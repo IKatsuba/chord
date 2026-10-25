@@ -22,6 +22,8 @@ import { tokensIn } from '../spend.ts';
 import { type ArrowTone, outArrow } from '../message.ts';
 import {
   firstLine,
+  guardianView,
+  GUARDIAN_REVIEWING,
   type Headline,
   headline,
   SUMMARY_LINES,
@@ -52,7 +54,15 @@ export function agentGroup(
   const sameKind = (entry: Entry | undefined) =>
     entry?.kind === 'subagent' && (entry.subagent.task !== undefined) === task;
 
-  if (sameKind(entries[index - 1])) {
+  const hidden = (entry: Entry | undefined) =>
+    entry?.kind === 'tool' && guardianView(entry.call) === 'hidden';
+  let before = index - 1;
+
+  while (hidden(entries[before])) {
+    before--;
+  }
+
+  if (sameKind(entries[before])) {
     return [];
   }
 
@@ -60,6 +70,10 @@ export function agentGroup(
 
   for (let at = index; at < entries.length; at++) {
     const entry = entries[at]!;
+
+    if (hidden(entry)) {
+      continue;
+    }
 
     if (entry.kind !== 'subagent' || !sameKind(entry)) {
       break;
@@ -98,8 +112,12 @@ export function workOf(subagent: Subagent): WorkItem[] {
 }
 
 function grouped(entries: readonly Entry[]): WorkItem[] {
-  return entries.flatMap((entry, index): WorkItem[] => {
-    const group = agentGroup(entries, index);
+  const visible = entries.filter(
+    (entry) => entry.kind !== 'tool' || guardianView(entry.call) !== 'hidden',
+  );
+
+  return visible.flatMap((entry, index): WorkItem[] => {
+    const group = agentGroup(visible, index);
 
     return group === undefined
       ? [{ kind: 'entry', entry }]
@@ -140,7 +158,9 @@ export function agentHeadline(subagent: Subagent, full = true): Headline {
  */
 export function toolUses(subagent: Subagent): number {
   return subagent.entries.filter(
-    (entry) => entry.kind === 'tool' || entry.kind === 'subagent',
+    (entry) =>
+      entry.kind === 'subagent' ||
+      (entry.kind === 'tool' && guardianView(entry.call) === 'block'),
   ).length;
 }
 
@@ -301,6 +321,8 @@ export interface WorkLine {
   readonly arrow?: ArrowTone;
   /** A permission request for it is on screen now. */
   readonly waiting: boolean;
+  /** Guardian's in-progress row has no call headline or marker. */
+  readonly reviewing?: true;
 }
 
 function workLines(
@@ -311,6 +333,23 @@ function workLines(
   return subagent.entries.flatMap((entry): WorkLine[] => {
     switch (entry.kind) {
       case 'tool': {
+        const review = guardianView(entry.call);
+
+        if (review === 'hidden') {
+          return [];
+        }
+
+        if (review === 'reviewing') {
+          return [
+            {
+              headline: { name: GUARDIAN_REVIEWING },
+              failed: false,
+              waiting: false,
+              reviewing: true,
+            },
+          ];
+        }
+
         // A row of three under the block: a heredoc whole would push out
         // the other two.
         const line = firstLine(headline(entry.call, chordServer));

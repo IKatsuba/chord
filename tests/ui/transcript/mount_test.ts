@@ -214,3 +214,15 @@ describe('tester: selection mount retention', () => {
     ).toBe(80);
   });
 });
+
+test('approved Guardian entries cost no mount budget, keeping earlier visible entries in the tail (CHD-521)', () => {
+  const reviews: Entry[] = Array.from({ length: 100 }, (_, at) => ({
+    kind: 'tool',
+    turnId: T,
+    call: { id: `review-${at}`, guardian: 'approved' },
+  }));
+  const entries = [say('visible before'), ...reviews, say('visible after')];
+
+  expect(entryWeight(entries, 1, false)).toBe(0);
+  expect(firstMounted(mounting(entries, FOLLOWING))).toBe(0);
+});

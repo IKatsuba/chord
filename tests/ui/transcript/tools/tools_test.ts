@@ -8,6 +8,7 @@ import stringWidth from 'string-width';
 import { runs, type Run } from '../../../../src/ui/theme/text.ts';
 import {
   asksFor,
+  guardianView,
   firstLine,
   type Headline,
   headline,
@@ -988,6 +989,28 @@ describe('CHD-404 tester: queued permission identity and status restoration', ()
       expect(summary(call, false).lines).toStrictEqual([
         status === 'failed' ? 'Error: existing output' : 'existing output',
       ]);
+    }
+  });
+});
+
+describe('Guardian presentation follows only its structured status (CHD-521)', () => {
+  test('approved hides, inProgress is one line, all other values remain full blocks', () => {
+    for (const [guardian, expected] of [
+      ['approved', 'hidden'],
+      ['inProgress', 'reviewing'],
+      ['denied', 'block'],
+      ['timedOut', 'block'],
+      ['aborted', 'block'],
+      ['future', 'block'],
+      [undefined, 'block'],
+    ] as const) {
+      expect(
+        guardianView({
+          id: 'review',
+          ...(guardian === undefined ? {} : { guardian }),
+          title: 'Status: Approved',
+        }),
+      ).toBe(expected);
     }
   });
 });

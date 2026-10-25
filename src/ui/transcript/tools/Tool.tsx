@@ -54,6 +54,8 @@ import type { TerminalView } from './terminal.ts';
 import { callTarget } from '../targets.ts';
 import {
   type Headline,
+  guardianView,
+  GUARDIAN_REVIEWING,
   headline,
   headlineRows,
   sentBody,
@@ -110,6 +112,31 @@ export function Tool({
   const tone = ended && live === 'running' ? 'pending' : live;
   const colours = useColours();
   const selectable = useSelectable();
+  const review = guardianView(call);
+
+  if (review === 'hidden') {
+    return null;
+  }
+
+  if (review === 'reviewing') {
+    return (
+      <>
+        {gap.spacer}
+        <box
+          id={callTarget(call.id)}
+          flexDirection='row'
+          {...gap.props}
+          flexShrink={0}
+        >
+          <Gutter> </Gutter>
+          <text {...CUT} attributes={DIM}>
+            {GUARDIAN_REVIEWING}
+          </text>
+        </box>
+      </>
+    );
+  }
+
   const proposal =
     call.chord === undefined ? undefined : proposalOf(call.chord);
   const { lines, hidden, terminals, diffs } = summary(

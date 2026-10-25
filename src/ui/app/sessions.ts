@@ -157,7 +157,11 @@ import {
   teamRefusal,
   type TeamRun,
 } from '../teams/teams.ts';
-import { firstLine, headline } from '../transcript/tools/tools.ts';
+import {
+  firstLine,
+  guardianView,
+  headline,
+} from '../transcript/tools/tools.ts';
 import { windowSpend } from '../transcript/spend.ts';
 import {
   type AppAction,
@@ -2237,7 +2241,9 @@ export function useSessions(
       const state = agentState(row, now);
       const mark = agentMark(row);
       const latest = stateOf(child.key)?.transcript.entries.findLast(
-        (entry) => entry.kind === 'tool' || entry.kind === 'message',
+        (entry) =>
+          entry.kind === 'message' ||
+          (entry.kind === 'tool' && guardianView(entry.call) === 'block'),
       );
 
       return {

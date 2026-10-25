@@ -19,6 +19,20 @@ import {
 } from '../../../session/transcript/chord.ts';
 import { wrapLine } from '../message.ts';
 
+export const GUARDIAN_REVIEWING = 'Guardian reviewing…';
+
+/** Only chord's structured Guardian verdict changes its presentation. */
+export function guardianView(call: ToolCall): 'hidden' | 'reviewing' | 'block' {
+  switch (call.guardian) {
+    case 'approved':
+      return 'hidden';
+    case 'inProgress':
+      return 'reviewing';
+    default:
+      return 'block';
+  }
+}
+
 /**
  * `Read(src/main.tsx)`: the tool's name, and its argument when it has one,
  * whole: a heredoc command keeps every line, as Claude Code draws it.

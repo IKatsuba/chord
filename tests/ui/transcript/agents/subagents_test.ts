@@ -714,3 +714,48 @@ describe('CHD-473 T2 tester: grapheme and selectable-run boundaries', () => {
     }
   });
 });
+
+test('Guardian reviews leave no subagent counts or approved work/headlines, while in-progress rows stay dim (CHD-521)', () => {
+  const review = (guardian: string): Entry => ({
+    kind: 'tool',
+    turnId: T,
+    call: { id: guardian, title: 'Guardian Review', guardian },
+  });
+  const child = agent({
+    id: 'guardian-work',
+    entries: [
+      tool('read', 'Read file'),
+      review('approved'),
+      review('inProgress'),
+      review('denied'),
+    ],
+  });
+
+  expect(toolUses(child)).toBe(2);
+  expect(
+    workOf(child).flatMap((item) =>
+      item.kind === 'entry' && item.entry.kind === 'tool'
+        ? [item.entry.call.id]
+        : [],
+    ),
+  ).toStrictEqual(['read', 'inProgress', 'denied']);
+
+  const folded = blockFold(child, []);
+
+  expect(folded.kind).toBe('work');
+
+  if (folded.kind === 'work') {
+    expect(folded.lines).toHaveLength(3);
+    expect(folded.lines[1]).toMatchObject({
+      reviewing: true,
+      headline: { name: 'Guardian reviewing…' },
+    });
+  }
+
+  const first = agent({ id: 'first' });
+  const second = agent({ id: 'second' });
+  const entries = [entry(first), review('approved'), entry(second)];
+
+  expect(agentGroup(entries, 0)).toStrictEqual([first, second]);
+  expect(agentGroup(entries, 2)).toStrictEqual([]);
+});

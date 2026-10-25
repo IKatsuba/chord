@@ -736,7 +736,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       const images = taken.flatMap(({ images }) => images ?? []);
       const withdrawn = {
         ...state,
-        queue: state.queue.filter((queued) => queued.from !== undefined),
+        queue: state.queue.filter((queued) => !taken.includes(queued)),
         held:
           back.length === 0
             ? state.held

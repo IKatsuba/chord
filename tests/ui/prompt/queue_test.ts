@@ -215,3 +215,15 @@ test("the person's steered prompt held for the running calls or an answer says s
     },
   ]);
 });
+
+test("the person's steer out with the agent says so first (CHD-378)", () => {
+  expect(
+    queueRows([{ turnId: 't2', text: 'Use the parser', steering: true }], 5),
+  ).toStrictEqual([
+    {
+      kind: 'prompt',
+      text: 'Use the parser',
+      header: 'into the running turn: ',
+    },
+  ]);
+});

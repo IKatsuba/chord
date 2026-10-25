@@ -351,14 +351,32 @@ export function reducePrompt(
               return item;
             }
 
-            const { afterAnswer: _, afterCalls: __, ...rest } = item;
+            const {
+              afterAnswer: _,
+              afterCalls: __,
+              steering: ___,
+              ...rest
+            } = item;
 
             return {
               ...rest,
               ...(action.afterAnswer ? { afterAnswer: true as const } : {}),
               ...(action.afterCalls ? { afterCalls: true as const } : {}),
+              ...(action.steering ? { steering: true as const } : {}),
             };
           }),
+        };
+      }
+
+      // A steer out with the agent took its held output as it went, before
+      // this row came, and Esc gives nothing of it back (CHD-378).
+      if (action.steering) {
+        return {
+          ...state,
+          queue: [
+            ...state.queue,
+            { turnId: action.turnId, text: action.text, steering: true },
+          ],
         };
       }
 

@@ -1938,3 +1938,63 @@ describe('CHD-378 U1 tester: personal steer boundaries', () => {
     }
   });
 });
+
+describe("the person's steer the agent has not answered yet (CHD-378)", () => {
+  /** What the queue was told of `text`, each time: its reason, if any. */
+  const told = (events: readonly ConversationEvent[], text: string) =>
+    events.flatMap((event) =>
+      event.type === 'queued' && event.text === text
+        ? [
+            event.steering
+              ? 'steering'
+              : event.afterCalls
+                ? 'calls'
+                : event.afterAnswer
+                  ? 'answer'
+                  : 'plain',
+          ]
+        : [],
+    );
+
+  test('unanswered for a while it shows in the queue, and refused once the turn ends it goes as the next turn, the row with it', () =>
+    onFake(
+      ['--steering', 'claude', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('slow');
+        await until(() => saidIn(events).startsWith('Working'));
+
+        expect(conversation.steerIn('Then the docs.')).toStrictEqual('sent');
+        await until(() => told(events, 'Then the docs.').length === 1);
+        conversation.interrupt();
+        await ended(events, 2);
+
+        // Nothing waits ahead of it, so it starts at once, under its row's id.
+        expect(told(events, 'Then the docs.')).toStrictEqual(['steering']);
+        expect(
+          events.findLast((event) => event.type === 'prompt')?.turnId,
+        ).toStrictEqual(
+          events.find((event) => event.type === 'queued')?.turnId,
+        );
+        expect(promptsIn(events)).toStrictEqual([
+          ['slow', undefined],
+          ['Then the docs.', undefined],
+        ]);
+      },
+    ));
+
+  test('held for the running calls, it says it is out with the agent as soon as it goes', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('bashone');
+      await callOpen(events);
+      conversation.steerIn('Skip the slow tests');
+      await until(() =>
+        promptsIn(events).some(([text]) => text === 'Skip the slow tests'),
+      );
+
+      expect(told(events, 'Skip the slow tests')).toStrictEqual([
+        'calls',
+        'steering',
+      ]);
+      conversation.interrupt();
+    }));
+});

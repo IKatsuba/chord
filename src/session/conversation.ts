@@ -171,6 +171,11 @@ export type ConversationEvent =
        * a steer would cut off: it goes in once they have ended (CHD-423).
        */
       readonly afterCalls?: true;
+      /**
+       * The person's steer, out with the agent and not answered for a while:
+       * it is no longer theirs to take back (CHD-378).
+       */
+      readonly steering?: true;
     }
   /**
    * An interrupt took every queued prompt of the person's back; none of them
@@ -348,6 +353,11 @@ interface Retired {
 
 /** How long the agent must be silent after an answer to have finished. */
 const QUIET_MS = 1000;
+/**
+ * How long the person's steer goes unanswered before the queue shows it;
+ * a quicker answer draws no row to blink (CHD-378).
+ */
+const STEER_SHOWN_MS = 500;
 /** How long the next queued prompt waits for that silence at most. */
 const SETTLE_LIMIT_MS = 5000;
 
@@ -1317,10 +1327,34 @@ export class Conversation {
         return;
       }
 
-      outcome =
-        this.#steerable(session) === into
-          ? await session.steer(next.prompt)
-          : 'refused';
+      if (this.#steerable(session) === into) {
+        const out = session.steer(next.prompt);
+        const outgoing = () =>
+          this.#emit({
+            type: 'queued',
+            turnId: next.turnId,
+            text: next.text,
+            steering: true,
+          });
+        // The person's shows in the queue once it has waited a while, or at
+        // once if its row is there already: their text is then in neither
+        // the box nor the transcript (CHD-378).
+        let slow: ReturnType<typeof setTimeout> | undefined;
+
+        if (next.from === undefined && shown !== undefined) {
+          outgoing();
+        } else if (next.from === undefined) {
+          slow = setTimeout(outgoing, STEER_SHOWN_MS);
+        }
+
+        try {
+          outcome = await out;
+        } finally {
+          clearTimeout(slow);
+        }
+      } else {
+        outcome = 'refused';
+      }
     } catch {
       outcome = 'refused';
     } finally {

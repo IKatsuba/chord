@@ -934,7 +934,7 @@ describe('CHD-394 U1 tester: command and copy boundaries', () => {
   });
 });
 
-test('a picked code block drawn into a quote has its border in the accent colour, and only it (CHD-394)', () => {
+test("a picked code block drawn into a quote has its border in the accent colour, and only it, in the terminal's own colour under NO_COLOR (CHD-394)", () => {
   const text = '> ```sh\n> ls\n> ```\n\n> ```sh\n> pwd\n> ```';
   // The dark palette's accent, painted as the terminal takes colour.
   const accent = brush(PAINT, PALETTES.dark.accent)('┌ sh ──┐');
@@ -942,13 +942,40 @@ test('a picked code block drawn into a quote has its border in the accent colour
     softMarkdown(text, 80, true, PALETTES.dark, picked).map((block) =>
       block.kind === 'quote' ? block.text : '',
     );
+  // The quotes read with NO_COLOR as `noColor` says, whatever the run's own.
+  const under = (noColor: boolean, picked?: number) => {
+    const own = process.env.NO_COLOR;
 
-  expect(quotes().some((quote) => quote.includes(accent))).toBe(false);
-  expect(quotes()[1]).toContain('\x1b[2m┌ sh');
+    if (noColor) {
+      process.env.NO_COLOR = '1';
+    } else {
+      delete process.env.NO_COLOR;
+    }
 
-  const [first, second] = quotes(1);
+    try {
+      return quotes(picked);
+    } finally {
+      if (own === undefined) {
+        delete process.env.NO_COLOR;
+      } else {
+        process.env.NO_COLOR = own;
+      }
+    }
+  };
+
+  expect(under(false).some((quote) => quote.includes(accent))).toBe(false);
+  expect(under(false)[1]).toContain('\x1b[2m┌ sh');
+
+  const [first, second] = under(false, 1);
 
   expect(first).not.toContain(accent);
   expect(second).toContain(accent);
   expect(stripAnsi(second!)).toContain('pwd');
+
+  // With no colour, the picked box's border is the terminal's own
+  // foreground, as a picked box's is, the others' left dim.
+  expect(under(true)[1]).toContain('\x1b[2m┌ sh');
+  expect(under(true, 1)[1]).not.toContain('\x1b[2m┌ sh');
+  expect(under(true, 1)[1]).toContain('┌ sh ──┐');
+  expect(under(true, 1)[0]).toContain('\x1b[2m┌ sh');
 });

@@ -9,6 +9,7 @@ import { readRecords } from '../../../src/session/sessions.ts';
 import { createElement } from 'react';
 import { draw } from '../harness.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import type { Turn } from '../../../src/session/session.ts';
 import {
   CTRL_D,
   CTRL_G,
@@ -203,9 +204,30 @@ describe("the terminal is told the main session's id to resume (CHD-492)", () =>
         assert(second !== undefined);
         // Nothing to resume until its first prompt.
         expect(last(window)).toStrictEqual('');
+
+        const session = window.session();
+
+        assert(session?.id === second);
+
+        const prompt = session.prompt.bind(session);
+        let secondTurn: Turn | undefined;
+
+        session.prompt = (...args) => {
+          secondTurn = prompt(...args);
+
+          return secondTurn;
+        };
+
         await send(window, 'text');
         await until('the new id', () => last(window) === second);
-        await ready(window);
+        assert(secondTurn !== undefined);
+        expect((await secondTurn.result).status).toBe('completed');
+        await until(
+          'the second turn ended on screen',
+          () =>
+            !window.frame().includes('Working…') &&
+            !window.frame().includes('Interrupting…'),
+        );
         await window.type('/resume');
         await window.press('\r');
         await window.shows('Resume a session');

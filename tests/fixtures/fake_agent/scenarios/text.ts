@@ -13,7 +13,7 @@ import {
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
 import { mcpServers, openedWith, steeredInto } from '../sessions.ts';
-import { lifetime, pause, type Play } from '../turn.ts';
+import { lifetime, pause, type Play, steeredIn } from '../turn.ts';
 import { GATE_RELEASE, gateOpened } from './agents.ts';
 
 /**
@@ -83,6 +83,19 @@ export const TEXT = {
     } finally {
       waiting.stop();
     }
+
+    return 'end_turn';
+  },
+
+  // As `texttillsteered`, but the turn goes on once the steer is read, with
+  // nothing more said, until it is cancelled, at most `HELD_WITHIN_MS`: a
+  // test that steers and then stops the turn finds it still running however
+  // slow the machine is (CHD-526).
+  async texttillsteeredheld(turn) {
+    await turn.say('Hello', ', world', '. This reply', ' came in chunks.');
+    await steeredIn(turn, 1);
+    await turn.read();
+    await pause(turn.signal, HELD_WITHIN_MS);
 
     return 'end_turn';
   },

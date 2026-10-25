@@ -2,7 +2,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { modelName } from '../../session/models.ts';
 import { runningSubagents } from '../../session/subagents.ts';
 import type { TurnState } from '../../session/transcript/types.ts';
-import { copyNote } from '../app/selection.ts';
+import { blockCopyNote, copyNote } from '../app/selection.ts';
 import type { AppState } from '../app/state.ts';
 import { SPINNER_STEPS, spinnerMarks, workingLine } from './status.ts';
 import { useColours, useHintKey } from '../app/context.ts';
@@ -108,6 +108,15 @@ export function unsteeredNote(submit: string | undefined): string {
   return submit === undefined ? note : `${note} · ${submit} queues it`;
 }
 
+/**
+ * What a code block put into the prompt says where a draft is in the box,
+ * which it never replaces (docs/design/CHD-394.md §4).
+ */
+export const DRAFT_HELD = 'The prompt holds a draft · ctrl+c clears it';
+
+/** What `ctrl+x b` says with no code block in the transcript (CHD-394 §3). */
+export const NO_CODE_BLOCK = 'No code block to pick';
+
 /** Claude Code's mode colours, in the theme's tones; the rest is dim. */
 function statusColour(tone: StatusTone, colours: Palette): string | undefined {
   switch (tone) {
@@ -158,40 +167,64 @@ export function StatusLine({
   const failure = state.editorFailed ?? state.pasteFailed ?? state.keysFailed;
   const helpKey = hintKey(state.keys, 'help:toggle');
   const cycleKey = hintKey(state.keys, 'chat:cycleMode');
-  const copied = state.copied && copyNote(state.copied.result);
+  const copied =
+    state.copied &&
+    (state.copied.block
+      ? blockCopyNote(state.copied.result)
+      : copyNote(state.copied.result));
+  const held = state.draftHeld === undefined ? undefined : DRAFT_HELD;
+  const noBlock = state.noCodeBlock === undefined ? undefined : NO_CODE_BLOCK;
   const unsteered =
     state.steerRefused === undefined
       ? undefined
       : unsteeredNote(hintKey(state.keys, 'chat:submit'));
+  // A picked code block's line of keys comes before every note but an
+  // armed quit's: they are what the keys do now (CHD-394 §3).
   const notice =
     armed ??
     (connection.status === 'closing'
       ? `Stopping ${agent}…`
-      : (failure ??
-        unsteered ??
-        copied ??
-        state.sessionsNote ??
-        (connection.status === 'starting' ? `Starting ${agent}…` : undefined)));
+      : state.codePick !== undefined
+        ? undefined
+        : (failure ??
+          unsteered ??
+          held ??
+          noBlock ??
+          copied ??
+          state.sessionsNote ??
+          (connection.status === 'starting'
+            ? `Starting ${agent}…`
+            : undefined)));
   // A question waiting on a second press stands alone, so the sessions it
   // names are never cut for the model beside them; so does a copy's note,
   // which nothing may cut at 80 columns.
+  // So does a picked code block's line of keys, as the design draws it
+  // (CHD-394 §3).
   const alone =
-    armed !== undefined || (copied !== undefined && notice === copied);
+    armed !== undefined ||
+    (copied !== undefined && notice === copied) ||
+    (state.codePick !== undefined && notice === undefined);
+  // A picked block's line of keys stands alone, before bash mode, a mode,
+  // vim's mark and the waits, as the design draws it (CHD-394 §3).
+  const picking = state.codePick !== undefined && notice === undefined;
   const { left, right } = statusLine(
     {
       model: alone ? undefined : modelName(state.models),
       effort: alone ? undefined : effort,
       failed:
-        notice !== undefined && (notice === failure || notice === unsteered),
+        notice !== undefined &&
+        (notice === failure || notice === unsteered || notice === held),
       error:
         copied !== undefined &&
         notice === copied &&
         state.copied?.result.kind === 'failed',
-      mode: transcript.mode,
-      modeName: state.modes.find((mode) => mode.id === transcript.mode)?.name,
+      mode: picking ? undefined : transcript.mode,
+      modeName: picking
+        ? undefined
+        : state.modes.find((mode) => mode.id === transcript.mode)?.name,
       usage: alone ? undefined : transcript.usage,
       notice,
-      bash: state.bash,
+      bash: picking ? false : state.bash,
       // Subagents a finished turn left at work may be out of sight, so the
       // line says so, in place of Claude Code's pointer to its panel.
       hint:
@@ -206,8 +239,8 @@ export function StatusLine({
           ? `${helpKey} for shortcuts`
           : undefined),
       cycleKey: cycleKey ?? null,
-      vim: state.vim?.mode,
-      waits,
+      vim: picking ? undefined : state.vim?.mode,
+      waits: picking ? undefined : waits,
     },
     width,
   );

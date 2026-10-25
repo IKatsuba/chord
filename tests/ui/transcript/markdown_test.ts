@@ -1,15 +1,22 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { execFile } from 'node:child_process';
 import process from 'node:process';
 import { promisify } from 'node:util';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import {
+  type Code,
+  codeBlocks,
+  leastWidth,
   markdown,
   QUOTE_INSET,
+  runCommand,
+  type Soft,
   softMarkdown,
 } from '../../../src/ui/transcript/markdown.ts';
 import { PALETTES } from '../../../src/ui/theme/theme.ts';
+import { brush, PAINT } from '../../../src/ui/transcript/highlight.ts';
 import {
   MARKDOWN_LINES,
   MARKDOWN_OPEN_FENCE,
@@ -533,25 +540,84 @@ test('soft, a paragraph, a heading and a quote are a line each (CHD-396)', () =>
   ]);
 });
 
-test('soft, a code block is its code for a box as wide as it or its label, within the width (CHD-396)', () => {
+test('soft, a code block is its code for a box as wide as it, its label or its buttons, within the width (CHD-396, CHD-394)', () => {
   const code = (text: string) => softMarkdown(text, 30, false);
 
+  // Its code takes 19 cells; `┌─ sh ─[copy]─[run]─┐` takes 21.
   expect(code('```sh\ndeno task check\n```')).toStrictEqual([
-    { kind: 'code', label: 'sh', code: 'deno task check', width: 19 },
+    {
+      kind: 'code',
+      label: 'sh',
+      code: 'deno task check',
+      width: 21,
+      buttons: ['copy', 'run'],
+      copy: 'deno task check',
+      run: 'deno task check',
+    },
   ]);
-  // A label wider than its code widens the box so OpenTUI draws it.
+  // A label wider than its code widens the box so OpenTUI draws it, and
+  // its button beside it.
   expect(code('```typescript\nx\n```')).toStrictEqual([
-    { kind: 'code', label: 'typescript', code: 'x', width: 16 },
+    {
+      kind: 'code',
+      label: 'typescript',
+      code: 'x',
+      width: 23,
+      buttons: ['copy'],
+      copy: 'x',
+    },
   ]);
   // A long line stays whole for OpenTUI to cut; the box keeps to the width.
   // Blank lines in the code are the agent's.
   expect(code('```\n\n' + 'y'.repeat(40) + '\n\nz\n```')).toStrictEqual([
-    { kind: 'code', label: '', code: `\n${'y'.repeat(40)}\n\nz`, width: 30 },
+    {
+      kind: 'code',
+      label: '',
+      code: `\n${'y'.repeat(40)}\n\nz`,
+      width: 30,
+      buttons: ['copy'],
+      copy: `\n${'y'.repeat(40)}\n\nz`,
+    },
   ]);
   // The rows path keeps its drawn box.
   expect(markdown('```sh\nls\n```', 30, false)[0]?.text).toStrictEqual(
     '┌ sh ──┐\n│ ls   │\n└──────┘',
   );
+});
+
+test('a code box carries [copy], and [run] on sh and bash, never while its fence is open, at its least width, giving way run first only where the transcript is narrower (CHD-394)', () => {
+  const box = (text: string, width = 80) => {
+    const [block] = softMarkdown(text, width, false);
+
+    assert(block?.kind === 'code');
+
+    return [block.width, block.buttons];
+  };
+
+  // §1's table of least widths.
+  expect(leastWidth('sh', ['copy', 'run'])).toStrictEqual(21);
+  expect(leastWidth('bash', ['copy', 'run'])).toStrictEqual(23);
+  expect(leastWidth('ts', ['copy'])).toStrictEqual(15);
+  expect(leastWidth('console', ['copy'])).toStrictEqual(20);
+  expect(leastWidth('', ['copy'])).toStrictEqual(10);
+  expect(box('```bash\nls\n```')).toStrictEqual([23, ['copy', 'run']]);
+  expect(box('```console\n$ ls\n```')).toStrictEqual([20, ['copy']]);
+  expect(box('```\nls\n```')).toStrictEqual([10, ['copy']]);
+  // Streaming: an open fence has none, and its box keeps to its code.
+  expect(box('```sh\nls')).toStrictEqual([8, []]);
+  // Narrower than 21, run gives way; narrower than 15, copy too.
+  expect(box('```sh\nls\n```', 20)).toStrictEqual([15, ['copy']]);
+  expect(box('```sh\nls\n```', 14)).toStrictEqual([8, []]);
+
+  // In a list too.
+  const [list] = softMarkdown('1. Run:\n   ```sh\n   ls\n   ```\n', 80, false);
+
+  assert(list?.kind === 'list');
+  expect(list.items[0]?.blocks.at(-1)).toMatchObject({
+    kind: 'code',
+    width: 21,
+    buttons: ['copy', 'run'],
+  });
 });
 
 test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
@@ -587,7 +653,8 @@ test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
             items: [
               {
                 marker: '1. ',
-                // The box takes the 15 cells beside both markers.
+                // The box takes the 15 cells beside both markers, which
+                // hold [copy] but not [run], which gives way.
                 blocks: [
                   { kind: 'text', text: 'nested, and long enough too' },
                   {
@@ -595,6 +662,9 @@ test('soft, a list is its items, each beside its own marker (CHD-396)', () => {
                     label: 'sh',
                     code: 'abcdefghijklmnopqrstu',
                     width: 15,
+                    buttons: ['copy'],
+                    copy: 'abcdefghijklmnopqrstu',
+                    run: 'abcdefghijklmnopqrstu',
                   },
                 ],
               },
@@ -630,4 +700,282 @@ test('soft, a loose list says so (CHD-396)', () => {
       { marker: '- ', blocks: [{ kind: 'text', text: 'b' }] },
     ],
   });
+});
+
+test("a reply's code blocks are listed as drawn: label, text as written, whether it has [run], and where (CHD-394)", () => {
+  const reply = [
+    'Run this:',
+    '',
+    '```sh',
+    'bun test --isolate',
+    '```',
+    '',
+    '- then',
+    '',
+    '  ```bash',
+    '  echo "one"',
+    '  echo "two"',
+    '  ```',
+    '',
+    '> quoted:',
+    '>',
+    '> ```console',
+    '> $ ls',
+    '> a.ts',
+    '> ```',
+    '',
+    '```',
+    'no label',
+    '```',
+    '',
+    '```ts title.ts',
+    'const a = 1;',
+    '```',
+    '',
+    '```Bash',
+    'echo case',
+  ].join('\n');
+  const blocks = codeBlocks(reply);
+  const lines = reply.split('\n');
+
+  expect(
+    blocks.map(({ index, label, text, runnable, quoted }) => [
+      index,
+      label,
+      text,
+      runnable,
+      quoted,
+    ]),
+  ).toStrictEqual([
+    [0, 'sh', 'bun test --isolate', true, false],
+    [1, 'bash', 'echo "one"\necho "two"', true, false],
+    // A console block mixes commands with output: [copy] only.
+    [2, 'console', '$ ls\na.ts', false, true],
+    [3, '', 'no label', false, false],
+    [4, 'ts', 'const a = 1;', false, false],
+    // An open fence, mid-stream, to the end; a label is matched as written.
+    [5, 'Bash', 'echo case', false, false],
+  ]);
+  // Each starts on its fence's line of the reply.
+  expect(blocks.map(({ line }) => lines[line]?.trim())).toStrictEqual([
+    '```sh',
+    '```bash',
+    '> ```console',
+    '```',
+    '```ts title.ts',
+    '```Bash',
+  ]);
+
+  // The boxes the transcript draws, in the same order, hold the same code.
+  const boxes = (soft: readonly Soft[]): Code[] =>
+    soft.flatMap((block) =>
+      block.kind === 'code'
+        ? [block]
+        : block.kind === 'list'
+          ? block.items.flatMap((item) => boxes(item.blocks))
+          : [],
+    );
+
+  expect(
+    boxes(softMarkdown(reply, 80, true)).map(({ label, code }) => [
+      label,
+      stripAnsi(code),
+    ]),
+  ).toStrictEqual(
+    blocks
+      .filter(({ quoted }) => !quoted)
+      .map(({ label, text }) => [label, text]),
+  );
+});
+
+test('a reply with no code has no blocks, and an indented block has no label, its text without the line break it ends on', () => {
+  expect(codeBlocks('Just prose.')).toStrictEqual([]);
+  expect(codeBlocks('Here:\n\n    make all\n')).toStrictEqual([
+    {
+      index: 0,
+      line: 2,
+      label: '',
+      // marked keeps the reply's last line break, which a copy leaves out.
+      text: 'make all',
+      runnable: false,
+      quoted: false,
+    },
+  ]);
+});
+
+test("[run] puts a block's every line in, each leading `$ ` taken off, the rest as written (the owner's answer, CHD-394)", () => {
+  expect(runCommand('deno task check')).toStrictEqual('deno task check');
+  expect(runCommand('$ bun install\n$ bun test tests/parse')).toStrictEqual(
+    'bun install\nbun test tests/parse',
+  );
+  expect(
+    runCommand(
+      'deno task compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
+    ),
+  ).toStrictEqual(
+    'deno task compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
+  );
+  // Only a `$ ` the line starts with: an indented one, or `$` alone, stays.
+  expect(runCommand('  $ ls\n$\n$HOME\n$ ')).toStrictEqual(
+    '  $ ls\n$\n$HOME\n',
+  );
+});
+
+describe('CHD-394 U1 tester: block source boundaries', () => {
+  test('nested lists and quotes retain their original fence lines and quoted identity', () => {
+    const reply = [
+      'Intro',
+      '',
+      '> - quoted item',
+      '>',
+      '>   ~~~console',
+      '>   $ echo "hi"',
+      '>   hi',
+      '>   ~~~',
+      '',
+      '- outer',
+      '',
+      '  1. inner',
+      '',
+      '     ```bash extra',
+      '     printf "nested"',
+      '     ```',
+    ].join('\n');
+
+    expect(codeBlocks(reply)).toStrictEqual([
+      {
+        index: 0,
+        line: 4,
+        label: 'console',
+        text: '$ echo "hi"\nhi',
+        runnable: false,
+        quoted: true,
+      },
+      {
+        index: 1,
+        line: 13,
+        label: 'bash',
+        text: 'printf "nested"',
+        runnable: true,
+        quoted: false,
+      },
+    ]);
+  });
+
+  test('a longer open fence preserves literal shorter fences, Unicode and command prompts without rewriting', () => {
+    const before =
+      'A reply\r\n\r\n````sh title\r\n$ printf "café 👍🏽"\r\n```\r\noutput';
+    const expected = '$ printf "café 👍🏽"\n```\noutput';
+
+    expect(codeBlocks(before)).toStrictEqual([
+      {
+        index: 0,
+        line: 2,
+        label: 'sh',
+        text: expected,
+        runnable: true,
+        quoted: false,
+      },
+    ]);
+    expect(
+      codeBlocks(before + '\r\n````').map(({ index, line, text }) => ({
+        index,
+        line,
+        text,
+      })),
+    ).toStrictEqual([{ index: 0, line: 2, text: expected }]);
+  });
+
+  test('inline fence-like text and tables add no blocks, while empty and indented code remain listed', () => {
+    expect(
+      codeBlocks(
+        'Inline `echo hi` and `` ```sh ``.\n\n| a | b |\n| - | - |\n| c | d |',
+      ),
+    ).toStrictEqual([]);
+    expect(codeBlocks('```bash\n```\n\n    indented\n')).toStrictEqual([
+      {
+        index: 0,
+        line: 0,
+        label: 'bash',
+        text: '',
+        runnable: true,
+        quoted: false,
+      },
+      {
+        index: 1,
+        line: 3,
+        label: '',
+        text: 'indented',
+        runnable: false,
+        quoted: false,
+      },
+    ]);
+  });
+});
+
+describe('CHD-394 U1 tester: command and copy boundaries', () => {
+  test('run removes one exact prompt prefix per line, preserving blank lines, whitespace and Unicode', () => {
+    expect(runCommand('')).toBe('');
+    expect(
+      runCommand('$ $ printf "café 👍🏽"\n\n\t$ keep\n$\tkeep\n $ keep\n$ \n'),
+    ).toBe('$ printf "café 👍🏽"\n\n\t$ keep\n$\tkeep\n $ keep\n\n');
+  });
+
+  test('copy strips trailing line breaks while keeping internal blanks and spaces on the last line', () => {
+    const blocks = codeBlocks(
+      '```sh\n$ first\n\n$ second  \n\n\n```\n\n```bash\n\n\n```',
+    );
+
+    expect(blocks.map(({ text }) => text)).toStrictEqual([
+      '$ first\n\n$ second  ',
+      '',
+    ]);
+    expect(runCommand(blocks[0]?.text ?? '')).toBe('first\n\nsecond  ');
+  });
+});
+
+test("a picked code block drawn into a quote has its border in the accent colour, and only it, in the terminal's own colour under NO_COLOR (CHD-394)", () => {
+  const text = '> ```sh\n> ls\n> ```\n\n> ```sh\n> pwd\n> ```';
+  // The dark palette's accent, painted as the terminal takes colour.
+  const accent = brush(PAINT, PALETTES.dark.accent)('┌ sh ──┐');
+  const quotes = (picked?: number) =>
+    softMarkdown(text, 80, true, PALETTES.dark, picked).map((block) =>
+      block.kind === 'quote' ? block.text : '',
+    );
+  // The quotes read with NO_COLOR as `noColor` says, whatever the run's own.
+  const under = (noColor: boolean, picked?: number) => {
+    const own = process.env.NO_COLOR;
+
+    if (noColor) {
+      process.env.NO_COLOR = '1';
+    } else {
+      delete process.env.NO_COLOR;
+    }
+
+    try {
+      return quotes(picked);
+    } finally {
+      if (own === undefined) {
+        delete process.env.NO_COLOR;
+      } else {
+        process.env.NO_COLOR = own;
+      }
+    }
+  };
+
+  expect(under(false).some((quote) => quote.includes(accent))).toBe(false);
+  expect(under(false)[1]).toContain('\x1b[2m┌ sh');
+
+  const [first, second] = under(false, 1);
+
+  expect(first).not.toContain(accent);
+  expect(second).toContain(accent);
+  expect(stripAnsi(second!)).toContain('pwd');
+
+  // With no colour, the picked box's border is the terminal's own
+  // foreground, as a picked box's is, the others' left dim.
+  expect(under(true)[1]).toContain('\x1b[2m┌ sh');
+  expect(under(true, 1)[1]).not.toContain('\x1b[2m┌ sh');
+  expect(under(true, 1)[1]).toContain('┌ sh ──┐');
+  expect(under(true, 1)[0]).toContain('\x1b[2m┌ sh');
 });

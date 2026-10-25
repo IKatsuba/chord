@@ -222,7 +222,29 @@ break at spaces or after `/`, `-`, `.`, `,`, `:` and `(`. Outside quotes,
 list continuations hang under their item's text, including nested items and
 two-digit numbers. Code blocks wrap long lines at their box edge. Tables
 and code inside quotes keep their drawn rows, as do proposal and saved-team
-previews.
+previews. Once a code block's fence closes, its top border has `[copy]`
+on the right; `sh` and `bash` blocks also have `[run]`. A block inside a
+quote has no buttons, but the keys below still reach it.
+
+`[copy]` copies the block's text, without its border, label, display wraps
+or trailing newline. The status line says `copied N chars to clipboard`,
+`sent N chars to the terminal's clipboard` over OSC 52, or
+`could not copy: <reason>`, for 3 seconds. `[run]` puts all the block's lines
+into the prompt in bash mode, stripping a leading `$ ` from each line.
+Enter runs them as one script in the session's directory, with the output
+held for the agent's next prompt. An existing draft stays untouched;
+the status line says `The prompt holds a draft · ctrl+c clears it`.
+
+ctrl+x b picks the newest code block on screen, or the newest in the
+transcript if none is visible. ↑/↓ move between blocks across replies,
+scrolling to show the picked one, whose border turns accent and buttons
+bold. `c` copies and ends picking; `r` fills the prompt and ends picking
+on an `sh` or `bash` block. Esc ends picking; another key ends it and acts
+as usual, except the wheel and pgup/pgdn scroll and keep the pick. The
+status line names the bound keys, or says `No code block to pick` if none
+is available. Blocks in replies and agents' messages remain reachable
+however far back; code in tool output, expanded summaries or the plan box
+is pickable only while on screen. An open fence cannot be picked.
 
 Tool-call headlines show every line, wrapped to the width with no cap:
 a Bash heredoc is visible in full in the transcript. Continuation rows
@@ -561,8 +583,9 @@ and a chord is keys separated by spaces, each within 3 seconds of the one
 before. The actions are `chat:submit`, `chat:newline`, `chat:steer` (Tab),
 `chat:cancel`, `chat:cycleMode`, `chat:externalEditor`, `chat:imagePaste`,
 `history:previous`, `history:next` and `help:toggle` in `Chat`;
-`app:toggleTranscript`, `history:search` and chord's own `session:attention`
-in `Global`;
+`app:toggleTranscript`, `history:search`, chord's own `session:attention`
+and `codeBlock:pick` (ctrl+x b) in `Global`;
+`codeBlock:copy`, `prompt`, `previous`, `next` and `cancel` in `CodeBlock`;
 chord's own `agents:close` (`x`) in `Agents`, where it closes an agent
 in the agents list or stops an item in the background view;
 `autocomplete:accept`, `dismiss`, `previous` and `next` in `Autocomplete`;

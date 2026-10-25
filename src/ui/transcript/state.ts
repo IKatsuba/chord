@@ -23,7 +23,12 @@ export interface ViewSession {
    * after pgup: entry `entry`, from the row of its box with id `target`
    * where one is drawn in it; none once it has, or while following.
    */
-  readonly jump?: { readonly entry: number; readonly target?: string };
+  readonly jump?: {
+    readonly entry: number;
+    readonly target?: string;
+    /** From the target's own first row, its border's too (CHD-394). */
+    readonly whole?: true;
+  };
 }
 
 /** The window's part of the view. */
@@ -45,6 +50,11 @@ export type ViewAction =
       readonly type: 'jumped_to';
       readonly entry: number;
       readonly target?: string;
+      /**
+       * The target's own first row on top, not its first line's past
+       * whatever it holds above that: a code box's border with its label.
+       */
+      readonly whole?: true;
     }
   /** The measure put the entry asked for on top, or found it gone. */
   | { readonly type: 'jump_done' };
@@ -65,6 +75,7 @@ export function reduceView(state: ViewState, action: ViewAction): ViewState {
         jump: {
           entry: action.entry,
           ...(action.target === undefined ? {} : { target: action.target }),
+          ...(action.whole ? { whole: true as const } : {}),
         },
       };
     case 'jump_done': {

@@ -20,8 +20,18 @@ import {
   type Window,
   withWindow,
 } from './render.tsx';
-import { startMatch, useSessionVar } from '../../../src/ui/app/terminal.ts';
-import type { WindowedAction } from '../../../src/ui/app/state.ts';
+import {
+  type SelectionHandle,
+  startMatch,
+  useSelection,
+  useSessionVar,
+} from '../../../src/ui/app/terminal.ts';
+import type { Copy } from '../../../src/ui/app/selection.ts';
+import type { ClipboardWriteResult } from '@opentui/core';
+import {
+  initialAppState,
+  type WindowedAction,
+} from '../../../src/ui/app/state.ts';
 import { SLOW_MATCH_MS } from '../../../src/ui/prompt/state.ts';
 
 const FILES = ['src/main.ts', 'src/ui/state.ts'];
@@ -509,4 +519,266 @@ describe('CHD-492 U2 tester: cancelled turns and unprompted clears', () => {
         { columns, rows: columns === 80 ? 24 : 40 },
       ));
   }
+});
+
+describe("a code block's copy goes the selection's way (CHD-394)", () => {
+  test('its text is written as given, one copy at a time, a newer one superseding it, and nothing with no write', async () => {
+    const written: string[] = [];
+    const answers: ((result: ClipboardWriteResult) => void)[] = [];
+    const copy: Copy = (text) => {
+      written.push(text);
+
+      return new Promise((resolve) => answers.push(resolve));
+    };
+
+    let handle: SelectionHandle | undefined;
+    let without: SelectionHandle | undefined;
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: () => {},
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+      without = useSelection({
+        state: initialAppState,
+        dispatch: () => {},
+        copy: undefined,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'x');
+    };
+
+    const drawn = await draw(createElement(Probe));
+    const host = (status: 'written') =>
+      ({
+        host: { status },
+        terminal: { status: 'skipped' },
+      }) as unknown as ClipboardWriteResult;
+
+    try {
+      assert(handle !== undefined && without !== undefined);
+
+      const first = handle.copyText('bun test\n');
+      const second = handle.copyText('echo hi');
+
+      expect(written).toStrictEqual(['bun test\n', 'echo hi']);
+      answers[0]!(host('written'));
+      answers[1]!(host('written'));
+      expect(await first).toBeUndefined();
+      expect(await second).toStrictEqual({ kind: 'copied', chars: 7 });
+      expect(await without.copyText('echo hi')).toBeUndefined();
+      expect(await handle.copyText('')).toBeUndefined();
+      expect(written).toHaveLength(2);
+    } finally {
+      drawn.unmount();
+    }
+  });
+});
+
+describe('CHD-394 U1 tester: block copy outcomes', () => {
+  test('whitespace and Unicode are preserved, terminal-only writes and rejected writes return the shared feedback without dispatch', async () => {
+    const writes: string[] = [];
+    const actions: WindowedAction[] = [];
+    let handle: SelectionHandle | undefined;
+    let outcome: 'terminal' | 'throw' = 'terminal';
+    const copy: Copy = (text) => {
+      writes.push(text);
+
+      if (outcome === 'throw') {
+        throw new Error('clipboard\nnot available');
+      }
+
+      return Promise.resolve({
+        host: { status: 'failed', error: 'no host clipboard' },
+        terminal: { status: 'attempted' },
+      } as unknown as ClipboardWriteResult);
+    };
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: (action) => actions.push(action),
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'copy');
+    };
+
+    const screen = await draw(createElement(Probe));
+
+    try {
+      assert(handle !== undefined);
+
+      actions.length = 0;
+
+      expect(await handle.copyText('é👍🏽\n')).toStrictEqual({
+        kind: 'sent',
+        chars: 3,
+      });
+      expect(await handle.copyText(' \n')).toStrictEqual({
+        kind: 'sent',
+        chars: 2,
+      });
+
+      outcome = 'throw';
+
+      expect(await handle.copyText('echo hi')).toStrictEqual({
+        kind: 'failed',
+        reason: 'clipboard not available',
+      });
+      expect(writes).toStrictEqual(['é👍🏽\n', ' \n', 'echo hi']);
+      expect(actions).toStrictEqual([]);
+    } finally {
+      await screen.unmount();
+    }
+  });
+
+  test('unmount aborts an outstanding block copy and its late completion is silent', async () => {
+    const response = Promise.withResolvers<ClipboardWriteResult>();
+    let signal: AbortSignal | undefined;
+    let handle: SelectionHandle | undefined;
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: () => {},
+        copy: (_text, abort) => {
+          signal = abort;
+
+          return response.promise;
+        },
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'copy');
+    };
+
+    const screen = await draw(createElement(Probe));
+
+    assert(handle !== undefined);
+
+    const pending = handle.copyText('echo late');
+
+    await screen.unmount();
+    expect(signal?.aborted).toBe(true);
+    response.resolve({
+      host: { status: 'written' },
+      terminal: { status: 'skipped' },
+    } as unknown as ClipboardWriteResult);
+    expect(await pending).toBeUndefined();
+    expect(await handle.copyText('after close')).toBeUndefined();
+  });
+});
+
+describe("a code block's copy says what came of it (CHD-394)", () => {
+  test('it starts by taking over a selection copy, then notes its own result; one taken over by a later says nothing', async () => {
+    const answers: ((result: ClipboardWriteResult) => void)[] = [];
+    const copy: Copy = () => new Promise((resolve) => answers.push(resolve));
+    const seen: WindowedAction[] = [];
+    let handle: SelectionHandle | undefined;
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: (action) => seen.push(action),
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'x');
+    };
+
+    const drawn = await draw(createElement(Probe));
+    const written = {
+      host: { status: 'written' },
+      terminal: { status: 'skipped' },
+    } as unknown as ClipboardWriteResult;
+
+    try {
+      assert(handle !== undefined);
+      handle.copyBlock('bun test');
+      handle.copyBlock('echo hi');
+      answers[0]!(written);
+      answers[1]!(written);
+      await until(
+        'the second note',
+        () => seen.filter((a) => a.type === 'block_copy_noted').length > 0,
+      );
+
+      expect(seen).toStrictEqual([
+        { type: 'block_copy_started' },
+        { type: 'block_copy_started' },
+        {
+          type: 'block_copy_noted',
+          result: { kind: 'copied', chars: 7 },
+        },
+      ]);
+      handle.copyBlock('');
+      expect(seen).toHaveLength(3);
+    } finally {
+      drawn.unmount();
+    }
+  });
+});
+
+describe('CHD-394 U3 tester: delayed copy replacement', () => {
+  test('a block aborts an older clipboard write and its late failure cannot overwrite the block note', async () => {
+    const first = Promise.withResolvers<ClipboardWriteResult>();
+    const second = Promise.withResolvers<ClipboardWriteResult>();
+    const signals: AbortSignal[] = [];
+    const events: WindowedAction[] = [];
+    let handle: SelectionHandle | undefined;
+    const copy: Copy = (_text, signal) => {
+      signals.push(signal);
+
+      return signals.length === 1 ? first.promise : second.promise;
+    };
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: (action) => events.push(action),
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'copy');
+    };
+
+    const screen = await draw(createElement(Probe));
+
+    try {
+      assert(handle !== undefined);
+
+      const old = handle.copyText('old selection');
+
+      handle.copyBlock('echo new');
+      expect(signals[0]?.aborted).toBe(true);
+      expect(signals[1]?.aborted).toBe(false);
+      second.resolve({
+        host: { status: 'written' },
+        terminal: { status: 'skipped' },
+      } as unknown as ClipboardWriteResult);
+      await until('the block copy completes', () =>
+        events.some((event) => event.type === 'block_copy_noted'),
+      );
+      first.reject(new Error('late old failure'));
+      expect(await old).toBeUndefined();
+      expect(events).toStrictEqual([
+        { type: 'block_copy_started' },
+        { type: 'block_copy_noted', result: { kind: 'copied', chars: 8 } },
+      ]);
+    } finally {
+      await screen.unmount();
+    }
+  });
 });

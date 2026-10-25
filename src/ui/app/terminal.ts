@@ -35,7 +35,7 @@ import { matchFiles } from '../prompt/mentions.ts';
 import { type Cursor, endOf } from '../prompt/prompt.ts';
 import { SLOW_MATCH_MS } from '../prompt/state.ts';
 import { useApp, useStdout } from './renderer.tsx';
-import { type Copy, copies } from './selection.ts';
+import { type Copy, copies, type CopyResult } from './selection.ts';
 import type { AppAction, AppState, WindowedAction } from './state.ts';
 
 /**
@@ -552,6 +552,19 @@ export interface SelectionHandle {
   pressed(): void;
   /** The selection shown, copied; nothing while one is out. */
   copy(): void;
+  /**
+   * `text` copied as the selection is, through the window's one copy at a
+   * time, which it supersedes: what a code block's copy calls (CHD-394).
+   * Settles with what to say, the caller's to say, or `undefined` as
+   * `Copies.start` does, and with no write to copy through.
+   */
+  copyText(text: string): Promise<CopyResult | undefined>;
+  /**
+   * A code block's `text` copied, by its `[copy]` or its `c`, and what came
+   * of it said: through `copyText`, a selection's copy it takes over left
+   * shown to copy again (CHD-394).
+   */
+  copyBlock(text: string): void;
   /** chord's own clear, before a key or a paste does its own. */
   clear(): void;
 }
@@ -690,6 +703,24 @@ export function useSelection({
       if (latest.current.selection?.kind === 'shown') {
         start(false);
       }
+    },
+    copyText(text) {
+      return window === undefined || text === ''
+        ? Promise.resolve(undefined)
+        : window.start(text);
+    },
+    copyBlock(text) {
+      if (window === undefined || text === '') {
+        return;
+      }
+
+      dispatch({ type: 'block_copy_started' });
+      // A copy superseded says nothing: the one after it will.
+      void this.copyText(text).then(
+        (result) =>
+          result !== undefined &&
+          dispatch({ type: 'block_copy_noted', result }),
+      );
     },
     clear() {
       if (latest.current.selection !== undefined) {

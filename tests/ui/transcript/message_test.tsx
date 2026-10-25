@@ -679,7 +679,9 @@ test("a message's code box is OpenTUI's, and a copy over the message keeps its c
     const to = rows.findIndex((row) => row.includes('Second.'));
     const end = rows[to]!.indexOf('Second.') + 'Second.'.length;
 
-    expect(rows.join('\n')).toContain('┌─ sh ───┐\n     │ ls -la │');
+    expect(rows.join('\n')).toContain(
+      '┌─ sh ─[copy]─[run]─┐\n     │ ls -la            │',
+    );
     await drawn.write(left(rows[from]!.indexOf('First.'), from, 'down'));
 
     for (let y = from + 1; y <= to; y++) {

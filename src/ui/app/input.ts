@@ -119,9 +119,15 @@ export function drawn(run: () => boolean | void): boolean {
 export function useMouse({
   onWheel,
   onPress,
+  onRelease,
 }: {
   onWheel?: ((step: 'up' | 'down') => void) | undefined;
   onPress?: (() => void) | undefined;
+  /**
+   * A button came up, anywhere, after whatever under the pointer or holding
+   * the press heard it first (CHD-394).
+   */
+  onRelease?: (() => void) | undefined;
 }): {
   onMouseScroll?: (event: MouseEvent) => void;
   onMouse?: (event: MouseEvent) => void;
@@ -129,9 +135,11 @@ export function useMouse({
   // The latest listeners, behind functions that stay the same.
   const wheel = useRef(onWheel);
   const press = useRef(onPress);
+  const release = useRef(onRelease);
 
   wheel.current = onWheel;
   press.current = onPress;
+  release.current = onRelease;
 
   const onMouseScroll = useMemo(
     () => (event: MouseEvent) => {
@@ -149,12 +157,16 @@ export function useMouse({
       if (event.type === 'down' && event.button === 0) {
         drawn(() => press.current?.());
       }
+
+      if (event.type === 'up') {
+        release.current?.();
+      }
     },
     [],
   );
 
   return {
     ...(onWheel === undefined ? {} : { onMouseScroll }),
-    ...(onPress === undefined ? {} : { onMouse }),
+    ...(onPress === undefined && onRelease === undefined ? {} : { onMouse }),
   };
 }

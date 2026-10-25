@@ -6,11 +6,27 @@ import { describe, expect, test } from 'bun:test';
 import { useState } from 'react';
 import stringWidth from 'string-width';
 import { Reply } from '../../../src/ui/transcript/Reply.tsx';
+import chalk from 'chalk';
+import {
+  type CodeActions,
+  CodeBlockActions,
+  Colours,
+} from '../../../src/ui/app/context.ts';
+import type { BlockRef } from '../../../src/ui/transcript/code_pick.ts';
+import { PALETTES } from '../../../src/ui/theme/theme.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
-import { clipboard } from '../app/selecting.ts';
+import { clipboard, dragOver } from '../app/selecting.ts';
+import { type AppState, frontState } from '../../../src/ui/app/state.ts';
 import { draw, type Drawn } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
-import { left, send, until, withWindow, type Window } from '../app/render.tsx';
+import {
+  left,
+  send,
+  statusRow,
+  until,
+  withWindow,
+  type Window,
+} from '../app/render.tsx';
 
 const HEADING =
   'A heading long enough that at eighty columns it has to wrap onto a second row of its own';
@@ -98,9 +114,12 @@ for (const columns of [80, 120]) {
         const frame = stripAnsi(window.frame());
 
         // The label sits one cell past the corner, as OpenTUI draws a title,
-        // and widens a box whose code is narrower than it.
-        expect(frame).toContain('┌─ typescript ─┐\n   │ x            │');
-        expect(frame).toContain('┌─ sh ──────────┐');
+        // and widens a box whose code is narrower than it, as its buttons
+        // do (CHD-394).
+        expect(frame).toContain(
+          '┌─ typescript ─[copy]─┐\n   │ x                   │',
+        );
+        expect(frame).toContain('┌─ sh ─[copy]─[run]─┐');
         expect(
           frame.split('\n').every((row) => stringWidth(row) <= columns),
         ).toBe(true);
@@ -837,6 +856,493 @@ describe('CHD-396 U4 tester: selectable gap boundaries', () => {
         );
       }
     } finally {
+      await drawn.unmount();
+    }
+  });
+});
+
+describe("a code box's buttons (CHD-394)", () => {
+  /** The 0-based cell of `word`'s first character on the row of `marker`. */
+  const cell = (window: Window, marker: string, word: string) => {
+    const rows = stripAnsi(window.frame()).split('\n');
+    const y = rows.findIndex((row) => row.includes(marker));
+    const x = rows[y]!.indexOf(word);
+
+    expect(x).toBeGreaterThan(-1);
+
+    return { x: stringWidth(rows[y]!.slice(0, x)), y };
+  };
+
+  const click = async (
+    window: Window,
+    down: { x: number; y: number },
+    up = down,
+  ) => {
+    await window.press(left(down.x, down.y, 'down'));
+    await window.press(left(up.x, up.y, 'up'));
+  };
+
+  const LISTED = '┌─ sh ─[copy]─[run]─┐';
+
+  test('a click on [copy] copies the block as written and says so, as a selection copy does', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await click(window, cell(window, '┌─ typescript', '[copy]'));
+        await until('the copy', () => copies.length === 1);
+
+        expect(copies[0]!.text).toStrictEqual('x');
+        await window.shows('copied 1 chars to clipboard');
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
+  test('a click on [run] puts the command into the prompt in bash mode, and runs nothing', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await click(window, cell(window, LISTED, '[run]'));
+        await window.shows('│ ! bun dev check');
+        expect(window.frame()).not.toContain('Received `bun dev check`');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test('a draft in the box stays, and the status line says why', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await window.type('half a thought');
+        await window.shows('› half a thought');
+        await click(window, cell(window, LISTED, '[run]'));
+        await window.shows('The prompt holds a draft · ctrl+c clears it');
+        expect(window.frame()).toContain('› half a thought');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  /**
+   * The press table (CHD-394 §1, the lead's rows): what each mouse
+   * sequence does, read after it by a click on the typescript box's
+   * [copy], which copies `x`, so a sequence that does nothing is seen.
+   */
+  const ROWS: readonly {
+    readonly row: string;
+    readonly play: (at: (word: string) => { x: number; y: number }) => string[];
+    readonly copies: readonly string[];
+  }[] = [
+    {
+      row: 'a plain click',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('[copy]').x, at('[copy]').y, 'up'),
+      ],
+      copies: ['bun dev check'],
+    },
+    {
+      row: 'a small drag inside the button',
+      play: (at) => {
+        const { x, y } = at('[copy]');
+
+        return [
+          left(x, y, 'down'),
+          left(x + 2, y, 'drag'),
+          left(x + 2, y, 'up'),
+        ];
+      },
+      copies: ['bun dev check'],
+    },
+    {
+      row: 'a release outside it',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('paragraph').x, at('paragraph').y, 'up'),
+      ],
+      copies: [],
+    },
+    {
+      row: 'a press on [copy] released on [run]',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('[run]').x, at('[run]').y, 'up'),
+      ],
+      copies: [],
+    },
+    {
+      row: 'a press on [run] released on [copy], after a press on [copy] let go elsewhere',
+      play: (at) => [
+        left(at('[copy]').x, at('[copy]').y, 'down'),
+        left(at('paragraph').x, at('paragraph').y, 'up'),
+        left(at('[run]').x, at('[run]').y, 'down'),
+        left(at('[copy]').x, at('[copy]').y, 'up'),
+      ],
+      copies: [],
+    },
+    {
+      row: 'a release delivered twice',
+      play: (at) => {
+        const { x, y } = at('[copy]');
+
+        return [left(x, y, 'down'), left(x, y, 'up'), left(x, y, 'up')];
+      },
+      copies: ['bun dev check'],
+    },
+    {
+      row: 'a selection drag from the code ending on the button',
+      play: (at) => {
+        const code = at('bun dev check │');
+        const button = at('[copy]');
+
+        return [
+          left(code.x, code.y, 'down'),
+          left(code.x + 4, code.y, 'drag'),
+          left(button.x + 2, button.y, 'drag'),
+          left(button.x + 2, button.y, 'up'),
+        ];
+      },
+      copies: [],
+    },
+    {
+      row: 'a wheel over the button',
+      play: (at) => [`\x1b[<65;${at('[copy]').x + 1};${at('[copy]').y + 1}M`],
+      copies: [],
+    },
+  ];
+
+  test('a click is a press and the first release after it on the same button: the press table', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+
+        // The listed sh box's words, and the prose and code beside it.
+        const at = (word: string) =>
+          word === 'paragraph'
+            ? cell(window, 'A paragraph after.', 'A paragraph')
+            : word === 'bun dev check │'
+              ? cell(window, '│ bun dev check', 'bun')
+              : cell(window, LISTED, word);
+        const sentinel = () => cell(window, '┌─ typescript', '[copy]');
+
+        for (const { row, play, copies: wanted } of ROWS) {
+          const before = copies.length;
+
+          for (const report of play(at)) {
+            await window.press(report);
+          }
+
+          await click(window, sentinel());
+          await until(`${row}: the sentinel's copy`, () =>
+            copies.slice(before).some(({ text }) => text === 'x'),
+          );
+          expect(
+            copies.slice(before).map(({ text }) => text),
+            row,
+          ).toStrictEqual([...wanted, 'x']);
+        }
+
+        expect(window.frame()).not.toContain('│ ! bun dev check');
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+});
+
+describe('CHD-394 U2 tester: button boundaries', () => {
+  for (const columns of [80, 120]) {
+    test(`quoted and streaming fences add no buttons beside closed nested boxes at ${columns} columns`, async () => {
+      const text =
+        '```bash\necho top\n```\n\n> ```sh\n> echo quoted\n> ```\n\n- nested\n\n  ```console\n  $ echo nested\n  output\n  ```\n\n```sh\necho streaming';
+      const screen = await draw(<Reply text={text} width={columns} />, {
+        columns,
+        rows: 40,
+      });
+
+      try {
+        const frame = stripAnsi(screen.frame());
+
+        expect(frame.match(/\[copy\]/g)).toHaveLength(2);
+        expect(frame.match(/\[run\]/g)).toHaveLength(1);
+        expect(frame).toContain('echo quoted');
+        expect(frame).toContain('echo streaming');
+        expect(frame).toContain('[copy]─[run]─┐');
+      } finally {
+        await screen.unmount();
+      }
+    });
+  }
+
+  test('one-cell width boundaries drop run before copy without overflowing the terminal', async () => {
+    for (const [columns, copy, run] of [
+      [21, true, true],
+      [20, true, false],
+      [15, true, false],
+      [14, false, false],
+    ] as const) {
+      const screen = await draw(
+        <Reply text={'```sh\nx\n```'} width={columns} />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        const frame = stripAnsi(screen.frame());
+
+        expect(frame.includes('[copy]')).toBe(copy);
+        expect(frame.includes('[run]')).toBe(run);
+        expect(frame).toContain('x');
+        expect(
+          frame.split('\n').every((line) => stringWidth(line) <= columns),
+        ).toBe(true);
+      } finally {
+        await screen.unmount();
+      }
+    }
+  });
+
+  test('a literal shorter fence stays open until the matching closer streams in', async () => {
+    let update: (text: string) => void = () => {};
+
+    const open = '````sh\necho first\n```\necho last';
+
+    function Stream() {
+      const [text, setText] = useState(open);
+
+      update = setText;
+
+      return <Reply text={text} width={80} />;
+    }
+
+    const screen = await draw(<Stream />, { columns: 80, rows: 24 });
+
+    try {
+      expect(stripAnsi(screen.frame())).not.toContain('[copy]');
+      update(open + '\n````');
+      await until('the closed box gains its buttons', async () => {
+        await screen.write('');
+
+        return stripAnsi(screen.frame()).includes('[copy]─[run]─┐');
+      });
+
+      expect(stripAnsi(screen.frame())).toContain('echo last');
+      expect(stripAnsi(screen.frame()).match(/\[copy\]/g)).toHaveLength(1);
+    } finally {
+      await screen.unmount();
+    }
+  });
+});
+
+describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
+  const command =
+    'bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt\n\necho done';
+  const button = (window: Window, marker: string, word: string) => {
+    const lines = stripAnsi(window.frame()).split('\n');
+    const y = lines.findIndex((line) => line.includes(marker));
+    const x = lines[y]?.indexOf(word) ?? -1;
+
+    expect(y).toBeGreaterThanOrEqual(0);
+    expect(x).toBeGreaterThanOrEqual(0);
+
+    return { x, y };
+  };
+
+  const finished = async (
+    window: Window,
+    state: () => AppState | undefined,
+  ) => {
+    await send(window, 'markdowncode');
+    await window.shows('A paragraph after.');
+    // The final result shrinks the followed reply and moves its buttons.
+    await until(
+      'the code reply final result is drawn',
+      () =>
+        state()?.transcript.turn.status === 'idle' &&
+        statusRow(window).includes('? for shortcuts'),
+    );
+  };
+
+  const large = '┌─ sh ───';
+  const nested = '┌─ sh ─[copy]';
+  const click = async (window: Window, at: { x: number; y: number }) => {
+    await window.press(left(at.x, at.y, 'down'));
+    await window.press(left(at.x, at.y, 'up'));
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a release in another box consumes the press, and bracket cells copy exact text at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+      let state: AppState | undefined;
+
+      return withWindow(
+        async (window) => {
+          await finished(window, () => state);
+
+          const a = button(window, large, '[copy]');
+          const b = button(window, nested, '[copy]');
+          const run = button(window, nested, '[run]');
+
+          await window.press(left(a.x, a.y, 'down'));
+          await window.press(left(b.x, b.y, 'up'));
+          await window.press(left(a.x, a.y, 'up'));
+          await window.press(left(run.x, run.y, 'down'));
+          await window.press(left(a.x, a.y, 'up'));
+          await click(window, { x: b.x + 5, y: b.y });
+          await until('the bracket click copies', () => copies.length >= 1);
+          await click(window, a);
+          await until('both valid copies settle', () => copies.length >= 2);
+          expect(copies.map(({ text }) => text)).toStrictEqual([
+            'bun dev check',
+            command,
+          ]);
+          expect(window.frame()).not.toContain('│ !');
+        },
+        {
+          columns,
+          rows,
+          copy,
+          onState: (all) => {
+            state = frontState(all);
+          },
+        },
+      );
+    });
+
+    test(`copy clears a selection, and run preserves an existing live draft at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+      let state: AppState | undefined;
+
+      return withWindow(
+        async (window) => {
+          await finished(window, () => state);
+          await dragOver(window, 'echo done');
+          expect(window.selected()).toBe('echo done');
+          await click(window, button(window, nested, '[copy]'));
+          await until('copy after selecting', () => copies.length === 1);
+          expect(window.selected()).toBe('');
+          expect(state?.selection?.kind ?? 'none').toBe('none');
+          await window.type('my draft');
+          await window.shows('› my draft');
+          await click(window, button(window, nested, '[run]'));
+          await window.shows('The prompt holds a draft · ctrl+c clears it');
+          expect(state?.draft).toBe('my draft');
+          expect(state?.bash).toBe(false);
+          expect(copies.map(({ text }) => text)).toStrictEqual([
+            'bun dev check',
+          ]);
+        },
+        {
+          columns,
+          rows,
+          copy,
+          copyOnSelect: false,
+          onState: (all) => {
+            state = frontState(all);
+          },
+        },
+      );
+    });
+
+    test(`multiline run fills bash without executing until Enter at ${columns} columns`, () => {
+      const ran: string[] = [];
+      let state: AppState | undefined;
+
+      return withWindow(
+        async (window) => {
+          await finished(window, () => state);
+          await click(window, button(window, large, '[run]'));
+          await until(
+            'the multiline command fills bash',
+            () => state?.bash === true && state.draft === command,
+          );
+          expect(ran).toStrictEqual([]);
+          await window.press('\r');
+          await until('Enter starts the exact command', () => ran.length === 1);
+          expect(ran).toStrictEqual([command]);
+        },
+        {
+          columns,
+          rows,
+          onState: (all) => {
+            state = frontState(all);
+          },
+          shell: (text) => {
+            ran.push(text);
+
+            return { stop() {}, ended: Promise.resolve({ code: 0 }) };
+          },
+        },
+      );
+    });
+  }
+});
+
+describe("a picked code box's look (CHD-394)", () => {
+  test('its border, label and buttons are in the accent colour, the buttons bold, and the pick drawn again only where it changed', async () => {
+    const level = chalk.level;
+    const refs: BlockRef[] = [];
+    const listeners = new Set<() => void>();
+    let pick: BlockRef | undefined;
+    const actions: CodeActions = {
+      copy: () => {},
+      prompt: () => {},
+      pressed: () => {},
+      released: () => false,
+      add: (block) => {
+        refs.push(block.ref);
+
+        return () => {};
+      },
+      picked: () => pick,
+      onPick: (listener) => {
+        listeners.add(listener);
+
+        return () => listeners.delete(listener);
+      },
+    };
+    const accent = '38;2;71;231;165';
+
+    chalk.level = 3;
+
+    const drawn = await draw(
+      <Colours.Provider value={PALETTES.dark}>
+        <CodeBlockActions.Provider value={actions}>
+          <Reply text={'```sh\nls\n```\n\n```ts\nx\n```'} width={80} />
+        </CodeBlockActions.Provider>
+      </Colours.Provider>,
+      { columns: 80, rows: 12 },
+    );
+    const row = (marker: string) =>
+      drawn
+        .frame()
+        .split('\n')
+        .find((line) => stripAnsi(line).includes(marker)) ?? '';
+
+    try {
+      expect(row('┌─ sh')).not.toContain(accent);
+
+      pick = refs[0];
+
+      for (const listener of listeners) {
+        listener();
+      }
+
+      await until('the accent', () => row('┌─ sh').includes(accent));
+
+      expect(row('┌─ sh')).toContain('\x1b[1m');
+      expect(row('┌─ ts')).not.toContain(accent);
+    } finally {
+      chalk.level = level;
+
       await drawn.unmount();
     }
   });

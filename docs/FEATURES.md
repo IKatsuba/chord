@@ -30,6 +30,7 @@ first prompt to commit without opening `claude`.
 | Start a session in a directory            | `claude`                            | ACP `session/new`                            |
 | Send a prompt, stream the reply           | Enter                               | ACP `session/prompt`, `agent_message_chunk`  |
 | Markdown in replies                       | rendered                            | client (marked + a terminal renderer)        |
+| Copy a code block, or put its command in the prompt | `[copy]` / `[run]` on the border; ctrl+x b to pick by key | client: `sh` / `bash` commands go into `!` mode; Enter runs them |
 | Thinking, collapsed                       | `∴ Thinking…`, ctrl+o expands       | ACP `agent_thought_chunk`                    |
 | Tool calls with status                    | `⏺ Read(file)` … `⎿`                | ACP `tool_call`, `tool_call_update`          |
 | Edits as diffs                            | coloured diff under the call        | ACP `tool_call.content` (`type: "diff"`)     |

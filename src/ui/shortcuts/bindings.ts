@@ -11,8 +11,9 @@ import type { KeyPress } from './state.ts';
 
 /**
  * Where an action applies, by Claude Code's names for its contexts, and
- * chord's `Agents` for the list of a session's agents and `Selection` for a
- * selection shown, which it has not.
+ * chord's `Agents` for the list of a session's agents, `Selection` for a
+ * selection shown and `CodeBlock` for a code block picked, which it has
+ * not.
  */
 export const CONTEXTS = [
   'Global',
@@ -25,6 +26,7 @@ export const CONTEXTS = [
   'Scroll',
   'Agents',
   'Selection',
+  'CodeBlock',
 ] as const;
 
 export type Context = (typeof CONTEXTS)[number];
@@ -78,6 +80,14 @@ export const ACTIONS = {
   // The list of the session's agents under the prompt, which Claude Code
   // does not have: x closes the child picked in it.
   'agents:close': { context: 'Agents', keys: ['x'] },
+  // A code block picked through the leader, which Claude Code does not
+  // have: copy it, or put its command in the prompt (CHD-394).
+  'codeBlock:pick': { context: 'Global', keys: ['ctrl+x b'] },
+  'codeBlock:copy': { context: 'CodeBlock', keys: ['c'] },
+  'codeBlock:prompt': { context: 'CodeBlock', keys: ['r'] },
+  'codeBlock:previous': { context: 'CodeBlock', keys: ['up'] },
+  'codeBlock:next': { context: 'CodeBlock', keys: ['down'] },
+  'codeBlock:cancel': { context: 'CodeBlock', keys: ['escape'] },
   'select:cancel': { context: 'Select', keys: ['escape'] },
   'select:toggleScope': { context: 'Select', keys: ['ctrl+a'] },
   // Terminal.app keeps pgup, pgdn, home and end for its own scrollback and

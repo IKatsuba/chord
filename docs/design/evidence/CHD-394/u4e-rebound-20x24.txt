@@ -1,0 +1,24 @@
+   │ ord-qa -p >  │
+   │ /tmp/screen. │
+   │ txt          │
+   │              │
+   │ echo done    │
+   └──────────────┘
+
+   - a loose item
+
+   - a loose item
+     with a box:
+
+     ┌─ sh ───────┐
+     │ bun dev ch │
+     │ eck        │
+     └────────────┘
+
+   A paragraph
+   after.
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+  y copy

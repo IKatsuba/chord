@@ -154,6 +154,9 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'agents_leave',
       'background_up',
       'background_down',
+      // From one picked code block to the next (CHD-394).
+      'code_block_up',
+      'code_block_down',
     ],
     presses: ['↑', '↓', 'j', 'k', 'esc'],
     prompt: ['↑', '↓'],
@@ -341,6 +344,22 @@ export const SHORTCUTS: readonly Shortcut[] = [
     presses: ['ctrl + x', 'a'],
     actions: ['session:attention'],
   },
+  // A code block picked through the leader, then copied or put in the
+  // prompt; ↑ ↓ move between blocks and esc ends it (CHD-394).
+  {
+    key: 'ctrl + x b',
+    does: 'to pick a code block',
+    commands: ['key_pending', 'pick_code_block'],
+    presses: ['ctrl + x', 'b'],
+    actions: ['codeBlock:pick'],
+  },
+  {
+    key: 'c r',
+    does: 'to copy or put in the prompt',
+    commands: ['copy_code_block', 'prompt_code_block'],
+    presses: ['c', 'r'],
+    actions: ['codeBlock:copy', 'codeBlock:prompt'],
+  },
   {
     key: '1–9',
     does: 'to pick a choice',
@@ -386,6 +405,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'close_mcp',
       'close_teams_picker',
       'close_notice',
+      'end_code_pick',
     ],
     presses: ['esc', '←'],
     actions: ['select:cancel', 'help:dismiss'],

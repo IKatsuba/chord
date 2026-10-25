@@ -1,12 +1,14 @@
 import { createContext, useContext, useMemo } from 'react';
-import type { RGBA } from '@opentui/core';
+import type { Renderable, RGBA } from '@opentui/core';
 import {
   type Action,
   DEFAULT_KEYMAP,
   hintKey,
   type Keymap,
 } from '../shortcuts/bindings.ts';
+import type { BlockRef } from '../transcript/code_pick.ts';
 import { highlighting } from '../transcript/highlight.ts';
+import type { Soft } from '../transcript/markdown.ts';
 import { type Palette, paletteOf } from '../theme/theme.ts';
 import { capital } from '../shortcuts/state.ts';
 import { colour } from '../theme/text.ts';
@@ -48,6 +50,59 @@ export function useSelectable(): {
     [selection],
   );
 }
+
+/**
+ * What a code box's buttons do, handed down to every reply (CHD-394): its
+ * text copied, or its command put into the prompt in bash mode.
+ */
+export interface CodeActions {
+  copy(text: string): void;
+  prompt(command: string): void;
+  /** The left button went down on the button `target`. */
+  pressed(target: unknown): void;
+  /**
+   * The first release since that press, which it takes: whether it was on
+   * `target`. Any later release, a second delivery of the same one too,
+   * finds no press (CHD-394 §1).
+   */
+  released(target: unknown): boolean;
+  /**
+   * A code block drawn, there for `ctrl+x b` to pick until the function
+   * it gives back says it went (CHD-394).
+   */
+  add(block: DrawnBlock): () => void;
+  /** The block picked through `ctrl+x b`, drawn in the accent colour. */
+  picked(): BlockRef | undefined;
+  /** Hears each change of `picked`, until the function it gives back. */
+  onPick(listener: () => void): () => void;
+}
+
+/** A code block drawn in the transcript, for `ctrl+x b` to find (CHD-394). */
+export interface DrawnBlock {
+  readonly ref: BlockRef;
+  /** What `c` copies. */
+  readonly copy: string;
+  /** What `r` puts into the prompt, on an `sh` or `bash` block. */
+  readonly run?: string;
+  /** Its box, or the quote it is drawn in, as laid out now. */
+  readonly node: () => Renderable | undefined;
+}
+
+/**
+ * The transcript entry being drawn, where its code blocks are listed from
+ * the transcript (`listedText`); none for any other drawing (CHD-394).
+ */
+export const ListedEntry = createContext<number | undefined>(undefined);
+
+/** The ids a reply's code boxes and quotes are drawn with, by block. */
+export const CodeIds = createContext<ReadonlyMap<Soft, string> | undefined>(
+  undefined,
+);
+
+/** The window's code box actions; none where nothing answers a button. */
+export const CodeBlockActions = createContext<CodeActions | undefined>(
+  undefined,
+);
 
 /**
  * Which key does what, handed down as the palette is, so every hint that

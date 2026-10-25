@@ -151,6 +151,7 @@ Inside the window:
 | `shift+tab`       | cycle the permission mode                    |
 | `ctrl+o`          | expand Read output and subagents             |
 | `ctrl+x a`        | go to what waits on you                       |
+| `ctrl+x b`        | pick code; `c` copies, `r` puts in the prompt |
 | `esc`             | interrupt the turn                           |
 
 Settings live in `~/.config/chord/settings.json` and the project's

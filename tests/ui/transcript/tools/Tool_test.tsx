@@ -14,7 +14,13 @@ import type {
   ToolCall,
   TurnState,
 } from '../../../../src/session/transcript/types.ts';
-import { ChordServerName } from '../../../../src/ui/app/context.ts';
+import {
+  ChordServerName,
+  type CodeActions,
+  CodeBlockActions,
+  type DrawnBlock,
+} from '../../../../src/ui/app/context.ts';
+import { MessageBody } from '../../../../src/ui/transcript/tools/Tool.tsx';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import {
   asked,
@@ -1286,4 +1292,67 @@ describe('CHD-493 U4 tester: saved list_sessions answers', () => {
       }
     }
   }
+});
+
+describe("a message's code blocks are told to the window, a quoted one too (CHD-394)", () => {
+  /** The window's code block actions, keeping each block told. */
+  const told = () => {
+    const blocks: DrawnBlock[] = [];
+    const actions: CodeActions = {
+      copy: () => {},
+      prompt: () => {},
+      pressed: () => {},
+      released: () => false,
+      picked: () => undefined,
+      onPick: () => () => {},
+      add: (block) => {
+        blocks.push(block);
+
+        return () => {
+          blocks.splice(blocks.indexOf(block), 1);
+        };
+      },
+    };
+
+    return { blocks, actions };
+  };
+
+  test('a quoted sh block in a message is found where it is drawn, and copies and runs as written', async () => {
+    const { blocks, actions } = told();
+    const drawn = await draw(
+      <CodeBlockActions.Provider value={actions}>
+        <MessageBody
+          text={'Try this:\n\n> ```sh\n> $ bun test\n> ```'}
+          width={80}
+        />
+      </CodeBlockActions.Provider>,
+      { columns: 80, rows: 12 },
+    );
+
+    try {
+      expect(blocks.map(({ copy, run }) => [copy, run])).toStrictEqual([
+        ['$ bun test', 'bun test'],
+      ]);
+      // The quote it is drawn in, a text of the message's own.
+      expect(blocks[0]!.node()).toBeDefined();
+    } finally {
+      await drawn.unmount();
+    }
+  });
+
+  test('a block whose fence is still open is told only once it closes', async () => {
+    const { blocks, actions } = told();
+    const drawn = await draw(
+      <CodeBlockActions.Provider value={actions}>
+        <MessageBody text={'```sh\nls\n```\n\n```sh\nmake'} width={80} />
+      </CodeBlockActions.Provider>,
+      { columns: 80, rows: 12 },
+    );
+
+    try {
+      expect(blocks.map(({ copy }) => copy)).toStrictEqual(['ls']);
+    } finally {
+      await drawn.unmount();
+    }
+  });
 });

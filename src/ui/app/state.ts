@@ -4,6 +4,11 @@
  * own folder's `state.ts`; here they are put together into a session's state
  * and the window's, with what more than one feature writes.
  */
+import {
+  type BlockRef,
+  type CodePickAction,
+  reduceCodePick,
+} from '../transcript/code_pick.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
 import {
   type AgentModels,
@@ -252,6 +257,18 @@ export interface WindowState
    * number among the notes, said for a while (CHD-378).
    */
   readonly steerRefused?: number;
+  /**
+   * The note of the last code block put into the prompt over a draft, which
+   * stayed, by its number among the notes, said for a while (CHD-394).
+   */
+  readonly draftHeld?: number;
+  /** The code block picked through `ctrl+x b`, while one is (CHD-394). */
+  readonly codePick?: BlockRef;
+  /**
+   * The note of the last `ctrl+x b` that found no code block, by its
+   * number among the notes, said for a while (CHD-394).
+   */
+  readonly noCodeBlock?: number;
   /** The notes said so far, so each note's time is its own. */
   readonly notes?: number;
 }
@@ -263,6 +280,11 @@ export interface Copied {
   readonly result: CopyResult;
   /** Release copied it, rather than the copy key. */
   readonly auto: boolean;
+  /**
+   * A code block's copy (CHD-394): its note goes in time whatever it says,
+   * as no selection is left to try it again on.
+   */
+  readonly block?: true;
 }
 
 /** The window as the session in front fills it: what is drawn, and keys read. */
@@ -276,6 +298,7 @@ export type AppAction =
   | ShortcutsAction
   | BackgroundAction
   | DialogsAction
+  | CodePickAction
   /** ctrl+c asks for a second press. */
   | { readonly type: 'quit_armed' }
   | { readonly type: 'quit_disarmed' }
@@ -334,6 +357,21 @@ export type AppAction =
     }
   /** The note `id` has been said long enough. */
   | { readonly type: 'copied_gone'; readonly id: number }
+  /**
+   * A code block's copy started: a selection's copy it takes over says
+   * nothing now, and the selection stays to copy again (CHD-394).
+   */
+  | { readonly type: 'block_copy_started' }
+  /** The latest code block's copy came back. */
+  | { readonly type: 'block_copy_noted'; readonly result: CopyResult }
+  /** `ctrl+x b` found no code block in the transcript (CHD-394). */
+  | { readonly type: 'no_code_block' }
+  /** The no-block note `id` has been said long enough. */
+  | { readonly type: 'no_code_block_gone'; readonly id: number }
+  /** A code block put into the prompt found a draft there, which stays. */
+  | { readonly type: 'draft_held' }
+  /** The draft note `id` has been said long enough. */
+  | { readonly type: 'draft_held_gone'; readonly id: number }
   /** Tab on an agent that takes no steering: nothing went (CHD-378). */
   | { readonly type: 'steer_refused' }
   /** The steering note `id` has been said long enough. */
@@ -378,21 +416,20 @@ export const COPIED_NOTE_MS = 3000;
 
 /**
  * The selection gone, and with it a failed copy's note, which says how to
- * try again on a selection there is no more. One gone mid-drag, which no
+ * try again on a selection there is no more; a code block's failed note is
+ * no selection's, and goes in time (CHD-394). One gone mid-drag, which no
  * release will end, lets go of the view as a release would.
  */
 function withoutSelection(state: AppState): AppState {
-  if (
-    state.selection === undefined &&
-    state.copied?.result.kind !== 'failed' &&
-    !state.scroll.held
-  ) {
+  const retry = state.copied?.result.kind === 'failed' && !state.copied.block;
+
+  if (state.selection === undefined && !retry && !state.scroll.held) {
     return state;
   }
 
   const { selection, ...rest } = state;
-  const { copied, ...uncopied } = rest;
-  const left = copied?.result.kind === 'failed' ? uncopied : rest;
+  const { copied: _, ...uncopied } = rest;
+  const left = retry ? uncopied : rest;
 
   if (!left.scroll.held) {
     return left;
@@ -908,6 +945,64 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       }
 
       const { copied: _, ...rest } = state;
+
+      return rest;
+    }
+    case 'block_copy_started':
+      return state.selection?.kind === 'copying'
+        ? { ...state, selection: { kind: 'shown' } }
+        : state;
+    case 'block_copy_noted': {
+      const id = (state.notes ?? 0) + 1;
+
+      return {
+        ...state,
+        copied: { id, result: action.result, auto: false, block: true },
+        notes: id,
+      };
+    }
+    case 'code_pick_started':
+    case 'code_pick_moved':
+    case 'code_pick_ended': {
+      const codePick = reduceCodePick(state.codePick, action);
+
+      if (codePick === state.codePick) {
+        return state;
+      }
+
+      if (codePick === undefined) {
+        const { codePick: _, ...rest } = state;
+
+        return rest;
+      }
+
+      return { ...state, codePick };
+    }
+    case 'no_code_block': {
+      const id = (state.notes ?? 0) + 1;
+
+      return { ...state, noCodeBlock: id, notes: id };
+    }
+    case 'no_code_block_gone': {
+      if (state.noCodeBlock !== action.id) {
+        return state;
+      }
+
+      const { noCodeBlock: _, ...rest } = state;
+
+      return rest;
+    }
+    case 'draft_held': {
+      const id = (state.notes ?? 0) + 1;
+
+      return { ...state, draftHeld: id, notes: id };
+    }
+    case 'draft_held_gone': {
+      if (state.draftHeld !== action.id) {
+        return state;
+      }
+
+      const { draftHeld: _, ...rest } = state;
 
       return rest;
     }
@@ -1678,6 +1773,20 @@ function boundCommand(
     return session;
   }
 
+  // A code block picked takes its own keys; any other ends the pick on its
+  // way to what it does (CHD-394).
+  if (state.codePick !== undefined) {
+    const picked = codePickCommand(on);
+
+    if (picked !== undefined) {
+      return picked;
+    }
+  }
+
+  if (on('codeBlock:pick')) {
+    return 'pick_code_block';
+  }
+
   // The list of agents takes ↑ ↓, j k, Enter, Esc and `x`; every other
   // letter does nothing, so a stray key never lands in a child's prompt. A
   // permission or form of the agent picked waits until Enter or Esc goes
@@ -2061,6 +2170,23 @@ function agentsCommand(
   }
 
   return key.return || key.escape ? 'agents_leave' : undefined;
+}
+
+/** What a key means while a code block is picked (CHD-394). */
+function codePickCommand(
+  on: (action: Action) => boolean,
+): KeyCommand | undefined {
+  return on('codeBlock:copy')
+    ? 'copy_code_block'
+    : on('codeBlock:prompt')
+      ? 'prompt_code_block'
+      : on('codeBlock:previous')
+        ? 'code_block_up'
+        : on('codeBlock:next')
+          ? 'code_block_down'
+          : on('codeBlock:cancel')
+            ? 'end_code_pick'
+            : undefined;
 }
 
 /** What a key bound to `session:attention` asks for. */

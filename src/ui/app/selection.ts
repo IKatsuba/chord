@@ -145,6 +145,17 @@ function oneLine(error: unknown): string {
   return message.replace(/\s+/g, ' ').trim() || NO_CLIPBOARD;
 }
 
+/**
+ * What the status line says of a code block's copy: a selection's note,
+ * but a failure without the copy key, which has no selection to copy
+ * again (docs/design/CHD-394.md §2).
+ */
+export function blockCopyNote(result: CopyResult): string {
+  return result.kind === 'failed'
+    ? `could not copy: ${result.reason}`
+    : copyNote(result);
+}
+
 /** What the status line says of a copy; a failure in the error tone. */
 export function copyNote(result: CopyResult): string {
   switch (result.kind) {

@@ -3,6 +3,8 @@
  * the keys that quit, clear and edit.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
@@ -18,8 +20,11 @@ import {
   CTRL_C,
   CTRL_D,
   CTRL_G,
+  CTRL_X,
   DOWN,
+  END,
   ESC,
+  leader,
   promptRow,
   quitAll,
   ready,
@@ -39,6 +44,7 @@ import { openSession } from '../../../src/session/session.ts';
 import manifest from '../../../package.json' with { type: 'json' };
 
 import { OSC9, writes } from './app_window.tsx';
+import { clipboard } from './selecting.ts';
 
 const VERSION = manifest.version;
 
@@ -646,8 +652,9 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
   test('one the agent leaves unanswered shows in the queue as going into the turn, Esc leaves it, and refused it goes as the next turn', () =>
     withWindow(
       async (window) => {
-        await send(window, 'slow');
-        await window.shows('esc to interrupt');
+        // Held until the cancel, however slow the machine (CHD-526).
+        await send(window, 'texttillsteeredheld');
+        await window.shows('This reply came in chunks.');
         await draft(window, 'Use the second parser instead');
         await window.press(TAB);
         await window.shows(
@@ -661,8 +668,7 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
           'the refused steer to go as the next turn',
           () => !window.frame().includes('into the running turn'),
         );
-        await window.shows('esc to interrupt');
-        expect(window.frame()).toContain('› Use the second parser instead');
+        await window.shows('› Use the second parser instead');
         await window.press(ESC);
       },
       {
@@ -1045,8 +1051,9 @@ describe('CHD-378 U3 tester: steering through the window', () => {
       test(`a rebound steer leaves an Enter prompt queued and enters history on ${adapter} at ${columns} columns`, () =>
         withWindow(
           async (window) => {
-            await send(window, 'slow');
-            await window.shows('esc to interrupt');
+            // Keep the turn alive through the history and Esc assertions (CHD-526).
+            await send(window, 'texttillsteeredheld');
+            await window.shows('This reply came in chunks.');
             await put(window, 'Next turn only.');
             await window.press('\r');
             await window.shows('› Next turn only.');
@@ -1163,4 +1170,454 @@ describe('CHD-378 U3 tester: steering through the window', () => {
       expect(statusRow(window)).toContain('enter queues it');
       expect(promptRow(window)).toContain('Keep this draft');
     }));
+});
+
+describe('ctrl+x b picks a code block, and its keys copy it or put it in the prompt (CHD-394)', () => {
+  const HINT = '↑ ↓ another block · c copy · r put in the prompt · esc done';
+  const LONG =
+    'bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt\n\necho done';
+
+  test('the newest block on screen is picked, ↑ moves the pick, and c copies the block picked', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await window.press(CTRL_X);
+
+        expect(statusRow(window)).toContain('b a code block');
+        await window.press('b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        // ↑ is the pick's, not history's.
+        await window.press(UP);
+        expect(promptRow(window)).not.toContain('markdowncode');
+        await window.press('c');
+        await until('the copy', () => copies.length === 1);
+
+        expect(copies[0]!.text).toStrictEqual(LONG);
+        await window.shows(`copied ${LONG.length} chars to clipboard`);
+        expect(promptRow(window)).not.toContain('c');
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
+  test('r puts the picked command into the prompt in bash mode, and does nothing on a block with no [run]', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('r');
+        await window.shows('│ ! bun dev check');
+
+        // The typescript box, first on screen, has no [run].
+        await window.press('\x15');
+        await window.press('\x7f');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press(UP);
+        await window.press(UP);
+        await until('the typescript box picked', () =>
+          statusRow(window).includes('↑ ↓ another block · c copy · esc done'),
+        );
+        await window.press('r');
+        expect(statusRow(window)).toContain(
+          '↑ ↓ another block · c copy · esc done',
+        );
+        expect(promptRow(window)).not.toContain('!');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test("the pick's line stands alone, before bash mode and a mode other than the default", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('r');
+        await window.shows('│ ! bun dev check');
+        await until('bash mode', () =>
+          statusRow(window).includes('! for bash mode'),
+        );
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        expect(statusRow(window)).not.toContain('bash mode');
+        await window.press(ESC);
+        await window.press('\x15');
+        await window.press('\x7f');
+        await window.press('\x1b[Z');
+        await until('accept edits', () =>
+          statusRow(window).includes('⏵⏵ accept edits on'),
+        );
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        expect(statusRow(window)).not.toContain('accept edits');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test('in a window too narrow for its first item, the pick keeps the whole items after it that fit', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('   after.');
+        await leader(window, 'b');
+        // 16 cells: `ctrl + p ctrl + n block` is too wide, `y copy` fits.
+        await until('the pick', () => statusRow(window).includes('y copy'));
+
+        expect(statusRow(window)).not.toContain('ctrl + p');
+      },
+      {
+        columns: 20,
+        rows: 40,
+        keybindings: JSON.stringify({
+          bindings: [
+            {
+              context: 'CodeBlock',
+              bindings: {
+                up: null,
+                'ctrl+p': 'codeBlock:previous',
+                down: null,
+                'ctrl+n': 'codeBlock:next',
+                c: null,
+                y: 'codeBlock:copy',
+                r: null,
+                p: 'codeBlock:prompt',
+                escape: null,
+                'ctrl+q': 'codeBlock:cancel',
+              },
+            },
+          ],
+        }),
+      },
+    ));
+
+  test('esc ends the pick with nothing done, and any other key ends it and does its own', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press(ESC);
+        await until('the pick to end', () => !statusRow(window).includes(HINT));
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('x');
+        await window.shows('› x');
+        expect(statusRow(window)).not.toContain(HINT);
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test("picked again at once after a copy, the line says the pick's keys, not the copy's note", () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('c');
+        await window.shows('copied 13 chars to clipboard');
+        await leader(window, 'b');
+        // Within the copy note's 3 s: the frame after b says the pick's keys.
+        await until(
+          'the leader line to go',
+          () => !statusRow(window).includes('ctrl+x …'),
+        );
+
+        expect(statusRow(window)).toContain(HINT);
+        expect(statusRow(window)).not.toContain('copied');
+        expect(copies).toHaveLength(1);
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
+  test("the picked box's buttons are bold until the pick ends, where the window draws with no colour", () => {
+    // A row as a terminal would be sent it, its colours written.
+    const row = (window: Window, marker: string) => {
+      const level = chalk.level;
+
+      chalk.level = 3;
+
+      try {
+        return (
+          window
+            .frame()
+            .split('\n')
+            .find((line) => stripAnsi(line).includes(marker)) ?? ''
+        );
+      } finally {
+        chalk.level = level;
+      }
+    };
+
+    const LISTED = '┌─ sh ─[copy]─[run]─┐';
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        // Its buttons bold, which no border is; with no colour, its border
+        // the terminal's own foreground, not the grey of every other box.
+        expect(row(window, LISTED)).toContain('\x1b[1m[copy]');
+        expect(row(window, LISTED)).not.toContain('38;5;244');
+        expect(row(window, '┌─ typescript')).toContain('38;5;244');
+        expect(row(window, '┌─ typescript')).not.toContain('\x1b[1m');
+        await window.press(ESC);
+        await until(
+          'the bold to go',
+          () => !row(window, LISTED).includes('\x1b[1m'),
+        );
+      },
+      { columns: 80, rows: 40 },
+    );
+  });
+
+  test('↑ to a block out of view scrolls the transcript to show it', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdown');
+        await window.shows('built $bin');
+        await leader(window, 'b');
+        await until('the pick', () =>
+          statusRow(window).includes('another block'),
+        );
+        // The quoted ts block, the reply's first, is scrolled off at 24 rows.
+        expect(window.frame()).not.toContain('┌ ts');
+
+        for (let up = 0; up < 3; up++) {
+          await window.press(UP);
+        }
+
+        await window.shows('┌ ts');
+        expect(window.frame()).toContain('await session.close();');
+        // Down to the ts box: its border, label and [copy] are the view's
+        // top row, the whole box in view.
+        await window.press(DOWN);
+        await until('the ts box on top', () =>
+          (window.frame().split('\n')[0] ?? '').includes('┌─ ts'),
+        );
+        expect(window.frame().split('\n')[0]).toContain('[copy]');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test("in a long history, ctrl+x b reaches the newest code past the mounted tail, and ↑ crosses into it from the tail's", () => {
+    const { copies, copy } = clipboard();
+    const BUILT =
+      'deno task compile --all\nfor bin in dist/*/chord; do echo "built $bin"; done';
+    // Enough turns of plain text that the code reply leaves the tail of
+    // entries mounted while following (TAIL_ENTRIES).
+    // Each turn ends on a reply of its own, which `verbatim` gives back as
+    // sent, so the next goes only once that one is drawn: 22 turns are 44
+    // entries after the code reply's two, past the 40 of the tail.
+    const plain = async (window: Window) => {
+      for (let turn = 0; turn < 22; turn++) {
+        await send(window, `verbatim turn ${turn}`);
+        await window.shows(`"turn ${turn}"`);
+        await until(
+          `turn ${turn} to end`,
+          () => !window.frame().includes('esc to interrupt'),
+        );
+      }
+    };
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdown');
+        await window.shows('built $bin');
+        await plain(window);
+        expect(window.frame()).not.toContain('[copy]');
+
+        // No code in the mounted tail: the transcript's newest is picked,
+        // mounted and shown.
+        await leader(window, 'b');
+        await window.shows('┌─ sh ───');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('c');
+        await until('the copy', () => copies.length === 1);
+        expect(copies[0]!.text).toStrictEqual(BUILT);
+
+        // A code reply in the tail; ↑ from it goes back past the tail.
+        await window.press(END);
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        for (let up = 0; up < 3; up++) {
+          await window.press(UP);
+        }
+
+        await window.press('c');
+        await until('the second copy', () => copies.length === 2);
+        expect(copies[1]!.text).toStrictEqual(BUILT);
+      },
+      { columns: 80, rows: 24, copy },
+    );
+  });
+
+  test('with no code block in the transcript, ctrl+x b says so', () =>
+    withWindow(async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await leader(window, 'b');
+      await until('the note', () =>
+        statusRow(window).includes('No code block to pick'),
+      );
+    }));
+});
+
+describe('CHD-394 U4 tester: rebound keys and tall picks', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`rebound actions own the pick, preserve a typed draft and release keys afterwards at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          await window.type('kept draft');
+          await window.shows('› kept draft');
+          await leader(window, 'k');
+          await window.shows(
+            columns === 80
+              ? 'y copy · p prompt · ctrl + q done'
+              : 'y copy · p put in the prompt · ctrl + q done',
+          );
+          await window.press('\x10');
+          await window.press('\x0e');
+          await window.press('y');
+          await until('rebound copy', () => copies.length === 1);
+          expect(copies[0]?.text).toBe('bun dev check');
+          expect(promptRow(window)).toContain('kept draft');
+          await leader(window, 'k');
+          await window.press('p');
+          await window.shows('The prompt holds a draft · ctrl+c clears it');
+          expect(promptRow(window)).toContain('kept draft');
+          await leader(window, 'k');
+          await window.press('\x11');
+          await until(
+            'the rebound cancel ends picking',
+            () => !statusRow(window).includes('y copy'),
+          );
+          await window.type('z');
+          await window.shows('› kept draftz');
+        },
+        {
+          columns,
+          rows,
+          copy,
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'Global',
+                bindings: { 'ctrl+x b': null, 'ctrl+x k': 'codeBlock:pick' },
+              },
+              {
+                context: 'CodeBlock',
+                bindings: {
+                  c: null,
+                  y: 'codeBlock:copy',
+                  r: null,
+                  p: 'codeBlock:prompt',
+                  up: null,
+                  'ctrl+p': 'codeBlock:previous',
+                  down: null,
+                  'ctrl+n': 'codeBlock:next',
+                  escape: null,
+                  'ctrl+q': 'codeBlock:cancel',
+                },
+              },
+            ],
+          }),
+        },
+      );
+    });
+
+    test(`a taller-than-view box lands its top border on top and copies every hidden line at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+      const body = Array.from(
+        { length: 50 },
+        (_, index) => `printf tall-line-${index}`,
+      ).join('\n');
+
+      return withWindow(
+        async (window) => {
+          await window.paste('/echo ```sh\n' + body + '\n```');
+          await window.press('\r');
+          await window.shows('printf tall-line-49');
+          await until(
+            'the echoed code turn ends',
+            () => !statusRow(window).includes('esc to interrupt'),
+          );
+          await leader(window, 'b');
+          await until('the tall box top is shown', () =>
+            (window.frame().split('\n')[0] ?? '').includes('┌─ sh'),
+          );
+          expect(window.frame()).toContain('printf tall-line-0');
+          expect(window.frame()).not.toContain('printf tall-line-49');
+          await window.press('c');
+          await until('all hidden lines copied', () => copies.length === 1);
+          expect(copies[0]?.text).toBe(body);
+        },
+        { columns, rows, copy },
+      );
+    });
+  }
+});
+
+describe('CHD-394 U4 tester: unbound pick fallback', () => {
+  for (const columns of [80, 120]) {
+    test(`with every pick action unbound the neutral line overrides bash and a letter ends picking at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          await window.type('!echo kept');
+          await window.shows('│ ! echo kept');
+          await leader(window, 'b');
+          await window.shows('picking a code block');
+          expect(statusRow(window)).not.toContain('bash mode');
+          await window.type('z');
+          await window.shows('│ ! echo keptz');
+          expect(statusRow(window)).not.toContain('picking a code block');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'CodeBlock',
+                bindings: {
+                  up: null,
+                  down: null,
+                  c: null,
+                  r: null,
+                  escape: null,
+                },
+              },
+            ],
+          }),
+        },
+      ));
+  }
 });

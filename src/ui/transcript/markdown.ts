@@ -8,7 +8,7 @@ import { render, type RenderOptions, type Theme } from 'markdansi';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
-import { fenceLanguage, highlightLines } from './highlight.ts';
+import { brush, fenceLanguage, highlightLines, PAINT } from './highlight.ts';
 import { type Palette, PALETTES, PLAIN } from '../theme/theme.ts';
 
 /**
@@ -93,13 +93,132 @@ export interface Code {
   readonly code: string;
   /**
    * Cells the box takes: its widest line beside the borders and padding, as
-   * wide as the label needs for OpenTUI to draw it, and no wider than `width`.
+   * wide as the label needs for OpenTUI to draw it, and as its buttons need
+   * beside the label, and no wider than `width`.
    */
   readonly width: number;
+  /**
+   * The buttons on its top border, right of the label: `copy` on every
+   * closed block, `run` too on an `sh` or `bash` one; none while its fence
+   * is open, its text not final, and only those its `width` holds
+   * (docs/design/CHD-394.md §1).
+   */
+  readonly buttons: readonly Button[];
+  /** What its `[copy]` takes: its `CodeBlock`'s `text`. */
+  readonly copy: string;
+  /** What its `[run]` puts into the prompt, on an `sh` or `bash` block. */
+  readonly run?: string;
 }
+
+/** A code box's button, drawn as its bracketed word. */
+export type Button = 'copy' | 'run';
 
 /** Cells a quote's bar takes: the bar and a space. */
 export const QUOTE_INSET = 2;
+
+/**
+ * A code block of a reply as the transcript draws it, for a button or a key
+ * to find and act on (CHD-394).
+ */
+export interface CodeBlock {
+  /** Its place among the reply's code blocks, from 0, in the order drawn. */
+  readonly index: number;
+  /** The line of the reply's text its block starts on, from 0. */
+  readonly line: number;
+  /** The fence's language, its first word, as the box's label; empty for none. */
+  readonly label: string;
+  /**
+   * The code as written, unhighlighted, its lines joined with newlines and
+   * none after the last: what a copy of it takes (docs/design/CHD-394.md §2).
+   */
+  readonly text: string;
+  /**
+   * Labelled `sh` or `bash`, the blocks with a `[run]` button; a
+   * `console` block mixes commands with their output, and it and an
+   * unlabelled one get `[copy]` only (the owner, 2026-10-25).
+   */
+  readonly runnable: boolean;
+  /**
+   * In a quote, drawn into the quote's text beside its bar, where every
+   * other block is a box of its own.
+   */
+  readonly quoted: boolean;
+}
+
+/**
+ * The `codeBlocks` indices of `text`'s blocks whose fence is still open,
+ * mid-stream: their text is not final, so no button and no key acts on
+ * them yet (CHD-394 §1).
+ */
+export function openFences(text: string): ReadonlySet<number> {
+  return new Set(
+    blockCode(lexer(text), 0).flatMap(({ token }, index) =>
+      closed(token) ? [] : [index],
+    ),
+  );
+}
+
+/**
+ * Where `text`'s code blocks are drawn, by their `codeBlocks` index: for
+ * each code box `softMarkdown` lays out, in its order, its block's; for each
+ * quote it lays out, in order, those of the blocks drawn into the quote's
+ * text (CHD-394).
+ */
+export function codePlaces(text: string): {
+  readonly boxes: number[];
+  readonly quotes: number[][];
+} {
+  const boxes: number[] = [];
+  const quotes: number[][] = [];
+  let next = 0;
+  // The order `blockCode` lists them in, and so `codeBlocks` does.
+  const walk = (tokens: readonly Token[], quote?: number[]) => {
+    for (const token of tokens) {
+      if (token.type === 'list') {
+        for (const item of (token as Tokens.List).items) {
+          walk(item.tokens, quote);
+        }
+      } else if (token.type === 'blockquote') {
+        const own = quote ?? [];
+
+        if (quote === undefined) {
+          quotes.push(own);
+        }
+
+        walk((token as Tokens.Blockquote).tokens, own);
+      } else if (token.type === 'code') {
+        (quote ?? boxes).push(next++);
+      }
+    }
+  };
+
+  walk(lexer(text));
+
+  return { boxes, quotes };
+}
+
+/** The labels of the blocks with a `[run]` button (the owner, CHD-394). */
+const RUNNABLE: ReadonlySet<string> = new Set(['sh', 'bash']);
+
+/**
+ * `text`'s code blocks, a reply's as `softMarkdown` lays it out: those at
+ * its top, in its lists and in its quotes, in the order written, which is
+ * the order drawn. A fence still open, mid-stream, is a block to the end.
+ */
+export function codeBlocks(text: string): CodeBlock[] {
+  return blockCode(lexer(text), 0).map(({ token, line, quoted }, index) => {
+    const label = labelOf(token);
+
+    return {
+      index,
+      line,
+      label,
+      text: copyOf(token),
+      runnable: RUNNABLE.has(label),
+      quoted,
+    };
+  });
+}
 
 /**
  * `text` as its top-level blocks, rendered to lines no wider than `width`
@@ -135,8 +254,9 @@ export function softMarkdown(
   width: number,
   color?: boolean,
   palette: Palette = PALETTES.dark,
+  picked?: number,
 ): Soft[] {
-  return laid(text, width, paint(color, palette), true);
+  return laid(text, width, paint(color, palette), true, picked);
 }
 
 /**
@@ -151,9 +271,21 @@ function paint(color: boolean | undefined, palette: Palette): Paint {
     : undefined;
 }
 
-/** `text`'s blocks, `soft` or in rows. */
-function laid(text: string, width: number, on: Paint, soft: boolean): Soft[] {
+/**
+ * `text`'s blocks, `soft` or in rows; the code block `picked`, by its
+ * `codeBlocks` index, drawn into a quote with its border in the accent
+ * colour (CHD-394 §1).
+ */
+function laid(
+  text: string,
+  width: number,
+  on: Paint,
+  soft: boolean,
+  picked?: number,
+): Soft[] {
   const tokens = lexer(text);
+  const held =
+    picked === undefined ? undefined : blockCode(tokens, 0)[picked]?.token;
   // A reference link resolves against definitions anywhere in the reply, but
   // each block goes to markdansi alone, so every block takes them along.
   const references = tokens
@@ -161,7 +293,7 @@ function laid(text: string, width: number, on: Paint, soft: boolean): Soft[] {
     .map((token) => token.raw.trimEnd())
     .join('\n');
 
-  return blocksOf(tokens, width, on, references, soft);
+  return blocksOf(tokens, width, on, references, soft, held);
 }
 
 function blocksOf(
@@ -170,6 +302,7 @@ function blocksOf(
   on: Paint,
   references: string,
   soft: boolean,
+  picked?: Tokens.Code,
 ): Soft[] {
   const block = (raw: string, width: number, options: RenderOptions = {}) =>
     renderBlock(raw, width, on, { wrap: !soft, ...options }, references);
@@ -180,7 +313,7 @@ function blocksOf(
     }
 
     if (soft && token.type === 'list') {
-      return [listOf(token as Tokens.List, width, on, references)];
+      return [listOf(token as Tokens.List, width, on, references, picked)];
     }
 
     if (soft && token.type === 'code') {
@@ -199,6 +332,7 @@ function blocksOf(
           on,
           { quotePrefix: '', wrap: !soft },
           references,
+          picked,
         )
       : token.type === 'table'
         ? renderTable(token.raw, width, on, references)
@@ -212,6 +346,7 @@ function blocksOf(
                 on,
                 {},
                 references,
+                picked,
               )
             : token.type === 'heading' && (token as Tokens.Heading).depth === 1
               ? block(token.raw, width, { theme: themeOf(on, true) })
@@ -236,6 +371,7 @@ function listOf(
   width: number,
   on: Paint,
   references: string,
+  picked?: Tokens.Code,
 ): Soft {
   return {
     kind: 'list',
@@ -257,6 +393,7 @@ function listOf(
           on,
           references,
           true,
+          picked,
         ),
       };
     }),
@@ -274,7 +411,7 @@ function highlighted(
   token: Tokens.Code,
   color: Paint,
 ): { label: string; lines: readonly string[] } {
-  const label = token.lang?.trim().split(/\s+/)[0] ?? '';
+  const label = labelOf(token);
   const language = color?.code && fenceLanguage(label);
 
   return {
@@ -292,6 +429,13 @@ function codeOf(token: Tokens.Code, width: number, color: Paint): Code {
   const { label, lines } = highlighted(token, color);
   const widest = Math.max(...lines.map((line) => stringWidth(line)));
   const labelled = label === '' ? 0 : stringWidth(label) + 2 + CODE_INSET;
+  // Never narrower than its buttons need: they give way, run first, only
+  // where the transcript itself is narrower than that.
+  const buttons = fitting(
+    label,
+    !closed(token) ? [] : RUNNABLE.has(label) ? ['copy', 'run'] : ['copy'],
+    width,
+  );
 
   return {
     kind: 'code',
@@ -299,9 +443,80 @@ function codeOf(token: Tokens.Code, width: number, color: Paint): Code {
     code: lines.join('\n'),
     width: Math.max(
       1,
-      Math.min(width, Math.max(widest + CODE_INSET, labelled)),
+      Math.min(
+        width,
+        Math.max(
+          widest + CODE_INSET,
+          labelled,
+          buttons.length === 0 ? 0 : leastWidth(label, buttons),
+        ),
+      ),
     ),
+    buttons,
+    copy: copyOf(token),
+    ...(RUNNABLE.has(label) ? { run: runCommand(copyOf(token)) } : {}),
   };
+}
+
+/** A code block's text as a copy takes it: no line break after its last. */
+function copyOf(token: Tokens.Code): string {
+  return token.text.replace(/\n+$/, '');
+}
+
+/**
+ * The buttons of `wanted` a box in `width` cells holds: all of them where
+ * their least width fits, else with `run` given way first, then `copy`.
+ */
+function fitting(
+  label: string,
+  wanted: readonly Button[],
+  width: number,
+): Button[] {
+  for (let count = wanted.length; count > 0; count--) {
+    const kept = wanted.slice(0, count);
+
+    if (leastWidth(label, kept) <= width) {
+      return kept;
+    }
+  }
+
+  return [];
+}
+
+/**
+ * The least cells a box holding `buttons` takes, corners included:
+ * `┌─ sh ─[copy]─[run]─┐`, the label between rules, a `─` between the
+ * bracketed words and `─┐` after the last; no blank cell beside a button,
+ * which OpenTUI would draw with the border's `─` through it (the owner,
+ * CHD-394 §1's table).
+ */
+export function leastWidth(label: string, buttons: readonly Button[]): number {
+  const labelled = label === '' ? 1 : stringWidth(label) + 4;
+
+  return (
+    1 +
+    labelled +
+    buttons.reduce((sum, button) => sum + button.length + 2, 0) +
+    Math.max(buttons.length - 1, 0) +
+    2
+  );
+}
+
+/**
+ * Whether a code block is whole: an indented one always, a fenced one once
+ * its closing fence has come, as one still open mid-stream is not.
+ */
+function closed(token: Tokens.Code): boolean {
+  const marks = fence(token.raw);
+
+  if (marks === undefined) {
+    return true;
+  }
+
+  const own = token.raw.replace(/\n+$/, '').split('\n');
+  const closer = new RegExp(`^\\s*${marks[0]}{${marks.length},}\\s*$`);
+
+  return own.length > 1 && closer.test(own.at(-1)!);
 }
 
 /**
@@ -313,8 +528,18 @@ function codeOf(token: Tokens.Code, width: number, color: Paint): Code {
  * highlight.js knows it. A line too long for the box is cut at its edge and
  * goes on below, as markdansi cuts one.
  */
-function renderCode(token: Tokens.Code, width: number, color: Paint): string {
+function renderCode(
+  token: Tokens.Code,
+  width: number,
+  color: Paint,
+  picked = false,
+): string {
   const { label, lines } = highlighted(token, color);
+  // Picked through ctrl+x b, its border is in the accent colour (CHD-394).
+  const rule = picked
+    ? (text: string) =>
+        color === undefined ? text : brush(PAINT, color.accent)(text)
+    : (text: string) => dim(text, color);
   // Highlighted whole, and only then cut to the box.
   const code = lines.flatMap((line) =>
     wrapAnsi(line, Math.max(1, width - CODE_INSET), {
@@ -331,14 +556,14 @@ function renderCode(token: Tokens.Code, width: number, color: Paint): string {
     label === ''
       ? `┌${'─'.repeat(inner + 2)}┐`
       : `┌ ${label} ${'─'.repeat(inner - stringWidth(label))}┐`;
-  const bar = dim('│', color);
+  const bar = rule('│');
 
   return [
-    dim(top, color),
+    rule(top),
     ...code.map(
       (line) => `${bar} ${line}${' '.repeat(inner - stringWidth(line))} ${bar}`,
     ),
-    dim(`└${'─'.repeat(inner + 2)}┘`, color),
+    rule(`└${'─'.repeat(inner + 2)}┘`),
   ].join('\n');
 }
 
@@ -359,6 +584,7 @@ function renderHoled(
   color: Paint,
   options: RenderOptions,
   references: string,
+  picked?: Tokens.Code,
 ): string {
   const codes = found.slice(0, HOLES.size);
   const raw = holed(text, codes);
@@ -394,7 +620,7 @@ function renderHoled(
         .replace(/[^│\s]/g, ' ')
         .replace(/│/g, (bar) => dim(bar, color));
 
-      return renderCode(code.token, width - inset, color)
+      return renderCode(code.token, width - inset, color, code.token === picked)
         .split('\n')
         .map((row, i) => `${i === 0 ? indent : hang}${row}`);
     })
@@ -416,12 +642,30 @@ const HOLES = new Map(
 );
 
 /**
+ * What `[run]` puts into the prompt from a block's `text`: every line, in
+ * order, each one that starts with a `$ ` prompt without it, the rest as
+ * written (the owner, 2026-10-25; docs/design/CHD-394.md §5).
+ */
+export function runCommand(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => (line.startsWith('$ ') ? line.slice(2) : line))
+    .join('\n');
+}
+
+/** A code block's label: its fence's language, its first word. */
+function labelOf(token: Tokens.Code): string {
+  return token.lang?.trim().split(/\s+/)[0] ?? '';
+}
+
+/**
  * A code block in a list or a quote, and the line of the list's or the
- * quote's `raw` it starts on.
+ * quote's `raw` it starts on; whether a quote holds it.
  */
 interface HeldCode {
   readonly token: Tokens.Code;
   readonly line: number;
+  readonly quoted: boolean;
 }
 
 /**
@@ -430,7 +674,11 @@ interface HeldCode {
  * hands an item's blocks over with its indent taken off but its lines kept,
  * so a block's line is the lines of the blocks before it.
  */
-function listCode(items: readonly Tokens.ListItem[], line: number): HeldCode[] {
+function listCode(
+  items: readonly Tokens.ListItem[],
+  line: number,
+  quoted = false,
+): HeldCode[] {
   let at = line;
 
   return items.flatMap((item) => {
@@ -438,7 +686,7 @@ function listCode(items: readonly Tokens.ListItem[], line: number): HeldCode[] {
 
     at += lineBreaks(item.raw);
 
-    return blockCode(item.tokens, start);
+    return blockCode(item.tokens, start, quoted);
   });
 }
 
@@ -447,7 +695,11 @@ function listCode(items: readonly Tokens.ListItem[], line: number): HeldCode[] {
  * lists and quotes among them. A quote's blocks, like an item's, keep their
  * lines with the `>` taken off.
  */
-function blockCode(tokens: readonly Token[], line: number): HeldCode[] {
+function blockCode(
+  tokens: readonly Token[],
+  line: number,
+  quoted = false,
+): HeldCode[] {
   let at = line;
 
   return tokens.flatMap((token) => {
@@ -456,11 +708,11 @@ function blockCode(tokens: readonly Token[], line: number): HeldCode[] {
     at += lineBreaks(token.raw);
 
     return token.type === 'list'
-      ? listCode((token as Tokens.List).items, start)
+      ? listCode((token as Tokens.List).items, start, quoted)
       : token.type === 'blockquote'
-        ? blockCode((token as Tokens.Blockquote).tokens, start)
+        ? blockCode((token as Tokens.Blockquote).tokens, start, true)
         : token.type === 'code'
-          ? [{ token: token as Tokens.Code, line: start }]
+          ? [{ token: token as Tokens.Code, line: start, quoted }]
           : [];
   });
 }

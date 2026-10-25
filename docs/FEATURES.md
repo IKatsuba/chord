@@ -56,6 +56,7 @@ Done when chord is the interface its authors open by default.
 | Agent slash commands with completion      | `/` opens the list                  | ACP `available_commands_update`              |
 | Client slash commands                     | `/clear` `/new` `/resume` `/help` `/exit` `/status` `/cost` | client               |
 | `@` file mentions with fuzzy finder       | `@` opens files                     | client (the path in the prompt text), ACP `resource_link` beside it |
+| Name an agent in the prompt with completion | `@@` opens agent names            | client: offers whom `send_message` reaches; sent as plain text |
 | Bash mode                                 | `!` prefix runs a command           | client, output sent as context               |
 | Resume a session                          | `--continue`, `--resume`, `/resume` | chord's own session records, ACP `session/load` / `session/resume` |
 | Queue a prompt while a turn runs          | type and Enter during a turn; Esc puts it back | client, sent once the turn ahead ends |

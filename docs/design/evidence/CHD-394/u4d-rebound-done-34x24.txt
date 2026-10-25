@@ -1,0 +1,24 @@
+   ┌─ typescript ─[copy]─┐
+   │ x                   │
+   └─────────────────────┘
+
+   ┌─ sh ──────────[copy]─[run]─┐
+   │ bun dev chord --fake --qa  │
+   │ capture && tmux capture-pa │
+   │ ne -t chord-qa -p > /tmp/s │
+   │ creen.txt                  │
+   │                            │
+   │ echo done                  │
+   └────────────────────────────┘
+
+   - a loose item
+
+   - a loose item with a box:
+
+     ┌─ sh ─[copy]─[run]─┐
+ ── ↓ 4 lines below ─────────────
+
+╭────────────────────────────────╮
+│ ›                              │
+╰────────────────────────────────╯
+    Fake Large with a… · 1% used

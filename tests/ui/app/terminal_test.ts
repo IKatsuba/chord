@@ -205,6 +205,7 @@ describe("the terminal is told the main session's id to resume (CHD-492)", () =>
         expect(last(window)).toStrictEqual('');
         await send(window, 'text');
         await until('the new id', () => last(window) === second);
+        await ready(window);
         await window.type('/resume');
         await window.press('\r');
         await window.shows('Resume a session');

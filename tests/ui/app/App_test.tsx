@@ -31,6 +31,7 @@ import {
   withWindow,
 } from './render.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { openSession } from '../../../src/session/session.ts';
 import manifest from '../../../package.json' with { type: 'json' };
 
 import { OSC9, writes } from './app_window.tsx';
@@ -669,4 +670,141 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
         ),
       },
     ));
+});
+
+describe('CHD-378 U3 tester: steering through the window', () => {
+  const put = async (window: Window, text: string) => {
+    await window.type(text);
+    await until(
+      'the draft to be ready',
+      () => promptRow(window)?.includes(text) ?? false,
+    );
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const adapter of ['claude', 'codex']) {
+      test(`a rebound steer leaves an Enter prompt queued and enters history on ${adapter} at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await send(window, 'slow');
+            await window.shows('esc to interrupt');
+            await put(window, 'Next turn only.');
+            await window.press('\r');
+            await window.shows('› Next turn only.');
+            await put(window, 'Change the parser.');
+            await window.press('\x13');
+            await window.shows('Read the message from nobody.');
+
+            expect(promptRow(window)).not.toContain('Change the parser.');
+            expect(window.frame()).toContain('› Change the parser.');
+            expect(window.frame()).toContain('› Next turn only.');
+            expect(window.frame()).not.toContain('· steered');
+            await window.press(UP);
+            await until(
+              'the steered prompt in history',
+              () => promptRow(window)?.includes('Change the parser.') ?? false,
+            );
+            await window.press(CTRL_C);
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+            await until(
+              'the Enter prompt restored',
+              () => promptRow(window)?.includes('Next turn only.') ?? false,
+            );
+          },
+          {
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--steering', adapter),
+            keybindings: JSON.stringify({
+              bindings: [
+                {
+                  context: 'Chat',
+                  bindings: { tab: null, 'ctrl+s': 'chat:steer' },
+                },
+              ],
+            }),
+          },
+        ));
+    }
+
+    test(`a call-held steer names the new permission first, then changes to in-flight before its answer at ${columns} columns`, async () => {
+      const release = Promise.withResolvers<void>();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'overlapask');
+            await window.shows('sleep 2');
+            await put(window, 'Also write the docs');
+            await window.press(TAB);
+            await window.shows(
+              '› after the running calls: Also write the docs',
+            );
+            await asked(window);
+            await window.shows('› after your answer: Also write the docs');
+
+            expect(window.frame()).not.toContain('after the running calls');
+            await window.press('\r');
+            await window.shows('› into the running turn: Also write the docs');
+            expect(promptRow(window)).not.toContain('Also write the docs');
+            release.resolve();
+            await until(
+              'the in-flight row to leave',
+              () => !window.frame().includes('into the running turn'),
+            );
+            await window.shows('› Also write the docs');
+          },
+          {
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--steering',
+              'claude',
+              '--step-ms',
+              '100',
+            ),
+            openWith: async (options) => {
+              const session = await openSession(options);
+              const steer = session.steer.bind(session);
+
+              return Object.assign(session, {
+                steer: async (text: string) => {
+                  const outcome = await steer(text);
+
+                  await release.promise;
+
+                  return outcome;
+                },
+              });
+            },
+          },
+        );
+      } finally {
+        release.resolve();
+      }
+    });
+  }
+
+  test('a no-steering warning survives typing and Esc while retaining the unsent draft', () =>
+    withWindow(async (window) => {
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await put(window, 'Keep this');
+      await window.press(TAB);
+      await window.shows(
+        'This agent does not take messages into a running turn',
+      );
+      await put(window, ' draft');
+
+      expect(statusRow(window)).toContain('enter queues it');
+      await window.press(ESC);
+      await window.shows('Interrupted by user');
+      expect(statusRow(window)).toContain('enter queues it');
+      expect(promptRow(window)).toContain('Keep this draft');
+    }));
 });

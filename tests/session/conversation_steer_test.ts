@@ -1351,24 +1351,24 @@ describe('CHD-423 tester: mixed queue holds', () => {
         event.type === 'queued' ? [event] : [],
       );
 
-      expect(
-        queued
-          .slice(0, 3)
-          .map((event) => [event.text, event.afterCalls, event.afterAnswer]),
-      ).toStrictEqual([
-        ['First, while the call runs.', true, undefined],
-        ['Second, while the answer waits.', undefined, true],
-        ['Second, while the answer waits.', true, undefined],
+      const first = queued.filter((event) => event.text.startsWith('First,'));
+      const second = queued.filter((event) => event.text.startsWith('Second,'));
+      const reasons = (rows: typeof queued) =>
+        rows.map((event) => [event.afterCalls, event.afterAnswer]);
+
+      // The question takes priority for both messages, then the still-open
+      // call does again, without changing either row's identity (CHD-378).
+      expect(reasons(first).slice(0, 3)).toStrictEqual([
+        [true, undefined],
+        [undefined, true],
+        [true, undefined],
       ]);
-      expect(queued[1]!.turnId).toBe(queued[2]!.turnId);
-      // Refused steering requeues the message under the same row (CHD-467).
-      expect(
-        new Set(
-          queued
-            .filter((event) => event.text.startsWith('First,'))
-            .map((event) => event.turnId),
-        ).size,
-      ).toBe(1);
+      expect(reasons(second).slice(0, 2)).toStrictEqual([
+        [undefined, true],
+        [true, undefined],
+      ]);
+      expect(new Set(first.map((event) => event.turnId)).size).toBe(1);
+      expect(new Set(second.map((event) => event.turnId)).size).toBe(1);
       expect(
         promptsIn(events)
           .slice(1)

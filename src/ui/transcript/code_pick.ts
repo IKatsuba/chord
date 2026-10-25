@@ -10,6 +10,7 @@ import {
   keysOf,
   sequencePanel,
 } from '../shortcuts/bindings.ts';
+import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import type { Entry } from '../../session/transcript/types.ts';
 import {
@@ -208,7 +209,11 @@ export function inView(
  * `[run]` (docs/design/CHD-394.md §3). An action with no key bound is left
  * out.
  */
-export function pickHint(keymap: Keymap, run: boolean): string {
+export function pickHint(
+  keymap: Keymap,
+  run: boolean,
+  width = Number.POSITIVE_INFINITY,
+): string {
   const key = (action: Action) => {
     const [first] = keysOf(keymap, action);
 
@@ -218,18 +223,33 @@ export function pickHint(keymap: Keymap, run: boolean): string {
   const up = key('codeBlock:previous');
   const down = key('codeBlock:next');
   const moves = [up, down].filter((name) => name !== undefined).join(' ');
-  const parts: [string | undefined, string][] = [
-    [moves === '' ? undefined : moves, 'another block'],
-    [key('codeBlock:copy'), 'copy'],
-    [run ? key('codeBlock:prompt') : undefined, 'put in the prompt'],
-    [key('codeBlock:cancel'), 'done'],
+  // Each item's keys, its words, and its short words for a narrow line.
+  const parts: [string | undefined, string, string][] = [
+    [moves === '' ? undefined : moves, 'another block', 'block'],
+    [key('codeBlock:copy'), 'copy', 'copy'],
+    [run ? key('codeBlock:prompt') : undefined, 'put in the prompt', 'prompt'],
+    [key('codeBlock:cancel'), 'done', 'done'],
   ];
+  const items = (short: boolean) =>
+    parts.flatMap(([keys, words, brief]) =>
+      keys === undefined ? [] : [`${keys} ${short ? brief : words}`],
+    );
+  const line = (shown: readonly string[]) => shown.join(' · ');
+  const full = line(items(false));
 
-  return parts
-    .flatMap(([keys, words]) =>
-      keys === undefined ? [] : [`${keys} ${words}`],
-    )
-    .join(' · ');
+  if (stringWidth(full) <= width) {
+    return full;
+  }
+
+  // Short words, then whole items dropped from the end, never one cut
+  // through, and never none (docs/design/CHD-394.md §3).
+  const short = items(true);
+
+  while (short.length > 1 && stringWidth(line(short)) > width) {
+    short.pop();
+  }
+
+  return line(short);
 }
 
 /**

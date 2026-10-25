@@ -299,3 +299,47 @@ describe('CHD-394 U4 tester: eligible block boundaries', () => {
     expect(listedBlocks([{ ...entry, text: text + '\n````' }])).toHaveLength(2);
   });
 });
+
+test("a picked block's line of keys takes short words where the full one does not fit, then drops whole items from its end, never all (CHD-394 §3)", () => {
+  const { keymap } = readKeybindings(
+    JSON.stringify({
+      bindings: [
+        {
+          context: 'CodeBlock',
+          bindings: {
+            'ctrl+p': 'codeBlock:previous',
+            'ctrl+n': 'codeBlock:next',
+            y: 'codeBlock:copy',
+            p: 'codeBlock:prompt',
+            'ctrl+q': 'codeBlock:cancel',
+            up: null,
+            down: null,
+            c: null,
+            r: null,
+            escape: null,
+          },
+        },
+      ],
+    }),
+  );
+
+  expect(pickHint(keymap, true, 116)).toStrictEqual(
+    'ctrl + p ctrl + n another block · y copy · p put in the prompt · ctrl + q done',
+  );
+  // 76 cells, the line's at 80 columns.
+  expect(pickHint(keymap, true, 76)).toStrictEqual(
+    'ctrl + p ctrl + n block · y copy · p prompt · ctrl + q done',
+  );
+  // Without [run] the full words fit 76.
+  expect(pickHint(keymap, false, 76)).toStrictEqual(
+    'ctrl + p ctrl + n another block · y copy · ctrl + q done',
+  );
+  expect(pickHint(keymap, true, 50)).toStrictEqual(
+    'ctrl + p ctrl + n block · y copy · p prompt',
+  );
+  expect(pickHint(keymap, true, 10)).toStrictEqual('ctrl + p ctrl + n block');
+  // The default keys fit 80 whole.
+  expect(pickHint(DEFAULT_KEYMAP, true, 76)).toStrictEqual(
+    '↑ ↓ another block · c copy · r put in the prompt · esc done',
+  );
+});

@@ -1880,6 +1880,7 @@ export function App({
                                 hint: pickHint(
                                   state.keys,
                                   pickedBlock()?.run !== undefined,
+                                  columns - 4,
                                 ),
                               }
                             : {})}

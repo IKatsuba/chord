@@ -2059,3 +2059,106 @@ test("the person's unanswered steer of a session /clear let go never shows in th
   ).toBeFalsy();
   await conversation.close();
 });
+
+describe('CHD-378 U3 tester: closing with a delayed steer', () => {
+  test('closing suppresses the delayed queue timer and a later injected response', async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers } = stub;
+
+    try {
+      conversation.send('go');
+      stub.go();
+      await went();
+      conversation.steerIn('Only in the old session.');
+      await until(() => steers.length === 1);
+
+      const closing = conversation.close();
+      const afterClose = events.length;
+
+      stub.end();
+      await closing;
+      // Past the 500 ms callback: it must remain silent after close.
+      await new Promise((resolve) => setTimeout(resolve, 650));
+      steers[0]!.answer('injected');
+      await went();
+
+      expect(
+        events
+          .slice(afterClose)
+          .filter(
+            (event) =>
+              (event.type === 'queued' || event.type === 'prompt') &&
+              event.text === 'Only in the old session.',
+          ),
+      ).toStrictEqual([]);
+    } finally {
+      stub.end();
+      steers[0]?.answer('refused');
+      await conversation.close();
+    }
+  });
+});
+
+describe('a steer held for the running calls while a question opens and is answered (CHD-378)', () => {
+  /** Each reason the queue was told for `text`, in order. */
+  const reasons = (events: readonly ConversationEvent[], text: string) =>
+    events.flatMap((event) =>
+      event.type === 'queued' && event.text === text
+        ? [
+            event.steering
+              ? 'steering'
+              : event.afterAnswer
+                ? 'answer'
+                : event.afterCalls
+                  ? 'calls'
+                  : 'plain',
+          ]
+        : [],
+    );
+
+  for (const whose of ['the person', 'another agent'] as const) {
+    test(`${whose}'s says it waits for the answer while the question is open, then for the calls again, and goes in once they end`, () =>
+      onFake(['--steering', 'claude'], async (conversation, events) => {
+        const text = 'Also write the docs';
+
+        conversation.send('overlapask');
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'update' &&
+              event.update.sessionUpdate === 'tool_call' &&
+              event.update.toolCallId === 'overlapask-a',
+          ),
+        );
+
+        if (whose === 'the person') {
+          conversation.steerIn(text);
+        } else {
+          conversation.tell(MAIN, text);
+        }
+
+        await until(() =>
+          events.some((event) => event.type === 'permission_requested'),
+        );
+        await until(() => reasons(events, text).includes('answer'));
+
+        const asked = events.find(
+          (event) => event.type === 'permission_requested',
+        );
+
+        assert(asked?.type === 'permission_requested');
+        conversation.choose(asked.permission.id, 'allow');
+        await until(() =>
+          promptsIn(events).some(([said, into]) => said === text && into),
+        );
+
+        expect(reasons(events, text)).toStrictEqual([
+          'calls',
+          'answer',
+          'calls',
+          ...(whose === 'the person' ? ['steering'] : []),
+        ]);
+        await ended(events, 1);
+      }));
+  }
+});

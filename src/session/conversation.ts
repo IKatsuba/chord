@@ -1305,19 +1305,17 @@ export class Conversation {
       await ahead;
 
       // The steer ahead may have found the turn over, or the person may have
-      // been asked something while it was out.
-      if (this.#steerable(session) === into) {
-        if (this.#waitsOnPerson()) {
-          show('answer');
-        } else if (open()) {
-          show('calls');
-        }
-      }
+      // been asked something while it was out; and each wake may change what
+      // it waits on, an open question first (CHD-423, CHD-378).
+      const why = (): 'answer' | 'calls' | undefined =>
+        this.#waitsOnPerson() ? 'answer' : open() ? 'calls' : undefined;
 
-      while (
-        this.#steerable(session) === into &&
-        (this.#waitsOnPerson() || open())
+      for (
+        let waits = why();
+        this.#steerable(session) === into && waits !== undefined;
+        waits = why()
       ) {
+        show(waits);
         await this.#wake.promise;
       }
 
@@ -2345,6 +2343,7 @@ export class Conversation {
       };
 
       this.#permissions.set(id, { request, turnId: turn.id });
+      this.#rouse();
       this.#asks.add(withdraw);
       signal.addEventListener('abort', withdraw, { once: true });
       this.#emit({
@@ -3083,6 +3082,8 @@ export class Conversation {
       turnId,
       ...(between && { between }),
     });
+    // A steer held for the calls says from now it waits for the answer.
+    this.#rouse();
 
     if (between) {
       this.#holdForAnswer();
@@ -3137,6 +3138,7 @@ export class Conversation {
       turnId,
       ...(between && { between }),
     });
+    this.#rouse();
 
     if (between) {
       this.#holdForAnswer();
@@ -3199,6 +3201,7 @@ export class Conversation {
     };
 
     this.#plans.set(id, { request, turnId });
+    this.#rouse();
     this.#emit({ type: 'plan_requested', turnId, plan: request.wait });
     request.signal.addEventListener('abort', withdrawn, { once: true });
 

@@ -963,6 +963,11 @@ export class Conversation {
     }
   }
 
+  /** Whether the agent takes a prompt into its running turn (CHD-378). */
+  steers(): boolean {
+    return this.#session?.steers() ?? false;
+  }
+
   /**
    * Reports the agent's slash commands if they moved: the interface asks when
    * it is about to show them.
@@ -1087,13 +1092,18 @@ export class Conversation {
 
   /**
    * The person's prompt put into the running turn, as `tell` puts another
-   * agent's message (CHD-378): `prompt` built as `send` builds it, held
-   * shell output ahead. `unsteerable` on an agent that takes no steering,
+   * agent's message (CHD-378): built as `send` builds it, held shell
+   * output ahead, its images and mentions too. `unsteerable` on an agent that takes no steering,
    * with nothing sent or queued, the draft the caller's to keep; with no
    * turn to go into it goes as `send` sends it.
    * Undefined before the session is up and once closing.
    */
-  steerIn(text: string, prompt: string = text): Steered | undefined {
+  steerIn(
+    text: string,
+    prompt: string = text,
+    attachments: readonly Attachment[] = [],
+    mentions: readonly string[] = [],
+  ): Steered | undefined {
     const session = this.#session;
 
     if (!session || this.#closing) {
@@ -1110,8 +1120,8 @@ export class Conversation {
       turnId: crypto.randomUUID(),
       text,
       prompt: [...ahead, prompt].join('\n\n'),
-      attachments: [],
-      mentions: [],
+      attachments,
+      mentions,
     };
 
     if (into === undefined) {
@@ -1267,6 +1277,8 @@ export class Conversation {
     const { promise: answered, resolve: answer } =
       Promise.withResolvers<void>();
     let outcome: SteerOutcome;
+    // The links found for its mentions, recorded with it.
+    let links: readonly ResourceLink[] = [];
 
     // What its queue row says it waits on, once it has one.
     let shown: 'answer' | 'calls' | undefined;
@@ -1326,7 +1338,12 @@ export class Conversation {
       }
 
       if (this.#steerable(session) === into) {
-        const out = session.steer(next.prompt);
+        const out = session.steer(
+          next.prompt,
+          next.attachments,
+          next.mentions,
+          (found) => (links = found),
+        );
         // Never into a session /clear opened since, or once closing.
         const outgoing = () =>
           this.#current(session) &&
@@ -1426,7 +1443,15 @@ export class Conversation {
 
     this.#firstPrompt ??= next.prompt;
 
-    this.#recording?.sent(next.turnId, next.prompt, 0, [], at, next.from, into);
+    this.#recording?.sent(
+      next.turnId,
+      next.prompt,
+      next.attachments.length,
+      links,
+      at,
+      next.from,
+      into,
+    );
     this.#flushedFirst();
     // The turn may have answered while the steer was out, the queue held.
     void this.#advance(session);

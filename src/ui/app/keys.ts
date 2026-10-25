@@ -116,6 +116,8 @@ export type Step =
       readonly type: 'steer';
       readonly text: string;
       readonly kept: readonly Step[];
+      /** It names image files, read before it goes, as Enter reads them. */
+      readonly paths: boolean;
     }
   /** Enter on a draft naming image files: they are read before it goes. */
   | { readonly type: 'send_with_paths'; readonly text: string }
@@ -832,7 +834,14 @@ function commandSteps(
     case 'submit':
       return submitSteps(draft, context);
     case 'steer':
-      return [{ type: 'steer', text: draft, kept: keptLeft(context) }];
+      return [
+        {
+          type: 'steer',
+          text: draft,
+          kept: keptLeft(context),
+          paths: state.takesImages === true && namesImage(draft, context.home),
+        },
+      ];
     case 'newline': {
       const next = broken(draft, cursor);
 

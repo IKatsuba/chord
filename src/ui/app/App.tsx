@@ -864,6 +864,12 @@ export function App({
       case 'send':
         return sessions.send(step.text);
       case 'steer':
+        if (step.paths) {
+          return void images
+            .sendWithPaths(step.text, true)
+            .then((went) => went && play(step.kept));
+        }
+
         if (sessions.steer(step.text)) {
           play(step.kept);
         }

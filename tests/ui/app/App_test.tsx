@@ -3,6 +3,8 @@
  * the keys that quit, clear and edit.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   withChild,
   openOther,
@@ -31,6 +33,8 @@ import {
   withWindow,
 } from './render.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { PIXEL_BYTES, PIXEL_PNG } from '../../fixtures/images.ts';
+import { RECEIVED } from '../prompt/prompt_window.tsx';
 import { openSession } from '../../../src/session/session.ts';
 import manifest from '../../../package.json' with { type: 'json' };
 
@@ -668,6 +672,89 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
           'claude',
           '--steer-late',
         ),
+      },
+    ));
+
+  test("a draft naming an image file by its path goes in with the image read, as Enter would send it (the owner's Q215)", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+
+        // Typed key by key: pasted, the path would be read at once.
+        for (const key of 'see /shots/a.png') {
+          await window.press(key);
+        }
+
+        await window.shows('› see /shots/a.png');
+        await window.press(TAB);
+        await window.shows('› see [Image #1]');
+        await window.shows(RECEIVED);
+
+        expect(promptRow(window)).not.toContain('see');
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        readImage: () =>
+          Promise.resolve({
+            mediaType: 'image/png',
+            data: PIXEL_PNG,
+            bytes: PIXEL_BYTES.length,
+          }),
+      },
+    ));
+
+  test('on an agent without steering a draft naming an image file stays as typed, nothing read', () => {
+    const read: string[] = [];
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+
+        // Typed key by key: pasted, the path would be read at once.
+        for (const key of 'see /shots/a.png') {
+          await window.press(key);
+        }
+
+        await window.shows('› see /shots/a.png');
+        await window.press(TAB);
+        await window.shows('does not take messages into a running turn');
+
+        expect(promptRow(window)).toContain('see /shots/a.png');
+        expect(read).toStrictEqual([]);
+        await window.press(ESC);
+      },
+      {
+        readImage: (path) => {
+          read.push(path);
+
+          return Promise.resolve({
+            mediaType: 'image/png',
+            data: PIXEL_PNG,
+            bytes: PIXEL_BYTES.length,
+          });
+        },
+      },
+    );
+  });
+
+  test("a draft mentioning a file goes in with the file's link, as Enter would send it (the owner's Q216)", () =>
+    withWindow(
+      async (window) => {
+        await writeFile(join(window.dir, 'a.ts'), '');
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await draft(window, 'See @a.ts ');
+        await window.press(TAB);
+        await window.shows('Received a link: a.ts');
+
+        expect(window.frame()).toContain('› See @a.ts');
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
       },
     ));
 });

@@ -5,6 +5,8 @@
  */
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { type SessionUpdate } from '@agentclientprotocol/sdk';
 import {
   Conversation,
@@ -2161,4 +2163,74 @@ describe('a steer held for the running calls while a question opens and is answe
         await ended(events, 1);
       }));
   }
+});
+
+describe("the person's draft with an image or a mention steered whole, as a new turn would send it (CHD-378, the owner's Q215, Q216)", () => {
+  /** A session on the fake whose directory holds `a.ts`, to mention. */
+  const withFile = (session: Session): Session => {
+    writeFileSync(join(session.cwd, 'a.ts'), '');
+
+    return session;
+  };
+
+  for (const adapter of ['claude', 'codex']) {
+    test(`on ${adapter}'s adapter the image and the file's link go into the running turn with the text`, () =>
+      onFake(
+        ['--steering', adapter],
+        async (conversation, events) => {
+          conversation.send('slow');
+          await until(() => saidIn(events).startsWith('Working'));
+
+          expect(
+            conversation.steerIn(
+              'See @a.ts and [Image #1]',
+              undefined,
+              [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+              ['a.ts'],
+            ),
+          ).toStrictEqual('sent');
+          await until(() =>
+            saidIn(events).includes('Read the message from nobody.'),
+          );
+
+          expect(saidIn(events)).toContain(
+            'Received an image: image/png, 5 bytes',
+          );
+          expect(saidIn(events)).toContain('Received a link: a.ts, file://');
+          expect(promptsIn(events).at(-1)).toStrictEqual([
+            'See @a.ts and [Image #1]',
+            firstTurn(events),
+          ]);
+          conversation.interrupt();
+          await until(() => events.some((event) => event.type === 'result'));
+        },
+        withFile,
+      ));
+  }
+
+  test('refused once the turn has ended, it goes as the next turn with its image and link still', () =>
+    onFake(
+      ['--steering', 'claude', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await went();
+        conversation.steerIn(
+          'See @a.ts and [Image #1]',
+          undefined,
+          [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+          ['a.ts'],
+        );
+        await ended(events, 2);
+
+        expect(promptsIn(events).at(-1)).toStrictEqual([
+          'See @a.ts and [Image #1]',
+          undefined,
+        ]);
+        expect(saidIn(events)).toContain(
+          'Received an image: image/png, 5 bytes',
+        );
+        expect(saidIn(events)).toContain('Received a link: a.ts, file://');
+      },
+      withFile,
+    ));
 });

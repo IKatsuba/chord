@@ -12,7 +12,6 @@ import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import {
   CodeBlockActions,
-  CodeBlocks,
   CodeIds,
   useColours,
   useSelectable,
@@ -71,7 +70,7 @@ export function useCodeBlocks(
   text: string,
   blocks: readonly Soft[],
 ): ReadonlyMap<Soft, string> {
-  const registry = useContext(CodeBlocks);
+  const registry = useContext(CodeBlockActions);
   const renderer = useRenderer();
   const [entry] = useState(() => (drawings += 1));
   const found = useMemo(() => codeBlocks(text), [text]);

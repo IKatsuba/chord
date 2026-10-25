@@ -66,6 +66,11 @@ export interface CodeActions {
    * finds no press (CHD-394 §1).
    */
   released(target: unknown): boolean;
+  /**
+   * A code block drawn, there for `ctrl+x b` to pick until the function
+   * it gives back says it went (CHD-394).
+   */
+  add(block: DrawnBlock): () => void;
 }
 
 /** A code block drawn in the transcript, for `ctrl+x b` to find (CHD-394). */
@@ -78,14 +83,6 @@ export interface DrawnBlock {
   /** Its box, or the quote it is drawn in, as laid out now. */
   readonly node: () => Renderable | undefined;
 }
-
-/** Where drawn code blocks say they are there, and that they went. */
-export interface CodeRegistry {
-  add(block: DrawnBlock): () => void;
-}
-
-/** The window's; none where nothing picks a block, as in a test's draw. */
-export const CodeBlocks = createContext<CodeRegistry | undefined>(undefined);
 
 /** The ids a reply's code boxes and quotes are drawn with, by block. */
 export const CodeIds = createContext<ReadonlyMap<Soft, string> | undefined>(

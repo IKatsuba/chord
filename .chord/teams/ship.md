@@ -42,8 +42,9 @@ lead:
     passed its tests, hand writer the slice (the task, the commits, what
     changed for a person) and wait for its commit; then tell tester the last
     unit is in. Report when every unit has passed review and tests, writer
-    has brought the docs in line, and bun dev check, which tester runs once
-    on the final commit, passes.
+    has brought the docs in line, and tester's final run of the tests the
+    slice reaches plus bun dev check --static passes on the final commit.
+    CI on the PR is the whole check; main merges on green CI.
 members:
   - name: developer
     role: Builds the slice unit by unit, exactly as its design says
@@ -71,8 +72,9 @@ members:
       the smallest code that does the unit fully; no features beyond the
       slice. While you work and for every fix, run only the tests your
       change reaches, as the body's "Running tests" says, never the whole
-      suite. When a unit is finished: run bun dev check once, in the
-      background, and wait for it to report, then commit locally with a
+      suite. When a unit is finished: run the tests it reaches plus
+      bun dev check --static in the background, never the whole suite, and
+      wait for them to report, then commit locally with a
       conventional message and no trailers, never push, and hand it on with
       send_message: to designer if it changes what is on screen, else to
       reviewer. Say the unit, the commit, the files, the parts of the design
@@ -166,9 +168,9 @@ members:
       You test, and you stay open for the whole run. You act only on a unit
       reviewer has handed to you as passed review, never on code developer
       has not finished or reviewer has not passed; do not write tests ahead
-      against the design. For each unit: developer's bun dev check has
-      already passed on it, so do not run the whole suite again; run the
-      tests the unit reaches on the named commit, as the body's "Running
+      against the design. For each unit: developer's reached tests and
+      bun dev check --static have passed; run the tests the unit reaches
+      on the named commit, as the body's "Running
       tests" says, then write the missing tests for what the design
       promises for that unit: edge cases, an agent
       that exits, hangs or answers late (the fake agent's --hang and
@@ -186,9 +188,12 @@ members:
       with the steps to reproduce and the design part it breaks, and rerun
       when developer hands you the fix commit. When a unit passes, tell
       developer and the lead in one line: the unit, the commit, passed. When
-      the lead says the last unit is in, run bun dev check once on the final
-      commit, in the background, and report its result to the lead. If a
-      test needs a name or entry point the design does not fix, ask
+      the lead says the last unit is in, run the tests the whole slice
+      reaches (e.g. nice -n 19 bun dev test --changed=origin/main) and
+      bun dev check --static on the final commit, in the background, and
+      report the results to the lead. A reached test that fails is a failure
+      even if it passes alone. If a test needs a name or entry point the
+      design does not fix, ask
       developer. Do not fix code under src/.
   - name: writer
     role: Keeps README, the guide, FEATURES and AGENTS.md files true to the slice
@@ -233,21 +238,21 @@ chord's team for a feature or a fix, from the task to tested commits. Small feat
 
 1. The lead reads AGENTS.md, README.md, docs/FEATURES.md, docs/decisions.md and the designs the task touches, and cuts the job into one slice: what it implements, what is out, and how done is checked. A task too big for this team goes back to main with the architects team suggested; a choice that is the owner's goes to main with options before work starts.
 2. The lead cuts the slice into units (a module, a reducer, a component, a fake scenario) in build order, marks those that change what is on screen, asks designer for a design where one is missing, opens developer, designer, reviewer and tester, and keeps them open for the whole run.
-3. developer finishes a unit, runs bun dev check once, commits, hands it on (to designer if it changes the screen, else to reviewer), and starts the next unit.
+3. developer finishes a unit, runs the tests it reaches plus bun dev check --static, commits, hands it on (to designer if it changes the screen, else to reviewer), and starts the next unit.
 4. designer runs a screen unit in tmux and looks at it at 120x40 and 80x24. What reads badly goes back to developer; when it looks right, designer hands it to reviewer with the captures.
 5. reviewer reviews the handed-over unit. Blocking findings go back to developer; when nothing blocking is left, reviewer hands the unit to tester.
 6. tester tests the passed unit. Failures go to developer; when it passes, tester says so to developer and the lead.
-7. When the last unit has passed, the lead hands the slice to writer, who brings README.md, docs/guide.md, docs/FEATURES.md and the AGENTS.md files in line with it and commits; then tester runs the final check.
-8. The lead reports when every unit has passed review and tests and bun dev check, run once by tester on the final commit, passes.
+7. When the last unit has passed, the lead hands the slice to writer, who brings README.md, docs/guide.md, docs/FEATURES.md and the AGENTS.md files in line with it and commits; then tester runs the tests the whole slice reaches plus bun dev check --static on the final commit.
+8. The lead reports the slice ready when every unit has passed review and tests and tester's final reached tests and bun dev check --static pass. CI on the PR is the whole check; main merges on green CI.
 
 ## Running tests
 
-The whole suite takes about ten minutes; nobody waits that long for a change of a few lines.
+Run only the tests the change reaches, with static checks as below.
 
-- While working, and for every fix and every rerun, run only what the change reaches: one file (`bun test --isolate --timeout=60000 ./tests/ui/dialogs/Form_test.tsx`), the tests whose names match (`-t "a stop"` after the file), or every test file the change reaches by git (`bun dev test --changed` for what is not committed, `--changed=<commit>` against a commit, such as the one before the unit). Add `bun dev check --static` when types, lint or layout may have moved.
-- The whole `bun dev check` runs at the end of a step, not after each edit: once by developer when a unit is finished, before it is handed on, and once by tester on the final commit of the slice. A fix commit gets the targeted tests and `bun dev check --static`, not the whole suite.
-- A heavy command (`bun dev check`, `bun dev check --static`, `bun dev compile`, a long test file) runs in the background, and you wait for it to report and read what it returned before acting on it. Do not poll it with sleep, and do not start a second whole run while one is still going.
-- The machine is the owner's, and it must stay usable while you test. Across the whole team, at most one whole run (`bun dev check` or the whole `bun dev test`) goes at a time, and it runs under `nice -n 19`. Never run two whole runs at once to make a flake show, not even as a measured pair. A flake is reproduced by its own file or describe, run in a loop; a load generator, if one is needed, is bounded by a timeout, dies with its command, and never runs beside a whole run. After any reproduction, check that nothing it started is left (`pgrep -x yes`, stray `bun test` workers, fake agents).
+- While working, and for every fix and every rerun, run only what the change reaches under `nice -n 19`: one file (`bun test --isolate --timeout=60000 ./tests/ui/dialogs/Form_test.tsx`), the tests whose names match (`-t "a stop"` after the file), or every test file the change reaches by git (`bun dev test --changed` for what is not committed, `--changed=<commit>` against a commit, such as the one before the unit). Per unit, for every fix and at the end of the slice, run these tests plus `bun dev check --static`; for prose-only changes, follow AGENTS.md's "Choosing checks for a change" instead. A reached test that fails is a failure even if it passes alone.
+- Nobody runs the whole `bun dev check` or the whole `bun dev test` locally: load from apps outside the team turns whole runs red with tests that pass alone. CI on the PR is the whole check; the lead reports ready on reached tests and static, and main merges on green CI.
+- A heavy command (`bun dev check --static`, `bun dev compile`, a long test file) runs in the background, and you wait for it to report and read what it returned before acting on it. Do not poll it with sleep.
+- The machine is the owner's, and it must stay usable while you test. Across the whole team, heavy runs go one at a time under `nice -n 19`. A flake is reproduced by its own file or describe, run in a loop; a load generator, if one is needed, is bounded by a timeout, dies with its command, and never runs beside a heavy run. After any reproduction, check that nothing it started is left (`pgrep -x yes`, stray `bun test` workers, fake agents).
 
 Everything written is in English and names no private path, per AGENTS.md. Follow the one rule: a maintained package before our own code, and when a library does not do what the task asks, stop and hand the question up with options, never a workaround around it. Tests never reach a real model or a real agent. Commits are local, conventional and carry no trailers; nobody pushes or publishes.
 

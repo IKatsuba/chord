@@ -141,10 +141,10 @@ A full `bun dev check` is not required before every commit.
 - For code changes, run the relevant tests and static checks for the affected
   code. For interface changes, also check the behavior and layout by hand
   where automated checks do not cover them.
-- Use the full `bun dev check` for changes with broad impact, such as shared
-  runtime behavior, dependencies or build and test configuration, or when
-  targeted checks leave a concrete concern unresolved. Do not broaden or
-  repeat checks without a reason tied to the change or a failure.
+- Use the full `bun dev check`, locally or in pull request CI, for broad
+  changes (shared runtime behavior, dependencies, build or test configuration)
+  or concrete concerns left by targeted checks. Do not broaden or repeat
+  checks without a reason tied to the change or a failure.
 
 Report what was run, what passed or failed, and what was not checked. CI may
 still run the full suite; that does not require repeating it locally for

@@ -110,7 +110,8 @@ export type Step =
   | { readonly type: 'send'; readonly text: string }
   /**
    * Tab during a turn: `text` into it; `kept` plays once it went, as a
-   * kept draft leaves the stack only then.
+   * kept draft leaves the stack only then, or, for one naming image files,
+   * before they are read, as Enter's, on an agent that steers.
    */
   | {
       readonly type: 'steer';
@@ -834,6 +835,11 @@ function commandSteps(
     case 'submit':
       return submitSteps(draft, context);
     case 'steer':
+      // One send at a time while its image paths are read, as Enter's.
+      if (context.submitting) {
+        return [];
+      }
+
       return [
         {
           type: 'steer',

@@ -740,6 +740,116 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
     );
   });
 
+  /** An image file reader that holds each read until the test lets it go. */
+  const heldReader = () => {
+    const waiting: (() => void)[] = [];
+
+    return {
+      waiting,
+      readImage: () =>
+        new Promise<{ mediaType: string; data: string; bytes: number }>(
+          (resolve) =>
+            waiting.push(() =>
+              resolve({
+                mediaType: 'image/png',
+                data: PIXEL_PNG,
+                bytes: PIXEL_BYTES.length,
+              }),
+            ),
+        ),
+    };
+  };
+
+  for (const first of ['tab', 'enter'] as const) {
+    test(`a second Tab while the image paths ${first} sent are read sends nothing more`, () => {
+      const reader = heldReader();
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+
+          for (const key of 'see /shots/a.png') {
+            await window.press(key);
+          }
+
+          await window.shows('› see /shots/a.png');
+          await window.press(first === 'tab' ? TAB : '\r');
+          await until('the read', () => reader.waiting.length === 1);
+          await window.press(TAB);
+          reader.waiting[0]?.();
+          await window.shows('› see [Image #1]');
+          await new Promise((resolve) => setTimeout(resolve, 300));
+
+          expect(reader.waiting).toHaveLength(1);
+          expect(
+            window
+              .frame()
+              .split('\n')
+              .filter((row) => row.includes('› see [Image #1]')),
+          ).toHaveLength(1);
+          await window.press(ESC);
+        },
+        {
+          agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          readImage: reader.readImage,
+        },
+      );
+    });
+  }
+
+  test("a kept draft naming an image file leaves its own session's stack, not the one in front once its file is read", () => {
+    const reader = heldReader();
+    const steering = fakeAgentCommand(
+      undefined,
+      '--child-runtime',
+      'fake',
+      '--steering',
+      'claude',
+    );
+    const aside = (window: Window) =>
+      until('the draft set aside', () =>
+        /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+      );
+
+    return withChild(
+      async (window) => {
+        await openOther(window);
+        await pickAgent(window, 'other');
+        await window.type('other draft');
+        await window.press(DOWN);
+        await aside(window);
+        await pickAgent(window, 'main');
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+
+        for (const key of 'see /shots/a.png') {
+          await window.press(key);
+        }
+
+        await window.press(DOWN);
+        await aside(window);
+        await window.press(UP);
+        await window.shows('› see /shots/a.png');
+        await window.press(TAB);
+        await until('the read', () => reader.waiting.length === 1);
+        await pickAgent(window, 'other');
+        reader.waiting[0]?.();
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        await window.press(UP);
+        await window.shows('› other draft');
+        await pickAgent(window, 'main');
+        await window.shows('› see [Image #1]');
+        await window.shows(RECEIVED);
+      },
+      {
+        agentCommand: steering,
+        startupOf: () => ({ agentCommand: steering }),
+        readImage: reader.readImage,
+      },
+    );
+  });
+
   test("a draft mentioning a file goes in with the file's link, as Enter would send it (the owner's Q216)", () =>
     withWindow(
       async (window) => {

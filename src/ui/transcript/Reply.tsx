@@ -8,7 +8,7 @@ import {
   useSyncExternalStore,
 } from 'react';
 import { useRenderer } from '@opentui/react';
-import type { MouseEvent, Renderable, RGBA } from '@opentui/core';
+import { type MouseEvent, type Renderable, RGBA } from '@opentui/core';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import {
@@ -197,7 +197,10 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
   // accent colour (CHD-394 §3).
   const lit =
     picked !== undefined && id === `code-${picked.entry}-${picked.block}`;
-  const border = lit ? (colour(colours.accent) ?? DIM_BORDER) : DIM_BORDER;
+  // With no colour, the terminal's own foreground, as a quoted block's.
+  const border = lit
+    ? (colour(colours.accent) ?? RGBA.defaultForeground())
+    : DIM_BORDER;
 
   if (block.kind === 'list') {
     // A loose list's blank rows are a copy's too; a tight one has none.

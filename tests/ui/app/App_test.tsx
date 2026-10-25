@@ -1303,8 +1303,11 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
         await leader(window, 'b');
         await until('the pick', () => statusRow(window).includes(HINT));
 
-        // Its buttons bold, which no border is; the accent is a colour's.
+        // Its buttons bold, which no border is; with no colour, its border
+        // the terminal's own foreground, not the grey of every other box.
         expect(row(window, LISTED)).toContain('\x1b[1m[copy]');
+        expect(row(window, LISTED)).not.toContain('38;5;244');
+        expect(row(window, '┌─ typescript')).toContain('38;5;244');
         expect(row(window, '┌─ typescript')).not.toContain('\x1b[1m');
         await window.press(ESC);
         await until(
@@ -1334,6 +1337,13 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
 
         await window.shows('┌ ts');
         expect(window.frame()).toContain('await session.close();');
+        // Down to the ts box: its border, label and [copy] are the view's
+        // top row, the whole box in view.
+        await window.press(DOWN);
+        await until('the ts box on top', () =>
+          (window.frame().split('\n')[0] ?? '').includes('┌─ ts'),
+        );
+        expect(window.frame().split('\n')[0]).toContain('[copy]');
       },
       { columns: 80, rows: 24 },
     ));

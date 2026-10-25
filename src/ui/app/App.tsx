@@ -1244,7 +1244,7 @@ export function App({
         { top: area.screenY, height: area.height },
       )
     ) {
-      dispatch({ type: 'jumped_to', entry, target: node.id });
+      dispatch({ type: 'jumped_to', entry, target: node.id, whole: true });
     }
   };
 

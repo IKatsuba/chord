@@ -27,7 +27,11 @@ import type { AppState, WindowedAction } from './state.ts';
  * entry's own; past the blank line each keeps above it, so its own first
  * line goes on top.
  */
-function rowOf(entry: Renderable, target: string | undefined): number {
+function rowOf(
+  entry: Renderable,
+  target: string | undefined,
+  whole = false,
+): number {
   const found =
     target === undefined ? undefined : entry.findDescendantById(target);
   let row = 0;
@@ -37,8 +41,9 @@ function rowOf(entry: Renderable, target: string | undefined): number {
     row += at.getLayout().top;
   }
 
+  // A whole box keeps its own first row: a code box's border (CHD-394).
   for (
-    let at = (found ?? entry).getChildren()[0];
+    let at = whole && found ? undefined : (found ?? entry).getChildren()[0];
     at;
     at = at.getChildren()[0]
   ) {
@@ -194,7 +199,7 @@ export function useMeasured(
           ? undefined
           : box
             ? Math.min(
-                box.getLayout().top + rowOf(box, jump.target),
+                box.getLayout().top + rowOf(box, jump.target, jump.whole),
                 Math.max(0, whole.height - view),
               )
             : null;

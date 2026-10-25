@@ -365,7 +365,9 @@ describe('CHD-523 tester: multiline titles and later session changes', () => {
               await window.shows('Renamed.');
               check();
               await send(window, 'costwait');
-              await window.shows('esc to interrupt');
+              // Parser's reports can start short acknowledgement turns
+              // while costwait is queued. Cancel only once its own turn runs.
+              await window.shows('Working until stopped.');
               check();
               await window.press(ESC);
               await window.shows('Interrupted by user');

@@ -7286,3 +7286,12 @@ nor tell which word a press landed on.
 - **Choice (the owner): texts of their own.** OpenTUI still draws the
   border and the label; each button is an OpenTUI text with its own
   handlers, so a click is OpenTUI's own mouse event on it.
+- **Found building it: no blank cell beside a button.** OpenTUI draws a
+  space on a transparent background by blending it over the cell below,
+  which keeps the border's `─`; chord knows the terminal's background only
+  as dark or light, not its colour, so an opaque space would be a patch of
+  the wrong colour. Weighed: the `─` kept beside the buttons; an opaque
+  space in a theme colour; chord drawing the top row after all; asking
+  OpenTUI for an opaque default background. **The owner kept the `─`:**
+  `┌─ sh ─[copy]─[run]─┐`, a `─` between the words and before the corner,
+  which also makes each least width two cells narrower.

@@ -10,6 +10,7 @@ import {
   keysOf,
   sequencePanel,
 } from '../shortcuts/bindings.ts';
+import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import type { Entry } from '../../session/transcript/types.ts';
@@ -203,6 +204,9 @@ export function inView(
   return at.top < view.top + view.height && at.top + at.height > view.top;
 }
 
+/** The status line while a block is picked and no action of it has a key. */
+const UNBOUND = 'picking a code block';
+
 /**
  * The status line while a block is picked: the keys that do something to
  * it, named as the shortcuts panel names them, `r` only on a block with
@@ -238,6 +242,13 @@ export function pickHint(
   const line = (shown: readonly string[]) => shown.join(' · ');
   const full = line(items(false));
 
+  // No action has a key: plain words, as any key still ends the pick.
+  if (full === '') {
+    return stringWidth(UNBOUND) <= width
+      ? UNBOUND
+      : cliTruncate(UNBOUND, width);
+  }
+
   if (stringWidth(full) <= width) {
     return full;
   }
@@ -258,26 +269,7 @@ export function pickHint(
 
   // None fits: the bare cancel key, so the line is never blank, cut at the
   // edge only when even it is too wide.
-  return cut(cancel ?? '', width);
-}
-
-/** `text` in `width` cells, its end cut with `…` when it is wider. */
-function cut(text: string, width: number): string {
-  if (stringWidth(text) <= width) {
-    return text;
-  }
-
-  let kept = '';
-
-  for (const char of text) {
-    if (stringWidth(kept + char) > width - 1) {
-      break;
-    }
-
-    kept += char;
-  }
-
-  return `${kept}…`;
+  return cliTruncate(cancel ?? UNBOUND, width);
 }
 
 /**

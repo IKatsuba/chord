@@ -223,6 +223,22 @@ test("a picked block's line of keys names the bound ones, r only with [run] (CHD
   );
 });
 
+test('with no action of a pick bound, its line says so in plain words, cut where it does not fit (CHD-394 §3)', () => {
+  const { keymap } = readKeybindings(
+    JSON.stringify({
+      bindings: [
+        {
+          context: 'CodeBlock',
+          bindings: { up: null, down: null, c: null, r: null, escape: null },
+        },
+      ],
+    }),
+  );
+
+  expect(pickHint(keymap, true)).toStrictEqual('picking a code block');
+  expect(pickHint(keymap, true, 10)).toStrictEqual('picking a…');
+});
+
 test('a block is whole in view only with every row of it in the view (CHD-394)', () => {
   const view = { top: 10, height: 10 };
 

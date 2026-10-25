@@ -191,7 +191,9 @@ before it opened) (`mock-held-answer-*`):
 
 - **One reason at a time,** as CHD-423: an open question first, else running
   calls. Answered, a row still behind calls changes its reason, never shows
-  both.
+  both. When the hold clears and the steer goes out, the row's reason
+  becomes `into the running turn` at once (no 500 ms wait, as the row is
+  already on screen), and from then on Esc leaves it, as §3 says.
 - **80×24:** `› after the running calls: ` is 28 cells, leaving the text
   about 48; the queue cuts the text in its middle as it cuts any row.
 - **Esc interrupting the turn** takes a held steer back into the draft with

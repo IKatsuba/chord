@@ -1,4 +1,4 @@
-import { Fragment, type ReactNode, useContext, useMemo, useRef } from 'react';
+import { Fragment, type ReactNode, useContext, useMemo } from 'react';
 import type { MouseEvent, Renderable, RGBA } from '@opentui/core';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
@@ -165,8 +165,6 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
  */
 function Buttons({ code }: { code: Code }) {
   const actions = useContext(CodeBlockActions);
-  // The button the left button went down on, until it comes up.
-  const pressed = useRef<Button | undefined>(undefined);
   const act = (button: Button) =>
     button === 'copy'
       ? actions?.copy(code.copy)
@@ -178,23 +176,18 @@ function Buttons({ code }: { code: Code }) {
         <text
           key={button}
           {...TEXT}
-          onMouseDown={(event: MouseEvent) => {
-            pressed.current = event.button === 0 ? button : undefined;
-          }}
           onMouseUp={(event: MouseEvent) => {
-            // A drag's end is a selection's, though it ends on a button,
-            // and a release OpenTUI hands the pressed button away from it
-            // is none of its (CHD-394 §1).
-            const clicked =
-              pressed.current === button &&
+            // A click is the window's last press on this very button and
+            // its release here: a drag's end is a selection's, though it
+            // ends on a button, and a release OpenTUI hands the pressed
+            // button away from it is none of its (CHD-394 §1).
+            if (
               event.button === 0 &&
               event.isDragging !== true &&
               event.currentTarget !== null &&
-              over(event, event.currentTarget);
-
-            pressed.current = undefined;
-
-            if (clicked) {
+              actions?.pressedOn(event.currentTarget) === true &&
+              over(event, event.currentTarget)
+            ) {
               act(button);
             }
           }}

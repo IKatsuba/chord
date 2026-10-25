@@ -121,7 +121,8 @@ export function useMouse({
   onPress,
 }: {
   onWheel?: ((step: 'up' | 'down') => void) | undefined;
-  onPress?: (() => void) | undefined;
+  /** The left button went down, on `event`'s target. */
+  onPress?: ((event: MouseEvent) => void) | undefined;
 }): {
   onMouseScroll?: (event: MouseEvent) => void;
   onMouse?: (event: MouseEvent) => void;
@@ -147,7 +148,7 @@ export function useMouse({
   const onMouse = useMemo(
     () => (event: MouseEvent) => {
       if (event.type === 'down' && event.button === 0) {
-        drawn(() => press.current?.());
+        drawn(() => press.current?.(event));
       }
     },
     [],

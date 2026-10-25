@@ -940,6 +940,32 @@ describe("a code box's buttons (CHD-394)", () => {
     );
   });
 
+  test("a press on one box's [copy] released on another box's, after a press there was let go elsewhere, is no click", () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+
+        const first = cell(window, '┌─ typescript', '[copy]');
+        const second = cell(window, LISTED, '[copy]');
+        const prose = cell(window, 'A paragraph after.', 'A paragraph');
+
+        // The first box's button pressed, then let go over the prose.
+        await click(window, first, prose);
+        // The second's pressed, and let go on the first's with no drag.
+        await click(window, second, first);
+        // A click after them copies once; had either been one, it would be
+        // the second.
+        await click(window, first);
+        await window.shows('copied 1 chars to clipboard');
+        expect(copies.map(({ text }) => text)).toStrictEqual(['x']);
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
   test('a press on one button and a release on another, or a wheel over one, is no click', () => {
     const { copies, copy } = clipboard();
 

@@ -56,6 +56,11 @@ export function useSelectable(): {
 export interface CodeActions {
   copy(text: string): void;
   prompt(command: string): void;
+  /**
+   * Whether the window's last left press, wherever it came, was on
+   * `target`: a release is a click only on the button pressed.
+   */
+  pressedOn(target: unknown): boolean;
 }
 
 /** The window's code box actions; none where nothing answers a button. */

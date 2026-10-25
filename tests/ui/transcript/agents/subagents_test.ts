@@ -759,3 +759,38 @@ test('Guardian reviews leave no subagent counts or approved work/headlines, whil
   expect(agentGroup(entries, 0)).toStrictEqual([first, second]);
   expect(agentGroup(entries, 2)).toStrictEqual([]);
 });
+
+test('folded progress rows do not count as more uses; an unstructured Guardian call counts only when omitted (CHD-521)', () => {
+  const progress = (at: number): Entry => ({
+    kind: 'tool',
+    turnId: T,
+    call: { id: `review-${at}`, guardian: 'inProgress' },
+  });
+  const reviews = Array.from({ length: 5 }, (_, at) => progress(at));
+  const child = agent({
+    id: 'reviews',
+    entries: [...reviews, tool('unstructured', 'Guardian Review')],
+  });
+
+  // The unstructured call is last and visible; only progress rows are omitted.
+  expect(blockFold(child, [])).toMatchObject({
+    kind: 'work',
+    more: 0,
+    lines: [
+      { reviewing: true },
+      { reviewing: true },
+      { headline: { name: 'Guardian' } },
+    ],
+  });
+  expect(toolUses(child)).toBe(1);
+  // Put that ordinary fallback first: now omitted, it contributes one use.
+  expect(
+    blockFold({ ...child, entries: [child.entries.at(-1)!, ...reviews] }, []),
+  ).toMatchObject({ kind: 'work', more: 1 });
+  expect(
+    blockFold(
+      { ...child, entries: [tool('read', 'Read file'), ...child.entries] },
+      [],
+    ),
+  ).toMatchObject({ kind: 'work', more: 1 });
+});

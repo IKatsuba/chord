@@ -427,7 +427,8 @@ export function blockFold(
     : {
         kind: 'work',
         lines: lines.slice(-SUMMARY_LINES),
-        more: Math.max(lines.length - SUMMARY_LINES, 0),
+        more: lines.slice(0, -SUMMARY_LINES).filter((line) => !line.reviewing)
+          .length,
       };
 }
 

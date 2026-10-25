@@ -782,7 +782,7 @@ describe('CHD-394 U1 tester: block source boundaries', () => {
         line: 4,
         label: 'console',
         text: '$ echo "hi"\nhi',
-        runnable: true,
+        runnable: false,
         quoted: true,
       },
       {
@@ -839,10 +839,31 @@ describe('CHD-394 U1 tester: block source boundaries', () => {
         index: 1,
         line: 3,
         label: '',
-        text: 'indented\n',
+        text: 'indented',
         runnable: false,
         quoted: false,
       },
     ]);
+  });
+});
+
+describe('CHD-394 U1 tester: command and copy boundaries', () => {
+  test('run removes one exact prompt prefix per line, preserving blank lines, whitespace and Unicode', () => {
+    expect(runCommand('')).toBe('');
+    expect(
+      runCommand('$ $ printf "café 👍🏽"\n\n\t$ keep\n$\tkeep\n $ keep\n$ \n'),
+    ).toBe('$ printf "café 👍🏽"\n\n\t$ keep\n$\tkeep\n $ keep\n\n');
+  });
+
+  test('copy strips trailing line breaks while keeping internal blanks and spaces on the last line', () => {
+    const blocks = codeBlocks(
+      '```sh\n$ first\n\n$ second  \n\n\n```\n\n```bash\n\n\n```',
+    );
+
+    expect(blocks.map(({ text }) => text)).toStrictEqual([
+      '$ first\n\n$ second  ',
+      '',
+    ]);
+    expect(runCommand(blocks[0]?.text ?? '')).toBe('first\n\nsecond  ');
   });
 });

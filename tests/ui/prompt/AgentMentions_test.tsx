@@ -224,6 +224,12 @@ describe('CHD-519 U3 tester: live roster and completion key ownership', () => {
             () => !listed(window, 'worker') && listed(window, 'worker two'),
           );
           await window.press(TAB);
+          await until(
+            'the remaining recipient fills the prompt and closes the list',
+            () =>
+              promptRow(window)?.includes('@@"worker two" ') === true &&
+              !listed(window, 'worker two'),
+          );
           expect(promptRow(window)).toContain('@@"worker two" ');
           expect(promptRow(window)).not.toContain('@@worker ');
           expect(listed(window, 'worker two')).toBe(false);
@@ -266,6 +272,12 @@ describe('CHD-519 U3 tester: live roster and completion key ownership', () => {
         );
         expect(promptRow(window)).toContain('@@par');
         await window.press(TAB);
+        await until(
+          'the replacement recipient fills the prompt and closes the list',
+          () =>
+            promptRow(window)?.includes('@@par-next ') === true &&
+            !listed(window, 'par-next'),
+        );
         expect(promptRow(window)).toContain('@@par-next ');
       },
       {
@@ -322,6 +334,12 @@ describe('CHD-519 U3 tester: live roster and completion key ownership', () => {
         }
 
         await window.press(TAB);
+        await until(
+          'the rebound quoted pick fills the prompt and closes the list',
+          () =>
+            promptRow(window)?.includes('@@"bugfix 2" ') === true &&
+            !listed(window, 'bugfix 2'),
+        );
         expect(promptRow(window), window.frame()).toContain('@@"bugfix 2" ');
         expect(sent).toHaveLength(0);
         await window.press('\r');

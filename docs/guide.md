@@ -270,11 +270,10 @@ text. The session record and `-p` output carry the same result.
 Codex Guardian reviews show one dim `Guardian reviewing…` line while in
 progress. When the agent reports Approved in its structured review status,
 the review disappears, including in ctrl+o and after `/resume`; the agent's
-record keeps it. Approved reviews are excluded from subagent tool-use counts
-and a team's latest headline. Denied, timed-out or aborted reviews, or
-reviews with an unknown or missing structured status, keep the full
-`Guardian(Review)` block.
-This behavior has no setting.
+record keeps it. Approved and in-progress reviews are left out of subagent
+tool-use counts and a team's latest headline. Denied, timed-out or aborted
+reviews, or reviews with an unknown or missing structured status, keep the
+full `Guardian(Review)` block. This behavior has no setting.
 
 An Agent call shows its description; ctrl+o shows the subagent's whole task
 and work, with later messages as `← from <sender>` rows. A Claude subagent

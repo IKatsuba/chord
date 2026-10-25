@@ -860,3 +860,88 @@ describe('send_message recipients shared with agent completion (CHD-519)', () =>
     });
   });
 });
+
+describe('CHD-519 U1 tester: recipient identity across roster changes', () => {
+  test('a closed source never becomes a same-named replacement, and earlier recipient snapshots stay unchanged', () => {
+    const initial = opened('fake', 'parser', 'bugfix 2');
+    const before = messageRecipients(initial, 1);
+    const closed = closeChild(initial, 3);
+    const replacement = openChild(
+      closed,
+      { id: 'replacement-run', name: 'bugfix 2', runtime: 'fake', openedAt: 1 },
+      'replacement conversation',
+    )!;
+
+    expect(before).toEqual([
+      { key: 2, id: 'id-parser', name: 'parser' },
+      { key: 3, id: 'id-bugfix 2', name: 'bugfix 2' },
+    ]);
+    expect(messageRecipients(replacement.agents, 1)).toEqual([
+      { key: 2, id: 'id-parser', name: 'parser' },
+      { key: replacement.key, id: 'replacement-run', name: 'bugfix 2' },
+    ]);
+    expect(messageRecipients(replacement.agents, 3)).toEqual([]);
+    expect(messageRecipients(replacement.agents, replacement.key)).toEqual([
+      { key: 1, name: 'main' },
+    ]);
+  });
+
+  test('an orphaned member cannot acquire a different lead with the same run name', () => {
+    const lead = openChild(
+      opened('fake'),
+      {
+        id: 'old-lead',
+        name: 'bugfix',
+        team: 'bugfix',
+        runtime: 'fake',
+        openedAt: 0,
+      },
+      'old lead',
+    )!;
+    const member = openChild(
+      lead.agents,
+      {
+        id: 'member',
+        name: 'tester',
+        team: 'bugfix',
+        lead: 'old-lead',
+        runtime: 'fake',
+        openedAt: 0,
+      },
+      'member',
+    )!;
+    const orphaned = closeChild(member.agents, lead.key);
+    const replacement = openChild(
+      orphaned,
+      {
+        id: 'new-lead',
+        name: 'bugfix',
+        team: 'bugfix',
+        runtime: 'fake',
+        openedAt: 1,
+      },
+      'new lead',
+    )!;
+
+    expect(messageRecipients(replacement.agents, member.key)).toEqual([]);
+    expect(messageRecipients(replacement.agents, replacement.key)).toEqual([
+      { key: 1, name: 'main' },
+    ]);
+    expect(messageRecipients(replacement.agents, 1)).toEqual([
+      { key: replacement.key, id: 'new-lead', name: 'bugfix' },
+    ]);
+  });
+
+  test('the explicit source controls scope independently of the current pick, and a missing main offers nothing', () => {
+    const initial = opened('codex', 'parser', 'docs');
+    const picked = pick(initial, 3);
+
+    expect(messageRecipients(picked, 1).map((each) => each.name)).toEqual([
+      'parser',
+      'docs',
+    ]);
+    expect(messageRecipients(picked, 2)).toEqual([{ key: 1, name: 'main' }]);
+    expect(messageRecipients({ ...picked, main: undefined }, 2)).toEqual([]);
+    expect(messageRecipients(picked, 999)).toEqual([]);
+  });
+});

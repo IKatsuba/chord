@@ -566,12 +566,13 @@ export type Entry =
       /**
        * The close of a turn the agent started on its own with a message
        * steered after chord's turn had ended, which chord cancelled; the
-       * message, from `from`, goes as chord's next turn. It stays under what
-       * that turn drew, and stands alone while the turn drew nothing.
+       * message, from `from` or the person with none, goes as chord's next
+       * turn. It stays under what that turn drew, and stands alone while the
+       * turn drew nothing.
        */
       readonly kind: 'self_started';
       readonly turnId: string;
-      readonly from: MessageFrom;
+      readonly from?: MessageFrom;
       readonly alone: boolean;
     };
 
@@ -1098,12 +1099,13 @@ export type TranscriptAction =
     }
   /**
    * chord cancelled turn `turnId`, which the agent started on its own with
-   * a message from `from` that a steer brought after chord's turn had ended.
+   * a message from `from`, or the person's with none, that a steer
+   * brought after chord's turn had ended.
    */
   | {
       readonly type: 'self_started';
       readonly turnId: string;
-      readonly from: MessageFrom;
+      readonly from?: MessageFrom;
     }
   /**
    * The agent began a cycle of its own, `turnId`, with no turn of the

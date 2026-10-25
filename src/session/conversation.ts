@@ -171,6 +171,11 @@ export type ConversationEvent =
        * a steer would cut off: it goes in once they have ended (CHD-423).
        */
       readonly afterCalls?: true;
+      /**
+       * The person's steer, out with the agent and not answered for a while:
+       * it is no longer theirs to take back (CHD-378).
+       */
+      readonly steering?: true;
     }
   /**
    * An interrupt took every queued prompt of the person's back; none of them
@@ -283,6 +288,12 @@ interface Prompt {
 /** How a message to the session went: straight into a turn, or queued. */
 export type Delivery = 'sent' | 'queued';
 
+/**
+ * How the person's prompt steered into a running turn went: as a message
+ * does, or not at all, as the agent takes no steering.
+ */
+export type Steered = Delivery | 'unsteerable';
+
 /** A monitor started, as `monitor` answers it. */
 export interface MonitorStarted {
   readonly id: string;
@@ -342,6 +353,11 @@ interface Retired {
 
 /** How long the agent must be silent after an answer to have finished. */
 const QUIET_MS = 1000;
+/**
+ * How long the person's steer goes unanswered before the queue shows it;
+ * a quicker answer draws no row to blink (CHD-378).
+ */
+const STEER_SHOWN_MS = 500;
 /** How long the next queued prompt waits for that silence at most. */
 const SETTLE_LIMIT_MS = 5000;
 
@@ -457,6 +473,14 @@ export class Conversation {
    * turn the agent started with it, which chord cancels.
    */
   #steering = Promise.resolve();
+  /**
+   * The person's steers that wait in the queue, shown there, for the
+   * calls open as they came or for an answer, by turn id: Esc takes them
+   * back to the box with the prompts queued (CHD-378).
+   */
+  #heldSteers = new Set<string>();
+  /** The person's held steers Esc took back, which go nowhere now. */
+  #takenBack = new Set<string>();
   /**
    * The tool calls of the turn on screen not ended yet, by id, which hold a
    * steer back on an agent whose steer cuts them off.
@@ -827,6 +851,8 @@ export class Conversation {
     this.#queued = [];
     this.#steers = new Set();
     this.#steering = Promise.resolve();
+    this.#heldSteers = new Set();
+    this.#takenBack = new Set();
     this.#openCalls = new Set();
     this.#calls = emptyTranscript;
     this.#madeAt = new Map();
@@ -935,6 +961,11 @@ export class Conversation {
 
       await delay(wait);
     }
+  }
+
+  /** Whether the agent takes a prompt into its running turn (CHD-378). */
+  steers(): boolean {
+    return this.#session?.steers() ?? false;
   }
 
   /**
@@ -1055,6 +1086,61 @@ export class Conversation {
     }
 
     void this.#steer(session, into, next, queued);
+
+    return 'sent';
+  }
+
+  /**
+   * The person's prompt put into the running turn, as `tell` puts another
+   * agent's message (CHD-378): built as `send` builds it, held shell
+   * output ahead, its images and mentions too. `unsteerable` on an agent that takes no steering,
+   * with nothing sent or queued, the draft the caller's to keep; with no
+   * turn to go into it goes as `send` sends it.
+   * Undefined before the session is up and once closing.
+   */
+  steerIn(
+    text: string,
+    prompt: string = text,
+    attachments: readonly Attachment[] = [],
+    mentions: readonly string[] = [],
+  ): Steered | undefined {
+    const session = this.#session;
+
+    if (!session || this.#closing) {
+      return undefined;
+    }
+
+    if (!session.steers()) {
+      return 'unsteerable';
+    }
+
+    const into = this.#steerable(session);
+    const ahead = this.#ahead.splice(0);
+    const next: Prompt = {
+      turnId: crypto.randomUUID(),
+      text,
+      prompt: [...ahead, prompt].join('\n\n'),
+      attachments,
+      mentions,
+    };
+
+    if (into === undefined) {
+      return this.#enqueue(session, next);
+    }
+
+    if (this.#waitsOnPerson()) {
+      this.#queued.push({ ...next, afterAnswer: true });
+      this.#emit({
+        type: 'queued',
+        turnId: next.turnId,
+        text,
+        afterAnswer: true,
+      });
+
+      return 'queued';
+    }
+
+    void this.#steer(session, into, next);
 
     return 'sent';
   }
@@ -1191,6 +1277,8 @@ export class Conversation {
     const { promise: answered, resolve: answer } =
       Promise.withResolvers<void>();
     let outcome: SteerOutcome;
+    // The links found for its mentions, recorded with it.
+    let links: readonly ResourceLink[] = [];
 
     // What its queue row says it waits on, once it has one.
     let shown: 'answer' | 'calls' | undefined;
@@ -1200,6 +1288,10 @@ export class Conversation {
       }
 
       shown = why;
+
+      if (next.from === undefined) {
+        this.#heldSteers.add(next.turnId);
+      }
 
       this.#emit({
         type: 'queued',
@@ -1225,26 +1317,61 @@ export class Conversation {
       await ahead;
 
       // The steer ahead may have found the turn over, or the person may have
-      // been asked something while it was out.
-      if (this.#steerable(session) === into) {
-        if (this.#waitsOnPerson()) {
-          show('answer');
-        } else if (open()) {
-          show('calls');
-        }
-      }
+      // been asked something while it was out; and each wake may change what
+      // it waits on, an open question first (CHD-423, CHD-378).
+      const why = (): 'answer' | 'calls' | undefined =>
+        this.#waitsOnPerson() ? 'answer' : open() ? 'calls' : undefined;
 
-      while (
-        this.#steerable(session) === into &&
-        (this.#waitsOnPerson() || open())
+      for (
+        let waits = why();
+        this.#steerable(session) === into && waits !== undefined;
+        waits = why()
       ) {
+        show(waits);
         await this.#wake.promise;
       }
 
-      outcome =
-        this.#steerable(session) === into
-          ? await session.steer(next.prompt)
-          : 'refused';
+      this.#heldSteers.delete(next.turnId);
+
+      if (this.#takenBack.delete(next.turnId)) {
+        return;
+      }
+
+      if (this.#steerable(session) === into) {
+        const out = session.steer(
+          next.prompt,
+          next.attachments,
+          next.mentions,
+          (found) => (links = found),
+        );
+        // Never into a session /clear opened since, or once closing.
+        const outgoing = () =>
+          this.#current(session) &&
+          this.#emit({
+            type: 'queued',
+            turnId: next.turnId,
+            text: next.text,
+            steering: true,
+          });
+        // The person's shows in the queue once it has waited a while, or at
+        // once if its row is there already: their text is then in neither
+        // the box nor the transcript (CHD-378).
+        let slow: ReturnType<typeof setTimeout> | undefined;
+
+        if (next.from === undefined && shown !== undefined) {
+          outgoing();
+        } else if (next.from === undefined) {
+          slow = setTimeout(outgoing, STEER_SHOWN_MS);
+        }
+
+        try {
+          outcome = await out;
+        } finally {
+          clearTimeout(slow);
+        }
+      } else {
+        outcome = 'refused';
+      }
     } catch {
       outcome = 'refused';
     } finally {
@@ -1286,10 +1413,13 @@ export class Conversation {
       });
 
       // A line of its own closes it, so what it drew never reads as the
-      // reply of chord's turn before it (CHD-365's design).
-      if (next.from !== undefined) {
-        this.#emit({ type: 'self_started', turnId: own, from: next.from });
-      }
+      // reply of chord's turn before it (CHD-365's design), the person's
+      // steered prompt's too (CHD-378).
+      this.#emit({
+        type: 'self_started',
+        turnId: own,
+        ...(next.from === undefined ? {} : { from: next.from }),
+      });
 
       const quiet = this.#quieten(session);
 
@@ -1313,7 +1443,15 @@ export class Conversation {
 
     this.#firstPrompt ??= next.prompt;
 
-    this.#recording?.sent(next.turnId, next.prompt, 0, [], at, next.from, into);
+    this.#recording?.sent(
+      next.turnId,
+      next.prompt,
+      next.attachments.length,
+      links,
+      at,
+      next.from,
+      into,
+    );
     this.#flushedFirst();
     // The turn may have answered while the steer was out, the queue held.
     void this.#advance(session);
@@ -2080,7 +2218,13 @@ export class Conversation {
 
     this.#queued = this.#queued.filter((queued) => queued.from);
 
-    if (withdrawn.length > 0) {
+    // The person's steers held in the queue go back with the prompts.
+    const steers = [...this.#heldSteers];
+
+    this.#heldSteers = new Set();
+    this.#takenBack = new Set([...this.#takenBack, ...steers]);
+
+    if (withdrawn.length > 0 || steers.length > 0) {
       this.#emit({ type: 'queue_withdrawn' });
     }
 
@@ -2224,6 +2368,7 @@ export class Conversation {
       };
 
       this.#permissions.set(id, { request, turnId: turn.id });
+      this.#rouse();
       this.#asks.add(withdraw);
       signal.addEventListener('abort', withdraw, { once: true });
       this.#emit({
@@ -2962,6 +3107,8 @@ export class Conversation {
       turnId,
       ...(between && { between }),
     });
+    // A steer held for the calls says from now it waits for the answer.
+    this.#rouse();
 
     if (between) {
       this.#holdForAnswer();
@@ -3016,6 +3163,7 @@ export class Conversation {
       turnId,
       ...(between && { between }),
     });
+    this.#rouse();
 
     if (between) {
       this.#holdForAnswer();
@@ -3078,6 +3226,7 @@ export class Conversation {
     };
 
     this.#plans.set(id, { request, turnId });
+    this.#rouse();
     this.#emit({ type: 'plan_requested', turnId, plan: request.wait });
     request.signal.addEventListener('abort', withdrawn, { once: true });
 

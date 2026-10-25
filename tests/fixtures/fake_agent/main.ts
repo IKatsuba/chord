@@ -49,7 +49,8 @@
  *
  * It takes images in a prompt, and answers each one first with a line naming
  * its media type and its size in bytes, so a capture shows what arrived, and
- * each `resource_link` with a line naming it and its URI.
+ * each `resource_link` with a line naming it and its URI; a steer's, after
+ * the line saying it read the message.
  * Started with `--no-images`, or with `CHORD_FAKE_NO_IMAGES=1`, its
  * `promptCapabilities` say it takes none, as an agent that reads only text.
  *
@@ -571,6 +572,22 @@ if (HANG !== undefined) {
   }, 200);
 }
 
+/**
+ * A line for each image and `resource_link` in a prompt, a turn's or a
+ * steer's, so a capture shows what arrived.
+ */
+function receivedLines(prompt: readonly acp.ContentBlock[]): string[] {
+  return prompt.flatMap((block) =>
+    block.type === 'image'
+      ? [
+          `Received an image: ${block.mimeType}, ${atob(block.data).length} bytes\n\n`,
+        ]
+      : block.type === 'resource_link'
+        ? [`Received a link: ${block.name}, ${block.uri}\n\n`]
+        : [],
+  );
+}
+
 function promptText(prompt: acp.ContentBlock[]): string {
   return prompt
     .map((block) => (block.type === 'text' ? block.text : ''))
@@ -931,16 +948,8 @@ async function playPrompt(
       await turn.say(`Received \`${run.command}\`: ${first}\n\n`);
     }
 
-    for (const block of params.prompt) {
-      if (block.type === 'image') {
-        const bytes = atob(block.data).length;
-
-        await turn.say(
-          `Received an image: ${block.mimeType}, ${bytes} bytes\n\n`,
-        );
-      } else if (block.type === 'resource_link') {
-        await turn.say(`Received a link: ${block.name}, ${block.uri}\n\n`);
-      }
+    for (const line of receivedLines(params.prompt)) {
+      await turn.say(line);
     }
 
     // A team agent's first prompt has its team part ahead of the message,
@@ -1412,7 +1421,7 @@ const connection = acp
 
       if (turn !== undefined) {
         heard(params.sessionId, promptText(params.prompt));
-        turn.steer(promptText(params.prompt));
+        turn.steer(promptText(params.prompt), receivedLines(params.prompt));
 
         return { outcome: 'injected' };
       }

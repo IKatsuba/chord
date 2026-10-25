@@ -342,7 +342,7 @@ export function reducePrompt(
         };
       }
 
-      // Told again once the answer it waited for came: only that changes.
+      // Told again once what it waited for changed: only that changes.
       if (state.queue.some((item) => item.turnId === action.turnId)) {
         return {
           ...state,
@@ -351,10 +351,32 @@ export function reducePrompt(
               return item;
             }
 
-            const { afterAnswer: _, ...rest } = item;
+            const {
+              afterAnswer: _,
+              afterCalls: __,
+              steering: ___,
+              ...rest
+            } = item;
 
-            return action.afterAnswer ? { ...rest, afterAnswer: true } : rest;
+            return {
+              ...rest,
+              ...(action.afterAnswer ? { afterAnswer: true as const } : {}),
+              ...(action.afterCalls ? { afterCalls: true as const } : {}),
+              ...(action.steering ? { steering: true as const } : {}),
+            };
           }),
+        };
+      }
+
+      // A steer out with the agent took its held output as it went, before
+      // this row came, and Esc gives nothing of it back (CHD-378).
+      if (action.steering) {
+        return {
+          ...state,
+          queue: [
+            ...state.queue,
+            { turnId: action.turnId, text: action.text, steering: true },
+          ],
         };
       }
 
@@ -372,6 +394,7 @@ export function reducePrompt(
             ...(state.held.length > 0 ? { held: state.held } : {}),
             ...(images.length > 0 ? { images } : {}),
             ...(action.afterAnswer ? { afterAnswer: action.afterAnswer } : {}),
+            ...(action.afterCalls ? { afterCalls: action.afterCalls } : {}),
           },
         ],
       };

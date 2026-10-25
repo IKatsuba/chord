@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { CHORD_WAIT_MS } from '../../../src/ui/shortcuts/bindings.ts';
 import { SHORTCUTS } from '../../../src/ui/shortcuts/keys.ts';
 import {
@@ -13,35 +13,247 @@ import {
 } from '../app/render.tsx';
 
 test('? on an empty prompt opens the shortcuts, esc and ? close them', () =>
-  withWindow(async (window) => {
-    await ready(window);
-    await window.type('?');
-    await window.shows('ctrl + o for verbose output');
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows('ctrl + o for verbose output');
 
-    const frame = window.frame();
+      const frame = window.frame();
 
-    for (const { key, does } of SHORTCUTS) {
-      expect(frame).toContain(`${key} ${does}`);
-    }
+      for (const { key, does } of SHORTCUTS) {
+        expect(frame).toContain(`${key} ${does}`);
+      }
 
-    expect(!frame.includes('› ?'), 'the ? went into the draft').toBeTruthy();
-    await window.press(ESC);
-    await until(
-      'the panel to close',
-      () => !window.frame().includes('ctrl + o'),
+      expect(!frame.includes('› ?'), 'the ? went into the draft').toBeTruthy();
+      await window.press(ESC);
+      await until(
+        'the panel to close',
+        () => !window.frame().includes('ctrl + o'),
+      );
+      await window.type('?');
+      await window.shows('ctrl + o');
+      await window.type('?');
+      await until(
+        'the panel to close',
+        () => !window.frame().includes('ctrl + o'),
+      );
+      expect(
+        !window.frame().includes('› ?'),
+        'the ? went into the draft',
+      ).toBeTruthy();
+    },
+    // Tall enough for the whole panel; a short window scrolls it, below.
+    { rows: 40 },
+  ));
+
+const PAGE_UP = '\x1b[5~';
+const PAGE_DOWN = '\x1b[6~';
+const HOME = '\x1b[H';
+const END = '\x1b[F';
+const SHIFT_DOWN = '\x1b[1;2B';
+/** An SGR wheel report, `up` or down, at the 0-based cell `x`, `y`. */
+const wheel = (x: number, y: number, up: boolean) =>
+  `\x1b[<${up ? 64 : 65};${x + 1};${y + 1}M`;
+const BELOW = '── ↓ 2 lines below · pagedown to scroll ──';
+const ABOVE = '── ↑ 2 lines above · pageup to scroll ──';
+const LAST = 'tab enter to add a file';
+
+describe('CHD-378 U5 tester: panel ownership and resize', () => {
+  test('resizing a scrolled panel to fit releases its keys and shrinking again clamps to the top', () => {
+    let overflows = false;
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('?');
+        await window.shows(BELOW);
+        await window.press(END);
+        await window.shows(ABOVE);
+        await window.resize({ columns: 120, rows: 40 });
+        await until('the panel fits after resize', () => !overflows);
+        await window.shows('enter to send');
+        await window.shows(LAST);
+
+        expect(window.frame()).not.toContain('to scroll ──');
+        await window.press(HOME);
+        await window.resize({ columns: 80, rows: 24 });
+        await window.shows(BELOW);
+        expect(window.frame()).not.toContain('lines above');
+        expect(window.frame()).not.toContain(LAST);
+        await window.press(END);
+        await window.shows(LAST);
+      },
+      {
+        columns: 80,
+        rows: 24,
+        onState: (all) => {
+          overflows = all.window.panelOverflows === true;
+        },
+      },
     );
-    await window.type('?');
-    await window.shows('ctrl + o');
-    await window.type('?');
-    await until(
-      'the panel to close',
-      () => !window.frame().includes('ctrl + o'),
+  });
+
+  test('rebound page keys drive the overflowing panel and its hints, then return to the transcript', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('?');
+        await window.shows('ctrl+n to scroll');
+        await window.press(PAGE_DOWN);
+        expect(window.frame()).not.toContain(LAST);
+        await window.press('\x0e');
+        await window.shows('ctrl+p to scroll');
+        await window.shows(LAST);
+        await window.press('\x10');
+        await window.shows('ctrl+n to scroll');
+        expect(window.frame()).not.toContain(LAST);
+        await window.resize({ columns: 120, rows: 40 });
+        await window.shows(LAST);
+        await window.press('\x0e');
+        expect(window.frame()).toContain('enter to send');
+        expect(window.frame()).not.toContain('lines above');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        keybindings: JSON.stringify({
+          bindings: [
+            {
+              context: 'Scroll',
+              bindings: {
+                pageup: null,
+                'shift+pageup': null,
+                pagedown: null,
+                'shift+pagedown': null,
+                'ctrl+p': 'scroll:pageUp',
+                'ctrl+n': 'scroll:pageDown',
+              },
+            },
+          ],
+        }),
+      },
+    ));
+
+  test('wheel overscroll clamps at both ends and typing closes a scrolled panel without leaving ownership behind', () => {
+    let overflows = false;
+
+    return withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('?');
+        await window.shows(BELOW);
+        await window.press(END);
+        await window.shows(ABOVE);
+
+        for (let i = 0; i < 4; i++) {
+          await window.press(wheel(10, 10, false));
+        }
+
+        await window.shows(LAST);
+        expect(window.frame()).not.toContain('lines below');
+        await window.press(HOME);
+
+        for (let i = 0; i < 4; i++) {
+          await window.press(wheel(10, 10, true));
+        }
+
+        await window.shows(BELOW);
+        expect(window.frame()).not.toContain('lines above');
+        await window.press(END);
+        await window.shows(LAST);
+        await window.type('x');
+        await until('typing releases the panel keys', () => !overflows);
+        await window.shows('› x');
+        await window.press('\x03');
+        await window.type('?');
+        await window.shows(BELOW);
+        expect(window.frame()).not.toContain('lines above');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        onState: (all) => {
+          overflows = all.window.panelOverflows === true;
+        },
+      },
     );
-    expect(
-      !window.frame().includes('› ?'),
-      'the ? went into the draft',
-    ).toBeTruthy();
-  }));
+  });
+});
+
+test("at 80x24 the panel shows what fits, a rule saying what is below, and every scroll key reaches the rest (CHD-378, the owner's Q217)", () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows(BELOW);
+
+      // The rule takes the last row; the panel's last entry is past it.
+      expect(window.frame().split('\n').at(-1)).toContain(BELOW);
+      expect(window.frame()).not.toContain(LAST);
+
+      const seen = new Set(
+        SHORTCUTS.filter(({ key, does }) =>
+          window.frame().includes(`${key} ${does}`),
+        ),
+      );
+
+      await window.press(PAGE_DOWN);
+      await window.shows(ABOVE);
+      expect(window.frame()).toContain(LAST);
+      expect(window.frame()).not.toContain(BELOW);
+
+      for (const shortcut of SHORTCUTS) {
+        if (window.frame().includes(`${shortcut.key} ${shortcut.does}`)) {
+          seen.add(shortcut);
+        }
+      }
+
+      // Between the two ends, both rules, each with its own count.
+      expect(seen.size).toStrictEqual(SHORTCUTS.length);
+      await window.press(HOME);
+      await window.shows(BELOW);
+      await window.press(SHIFT_DOWN);
+      await window.shows('── ↑ 1 line above · pageup to scroll ──');
+      // The rule above takes a row of the room too.
+      expect(window.frame()).toContain(BELOW);
+      await window.press(END);
+      await window.shows(ABOVE);
+      await window.press(PAGE_UP);
+      await window.shows(BELOW);
+      expect(window.frame()).not.toContain('lines above');
+    },
+    { columns: 80, rows: 24 },
+  ));
+
+test('the wheel over the panel scrolls it, and it opens again at the top', () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows(BELOW);
+      await window.press(wheel(10, 10, false));
+      await window.press(wheel(10, 10, false));
+      await window.shows(ABOVE);
+      await window.press(ESC);
+      await until('the panel to close', () => !window.frame().includes(ABOVE));
+      await window.type('?');
+      await window.shows(BELOW);
+      expect(window.frame()).not.toContain('lines above');
+    },
+    { columns: 80, rows: 24 },
+  ));
+
+test('a panel that fits has no rule', () =>
+  withWindow(
+    async (window) => {
+      await ready(window);
+      await window.type('?');
+      await window.shows(LAST);
+      expect(window.frame()).not.toContain('to scroll ──');
+    },
+    { columns: 120, rows: 40 },
+  ));
 
 test('? anywhere but an empty prompt is text', () =>
   withWindow(async (window) => {

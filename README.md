@@ -147,6 +147,7 @@ Inside the window:
 | `!`               | run a shell command, its output for the agent |
 | `alt+←` / `alt+→` | move by word in the prompt                    |
 | `cmd+←` / `cmd+→` | line start/end, where the terminal passes it  |
+| `tab`             | send into the running turn, where supported  |
 | `shift+tab`       | cycle the permission mode                    |
 | `ctrl+o`          | expand Read output and subagents             |
 | `ctrl+x a`        | go to what waits on you                       |

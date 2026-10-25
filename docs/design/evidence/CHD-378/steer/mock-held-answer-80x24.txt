@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › permissionsteer
+
+ ⏺ Write(notes.txt)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (3s)
+ › after your answer: Also write the docs for it
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

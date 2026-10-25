@@ -3,6 +3,8 @@
  * the keys that quit, clear and edit.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import {
   withChild,
   openOther,
@@ -18,14 +20,22 @@ import {
   CTRL_G,
   DOWN,
   ESC,
+  promptRow,
   quitAll,
   ready,
   send,
   statusReports,
+  statusRow,
+  TAB,
   until,
   UP,
+  type Window,
   withWindow,
 } from './render.tsx';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { PIXEL_BYTES, PIXEL_PNG } from '../../fixtures/images.ts';
+import { RECEIVED } from '../prompt/prompt_window.tsx';
+import { openSession } from '../../../src/session/session.ts';
 import manifest from '../../../package.json' with { type: 'json' };
 
 import { OSC9, writes } from './app_window.tsx';
@@ -562,3 +572,595 @@ test('ctrl+c quits mid-turn and stops the agent', () =>
       () => window.session()?.agentPids.size === 0,
     );
   }));
+
+describe('Tab sends the draft into the running turn (CHD-378)', () => {
+  const UNSTEERED_NOTE =
+    'This agent does not take messages into a running turn · enter queues it';
+
+  /** `text` typed into the box, there before the next key. */
+  const draft = async (window: Window, text: string) => {
+    await window.type(text);
+    await until(
+      `"${text}" in the box`,
+      () => promptRow(window)?.includes(text) ?? false,
+    );
+  };
+
+  test("on an agent that steers, the box empties and the person's row is drawn in the turn, which goes on", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'texttillsteered');
+        await window.shows('esc to interrupt');
+        await draft(window, 'Use the second parser instead');
+        await window.press(TAB);
+        await window.shows('Read the message from nobody.');
+
+        expect(promptRow(window)).not.toContain('Use the second parser');
+        expect(window.frame()).toContain('› Use the second parser instead');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+      },
+    ));
+
+  test('on an agent that does not, nothing goes, the draft stays, and the status line says why', () =>
+    withWindow(async (window) => {
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await draft(window, 'Use the second parser instead');
+      await window.press(TAB);
+      await until('the note', () => statusRow(window).includes(UNSTEERED_NOTE));
+
+      expect(promptRow(window)).toContain('Use the second parser instead');
+      await until(
+        'the note to go',
+        () => !statusRow(window).includes(UNSTEERED_NOTE),
+      );
+      expect(promptRow(window)).toContain('Use the second parser instead');
+      await window.press(ESC);
+    }));
+
+  test("one held behind Claude's open calls waits in the queue saying so, and Esc takes it back to the box", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'bashcut');
+        await window.shows('Running…');
+        await draft(window, 'Skip the slow tests');
+        await window.press(TAB);
+        await window.shows('› after the running calls: Skip the slow tests');
+
+        expect(promptRow(window)).not.toContain('Skip the slow tests');
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+        await until(
+          'the prompt back in the box',
+          () => promptRow(window)?.includes('Skip the slow tests') ?? false,
+        );
+        expect(window.frame()).not.toContain('after the running calls');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+      },
+    ));
+
+  test('one the agent leaves unanswered shows in the queue as going into the turn, Esc leaves it, and refused it goes as the next turn', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await draft(window, 'Use the second parser instead');
+        await window.press(TAB);
+        await window.shows(
+          '› into the running turn: Use the second parser instead',
+        );
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+
+        expect(promptRow(window)).not.toContain('Use the second parser');
+        await until(
+          'the refused steer to go as the next turn',
+          () => !window.frame().includes('into the running turn'),
+        );
+        await window.shows('esc to interrupt');
+        expect(window.frame()).toContain('› Use the second parser instead');
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--steering',
+          'claude',
+          '--steer-late',
+        ),
+      },
+    ));
+
+  test("a draft naming an image file by its path goes in with the image read, as Enter would send it (the owner's Q215)", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+
+        // Typed key by key: pasted, the path would be read at once.
+        for (const key of 'see /shots/a.png') {
+          await window.press(key);
+        }
+
+        await window.shows('› see /shots/a.png');
+        await window.press(TAB);
+        await window.shows('› see [Image #1]');
+        await window.shows(RECEIVED);
+
+        expect(promptRow(window)).not.toContain('see');
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        readImage: () =>
+          Promise.resolve({
+            mediaType: 'image/png',
+            data: PIXEL_PNG,
+            bytes: PIXEL_BYTES.length,
+          }),
+      },
+    ));
+
+  test('on an agent without steering a draft naming an image file stays as typed, nothing read', () => {
+    const read: string[] = [];
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+
+        // Typed key by key: pasted, the path would be read at once.
+        for (const key of 'see /shots/a.png') {
+          await window.press(key);
+        }
+
+        await window.shows('› see /shots/a.png');
+        await window.press(TAB);
+        await window.shows('does not take messages into a running turn');
+
+        expect(promptRow(window)).toContain('see /shots/a.png');
+        expect(read).toStrictEqual([]);
+        await window.press(ESC);
+      },
+      {
+        readImage: (path) => {
+          read.push(path);
+
+          return Promise.resolve({
+            mediaType: 'image/png',
+            data: PIXEL_PNG,
+            bytes: PIXEL_BYTES.length,
+          });
+        },
+      },
+    );
+  });
+
+  /** An image file reader that holds each read until the test lets it go. */
+  const heldReader = () => {
+    const waiting: (() => void)[] = [];
+
+    return {
+      waiting,
+      readImage: () =>
+        new Promise<{ mediaType: string; data: string; bytes: number }>(
+          (resolve) =>
+            waiting.push(() =>
+              resolve({
+                mediaType: 'image/png',
+                data: PIXEL_PNG,
+                bytes: PIXEL_BYTES.length,
+              }),
+            ),
+        ),
+    };
+  };
+
+  for (const first of ['tab', 'enter'] as const) {
+    test(`a second Tab while the image paths ${first} sent are read sends nothing more`, () => {
+      const reader = heldReader();
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+
+          for (const key of 'see /shots/a.png') {
+            await window.press(key);
+          }
+
+          await window.shows('› see /shots/a.png');
+          await window.press(first === 'tab' ? TAB : '\r');
+          await until('the read', () => reader.waiting.length === 1);
+          await window.press(TAB);
+          reader.waiting[0]?.();
+          await window.shows('› see [Image #1]');
+          await window.shows(RECEIVED);
+
+          // A second read, had one started, would still be waiting.
+          expect(reader.waiting).toHaveLength(1);
+          expect(
+            window
+              .frame()
+              .split('\n')
+              .filter((row) => row.includes('› see [Image #1]')),
+          ).toHaveLength(1);
+          await window.press(ESC);
+        },
+        {
+          agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          readImage: reader.readImage,
+        },
+      );
+    });
+  }
+
+  test("a kept draft naming an image file leaves its own session's stack, not the one in front once its file is read", () => {
+    const reader = heldReader();
+    const steering = fakeAgentCommand(
+      undefined,
+      '--child-runtime',
+      'fake',
+      '--steering',
+      'claude',
+    );
+    const aside = (window: Window) =>
+      until('the draft set aside', () =>
+        /^│ ›\s*│$/.test(promptRow(window) ?? ''),
+      );
+
+    return withChild(
+      async (window) => {
+        await openOther(window);
+        await pickAgent(window, 'other');
+        await window.type('other draft');
+        await window.press(DOWN);
+        await aside(window);
+        await pickAgent(window, 'main');
+        // Its turn ends once the steer is in, which the list shows.
+        await send(window, 'texttillsteered');
+        await window.shows('esc to interrupt');
+
+        for (const key of 'see /shots/a.png') {
+          await window.press(key);
+        }
+
+        await window.press(DOWN);
+        await aside(window);
+        await window.press(UP);
+        await window.shows('› see /shots/a.png');
+        await window.press(TAB);
+        await until('the read', () => reader.waiting.length === 1);
+        await pickAgent(window, 'other');
+        reader.waiting[0]?.();
+        // The steer has gone and its turn ended, with other still in front.
+        await until('main to have replied', () =>
+          window
+            .frame()
+            .split('\n')
+            .some((row) => /^\s*main\s.*✓ new reply/.test(row)),
+        );
+        await window.press(UP);
+        await window.shows('› other draft');
+        await pickAgent(window, 'main');
+        await window.shows('› see [Image #1]');
+        await window.shows(RECEIVED);
+      },
+      {
+        agentCommand: steering,
+        startupOf: () => ({ agentCommand: steering }),
+        readImage: reader.readImage,
+      },
+    );
+  });
+
+  test("a draft mentioning a file goes in with the file's link, as Enter would send it (the owner's Q216)", () =>
+    withWindow(
+      async (window) => {
+        await writeFile(join(window.dir, 'a.ts'), '');
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await draft(window, 'See @a.ts ');
+        await window.press(TAB);
+        await window.shows('Received a link: a.ts');
+
+        expect(window.frame()).toContain('› See @a.ts');
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+      },
+    ));
+});
+
+describe('CHD-378 U4 tester: attachment submission boundaries', () => {
+  const image = {
+    mediaType: 'image/png',
+    data: PIXEL_PNG,
+    bytes: PIXEL_BYTES.length,
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a clipboard image held behind calls survives Esc and resending at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'bashcut');
+          await window.shows('Running…');
+          await window.press('\x16');
+          await window.shows('› [Image #1]');
+          await window.press(TAB);
+          await window.shows('› after the running calls: [Image #1]');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await until(
+            'the image placeholder restored',
+            () => promptRow(window)?.includes('[Image #1]') ?? false,
+          );
+          await window.press('\r');
+          await window.shows(RECEIVED);
+
+          expect(window.frame()).not.toContain('[Image #2]');
+          expect(promptRow(window)).not.toContain('[Image #1]');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          clipboard: () => Promise.resolve({ image }),
+        },
+      ));
+  }
+
+  test('Enter during a Tab image-file read neither reads nor submits the draft twice', () => {
+    const release = Promise.withResolvers<typeof image>();
+    let reads = 0;
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+
+        for (const key of 'look /shots/one.png') {
+          await window.press(key);
+        }
+
+        await window.shows('› look /shots/one.png');
+        await window.press(TAB);
+        await until('the first read started', () => reads === 1);
+        await window.press('\r');
+        release.resolve(image);
+        await window.shows(RECEIVED);
+
+        expect(reads).toBe(1);
+        expect(
+          window
+            .frame()
+            .split('\n')
+            .filter((row) => row.includes('› look [Image #1]')),
+        ).toHaveLength(1);
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        readImage: () => {
+          reads += 1;
+
+          return release.promise;
+        },
+      },
+    );
+  });
+
+  test('another session can steer its clipboard image while the first reads a named image', () => {
+    const release = Promise.withResolvers<typeof image>();
+    let reads = 0;
+    const steering = fakeAgentCommand(
+      undefined,
+      '--child-runtime',
+      'fake',
+      '--steering',
+      'claude',
+    );
+
+    return withChild(
+      async (window) => {
+        await openOther(window);
+        await send(window, 'texttillsteered');
+        await window.shows('esc to interrupt');
+
+        for (const key of 'main /shots/one.png') {
+          await window.press(key);
+        }
+
+        await window.press(TAB);
+        await until('main image read started', () => reads === 1);
+        await pickAgent(window, 'other');
+        await readyAgent(window);
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await window.press('\x16');
+        await window.shows('› [Image #2]');
+        await window.press(TAB);
+        await window.shows(RECEIVED);
+
+        expect(window.frame()).not.toContain('› main [Image');
+        release.resolve(image);
+        await until('main finished its steered turn', () =>
+          window
+            .frame()
+            .split('\n')
+            .some((row) => /^\s*main\s.*✓ new reply/.test(row)),
+        );
+        await window.type('other stays');
+        await until(
+          'the other draft before switching',
+          () => promptRow(window)?.includes('other stays') ?? false,
+        );
+        await pickAgent(window, 'main');
+        await window.shows('› main [Image #1]');
+        await window.shows(RECEIVED);
+        await pickAgent(window, 'other');
+        await window.press(UP);
+        await until(
+          'other draft retained',
+          () => promptRow(window)?.includes('other stays') ?? false,
+        );
+        expect(reads).toBe(1);
+      },
+      {
+        agentCommand: steering,
+        startupOf: () => ({ agentCommand: steering }),
+        clipboard: () => Promise.resolve({ image }),
+        readImage: () => {
+          reads += 1;
+
+          return release.promise;
+        },
+      },
+    );
+  });
+});
+
+describe('CHD-378 U3 tester: steering through the window', () => {
+  const put = async (window: Window, text: string) => {
+    await window.type(text);
+    await until(
+      'the draft to be ready',
+      () => promptRow(window)?.includes(text) ?? false,
+    );
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const adapter of ['claude', 'codex']) {
+      test(`a rebound steer leaves an Enter prompt queued and enters history on ${adapter} at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await send(window, 'slow');
+            await window.shows('esc to interrupt');
+            await put(window, 'Next turn only.');
+            await window.press('\r');
+            await window.shows('› Next turn only.');
+            await put(window, 'Change the parser.');
+            await window.press('\x13');
+            await window.shows('Read the message from nobody.');
+
+            expect(promptRow(window)).not.toContain('Change the parser.');
+            expect(window.frame()).toContain('› Change the parser.');
+            expect(window.frame()).toContain('› Next turn only.');
+            expect(window.frame()).not.toContain('· steered');
+            await window.press(UP);
+            await until(
+              'the steered prompt in history',
+              () => promptRow(window)?.includes('Change the parser.') ?? false,
+            );
+            await window.press(CTRL_C);
+            await window.press(ESC);
+            await window.shows('Interrupted by user');
+            await until(
+              'the Enter prompt restored',
+              () => promptRow(window)?.includes('Next turn only.') ?? false,
+            );
+          },
+          {
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--steering', adapter),
+            keybindings: JSON.stringify({
+              bindings: [
+                {
+                  context: 'Chat',
+                  bindings: { tab: null, 'ctrl+s': 'chat:steer' },
+                },
+              ],
+            }),
+          },
+        ));
+    }
+
+    test(`a call-held steer names the new permission first, then changes to in-flight before its answer at ${columns} columns`, async () => {
+      const release = Promise.withResolvers<void>();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'overlapask');
+            await window.shows('sleep 2');
+            await put(window, 'Also write the docs');
+            await window.press(TAB);
+            await window.shows(
+              '› after the running calls: Also write the docs',
+            );
+            await asked(window);
+            await window.shows('› after your answer: Also write the docs');
+
+            expect(window.frame()).not.toContain('after the running calls');
+            await window.press('\r');
+            await window.shows('› into the running turn: Also write the docs');
+            expect(promptRow(window)).not.toContain('Also write the docs');
+            release.resolve();
+            await until(
+              'the in-flight row to leave',
+              () => !window.frame().includes('into the running turn'),
+            );
+            await window.shows('› Also write the docs');
+          },
+          {
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--steering',
+              'claude',
+              '--step-ms',
+              '100',
+            ),
+            openWith: async (options) => {
+              const session = await openSession(options);
+              const steer = session.steer.bind(session);
+
+              return Object.assign(session, {
+                steer: async (text: string) => {
+                  const outcome = await steer(text);
+
+                  await release.promise;
+
+                  return outcome;
+                },
+              });
+            },
+          },
+        );
+      } finally {
+        release.resolve();
+      }
+    });
+  }
+
+  test('a no-steering warning survives typing and Esc while retaining the unsent draft', () =>
+    withWindow(async (window) => {
+      await send(window, 'slow');
+      await window.shows('esc to interrupt');
+      await put(window, 'Keep this');
+      await window.press(TAB);
+      await window.shows(
+        'This agent does not take messages into a running turn',
+      );
+      await put(window, ' draft');
+
+      expect(statusRow(window)).toContain('enter queues it');
+      await window.press(ESC);
+      await window.shows('Interrupted by user');
+      expect(statusRow(window)).toContain('enter queues it');
+      expect(promptRow(window)).toContain('Keep this draft');
+    }));
+});

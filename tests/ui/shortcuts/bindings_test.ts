@@ -1031,8 +1031,8 @@ test('the panel still fits 80x24: one line for what waits, one quit line', () =>
   expect(lines.includes('ctrl + d or ctrl + c twice to quit')).toBeTruthy();
   expect(!lines.includes('ctrl + d to quit')).toBeTruthy();
   expect(columns.length).toStrictEqual(2);
-  // 20 rows with CHD-243's line for x, still under the prompt at 24 rows.
-  expect(Math.max(...columns.map((column) => column.length))).toStrictEqual(20);
+  // 21 rows with CHD-243's line for x and CHD-378's for Tab.
+  expect(Math.max(...columns.map((column) => column.length))).toStrictEqual(21);
 });
 
 test('session:attention bound elsewhere is named as bound, and unbound has no line', () => {

@@ -48,6 +48,7 @@ import {
 import { EDIT_NEW } from '../fixtures/edits.ts';
 import { BASH_OUTPUT, SHELL_OUTPUT } from '../fixtures/terminals.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { until } from './conversation_fake.ts';
 import { recordSession } from '../fixtures/records.ts';
 import { play, run, said as saidChunks } from '../fixtures/recorder.ts';
 
@@ -736,6 +737,201 @@ test('a message steered into a turn is recorded where it went, and a reopened se
       'assistant: Read the message from main.\n\nPermission: allow.',
     ]);
   }));
+
+test("the person's prompt steered into a turn is recorded where it went, as theirs, and a reopened session draws it there (CHD-378)", () =>
+  withPlace(async (place) => {
+    const steering = fakeAgentCommand(undefined, '--steering', 'claude');
+    const events: ConversationEvent[] = [];
+    const failures: string[] = [];
+    const conversation = new Conversation(
+      () =>
+        openSession({ agent: 'fake', cwd: place.dir, agentCommand: steering }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      new FileRecording(place.stateDir, (message) => failures.push(message)),
+    );
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      conversation.send('permissionsteer');
+      await until(() =>
+        events.some((event) => event.type === 'permission_requested'),
+      );
+      conversation.steerIn('Then the docs.');
+
+      const asked = events.find(
+        (event) => event.type === 'permission_requested',
+      );
+
+      assert(asked?.type === 'permission_requested');
+      conversation.choose(asked.permission.id, 'allow');
+      await until(() => events.some((event) => event.type === 'result'));
+    } finally {
+      await conversation.close();
+    }
+
+    expect(failures).toStrictEqual([]);
+
+    const live = drawn(
+      events
+        .filter((event): event is TranscriptAction =>
+          ['prompt', 'update', 'result'].includes(event.type),
+        )
+        .reduce(reduceTranscript, emptyTranscript).entries,
+    );
+    const [record] = await readRecords(place.stateDir);
+
+    assert(record !== undefined);
+
+    const past = await readPast(record.path);
+    const into = past.find(
+      (entry) => entry.type === 'prompt' && entry.into !== undefined,
+    );
+    const connected = events.find((event) => event.type === 'connected');
+
+    assert(connected?.type === 'connected');
+
+    // Replayed, it starts no turn: the one it went into ends once, after it.
+    const turns = recordActions(past).flatMap((action) =>
+      action.type === 'prompt' || action.type === 'result'
+        ? [[action.type, action.type === 'prompt' ? action.into : undefined]]
+        : [],
+    );
+    const session = await open(place, place.resuming, {
+      sessionId: connected.sessionId,
+      cwd: place.dir,
+      record: record.path,
+    });
+
+    try {
+      expect(turns).toStrictEqual([
+        ['prompt', undefined],
+        ['prompt', expect.stringMatching(/^history-/)],
+        ['result', undefined],
+      ]);
+      expect(into).toMatchObject({ prompt: 'Then the docs.' });
+      expect(into).not.toHaveProperty('from');
+      expect(replayed(session.history())).toStrictEqual(live);
+    } finally {
+      await session.close();
+    }
+
+    expect(live).toStrictEqual([
+      'user: permissionsteer',
+      'tool: Write notes.txt completed',
+      'user: Then the docs.',
+      'assistant: Read the message from nobody.\n\nPermission: allow.',
+    ]);
+  }));
+
+describe('CHD-378 U4 tester: attachment record replay', () => {
+  for (const late of [false, true]) {
+    test(`${late ? 'a refused' : 'an injected'} personal steer records its image count and link and replays once`, () =>
+      withPlace(async (place) => {
+        await writeFile(join(place.dir, 'a.ts'), 'export {};');
+
+        const events: ConversationEvent[] = [];
+        const failures: string[] = [];
+        const command = fakeAgentCommand(
+          undefined,
+          '--steering',
+          'claude',
+          '--step-ms',
+          '30',
+          ...(late ? ['--steer-late'] : []),
+        );
+        const conversation = new Conversation(
+          () =>
+            openSession({
+              agent: 'fake',
+              cwd: place.dir,
+              agentCommand: command,
+            }),
+          (event) => events.push(event),
+          Date.now,
+          {},
+          new FileRecording(place.stateDir, (failure) =>
+            failures.push(failure),
+          ),
+        );
+        const text = 'Look at [Image #1] and @a.ts';
+
+        try {
+          conversation.start();
+          await until(() => events.some((event) => event.type === 'connected'));
+          conversation.send(late ? 'text' : 'texttillsteered');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'update' &&
+                event.update.sessionUpdate === 'agent_message_chunk',
+            ),
+          );
+          conversation.steerIn(
+            text,
+            undefined,
+            [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+            ['a.ts'],
+          );
+          await until(
+            () =>
+              events.filter((event) => event.type === 'result').length ===
+              (late ? 2 : 1),
+          );
+        } finally {
+          await conversation.close();
+        }
+
+        const [record] = await readRecords(place.stateDir);
+
+        assert(record !== undefined);
+
+        const past = await readPast(record.path);
+        const prompts = past.filter(
+          (entry) => entry.type === 'prompt' && entry.prompt === text,
+        );
+
+        expect(failures).toStrictEqual([]);
+        expect(prompts).toHaveLength(1);
+
+        const [sent] = prompts;
+
+        assert(sent?.type === 'prompt');
+        expect(sent.images).toBe(1);
+        expect(sent.links).toMatchObject([
+          { name: 'a.ts', uri: pathToFileURL(join(place.dir, 'a.ts')).href },
+        ]);
+        expect(sent.into === undefined).toBe(late);
+        expect(sent.from).toBeUndefined();
+
+        const session = await open(place, place.resuming, {
+          sessionId: record.sessionId,
+          cwd: place.dir,
+          record: record.path,
+        });
+
+        try {
+          const live = drawn(
+            events
+              .filter((event): event is TranscriptAction =>
+                ['prompt', 'update', 'result'].includes(event.type),
+              )
+              .reduce(reduceTranscript, emptyTranscript).entries,
+          );
+          const replay = replayed(session.history());
+
+          expect(replay).toStrictEqual(live);
+          expect(
+            replay.filter((line) => line === 'user: ' + text),
+          ).toHaveLength(1);
+        } finally {
+          await session.close();
+        }
+      }));
+  }
+});
 
 test('--resume by an id chord has a record of opens it in its own directory', () =>
   withPlace(async (place) => {

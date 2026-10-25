@@ -1,5 +1,6 @@
 import { expect, test } from 'bun:test';
 import { CTRL_C, send, until, withWindow } from '../app/render.tsx';
+import { unsteeredNote } from '../../../src/ui/status/Status.tsx';
 
 const SHIFT_TAB = '\x1b[Z';
 
@@ -141,3 +142,12 @@ test("the working line turns Chorded's mark where the star was", () =>
     await send(window, 'slow');
     await window.shows('››› Working…');
   }));
+
+test("Tab's note on an agent without steering names the key bound to send, and no way out with none bound (CHD-378)", () => {
+  expect(unsteeredNote('ctrl + s')).toStrictEqual(
+    'This agent does not take messages into a running turn · ctrl + s queues it',
+  );
+  expect(unsteeredNote(undefined)).toStrictEqual(
+    'This agent does not take messages into a running turn',
+  );
+});

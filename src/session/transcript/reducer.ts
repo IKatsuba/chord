@@ -306,7 +306,7 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
           closed(state.entries, action.turnId, {
             kind: 'self_started',
             turnId: action.turnId,
-            from: action.from,
+            ...(action.from === undefined ? {} : { from: action.from }),
             alone: true,
           }),
         ],

@@ -21,6 +21,7 @@ import {
 import {
   columnCount,
   inColumns,
+  panelRows,
   shortcutLine,
   shortcuts,
   SHORTCUTS,
@@ -127,6 +128,12 @@ const STATES: Record<string, AppState> = {
     {
       type: 'help_toggled',
     },
+  ),
+  // Taller than its room, it takes the scroll keys (CHD-378).
+  'help, overflowing': after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'help_toggled' },
+    { type: 'panel_overflowed', overflows: true },
   ),
   expanded: after(
     { type: 'connected', sessionId: 'session-1' },
@@ -639,6 +646,56 @@ test('shift + tab asks for a mode only once the agent offers two', () => {
   expect(
     keyCommand('', shiftTab, STATES['modes, starting']!, ''),
   ).toStrictEqual(undefined);
+});
+
+test('the panel lays its columns out as rows, each column as wide as its widest line (CHD-378)', () => {
+  expect(panelRows(['a', 'bbb', 'cc', 'd', 'e'], 2)).toStrictEqual([
+    'a     d',
+    'bbb   e',
+    'cc',
+  ]);
+  expect(panelRows([], 3)).toStrictEqual([]);
+});
+
+test('the scroll keys move the open panel while it overflows, and the transcript otherwise (CHD-378)', () => {
+  const pageDown = { ctrl: false, escape: false, pageDown: true };
+
+  expect(
+    keyCommand('', pageDown, STATES['help, overflowing']!, ''),
+  ).toStrictEqual('panel_page_down');
+  expect(keyCommand('', pageDown, STATES.help!, '')).toStrictEqual(
+    'scroll_page_down',
+  );
+  // Shut, it no longer holds them.
+  expect(
+    keyCommand(
+      '',
+      pageDown,
+      reduceApp(STATES['help, overflowing']!, { type: 'help_closed' }),
+      '',
+    ),
+  ).toStrictEqual('scroll_page_down');
+});
+
+test('tab sends the draft into a running turn, and only there (CHD-378)', () => {
+  const tab = { ctrl: false, escape: false, tab: true };
+  const { ready, busy, asked } = STATES;
+
+  expect(keyCommand('', tab, busy!, 'Then the docs')).toStrictEqual('steer');
+  // No turn, an empty box or a shell command: nothing, as before.
+  expect(keyCommand('', tab, ready!, 'Then the docs')).toStrictEqual(undefined);
+  expect(keyCommand('', tab, busy!, '  ')).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(busy!, { type: 'bash_mode', on: true }),
+      'ls',
+    ),
+  ).toStrictEqual(undefined);
+  // The lists keep their Tab, and a permission has the keys.
+  expect(keyCommand('', tab, busy!, '/')).toStrictEqual('complete_command');
+  expect(keyCommand('', tab, asked!, 'Then the docs')).toStrictEqual(undefined);
 });
 
 test('? on an empty prompt opens the panel, and text anywhere else', () => {
@@ -1357,11 +1414,12 @@ test("the panel says ctrl + c to copy, and a rebound key's first, or ctrl + c (C
 
   expect(line(keymap)).toStrictEqual('ctrl + x y or ctrl + c');
 
-  // The panel is still two columns of twenty at 80 and three of fourteen at 120.
+  // The panel is two columns of twenty-one at 80 since Tab steers (CHD-378),
+  // and three of fourteen at 120.
   const lines = shortcuts(keymap).map(shortcutLine);
 
   expect(columnCount(lines, 80)).toStrictEqual(2);
-  expect(Math.ceil(lines.length / 2)).toStrictEqual(20);
+  expect(Math.ceil(lines.length / 2)).toStrictEqual(21);
   expect(columnCount(lines, 120)).toStrictEqual(3);
   expect(Math.ceil(lines.length / 3)).toStrictEqual(14);
 });
@@ -1492,6 +1550,125 @@ test("in an agent's or a task's detail, every key the panel names does what it s
   }
 });
 
+describe('CHD-378 U2 tester: steer key contexts', () => {
+  const tab: KeyPress = { ctrl: false, escape: false, tab: true };
+  const superEnter: KeyPress = {
+    ctrl: false,
+    escape: false,
+    super: true,
+    return: true,
+  };
+
+  test('rebinding to super+enter moves the action and its panel line while lists retain Tab', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          {
+            context: 'Chat',
+            bindings: { tab: null, 'super+enter': 'chat:steer' },
+          },
+        ],
+      }),
+    );
+    const busy = {
+      ...reduceApp(STATES.busy!, {
+        type: 'files_listed',
+        files: ['README.md'],
+      }),
+      keys: keymap,
+    };
+    const lines = shortcuts(keymap).map(shortcutLine);
+
+    expect(problems).toStrictEqual([]);
+    expect(keyCommand('', superEnter, busy, 'Change the parser.')).toBe(
+      'steer',
+    );
+    expect(keyCommand('', tab, busy, 'Change the parser.')).toBeUndefined();
+    expect(keyCommand('', tab, busy, '/mod')).toBe('complete_command');
+    expect(keyCommand('', tab, busy, '@README')).toBe('complete_mention');
+
+    const send = lines.indexOf('enter to send');
+
+    expect(lines[send + 1]).toBe('cmd + enter to send into the running turn');
+    expect(lines).not.toContain('tab to send into the running turn');
+    expect(lines).toContain('tab to complete a command');
+    expect(lines).toContain('tab enter to add a file');
+  });
+
+  test('unbinding removes only the steer line and action', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [{ context: 'Chat', bindings: { tab: null } }],
+      }),
+    );
+    const busy = {
+      ...reduceApp(STATES.busy!, {
+        type: 'files_listed',
+        files: ['README.md'],
+      }),
+      keys: keymap,
+    };
+
+    expect(problems).toStrictEqual([]);
+    expect(keyCommand('', tab, busy, 'Change the parser.')).toBeUndefined();
+    expect(
+      shortcuts(keymap).some((line) => line.actions?.includes('chat:steer')),
+    ).toBe(false);
+    expect(keyCommand('', tab, busy, '/mod')).toBe('complete_command');
+    expect(keyCommand('', tab, busy, '@README')).toBe('complete_mention');
+    expect(
+      keyCommand('', { ...tab, return: true, tab: false }, busy, 'Next.'),
+    ).toBeUndefined();
+  });
+
+  test('requests, pickers, search, background views and Vim normal mode never steer', () => {
+    const guarded = [
+      STATES.asked!,
+      STATES.form!,
+      STATES['picker, busy']!,
+      STATES['vim, normal, busy']!,
+      { ...STATES['background view']!, transcript: STATES.busy!.transcript },
+      { ...STATES['background detail']!, transcript: STATES.busy!.transcript },
+      reduceApp(STATES.busy!, { type: 'searched', search: emptySearch }),
+      reduceApp(STATES.busy!, { type: 'bash_mode', on: true }),
+    ];
+
+    for (const state of guarded) {
+      expect(keyCommand('', tab, state, 'Change the parser.')).not.toBe(
+        'steer',
+      );
+    }
+
+    expect(
+      keyCommand('', tab, STATES.ready!, 'Change the parser.'),
+    ).toBeUndefined();
+    expect(keyCommand('', tab, STATES.busy!, '\n\t ')).toBeUndefined();
+  });
+
+  test('Enter and newline stay widget-owned while shift+tab still cycles modes', () => {
+    const busy = STATES['modes, busy']!;
+
+    expect(textareaDoes(sequence('enter'), 'chat:submit')).toBe(true);
+    expect(textareaDoes(sequence('shift+enter'), 'chat:newline')).toBe(true);
+
+    expect(
+      keyCommand('', { ...tab, tab: false, return: true }, busy, 'Next.'),
+    ).toBeUndefined();
+    expect(
+      keyCommand(
+        '',
+        { ...tab, tab: false, return: true, shift: true },
+        busy,
+        'Next.',
+      ),
+    ).toBeUndefined();
+    expect(keyCommand('', { ...tab, shift: true }, busy, 'Next.')).toBe(
+      'cycle_mode',
+    );
+    expect(keyCommand('', tab, busy, 'Next.')).toBe('steer');
+  });
+});
+
 describe('CHD-386 tester: movement panel entries', () => {
   test('word and line moves follow paste, before history, in both layouts', () => {
     const lines = shortcuts().map(shortcutLine);
@@ -1502,13 +1679,13 @@ describe('CHD-386 tester: movement panel entries', () => {
       'cmd + ← → to line start or end',
       '↑ ↓ for prompts, agents, background',
     ]);
-    expect(lines).toHaveLength(40);
+    expect(lines).toHaveLength(41);
     expect(
       inColumns(lines, columnCount(lines, 80)).map((c) => c.length),
-    ).toStrictEqual([20, 20]);
+    ).toStrictEqual([21, 20]);
     expect(
       inColumns(lines, columnCount(lines, 120)).map((c) => c.length),
-    ).toStrictEqual([14, 14, 12]);
+    ).toStrictEqual([14, 14, 13]);
     expect(lines).toContain('/ @ for commands or files');
     expect(lines).toContain('↑ ↓ to pick a command or file');
     expect(lines).toContain('tab to complete a command');

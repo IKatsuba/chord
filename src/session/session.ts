@@ -247,10 +247,17 @@ export interface Session {
    */
   startsOwnCycles(): boolean;
   /**
-   * Puts `text` into the turn the agent is running, asking an agent with
-   * none running to do nothing with it; rejects when the request fails.
+   * Puts a prompt into the turn the agent is running, its blocks as
+   * `prompt` sends a turn's, asking an agent with none running to do
+   * nothing with it; rejects when the request fails. `went` hears the
+   * links found for the mentions as it goes (CHD-378).
    */
-  steer(text: string): Promise<SteerOutcome>;
+  steer(
+    text: string,
+    attachments?: readonly Attachment[],
+    mentions?: readonly string[],
+    went?: (links: readonly ResourceLink[]) => void,
+  ): Promise<SteerOutcome>;
   /**
    * chord's own MCP server as the agent was given it, under the name it went
    * by; none when it was not passed, as to an agent that does not take HTTP.
@@ -595,14 +602,7 @@ export async function openSession(
       return () => listeners.delete(listener);
     },
     prompt: (text, attachments = [], mentions = []) => {
-      const blocks: ContentBlock[] = [
-        { type: 'text', text },
-        ...attachments.map(({ mediaType, data }): ContentBlock => ({
-          type: 'image',
-          mimeType: mediaType,
-          data,
-        })),
-      ];
+      const blocks = promptBlocks(text, attachments);
       let cancelled = false;
       /** Whether the prompt has gone to the agent, which a cancel then tells. */
       let gone = false;
@@ -677,10 +677,15 @@ export async function openSession(
     steers: () => connection.steering,
     cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     startsOwnCycles: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
-    steer: async (text) => {
+    steer: async (text, attachments = [], mentions = [], went) => {
+      const links =
+        mentions.length === 0 ? [] : await mentionLinks(mentions, cwd);
+
+      went?.(links);
+
       const { outcome } = await connection.steer({
         sessionId: id,
-        prompt: [{ type: 'text', text }],
+        prompt: [...promptBlocks(text, attachments), ...links],
         _meta: { steering: { idleBehavior: 'promptRequired' } },
       });
 
@@ -771,6 +776,24 @@ export async function openSession(
       plans.close();
     },
   };
+}
+
+/**
+ * A prompt's blocks ahead of its mentions' links: its text, then its
+ * images, for a turn and a steer alike.
+ */
+function promptBlocks(
+  text: string,
+  attachments: readonly Attachment[],
+): ContentBlock[] {
+  return [
+    { type: 'text', text },
+    ...attachments.map(({ mediaType, data }): ContentBlock => ({
+      type: 'image',
+      mimeType: mediaType,
+      data,
+    })),
+  ];
 }
 
 /**

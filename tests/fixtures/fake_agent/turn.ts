@@ -69,7 +69,7 @@ export class Turn {
   /** Token usage the turn's answer reports, as ACP's `PromptResponse.usage`. */
   usage: acp.Usage | undefined;
   /** Messages steered into the turn that its next step has not read yet. */
-  readonly #steered: string[] = [];
+  readonly #steered: { text: string; received: readonly string[] }[] = [];
   /** How many messages steered into the turn it has read. */
   #read = 0;
   /** Settles once the turn's play has returned, its answer on its way. */
@@ -121,10 +121,11 @@ export class Turn {
 
   /**
    * A message steered into the turn: read at the turn's next step, as the
-   * adapters' agents read one, or as the turn ends.
+   * adapters' agents read one, or as the turn ends, with a line for each
+   * image or link that came with it.
    */
-  steer(text: string): void {
-    this.#steered.push(text);
+  steer(text: string, received: readonly string[] = []): void {
+    this.#steered.push({ text, received });
   }
 
   /** Whether a message steered in waits for the turn's next step. */
@@ -139,7 +140,7 @@ export class Turn {
 
   /** Answers each message steered in since the last step, saying whose. */
   async read(): Promise<void> {
-    for (const text of this.#steered.splice(0)) {
+    for (const { text, received } of this.#steered.splice(0)) {
       this.#read += 1;
 
       await this.client.notify('session/update', {
@@ -148,7 +149,10 @@ export class Turn {
           sessionUpdate: 'agent_message_chunk',
           content: {
             type: 'text',
-            text: `Read the message from ${senderOf(text) ?? 'nobody'}.\n\n`,
+            text: [
+              `Read the message from ${senderOf(text) ?? 'nobody'}.\n\n`,
+              ...received,
+            ].join(''),
           },
         },
       });

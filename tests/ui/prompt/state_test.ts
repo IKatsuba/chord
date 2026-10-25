@@ -7,6 +7,7 @@ import {
   reduceApp,
 } from '../../../src/ui/app/state.ts';
 import { agentItems } from '../../../src/ui/prompt/commands.ts';
+import { restoredDraft } from '../../../src/ui/prompt/queue.ts';
 import type { PastedImage } from '../../../src/ui/prompt/images.ts';
 import {
   commandMenu,
@@ -893,4 +894,63 @@ test("the person's prompt held for an answer is marked so, and only that changes
       { type: 'queued', turnId: 't2', text: 'second' },
     ).queue,
   ).toStrictEqual([{ turnId: 't2', text: 'second' }]);
+});
+
+test("the person's steer held for the running calls is marked so, changes its reason when told again, and a refusal drops it (CHD-378)", () => {
+  const connected = { type: 'connected', sessionId: 'session-1' } as const;
+
+  expect(
+    after(connected, {
+      type: 'queued',
+      turnId: 't2',
+      text: 'second',
+      afterCalls: true,
+    }).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'second', afterCalls: true }]);
+  expect(
+    after(
+      connected,
+      { type: 'queued', turnId: 't2', text: 'second', afterCalls: true },
+      { type: 'queued', turnId: 't2', text: 'second', afterAnswer: true },
+    ).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'second', afterAnswer: true }]);
+  expect(
+    after(
+      connected,
+      { type: 'queued', turnId: 't2', text: 'second', afterCalls: true },
+      { type: 'queued', turnId: 't2', text: 'second' },
+    ).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'second' }]);
+});
+
+test("the person's steer out with the agent shows in the queue, holds nothing, stays when Esc takes the rest back, and leaves as it is drawn (CHD-378)", () => {
+  const out = after(
+    { type: 'connected', sessionId: 'session-1' },
+    { type: 'prompt', turnId: 't1', text: 'hi', at: 0 },
+    { type: 'queued', turnId: 't2', text: 'Queued with Enter' },
+    { type: 'queued', turnId: 't3', text: 'Use the parser', steering: true },
+  );
+
+  expect(out.queue).toStrictEqual([
+    { turnId: 't2', text: 'Queued with Enter' },
+    { turnId: 't3', text: 'Use the parser', steering: true },
+  ]);
+  expect(restoredDraft(out.queue, '')).toStrictEqual('Queued with Enter');
+  expect(reduceApp(out, { type: 'queue_withdrawn' }).queue).toStrictEqual([
+    { turnId: 't3', text: 'Use the parser', steering: true },
+  ]);
+  expect(
+    reduceApp(out, {
+      type: 'prompt',
+      turnId: 't3',
+      text: 'Use the parser',
+      at: 1,
+      into: 't1',
+    }).queue,
+  ).toStrictEqual([{ turnId: 't2', text: 'Queued with Enter' }]);
+  // Refused while the turn runs, it waits for its end as a plain row.
+  expect(
+    reduceApp(out, { type: 'queued', turnId: 't3', text: 'Use the parser' })
+      .queue,
+  ).toContainEqual({ turnId: 't3', text: 'Use the parser' });
 });

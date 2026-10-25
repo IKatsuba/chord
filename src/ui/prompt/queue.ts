@@ -35,6 +35,11 @@ export interface Queued {
    * it goes into the turn (CHD-423).
    */
   readonly afterCalls?: true;
+  /**
+   * The person's steer out with the agent, unanswered for a while: Esc
+   * leaves it, as it is no longer in the window's hands (CHD-378).
+   */
+  readonly steering?: true;
 }
 
 export type QueueRow =
@@ -77,7 +82,9 @@ export function restoredDraft(queue: readonly Queued[], draft: string): string {
 
 /** The person's own prompts among `queue`, which Esc takes back. */
 export function mine(queue: readonly Queued[]): readonly Queued[] {
-  return queue.filter((queued) => queued.from === undefined);
+  return queue.filter(
+    (queued) => queued.from === undefined && queued.steering === undefined,
+  );
 }
 
 /** The queue's share of a window `rows` tall, never under two rows. */
@@ -92,10 +99,14 @@ export function queueRowLimit(rows: number): number {
  */
 /** Ahead of a prompt held for the person's answer to a request. */
 const AFTER_ANSWER = 'after your answer: ';
+/** Ahead of a steered prompt held for the turn's open calls (CHD-378). */
+const AFTER_CALLS = 'after the running calls: ';
+/** Ahead of a steered prompt out with the agent, not answered yet. */
+const STEERING = 'into the running turn: ';
 
 export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
   const rows = queue.map(
-    ({ text, from, afterAnswer, afterCalls }): QueueRow => {
+    ({ text, from, afterAnswer, afterCalls, steering }): QueueRow => {
       if (from !== undefined) {
         return {
           kind: 'message',
@@ -112,7 +123,13 @@ export function queueRows(queue: readonly Queued[], limit: number): QueueRow[] {
       return {
         kind: 'prompt',
         text: rest.length > 0 ? `${first} …` : first,
-        ...(afterAnswer ? { header: AFTER_ANSWER } : {}),
+        ...(steering
+          ? { header: STEERING }
+          : afterAnswer
+            ? { header: AFTER_ANSWER }
+            : afterCalls
+              ? { header: AFTER_CALLS }
+              : {}),
       };
     },
   );

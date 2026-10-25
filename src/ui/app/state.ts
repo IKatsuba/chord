@@ -247,6 +247,11 @@ export interface WindowState
   readonly selection?: Selection;
   /** What the status line says of the last copy, for a while. */
   readonly copied?: Copied;
+  /**
+   * The note of the last Tab on an agent that takes no steering, by its
+   * number among the notes, said for a while (CHD-378).
+   */
+  readonly steerRefused?: number;
   /** The notes said so far, so each note's time is its own. */
   readonly notes?: number;
 }
@@ -328,7 +333,11 @@ export type AppAction =
       readonly auto: boolean;
     }
   /** The note `id` has been said long enough. */
-  | { readonly type: 'copied_gone'; readonly id: number };
+  | { readonly type: 'copied_gone'; readonly id: number }
+  /** Tab on an agent that takes no steering: nothing went (CHD-378). */
+  | { readonly type: 'steer_refused' }
+  /** The steering note `id` has been said long enough. */
+  | { readonly type: 'steer_note_gone'; readonly id: number };
 
 export const initialAppState: AppState = {
   connection: { status: 'starting' },
@@ -499,6 +508,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'help_closed':
     case 'help_opened':
     case 'keys_pending':
+    case 'panel_overflowed':
       return reduceShortcuts(state, action) as AppState;
     case 'background_opened':
     case 'background_closed':
@@ -727,7 +737,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       const images = taken.flatMap(({ images }) => images ?? []);
       const withdrawn = {
         ...state,
-        queue: state.queue.filter((queued) => queued.from !== undefined),
+        queue: state.queue.filter((queued) => !taken.includes(queued)),
         held:
           back.length === 0
             ? state.held
@@ -898,6 +908,21 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       }
 
       const { copied: _, ...rest } = state;
+
+      return rest;
+    }
+    case 'steer_refused': {
+      // A press again says it afresh, its time from this one.
+      const id = (state.notes ?? 0) + 1;
+
+      return { ...state, steerRefused: id, notes: id };
+    }
+    case 'steer_note_gone': {
+      if (state.steerRefused !== action.id) {
+        return state;
+      }
+
+      const { steerRefused: _, ...rest } = state;
 
       return rest;
     }
@@ -1741,6 +1766,12 @@ function boundCommand(
 
   const step = scrollStep(on);
 
+  // The open panel taller than its room takes them first: having taken
+  // every row, it leaves no transcript in view (CHD-378, the owner's Q217).
+  if (step && state.help && state.panelOverflows) {
+    return `panel_${step}`;
+  }
+
   // A permission request taller than its box takes the view's keys, as the
   // person reads it before answering (CHD-246).
   if (step) {
@@ -1868,6 +1899,18 @@ function boundCommand(
 
   if (typing && on('chat:newline') && !textareaDid('chat:newline')) {
     return 'newline';
+  }
+
+  // A shell command is no message, and with no turn running Tab does nothing,
+  // as before (CHD-378); the lists above keep it while open.
+  if (
+    typing &&
+    on('chat:steer') &&
+    isBusy(state) &&
+    !state.bash &&
+    canSend(state, draft)
+  ) {
+    return 'steer';
   }
 
   if (

@@ -976,3 +976,34 @@ describe("a code block's copy and the draft note (CHD-394)", () => {
     ).toBeUndefined();
   });
 });
+
+test("a code block's failed note outlives a selection's going, which takes a failed selection note with it (CHD-394)", () => {
+  const failure = {
+    kind: 'failed',
+    reason: 'no clipboard to write to',
+  } as const;
+  const block = reduceApp(ready, { type: 'block_copy_noted', result: failure });
+
+  for (const away of [
+    { type: 'selection_gone' },
+    { type: 'expanded_toggled' },
+  ] as const) {
+    expect(reduceApp(block, away).copied).toStrictEqual(block.copied);
+  }
+
+  const selection = reduceApp(
+    reduceApp(
+      reduceApp(reduceApp(ready, { type: 'selection_started' }), {
+        type: 'selection_released',
+        text: 'ab',
+      }),
+      { type: 'copy_started' },
+    ),
+    { type: 'copy_noted', result: failure, auto: false },
+  );
+
+  expect(selection.copied?.result).toStrictEqual(failure);
+  expect(
+    reduceApp(selection, { type: 'selection_gone' }).copied,
+  ).toBeUndefined();
+});

@@ -399,21 +399,20 @@ export const COPIED_NOTE_MS = 3000;
 
 /**
  * The selection gone, and with it a failed copy's note, which says how to
- * try again on a selection there is no more. One gone mid-drag, which no
+ * try again on a selection there is no more; a code block's failed note is
+ * no selection's, and goes in time (CHD-394). One gone mid-drag, which no
  * release will end, lets go of the view as a release would.
  */
 function withoutSelection(state: AppState): AppState {
-  if (
-    state.selection === undefined &&
-    state.copied?.result.kind !== 'failed' &&
-    !state.scroll.held
-  ) {
+  const retry = state.copied?.result.kind === 'failed' && !state.copied.block;
+
+  if (state.selection === undefined && !retry && !state.scroll.held) {
     return state;
   }
 
   const { selection, ...rest } = state;
-  const { copied, ...uncopied } = rest;
-  const left = copied?.result.kind === 'failed' ? uncopied : rest;
+  const { copied: _, ...uncopied } = rest;
+  const left = retry ? uncopied : rest;
 
   if (!left.scroll.held) {
     return left;

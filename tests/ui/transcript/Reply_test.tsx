@@ -911,6 +911,35 @@ describe("a code box's buttons (CHD-394)", () => {
       { columns: 80, rows: 40 },
     ));
 
+  test('a press on [copy] let go over the code, then a drag from the code ending on [copy], is a selection and no copy', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+
+        const button = cell(window, LISTED, '[copy]');
+        const code = cell(window, '│ bun dev check', 'bun');
+
+        // Pressed, then let go away from it: no click, and nothing left over.
+        await window.press(left(button.x, button.y, 'down'));
+        await window.press(left(code.x, code.y, 'up'));
+        // A drag that starts in the code and ends on the button.
+        await window.press(left(code.x, code.y, 'down'));
+        await window.press(left(code.x + 4, code.y, 'drag'));
+        await window.press(left(button.x + 2, button.y, 'drag'));
+        await window.press(left(button.x + 2, button.y, 'up'));
+        // A click after them copies once; had either been a click, this
+        // would be the second.
+        await click(window, cell(window, LISTED, '[copy]'));
+        await window.shows('copied 13 chars to clipboard');
+        expect(copies.map(({ text }) => text)).toStrictEqual(['bun dev check']);
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
   test('a press on one button and a release on another, or a wheel over one, is no click', () => {
     const { copies, copy } = clipboard();
 

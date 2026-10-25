@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode, useContext, useMemo, useRef } from 'react';
-import type { MouseEvent, RGBA } from '@opentui/core';
+import type { MouseEvent, Renderable, RGBA } from '@opentui/core';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import { CodeBlockActions, useColours, useSelectable } from '../app/context.ts';
@@ -182,7 +182,15 @@ function Buttons({ code }: { code: Code }) {
             pressed.current = event.button === 0 ? button : undefined;
           }}
           onMouseUp={(event: MouseEvent) => {
-            const clicked = pressed.current === button && event.button === 0;
+            // A drag's end is a selection's, though it ends on a button,
+            // and a release OpenTUI hands the pressed button away from it
+            // is none of its (CHD-394 §1).
+            const clicked =
+              pressed.current === button &&
+              event.button === 0 &&
+              event.isDragging !== true &&
+              event.currentTarget !== null &&
+              over(event, event.currentTarget);
 
             pressed.current = undefined;
 
@@ -195,5 +203,15 @@ function Buttons({ code }: { code: Code }) {
         </text>
       ))}
     </box>
+  );
+}
+
+/** Whether `event` came at a cell of `at`, as it is drawn now. */
+function over(event: MouseEvent, at: Renderable): boolean {
+  return (
+    event.x >= at.screenX &&
+    event.x < at.screenX + at.width &&
+    event.y >= at.screenY &&
+    event.y < at.screenY + at.height
   );
 }

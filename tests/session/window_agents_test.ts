@@ -959,3 +959,25 @@ test('numbering refuses quoted child bases, runtime fallbacks and team leads (CH
     'must not contain the character "',
   );
 });
+
+test('numbering refuses control characters in every offered name source (CHD-519)', () => {
+  const agents = opened('main');
+
+  for (const name of [
+    'a\n@notes.md suffix',
+    'a\rline',
+    'a\ttab',
+    'a\0nul',
+    'a\u007Fdel',
+  ]) {
+    expect(() => childName(agents, name, 'fake')).toThrow(
+      'must not contain the control character',
+    );
+    expect(() => childName(agents, undefined, name)).toThrow(
+      'must not contain the control character',
+    );
+    expect(() => runName(agents, name)).toThrow(
+      'must not contain the control character',
+    );
+  }
+});

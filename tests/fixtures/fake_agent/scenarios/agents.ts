@@ -570,6 +570,21 @@ export const AGENTS = {
         agent: 'bad"runtime',
         prompt: 'text',
       });
+
+      for (const name of [
+        'a\n@notes.md suffix',
+        'a\rline',
+        'a\ttab',
+        'a\0nul',
+        'a\u007Fdel',
+      ]) {
+        await callChord(turn, client, 'open_agent', {
+          agent: 'fake',
+          name,
+          prompt: 'text',
+        });
+      }
+
       await turn.say('Quoted agent names refused.');
     } finally {
       await client.close();

@@ -465,11 +465,9 @@ export function useSessions(
     parent: Conversation | undefined,
     args: OpenArgs,
     kind: string,
+    name = args.name?.trim() || args.agent,
   ): Promise<string | undefined> => {
-    const named =
-      kind === 'agent'
-        ? agentNameProblem(args.name?.trim() || args.agent)
-        : undefined;
+    const named = kind === 'agent' ? agentNameProblem(name) : undefined;
 
     if (named !== undefined) {
       return `An agent name ${named}`;
@@ -1049,7 +1047,7 @@ export function useSessions(
       ...(lead.mode === undefined ? {} : { mode: lead.mode }),
     };
     const refused =
-      (await startRefusal(key, conversationAt(key), args, 'agent')) ??
+      (await startRefusal(key, conversationAt(key), args, 'agent', team)) ??
       fullRefusal(key);
     const agents = ownedBy(sessions.agents, key);
 
@@ -1135,7 +1133,8 @@ export function useSessions(
     // Asked again after the wait: two calls for one member may both have
     // passed the first look, and the lead may have closed meanwhile.
     const refused =
-      (await startRefusal(key, lead.conversation, args, 'agent')) ?? occupied();
+      (await startRefusal(key, lead.conversation, args, 'agent', member)) ??
+      occupied();
 
     if (refused !== undefined) {
       return { error: refused };

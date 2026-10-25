@@ -468,4 +468,5 @@
   recording conversation, for the resume tests to find.
 
 - `agentnames` asks `open_agent` for an explicit quoted name and a runtime
-  fallback containing a quote; both are refused before any child starts.
+  fallback containing a quote, then names containing CR, LF, tab, NUL and
+  DEL; all are refused before any child starts.

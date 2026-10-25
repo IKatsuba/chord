@@ -530,5 +530,12 @@ test('open_agent refuses quotes in supplied names and runtime fallbacks before s
     expect(
       count(window, 'An agent name must not contain the character "'),
     ).toBe(2);
+
+    for (const code of ['000A', '000D', '0009', '0000', '007F']) {
+      expect(window.frame()).toContain(
+        `An agent name must not contain the control character U+${code}`,
+      );
+    }
+
     expect(window.pids).toHaveLength(1);
   }));

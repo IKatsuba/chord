@@ -594,3 +594,35 @@ test('quoted team and member names are refused, including saved list_teams probl
     });
   });
 });
+
+test('control characters in team and member names report list_teams problems (CHD-519)', async () => {
+  for (const [name, code] of [
+    ['a\n@notes.md suffix', '000A'],
+    ['a\rline', '000D'],
+    ['a\ttab', '0009'],
+    ['a\0nul', '0000'],
+    ['a\u007Fdel', '007F'],
+  ] as const) {
+    const member = EXAMPLE.replace(
+      'name: tester',
+      `name: ${JSON.stringify(name)}`,
+    );
+    const problem = `must not contain the control character U+${code}`;
+
+    expect(problemOf(EXAMPLE, name)).toBe(problem);
+    expect(problemOf(member)).toBe(`members.0.name: ${problem}`);
+    await place(async (where, { project }) => {
+      await write(project, 'bugfix.md', member);
+      expect(
+        teamsAnswer({ found: await findTeams(where, RUNTIMES), runs: [] }),
+      ).toStrictEqual({
+        teams: [
+          {
+            name: 'bugfix',
+            problem: `members.0.name: ${problem}; it cannot run until its file is fixed`,
+          },
+        ],
+      });
+    });
+  }
+});

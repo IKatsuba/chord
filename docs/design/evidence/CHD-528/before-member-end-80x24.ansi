@@ -1,0 +1,24 @@
+[38;2;255;255;255m
+[38;2;232;201;90m╭─[1m tester[0;2m · bugfix[0m[38;2;232;201;90m ────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;2;232;201;90m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m── ↑ 6 lines above · pageup to scroll ────────────────────────────────────────
+[0m[38;2;255;255;255m  [2m[39mcmd + ← → to line start or end          ctrl + d or ctrl + c twice to quit[0m[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents, background     ctrl + x a for what waits on you[0m[38;2;255;255;255m
+  [2m[39mx to close an agent, stop background    ctrl + x b to pick a code block[0m[38;2;255;255;255m
+  [2m[39menter for background, details, a call   c r to copy or put in the prompt[0m[38;2;255;255;255m
+  [2m[39mctrl + r to search prompts              1–9 to pick a choice[0m[38;2;255;255;255m
+  [2m[39mtab enter to take a match               ↑ ↓ or j k to move between choices[0m[38;2;255;255;255m
+  [2m[39mesc to cancel a search                  enter to pick the highlighted choice[0m[38;2;255;255;255m
+  [2m[39mpgup pgdn or wheel to scroll            esc to reject a permission[0m[38;2;255;255;255m
+  [2m[39mshift + ↑ ↓ to scroll a line            esc ← to leave a picker or shortcuts[0m[38;2;255;255;255m
+  [2m[39mhome end for the top and the bottom     ctrl + a to show all directories[0m[38;2;255;255;255m
+  [2m[39mctrl + c to copy                        tab ← → ↑ ↓ space to answer forms[0m[38;2;255;255;255m
+  [2m[39m/ @ @@ for commands, files or agents    ctrl + c to stop the turn and its form
+[0m[38;2;255;255;255m  [2m[39m↑ ↓ to pick a completion                /vim for vim mode[0m[38;2;255;255;255m
+  [2m[39mtab to complete a command               ? for shortcuts[0m[38;2;255;255;255m
+  [2m[39mtab enter to add a file or agent        any key to quit the crash screen[0m[38;2;255;255;255m
+  [2m[39mesc to close completions[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain     [2m  fake                    ◦ idle 32s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mparser   [2m[39m  fake                    ◦ idle 32s[0m[38;2;255;255;255m
+  [2m[39m  … +5 more[0m[38;2;255;255;255m

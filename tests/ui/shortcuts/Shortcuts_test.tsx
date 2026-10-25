@@ -1,7 +1,18 @@
 import { describe, expect, test } from 'bun:test';
 import { CHORD_WAIT_MS } from '../../../src/ui/shortcuts/bindings.ts';
-import { SHORTCUTS } from '../../../src/ui/shortcuts/keys.ts';
 import {
+  columnCount,
+  panelRows,
+  shortcutLine,
+  shortcuts,
+  SHORTCUTS,
+} from '../../../src/ui/shortcuts/keys.ts';
+import { requestRule } from '../../../src/ui/dialogs/permission.ts';
+import { serveChord } from '../../../src/server/server.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import { BUGFIX } from '../agents/teams_window.tsx';
+import {
+  DOWN,
   CTRL_G,
   CTRL_R,
   ESC,
@@ -645,3 +656,241 @@ test("a keybindings file's problem is said in the status line, and the rest appl
       }),
     },
   ));
+
+describe('shortcuts scroll rules occupy their own rows (CHD-528)', () => {
+  test('top, middle and end keep whole rows with a member and two runs at 80x24', async () => {
+    const server = serveChord();
+    const lines = shortcuts().map(shortcutLine);
+    const rows = panelRows(lines, columnCount(lines, 80));
+    const frames: {
+      name: string;
+      frame: string;
+      above: boolean;
+      below: boolean;
+      top?: number;
+    }[] = [];
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await window.type('agentmentions');
+          await window.press('\r');
+          await window.shows('Agent completion sessions opened.');
+          await until(
+            'all fake sessions opened',
+            () => window.pids.length === 9,
+          );
+
+          for (let move = 0; move < 5; move++) {
+            await window.press(DOWN);
+          }
+
+          await window.press('\r');
+          await window.shows('╭─ tester · bugfix ─');
+          await window.type('?');
+          await window.shows('lines below');
+          frames.push({
+            name: 'top',
+            frame: window.frame(),
+            above: false,
+            below: true,
+            top: 0,
+          });
+          await window.press(SHIFT_DOWN);
+          await window.shows('1 line above');
+          frames.push({
+            name: 'middle',
+            frame: window.frame(),
+            above: true,
+            below: true,
+            top: 1,
+          });
+          await window.press(END);
+          await window.shows('tab enter to add a file or agent');
+          frames.push({
+            name: 'end',
+            frame: window.frame(),
+            above: true,
+            below: false,
+          });
+        },
+        {
+          server,
+          columns: 80,
+          rows: 24,
+          runtimes: ['fake'],
+          teams: { bugfix: BUGFIX },
+          agentCommand: fakeAgentCommand(undefined, '--tester-plays', 'text'),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+
+    for (const { name, frame, above, below, top } of frames) {
+      const captured = frame.split('\n').map((line) => line.trimEnd());
+      const start = captured.findIndex((line) => line.startsWith('╰─')) + 1;
+      const end = captured.findIndex(
+        (line, at) => at > start && /^ +main +fake/.test(line),
+      );
+      const actual = captured.slice(start, end).filter((line) => line !== '');
+      const count = actual.length - Number(above) - Number(below);
+      const offset = top ?? rows.length - count;
+      const expected = [
+        ...(above ? [`  ${requestRule('↑', offset, 'pageup', 78)}`] : []),
+        ...rows
+          .slice(offset, offset + count)
+          .map((row) => `  ${row}`.trimEnd()),
+        ...(below
+          ? [
+              `  ${requestRule('↓', rows.length - offset - count, 'pagedown', 78)}`,
+            ]
+          : []),
+      ].map((line) => line.trimEnd());
+
+      expect(actual, `${name}\n${frame}`).toStrictEqual(expected);
+    }
+  });
+});
+
+describe('CHD-528 tester: page boundaries at other terminal sizes', () => {
+  for (const [columns, height] of [
+    [80, 20],
+    [80, 24],
+    [100, 30],
+  ]) {
+    for (const roster of [false, true]) {
+      test(`${columns}x${height} keeps complete rows paging both ways ${roster ? 'with' : 'without'} the agents list`, async () => {
+        const server = serveChord();
+        const lines = shortcuts().map(shortcutLine);
+        const expected = panelRows(lines, columnCount(lines, columns!));
+        const seen = new Set<string>();
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+
+              if (roster) {
+                await window.type('agentmentions');
+                await window.press('\r');
+                await window.shows('Agent completion sessions opened.');
+                await until(
+                  'the roster sessions opened',
+                  () => window.pids.length === 9,
+                );
+
+                for (let move = 0; move < 5; move++) {
+                  await window.press(DOWN);
+                }
+
+                await window.press('\r');
+                await window.shows('╭─ tester · bugfix ─');
+              }
+
+              await window.type('?');
+              await window.shows('enter to send');
+
+              const inspect = () => {
+                const frame = window.frame();
+                const captured = frame
+                  .split('\n')
+                  .map((line) => line.trimEnd());
+                const start =
+                  captured.findIndex((line) => line.startsWith('╰─')) + 1;
+                const rosterStart = captured.findIndex(
+                  (line, at) => at >= start && /^ +main +fake/.test(line),
+                );
+                const actual = captured
+                  .slice(start, rosterStart < 0 ? undefined : rosterStart)
+                  .filter((line) => line !== '');
+                const above = actual[0]?.match(/↑ (\d+) lines? above/);
+                const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
+                const offset = Number(above?.[1] ?? 0);
+                const count = actual.length - Number(!!above) - Number(!!below);
+                const rows = expected.slice(offset, offset + count);
+                const whole = [
+                  ...(above
+                    ? [`  ${requestRule('↑', offset, 'pageup', columns! - 2)}`]
+                    : []),
+                  ...rows.map((row) => `  ${row}`.trimEnd()),
+                  ...(below
+                    ? [
+                        `  ${requestRule('↓', expected.length - offset - count, 'pagedown', columns! - 2)}`,
+                      ]
+                    : []),
+                ]
+                  .filter((line) => line !== '')
+                  .map((line) => line.trimEnd());
+
+                expect(actual, frame).toStrictEqual(whole);
+
+                for (const row of rows) {
+                  seen.add(row);
+                }
+
+                return { above: !!above, below: !!below };
+              };
+
+              let view = inspect();
+
+              expect(view.above).toBe(false);
+
+              for (let page = 0; view.below && page < expected.length; page++) {
+                const previous = window.frame();
+
+                await window.press(PAGE_DOWN);
+                await until(
+                  'a lower shortcuts page',
+                  () => window.frame() !== previous,
+                );
+
+                view = inspect();
+              }
+
+              expect(view.below).toBe(false);
+              expect(window.frame()).toContain(
+                'tab enter to add a file or agent',
+              );
+              expect(seen).toStrictEqual(new Set(expected));
+              await window.press(PAGE_DOWN);
+              inspect();
+
+              for (let page = 0; view.above && page < expected.length; page++) {
+                const previous = window.frame();
+
+                await window.press(PAGE_UP);
+                await until(
+                  'an upper shortcuts page',
+                  () => window.frame() !== previous,
+                );
+
+                view = inspect();
+              }
+
+              expect(view.above).toBe(false);
+              expect(window.frame()).toContain('enter to send');
+              await window.press(PAGE_UP);
+              inspect();
+            },
+            {
+              server,
+              columns: columns!,
+              rows: height!,
+              runtimes: ['fake'],
+              teams: { bugfix: BUGFIX },
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--tester-plays',
+                'text',
+              ),
+            },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
+  }
+});

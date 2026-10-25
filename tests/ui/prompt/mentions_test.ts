@@ -3,6 +3,7 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { listFiles } from '../../../src/files.ts';
+import { agentNameProblem } from '../../../src/agent_name.ts';
 import {
   agentMentionAt,
   insertAgentMention,
@@ -285,5 +286,52 @@ describe('agent mentions remain plain text (CHD-519)', () => {
       ['a.ts', 'b c.ts', 'd.ts'],
     );
     expect(mentionsIn('@@ @a.ts')).toStrictEqual(['a.ts']);
+  });
+});
+
+describe('CHD-519 U2 tester: accepted names cannot introduce file attachments', () => {
+  for (const name of [
+    'parser',
+    'bugfix 2',
+    '解析🚀',
+    'a\\b',
+    "a'b",
+    '@notes.md',
+    'reader @notes.md',
+    'a\\ @notes.md',
+    'a\u00a0@notes.md',
+  ]) {
+    test(`${JSON.stringify(name)} replaces a token inside a multiline mixed draft without introducing links`, () => {
+      expect(agentNameProblem(name)).toBeUndefined();
+
+      const draft = 'first @first.ts\nask @@old-tail @keep.ts\n@last.ts';
+      const cursor = [1, 8] as const;
+      const mention = agentMentionAt(draft, cursor)!;
+      const inserted = insertAgentMention(draft, cursor, mention, name);
+      const token = `@@${/\s/.test(name) ? `"${name}"` : name}`;
+
+      expect(inserted.text).toBe(
+        `first @first.ts\nask ${token} @keep.ts\n@last.ts`,
+      );
+      expect(inserted.cursor).toEqual([1, `ask ${token} `.length]);
+      expect(agentMentionAt(inserted.text, inserted.cursor)).toBeUndefined();
+      expect(mentionAt(inserted.text, inserted.cursor)).toBeUndefined();
+      expect(mentionsIn(inserted.text)).toEqual([
+        'first.ts',
+        'keep.ts',
+        'last.ts',
+      ]);
+    });
+  }
+
+  test('editing just before a closing quote replaces its whole agent name and keeps following file mentions', () => {
+    const draft = '@before.ts @@"old @hidden.ts" @after.ts';
+    const cursor = [0, draft.indexOf('" @after')] as const;
+    const mention = agentMentionAt(draft, cursor)!;
+    const inserted = insertAgentMention(draft, cursor, mention, 'bugfix 2');
+
+    expect(mention.query).toBe('old @hidden.ts');
+    expect(inserted.text).toBe('@before.ts @@"bugfix 2" @after.ts');
+    expect(mentionsIn(inserted.text)).toEqual(['before.ts', 'after.ts']);
   });
 });

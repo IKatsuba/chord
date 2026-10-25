@@ -17,8 +17,8 @@
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
-  `bigask`, `bigasktwice`, `overlapask`, `mainbetween`, `leftask`,
-  `mainbetweentwice`, `bigaskleft`),
+  `bigask`, `bigasktwice`, `overlapask`, `overlapasksteer`, `mainbetween`,
+  `leftask`, `mainbetweentwice`, `bigaskleft`),
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`),
@@ -59,6 +59,7 @@
   `thought`, `tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
   `longcommand`, `overlap`, `overlaptwo`, `overlapfail`, `overlapask`,
+  `overlapasksteer`,
   `subagentcall`,
   `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
   `tasktallname`, `tasktwo`,
@@ -104,7 +105,8 @@
   still runs; `overlaptwo` holds the last step for two steered messages,
   up to 10 s, so both reach the running turn; `overlapfail` fails the first
   instead; `overlapask` asks for a write's permission while another call
-  stays open; `subagentcall` runs
+  stays open; `overlapasksteer` then waits at most 10 s for a steered message
+  after that call ends, keeping the turn open for delivery; `subagentcall` runs
   one subagent's call with no call of the parent's open;
   `headlines` plays a heredoc, a long one-line command, an MCP call and a
   300-line heredoc; `heredoc` and `longcommand` play the Bash calls from

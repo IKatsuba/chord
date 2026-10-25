@@ -355,6 +355,7 @@ const SCENARIOS = [
   'overlaptwo',
   'overlapfail',
   'overlapask',
+  'overlapasksteer',
   'subagentcall',
   'unordered',
   'edit',

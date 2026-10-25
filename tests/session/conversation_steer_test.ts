@@ -2123,7 +2123,7 @@ describe('a steer held for the running calls while a question opens and is answe
       onFake(['--steering', 'claude'], async (conversation, events) => {
         const text = 'Also write the docs';
 
-        conversation.send('overlapask');
+        conversation.send('overlapasksteer');
         await until(() =>
           events.some(
             (event) =>

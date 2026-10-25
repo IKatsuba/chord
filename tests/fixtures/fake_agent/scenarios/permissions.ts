@@ -6,7 +6,7 @@
 import * as acp from '@agentclientprotocol/sdk';
 import { RELEASE_NOTES } from '../../release_notes.ts';
 import { STEP_MS } from '../options.ts';
-import { lifetime, pause, type Play, type Turn } from '../turn.ts';
+import { lifetime, pause, steeredIn, type Play, type Turn } from '../turn.ts';
 
 /**
  * Asks for permission to call `server`'s `tool` with `rawInput`, as
@@ -208,6 +208,17 @@ export const PERMISSIONS = {
     });
 
     return 'end_turn';
+  },
+
+  // Keep the turn open after its last call so a held steer can reach it.
+  async overlapasksteer(turn: Turn): Promise<acp.StopReason> {
+    const stop = await PERMISSIONS.overlapask(turn);
+
+    if (stop !== 'cancelled') {
+      await steeredIn(turn, 1);
+    }
+
+    return stop;
   },
 
   async permission(turn) {

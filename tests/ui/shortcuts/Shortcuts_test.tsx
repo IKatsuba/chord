@@ -946,6 +946,10 @@ describe('CHD-528 tester: page boundaries at other terminal sizes', () => {
 
                 expect(actual, frame).toStrictEqual(whole);
 
+                if (!below) {
+                  expect(offset + count, frame).toBe(expected.length);
+                }
+
                 for (const row of rows) {
                   seen.add(row);
                 }

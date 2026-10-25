@@ -98,11 +98,15 @@ export function Working({
 }
 
 /**
- * What Tab says on an agent that takes no steering, and the way out
- * (CHD-378); 72 cells, whole at 80 columns.
+ * What Tab says on an agent that takes no steering, and the way out by the
+ * key bound to send, if any (CHD-378); 72 cells with Enter, whole at 80
+ * columns.
  */
-export const UNSTEERED =
-  'This agent does not take messages into a running turn · enter queues it';
+export function unsteeredNote(submit: string | undefined): string {
+  const note = 'This agent does not take messages into a running turn';
+
+  return submit === undefined ? note : `${note} · ${submit} queues it`;
+}
 
 /** Claude Code's mode colours, in the theme's tones; the rest is dim. */
 function statusColour(tone: StatusTone, colours: Palette): string | undefined {
@@ -155,7 +159,10 @@ export function StatusLine({
   const helpKey = hintKey(state.keys, 'help:toggle');
   const cycleKey = hintKey(state.keys, 'chat:cycleMode');
   const copied = state.copied && copyNote(state.copied.result);
-  const unsteered = state.steerRefused === undefined ? undefined : UNSTEERED;
+  const unsteered =
+    state.steerRefused === undefined
+      ? undefined
+      : unsteeredNote(hintKey(state.keys, 'chat:submit'));
   const notice =
     armed ??
     (connection.status === 'closing'

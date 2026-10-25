@@ -30,7 +30,6 @@ import {
   type Window,
   withWindow,
 } from './render.tsx';
-import { UNSTEERED } from '../../../src/ui/status/Status.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import manifest from '../../../package.json' with { type: 'json' };
 
@@ -570,6 +569,9 @@ test('ctrl+c quits mid-turn and stops the agent', () =>
   }));
 
 describe('Tab sends the draft into the running turn (CHD-378)', () => {
+  const UNSTEERED_NOTE =
+    'This agent does not take messages into a running turn · enter queues it';
+
   /** `text` typed into the box, there before the next key. */
   const draft = async (window: Window, text: string) => {
     await window.type(text);
@@ -602,12 +604,12 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
       await window.shows('esc to interrupt');
       await draft(window, 'Use the second parser instead');
       await window.press(TAB);
-      await until('the note', () => statusRow(window).includes(UNSTEERED));
+      await until('the note', () => statusRow(window).includes(UNSTEERED_NOTE));
 
       expect(promptRow(window)).toContain('Use the second parser instead');
       await until(
         'the note to go',
-        () => !statusRow(window).includes(UNSTEERED),
+        () => !statusRow(window).includes(UNSTEERED_NOTE),
       );
       expect(promptRow(window)).toContain('Use the second parser instead');
       await window.press(ESC);

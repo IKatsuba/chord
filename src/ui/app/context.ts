@@ -88,6 +88,12 @@ export interface DrawnBlock {
   readonly node: () => Renderable | undefined;
 }
 
+/**
+ * The transcript entry being drawn, where its code blocks are listed from
+ * the transcript (`listedText`); none for any other drawing (CHD-394).
+ */
+export const ListedEntry = createContext<number | undefined>(undefined);
+
 /** The ids a reply's code boxes and quotes are drawn with, by block. */
 export const CodeIds = createContext<ReadonlyMap<Soft, string> | undefined>(
   undefined,

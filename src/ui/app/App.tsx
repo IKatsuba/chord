@@ -47,10 +47,15 @@ import { subagentPath } from '../../session/subagents.ts';
 import { agentGroup } from '../transcript/agents/subagents.ts';
 import {
   type CodePickAction,
-  onScreen,
+  type BlockRef,
+  type Drawn,
+  inOrder,
+  inView,
+  listedBlocks,
+  listedText,
   pickHint,
-  type Placed,
   reduceCodePick,
+  same,
   wholeInView,
 } from '../transcript/code_pick.ts';
 import { bashCommand, typedText } from '../prompt/bash.ts';
@@ -169,6 +174,7 @@ import {
   type CodeActions,
   CodeBlockActions,
   type DrawnBlock,
+  ListedEntry,
   COLOUR,
   Colours,
   drawnColours,
@@ -901,7 +907,7 @@ export function App({
       case 'scroll_panel':
         return panelScroller.current?.(step.step);
       case 'pick_code_block': {
-        const { blocks, shown } = blocksOnScreen();
+        const { blocks, shown } = pickable();
 
         if (blocks.length === 0) {
           return dispatch({ type: 'no_code_block' });
@@ -913,7 +919,7 @@ export function App({
         return pickTo({
           type: 'code_pick_moved',
           by: step.by,
-          blocks: blocksOnScreen().blocks,
+          blocks: pickable().blocks,
         });
       case 'copy_code_pick': {
         const picked = pickedBlock();
@@ -1192,46 +1198,94 @@ export function App({
       />
     ) : undefined;
 
-  /** The code blocks drawn now, in their order on screen, and those in view. */
-  const blocksOnScreen = () => {
+  // The transcript's code blocks, mounted or not, listed again only as its
+  // entries change (CHD-394 §3).
+  const codes = useMemo(
+    () => listedBlocks(state.transcript.entries),
+    [state.transcript.entries],
+  );
+  /** The transcript's rows on screen. */
+  const view = () => {
     const area = viewport.current;
 
-    return onScreen(
-      [...drawnBlocks.current.values()].flatMap((block): Placed[] => {
-        const node = block.node();
+    return area === null
+      ? { top: 0, height: 0 }
+      : { top: area.screenY, height: area.height };
+  };
+
+  /** A block's box, or its quote, while it is drawn. */
+  const nodeOf = (ref: BlockRef) =>
+    drawnBlocks.current.get(`${ref.entry}:${ref.block}`)?.node();
+
+  /**
+   * Every code block the pick reaches, in transcript order, and those on
+   * screen: the listed ones mounted or not, and those found only while
+   * drawn, by where they are.
+   */
+  const pickable = () => {
+    const drawn = [...drawnBlocks.current.values()].flatMap(
+      ({ ref, node: at }): Drawn[] => {
+        const node = ref.entry < 0 ? at() : undefined;
 
         return node === undefined
           ? []
           : [
               {
-                ref: block.ref,
+                ref,
+                at: entryOf(node),
                 top: node.screenY,
                 left: node.screenX,
-                height: node.height,
               },
             ];
-      }),
-      area === null
-        ? { top: 0, height: 0 }
-        : { top: area.screenY, height: area.height },
+      },
     );
+    const blocks = inOrder(
+      codes.map(({ ref }) => ref),
+      drawn,
+    );
+    const now = view();
+
+    return {
+      blocks,
+      shown: blocks.filter((ref) => {
+        const node = nodeOf(ref);
+
+        return (
+          node !== undefined &&
+          inView({ top: node.screenY, height: node.height }, now)
+        );
+      }),
+    };
   };
 
   /**
    * The pick moved, and the view with it where the block picked is not
-   * whole in view: scrolled so its first row is the view's (CHD-394 §3).
+   * whole in view: scrolled so its first row is the view's; one not
+   * mounted is mounted by the same jump (CHD-394 §3).
    */
   const pickTo = (action: CodePickAction) => {
     const next = reduceCodePick(state.codePick, action);
-    const node =
-      next === undefined
-        ? undefined
-        : drawnBlocks.current.get(`${next.entry}:${next.block}`)?.node();
-    const area = viewport.current;
 
     dispatch(action);
 
-    if (node === undefined || area === null) {
+    if (next === undefined) {
+      return;
+    }
+
+    const node = nodeOf(next);
+
+    if (node === undefined) {
+      const far = codes.find(({ ref }) => same(ref, next));
+
+      if (far !== undefined) {
+        dispatch({
+          type: 'jumped_to',
+          entry: next.entry,
+          target: far.node,
+          whole: true,
+        });
+      }
+
       return;
     }
 
@@ -1239,22 +1293,20 @@ export function App({
 
     if (
       entry !== undefined &&
-      !wholeInView(
-        { top: node.screenY, height: node.height },
-        { top: area.screenY, height: area.height },
-      )
+      !wholeInView({ top: node.screenY, height: node.height }, view())
     ) {
       dispatch({ type: 'jumped_to', entry, target: node.id, whole: true });
     }
   };
 
-  /** The block picked, while it is drawn. */
+  /** The block picked: what it copies and runs, mounted or not. */
   const pickedBlock = () => {
     const at = state.codePick;
 
     return at === undefined
       ? undefined
-      : drawnBlocks.current.get(`${at.entry}:${at.block}`);
+      : (codes.find(({ ref }) => same(ref, at)) ??
+          drawnBlocks.current.get(`${at.entry}:${at.block}`));
   };
 
   // A code box's buttons: its copy goes the selection's way, its command
@@ -1457,13 +1509,23 @@ export function App({
                           return (
                             <box key={index} ref={place(index)} flexShrink={0}>
                               {group === undefined ? (
-                                <TranscriptEntry
-                                  entry={entry}
-                                  turn={state.transcript.turn}
-                                  agent={shownAgent}
-                                  expanded={state.expanded}
-                                  width={columns - TRANSCRIPT_INSET}
-                                />
+                                // Its code blocks named by its place, as the
+                                // transcript lists them (CHD-394).
+                                <ListedEntry.Provider
+                                  value={
+                                    listedText(entry) === undefined
+                                      ? undefined
+                                      : index
+                                  }
+                                >
+                                  <TranscriptEntry
+                                    entry={entry}
+                                    turn={state.transcript.turn}
+                                    agent={shownAgent}
+                                    expanded={state.expanded}
+                                    width={columns - TRANSCRIPT_INSET}
+                                  />
+                                </ListedEntry.Provider>
                               ) : (
                                 group.length > 0 && (
                                   <Agents

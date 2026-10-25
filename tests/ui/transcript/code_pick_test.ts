@@ -6,7 +6,8 @@ import {
 import {
   type BlockRef,
   drawnIds,
-  onScreen,
+  inOrder,
+  inView,
   pickHint,
   reduceCodePick,
   wholeInView,
@@ -163,25 +164,40 @@ test("a reply's boxes and quotes are given ids, and each block the id of what it
   ]);
 });
 
-test('the blocks drawn are ordered as on screen, and those in view told apart (CHD-394)', () => {
-  const at = (entry: number, top: number, left = 0, height = 3) => ({
-    ref: { entry, block: 0 },
-    top,
-    left,
-    height,
-  });
-  const { blocks, shown } = onScreen(
-    [at(3, 30), at(1, 2), at(2, 12, 4), at(4, 12, 0)],
-    { top: 10, height: 10 },
-  );
+test('the blocks the pick reaches are in one transcript order, listed and drawn-only alike (CHD-394)', () => {
+  const ref = (entry: number, block = 0) => ({ entry, block });
 
-  expect(blocks.map(({ entry }) => entry)).toStrictEqual([1, 4, 2, 3]);
-  // A box whose rows reach into the view counts; one wholly past it does not.
-  expect(shown.map(({ entry }) => entry)).toStrictEqual([4, 2]);
-  expect(onScreen([], { top: 0, height: 10 })).toStrictEqual({
-    blocks: [],
-    shown: [],
-  });
+  expect(
+    inOrder(
+      [ref(5, 1), ref(1, 0), ref(5, 0)],
+      [
+        // A tool's summary in entry 3, two boxes one above the other.
+        { ref: ref(-2, 1), at: 3, top: 20, left: 0 },
+        { ref: ref(-2, 0), at: 3, top: 10, left: 0 },
+        // The plan box, outside the transcript: last.
+        { ref: ref(-9, 0), at: undefined, top: 1, left: 0 },
+        // Drawn in a listed entry: after its listed blocks.
+        { ref: ref(-4, 0), at: 5, top: 0, left: 0 },
+      ],
+    ),
+  ).toStrictEqual([
+    ref(1, 0),
+    ref(-2, 0),
+    ref(-2, 1),
+    ref(5, 0),
+    ref(5, 1),
+    ref(-4, 0),
+    ref(-9, 0),
+  ]);
+});
+
+test('a block is in view by any row of its own (CHD-394)', () => {
+  const view = { top: 10, height: 10 };
+
+  expect(inView({ top: 8, height: 3 }, view)).toBe(true);
+  expect(inView({ top: 19, height: 5 }, view)).toBe(true);
+  expect(inView({ top: 20, height: 1 }, view)).toBe(false);
+  expect(inView({ top: 5, height: 5 }, view)).toBe(false);
 });
 
 test("a picked block's line of keys names the bound ones, r only with [run] (CHD-394)", () => {

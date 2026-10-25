@@ -22,6 +22,7 @@ import {
   CTRL_G,
   CTRL_X,
   DOWN,
+  END,
   ESC,
   leader,
   promptRow,
@@ -1347,6 +1348,59 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
       },
       { columns: 80, rows: 24 },
     ));
+
+  test("in a long history, ctrl+x b reaches the newest code past the mounted tail, and ↑ crosses into it from the tail's", () => {
+    const { copies, copy } = clipboard();
+    const BUILT =
+      'deno task compile --all\nfor bin in dist/*/chord; do echo "built $bin"; done';
+    // Enough turns of plain text that the code reply leaves the tail of
+    // entries mounted while following (TAIL_ENTRIES).
+    const plain = async (window: Window) => {
+      for (let turn = 0; turn < 22; turn++) {
+        await send(window, 'text');
+        await until(
+          'the reply',
+          () =>
+            !statusRow(window).includes('esc to interrupt') &&
+            window.frame().includes('came in chunks.'),
+        );
+      }
+    };
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdown');
+        await window.shows('built $bin');
+        await plain(window);
+        expect(window.frame()).not.toContain('[copy]');
+
+        // No code in the mounted tail: the transcript's newest is picked,
+        // mounted and shown.
+        await leader(window, 'b');
+        await window.shows('┌─ sh ───');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('c');
+        await until('the copy', () => copies.length === 1);
+        expect(copies[0]!.text).toStrictEqual(BUILT);
+
+        // A code reply in the tail; ↑ from it goes back past the tail.
+        await window.press(END);
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        for (let up = 0; up < 3; up++) {
+          await window.press(UP);
+        }
+
+        await window.press('c');
+        await until('the second copy', () => copies.length === 2);
+        expect(copies[1]!.text).toStrictEqual(BUILT);
+      },
+      { columns: 80, rows: 24, copy },
+    );
+  });
 
   test('with no code block in the transcript, ctrl+x b says so', () =>
     withWindow(async (window) => {

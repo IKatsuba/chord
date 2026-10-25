@@ -14,6 +14,7 @@ import stripAnsi from 'strip-ansi';
 import {
   CodeBlockActions,
   CodeIds,
+  ListedEntry,
   useColours,
   useSelectable,
 } from '../app/context.ts';
@@ -79,11 +80,16 @@ export function usePicked(): BlockRef | undefined {
   );
 }
 
-/** This drawing's number, the `entry` of its blocks' `BlockRef`s. */
+/**
+ * The `entry` this drawing's blocks are named by: a listed transcript
+ * entry's index, the same mounted or not, or else a number of the drawing's
+ * own, below zero so the two never meet (CHD-394).
+ */
 export function useDrawing(): number {
-  const [entry] = useState(() => (drawings += 1));
+  const listed = useContext(ListedEntry);
+  const [own] = useState(() => -(drawings += 1));
 
-  return entry;
+  return listed ?? own;
 }
 
 /** The index of the block picked, when it is one of drawing `entry`'s. */

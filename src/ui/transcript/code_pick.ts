@@ -10,7 +10,15 @@ import {
   keysOf,
   sequencePanel,
 } from '../shortcuts/bindings.ts';
-import type { Soft } from './markdown.ts';
+import stripAnsi from 'strip-ansi';
+import type { Entry } from '../../session/transcript/types.ts';
+import {
+  codeBlocks,
+  codePlaces,
+  openFences,
+  runCommand,
+  type Soft,
+} from './markdown.ts';
 
 /** A code block where it is drawn: the text it is in, then its place there. */
 export interface BlockRef {
@@ -82,7 +90,8 @@ function newest(
   return blocks.findLast((ref) => among.some((other) => same(ref, other)));
 }
 
-function same(a: BlockRef, b: BlockRef): boolean {
+/** Whether two refs name the same block. */
+export function same(a: BlockRef, b: BlockRef): boolean {
   return a.entry === b.entry && a.block === b.block;
 }
 
@@ -141,36 +150,56 @@ export function drawnIds(
   return { ids, nodes };
 }
 
-/** Where a drawn block's box, or its quote, is on screen now. */
-export interface Placed {
+/**
+ * A code block found only while it is drawn, where it is: the transcript
+ * entry it is drawn in, none outside the transcript, and its screen place.
+ */
+export interface Drawn {
   readonly ref: BlockRef;
+  readonly at: number | undefined;
   readonly top: number;
   readonly left: number;
-  readonly height: number;
 }
 
 /**
- * The blocks drawn, in the order they are on screen, top to bottom, then
- * left to right, then as written; and those in `view`, the transcript's
- * rows on screen, by any row of theirs.
+ * Every block the pick reaches, in one transcript order for ↑ and ↓: the
+ * listed ones by entry and place, each drawn-only one in its entry's place
+ * after that entry's listed ones, top to bottom, those drawn outside the
+ * transcript last (CHD-394 §3).
  */
-export function onScreen(
-  drawn: readonly Placed[],
-  view: { readonly top: number; readonly height: number },
-): { readonly blocks: BlockRef[]; readonly shown: BlockRef[] } {
-  const sorted = [...drawn].sort(
-    (a, b) => a.top - b.top || a.left - b.left || a.ref.block - b.ref.block,
-  );
+export function inOrder(
+  listed: readonly BlockRef[],
+  drawn: readonly Drawn[],
+): BlockRef[] {
+  const keyed = [
+    ...listed.map((ref) => ({ ref, keys: [ref.entry, 0, ref.block, 0] })),
+    ...drawn.map(({ ref, at, top, left }) => ({
+      ref,
+      keys: [at ?? Number.POSITIVE_INFINITY, 1, top, left],
+    })),
+  ];
 
-  return {
-    blocks: sorted.map(({ ref }) => ref),
-    shown: sorted
-      .filter(
-        ({ top, height }) =>
-          top < view.top + view.height && top + height > view.top,
-      )
-      .map(({ ref }) => ref),
-  };
+  return keyed
+    .sort((a, b) => {
+      for (let at = 0; at < a.keys.length; at++) {
+        const by = a.keys[at]! - b.keys[at]!;
+
+        if (by !== 0) {
+          return by;
+        }
+      }
+
+      return 0;
+    })
+    .map(({ ref }) => ref);
+}
+
+/** Whether a block placed so has a row in `view`, the transcript's rows on screen. */
+export function inView(
+  at: { readonly top: number; readonly height: number },
+  view: { readonly top: number; readonly height: number },
+): boolean {
+  return at.top < view.top + view.height && at.top + at.height > view.top;
 }
 
 /**
@@ -212,4 +241,66 @@ export function wholeInView(
   view: { readonly top: number; readonly height: number },
 ): boolean {
   return at.top >= view.top && at.top + at.height <= view.top + view.height;
+}
+
+/** A code block the transcript holds, mounted or not (CHD-394 §3). */
+export interface ListedBlock {
+  readonly ref: BlockRef;
+  /** What `c` copies. */
+  readonly copy: string;
+  /** What `r` puts into the prompt, on an `sh` or `bash` block. */
+  readonly run?: string;
+  /** The id of what it is drawn in, its box or its quote, to jump to. */
+  readonly node: string;
+}
+
+/**
+ * The text of an entry whose code blocks are listed from the transcript,
+ * whether or not it is mounted: an assistant's reply, and a message, but a
+ * monitor's; none for any other. Code drawn elsewhere, as an expanded tool
+ * summary or the plan box, is found only while it is drawn (the lead's
+ * choice on CHD-394).
+ */
+export function listedText(entry: Entry): string | undefined {
+  return entry.kind === 'assistant' ||
+    (entry.kind === 'message' && entry.from.monitor === undefined)
+    ? stripAnsi(entry.text)
+    : undefined;
+}
+
+/**
+ * Every listed code block of `entries`, in transcript order, each named by
+ * its entry's index and its place among the entry's blocks; a block whose
+ * fence is still open is not one yet.
+ */
+export function listedBlocks(entries: readonly Entry[]): ListedBlock[] {
+  return entries.flatMap((entry, at) => {
+    const text = listedText(entry);
+
+    if (text === undefined) {
+      return [];
+    }
+
+    const open = openFences(text);
+    const { boxes, quotes } = codePlaces(text);
+
+    return codeBlocks(text).flatMap((block): ListedBlock[] => {
+      if (open.has(block.index)) {
+        return [];
+      }
+
+      const quote = quotes.findIndex((held) => held.includes(block.index));
+
+      return [
+        {
+          ref: { entry: at, block: block.index },
+          copy: block.text,
+          ...(block.runnable ? { run: runCommand(block.text) } : {}),
+          node: boxes.includes(block.index)
+            ? `code-${at}-${block.index}`
+            : `quote-${at}-${quote}`,
+        },
+      ];
+    });
+  });
 }

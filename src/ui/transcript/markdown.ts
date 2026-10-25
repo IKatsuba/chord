@@ -102,6 +102,54 @@ export interface Code {
 export const QUOTE_INSET = 2;
 
 /**
+ * A code block of a reply as the transcript draws it, for a button or a key
+ * to find and act on (CHD-394).
+ */
+export interface CodeBlock {
+  /** Its place among the reply's code blocks, from 0, in the order drawn. */
+  readonly index: number;
+  /** The line of the reply's text its block starts on, from 0. */
+  readonly line: number;
+  /** The fence's language, its first word, as the box's label; empty for none. */
+  readonly label: string;
+  /** The code as written, unhighlighted: what a copy of it takes. */
+  readonly text: string;
+  /**
+   * Labelled `sh`, `bash` or `console`, the blocks the owner's run button
+   * is tried on first; an unlabelled one is not.
+   */
+  readonly runnable: boolean;
+  /**
+   * In a quote, drawn into the quote's text beside its bar, where every
+   * other block is a box of its own.
+   */
+  readonly quoted: boolean;
+}
+
+/** The labels of the blocks a run button is tried on (the owner, CHD-394). */
+const RUNNABLE: ReadonlySet<string> = new Set(['sh', 'bash', 'console']);
+
+/**
+ * `text`'s code blocks, a reply's as `softMarkdown` lays it out: those at
+ * its top, in its lists and in its quotes, in the order written, which is
+ * the order drawn. A fence still open, mid-stream, is a block to the end.
+ */
+export function codeBlocks(text: string): CodeBlock[] {
+  return blockCode(lexer(text), 0).map(({ token, line, quoted }, index) => {
+    const label = labelOf(token);
+
+    return {
+      index,
+      line,
+      label,
+      text: token.text,
+      runnable: RUNNABLE.has(label),
+      quoted,
+    };
+  });
+}
+
+/**
  * `text` as its top-level blocks, rendered to lines no wider than `width`
  * cells. markdansi puts no blank line between blocks, so paragraphs would run
  * together; the component puts one between these. Each call renders the whole
@@ -274,7 +322,7 @@ function highlighted(
   token: Tokens.Code,
   color: Paint,
 ): { label: string; lines: readonly string[] } {
-  const label = token.lang?.trim().split(/\s+/)[0] ?? '';
+  const label = labelOf(token);
   const language = color?.code && fenceLanguage(label);
 
   return {
@@ -415,13 +463,19 @@ const HOLES = new Map(
   ]),
 );
 
+/** A code block's label: its fence's language, its first word. */
+function labelOf(token: Tokens.Code): string {
+  return token.lang?.trim().split(/\s+/)[0] ?? '';
+}
+
 /**
  * A code block in a list or a quote, and the line of the list's or the
- * quote's `raw` it starts on.
+ * quote's `raw` it starts on; whether a quote holds it.
  */
 interface HeldCode {
   readonly token: Tokens.Code;
   readonly line: number;
+  readonly quoted: boolean;
 }
 
 /**
@@ -430,7 +484,11 @@ interface HeldCode {
  * hands an item's blocks over with its indent taken off but its lines kept,
  * so a block's line is the lines of the blocks before it.
  */
-function listCode(items: readonly Tokens.ListItem[], line: number): HeldCode[] {
+function listCode(
+  items: readonly Tokens.ListItem[],
+  line: number,
+  quoted = false,
+): HeldCode[] {
   let at = line;
 
   return items.flatMap((item) => {
@@ -438,7 +496,7 @@ function listCode(items: readonly Tokens.ListItem[], line: number): HeldCode[] {
 
     at += lineBreaks(item.raw);
 
-    return blockCode(item.tokens, start);
+    return blockCode(item.tokens, start, quoted);
   });
 }
 
@@ -447,7 +505,11 @@ function listCode(items: readonly Tokens.ListItem[], line: number): HeldCode[] {
  * lists and quotes among them. A quote's blocks, like an item's, keep their
  * lines with the `>` taken off.
  */
-function blockCode(tokens: readonly Token[], line: number): HeldCode[] {
+function blockCode(
+  tokens: readonly Token[],
+  line: number,
+  quoted = false,
+): HeldCode[] {
   let at = line;
 
   return tokens.flatMap((token) => {
@@ -456,11 +518,11 @@ function blockCode(tokens: readonly Token[], line: number): HeldCode[] {
     at += lineBreaks(token.raw);
 
     return token.type === 'list'
-      ? listCode((token as Tokens.List).items, start)
+      ? listCode((token as Tokens.List).items, start, quoted)
       : token.type === 'blockquote'
-        ? blockCode((token as Tokens.Blockquote).tokens, start)
+        ? blockCode((token as Tokens.Blockquote).tokens, start, true)
         : token.type === 'code'
-          ? [{ token: token as Tokens.Code, line: start }]
+          ? [{ token: token as Tokens.Code, line: start, quoted }]
           : [];
   });
 }

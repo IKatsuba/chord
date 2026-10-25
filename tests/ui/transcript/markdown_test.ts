@@ -5,8 +5,11 @@ import { promisify } from 'node:util';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import {
+  type Code,
+  codeBlocks,
   markdown,
   QUOTE_INSET,
+  type Soft,
   softMarkdown,
 } from '../../../src/ui/transcript/markdown.ts';
 import { PALETTES } from '../../../src/ui/theme/theme.ts';
@@ -630,4 +633,104 @@ test('soft, a loose list says so (CHD-396)', () => {
       { marker: '- ', blocks: [{ kind: 'text', text: 'b' }] },
     ],
   });
+});
+
+test("a reply's code blocks are listed as drawn: label, text as written, whether a run button is tried on it, and where (CHD-394)", () => {
+  const reply = [
+    'Run this:',
+    '',
+    '```sh',
+    'bun test --isolate',
+    '```',
+    '',
+    '- then',
+    '',
+    '  ```bash',
+    '  echo "one"',
+    '  echo "two"',
+    '  ```',
+    '',
+    '> quoted:',
+    '>',
+    '> ```console',
+    '> $ ls',
+    '> a.ts',
+    '> ```',
+    '',
+    '```',
+    'no label',
+    '```',
+    '',
+    '```ts title.ts',
+    'const a = 1;',
+    '```',
+    '',
+    '```Bash',
+    'echo case',
+  ].join('\n');
+  const blocks = codeBlocks(reply);
+  const lines = reply.split('\n');
+
+  expect(
+    blocks.map(({ index, label, text, runnable, quoted }) => [
+      index,
+      label,
+      text,
+      runnable,
+      quoted,
+    ]),
+  ).toStrictEqual([
+    [0, 'sh', 'bun test --isolate', true, false],
+    [1, 'bash', 'echo "one"\necho "two"', true, false],
+    [2, 'console', '$ ls\na.ts', true, true],
+    [3, '', 'no label', false, false],
+    [4, 'ts', 'const a = 1;', false, false],
+    // An open fence, mid-stream, to the end; a label is matched as written.
+    [5, 'Bash', 'echo case', false, false],
+  ]);
+  // Each starts on its fence's line of the reply.
+  expect(blocks.map(({ line }) => lines[line]?.trim())).toStrictEqual([
+    '```sh',
+    '```bash',
+    '> ```console',
+    '```',
+    '```ts title.ts',
+    '```Bash',
+  ]);
+
+  // The boxes the transcript draws, in the same order, hold the same code.
+  const boxes = (soft: readonly Soft[]): Code[] =>
+    soft.flatMap((block) =>
+      block.kind === 'code'
+        ? [block]
+        : block.kind === 'list'
+          ? block.items.flatMap((item) => boxes(item.blocks))
+          : [],
+    );
+
+  expect(
+    boxes(softMarkdown(reply, 80, true)).map(({ label, code }) => [
+      label,
+      stripAnsi(code),
+    ]),
+  ).toStrictEqual(
+    blocks
+      .filter(({ quoted }) => !quoted)
+      .map(({ label, text }) => [label, text]),
+  );
+});
+
+test('a reply with no code has no blocks, and an indented block has no label, its text as its box draws it', () => {
+  expect(codeBlocks('Just prose.')).toStrictEqual([]);
+  expect(codeBlocks('Here:\n\n    make all\n')).toStrictEqual([
+    {
+      index: 0,
+      line: 2,
+      label: '',
+      // marked keeps the line break the reply ends on, and the box draws it.
+      text: 'make all\n',
+      runnable: false,
+      quoted: false,
+    },
+  ]);
 });

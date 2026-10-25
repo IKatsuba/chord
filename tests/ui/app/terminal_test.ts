@@ -20,8 +20,18 @@ import {
   type Window,
   withWindow,
 } from './render.tsx';
-import { startMatch, useSessionVar } from '../../../src/ui/app/terminal.ts';
-import type { WindowedAction } from '../../../src/ui/app/state.ts';
+import {
+  type SelectionHandle,
+  startMatch,
+  useSelection,
+  useSessionVar,
+} from '../../../src/ui/app/terminal.ts';
+import type { Copy } from '../../../src/ui/app/selection.ts';
+import type { ClipboardWriteResult } from '@opentui/core';
+import {
+  initialAppState,
+  type WindowedAction,
+} from '../../../src/ui/app/state.ts';
 import { SLOW_MATCH_MS } from '../../../src/ui/prompt/state.ts';
 
 const FILES = ['src/main.ts', 'src/ui/state.ts'];
@@ -509,4 +519,63 @@ describe('CHD-492 U2 tester: cancelled turns and unprompted clears', () => {
         { columns, rows: columns === 80 ? 24 : 40 },
       ));
   }
+});
+
+describe("a code block's copy goes the selection's way (CHD-394)", () => {
+  test('its text is written as given, one copy at a time, a newer one superseding it, and nothing with no write', async () => {
+    const written: string[] = [];
+    const answers: ((result: ClipboardWriteResult) => void)[] = [];
+    const copy: Copy = (text) => {
+      written.push(text);
+
+      return new Promise((resolve) => answers.push(resolve));
+    };
+
+    let handle: SelectionHandle | undefined;
+    let without: SelectionHandle | undefined;
+
+    const Probe = () => {
+      handle = useSelection({
+        state: initialAppState,
+        dispatch: () => {},
+        copy,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+      without = useSelection({
+        state: initialAppState,
+        dispatch: () => {},
+        copy: undefined,
+        copyOnSelect: false,
+        size: '80x24',
+      });
+
+      return createElement('text', null, 'x');
+    };
+
+    const drawn = await draw(createElement(Probe));
+    const host = (status: 'written') =>
+      ({
+        host: { status },
+        terminal: { status: 'skipped' },
+      }) as unknown as ClipboardWriteResult;
+
+    try {
+      assert(handle !== undefined && without !== undefined);
+
+      const first = handle.copyText('bun test\n');
+      const second = handle.copyText('echo hi');
+
+      expect(written).toStrictEqual(['bun test\n', 'echo hi']);
+      answers[0]!(host('written'));
+      answers[1]!(host('written'));
+      expect(await first).toBeUndefined();
+      expect(await second).toStrictEqual({ kind: 'copied', chars: 7 });
+      expect(await without.copyText('echo hi')).toBeUndefined();
+      expect(await handle.copyText('')).toBeUndefined();
+      expect(written).toHaveLength(2);
+    } finally {
+      drawn.unmount();
+    }
+  });
 });

@@ -1,0 +1,40 @@
+   │ │ await session.close(); // resolves once the exit is seen │
+   │ └──────────────────────────────────────────────────────────┘
+    
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ Module        │ Holds                                  │ Tested by          │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │
+   │               │ a session                              │                    │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │               │ gone                                   │                    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │               │ drawn                                  │                    │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘
+    
+   ┌─ ts ──────────────────────────────────────────────── [copy] ─┐
+   │ const session = await openSession({ agent: 'claude', cwd }); │
+   │ const turn = session.prompt('hello');                        │
+   │ await turn.result;                                           │
+   └──────────────────────────────────────────────────────────────┘
+    
+   That is the whole loop. To land a change:
+    
+   1. Run the checks:
+      ┌─ sh ─ [copy] [run] ─┐
+      │ deno task check     │
+      └─────────────────────┘
+   2. Commit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from a
+      build that runs.
+    
+   Then build the binary with:
+    
+   ┌─ sh ───────────────────────────────── [copy] [run] ─┐
+   │ deno task compile --all                             │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

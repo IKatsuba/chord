@@ -581,7 +581,12 @@ rest of the file still applies. The `?` panel and hints name the bound keys.
 of the file still applies.
 The panel combines the newline keys as `shift or \ + enter`; after a
 backslash, use the key bound to send. It also lists `any key` to quit the
-crash screen; that key cannot be rebound.
+crash screen; that key cannot be rebound. When the panel does not fit
+below the box, a dim rule counts the lines above or below the view and
+names the scroll key. pgup/pgdn page it, shift+↑/↓ move a row, home/end go
+to either end, and the wheel over it scrolls it. Otherwise those keys
+scroll the transcript. The panel opens at the top and keeps its place
+across a resize. At very narrow widths, rows are cut rather than wrapped.
 
 The keys work on a Russian layout too, the defaults and the file's alike: a
 press that does nothing as typed is read as the US key in the same place,
@@ -733,17 +738,19 @@ adapter does, chord cancels that turn at once, closes it with a dim
 `Interrupted · the agent started this on its own` line, and sends the
 message as the next turn. A monitor's events wait for the turn's end.
 
-Enter during a turn queues your prompt until the turn ends. Tab sends only
-the text in the box into the running turn where the agent supports it,
-without stopping the agent; earlier Enter-queued prompts stay queued.
+Enter during a turn queues your prompt until the turn ends. Tab sends the
+whole message into the running turn where the agent supports it, without
+stopping the agent: text, pasted images and `@path` links. Named image files
+are read first, as with Enter. Earlier Enter-queued prompts stay queued.
 The box clears, and your message appears as a plain `›` row among the
 turn's steps. A held message waits as `› after the running calls: …` or
 `› after your answer: …`, with an open question taking priority over calls.
 Once sent to the agent, it shows `› into the running turn: …` if unanswered
 for 500 ms, or at once if its held row was already showing. Esc takes held
 messages back into the draft; one already sent to the agent stays. A
-refused or late message becomes an ordinary queued prompt. If it started
-its own turn, chord cancels that turn with
+refused or late message becomes an ordinary queued prompt, including an
+image Codex refuses on a model without image input. If it started its own
+turn, chord cancels that turn with
 `Interrupted · the agent started this on its own; your message goes as the next turn`.
 On an agent without steering, Tab leaves the draft and sends nothing; the
 status line says so for 3 seconds and names the key that queues it. Tab

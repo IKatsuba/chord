@@ -384,8 +384,9 @@
   answers with the text as a JSON string, escaping every C0, DEL and C1
   character as `\uXXXX`. Shell output sent ahead of a prompt gets a
   `Received` line naming each command and its first line of output, and
-  each image in a prompt with one naming its media type and size in bytes,
-  and each `resource_link` with one naming it and its URI;
+  each image in a turn's or steered prompt gets
+  `Received an image: <mime>, <n> bytes`, and each `resource_link` gets
+  `Received a link: <name>, <uri>`;
   `--no-images` or `CHORD_FAKE_NO_IMAGES=1` says in `promptCapabilities`
   that it takes none. Any
   other scenario's turn that ends on its own reports usage as Claude's adapter does: a
@@ -426,7 +427,8 @@
   `--steering claude` or `--steering codex` (`CHORD_FAKE_STEERING`)
   advertises `_session/steering` and answers it as that adapter does: into
   the turn playing, `injected`, read at its next step or as it ends with
-  `Read the message from <sender>.`; with none, Claude's `promptRequired`
+  `Read the message from <sender>.`, then its images' and links' `Received`
+  lines; with none, Claude's `promptRequired`
   where the request asks for it, else, and always for Codex, a turn of the
   agent's own, `startedNewTurn`, answered before that turn says anything,
   as Codex's adapter answers once it has started. Without the flag it advertises nothing and

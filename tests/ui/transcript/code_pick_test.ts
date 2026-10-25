@@ -223,7 +223,7 @@ test("a picked block's line of keys names the bound ones, r only with [run] (CHD
   );
 });
 
-test('with no action of a pick bound, its line says so in plain words, cut where it does not fit (CHD-394 §3)', () => {
+test("with no item and no cancel key to show, a pick's line says so in plain words, cut where it does not fit (CHD-394 §3)", () => {
   const { keymap } = readKeybindings(
     JSON.stringify({
       bindings: [
@@ -237,6 +237,15 @@ test('with no action of a pick bound, its line says so in plain words, cut where
 
   expect(pickHint(keymap, true)).toStrictEqual('picking a code block');
   expect(pickHint(keymap, true, 10)).toStrictEqual('picking a…');
+
+  // Keys bound, but none fits and no cancel key to show: the same words.
+  const { keymap: uncancelled } = readKeybindings(
+    JSON.stringify({
+      bindings: [{ context: 'CodeBlock', bindings: { escape: null } }],
+    }),
+  );
+
+  expect(pickHint(uncancelled, true, 5)).toStrictEqual('pick…');
 });
 
 test('a block is whole in view only with every row of it in the view (CHD-394)', () => {

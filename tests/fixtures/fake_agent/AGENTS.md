@@ -6,7 +6,8 @@
   every request answered, sessions listed, loaded and resumed, and a turn's
   usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
-  (`text`, `texttillsteered`, `thought`, `todos`, `mcp`, `opened`, `markdown`,
+  (`text`, `texttillsteered`, `texttillsteeredheld`, `thought`, `todos`,
+  `mcp`, `opened`, `markdown`,
   `markdownwrap`, `markdowncode`, `titled`, `retitled`, `titledlook`,
   `titledfix`, `titledlong`, `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
@@ -51,6 +52,7 @@
   `scenarios/agents.ts`'s `gateOpened` waits up to 10 s for a gate file.
   The gated scenarios below use `<cwd>/.fake-gate/release`.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
+  `texttillsteeredheld`,
   `titled`, `retitled`, `titledlook`, `titledfix`, `titledlong`,
   `thought`, `tools`, `steps`, `stepslater`, `calls`, `rawoutputs`,
   `longresults`, `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`,
@@ -261,6 +263,8 @@
   then holds up to 10 s for cancel, to check scrolling with the bottom held;
   `texttillsteered` holds `text`'s turn for a steer, up to 10 s, so a
   message sent during the reply reaches the running turn;
+  `texttillsteeredheld` reads the steer, then holds until cancelled, at most
+  10 s, so a test can steer and stop the same running turn;
   `costwait` reports a cost, then works on until it is cancelled, and
   `costwaitlate` also says a cost of 0.02 just after its cancelled answer; `plan`
   moves its three steps along about 2 s apart, to see the list mid-turn;

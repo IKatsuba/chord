@@ -1,0 +1,40 @@
+ parser · fake · Fake Large with a 1M context window · opened by main 1m ago
+
+ ← from @main
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @@                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  main
+    main       fake · Fake Large with a 1M context window · medium  ◦ idle 1m
+    parser     fake · Fake Large with a 1M context window · medium  ◦ idle 1m
+    docs       fake · Fake Large with a 1M context window · medium  ◦ idle 1m  ✓ new reply
+    bugfix     team · fake · 3 agents                               ◦ idle 1m  ✓ new reply
+    bugfix 2   team · fake · 3 agents                               ◦ idle 1m  ✓ new reply

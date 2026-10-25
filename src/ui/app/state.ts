@@ -498,6 +498,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'prompt_capabilities':
     case 'menu_moved':
     case 'menu_dismissed':
+    case 'recipients_listed':
     case 'files_listed':
     case 'team_names_listed':
     case 'finder_moved':

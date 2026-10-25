@@ -1,0 +1,40 @@
+ tester · fake · Fake Small · bugfix's member · opened by @bugfix 1m ago
+
+ ⏺ bugfix's instructions for tester · 29 lines (ctrl+o to expand)
+
+ ← from @bugfix
+   ⎿  text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ← from @coder · fake
+   ⎿  Reading src/parse/tokenize.ts now. Tell me when your test fails.
+
+ ⏺ Received the message from coder · fake.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ tester · bugfix ────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @@                                                                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  bugfix
+  coder
+    main       fake · Fake Large with a 1M context window · medium         ◦ idle 1m
+    parser     fake · Fake Large with a 1M context window · medium         ◦ idle 1m
+    docs       fake · Fake Large with a 1M context window · medium         ◦ idle 1m
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ◦ idle 1m
+    ├─ tester  fake · Fake Small · medium                                  ◦ idle 1m
+    … +2 more

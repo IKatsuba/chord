@@ -15,6 +15,7 @@ import {
   isLead,
   MAX_CHILDREN,
   movePick,
+  messageRecipients,
   namedChild,
   notifiedName,
   openChild,
@@ -754,4 +755,229 @@ describe('CHD-493 U3 tester: closed child keys never become a new child', () => 
     expect(late.children[0]?.wait).toStrictEqual(replacement.children[0]?.wait);
     expect(late.closed.map(({ name }) => name)).toStrictEqual(['other']);
   });
+});
+
+describe('send_message recipients shared with agent completion (CHD-519)', () => {
+  function family() {
+    let agents = opened('main', 'parser');
+    const add = (id: string, name: string, team: string, lead?: string) => {
+      const child = openChild(
+        agents,
+        {
+          id,
+          name,
+          runtime: 'fake',
+          openedAt: 0,
+          team,
+          ...(lead === undefined ? {} : { lead }),
+        },
+        'conversation',
+      )!;
+
+      agents = child.agents;
+
+      return child.key;
+    };
+
+    const lead = add('lead', 'bugfix', 'bugfix');
+    const tester = add('tester', 'tester', 'bugfix', 'lead');
+    const coder = add('coder', 'coder', 'bugfix', 'lead');
+    const otherLead = add('other-lead', 'bugfix 2', 'bugfix');
+    const otherMember = add('other-tester', 'tester', 'bugfix', 'other-lead');
+    const names = (key: number) =>
+      messageRecipients(agents, key).map((each) => each.name);
+
+    return { agents, lead, tester, coder, otherLead, otherMember, names };
+  }
+
+  test('main reaches its own long-lived children and team leads, not their members', () => {
+    const { names } = family();
+
+    expect(names(1)).toStrictEqual(['parser', 'bugfix', 'bugfix 2']);
+  });
+
+  test('an ordinary child reaches only its parent, main', () => {
+    const { names } = family();
+
+    expect(names(2)).toStrictEqual(['main']);
+  });
+
+  test('a lead reaches main, its open members and another run’s lead', () => {
+    const { lead, names } = family();
+
+    expect(names(lead)).toStrictEqual(['main', 'tester', 'coder', 'bugfix 2']);
+  });
+
+  test('a member reaches its lead and peers, not main, another run’s lead or another run’s members', () => {
+    const { tester, names } = family();
+
+    expect(names(tester)).toStrictEqual(['bugfix', 'coder']);
+  });
+
+  test('another run’s lead reaches its own member and the first run’s lead', () => {
+    const { otherLead, names } = family();
+
+    expect(names(otherLead)).toStrictEqual(['main', 'tester', 'bugfix']);
+  });
+
+  test('task agents and unopened runtimes are excluded; a non-long-lived source has no recipients', () => {
+    const { agents, names } = family();
+    const withTask = {
+      ...agents,
+      tasks: [{ key: 999, name: 'Fix the tokenizer', runtime: 'codex' }],
+    };
+
+    expect(
+      messageRecipients(withTask, 1).map((each) => each.name),
+    ).toStrictEqual(names(1));
+    expect(messageRecipients(withTask, 999)).toStrictEqual([]);
+    expect(names(1)).not.toContain('codex');
+    expect(names(1)).not.toContain('Fix the tokenizer');
+  });
+
+  test('a closed child or member is no longer offered or resolved, and a closed source reaches nobody', () => {
+    const { agents, tester, lead } = family();
+    const closed = closeChild(closeChild(agents, 2), tester);
+
+    expect(messageRecipients(closed, 1).map((each) => each.name)).toStrictEqual(
+      ['bugfix', 'bugfix 2'],
+    );
+    expect(
+      messageRecipients(closed, lead).map((each) => each.name),
+    ).toStrictEqual(['main', 'coder', 'bugfix 2']);
+    expect(messageRecipients(closed, tester)).toStrictEqual([]);
+  });
+
+  test('recipients retain their exact session key and opaque id for routing aliases', () => {
+    const { agents, lead } = family();
+
+    expect(
+      messageRecipients(agents, 1).find((each) => each.key === lead),
+    ).toStrictEqual({ key: lead, name: 'bugfix', id: 'lead' });
+    expect(messageRecipients(agents, lead)[0]).toStrictEqual({
+      key: 1,
+      name: 'main',
+    });
+  });
+});
+
+describe('CHD-519 U1 tester: recipient identity across roster changes', () => {
+  test('a closed source never becomes a same-named replacement, and earlier recipient snapshots stay unchanged', () => {
+    const initial = opened('fake', 'parser', 'bugfix 2');
+    const before = messageRecipients(initial, 1);
+    const closed = closeChild(initial, 3);
+    const replacement = openChild(
+      closed,
+      { id: 'replacement-run', name: 'bugfix 2', runtime: 'fake', openedAt: 1 },
+      'replacement conversation',
+    )!;
+
+    expect(before).toEqual([
+      { key: 2, id: 'id-parser', name: 'parser' },
+      { key: 3, id: 'id-bugfix 2', name: 'bugfix 2' },
+    ]);
+    expect(messageRecipients(replacement.agents, 1)).toEqual([
+      { key: 2, id: 'id-parser', name: 'parser' },
+      { key: replacement.key, id: 'replacement-run', name: 'bugfix 2' },
+    ]);
+    expect(messageRecipients(replacement.agents, 3)).toEqual([]);
+    expect(messageRecipients(replacement.agents, replacement.key)).toEqual([
+      { key: 1, name: 'main' },
+    ]);
+  });
+
+  test('an orphaned member cannot acquire a different lead with the same run name', () => {
+    const lead = openChild(
+      opened('fake'),
+      {
+        id: 'old-lead',
+        name: 'bugfix',
+        team: 'bugfix',
+        runtime: 'fake',
+        openedAt: 0,
+      },
+      'old lead',
+    )!;
+    const member = openChild(
+      lead.agents,
+      {
+        id: 'member',
+        name: 'tester',
+        team: 'bugfix',
+        lead: 'old-lead',
+        runtime: 'fake',
+        openedAt: 0,
+      },
+      'member',
+    )!;
+    const orphaned = closeChild(member.agents, lead.key);
+    const replacement = openChild(
+      orphaned,
+      {
+        id: 'new-lead',
+        name: 'bugfix',
+        team: 'bugfix',
+        runtime: 'fake',
+        openedAt: 1,
+      },
+      'new lead',
+    )!;
+
+    expect(messageRecipients(replacement.agents, member.key)).toEqual([]);
+    expect(messageRecipients(replacement.agents, replacement.key)).toEqual([
+      { key: 1, name: 'main' },
+    ]);
+    expect(messageRecipients(replacement.agents, 1)).toEqual([
+      { key: replacement.key, id: 'new-lead', name: 'bugfix' },
+    ]);
+  });
+
+  test('the explicit source controls scope independently of the current pick, and a missing main offers nothing', () => {
+    const initial = opened('codex', 'parser', 'docs');
+    const picked = pick(initial, 3);
+
+    expect(messageRecipients(picked, 1).map((each) => each.name)).toEqual([
+      'parser',
+      'docs',
+    ]);
+    expect(messageRecipients(picked, 2)).toEqual([{ key: 1, name: 'main' }]);
+    expect(messageRecipients({ ...picked, main: undefined }, 2)).toEqual([]);
+    expect(messageRecipients(picked, 999)).toEqual([]);
+  });
+});
+
+test('numbering refuses quoted child bases, runtime fallbacks and team leads (CHD-519)', () => {
+  const agents = opened('main');
+
+  expect(() => childName(agents, 'a"b', 'fake')).toThrow(
+    'must not contain the character "',
+  );
+  expect(() => childName(agents, undefined, 'a"b')).toThrow(
+    'must not contain the character "',
+  );
+  expect(() => runName(agents, 'a"b')).toThrow(
+    'must not contain the character "',
+  );
+});
+
+test('numbering refuses control characters in every offered name source (CHD-519)', () => {
+  const agents = opened('main');
+
+  for (const name of [
+    'a\n@notes.md suffix',
+    'a\rline',
+    'a\ttab',
+    'a\0nul',
+    'a\u007Fdel',
+  ]) {
+    expect(() => childName(agents, name, 'fake')).toThrow(
+      'must not contain the control character',
+    );
+    expect(() => childName(agents, undefined, name)).toThrow(
+      'must not contain the control character',
+    );
+    expect(() => runName(agents, name)).toThrow(
+      'must not contain the control character',
+    );
+  }
 });

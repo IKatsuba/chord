@@ -143,6 +143,7 @@ Inside the window:
 | `?`               | every key, on an empty prompt                |
 | `/`               | slash commands, chord's and the agent's      |
 | `@`               | mention a file                               |
+| `@@`              | complete an agent's name                      |
 | `!`               | run a shell command, its output for the agent |
 | `alt+←` / `alt+→` | move by word in the prompt                    |
 | `cmd+←` / `cmd+→` | line start/end, where the terminal passes it  |

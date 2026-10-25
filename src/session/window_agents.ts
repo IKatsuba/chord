@@ -3,6 +3,7 @@
  * agents it opened, which one of them the prompt goes to, and the order
  * the ones that want the person come in (CHD-493).
  */
+import { agentNameProblem } from '../agent_name.ts';
 import type { Wait } from '../notify.ts';
 import type { ConversationEvent } from './conversation.ts';
 import { type AgentWait, heardWait, idle } from './waits.ts';
@@ -181,6 +182,70 @@ export function membersOf<C>(
   return agents.children.filter((child) => child.lead === lead);
 }
 
+/** One open session send_message reaches, by its name or optional child id. */
+export interface MessageRecipient {
+  readonly key: number;
+  readonly name: string;
+  readonly id?: string;
+}
+
+/**
+ * Who send_message reaches from `sourceKey`: main's own children; a child's
+ * parent; a lead's main, members and other leads; a member's lead and peers.
+ * Only open long-lived sessions live here, never tasks or unopened runtimes.
+ */
+export function messageRecipients<C>(
+  agents: WindowAgents<C>,
+  sourceKey: number,
+): readonly MessageRecipient[] {
+  const { main } = agents;
+  const named = ({ key, name, id }: Child<C>): MessageRecipient => ({
+    key,
+    name,
+    id,
+  });
+
+  if (main === undefined) {
+    return [];
+  }
+
+  if (sourceKey === main.key) {
+    return ownChildren(agents).map(named);
+  }
+
+  const self = agents.children.find((child) => child.key === sourceKey);
+
+  if (self === undefined) {
+    return [];
+  }
+
+  const parent = { key: main.key, name: 'main' };
+
+  if (self.team === undefined) {
+    return [parent];
+  }
+
+  const lead = isLead(self)
+    ? self
+    : agents.children.find((child) => child.id === self.lead);
+
+  if (lead === undefined) {
+    return [];
+  }
+
+  const members = membersOf(agents, lead.id).filter((child) => child !== self);
+
+  return self === lead
+    ? [
+        parent,
+        ...members.map(named),
+        ...ownChildren(agents)
+          .filter((child) => isLead(child) && child !== self)
+          .map(named),
+      ]
+    : [named(lead), ...members.map(named)];
+}
+
 /**
  * A child as a sentence about it names it: its own name, or a member's with
  * its run after it, `tester · bugfix 2`, while another agent of the window
@@ -242,6 +307,12 @@ export function runName<C>(agents: WindowAgents<C>, team: string): string {
 }
 
 function numbered(base: string, taken: ReadonlySet<string>): string {
+  const problem = agentNameProblem(base);
+
+  if (problem !== undefined) {
+    throw new Error(problem);
+  }
+
   if (!taken.has(base)) {
     return base;
   }

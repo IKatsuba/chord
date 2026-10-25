@@ -67,7 +67,8 @@
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
   `permission`,
   `permissionsteer`,
-  `callchildtwo`, `agenttitled`, `agentother`, `agentstitled`, `agentsquiet`,
+  `callchildtwo`, `agentnames`, `agentmentions`, `agenttitled`, `agentother`,
+  `agentstitled`, `agentsquiet`,
   `agentsheldgated`, `plan`,
   `planshrinkgated`,
   `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
@@ -466,3 +467,10 @@
   hand the transcript reducer, and `run` gathers a prompt's updates and its
   answer. `tests/fixtures/records.ts` leaves a session record as the window does, through a
   recording conversation, for the resume tests to find.
+
+- `agentnames` asks `open_agent` for an explicit quoted name and a runtime
+  fallback containing a quote, then names containing CR, LF, tab, NUL and
+  DEL; all are refused before any child starts.
+
+- `agentmentions` opens parser and docs on `text` and two runs of bugfix,
+  for main/child/lead/member completion and the quoted `bugfix 2` name.

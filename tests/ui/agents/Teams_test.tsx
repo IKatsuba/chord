@@ -5,6 +5,7 @@
 import { describe, expect, test } from 'bun:test';
 import { type ChordServer, serveChord } from '../../../src/server/server.ts';
 import type { Caller } from '../../../src/server/tools.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CODER_TO_TESTER,
   LEAD_REPORT,
@@ -19,6 +20,7 @@ import {
   send,
   until,
   type Window,
+  withWindow,
 } from '../app/render.tsx';
 import { BUGFIX, withTeams, started } from './teams_window.tsx';
 
@@ -319,5 +321,40 @@ describe('CHD-493 U11 tester: resumed sessions keep team run numbers', () => {
         server,
       );
     });
+  }
+});
+
+test('team leads and members validate their offered name rather than a quote-bearing runtime (CHD-519)', async () => {
+  const server = serveChord();
+  const runtime = 'bad"runtime';
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'team');
+        await window.shows('← from @bugfix');
+        await window.shows('├─ tester');
+        await window.shows('└─ coder');
+        await until(
+          'the lead and both members have started',
+          () => window.pids.length === 4,
+        );
+        expect(window.pids).toHaveLength(4);
+        expect(window.frame()).not.toContain('An agent name must not contain');
+      },
+      {
+        server,
+        runtimes: ['fake', runtime],
+        startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+        teams: {
+          bugfix: BUGFIX.replaceAll('agent: fake', `agent: '${runtime}'`),
+        },
+        columns: 120,
+        rows: 40,
+      },
+    );
+  } finally {
+    await server.close();
   }
 });

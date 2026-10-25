@@ -553,6 +553,80 @@ async function openOther(turn: Turn): Promise<acp.StopReason> {
 }
 
 export const AGENTS = {
+  async agentmentions(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      return 'end_turn';
+    }
+
+    try {
+      for (const name of ['parser', 'docs']) {
+        await callChord(turn, client, 'open_agent', {
+          agent: 'fake',
+          name,
+          prompt: 'text',
+        });
+      }
+
+      for (const prompt of [
+        'First completion team.',
+        'Second completion team.',
+      ]) {
+        await callChord(turn, client, 'run_team', {
+          team: 'bugfix',
+          job: prompt,
+        });
+      }
+
+      await turn.say('Agent completion sessions opened.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  async agentnames(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'open_agent', {
+        agent: 'fake',
+        name: 'a "b @notes.md suffix',
+        prompt: 'text',
+      });
+      await callChord(turn, client, 'open_agent', {
+        agent: 'bad"runtime',
+        prompt: 'text',
+      });
+
+      for (const name of [
+        'a\n@notes.md suffix',
+        'a\rline',
+        'a\ttab',
+        'a\0nul',
+        'a\u007Fdel',
+      ]) {
+        await callChord(turn, client, 'open_agent', {
+          agent: 'fake',
+          name,
+          prompt: 'text',
+        });
+      }
+
+      await turn.say('Quoted agent names refused.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // A child on another runtime, where a test once opened a tab of it
   // (CHD-493).
   agentother: (turn) => openOther(turn),

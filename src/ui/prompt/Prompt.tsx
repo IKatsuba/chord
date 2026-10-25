@@ -657,9 +657,11 @@ export function CommandList({
 export function FileList({
   finder,
   rows,
+  agentColours = {},
 }: {
   finder: FileFinder;
   rows: number;
+  agentColours?: Readonly<Record<string, string>>;
 }) {
   const { files, highlighted, searching } = finder;
   const { permission } = useColours();
@@ -681,11 +683,18 @@ export function FileList({
           {...CUT}
           {...(start + index === highlighted
             ? fg(permission)
-            : { attributes: DIM })}
+            : finder.agent && path !== 'main'
+              ? fg(agentColours[path])
+              : { attributes: DIM })}
         >
           {path}
         </text>
       ))}
+      {finder.empty !== undefined && (
+        <text {...CUT} attributes={DIM}>
+          {finder.empty}
+        </text>
+      )}
       {searching && (
         <text {...CUT} attributes={DIM}>
           searching…

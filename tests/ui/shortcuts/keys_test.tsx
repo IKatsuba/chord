@@ -1601,7 +1601,7 @@ describe('CHD-378 U2 tester: steer key contexts', () => {
     expect(lines[send + 1]).toBe('cmd + enter to send into the running turn');
     expect(lines).not.toContain('tab to send into the running turn');
     expect(lines).toContain('tab to complete a command');
-    expect(lines).toContain('tab enter to add a file');
+    expect(lines).toContain('tab enter to add a file or agent');
   });
 
   test('unbinding removes only the steer line and action', () => {
@@ -1695,10 +1695,10 @@ describe('CHD-386 tester: movement panel entries', () => {
     expect(
       inColumns(lines, columnCount(lines, 120)).map((c) => c.length),
     ).toStrictEqual([15, 15, 13]);
-    expect(lines).toContain('/ @ for commands or files');
-    expect(lines).toContain('↑ ↓ to pick a command or file');
+    expect(lines).toContain('/ @ @@ for commands, files or agents');
+    expect(lines).toContain('↑ ↓ to pick a completion');
     expect(lines).toContain('tab to complete a command');
-    expect(lines).toContain('tab enter to add a file');
+    expect(lines).toContain('tab enter to add a file or agent');
     expect(lines).toContain('esc ← to leave a picker or shortcuts');
     expect(lines.at(-2)).toStrictEqual('? for shortcuts');
     expect(lines.at(-1)).toStrictEqual('any key to quit the crash screen');
@@ -1725,12 +1725,12 @@ describe('CHD-386 tester: movement panel entries', () => {
 
     const shown = shortcuts(keymap);
     const navigation = shown.filter(
-      (entry) => entry.does === 'to pick a command or file',
+      (entry) => entry.does === 'to pick a completion',
     );
 
     expect(navigation).toHaveLength(1);
     expect(shortcutLine(navigation[0]!)).toStrictEqual(
-      'ctrl + p ctrl + n to pick a command or file',
+      'ctrl + p ctrl + n to pick a completion',
     );
     expect(navigation[0]!.commands).toStrictEqual([
       'menu_up',
@@ -1750,11 +1750,11 @@ describe('CHD-386 tester: movement panel entries', () => {
     expect(unbound.problems).toStrictEqual([]);
     expect(
       shortcuts(unbound.keymap).some(
-        (entry) => entry.does === 'to pick a command or file',
+        (entry) => entry.does === 'to pick a completion',
       ),
     ).toBeFalse();
     expect(shortcuts(unbound.keymap).map(shortcutLine)).toContain(
-      '/ @ for commands or files',
+      '/ @ @@ for commands, files or agents',
     );
   });
 });
@@ -1855,4 +1855,36 @@ test("every key quits the crash screen, as the panel's any key line says (CHD-46
   } finally {
     await crash.unmount();
   }
+});
+
+describe('agent completion shares documented keys (CHD-519)', () => {
+  const state = reduceApp(STATES.busy!, {
+    type: 'recipients_listed',
+    names: ['parser', 'bugfix 2'],
+  });
+
+  test('move, accept and dismiss use the existing completion bindings', () => {
+    for (const [key, command] of [
+      [{ ctrl: false, escape: false, upArrow: true }, 'finder_up'],
+      [{ ctrl: false, escape: false, downArrow: true }, 'finder_down'],
+      [{ ctrl: false, escape: false, tab: true }, 'complete_mention'],
+      [{ ctrl: false, escape: true }, 'close_finder'],
+    ] as const) {
+      expect(keyCommand('', key, state, '@@')).toBe(command);
+      expect(
+        shortcuts().some((entry) =>
+          (entry.commands as readonly string[] | undefined)?.includes(command),
+        ),
+      ).toBe(true);
+    }
+
+    expect(textareaDoes(sequence('enter'), 'chat:submit')).toBe(true);
+
+    const lines = shortcuts().map(shortcutLine);
+
+    expect(lines).toContain('/ @ @@ for commands, files or agents');
+    expect(lines).toContain('↑ ↓ to pick a completion');
+    expect(lines).toContain('tab enter to add a file or agent');
+    expect(lines).toContain('esc to close completions');
+  });
 });

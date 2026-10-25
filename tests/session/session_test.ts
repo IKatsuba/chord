@@ -1630,3 +1630,38 @@ describe('CHD-521 U1 tester: cancellation before Guardian verdicts', () => {
       ]);
     }));
 });
+
+describe('CHD-519 U2 tester: agent mentions on the fake ACP transport', () => {
+  test('real files matching agent names attach nothing for @@ while neighboring @ paths still attach once', () =>
+    withSession(async (session) => {
+      for (const name of ['parser', 'bugfix 2', 'notes.md', 'real.ts']) {
+        await writeFile(join(session.cwd, name), 'fixture');
+      }
+
+      const agentOnly = '@@parser @@"bugfix 2" @@"reader @notes.md"';
+      const first = await run(session, agentOnly, {
+        mentions: mentionsIn(agentOnly),
+      });
+
+      expect(first.result.status).toBe('completed');
+      expect(await first.turn.sent).toEqual([]);
+      expect(
+        said(first.updates).filter((text) =>
+          text.startsWith('Received a link'),
+        ),
+      ).toEqual([]);
+
+      const mixed = `${agentOnly} @real.ts @real.ts`;
+      const second = await run(session, mixed, { mentions: mentionsIn(mixed) });
+      const uri = pathToFileURL(join(session.cwd, 'real.ts')).href;
+
+      expect(await second.turn.sent).toEqual([
+        { type: 'resource_link', name: 'real.ts', uri },
+      ]);
+      expect(
+        said(second.updates).filter((text) =>
+          text.startsWith('Received a link'),
+        ),
+      ).toEqual([`Received a link: real.ts, ${uri}\n\n`]);
+    }));
+});

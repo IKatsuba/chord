@@ -1,0 +1,24 @@
+
+╭──────────────────────────────────────────────────────────╮
+│ ›                                                        │
+╰──────────────────────────────────────────────────────────╯
+  enter to send
+  tab to send into the running turn
+  shift or \ + enter for a newline
+  ctrl + g to edit in $EDITOR
+  ctrl + v to paste an image
+  alt + ← → to move by word
+  cmd + ← → to line start or end
+  ↑ ↓ for prompts, agents, background
+  x to close an agent, stop background
+  enter for background, details, a call
+  ctrl + r to search prompts
+  tab enter to take a match
+  esc to cancel a search
+  pgup pgdn or wheel to scroll
+  shift + ↑ ↓ to scroll a line
+  home end for the top and the bottom
+  ctrl + c to copy
+  / @ for commands or files
+  ↑ ↓ to pick a command or file
+  ── ↓ 22 lines below · pagedown to scroll ─────────────────

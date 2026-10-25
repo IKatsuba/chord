@@ -1,0 +1,24 @@
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ── ↑ 2 lines above · pageup to scroll ────────────────────────────────────────
+  shift or \ + enter for a newline        backspace to leave bash mode
+  ctrl + g to edit in $EDITOR             esc to interrupt or stop a command
+  ctrl + v to paste an image              shift + tab to cycle modes
+  alt + ← → to move by word               ctrl + o for verbose output
+  cmd + ← → to line start or end          ctrl + c to clear input
+  ↑ ↓ for prompts, agents, background     ctrl + d or ctrl + c twice to quit
+  x to close an agent, stop background    ctrl + x a for what waits on you
+  enter for background, details, a call   1–9 to pick a choice
+  ctrl + r to search prompts              ↑ ↓ or j k to move between choices
+  tab enter to take a match               enter to pick the highlighted choice
+  esc to cancel a search                  esc to reject a permission
+  pgup pgdn or wheel to scroll            esc ← to leave a picker or shortcuts
+  shift + ↑ ↓ to scroll a line            ctrl + a to show all directories
+  home end for the top and the bottom     tab ← → ↑ ↓ space to answer forms
+  ctrl + c to copy                        ctrl + c to stop the turn and its form
+  / @ for commands or files               /vim for vim mode
+  ↑ ↓ to pick a command or file           ? for shortcuts
+  tab to complete a command               any key to quit the crash screen
+  tab enter to add a file

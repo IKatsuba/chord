@@ -521,3 +521,14 @@ describe('CHD-445 U1 tester: each fake child owns its title updates', () => {
       );
     }));
 });
+
+test('open_agent refuses quotes in supplied names and runtime fallbacks before starting (CHD-519)', () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agentnames');
+    await window.shows('Quoted agent names refused.');
+    expect(
+      count(window, 'An agent name must not contain the character "'),
+    ).toBe(2);
+    expect(window.pids).toHaveLength(1);
+  }));

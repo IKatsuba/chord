@@ -4,6 +4,7 @@
  * under its key, picked, closed, resumed and quit, and the prompts sent to
  * them.
  */
+import { agentNameProblem } from '../../agent_name.ts';
 import { type Dispatch, useEffect, useRef, useState } from 'react';
 import { closeOnForcedExit, useApp } from './renderer.tsx';
 import { relative, resolve } from 'node:path';
@@ -465,6 +466,15 @@ export function useSessions(
     args: OpenArgs,
     kind: string,
   ): Promise<string | undefined> => {
+    const named =
+      kind === 'agent'
+        ? agentNameProblem(args.name?.trim() || args.agent)
+        : undefined;
+
+    if (named !== undefined) {
+      return `An agent name ${named}`;
+    }
+
     const startup = runtimeNames.includes(args.agent)
       ? place.startupOf(args.agent)
       : undefined;

@@ -6,6 +6,7 @@
  * at once.
  */
 import { z } from '@zod/zod';
+import { agentName, agentNameProblem } from './agent_name.ts';
 import { VFile } from 'vfile';
 import { matter } from 'vfile-matter';
 import { stringify } from 'yaml';
@@ -61,8 +62,7 @@ function frontmatterSchema(name: string, runtimes: readonly string[]) {
     instructions: z.string().min(1).optional(),
   });
   const member = z.strictObject({
-    name: z
-      .string()
+    name: agentName
       .regex(MEMBER_NAME, {
         message: 'must be a lowercase letter, then up to 15 of a-z, 0-9 and -',
       })
@@ -143,11 +143,14 @@ export function teamFile(dir: string, name: string): string {
 
 /** Why `name` cannot name a team, or undefined when it can. */
 export function teamNameProblem(name: string): string | undefined {
-  return !TEAM_NAME.test(name)
-    ? `the name ${name} must be a lowercase letter, then up to 23 of a-z, 0-9 and -`
-    : TAKEN.includes(name)
-      ? `the name ${name} is taken`
-      : undefined;
+  return (
+    agentNameProblem(name) ??
+    (!TEAM_NAME.test(name)
+      ? `the name ${name} must be a lowercase letter, then up to 23 of a-z, 0-9 and -`
+      : TAKEN.includes(name)
+        ? `the name ${name} is taken`
+        : undefined)
+  );
 }
 
 /** zod's message for a key left out, which `problemOf` words on its own. */

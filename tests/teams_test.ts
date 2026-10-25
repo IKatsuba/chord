@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { teamsAnswer } from '../src/server/tools.ts';
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -558,4 +559,38 @@ test("propose_team's input takes an effort for the lead and each member", () => 
       RUNTIMES,
     ),
   ).toMatchObject({ team: { lead: { effort: 'high' } } });
+});
+
+test('quoted team and member names are refused, including saved list_teams problems (CHD-519)', async () => {
+  const bad = EXAMPLE.replace('name: tester', `name: 'a "b @notes.md suffix'`);
+  const problem = 'members.0.name: must not contain the character "';
+
+  expect(problemOf(bad)).toBe(problem);
+  expect(problemOf(EXAMPLE, 'a"b')).toBe('must not contain the character "');
+
+  const team = teamOf(EXAMPLE);
+
+  expect(
+    checkProposal(
+      {
+        ...team,
+        name: 'bugfix',
+        members: [{ ...team.members[0]!, name: 'a"b' }],
+      },
+      RUNTIMES,
+    ),
+  ).toStrictEqual({ problem });
+  await place(async (where, { project }) => {
+    await write(project, 'bugfix.md', bad);
+    expect(
+      teamsAnswer({ found: await findTeams(where, RUNTIMES), runs: [] }),
+    ).toStrictEqual({
+      teams: [
+        {
+          name: 'bugfix',
+          problem: `${problem}; it cannot run until its file is fixed`,
+        },
+      ],
+    });
+  });
 });

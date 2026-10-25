@@ -3,6 +3,7 @@
  * agents it opened, which one of them the prompt goes to, and the order
  * the ones that want the person come in (CHD-493).
  */
+import { agentNameProblem } from '../agent_name.ts';
 import type { Wait } from '../notify.ts';
 import type { ConversationEvent } from './conversation.ts';
 import { type AgentWait, heardWait, idle } from './waits.ts';
@@ -306,6 +307,12 @@ export function runName<C>(agents: WindowAgents<C>, team: string): string {
 }
 
 function numbered(base: string, taken: ReadonlySet<string>): string {
+  const problem = agentNameProblem(base);
+
+  if (problem !== undefined) {
+    throw new Error(problem);
+  }
+
   if (!taken.has(base)) {
     return base;
   }

@@ -246,8 +246,8 @@ describe('agent mentions remain plain text (CHD-519)', () => {
     }
   });
 
-  test('quotes and backslashes are inserted verbatim by the path quoting rule', () => {
-    for (const name of ['bugfix 2', 'a"b', 'a\\b', 'a "b\\c']) {
+  test('backslashes are inserted verbatim by the path quoting rule', () => {
+    for (const name of ['bugfix 2', 'a\\b', 'a b\\c']) {
       const file = insertMention('@', [0, 1], mentionAt('@', [0, 1])!, name);
       const agent = insertAgentMention(
         '@@',

@@ -502,6 +502,7 @@ const SCENARIOS = [
   'agentexit',
   'agentfail',
   'agenttitled',
+  'agentnames',
   'agentstitled',
   'taskeffort',
   'taskmaxeffort',

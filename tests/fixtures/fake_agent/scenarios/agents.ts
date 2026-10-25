@@ -553,6 +553,31 @@ async function openOther(turn: Turn): Promise<acp.StopReason> {
 }
 
 export const AGENTS = {
+  async agentnames(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'open_agent', {
+        agent: 'fake',
+        name: 'a "b @notes.md suffix',
+        prompt: 'text',
+      });
+      await callChord(turn, client, 'open_agent', {
+        agent: 'bad"runtime',
+        prompt: 'text',
+      });
+      await turn.say('Quoted agent names refused.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // A child on another runtime, where a test once opened a tab of it
   // (CHD-493).
   agentother: (turn) => openOther(turn),

@@ -945,3 +945,17 @@ describe('CHD-519 U1 tester: recipient identity across roster changes', () => {
     expect(messageRecipients(picked, 999)).toEqual([]);
   });
 });
+
+test('numbering refuses quoted child bases, runtime fallbacks and team leads (CHD-519)', () => {
+  const agents = opened('main');
+
+  expect(() => childName(agents, 'a"b', 'fake')).toThrow(
+    'must not contain the character "',
+  );
+  expect(() => childName(agents, undefined, 'a"b')).toThrow(
+    'must not contain the character "',
+  );
+  expect(() => runName(agents, 'a"b')).toThrow(
+    'must not contain the character "',
+  );
+});

@@ -1414,3 +1414,101 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
       );
     }));
 });
+
+describe('CHD-394 U4 tester: rebound keys and tall picks', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`rebound actions own the pick, preserve a typed draft and release keys afterwards at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          await window.type('kept draft');
+          await window.shows('› kept draft');
+          await leader(window, 'k');
+          await window.shows('y copy · p put in the prompt · ctrl + q done');
+          await window.press('\x10');
+          await window.press('\x0e');
+          await window.press('y');
+          await until('rebound copy', () => copies.length === 1);
+          expect(copies[0]?.text).toBe('bun dev check');
+          expect(promptRow(window)).toContain('kept draft');
+          await leader(window, 'k');
+          await window.press('p');
+          await window.shows('The prompt holds a draft · ctrl+c clears it');
+          expect(promptRow(window)).toContain('kept draft');
+          await leader(window, 'k');
+          await window.press('\x11');
+          await until(
+            'the rebound cancel ends picking',
+            () => !statusRow(window).includes('y copy'),
+          );
+          await window.type('z');
+          await window.shows('› kept draftz');
+        },
+        {
+          columns,
+          rows,
+          copy,
+          keybindings: JSON.stringify({
+            bindings: [
+              {
+                context: 'Global',
+                bindings: { 'ctrl+x b': null, 'ctrl+x k': 'codeBlock:pick' },
+              },
+              {
+                context: 'CodeBlock',
+                bindings: {
+                  c: null,
+                  y: 'codeBlock:copy',
+                  r: null,
+                  p: 'codeBlock:prompt',
+                  up: null,
+                  'ctrl+p': 'codeBlock:previous',
+                  down: null,
+                  'ctrl+n': 'codeBlock:next',
+                  escape: null,
+                  'ctrl+q': 'codeBlock:cancel',
+                },
+              },
+            ],
+          }),
+        },
+      );
+    });
+
+    test(`a taller-than-view box lands its top border on top and copies every hidden line at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+      const body = Array.from(
+        { length: 50 },
+        (_, index) => `printf tall-line-${index}`,
+      ).join('\n');
+
+      return withWindow(
+        async (window) => {
+          await window.paste('/echo ```sh\n' + body + '\n```');
+          await window.press('\r');
+          await window.shows('printf tall-line-49');
+          await until(
+            'the echoed code turn ends',
+            () => !statusRow(window).includes('esc to interrupt'),
+          );
+          await leader(window, 'b');
+          await until('the tall box top is shown', () =>
+            (window.frame().split('\n')[0] ?? '').includes('┌─ sh'),
+          );
+          expect(window.frame()).toContain('printf tall-line-0');
+          expect(window.frame()).not.toContain('printf tall-line-49');
+          await window.press('c');
+          await until('all hidden lines copied', () => copies.length === 1);
+          expect(copies[0]?.text).toBe(body);
+        },
+        { columns, rows, copy },
+      );
+    });
+  }
+});

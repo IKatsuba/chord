@@ -8,6 +8,7 @@ import {
   drawnIds,
   inOrder,
   inView,
+  listedBlocks,
   pickableBlocks,
   pickHint,
   reduceCodePick,
@@ -257,4 +258,44 @@ test('a listed block is reached mounted or not, a drawn-only one only while seen
 
   expect(blocks).toStrictEqual([ref(1), ref(2), ref(3), ref(-6), ref(-7)]);
   expect(shown).toStrictEqual([ref(3), ref(-6), ref(-7)]);
+});
+
+describe('CHD-394 U4 tester: eligible block boundaries', () => {
+  test('a closed reply survives unmounting, while drawn-only blocks stop at viewport and screen edges', () => {
+    const listed = { entry: 7, block: 0 };
+    const top = { entry: -1, block: 0 };
+    const bottom = { entry: -2, block: 0 };
+    const plan = { entry: -3, block: 0 };
+    const hiddenPlan = { entry: -4, block: 0 };
+    const result = pickableBlocks(
+      [{ ref: listed }],
+      [
+        { ref: top, at: 2, top: 1, left: 0, height: 1 },
+        { ref: bottom, at: 3, top: 12, left: 0, height: 1 },
+        { ref: plan, at: undefined, top: 23, left: 0, height: 2 },
+        { ref: hiddenPlan, at: undefined, top: 24, left: 0, height: 2 },
+      ],
+      { top: 2, height: 10 },
+      { top: 0, height: 24 },
+    );
+
+    expect(result.blocks).toStrictEqual([listed, plan]);
+    expect(result.shown).toStrictEqual([plan]);
+  });
+
+  test('open fences remain ineligible until their matching closer, with quoted runnable text preserved', () => {
+    const text =
+      '> ```bash\n> $ printf "quoted"\n> ```\n\n````sh\n$ printf "open"\n```';
+    const entry = { kind: 'assistant', turnId: 'tall', text } as const;
+
+    expect(listedBlocks([entry])).toMatchObject([
+      {
+        ref: { entry: 0, block: 0 },
+        copy: '$ printf "quoted"',
+        run: 'printf "quoted"',
+        node: 'quote-0-0',
+      },
+    ]);
+    expect(listedBlocks([{ ...entry, text: text + '\n````' }])).toHaveLength(2);
+  });
 });

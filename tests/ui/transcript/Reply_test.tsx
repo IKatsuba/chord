@@ -7,7 +7,8 @@ import { useState } from 'react';
 import stringWidth from 'string-width';
 import { Reply } from '../../../src/ui/transcript/Reply.tsx';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
-import { clipboard } from '../app/selecting.ts';
+import { clipboard, dragOver } from '../app/selecting.ts';
+import { type AppState, frontState } from '../../../src/ui/app/state.ts';
 import { draw, type Drawn } from '../harness.tsx';
 import stripAnsi from 'strip-ansi';
 import { left, send, until, withWindow, type Window } from '../app/render.tsx';
@@ -1121,4 +1122,131 @@ describe('CHD-394 U2 tester: button boundaries', () => {
       await screen.unmount();
     }
   });
+});
+
+describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
+  const command =
+    'bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt\n\necho done';
+  const button = (window: Window, marker: string, word: string) => {
+    const lines = stripAnsi(window.frame()).split('\n');
+    const y = lines.findIndex((line) => line.includes(marker));
+    const x = lines[y]?.indexOf(word) ?? -1;
+
+    expect(y).toBeGreaterThanOrEqual(0);
+    expect(x).toBeGreaterThanOrEqual(0);
+
+    return { x, y };
+  };
+
+  const large = '┌─ sh ───';
+  const nested = '┌─ sh ─[copy]';
+  const click = async (window: Window, at: { x: number; y: number }) => {
+    await window.press(left(at.x, at.y, 'down'));
+    await window.press(left(at.x, at.y, 'up'));
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a release in another box consumes the press, and bracket cells copy exact text at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+
+          const a = button(window, large, '[copy]');
+          const b = button(window, nested, '[copy]');
+          const run = button(window, nested, '[run]');
+
+          await window.press(left(a.x, a.y, 'down'));
+          await window.press(left(b.x, b.y, 'up'));
+          await window.press(left(a.x, a.y, 'up'));
+          await window.press(left(run.x, run.y, 'down'));
+          await window.press(left(a.x, a.y, 'up'));
+          await click(window, { x: b.x + 5, y: b.y });
+          await until('the bracket click copies', () => copies.length >= 1);
+          await click(window, a);
+          await until('both valid copies settle', () => copies.length >= 2);
+          expect(copies.map(({ text }) => text)).toStrictEqual([
+            'bun dev check',
+            command,
+          ]);
+          expect(window.frame()).not.toContain('│ !');
+        },
+        { columns, rows, copy },
+      );
+    });
+
+    test(`copy clears a selection, and run preserves an existing live draft at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+      let state: AppState | undefined;
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          await dragOver(window, 'echo done');
+          expect(window.selected()).toBe('echo done');
+          await click(window, button(window, nested, '[copy]'));
+          await until('copy after selecting', () => copies.length === 1);
+          expect(window.selected()).toBe('');
+          expect(state?.selection?.kind ?? 'none').toBe('none');
+          await window.type('my draft');
+          await window.shows('› my draft');
+          await click(window, button(window, nested, '[run]'));
+          await window.shows('The prompt holds a draft · ctrl+c clears it');
+          expect(state?.draft).toBe('my draft');
+          expect(state?.bash).toBe(false);
+          expect(copies.map(({ text }) => text)).toStrictEqual([
+            'bun dev check',
+          ]);
+        },
+        {
+          columns,
+          rows,
+          copy,
+          copyOnSelect: false,
+          onState: (all) => {
+            state = frontState(all);
+          },
+        },
+      );
+    });
+
+    test(`multiline run fills bash without executing until Enter at ${columns} columns`, () => {
+      const ran: string[] = [];
+      let state: AppState | undefined;
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          await click(window, button(window, large, '[run]'));
+          await until(
+            'the multiline command fills bash',
+            () => state?.bash === true && state.draft === command,
+          );
+          expect(ran).toStrictEqual([]);
+          await window.press('\r');
+          await until('Enter starts the exact command', () => ran.length === 1);
+          expect(ran).toStrictEqual([command]);
+        },
+        {
+          columns,
+          rows,
+          onState: (all) => {
+            state = frontState(all);
+          },
+          shell: (text) => {
+            ran.push(text);
+
+            return { stop() {}, ended: Promise.resolve({ code: 0 }) };
+          },
+        },
+      );
+    });
+  }
 });

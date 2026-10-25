@@ -143,6 +143,17 @@ export type KeyCommand =
   | 'toggle_help'
   /** Esc while the shortcuts panel is open closes it before anything else. */
   | 'close_help'
+  /** ctrl+x b: a code block picked, the newest on screen (CHD-394). */
+  | 'pick_code_block'
+  /** c on a picked block: copied, and the pick over. */
+  | 'copy_code_block'
+  /** r on a picked block: its command into the prompt, and the pick over. */
+  | 'prompt_code_block'
+  /** ↑ ↓ while a block is picked: the block above or below. */
+  | 'code_block_up'
+  | 'code_block_down'
+  /** Esc while a block is picked: the pick over, nothing done. */
+  | 'end_code_pick'
   /** Tab during a turn: the draft into that turn, not the queue. */
   | 'steer'
   /** shift+tab: ask the agent for its next mode. */

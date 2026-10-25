@@ -588,6 +588,12 @@ function nextKeys(
 function leaderItems(next: Map<Action, string>, short: boolean): LeaderItem[] {
   const items: LeaderItem[] = [];
   const attention = next.get('session:attention');
+  const pick = next.get('codeBlock:pick');
+
+  // A code block first, as the design names it (CHD-394).
+  if (pick !== undefined) {
+    items.push({ keys: pick, words: short ? 'block' : 'a code block' });
+  }
 
   if (attention !== undefined) {
     items.push({
@@ -597,7 +603,7 @@ function leaderItems(next: Map<Action, string>, short: boolean): LeaderItem[] {
   }
 
   for (const [action, keys] of next) {
-    if (action !== 'session:attention') {
+    if (action !== 'session:attention' && action !== 'codeBlock:pick') {
       items.push({ keys, words: doesOf(action) });
     }
   }

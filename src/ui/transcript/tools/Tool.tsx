@@ -13,6 +13,7 @@ import stripAnsi from 'strip-ansi';
 import type { PlanAsk, ToolCall } from '../../../session/transcript/types.ts';
 import {
   ChordServerName,
+  CodeIds,
   paint,
   useAgentColour,
   useColours,
@@ -22,8 +23,8 @@ import {
 import { Ansi } from '../../theme/Ansi.tsx';
 import { colour, CUT, DIM, fg, FILL, ROWS, TEXT } from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
-import { markdown, softMarkdown } from '../markdown.ts';
-import { Reply, SoftBlock } from '../Reply.tsx';
+import { markdown, type Soft, softMarkdown } from '../markdown.ts';
+import { Reply, SoftBlock, useCodeBlocks } from '../Reply.tsx';
 import { type ArrowTone, outArrow, wrapLine } from '../message.ts';
 import { diffHeadline, type DiffView } from './diff.ts';
 import {
@@ -212,16 +213,22 @@ export function MessageBody({
 }) {
   const colours = useColours();
   const selectable = useSelectable();
+  // An agent's own escapes are text, not styling chord answers for.
+  const plain = stripAnsi(text);
   const blocks = useMemo(
     () =>
-      // An agent's own escapes are text, not styling chord answers for.
-      softMarkdown(stripAnsi(text), Math.max(width - 5, 1), undefined, colours),
-    [text, width, colours],
+      softMarkdown(plain, Math.max(width - 5, 1), undefined, colours).map(
+        // A quote reads as the rest of a message, with no bar.
+        (block): Soft =>
+          block.kind === 'quote' ? { ...block, kind: 'text' } : block,
+      ),
+    [plain, width, colours],
   );
+  const ids = useCodeBlocks(plain, blocks);
   const look = failed ? fg(colours.error) : { attributes: DIM };
 
   return (
-    <>
+    <CodeIds.Provider value={ids}>
       {blocks.map((block, index) => (
         <Fragment key={index}>
           {index > 0 && (
@@ -234,13 +241,7 @@ export function MessageBody({
           )}
           <Under first={index === 0}>
             <box flexGrow={1} flexShrink={1}>
-              <SoftBlock
-                // A quote reads as the rest of a message, with no bar.
-                block={
-                  block.kind === 'quote' ? { ...block, kind: 'text' } : block
-                }
-                look={look}
-              />
+              <SoftBlock block={block} look={look} />
             </box>
           </Under>
         </Fragment>
@@ -252,7 +253,7 @@ export function MessageBody({
           </text>
         </Under>
       )}
-    </>
+    </CodeIds.Provider>
   );
 }
 

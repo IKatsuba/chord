@@ -103,6 +103,17 @@ export type Step =
   | { readonly type: 'reject_permission'; readonly id: string }
   /** A scroll key moves the permission request in its box (CHD-246). */
   | { readonly type: 'scroll_request'; readonly step: ScrollStep }
+  /**
+   * `ctrl+x b`: the newest code block on screen picked, or the newest of
+   * all, or the note that there is none (CHD-394).
+   */
+  | { readonly type: 'pick_code_block' }
+  /** ↑ or ↓: the pick moves to the block above or below. */
+  | { readonly type: 'move_code_pick'; readonly by: -1 | 1 }
+  /** c: the picked block copied, and the pick over. */
+  | { readonly type: 'copy_code_pick' }
+  /** r: the picked block's command into the prompt, and the pick over. */
+  | { readonly type: 'prompt_code_pick' }
   /** A scroll key moves the shortcuts panel that overflows (CHD-378). */
   | { readonly type: 'scroll_panel'; readonly step: ScrollStep }
   /** An error in the background view, taller than its room, a page on. */
@@ -175,6 +186,16 @@ export interface KeyContext {
   /** The startup splash holds the screen in front of the window. */
   readonly splash?: boolean;
 }
+
+/** What a key does to a code block's pick, which none else keeps it through. */
+const PICK_COMMANDS: ReadonlySet<KeyCommand> = new Set<KeyCommand>([
+  'pick_code_block',
+  'code_block_up',
+  'code_block_down',
+  'copy_code_block',
+  'prompt_code_block',
+  'end_code_pick',
+]);
 
 /**
  * The commands that set the draft themselves, after a key that would also
@@ -360,7 +381,9 @@ export function awaitedSteps(context: KeyContext): Step[] {
 export function olderSteps(context: KeyContext): Step[] {
   const { state, history } = context;
   const { draft, cursor } = state;
+  // While a code block is picked ↑ is the pick's (CHD-394).
   const step =
+    state.codePick === undefined &&
     !commandMenu(state, draft) &&
     !fileFinder(state, draft, cursor) &&
     older(history, typedText(state.bash, draft), keptTexts(state));
@@ -378,8 +401,11 @@ export function olderSteps(context: KeyContext): Step[] {
 export function newerSteps(context: KeyContext): Step[] {
   const { state, history } = context;
   const { draft, cursor } = state;
+  // While a code block is picked ↓ is the pick's (CHD-394).
   const listed =
-    !commandMenu(state, draft) && !fileFinder(state, draft, cursor);
+    state.codePick === undefined &&
+    !commandMenu(state, draft) &&
+    !fileFinder(state, draft, cursor);
   const step = listed && newer(history, keptTexts(state));
 
   if (step) {
@@ -577,6 +603,19 @@ export function keySteps(
     !command?.startsWith('scroll_')
       ? [{ type: 'clear_selection' }]
       : [];
+
+  // Any key but the pick's own ends a code block's pick before it does
+  // what it does, typing too; a chord's first keys and the scroll keys keep
+  // it, as the wheel does (CHD-394 §3).
+  if (
+    state.codePick !== undefined &&
+    (command === undefined ||
+      (!PICK_COMMANDS.has(command) &&
+        command !== 'key_pending' &&
+        !command.startsWith('scroll_')))
+  ) {
+    steps.push(dispatch({ type: 'code_pick_ended' }));
+  }
 
   // A key bound to one of chord's actions that would also type, such as
   // `?`, or ctrl+j where it is no line break: the input hears it too, and
@@ -836,6 +875,20 @@ function commandSteps(
     case 'vim_send':
     case 'submit':
       return submitSteps(draft, context);
+    // The pick's keys are the window's, never the box's: ↑ walks no
+    // history, c and r type nothing (CHD-394).
+    case 'pick_code_block':
+      return [{ type: 'chord_key' }, { type: 'pick_code_block' }];
+    case 'code_block_up':
+      return [{ type: 'chord_key' }, { type: 'move_code_pick', by: -1 }];
+    case 'code_block_down':
+      return [{ type: 'chord_key' }, { type: 'move_code_pick', by: 1 }];
+    case 'copy_code_block':
+      return [{ type: 'chord_key' }, { type: 'copy_code_pick' }];
+    case 'prompt_code_block':
+      return [{ type: 'chord_key' }, { type: 'prompt_code_pick' }];
+    case 'end_code_pick':
+      return [{ type: 'chord_key' }, dispatch({ type: 'code_pick_ended' })];
     case 'steer':
       // One send at a time while its image paths are read, as Enter's.
       if (context.submitting) {

@@ -114,6 +114,9 @@ export function unsteeredNote(submit: string | undefined): string {
  */
 export const DRAFT_HELD = 'The prompt holds a draft · ctrl+c clears it';
 
+/** What `ctrl+x b` says with no code block in the transcript (CHD-394 §3). */
+export const NO_CODE_BLOCK = 'No code block to pick';
+
 /** Claude Code's mode colours, in the theme's tones; the rest is dim. */
 function statusColour(tone: StatusTone, colours: Palette): string | undefined {
   switch (tone) {
@@ -170,6 +173,7 @@ export function StatusLine({
       ? blockCopyNote(state.copied.result)
       : copyNote(state.copied.result));
   const held = state.draftHeld === undefined ? undefined : DRAFT_HELD;
+  const noBlock = state.noCodeBlock === undefined ? undefined : NO_CODE_BLOCK;
   const unsteered =
     state.steerRefused === undefined
       ? undefined
@@ -181,14 +185,19 @@ export function StatusLine({
       : (failure ??
         unsteered ??
         held ??
+        noBlock ??
         copied ??
         state.sessionsNote ??
         (connection.status === 'starting' ? `Starting ${agent}…` : undefined)));
   // A question waiting on a second press stands alone, so the sessions it
   // names are never cut for the model beside them; so does a copy's note,
   // which nothing may cut at 80 columns.
+  // So does a picked code block's line of keys, as the design draws it
+  // (CHD-394 §3).
   const alone =
-    armed !== undefined || (copied !== undefined && notice === copied);
+    armed !== undefined ||
+    (copied !== undefined && notice === copied) ||
+    (state.codePick !== undefined && notice === undefined);
   const { left, right } = statusLine(
     {
       model: alone ? undefined : modelName(state.models),

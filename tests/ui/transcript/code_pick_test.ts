@@ -1,8 +1,19 @@
 import { describe, expect, test } from 'bun:test';
 import {
+  DEFAULT_KEYMAP,
+  readKeybindings,
+} from '../../../src/ui/shortcuts/bindings.ts';
+import {
   type BlockRef,
+  drawnIds,
+  onScreen,
+  pickHint,
   reduceCodePick,
 } from '../../../src/ui/transcript/code_pick.ts';
+import {
+  codePlaces,
+  softMarkdown,
+} from '../../../src/ui/transcript/markdown.ts';
 
 /** Two replies: the first with two blocks, the second with one. */
 const BLOCKS: readonly BlockRef[] = [
@@ -118,4 +129,77 @@ describe('CHD-394 tester: pick identity and changing blocks', () => {
       reduceCodePick(undefined, { type: 'code_pick_ended' }),
     ).toBeUndefined();
   });
+});
+
+test("a reply's boxes and quotes are given ids, and each block the id of what it is drawn in (CHD-394)", () => {
+  const text = [
+    '```sh',
+    'ls',
+    '```',
+    '',
+    '> quoted:',
+    '>',
+    '> ```console',
+    '> $ pwd',
+    '> ```',
+    '',
+    '- then',
+    '',
+    '  ```bash',
+    '  echo hi',
+    '  ```',
+  ].join('\n');
+  const soft = softMarkdown(text, 80, false);
+  const { ids, nodes } = drawnIds(soft, codePlaces(text), 7);
+
+  // The quoted block is the second written: drawn into the quote.
+  expect(codePlaces(text)).toStrictEqual({ boxes: [0, 2], quotes: [[1]] });
+  expect(nodes).toStrictEqual(['code-7-0', 'quote-7-0', 'code-7-2']);
+  expect([...ids.values()]).toStrictEqual([
+    'code-7-0',
+    'quote-7-0',
+    'code-7-2',
+  ]);
+});
+
+test('the blocks drawn are ordered as on screen, and those in view told apart (CHD-394)', () => {
+  const at = (entry: number, top: number, left = 0, height = 3) => ({
+    ref: { entry, block: 0 },
+    top,
+    left,
+    height,
+  });
+  const { blocks, shown } = onScreen(
+    [at(3, 30), at(1, 2), at(2, 12, 4), at(4, 12, 0)],
+    { top: 10, height: 10 },
+  );
+
+  expect(blocks.map(({ entry }) => entry)).toStrictEqual([1, 4, 2, 3]);
+  // A box whose rows reach into the view counts; one wholly past it does not.
+  expect(shown.map(({ entry }) => entry)).toStrictEqual([4, 2]);
+  expect(onScreen([], { top: 0, height: 10 })).toStrictEqual({
+    blocks: [],
+    shown: [],
+  });
+});
+
+test("a picked block's line of keys names the bound ones, r only with [run] (CHD-394)", () => {
+  expect(pickHint(DEFAULT_KEYMAP, true)).toStrictEqual(
+    '↑ ↓ another block · c copy · r put in the prompt · esc done',
+  );
+  expect(pickHint(DEFAULT_KEYMAP, false)).toStrictEqual(
+    '↑ ↓ another block · c copy · esc done',
+  );
+
+  const { keymap } = readKeybindings(
+    JSON.stringify({
+      bindings: [
+        { context: 'CodeBlock', bindings: { y: 'codeBlock:copy', c: null } },
+      ],
+    }),
+  );
+
+  expect(pickHint(keymap, false)).toStrictEqual(
+    '↑ ↓ another block · y copy · esc done',
+  );
 });

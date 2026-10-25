@@ -66,6 +66,16 @@ export function useTimers(
       draftHeld !== undefined &&
       dispatch({ type: 'draft_held_gone', id: draftHeld }),
   );
+
+  const noCodeBlock = state.noCodeBlock;
+
+  useLapse(
+    noCodeBlock,
+    COPIED_NOTE_MS,
+    () =>
+      noCodeBlock !== undefined &&
+      dispatch({ type: 'no_code_block_gone', id: noCodeBlock }),
+  );
   useLapse(state.agentCloseArmed, QUIT_WINDOW_MS, () =>
     dispatch({ type: 'agent_close_disarmed' }),
   );

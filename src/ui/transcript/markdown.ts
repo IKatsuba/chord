@@ -145,6 +145,45 @@ export interface CodeBlock {
   readonly quoted: boolean;
 }
 
+/**
+ * Where `text`'s code blocks are drawn, by their `codeBlocks` index: for
+ * each code box `softMarkdown` lays out, in its order, its block's; for each
+ * quote it lays out, in order, those of the blocks drawn into the quote's
+ * text (CHD-394).
+ */
+export function codePlaces(text: string): {
+  readonly boxes: number[];
+  readonly quotes: number[][];
+} {
+  const boxes: number[] = [];
+  const quotes: number[][] = [];
+  let next = 0;
+  // The order `blockCode` lists them in, and so `codeBlocks` does.
+  const walk = (tokens: readonly Token[], quote?: number[]) => {
+    for (const token of tokens) {
+      if (token.type === 'list') {
+        for (const item of (token as Tokens.List).items) {
+          walk(item.tokens, quote);
+        }
+      } else if (token.type === 'blockquote') {
+        const own = quote ?? [];
+
+        if (quote === undefined) {
+          quotes.push(own);
+        }
+
+        walk((token as Tokens.Blockquote).tokens, own);
+      } else if (token.type === 'code') {
+        (quote ?? boxes).push(next++);
+      }
+    }
+  };
+
+  walk(lexer(text));
+
+  return { boxes, quotes };
+}
+
 /** The labels of the blocks with a `[run]` button (the owner, CHD-394). */
 const RUNNABLE: ReadonlySet<string> = new Set(['sh', 'bash']);
 

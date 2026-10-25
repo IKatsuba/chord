@@ -129,6 +129,15 @@ const STATES: Record<string, AppState> = {
       type: 'help_toggled',
     },
   ),
+  // A code block picked through ctrl+x b takes its own keys (CHD-394).
+  picked: after(
+    { type: 'connected', sessionId: 'session-1' },
+    {
+      type: 'code_pick_started',
+      blocks: [{ entry: 1, block: 0 }],
+      shown: [{ entry: 1, block: 0 }],
+    },
+  ),
   // Taller than its room, it takes the scroll keys (CHD-378).
   'help, overflowing': after(
     { type: 'connected', sessionId: 'session-1' },
@@ -1414,14 +1423,14 @@ test("the panel says ctrl + c to copy, and a rebound key's first, or ctrl + c (C
 
   expect(line(keymap)).toStrictEqual('ctrl + x y or ctrl + c');
 
-  // The panel is two columns of twenty-one at 80 since Tab steers (CHD-378),
-  // and three of fourteen at 120.
+  // The panel is two columns of twenty-two at 80 since Tab steers (CHD-378)
+  // and code blocks are picked (CHD-394), and three at 120.
   const lines = shortcuts(keymap).map(shortcutLine);
 
   expect(columnCount(lines, 80)).toStrictEqual(2);
-  expect(Math.ceil(lines.length / 2)).toStrictEqual(21);
+  expect(Math.ceil(lines.length / 2)).toStrictEqual(22);
   expect(columnCount(lines, 120)).toStrictEqual(3);
-  expect(Math.ceil(lines.length / 3)).toStrictEqual(14);
+  expect(Math.ceil(lines.length / 3)).toStrictEqual(15);
 });
 
 test('a copy key that types, or begins a chord that does, beats a form and the search line (CHD-172)', () => {

@@ -1,12 +1,14 @@
 import { createContext, useContext, useMemo } from 'react';
-import type { RGBA } from '@opentui/core';
+import type { Renderable, RGBA } from '@opentui/core';
 import {
   type Action,
   DEFAULT_KEYMAP,
   hintKey,
   type Keymap,
 } from '../shortcuts/bindings.ts';
+import type { BlockRef } from '../transcript/code_pick.ts';
 import { highlighting } from '../transcript/highlight.ts';
+import type { Soft } from '../transcript/markdown.ts';
 import { type Palette, paletteOf } from '../theme/theme.ts';
 import { capital } from '../shortcuts/state.ts';
 import { colour } from '../theme/text.ts';
@@ -65,6 +67,30 @@ export interface CodeActions {
    */
   released(target: unknown): boolean;
 }
+
+/** A code block drawn in the transcript, for `ctrl+x b` to find (CHD-394). */
+export interface DrawnBlock {
+  readonly ref: BlockRef;
+  /** What `c` copies. */
+  readonly copy: string;
+  /** What `r` puts into the prompt, on an `sh` or `bash` block. */
+  readonly run?: string;
+  /** Its box, or the quote it is drawn in, as laid out now. */
+  readonly node: () => Renderable | undefined;
+}
+
+/** Where drawn code blocks say they are there, and that they went. */
+export interface CodeRegistry {
+  add(block: DrawnBlock): () => void;
+}
+
+/** The window's; none where nothing picks a block, as in a test's draw. */
+export const CodeBlocks = createContext<CodeRegistry | undefined>(undefined);
+
+/** The ids a reply's code boxes and quotes are drawn with, by block. */
+export const CodeIds = createContext<ReadonlyMap<Soft, string> | undefined>(
+  undefined,
+);
 
 /** The window's code box actions; none where nothing answers a button. */
 export const CodeBlockActions = createContext<CodeActions | undefined>(

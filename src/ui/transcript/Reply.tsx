@@ -1,14 +1,32 @@
-import { Fragment, type ReactNode, useContext, useMemo } from 'react';
+import {
+  Fragment,
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
+import { useRenderer } from '@opentui/react';
 import type { MouseEvent, Renderable, RGBA } from '@opentui/core';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
-import { CodeBlockActions, useColours, useSelectable } from '../app/context.ts';
+import {
+  CodeBlockActions,
+  CodeBlocks,
+  CodeIds,
+  useColours,
+  useSelectable,
+} from '../app/context.ts';
+import { drawnIds } from './code_pick.ts';
 import { Ansi } from '../theme/Ansi.tsx';
 import { DIM_BORDER, FILL, TEXT } from '../theme/text.ts';
 import {
   type Button,
   type Code,
+  codeBlocks,
+  codePlaces,
   QUOTE_INSET,
+  runCommand,
   type Soft,
   softMarkdown,
 } from './markdown.ts';
@@ -21,19 +39,75 @@ import {
  */
 export function Reply({ text, width }: { text: string; width: number }) {
   const colours = useColours();
+  // An agent's own escapes are text, not styling chord answers for.
+  const plain = stripAnsi(text);
   const blocks = useMemo(
-    // An agent's own escapes are text, not styling chord answers for.
-    () => softMarkdown(stripAnsi(text), width, undefined, colours),
-    [text, width, colours],
+    () => softMarkdown(plain, width, undefined, colours),
+    [plain, width, colours],
   );
+  const ids = useCodeBlocks(plain, blocks);
 
   return (
-    <box flexGrow={1}>
-      {spaced(
-        blocks.map((block, index) => <SoftBlock key={index} block={block} />),
-      )}
-    </box>
+    <CodeIds.Provider value={ids}>
+      <box flexGrow={1}>
+        {spaced(
+          blocks.map((block, index) => <SoftBlock key={index} block={block} />),
+        )}
+      </box>
+    </CodeIds.Provider>
   );
+}
+
+/** Each drawing of a text with code blocks, numbered as it mounts. */
+let drawings = 0;
+
+/**
+ * `text`'s code blocks, as `blocks` lays it out, told to the window while
+ * they are drawn, for `ctrl+x b` to find (CHD-394): what each copies and
+ * puts into the prompt, and where it is, its box or the quote it is in.
+ * The ids those are drawn with, for `SoftBlock` to give them.
+ */
+export function useCodeBlocks(
+  text: string,
+  blocks: readonly Soft[],
+): ReadonlyMap<Soft, string> {
+  const registry = useContext(CodeBlocks);
+  const renderer = useRenderer();
+  const [entry] = useState(() => (drawings += 1));
+  const found = useMemo(() => codeBlocks(text), [text]);
+  const { ids, nodes } = useMemo(
+    () => drawnIds(blocks, codePlaces(text), entry),
+    [blocks, text, entry],
+  );
+
+  useEffect(() => {
+    if (registry === undefined) {
+      return;
+    }
+
+    const gone = found.map((block) =>
+      registry.add({
+        ref: { entry, block: block.index },
+        copy: block.text,
+        ...(block.runnable ? { run: runCommand(block.text) } : {}),
+        node: () => {
+          const id = nodes[block.index];
+
+          return id === undefined
+            ? undefined
+            : (renderer.root.findDescendantById(id) ?? undefined);
+        },
+      }),
+    );
+
+    return () => {
+      for (const go of gone) {
+        go();
+      }
+    };
+  }, [registry, renderer, found, nodes, entry]);
+
+  return ids;
 }
 
 /**
@@ -77,6 +151,8 @@ export interface Look {
  */
 export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
   const selectable = useSelectable();
+  const id = useContext(CodeIds)?.get(block);
+  const named = id === undefined ? {} : { id };
 
   if (block.kind === 'list') {
     // A loose list's blank rows are a copy's too; a tight one has none.
@@ -112,7 +188,7 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
 
   if (block.kind === 'code') {
     return (
-      <box width={block.width}>
+      <box width={block.width} {...named}>
         <box
           border
           borderStyle='single'
@@ -137,6 +213,7 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
 
   return block.kind === 'quote' ? (
     <box
+      {...named}
       flexDirection='row'
       border={['left']}
       borderStyle='single'
@@ -148,7 +225,7 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
       </text>
     </box>
   ) : (
-    <text {...TEXT} {...selectable} {...look}>
+    <text {...TEXT} {...selectable} {...look} {...named}>
       <Ansi text={block.text} />
     </text>
   );

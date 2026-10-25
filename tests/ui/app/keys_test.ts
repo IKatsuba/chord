@@ -784,3 +784,50 @@ describe('CHD-394 U3 tester: live draft protection', () => {
     ]);
   });
 });
+
+describe("a picked code block's keys (CHD-394)", () => {
+  const picked = reduceApp(ready, {
+    type: 'code_pick_started',
+    blocks: [{ entry: 1, block: 0 }],
+    shown: [{ entry: 1, block: 0 }],
+  });
+  const ended = dispatched({ type: 'code_pick_ended' });
+
+  test("its own keys are the window's, and walk no history", () => {
+    expect(
+      keySteps('', { ...plain, upArrow: true }, context(picked)),
+    ).toStrictEqual([
+      { type: 'chord_key' },
+      { type: 'move_code_pick', by: -1 },
+    ]);
+    expect(keySteps('c', plain, context(picked))).toContainEqual({
+      type: 'copy_code_pick',
+    });
+    expect(keySteps('', escape, context(picked))).toContainEqual(ended);
+    expect(olderSteps(context(picked))).toStrictEqual([]);
+    expect(newerSteps(context(picked))).toStrictEqual([]);
+  });
+
+  test('any other key ends the pick first, typing too, while the scroll keys keep it', () => {
+    expect(keySteps('x', plain, context(picked))[0]).toStrictEqual(ended);
+    expect(
+      keySteps('', { ...plain, pageUp: true }, context(picked)),
+    ).not.toContainEqual(ended);
+    // With no pick, a key ends nothing.
+    expect(keySteps('x', plain, context(ready))).not.toContainEqual(ended);
+  });
+
+  test('ctrl+x b with no code block leaves a note, said afresh each time', () => {
+    const first = reduceApp(ready, { type: 'no_code_block' });
+    const again = reduceApp(first, { type: 'no_code_block' });
+
+    expect(again.noCodeBlock).not.toStrictEqual(first.noCodeBlock);
+    expect(
+      reduceApp(again, { type: 'no_code_block_gone', id: again.noCodeBlock! })
+        .noCodeBlock,
+    ).toBeUndefined();
+    expect(
+      reduceApp(picked, { type: 'code_pick_ended' }).codePick,
+    ).toBeUndefined();
+  });
+});

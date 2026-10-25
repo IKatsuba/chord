@@ -18,8 +18,10 @@ import {
   CTRL_C,
   CTRL_D,
   CTRL_G,
+  CTRL_X,
   DOWN,
   ESC,
+  leader,
   promptRow,
   quitAll,
   ready,
@@ -39,6 +41,7 @@ import { openSession } from '../../../src/session/session.ts';
 import manifest from '../../../package.json' with { type: 'json' };
 
 import { OSC9, writes } from './app_window.tsx';
+import { clipboard } from './selecting.ts';
 
 const VERSION = manifest.version;
 
@@ -1163,5 +1166,94 @@ describe('CHD-378 U3 tester: steering through the window', () => {
       await window.shows('Interrupted by user');
       expect(statusRow(window)).toContain('enter queues it');
       expect(promptRow(window)).toContain('Keep this draft');
+    }));
+});
+
+describe('ctrl+x b picks a code block, and its keys copy it or put it in the prompt (CHD-394)', () => {
+  const HINT = '↑ ↓ another block · c copy · r put in the prompt · esc done';
+  const LONG =
+    'bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt\n\necho done';
+
+  test('the newest block on screen is picked, ↑ moves the pick, and c copies the block picked', () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await window.press(CTRL_X);
+
+        expect(statusRow(window)).toContain('b a code block');
+        await window.press('b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        // ↑ is the pick's, not history's.
+        await window.press(UP);
+        expect(promptRow(window)).not.toContain('markdowncode');
+        await window.press('c');
+        await until('the copy', () => copies.length === 1);
+
+        expect(copies[0]!.text).toStrictEqual(LONG);
+        await window.shows(`copied ${LONG.length} chars to clipboard`);
+        expect(promptRow(window)).not.toContain('c');
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
+  test('r puts the picked command into the prompt in bash mode, and does nothing on a block with no [run]', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('r');
+        await window.shows('│ ! bun dev check');
+
+        // The typescript box, first on screen, has no [run].
+        await window.press('\x15');
+        await window.press('\x7f');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press(UP);
+        await window.press(UP);
+        await until('the typescript box picked', () =>
+          statusRow(window).includes('↑ ↓ another block · c copy · esc done'),
+        );
+        await window.press('r');
+        expect(statusRow(window)).toContain(
+          '↑ ↓ another block · c copy · esc done',
+        );
+        expect(promptRow(window)).not.toContain('!');
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test('esc ends the pick with nothing done, and any other key ends it and does its own', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press(ESC);
+        await until('the pick to end', () => !statusRow(window).includes(HINT));
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('x');
+        await window.shows('› x');
+        expect(statusRow(window)).not.toContain(HINT);
+      },
+      { columns: 80, rows: 40 },
+    ));
+
+  test('with no code block in the transcript, ctrl+x b says so', () =>
+    withWindow(async (window) => {
+      await send(window, 'text');
+      await window.shows('This reply came in chunks.');
+      await leader(window, 'b');
+      await until('the note', () =>
+        statusRow(window).includes('No code block to pick'),
+      );
     }));
 });

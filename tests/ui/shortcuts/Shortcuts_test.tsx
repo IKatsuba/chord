@@ -55,8 +55,8 @@ const SHIFT_DOWN = '\x1b[1;2B';
 /** An SGR wheel report, `up` or down, at the 0-based cell `x`, `y`. */
 const wheel = (x: number, y: number, up: boolean) =>
   `\x1b[<${up ? 64 : 65};${x + 1};${y + 1}M`;
-const BELOW = '── ↓ 2 lines below · pagedown to scroll ──';
-const ABOVE = '── ↑ 2 lines above · pageup to scroll ──';
+const BELOW = '── ↓ 3 lines below · pagedown to scroll ──';
+const ABOVE = '── ↑ 3 lines above · pageup to scroll ──';
 const LAST = 'tab enter to add a file';
 
 describe('CHD-378 U5 tester: panel ownership and resize', () => {
@@ -232,8 +232,12 @@ test('the wheel over the panel scrolls it, and it opens again at the top', () =>
       await ready(window);
       await window.type('?');
       await window.shows(BELOW);
-      await window.press(wheel(10, 10, false));
-      await window.press(wheel(10, 10, false));
+
+      // As many rows as the rule says are below.
+      for (let row = 0; row < 3; row++) {
+        await window.press(wheel(10, 10, false));
+      }
+
       await window.shows(ABOVE);
       await window.press(ESC);
       await until('the panel to close', () => !window.frame().includes(ABOVE));

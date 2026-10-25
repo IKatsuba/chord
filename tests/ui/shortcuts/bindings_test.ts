@@ -986,13 +986,14 @@ test('the leader line names every key that can follow, as wide as it fits', () =
   const held = holding(ready(DEFAULT_KEYMAP), 'ctrl+x');
 
   expect(leader(held, 116)).toStrictEqual(
-    'ctrl+x …  a the one that waits · esc never mind',
+    'ctrl+x …  b a code block · a the one that waits · esc never mind',
   );
-  // 47 columns: it fits 80 whole.
-  expect(leader(held, 47)).toStrictEqual(
-    'ctrl+x …  a the one that waits · esc never mind',
+  // 64 columns: it fits 80 whole, a code block first (CHD-394).
+  expect(leader(held, 64)).toStrictEqual(
+    'ctrl+x …  b a code block · a the one that waits · esc never mind',
   );
-  expect(leader(held, 20)).toStrictEqual('ctrl+x …  a waits');
+  expect(leader(held, 47)).toStrictEqual('ctrl+x …  b block · a waits');
+  expect(leader(held, 20)).toStrictEqual('ctrl+x …  b block');
 });
 
 test('the leader line follows the keybindings file', () => {
@@ -1002,7 +1003,7 @@ test('the leader line follows the keybindings file', () => {
   });
 
   expect(leader(holding(ready(keymap), 'ctrl+x'), 116)).toStrictEqual(
-    'ctrl+x …  a the one that waits · ctrl+e edit in $EDITOR · esc never mind',
+    'ctrl+x …  b a code block · a the one that waits · ctrl+e edit in $EDITOR · esc never mind',
   );
 });
 
@@ -1031,8 +1032,9 @@ test('the panel still fits 80x24: one line for what waits, one quit line', () =>
   expect(lines.includes('ctrl + d or ctrl + c twice to quit')).toBeTruthy();
   expect(!lines.includes('ctrl + d to quit')).toBeTruthy();
   expect(columns.length).toStrictEqual(2);
-  // 21 rows with CHD-243's line for x and CHD-378's for Tab.
-  expect(Math.max(...columns.map((column) => column.length))).toStrictEqual(21);
+  // 22 rows with CHD-243's line for x, CHD-378's for Tab and CHD-394's two
+  // for code blocks.
+  expect(Math.max(...columns.map((column) => column.length))).toStrictEqual(22);
 });
 
 test('session:attention bound elsewhere is named as bound, and unbound has no line', () => {

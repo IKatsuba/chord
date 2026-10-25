@@ -48,7 +48,72 @@ pair (`mock-shortcuts-*`):
   one more than the window has room for beside the box and the blank row
   above it: the last line, `tab enter to add a file`, is cut. The mock
   (`mock-shortcuts-80x24`) left that blank row out and so was one row off.
-  Open with the owner (Q217); this section follows the answer.
+  The owner's answer (Q217, option D): the panel scrolls when it does not
+  fit, below.
+
+### The panel scrolls when it does not fit
+
+The panel keeps its columns and its order; when its rows are more than the
+window has room for under the box, it shows a window of them and one dim
+rule saying what is hidden and how to reach it. The rule is the permission
+box's own (`── ↓ 37 lines below · pagedown to scroll ──`,
+`ref-bigask-80x24`), so a person who has scrolled a long request already
+reads it.
+
+**80×24, just opened** (`panel-mock-top-80x24`): 20 rows under the box,
+the panel's 21, so 19 rows and the rule in the last row:
+
+```
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  enter to send                           esc to close commands or files
+  tab to send into the running turn       ! for bash mode
+  …
+  / @ for commands or files               /vim for vim mode
+  ↑ ↓ to pick a command or file           ? for shortcuts
+  ── ↓ 2 lines below · pagedown to scroll ────────────────────────────────────
+```
+
+**80×24, scrolled to the end** (`panel-mock-bottom-80x24`): the rule moves
+to the top row and says what is above:
+
+```
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ── ↑ 2 lines above · pageup to scroll ──────────────────────────────────────
+  shift or \ + enter for a newline        backspace to leave bash mode
+  …
+  tab to complete a command               any key to quit the crash screen
+  tab enter to add a file
+```
+
+Between the two (one row down from the top, by shift+↓), both rules show,
+each with its own count, as the permission box draws them.
+
+- **The rule.** Dim, from the panel's left padding to the box's right edge,
+  `↑ N lines above` / `↓ N lines below`, where a line is one row of the
+  panel, then `· <key> to scroll` with the key bound to page that way, named
+  as the permission box names it. It takes a row of the panel's room, never
+  one more.
+- **The keys** are the ones the panel already lists for scrolling, and the
+  permission box's when it overflows: **pgup / pgdn** a page, **shift + ↑ ↓**
+  a row, **home / end** to either end, and **the wheel** over the panel.
+  While the panel is open and overflows, these move the panel instead of
+  the transcript. That costs nothing: a panel that overflows has taken every
+  row, so no transcript is in view. No new panel line: `pgup pgdn or wheel
+  to scroll`, `shift + ↑ ↓ to scroll a line` and `home end for the top and
+  the bottom` already say it; in `keys.ts` those entries name the panel's
+  commands beside the transcript's, so the key test presses them with the
+  panel open. Plain ↑ ↓ stay the prompt's history, and every other key does
+  what it does with the panel open today (`?` and esc close it).
+- **Opening** always starts at the top.
+- **120×40** (`panel-today-120x40`): 14 rows of three columns fit. No rule,
+  and pgup/pgdn, shift + ↑ ↓, home/end and the wheel scroll the transcript as
+  today.
+- **A resize while it is open** lays the columns out again for the new width
+  and keeps the panel's top row where it was, clamped to the new end. If the
+  panel now fits, the rules go and the scroll keys go back to the
+  transcript; if a narrower window makes it overflow, the rule appears.
 
 ## 2. Tab on an agent without steering
 
@@ -233,12 +298,24 @@ next turn.
 - **A permission, form or question has the keys:** its own Tab, as today.
 - **Bash mode (`!`):** nothing; a shell command is not a message.
 
-## 7. Open with the owner
+## 7. Images and `@path` mentions
 
-- **A draft with a pasted image (Q215).** Steering carries text only. Open:
-  what Tab does with it is not designed here.
-- **A draft with `@path` mentions (Q216).** A new turn attaches each as a
-  resource link; steering carries text only. Open: not designed here.
+The owner's answers to Q215 and Q216: Tab steers the whole message, with
+its images and `@path` resource links, as a new turn sends it.
+
+Nothing new goes on screen. A prompt with attachments already reads as its
+text, with `[Image #N]` where an image was pasted and `@path` as typed, in
+the queue and in the transcript alike (`ref-attach-queued-80x24`, a prompt
+queued with Enter during a turn today):
+
+```
+ ››› Working… (2s · esc to interrupt)
+ › look at [Image #1] and @README.md please
+```
+
+A steered, held, in-flight or refused prompt with attachments draws the
+same text in the rows of §3–§5. Esc that takes a held steer back puts its
+images back in the draft with it, as it does for any queued prompt.
 
 ## Colour roles
 
@@ -250,7 +327,9 @@ next turn.
 ## Keys
 
 `chat:steer`, default `tab`, rebindable, listed in the shortcuts panel as
-`tab to send into the running turn`. Nothing else new.
+`tab to send into the running turn`. While the shortcuts panel is open and
+overflows, pgup / pgdn, shift + ↑ ↓, home / end and the wheel scroll it
+(§1); the panel's existing lines for those keys cover it. Nothing else new.
 
 ## Why
 

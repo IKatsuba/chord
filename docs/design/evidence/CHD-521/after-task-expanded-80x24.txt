@@ -1,0 +1,24 @@
+
+      ⏺ Guardian(Review)
+        ⎿  Status: Approved
+           Action: exec printf ready
+           Risk: low
+           Authorization: high
+           Rationale: A scripted Guardian review.
+
+      ⏺ Guardian reviews opened.
+
+      ⏺ Guardian reviews finished.
+   ⎿  Done (4 tool uses · 2.0k tokens · $0.0125 · 3s)
+
+ ⏺ It is running; I will check its report when it lands.
+
+ ← from Fix the tokenizer · fake · report
+   ⎿  Guardian reviews finished.
+
+ ⏺ Received the message from Fix the tokenizer · fake · report.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.59.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd521-task
+ ▀▀     ? for shortcuts · /help
+
+ › task
+
+ ⏺ I will send a task agent on fake for the fix.
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Guardian reviewing…
+      Guardian reviewing…
+      Guardian(Review)
+      +3 more tool uses (ctrl+o to expand)
+
+ ⏺ It is running; I will check its report when it lands.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    background  1 task running

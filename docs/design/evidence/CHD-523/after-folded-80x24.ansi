@@ -1,0 +1,24 @@
+[38;2;255;255;255m
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mTeam[0m(bugfix)[2m · fake · fake-large[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mIssue 214: a string at the end of a line loses its closing quote.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mreadString in src/parse/tokenize.ts stops at the newline before it[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mconsumes the quote. Add a test that fails for that reason, fix it, and[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mhave the diff reviewed. Report to me when it is done.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mbugfix has the job. Its lead will report here; you can look in with ↓.[38;2;255;255;255m
+
+ [38;2;86;212;221m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;86;212;221m@bugfix[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; [0m[38;2;255;255;255m
+      [2m[39mcoder waits for it and will edit src/parse/tokenize.ts only. I will [0m[38;2;255;255;255m
+      [2m[39mreport when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix · fake.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m↑ ↓ pick · enter write · x close · esc back[0m[38;2;255;255;255m  [2m[39mFake Large with a 1M… · 1% used[0m[38;2;255;255;255m
+  [38;2;177;185;249m❯ [1m[39mmain     [0;2m  fake                    ◦ idle 28s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mparser   [2m[39m  fake                    ◦ idle 38s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;196;156;255mdocs     [2m[39m  fake                    ◦ idle 38s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;86;212;221mbugfix   [2m[39m  team · fake · 3 agents[38;2;71;231;165m  ✻ tester: working 28s[0m[38;2;255;255;255m

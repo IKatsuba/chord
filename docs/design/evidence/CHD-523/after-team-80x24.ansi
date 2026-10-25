@@ -1,0 +1,24 @@
+[38;2;255;255;255m      [2m[39mhave the diff reviewed. Report to me when it is done.[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(tester)[2m · fake · fake-small · acceptEdits[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mcostwait[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mOpen[0m(coder)[2m · fake · fake-large · plan[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mYou will edit src/parse/tokenize.ts, and only it, once tester's test[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mfails. Read it now; change nothing yet.[0m[38;2;255;255;255m
+
+ [39m→[38;2;255;255;255m [2m[39mto [0;1m@main[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; [0m[38;2;255;255;255m
+      [2m[39mcoder waits for it and will edit src/parse/tokenize.ts only. I will [0m[38;2;255;255;255m
+      [2m[39mreport when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mtester and coder are open; I wait for tester's test.[38;2;255;255;255m
+
+[38;2;86;212;221m╭─[1m bugfix[0m[38;2;86;212;221m ─────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;2;86;212;221m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m↑ ↓ pick · enter write · x close · esc back[0m[38;2;255;255;255m  [2m[39mFake Large with a 1M… · 1% used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mparser   [2m[39m  fake         ◦ idle 37s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;196;156;255mdocs     [2m[39m  fake         ◦ idle 37s[0m[38;2;255;255;255m
+  [38;2;177;185;249m❯ [1m[38;2;86;212;221mbugfix   [0;2m  team · fake  ◦ idle 27s[0m[38;2;255;255;255m
+  [2m[39m  … +3 more[0m[38;2;255;255;255m

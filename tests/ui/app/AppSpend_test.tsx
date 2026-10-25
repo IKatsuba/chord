@@ -47,10 +47,7 @@ test("/cost while a turn runs says that turn is counted when it ends, beside the
       );
 
       await window.press(ESC);
-      await until(
-        'the turn to end',
-        () => !window.frame().includes('Working…'),
-      );
+      await window.shows('Interrupted by user');
       expect(await reported(window, '/cost')).not.toContain('This turn:');
     },
     {

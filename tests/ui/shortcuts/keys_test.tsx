@@ -1514,6 +1514,125 @@ test("in an agent's or a task's detail, every key the panel names does what it s
   }
 });
 
+describe('CHD-378 U2 tester: steer key contexts', () => {
+  const tab: KeyPress = { ctrl: false, escape: false, tab: true };
+  const superEnter: KeyPress = {
+    ctrl: false,
+    escape: false,
+    super: true,
+    return: true,
+  };
+
+  test('rebinding to super+enter moves the action and its panel line while lists retain Tab', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          {
+            context: 'Chat',
+            bindings: { tab: null, 'super+enter': 'chat:steer' },
+          },
+        ],
+      }),
+    );
+    const busy = {
+      ...reduceApp(STATES.busy!, {
+        type: 'files_listed',
+        files: ['README.md'],
+      }),
+      keys: keymap,
+    };
+    const lines = shortcuts(keymap).map(shortcutLine);
+
+    expect(problems).toStrictEqual([]);
+    expect(keyCommand('', superEnter, busy, 'Change the parser.')).toBe(
+      'steer',
+    );
+    expect(keyCommand('', tab, busy, 'Change the parser.')).toBeUndefined();
+    expect(keyCommand('', tab, busy, '/mod')).toBe('complete_command');
+    expect(keyCommand('', tab, busy, '@README')).toBe('complete_mention');
+
+    const send = lines.indexOf('enter to send');
+
+    expect(lines[send + 1]).toBe('cmd + enter to send into the running turn');
+    expect(lines).not.toContain('tab to send into the running turn');
+    expect(lines).toContain('tab to complete a command');
+    expect(lines).toContain('tab enter to add a file');
+  });
+
+  test('unbinding removes only the steer line and action', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [{ context: 'Chat', bindings: { tab: null } }],
+      }),
+    );
+    const busy = {
+      ...reduceApp(STATES.busy!, {
+        type: 'files_listed',
+        files: ['README.md'],
+      }),
+      keys: keymap,
+    };
+
+    expect(problems).toStrictEqual([]);
+    expect(keyCommand('', tab, busy, 'Change the parser.')).toBeUndefined();
+    expect(
+      shortcuts(keymap).some((line) => line.actions?.includes('chat:steer')),
+    ).toBe(false);
+    expect(keyCommand('', tab, busy, '/mod')).toBe('complete_command');
+    expect(keyCommand('', tab, busy, '@README')).toBe('complete_mention');
+    expect(
+      keyCommand('', { ...tab, return: true, tab: false }, busy, 'Next.'),
+    ).toBeUndefined();
+  });
+
+  test('requests, pickers, search, background views and Vim normal mode never steer', () => {
+    const guarded = [
+      STATES.asked!,
+      STATES.form!,
+      STATES['picker, busy']!,
+      STATES['vim, normal, busy']!,
+      { ...STATES['background view']!, transcript: STATES.busy!.transcript },
+      { ...STATES['background detail']!, transcript: STATES.busy!.transcript },
+      reduceApp(STATES.busy!, { type: 'searched', search: emptySearch }),
+      reduceApp(STATES.busy!, { type: 'bash_mode', on: true }),
+    ];
+
+    for (const state of guarded) {
+      expect(keyCommand('', tab, state, 'Change the parser.')).not.toBe(
+        'steer',
+      );
+    }
+
+    expect(
+      keyCommand('', tab, STATES.ready!, 'Change the parser.'),
+    ).toBeUndefined();
+    expect(keyCommand('', tab, STATES.busy!, '\n\t ')).toBeUndefined();
+  });
+
+  test('Enter and newline stay widget-owned while shift+tab still cycles modes', () => {
+    const busy = STATES['modes, busy']!;
+
+    expect(textareaDoes(sequence('enter'), 'chat:submit')).toBe(true);
+    expect(textareaDoes(sequence('shift+enter'), 'chat:newline')).toBe(true);
+
+    expect(
+      keyCommand('', { ...tab, tab: false, return: true }, busy, 'Next.'),
+    ).toBeUndefined();
+    expect(
+      keyCommand(
+        '',
+        { ...tab, tab: false, return: true, shift: true },
+        busy,
+        'Next.',
+      ),
+    ).toBeUndefined();
+    expect(keyCommand('', { ...tab, shift: true }, busy, 'Next.')).toBe(
+      'cycle_mode',
+    );
+    expect(keyCommand('', tab, busy, 'Next.')).toBe('steer');
+  });
+});
+
 describe('CHD-386 tester: movement panel entries', () => {
   test('word and line moves follow paste, before history, in both layouts', () => {
     const lines = shortcuts().map(shortcutLine);

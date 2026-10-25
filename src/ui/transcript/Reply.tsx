@@ -24,6 +24,7 @@ import {
   type Code,
   codeBlocks,
   codePlaces,
+  openFences,
   QUOTE_INSET,
   runCommand,
   type Soft,
@@ -73,7 +74,12 @@ export function useCodeBlocks(
   const registry = useContext(CodeBlockActions);
   const renderer = useRenderer();
   const [entry] = useState(() => (drawings += 1));
-  const found = useMemo(() => codeBlocks(text), [text]);
+  // A block whose fence is still open is no key's yet (CHD-394 §1).
+  const found = useMemo(() => {
+    const open = openFences(text);
+
+    return codeBlocks(text).filter((block) => !open.has(block.index));
+  }, [text]);
   const { ids, nodes } = useMemo(
     () => drawnIds(blocks, codePlaces(text), entry),
     [blocks, text, entry],

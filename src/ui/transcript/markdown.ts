@@ -146,6 +146,19 @@ export interface CodeBlock {
 }
 
 /**
+ * The `codeBlocks` indices of `text`'s blocks whose fence is still open,
+ * mid-stream: their text is not final, so no button and no key acts on
+ * them yet (CHD-394 §1).
+ */
+export function openFences(text: string): ReadonlySet<number> {
+  return new Set(
+    blockCode(lexer(text), 0).flatMap(({ token }, index) =>
+      closed(token) ? [] : [index],
+    ),
+  );
+}
+
+/**
  * Where `text`'s code blocks are drawn, by their `codeBlocks` index: for
  * each code box `softMarkdown` lays out, in its order, its block's; for each
  * quote it lays out, in order, those of the blocks drawn into the quote's

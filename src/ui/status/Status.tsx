@@ -178,17 +178,23 @@ export function StatusLine({
     state.steerRefused === undefined
       ? undefined
       : unsteeredNote(hintKey(state.keys, 'chat:submit'));
+  // A picked code block's line of keys comes before every note but an
+  // armed quit's: they are what the keys do now (CHD-394 §3).
   const notice =
     armed ??
     (connection.status === 'closing'
       ? `Stopping ${agent}…`
-      : (failure ??
-        unsteered ??
-        held ??
-        noBlock ??
-        copied ??
-        state.sessionsNote ??
-        (connection.status === 'starting' ? `Starting ${agent}…` : undefined)));
+      : state.codePick !== undefined
+        ? undefined
+        : (failure ??
+          unsteered ??
+          held ??
+          noBlock ??
+          copied ??
+          state.sessionsNote ??
+          (connection.status === 'starting'
+            ? `Starting ${agent}…`
+            : undefined)));
   // A question waiting on a second press stands alone, so the sessions it
   // names are never cut for the model beside them; so does a copy's note,
   // which nothing may cut at 80 columns.

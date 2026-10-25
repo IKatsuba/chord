@@ -215,16 +215,30 @@ export function MessageBody({
   const selectable = useSelectable();
   // An agent's own escapes are text, not styling chord answers for.
   const plain = stripAnsi(text);
-  const blocks = useMemo(
-    () =>
-      softMarkdown(plain, Math.max(width - 5, 1), undefined, colours).map(
-        // A quote reads as the rest of a message, with no bar.
-        (block): Soft =>
-          block.kind === 'quote' ? { ...block, kind: 'text' } : block,
-      ),
+  const laid = useMemo(
+    () => softMarkdown(plain, Math.max(width - 5, 1), undefined, colours),
     [plain, width, colours],
   );
-  const ids = useCodeBlocks(plain, blocks);
+  // Its blocks are told to the window as laid out, a quote as a quote, so
+  // the code drawn into one is found there (CHD-394).
+  const found = useCodeBlocks(plain, laid);
+  const { blocks, ids } = useMemo(() => {
+    // A quote reads as the rest of a message, with no bar.
+    const shown = laid.map((block): Soft =>
+      block.kind === 'quote' ? { ...block, kind: 'text' } : block,
+    );
+    const named = new Map(found);
+
+    shown.forEach((block, index) => {
+      const id = found.get(laid[index]!);
+
+      if (id !== undefined) {
+        named.set(block, id);
+      }
+    });
+
+    return { blocks: shown, ids: named };
+  }, [laid, found]);
   const look = failed ? fg(colours.error) : { attributes: DIM };
 
   return (

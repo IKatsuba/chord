@@ -1247,6 +1247,32 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
       { columns: 80, rows: 40 },
     ));
 
+  test("picked again at once after a copy, the line says the pick's keys, not the copy's note", () => {
+    const { copies, copy } = clipboard();
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+        await window.press('c');
+        await window.shows('copied 13 chars to clipboard');
+        await leader(window, 'b');
+        // Within the copy note's 3 s: the frame after b says the pick's keys.
+        await until(
+          'the leader line to go',
+          () => !statusRow(window).includes('ctrl+x …'),
+        );
+
+        expect(statusRow(window)).toContain(HINT);
+        expect(statusRow(window)).not.toContain('copied');
+        expect(copies).toHaveLength(1);
+      },
+      { columns: 80, rows: 40, copy },
+    );
+  });
+
   test('with no code block in the transcript, ctrl+x b says so', () =>
     withWindow(async (window) => {
       await send(window, 'text');

@@ -340,6 +340,7 @@ import {
 const SCENARIOS = [
   'text',
   'texttillsteered',
+  'texttillsteeredheld',
   'thought',
   'tools',
   'steps',

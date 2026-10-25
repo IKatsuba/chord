@@ -646,8 +646,9 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
   test('one the agent leaves unanswered shows in the queue as going into the turn, Esc leaves it, and refused it goes as the next turn', () =>
     withWindow(
       async (window) => {
-        await send(window, 'slow');
-        await window.shows('esc to interrupt');
+        // Held until the cancel, however slow the machine (CHD-526).
+        await send(window, 'texttillsteeredheld');
+        await window.shows('This reply came in chunks.');
         await draft(window, 'Use the second parser instead');
         await window.press(TAB);
         await window.shows(
@@ -661,8 +662,7 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
           'the refused steer to go as the next turn',
           () => !window.frame().includes('into the running turn'),
         );
-        await window.shows('esc to interrupt');
-        expect(window.frame()).toContain('› Use the second parser instead');
+        await window.shows('› Use the second parser instead');
         await window.press(ESC);
       },
       {

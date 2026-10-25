@@ -2275,3 +2275,22 @@ describe("the person's draft with an image or a mention steered whole, as a new 
       withFile,
     ));
 });
+
+test("the fake's texttillsteeredheld reads a steer, then holds its turn with nothing more said until it is cancelled (CHD-526)", () =>
+  onFake(['--steering', 'claude'], async (conversation, events) => {
+    conversation.send('texttillsteeredheld');
+    await until(() => saidIn(events).endsWith('came in chunks.'));
+    conversation.tell(MAIN, 'Then the docs.');
+    await until(() => saidIn(events).includes('Read the message from main.'));
+
+    const said = saidIn(events);
+
+    expect(!events.some((event) => event.type === 'result')).toBeTruthy();
+    conversation.interrupt();
+    await until(() => events.some((event) => event.type === 'result'));
+
+    expect(events.find((event) => event.type === 'result')).toMatchObject({
+      result: { status: 'cancelled' },
+    });
+    expect(saidIn(events)).toStrictEqual(said);
+  }));

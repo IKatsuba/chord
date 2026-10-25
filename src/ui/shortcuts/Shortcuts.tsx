@@ -4,6 +4,7 @@ import {
   type MouseEvent,
   type ScrollBoxRenderable,
 } from '@opentui/core';
+import { flushSync } from '@opentui/react';
 import {
   type RefObject,
   useCallback,
@@ -121,11 +122,17 @@ export function Shortcuts({
       flexShrink={1}
       overflow='hidden'
       ref={area}
-      onSizeChange={() => setRoom(area.current?.getLayout().height ?? total)}
+      onSizeChange={() => {
+        // Reserve the rules before this frame paints the smaller panel.
+        flushSync(() => setRoom(area.current?.getLayout().height ?? total));
+      }}
     >
-      {shown.above && (
-        <Rule text={requestRule('↑', hidden.above, pageUp, ruled)} />
-      )}
+      {/* Keep both texts mounted: one added in the size hook is painted
+      only on the next frame, even when React commits synchronously. */}
+      <Rule
+        visible={shown.above}
+        text={requestRule('↑', hidden.above, pageUp, ruled)}
+      />
       <scrollbox
         ref={view}
         visible={shown.shown > 0}
@@ -150,16 +157,17 @@ export function Shortcuts({
           </text>
         ))}
       </scrollbox>
-      {shown.below && (
-        <Rule text={requestRule('↓', hidden.below, pageDown, ruled)} />
-      )}
+      <Rule
+        visible={shown.below}
+        text={requestRule('↓', hidden.below, pageDown, ruled)}
+      />
     </box>
   );
 }
 
-function Rule({ text }: { text: string }) {
+function Rule({ text, visible }: { text: string; visible: boolean }) {
   return (
-    <text {...CUT} attributes={DIM} flexShrink={0}>
+    <text {...CUT} attributes={DIM} flexShrink={0} visible={visible}>
       {text}
     </text>
   );

@@ -779,8 +779,9 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
           await window.press(TAB);
           reader.waiting[0]?.();
           await window.shows('› see [Image #1]');
-          await new Promise((resolve) => setTimeout(resolve, 300));
+          await window.shows(RECEIVED);
 
+          // A second read, had one started, would still be waiting.
           expect(reader.waiting).toHaveLength(1);
           expect(
             window
@@ -820,7 +821,8 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
         await window.press(DOWN);
         await aside(window);
         await pickAgent(window, 'main');
-        await send(window, 'slow');
+        // Its turn ends once the steer is in, which the list shows.
+        await send(window, 'texttillsteered');
         await window.shows('esc to interrupt');
 
         for (const key of 'see /shots/a.png') {
@@ -835,7 +837,13 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
         await until('the read', () => reader.waiting.length === 1);
         await pickAgent(window, 'other');
         reader.waiting[0]?.();
-        await new Promise((resolve) => setTimeout(resolve, 300));
+        // The steer has gone and its turn ended, with other still in front.
+        await until('main to have replied', () =>
+          window
+            .frame()
+            .split('\n')
+            .some((row) => /^\s*main\s.*✓ new reply/.test(row)),
+        );
         await window.press(UP);
         await window.shows('› other draft');
         await pickAgent(window, 'main');

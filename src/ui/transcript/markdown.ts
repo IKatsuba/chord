@@ -112,11 +112,15 @@ export interface CodeBlock {
   readonly line: number;
   /** The fence's language, its first word, as the box's label; empty for none. */
   readonly label: string;
-  /** The code as written, unhighlighted: what a copy of it takes. */
+  /**
+   * The code as written, unhighlighted, its lines joined with newlines and
+   * none after the last: what a copy of it takes (docs/design/CHD-394.md §2).
+   */
   readonly text: string;
   /**
-   * Labelled `sh`, `bash` or `console`, the blocks the owner's run button
-   * is tried on first; an unlabelled one is not.
+   * Labelled `sh` or `bash`, the blocks with a `[run]` button; a
+   * `console` block mixes commands with their output, and it and an
+   * unlabelled one get `[copy]` only (the owner, 2026-10-25).
    */
   readonly runnable: boolean;
   /**
@@ -126,8 +130,8 @@ export interface CodeBlock {
   readonly quoted: boolean;
 }
 
-/** The labels of the blocks a run button is tried on (the owner, CHD-394). */
-const RUNNABLE: ReadonlySet<string> = new Set(['sh', 'bash', 'console']);
+/** The labels of the blocks with a `[run]` button (the owner, CHD-394). */
+const RUNNABLE: ReadonlySet<string> = new Set(['sh', 'bash']);
 
 /**
  * `text`'s code blocks, a reply's as `softMarkdown` lays it out: those at
@@ -142,7 +146,7 @@ export function codeBlocks(text: string): CodeBlock[] {
       index,
       line,
       label,
-      text: token.text,
+      text: token.text.replace(/\n+$/, ''),
       runnable: RUNNABLE.has(label),
       quoted,
     };
@@ -462,6 +466,18 @@ const HOLES = new Map(
     <T>(codes: readonly T[]) => codes[n],
   ]),
 );
+
+/**
+ * What `[run]` puts into the prompt from a block's `text`: every line, in
+ * order, each one that starts with a `$ ` prompt without it, the rest as
+ * written (the owner, 2026-10-25; docs/design/CHD-394.md §5).
+ */
+export function runCommand(text: string): string {
+  return text
+    .split('\n')
+    .map((line) => (line.startsWith('$ ') ? line.slice(2) : line))
+    .join('\n');
+}
 
 /** A code block's label: its fence's language, its first word. */
 function labelOf(token: Tokens.Code): string {

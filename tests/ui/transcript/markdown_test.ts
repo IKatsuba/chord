@@ -9,6 +9,7 @@ import {
   codeBlocks,
   markdown,
   QUOTE_INSET,
+  runCommand,
   type Soft,
   softMarkdown,
 } from '../../../src/ui/transcript/markdown.ts';
@@ -635,7 +636,7 @@ test('soft, a loose list says so (CHD-396)', () => {
   });
 });
 
-test("a reply's code blocks are listed as drawn: label, text as written, whether a run button is tried on it, and where (CHD-394)", () => {
+test("a reply's code blocks are listed as drawn: label, text as written, whether it has [run], and where (CHD-394)", () => {
   const reply = [
     'Run this:',
     '',
@@ -682,7 +683,8 @@ test("a reply's code blocks are listed as drawn: label, text as written, whether
   ).toStrictEqual([
     [0, 'sh', 'bun test --isolate', true, false],
     [1, 'bash', 'echo "one"\necho "two"', true, false],
-    [2, 'console', '$ ls\na.ts', true, true],
+    // A console block mixes commands with output: [copy] only.
+    [2, 'console', '$ ls\na.ts', false, true],
     [3, '', 'no label', false, false],
     [4, 'ts', 'const a = 1;', false, false],
     // An open fence, mid-stream, to the end; a label is matched as written.
@@ -720,19 +722,37 @@ test("a reply's code blocks are listed as drawn: label, text as written, whether
   );
 });
 
-test('a reply with no code has no blocks, and an indented block has no label, its text as its box draws it', () => {
+test('a reply with no code has no blocks, and an indented block has no label, its text without the line break it ends on', () => {
   expect(codeBlocks('Just prose.')).toStrictEqual([]);
   expect(codeBlocks('Here:\n\n    make all\n')).toStrictEqual([
     {
       index: 0,
       line: 2,
       label: '',
-      // marked keeps the line break the reply ends on, and the box draws it.
-      text: 'make all\n',
+      // marked keeps the reply's last line break, which a copy leaves out.
+      text: 'make all',
       runnable: false,
       quoted: false,
     },
   ]);
+});
+
+test("[run] puts a block's every line in, each leading `$ ` taken off, the rest as written (the owner's answer, CHD-394)", () => {
+  expect(runCommand('deno task check')).toStrictEqual('deno task check');
+  expect(runCommand('$ bun install\n$ bun test tests/parse')).toStrictEqual(
+    'bun install\nbun test tests/parse',
+  );
+  expect(
+    runCommand(
+      'deno task compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
+    ),
+  ).toStrictEqual(
+    'deno task compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
+  );
+  // Only a `$ ` the line starts with: an indented one, or `$` alone, stays.
+  expect(runCommand('  $ ls\n$\n$HOME\n$ ')).toStrictEqual(
+    '  $ ls\n$\n$HOME\n',
+  );
 });
 
 describe('CHD-394 U1 tester: block source boundaries', () => {

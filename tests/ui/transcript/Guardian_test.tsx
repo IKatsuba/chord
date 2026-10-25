@@ -4,7 +4,9 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import stripAnsi from 'strip-ansi';
 import chalk from 'chalk';
-import type { ToolCall } from '../../../src/session/transcript/types.ts';
+import assert from 'node:assert/strict';
+import type { Entry, ToolCall } from '../../../src/session/transcript/types.ts';
+import { GUARDIAN_REVIEW } from '../../../src/session/enrich.ts';
 import { emptyTranscript } from '../../../src/session/transcript/types.ts';
 import { reduceTranscript } from '../../../src/session/transcript/reducer.ts';
 import {
@@ -15,7 +17,7 @@ import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 import { Tool } from '../../../src/ui/transcript/tools/Tool.tsx';
 import { BlockGap } from '../../../src/ui/transcript/gap.ts';
 import { draw } from '../harness.tsx';
-import { CTRL_O, ready, send, until, withWindow } from '../app/render.tsx';
+import { CTRL_O, ESC, ready, send, until, withWindow } from '../app/render.tsx';
 
 const REVIEW: ToolCall = {
   id: 'guardian_assessment:review',
@@ -244,3 +246,126 @@ for (const columns of [80, 120]) {
       { columns, rows: 80 },
     ));
 }
+
+describe('CHD-521 U2 tester: nested omission and cancelled review replay', () => {
+  for (const columns of [80, 120]) {
+    for (const expanded of [false, true]) {
+      for (const state of ['running', 'completed'] as const) {
+        test(`adjacent approvals add no nested rows or counts while ${state}, expanded=${expanded}, at ${columns} columns`, async () => {
+          const frame = async (approved: boolean) => {
+            const ordinary = (id: string): Entry => ({
+              kind: 'tool',
+              turnId: 'nested',
+              call: { id, title: `Read ${id}`, status: 'completed' },
+            });
+            const entries: Entry[] = [
+              ordinary('before'),
+              ...(approved
+                ? ['first', 'second'].map((id): Entry => ({
+                    kind: 'tool',
+                    turnId: 'nested',
+                    call: { ...REVIEW, id, guardian: 'approved' },
+                  }))
+                : []),
+              ordinary('after'),
+            ];
+            const screen = await draw(
+              <TranscriptEntry
+                entry={{
+                  kind: 'subagent',
+                  turnId: 'nested',
+                  subagent: {
+                    id: 'child',
+                    title: 'Inspect work',
+                    state,
+                    entries,
+                    plan: [],
+                  },
+                }}
+                turn={emptyTranscript.turn}
+                agent='codex'
+                expanded={expanded}
+                width={columns - 3}
+              />,
+              { columns, rows: 24 },
+            );
+
+            try {
+              expect(screen.mounted('review-only detail')).toBe(false);
+
+              return stripAnsi(screen.frame());
+            } finally {
+              await screen.unmount();
+            }
+          };
+
+          expect(await frame(true)).toBe(await frame(false));
+        });
+      }
+    }
+  }
+
+  test('a specifically opened review cancelled without a verdict stays dim in ctrl+o and narrow resumed history', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+
+        const session = window.session();
+
+        assert(session);
+
+        const ids = new Set<string>();
+        const closed = new Set<string>();
+        const unsubscribe = session.subscribe((update) => {
+          if (
+            update.sessionUpdate === 'tool_call' &&
+            update._meta?.[GUARDIAN_REVIEW] === 'inProgress'
+          ) {
+            ids.add(update.toolCallId);
+          }
+
+          if (
+            update.sessionUpdate === 'tool_call_update' &&
+            ids.has(update.toolCallId)
+          ) {
+            closed.add(update.toolCallId);
+          }
+        });
+
+        try {
+          await mkdir(join(window.dir, '.fake-gate'), { recursive: true });
+          await send(window, 'guardiangated');
+          await until(
+            'five specific Guardian review openings',
+            () => ids.size === 5,
+          );
+          await window.shows('Guardian reviews opened.');
+          await window.shows('Guardian reviewing…');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          expect(closed.size).toBe(0);
+          expect(window.mounted('Guardian reviewing…')).toBe(true);
+          await window.press(CTRL_O);
+          expect(window.mounted('Guardian reviewing…')).toBe(true);
+          await send(window, '/clear');
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+
+          const choice = stripAnsi(window.frame())
+            .split('\n')
+            .find((line) => line.includes('guardiangated'))
+            ?.match(/(\d+)\./)?.[1];
+
+          assert(choice);
+          await window.press(choice);
+          await window.shows('Interrupted by user');
+          expect(window.mounted('Guardian reviewing…')).toBe(true);
+          expect(window.mounted('Guardian reviews finished.')).toBe(false);
+        } finally {
+          unsubscribe();
+        }
+      },
+      { columns: 80, rows: 24 },
+    ));
+});

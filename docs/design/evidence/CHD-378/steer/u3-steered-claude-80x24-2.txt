@@ -1,0 +1,24 @@
+ ▀▄     chord v0.59.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des378
+ ▀▀     ? for shortcuts · /help
+
+ › texttillsteered
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › Use the second parser instead
+
+ ⏺ Read the message from nobody.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

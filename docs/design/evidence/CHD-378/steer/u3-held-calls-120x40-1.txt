@@ -1,0 +1,40 @@
+ ▀▄     chord v0.59.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des378
+ ▀▀     ? for shortcuts · /help
+
+ › bashcut
+
+ ⏺ Bash(bun test)
+   ⎿  Running…
+
+ ⏺ Read(package.json)
+   ⎿  Waiting…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (2s · esc to interrupt)
+ › after the running calls: Skip the slow tests
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

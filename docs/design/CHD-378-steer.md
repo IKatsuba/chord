@@ -108,10 +108,26 @@ and the agent's next step comes under it (`mock-steered-next-*`):
 - **Where chord handed it over, not where the agent read it.** A call
   running at that moment finishes above the row; the agent's next step comes
   below. Same as CHD-364.
-- **No queue row for the round trip.** Between the press and the answer the
-  text is in neither place: a row that blinks for a few milliseconds reads
-  as a glitch (CHD-364 part 1). The box is already empty, which is the
-  feedback the press needs.
+- **No queue row for a quick round trip.** A row that blinks for a few
+  milliseconds reads as a glitch (CHD-364 part 1), and the box already
+  empty is the feedback the press needs. But a steer can go unanswered for
+  seconds (one that meets the turn's end, or Codex's late answer), and then
+  the text would be on screen nowhere. So **after 500 ms without an
+  answer**, the queue shows it, dim like every queue row:
+
+  ```
+   ››› Working… (3s · esc to interrupt)
+   › into the running turn: Use the second parser instead
+  ```
+
+  Answered `injected`, the row leaves the queue in the same frame the
+  prompt's row is drawn in the transcript. Refused or late, it loses its
+  reason and becomes the plain queue row of §5. A fast answer never shows
+  it.
+- **Esc does not take it back.** The steer is already out with the agent,
+  so an interrupt leaves an `into the running turn` row where it is (it goes
+  as the next turn if refused), while the person's other queued rows come
+  back into the box as today.
 - **Replay.** A resumed session draws the row in the same place, as the
   record keeps it.
 - **The same on Claude and Codex.** Only the holds below differ.
@@ -194,7 +210,8 @@ today's plain row (`today-queued-*`, which is exactly this picture):
 ```
 
 It goes when the turn ends, behind the prompts queued before it. A held row
-whose steer is refused drops its reason and becomes this row. No status
+whose steer is refused, or an `into the running turn` row (§3) whose steer
+comes back refused or late, drops its reason and becomes this row. No status
 note and no error: nothing was lost, it went the old way (CHD-364 part 5),
 and the row moving to the queue instead of the transcript is the visible
 difference. If the turn had already ended, the row goes as the next turn at
@@ -224,7 +241,7 @@ next turn.
 ## Colour roles
 
 - Steered row: the user row's (`›` dim, text default).
-- Held and refused rows: the queue's dim, whole row.
+- Held, in-flight and refused rows: the queue's dim, whole row.
 - The no-steering note: `warning` (the status line's `failed` tone).
 - Nothing new in `theme.ts`.
 

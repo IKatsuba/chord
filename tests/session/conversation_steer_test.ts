@@ -2165,6 +2165,47 @@ describe('a steer held for the running calls while a question opens and is answe
   }
 });
 
+describe('CHD-378 U4 tester: attachment fallback after a Codex own turn', () => {
+  test('the replacement prompt keeps its image and resource link after Codex starts a turn of its own', () =>
+    onFake(
+      ['--steering', 'codex', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await went();
+        conversation.steerIn(
+          'Look [Image #1] @a.ts',
+          undefined,
+          [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+          ['a.ts'],
+        );
+        await ended(events, 2);
+
+        const sent = events.findLast((event) => event.type === 'prompt');
+
+        assert(sent?.type === 'prompt');
+
+        const reply = saidIn(
+          events.filter(
+            (event) => event.type === 'update' && event.turnId === sent.turnId,
+          ),
+        );
+
+        expect(promptsIn(events)).toStrictEqual([
+          ['text', undefined],
+          ['Look [Image #1] @a.ts', undefined],
+        ]);
+        expect(reply).toContain('Received an image: image/png, 5 bytes');
+        expect(reply).toContain('Received a link: a.ts, file://');
+        expect(reply).not.toContain('Started alongside');
+      },
+      (session) => {
+        writeFileSync(join(session.cwd, 'a.ts'), '');
+
+        return session;
+      },
+    ));
+});
+
 describe("the person's draft with an image or a mention steered whole, as a new turn would send it (CHD-378, the owner's Q215, Q216)", () => {
   /** A session on the fake whose directory holds `a.ts`, to mention. */
   const withFile = (session: Session): Session => {

@@ -877,6 +877,157 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
     ));
 });
 
+describe('CHD-378 U4 tester: attachment submission boundaries', () => {
+  const image = {
+    mediaType: 'image/png',
+    data: PIXEL_PNG,
+    bytes: PIXEL_BYTES.length,
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a clipboard image held behind calls survives Esc and resending at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'bashcut');
+          await window.shows('Running…');
+          await window.press('\x16');
+          await window.shows('› [Image #1]');
+          await window.press(TAB);
+          await window.shows('› after the running calls: [Image #1]');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await until(
+            'the image placeholder restored',
+            () => promptRow(window)?.includes('[Image #1]') ?? false,
+          );
+          await window.press('\r');
+          await window.shows(RECEIVED);
+
+          expect(window.frame()).not.toContain('[Image #2]');
+          expect(promptRow(window)).not.toContain('[Image #1]');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+          clipboard: () => Promise.resolve({ image }),
+        },
+      ));
+  }
+
+  test('Enter during a Tab image-file read neither reads nor submits the draft twice', () => {
+    const release = Promise.withResolvers<typeof image>();
+    let reads = 0;
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+
+        for (const key of 'look /shots/one.png') {
+          await window.press(key);
+        }
+
+        await window.shows('› look /shots/one.png');
+        await window.press(TAB);
+        await until('the first read started', () => reads === 1);
+        await window.press('\r');
+        release.resolve(image);
+        await window.shows(RECEIVED);
+
+        expect(reads).toBe(1);
+        expect(
+          window
+            .frame()
+            .split('\n')
+            .filter((row) => row.includes('› look [Image #1]')),
+        ).toHaveLength(1);
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        readImage: () => {
+          reads += 1;
+
+          return release.promise;
+        },
+      },
+    );
+  });
+
+  test('another session can steer its clipboard image while the first reads a named image', () => {
+    const release = Promise.withResolvers<typeof image>();
+    let reads = 0;
+    const steering = fakeAgentCommand(
+      undefined,
+      '--child-runtime',
+      'fake',
+      '--steering',
+      'claude',
+    );
+
+    return withChild(
+      async (window) => {
+        await openOther(window);
+        await send(window, 'texttillsteered');
+        await window.shows('esc to interrupt');
+
+        for (const key of 'main /shots/one.png') {
+          await window.press(key);
+        }
+
+        await window.press(TAB);
+        await until('main image read started', () => reads === 1);
+        await pickAgent(window, 'other');
+        await readyAgent(window);
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await window.press('\x16');
+        await window.shows('› [Image #2]');
+        await window.press(TAB);
+        await window.shows(RECEIVED);
+
+        expect(window.frame()).not.toContain('› main [Image');
+        release.resolve(image);
+        await until('main finished its steered turn', () =>
+          window
+            .frame()
+            .split('\n')
+            .some((row) => /^\s*main\s.*✓ new reply/.test(row)),
+        );
+        await window.type('other stays');
+        await until(
+          'the other draft before switching',
+          () => promptRow(window)?.includes('other stays') ?? false,
+        );
+        await pickAgent(window, 'main');
+        await window.shows('› main [Image #1]');
+        await window.shows(RECEIVED);
+        await pickAgent(window, 'other');
+        await window.press(UP);
+        await until(
+          'other draft retained',
+          () => promptRow(window)?.includes('other stays') ?? false,
+        );
+        expect(reads).toBe(1);
+      },
+      {
+        agentCommand: steering,
+        startupOf: () => ({ agentCommand: steering }),
+        clipboard: () => Promise.resolve({ image }),
+        readImage: () => {
+          reads += 1;
+
+          return release.promise;
+        },
+      },
+    );
+  });
+});
+
 describe('CHD-378 U3 tester: steering through the window', () => {
   const put = async (window: Window, text: string) => {
     await window.type(text);

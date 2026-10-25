@@ -826,6 +826,113 @@ test("the person's prompt steered into a turn is recorded where it went, as thei
     ]);
   }));
 
+describe('CHD-378 U4 tester: attachment record replay', () => {
+  for (const late of [false, true]) {
+    test(`${late ? 'a refused' : 'an injected'} personal steer records its image count and link and replays once`, () =>
+      withPlace(async (place) => {
+        await writeFile(join(place.dir, 'a.ts'), 'export {};');
+
+        const events: ConversationEvent[] = [];
+        const failures: string[] = [];
+        const command = fakeAgentCommand(
+          undefined,
+          '--steering',
+          'claude',
+          '--step-ms',
+          '30',
+          ...(late ? ['--steer-late'] : []),
+        );
+        const conversation = new Conversation(
+          () =>
+            openSession({
+              agent: 'fake',
+              cwd: place.dir,
+              agentCommand: command,
+            }),
+          (event) => events.push(event),
+          Date.now,
+          {},
+          new FileRecording(place.stateDir, (failure) =>
+            failures.push(failure),
+          ),
+        );
+        const text = 'Look at [Image #1] and @a.ts';
+
+        try {
+          conversation.start();
+          await until(() => events.some((event) => event.type === 'connected'));
+          conversation.send(late ? 'text' : 'texttillsteered');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'update' &&
+                event.update.sessionUpdate === 'agent_message_chunk',
+            ),
+          );
+          conversation.steerIn(
+            text,
+            undefined,
+            [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+            ['a.ts'],
+          );
+          await until(
+            () =>
+              events.filter((event) => event.type === 'result').length ===
+              (late ? 2 : 1),
+          );
+        } finally {
+          await conversation.close();
+        }
+
+        const [record] = await readRecords(place.stateDir);
+
+        assert(record !== undefined);
+
+        const past = await readPast(record.path);
+        const prompts = past.filter(
+          (entry) => entry.type === 'prompt' && entry.prompt === text,
+        );
+
+        expect(failures).toStrictEqual([]);
+        expect(prompts).toHaveLength(1);
+
+        const [sent] = prompts;
+
+        assert(sent?.type === 'prompt');
+        expect(sent.images).toBe(1);
+        expect(sent.links).toMatchObject([
+          { name: 'a.ts', uri: pathToFileURL(join(place.dir, 'a.ts')).href },
+        ]);
+        expect(sent.into === undefined).toBe(late);
+        expect(sent.from).toBeUndefined();
+
+        const session = await open(place, place.resuming, {
+          sessionId: record.sessionId,
+          cwd: place.dir,
+          record: record.path,
+        });
+
+        try {
+          const live = drawn(
+            events
+              .filter((event): event is TranscriptAction =>
+                ['prompt', 'update', 'result'].includes(event.type),
+              )
+              .reduce(reduceTranscript, emptyTranscript).entries,
+          );
+          const replay = replayed(session.history());
+
+          expect(replay).toStrictEqual(live);
+          expect(
+            replay.filter((line) => line === 'user: ' + text),
+          ).toHaveLength(1);
+        } finally {
+          await session.close();
+        }
+      }));
+  }
+});
+
 test('--resume by an id chord has a record of opens it in its own directory', () =>
   withPlace(async (place) => {
     const id = await earlier(place);

@@ -753,3 +753,144 @@ describe('shortcuts scroll rules occupy their own rows (CHD-528)', () => {
     }
   });
 });
+
+describe('CHD-528 tester: page boundaries at other terminal sizes', () => {
+  for (const [columns, height] of [
+    [80, 20],
+    [80, 24],
+    [100, 30],
+  ]) {
+    for (const roster of [false, true]) {
+      test(`${columns}x${height} keeps complete rows paging both ways ${roster ? 'with' : 'without'} the agents list`, async () => {
+        const server = serveChord();
+        const lines = shortcuts().map(shortcutLine);
+        const expected = panelRows(lines, columnCount(lines, columns!));
+        const seen = new Set<string>();
+
+        try {
+          await withWindow(
+            async (window) => {
+              await ready(window);
+
+              if (roster) {
+                await window.type('agentmentions');
+                await window.press('\r');
+                await window.shows('Agent completion sessions opened.');
+                await until(
+                  'the roster sessions opened',
+                  () => window.pids.length === 9,
+                );
+
+                for (let move = 0; move < 5; move++) {
+                  await window.press(DOWN);
+                }
+
+                await window.press('\r');
+                await window.shows('╭─ tester · bugfix ─');
+              }
+
+              await window.type('?');
+              await window.shows('enter to send');
+
+              const inspect = () => {
+                const frame = window.frame();
+                const captured = frame
+                  .split('\n')
+                  .map((line) => line.trimEnd());
+                const start =
+                  captured.findIndex((line) => line.startsWith('╰─')) + 1;
+                const rosterStart = captured.findIndex(
+                  (line, at) => at >= start && /^ +main +fake/.test(line),
+                );
+                const actual = captured
+                  .slice(start, rosterStart < 0 ? undefined : rosterStart)
+                  .filter((line) => line !== '');
+                const above = actual[0]?.match(/↑ (\d+) lines? above/);
+                const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
+                const offset = Number(above?.[1] ?? 0);
+                const count = actual.length - Number(!!above) - Number(!!below);
+                const rows = expected.slice(offset, offset + count);
+                const whole = [
+                  ...(above
+                    ? [`  ${requestRule('↑', offset, 'pageup', columns! - 2)}`]
+                    : []),
+                  ...rows.map((row) => `  ${row}`.trimEnd()),
+                  ...(below
+                    ? [
+                        `  ${requestRule('↓', expected.length - offset - count, 'pagedown', columns! - 2)}`,
+                      ]
+                    : []),
+                ]
+                  .filter((line) => line !== '')
+                  .map((line) => line.trimEnd());
+
+                expect(actual, frame).toStrictEqual(whole);
+
+                for (const row of rows) {
+                  seen.add(row);
+                }
+
+                return { above: !!above, below: !!below };
+              };
+
+              let view = inspect();
+
+              expect(view.above).toBe(false);
+
+              for (let page = 0; view.below && page < expected.length; page++) {
+                const previous = window.frame();
+
+                await window.press(PAGE_DOWN);
+                await until(
+                  'a lower shortcuts page',
+                  () => window.frame() !== previous,
+                );
+
+                view = inspect();
+              }
+
+              expect(view.below).toBe(false);
+              expect(window.frame()).toContain(
+                'tab enter to add a file or agent',
+              );
+              expect(seen).toStrictEqual(new Set(expected));
+              await window.press(PAGE_DOWN);
+              inspect();
+
+              for (let page = 0; view.above && page < expected.length; page++) {
+                const previous = window.frame();
+
+                await window.press(PAGE_UP);
+                await until(
+                  'an upper shortcuts page',
+                  () => window.frame() !== previous,
+                );
+
+                view = inspect();
+              }
+
+              expect(view.above).toBe(false);
+              expect(window.frame()).toContain('enter to send');
+              await window.press(PAGE_UP);
+              inspect();
+            },
+            {
+              server,
+              columns: columns!,
+              rows: height!,
+              runtimes: ['fake'],
+              teams: { bugfix: BUGFIX },
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--tester-plays',
+                'text',
+              ),
+            },
+          );
+        } finally {
+          await server.close();
+        }
+      });
+    }
+  }
+});

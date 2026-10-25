@@ -52,7 +52,10 @@ for (const [columns, rows] of [
           await window.press(TAB);
           expect(promptRow(window)).toContain('@@');
           await window.press(ESC);
-          expect(window.frame()).not.toContain('No agents to mention');
+          await until(
+            'dismissal closes empty agent feedback',
+            () => !window.frame().includes('No agents to mention'),
+          );
           await window.press('\r');
           await window.shows('› @@');
           await window.shows('Hello, world. This reply came in chunks.');
@@ -91,7 +94,10 @@ for (const [columns, rows] of [
             await window.press(DOWN);
             await window.press(DOWN);
             await window.press(TAB);
-            expect(promptRow(window)).toContain('@@"bugfix 2" ');
+            await until(
+              'the quoted agent pick fills the prompt',
+              () => promptRow(window)?.includes('@@"bugfix 2" ') === true,
+            );
             expect(window.frame()).not.toContain('No matching agents');
             await clear(window);
             await window.type('@@zzz');

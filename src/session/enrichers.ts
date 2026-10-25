@@ -18,7 +18,6 @@ import {
   answerOf,
   type Enricher,
   markFilled,
-  GUARDIAN_REVIEW,
   MCP_CALL,
   notificationOf,
   recordOf,
@@ -29,6 +28,7 @@ import {
   withUpdate,
 } from './enrich.ts';
 import { modeConfigId } from './modes.ts';
+import { guardianReview } from './guardian_review.ts';
 import {
   choices,
   formFields,
@@ -782,43 +782,17 @@ export const codexMcpCall: Enricher = (message) => {
   ];
 };
 
-/**
- * codex-acp v2.2.2's GuardianReporter names reviews `guardian_assessment:`
- * followed by their id, and sends `rawInput.review.status` on a tool_call,
- * `rawOutput.review.status` on an update, including a completed review that
- * arrives as an opening call. File only that structured string, never its
- * rendered text. Missing ids or statuses leave the ordinary block; unknown
- * statuses do too. A missing status on an update leaves the last one read.
- */
+/** Files Guardian's structured verdict before state and recordings read it. */
 export const codexGuardianReview: Enricher = (message) => {
   const update = notificationOf(message)?.update;
 
-  if (
-    (update?.sessionUpdate !== 'tool_call' &&
-      update?.sessionUpdate !== 'tool_call_update') ||
-    !update.toolCallId.startsWith('guardian_assessment:')
-  ) {
+  if (update === undefined) {
     return [message];
   }
 
-  const raw = recordOf(
-    update.sessionUpdate === 'tool_call' ? update.rawInput : update.rawOutput,
-  );
-  const { status } = recordOf(raw.review);
+  const read = guardianReview(update);
 
-  if (typeof status !== 'string') {
-    return [message];
-  }
-
-  return [
-    withUpdate(message, {
-      ...update,
-      _meta: {
-        ...markFilled(update._meta, [GUARDIAN_REVIEW]),
-        [GUARDIAN_REVIEW]: status,
-      },
-    }),
-  ];
+  return read === update ? [message] : [withUpdate(message, read)];
 };
 
 /** The keys of a `rawOutput` object read as its text, in this order. */

@@ -1873,6 +1873,31 @@ describe('CHD-440 tester: fallback provenance across sessions and replay', () =>
 });
 
 describe('structured Codex Guardian review status (CHD-521)', () => {
+  test('missing, malformed and empty Guardian review ids leave the wire message untouched', () => {
+    const { relay } = relayOn([codexGuardianReview]);
+
+    for (const toolCallId of [undefined, null, 42, 'guardian_assessment:']) {
+      for (const opening of [true, false]) {
+        const sent: AnyMessage = {
+          jsonrpc: '2.0',
+          method: 'session/update',
+          params: {
+            sessionId: SESSION,
+            update: {
+              sessionUpdate: opening ? 'tool_call' : 'tool_call_update',
+              ...(toolCallId === undefined ? {} : { toolCallId }),
+              ...(opening
+                ? { rawInput: { review: { status: 'approved' } } }
+                : { rawOutput: { review: { status: 'approved' } } }),
+            },
+          },
+        };
+
+        expect(relay.fromAgent(sent)).toStrictEqual([sent]);
+      }
+    }
+  });
+
   for (const status of [
     'inProgress',
     'approved',

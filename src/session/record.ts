@@ -13,6 +13,7 @@ import { shellContext, splitContext, withContext } from './context.ts';
 import type { ConversationEvent, Recording } from './conversation.ts';
 import type { PastAction, Session } from './session.ts';
 import { monitorsPast } from './monitors.ts';
+import { guardianReview } from './guardian_review.ts';
 import { withoutSecrets } from './questions.ts';
 import { unwrapMessage } from './tasks.ts';
 import { TASK_META } from './transcript/subagents.ts';
@@ -633,7 +634,7 @@ export function recordActions(
         actions.push({
           type: 'update',
           turnId: id(entry.turnId),
-          update: entry.update,
+          update: guardianReview(entry.update),
           ...(entry.subagentId === undefined
             ? {}
             : { subagentId: entry.subagentId }),

@@ -129,8 +129,10 @@ export function Shortcuts({
       <scrollbox
         ref={view}
         visible={shown.shown > 0}
-        flexGrow={1}
-        flexShrink={1}
+        // Flex sizing put the rule on the viewport's last row in a short
+        // window. Pin the reserved rows so both use the same boundary.
+        height={shown.shown}
+        flexShrink={0}
         minHeight={0}
         focusable={false}
         scrollAcceleration={WHEEL}

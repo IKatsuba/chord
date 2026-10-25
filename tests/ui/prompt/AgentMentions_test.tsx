@@ -52,7 +52,10 @@ for (const [columns, rows] of [
           await window.press(TAB);
           expect(promptRow(window)).toContain('@@');
           await window.press(ESC);
-          expect(window.frame()).not.toContain('No agents to mention');
+          await until(
+            'dismissal closes empty agent feedback',
+            () => !window.frame().includes('No agents to mention'),
+          );
           await window.press('\r');
           await window.shows('› @@');
           await window.shows('Hello, world. This reply came in chunks.');
@@ -91,7 +94,10 @@ for (const [columns, rows] of [
             await window.press(DOWN);
             await window.press(DOWN);
             await window.press(TAB);
-            expect(promptRow(window)).toContain('@@"bugfix 2" ');
+            await until(
+              'the quoted agent pick fills the prompt',
+              () => promptRow(window)?.includes('@@"bugfix 2" ') === true,
+            );
             expect(window.frame()).not.toContain('No matching agents');
             await clear(window);
             await window.type('@@zzz');
@@ -218,6 +224,12 @@ describe('CHD-519 U3 tester: live roster and completion key ownership', () => {
             () => !listed(window, 'worker') && listed(window, 'worker two'),
           );
           await window.press(TAB);
+          await until(
+            'the remaining recipient fills the prompt and closes the list',
+            () =>
+              promptRow(window)?.includes('@@"worker two" ') === true &&
+              !listed(window, 'worker two'),
+          );
           expect(promptRow(window)).toContain('@@"worker two" ');
           expect(promptRow(window)).not.toContain('@@worker ');
           expect(listed(window, 'worker two')).toBe(false);
@@ -260,6 +272,12 @@ describe('CHD-519 U3 tester: live roster and completion key ownership', () => {
         );
         expect(promptRow(window)).toContain('@@par');
         await window.press(TAB);
+        await until(
+          'the replacement recipient fills the prompt and closes the list',
+          () =>
+            promptRow(window)?.includes('@@par-next ') === true &&
+            !listed(window, 'par-next'),
+        );
         expect(promptRow(window)).toContain('@@par-next ');
       },
       {
@@ -316,6 +334,12 @@ describe('CHD-519 U3 tester: live roster and completion key ownership', () => {
         }
 
         await window.press(TAB);
+        await until(
+          'the rebound quoted pick fills the prompt and closes the list',
+          () =>
+            promptRow(window)?.includes('@@"bugfix 2" ') === true &&
+            !listed(window, 'bugfix 2'),
+        );
         expect(promptRow(window), window.frame()).toContain('@@"bugfix 2" ');
         expect(sent).toHaveLength(0);
         await window.press('\r');

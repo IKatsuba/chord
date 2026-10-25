@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
+import type { Caller } from '../../../src/server/tools.ts';
 import { CHORD_WAIT_MS } from '../../../src/ui/shortcuts/bindings.ts';
 import {
   columnCount,
@@ -754,6 +756,124 @@ describe('shortcuts scroll rules occupy their own rows (CHD-528)', () => {
   });
 });
 
+test('shortcuts keep their last row or a below rule when a message starts a turn (CHD-530)', async () => {
+  const server = serveChord();
+  const callers: Caller[] = [];
+  const lines = shortcuts().map(shortcutLine);
+  const rows = panelRows(lines, columnCount(lines, 80));
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+
+        await window.type('agentmentions');
+        await window.press('\r');
+        await window.shows('Agent completion sessions opened.');
+        await until(
+          'the roster sessions opened',
+          () => window.pids.length === 9,
+        );
+
+        for (let move = 0; move < 5; move++) {
+          await window.press(DOWN);
+        }
+
+        await window.press('\r');
+        await window.shows('╭─ tester · bugfix ─');
+        await window.shows('Received the message from coder · fake.');
+        await until(
+          'the tester idle',
+          () => !window.frame().includes('Working'),
+        );
+        await window.type('?');
+        await window.shows('lines below');
+        await window.press(END);
+        await window.shows('tab enter to add a file or agent');
+
+        const sender = callers.find(({ team }) => team === 'lead');
+        const before = window.written().length;
+
+        assert(sender);
+        expect(
+          sender.window.tell(sender, 'tester', 'costwait', () => {}),
+        ).not.toHaveProperty('error');
+        await window.shows('Working…');
+        await until(
+          'the shortened panel to show its last row or count it below',
+          () =>
+            window.frame().includes('tab enter to add a file or agent') ||
+            /↓ [1-9]\d* lines? below/.test(window.frame()),
+        ).catch((error: Error) => {
+          throw new Error(`${error.message}; the screen:\n${window.frame()}`);
+        });
+
+        await window.press(END);
+        await window.shows('tab enter to add a file or agent');
+        expect(window.frame()).not.toContain('lines below');
+
+        const frames = window
+          .written()
+          .slice(before)
+          .filter(
+            (frame) =>
+              frame.includes('Working…') && frame.includes('lines above'),
+          );
+
+        expect(frames.length).toBeGreaterThan(0);
+
+        for (const frame of frames) {
+          expect(
+            frame.includes('tab enter to add a file or agent') ||
+              /↓ [1-9]\d* lines? below/.test(frame),
+            frame,
+          ).toBe(true);
+
+          const captured = frame.split('\n').map((line) => line.trimEnd());
+          const start = captured.findIndex((line) => line.startsWith('╰─')) + 1;
+          const end = captured.findIndex(
+            (line, at) => at >= start && /^ +main +fake/.test(line),
+          );
+          const actual = captured.slice(start, end);
+          const above = actual[0]?.match(/↑ (\d+) lines? above/);
+          const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
+          const offset = Number(above?.[1] ?? 0);
+          const count = actual.length - Number(!!above) - Number(!!below);
+
+          expect(actual, frame).toStrictEqual([
+            ...(above ? [`  ${requestRule('↑', offset, 'pageup', 78)}`] : []),
+            ...rows
+              .slice(offset, offset + count)
+              .map((row) => `  ${row}`.trimEnd()),
+            ...(below
+              ? [
+                  `  ${requestRule('↓', rows.length - offset - count, 'pagedown', 78)}`,
+                ]
+              : []),
+          ]);
+        }
+      },
+      {
+        columns: 80,
+        rows: 24,
+        runtimes: ['fake'],
+        teams: { bugfix: BUGFIX },
+        agentCommand: fakeAgentCommand(undefined, '--tester-plays', 'text'),
+        server: {
+          ...server,
+          admit: (caller) => {
+            callers.push(caller);
+
+            return server.admit(caller);
+          },
+        },
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});
+
 describe('CHD-528 tester: page boundaries at other terminal sizes', () => {
   for (const [columns, height] of [
     [80, 20],
@@ -825,6 +945,10 @@ describe('CHD-528 tester: page boundaries at other terminal sizes', () => {
                   .map((line) => line.trimEnd());
 
                 expect(actual, frame).toStrictEqual(whole);
+
+                if (!below) {
+                  expect(offset + count, frame).toBe(expected.length);
+                }
 
                 for (const row of rows) {
                   seen.add(row);

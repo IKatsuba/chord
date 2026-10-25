@@ -1,0 +1,40 @@
+[38;2;255;255;255m [1m[38;2;232;201;90mtester[0;2m · fake · Fake Small · bugfix's member · opened by @bugfix 10s ago[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [2m[39mbugfix's instructions for tester · 29 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+
+ [38;2;86;212;221m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;86;212;221m@bugfix[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mtext[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mHello, world. This reply came in chunks.[38;2;255;255;255m
+
+ [38;2;196;156;255m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;196;156;255m@coder[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mReading src/parse/tokenize.ts now. Tell me when your test fails.[0m[38;2;255;255;255m
+
+
+
+ [38;2;137;245;179m›[38;2;21;199;162m››[38;2;255;255;255m [38;2;71;231;165mWorking…[38;2;255;255;255m [2m[39m(0s · esc to interrupt)[0m[38;2;255;255;255m
+
+[38;2;232;201;90m╭─[1m tester[0;2m · bugfix[0m[38;2;232;201;90m ────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;2;232;201;90m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39menter to send                           home end for the top and the bottom    ctrl + x b to pick a code block[0m[38;2;255;255;255m
+  [2m[39mtab to send into the running turn       ctrl + c to copy                       c r to copy or put in the prompt[0m[38;2;255;255;255m
+  [2m[39mshift or \ + enter for a newline        / @ @@ for commands, files or agents   1–9 to pick a choice[0m[38;2;255;255;255m
+  [2m[39mctrl + g to edit in $EDITOR             ↑ ↓ to pick a completion               ↑ ↓ or j k to move between choices[0m[38;2;255;255;255m
+  [2m[39mctrl + v to paste an image              tab to complete a command              enter to pick the highlighted choice[0m[38;2;255;255;255m
+  [2m[39malt + ← → to move by word               tab enter to add a file or agent       esc to reject a permission[0m[38;2;255;255;255m
+  [2m[39mcmd + ← → to line start or end          esc to close completions               esc ← to leave a picker or shortcuts[0m[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents, background     ! for bash mode                        ctrl + a to show all directories[0m[38;2;255;255;255m
+  [2m[39mx to close an agent, stop background    backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms[0m[38;2;255;255;255m
+  [2m[39menter for background, details, a call   esc to interrupt or stop a command     ctrl + c to stop the turn and its form[0m[38;2;255;255;255m
+  [2m[39mctrl + r to search prompts              shift + tab to cycle modes             /vim for vim mode[0m[38;2;255;255;255m
+  [2m[39mtab enter to take a match               ctrl + o for verbose output            ? for shortcuts[0m[38;2;255;255;255m
+  [2m[39mesc to cancel a search                  ctrl + c to clear input                any key to quit the crash screen[0m[38;2;255;255;255m
+  [2m[39mpgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit[0m[38;2;255;255;255m
+  [2m[39mshift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain     [2m  fake · Fake Large with a 1M context window · medium       [38;2;71;231;165m  ✻ working 9s [39m  ✓ new reply[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mparser   [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 10s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;196;156;255mdocs     [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 10s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;86;212;221mbugfix   [2m[39m  team · fake · Fake Large with a 1M context window · medium[38;2;71;231;165m  ✻ working 8s [39m  ← new message[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [2m[39m├─ [0;1m[38;2;232;201;90mtester[0;2m  fake · Fake Small · medium                                [38;2;71;231;165m  ✻ working 0s[0m[38;2;255;255;255m
+  [2m[39m  … +2 more[0m[38;2;255;255;255m

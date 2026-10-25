@@ -844,3 +844,86 @@ describe('CHD-396 U4 tester: selectable gap boundaries', () => {
     }
   });
 });
+
+describe('CHD-394 U2 tester: button boundaries', () => {
+  for (const columns of [80, 120]) {
+    test(`quoted and streaming fences add no buttons beside closed nested boxes at ${columns} columns`, async () => {
+      const text =
+        '```bash\necho top\n```\n\n> ```sh\n> echo quoted\n> ```\n\n- nested\n\n  ```console\n  $ echo nested\n  output\n  ```\n\n```sh\necho streaming';
+      const screen = await draw(<Reply text={text} width={columns} />, {
+        columns,
+        rows: 40,
+      });
+
+      try {
+        const frame = stripAnsi(screen.frame());
+
+        expect(frame.match(/\[copy\]/g)).toHaveLength(2);
+        expect(frame.match(/\[run\]/g)).toHaveLength(1);
+        expect(frame).toContain('echo quoted');
+        expect(frame).toContain('echo streaming');
+        expect(frame).toContain('[copy]─[run]─┐');
+      } finally {
+        await screen.unmount();
+      }
+    });
+  }
+
+  test('one-cell width boundaries drop run before copy without overflowing the terminal', async () => {
+    for (const [columns, copy, run] of [
+      [21, true, true],
+      [20, true, false],
+      [15, true, false],
+      [14, false, false],
+    ] as const) {
+      const screen = await draw(
+        <Reply text={'```sh\nx\n```'} width={columns} />,
+        { columns, rows: 24 },
+      );
+
+      try {
+        const frame = stripAnsi(screen.frame());
+
+        expect(frame.includes('[copy]')).toBe(copy);
+        expect(frame.includes('[run]')).toBe(run);
+        expect(frame).toContain('x');
+        expect(
+          frame.split('\n').every((line) => stringWidth(line) <= columns),
+        ).toBe(true);
+      } finally {
+        await screen.unmount();
+      }
+    }
+  });
+
+  test('a literal shorter fence stays open until the matching closer streams in', async () => {
+    let update: (text: string) => void = () => {};
+
+    const open = '````sh\necho first\n```\necho last';
+
+    function Stream() {
+      const [text, setText] = useState(open);
+
+      update = setText;
+
+      return <Reply text={text} width={80} />;
+    }
+
+    const screen = await draw(<Stream />, { columns: 80, rows: 24 });
+
+    try {
+      expect(stripAnsi(screen.frame())).not.toContain('[copy]');
+      update(open + '\n````');
+      await until('the closed box gains its buttons', async () => {
+        await screen.write('');
+
+        return stripAnsi(screen.frame()).includes('[copy]─[run]─┐');
+      });
+
+      expect(stripAnsi(screen.frame())).toContain('echo last');
+      expect(stripAnsi(screen.frame()).match(/\[copy\]/g)).toHaveLength(1);
+    } finally {
+      await screen.unmount();
+    }
+  });
+});

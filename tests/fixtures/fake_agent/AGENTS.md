@@ -67,7 +67,8 @@
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
   `permission`,
   `permissionsteer`,
-  `callchildtwo`, `agentnames`, `agenttitled`, `agentother`, `agentstitled`, `agentsquiet`,
+  `callchildtwo`, `agentnames`, `agentmentions`, `agenttitled`, `agentother`,
+  `agentstitled`, `agentsquiet`,
   `agentsheldgated`, `plan`,
   `planshrinkgated`,
   `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
@@ -470,3 +471,6 @@
 - `agentnames` asks `open_agent` for an explicit quoted name and a runtime
   fallback containing a quote, then names containing CR, LF, tab, NUL and
   DEL; all are refused before any child starts.
+
+- `agentmentions` opens parser and docs on `text` and two runs of bugfix,
+  for main/child/lead/member completion and the quoted `bugfix 2` name.

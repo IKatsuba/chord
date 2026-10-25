@@ -21,7 +21,11 @@ import {
   type Walked,
 } from '../prompt/history.ts';
 import { cutPlaceholder, namesImage, pastedText } from '../prompt/images.ts';
-import { insertMention, mentionAt } from '../prompt/mentions.ts';
+import {
+  completionAt,
+  insertAgentMention,
+  insertMention,
+} from '../prompt/mentions.ts';
 import {
   broken,
   continued,
@@ -40,6 +44,7 @@ import {
 } from '../prompt/search.ts';
 import {
   commandMenu,
+  completionNames,
   fileFinder,
   pendingMention,
   runningShell,
@@ -318,7 +323,10 @@ function mention({ state }: KeyContext, enter: boolean): Step[] {
   const path = finder?.files[finder.highlighted];
 
   if (finder && path !== undefined) {
-    const next = insertMention(state.draft, state.cursor, finder.mention, path);
+    const next =
+      'quoted' in finder.mention
+        ? insertAgentMention(state.draft, state.cursor, finder.mention, path)
+        : insertMention(state.draft, state.cursor, finder.mention, path);
 
     return [show(next.text, next.cursor)];
   }
@@ -340,7 +348,7 @@ export function awaitedSteps(context: KeyContext): Step[] {
     return [];
   }
 
-  const now = mentionAt(state.draft, state.cursor);
+  const now = completionAt(state.draft, state.cursor);
   const settled = dispatch({ type: 'pick_settled' });
 
   if (
@@ -348,13 +356,14 @@ export function awaitedSteps(context: KeyContext): Step[] {
     now.query !== pick.mention.query ||
     now.line !== pick.mention.line ||
     now.column !== pick.mention.column ||
+    'quoted' in now !== 'quoted' in pick.mention ||
     state.finder.dismissed
   ) {
     return [settled];
   }
 
   const done =
-    state.matched?.files === state.files &&
+    state.matched?.files === completionNames(state, now) &&
     state.matched?.query === pick.mention.query;
 
   if (!done) {
@@ -369,7 +378,10 @@ export function awaitedSteps(context: KeyContext): Step[] {
       : [settled];
   }
 
-  const next = insertMention(state.draft, state.cursor, now, path);
+  const next =
+    'quoted' in now
+      ? insertAgentMention(state.draft, state.cursor, now, path)
+      : insertMention(state.draft, state.cursor, now, path);
 
   return [settled, show(next.text, next.cursor)];
 }
@@ -437,7 +449,7 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
   // Enter in the finder picks, as Tab does, rather than sending; a match
   // still running waits to pick, list or none.
   if (
-    fileFinder(state, draft, cursor) ||
+    (fileFinder(state, draft, cursor)?.files.length ?? 0) > 0 ||
     pendingMention(state, draft, cursor)
   ) {
     return mention(context, true);
@@ -799,7 +811,7 @@ function commandSteps(
       return mention(context, false);
     case 'finder_up':
     case 'finder_down':
-      return finder
+      return finder && finder.files.length > 0
         ? [
             dispatch({
               type: 'finder_moved',

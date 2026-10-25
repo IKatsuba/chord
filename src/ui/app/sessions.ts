@@ -2958,12 +2958,12 @@ export function useSessions(
     sendToMain,
     clearFront,
     agentRows,
-    messageNames: () => {
+    recipients: () => {
       const agents = front();
 
       return agents === undefined
         ? []
-        : messageRecipients(agents, agents.picked).map((each) => each.name);
+        : messageRecipients(agents, agents.picked);
     },
     listed,
     background,

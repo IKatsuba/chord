@@ -67,6 +67,32 @@ export function agentMentionAt(
   };
 }
 
+/** The agent trigger takes precedence over an `@` inside a quoted name. */
+export function completionAt(
+  draft: string,
+  cursor: Cursor,
+): Mention | AgentMention | undefined {
+  const before = draft.split('\n')[cursor[0]]?.slice(0, cursor[1]) ?? '';
+
+  // A completed quoted agent name may itself contain ` @`; that text
+  // cannot reopen the file finder before the next separating space.
+  if (/(^|\s)@@"[^"\n]*"[^\s]*$/.test(before)) {
+    return undefined;
+  }
+
+  return agentMentionAt(draft, cursor) ?? mentionAt(draft, cursor);
+}
+
+/** Equal names insert the same text, which routing resolves to the first. */
+export function mentionRecipients<T extends { readonly name: string }>(
+  recipients: readonly T[],
+): readonly T[] {
+  return recipients.filter(
+    (each, at) =>
+      recipients.findIndex((other) => other.name === each.name) === at,
+  );
+}
+
 /**
  * The most files the finder matches at once. The list shows a few rows, and
  * scoring a whole large tree on every key costs more than it shows.

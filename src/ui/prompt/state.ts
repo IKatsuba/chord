@@ -21,7 +21,13 @@ import {
   visibleRange,
 } from './commands.ts';
 import { imagesIn, type PastedImage } from './images.ts';
-import { firstFiles, type Mention, mentionAt } from './mentions.ts';
+import {
+  type AgentMention,
+  agentMentionAt,
+  completionAt,
+  firstFiles,
+  type Mention,
+} from './mentions.ts';
 import { type Cursor, START } from './prompt.ts';
 import type { Queued } from './queue.ts';
 import type { Search } from './search.ts';
@@ -88,6 +94,8 @@ export interface PromptWindow {
    * looked.
    */
   readonly files?: readonly string[];
+  /** The picked session's currently reachable message recipients. */
+  readonly recipients?: readonly string[];
   /** The `@` file finder's highlight and scroll, and whether Esc shut it. */
   readonly finder: MenuState & {
     /** ↑ or ↓ moved the highlight since the list on screen arrived. */
@@ -109,7 +117,10 @@ export interface PromptWindow {
    * was pressed on, picked from once that match comes back, if the draft's
    * mention is still the same, and whether it was Enter.
    */
-  readonly awaitedPick?: { readonly mention: Mention; readonly enter: boolean };
+  readonly awaitedPick?: {
+    readonly mention: Mention | AgentMention;
+    readonly enter: boolean;
+  };
   /**
    * The names `/team show`, `edit`, `run` and `stop` offer, as they were
    * read when the draft last came to one; none until then.
@@ -180,6 +191,7 @@ export type PromptAction =
   | { readonly type: 'menu_dismissed' }
   /** The working directory's files, walked as an `@` opened the finder. */
   | { readonly type: 'files_listed'; readonly files: readonly string[] }
+  | { readonly type: 'recipients_listed'; readonly names: readonly string[] }
   /** The team files and runs, read as the draft came to a team's name. */
   | { readonly type: 'team_names_listed'; readonly names: TeamNames }
   /** ↑ or ↓ in the `@` file finder, counted as `menu_moved` counts. */
@@ -203,7 +215,7 @@ export type PromptAction =
   /** Enter or Tab waits for the match running, to pick its first file. */
   | {
       readonly type: 'pick_awaited';
-      readonly mention: Mention;
+      readonly mention: Mention | AgentMention;
       readonly enter: boolean;
     }
   /** The awaited pick was made, or the mention changed under it. */
@@ -405,6 +417,15 @@ export function reducePrompt(
       return state.menu.dismissed
         ? state
         : { ...state, menu: { ...state.menu, dismissed: true } };
+    case 'recipients_listed':
+      return {
+        ...state,
+        recipients: action.names,
+        finder:
+          agentMentionAt(state.draft, state.cursor) === undefined
+            ? state.finder
+            : { ...initialMenu, dismissed: state.finder.dismissed },
+      };
     case 'files_listed':
       return { ...state, files: action.files };
     case 'team_names_listed':
@@ -415,7 +436,7 @@ export function reducePrompt(
         finder: { ...moved(state.finder, action), moved: true },
       };
     case 'files_matched': {
-      if (action.files !== state.files) {
+      if (action.files !== state.files && action.files !== state.recipients) {
         return state;
       }
 
@@ -643,9 +664,9 @@ export function commandMenu(
   };
 }
 
-/** The `@` file finder as it stands: the mention, its files, and where. */
+/** The shared `@`/`@@` completion list, its candidates and highlight. */
 export interface FileFinder {
-  readonly mention: Mention;
+  readonly mention: Mention | AgentMention;
   readonly files: readonly string[];
   readonly highlighted: number;
   /** The first file shown, when there are more than fit. */
@@ -657,6 +678,16 @@ export interface FileFinder {
   readonly pending: boolean;
   /** It has run longer than `SLOW_MATCH_MS`, which the list says. */
   readonly searching: boolean;
+  readonly agent?: true;
+  readonly empty?: string;
+}
+
+/** Matching and accepting always read the same candidate list. */
+export function completionNames(
+  state: PromptWindow,
+  mention: Mention | AgentMention,
+): readonly string[] | undefined {
+  return 'quoted' in mention ? (state.recipients ?? []) : state.files;
 }
 
 /** How long a match runs before the list says it is searching. */
@@ -672,13 +703,16 @@ export function pendingMention(
   state: PromptState & Open,
   draft: string,
   cursor: Cursor,
-): Mention | undefined {
-  const mention = mentionAt(draft, cursor);
+): Mention | AgentMention | undefined {
+  const mention = completionAt(draft, cursor);
+  const names =
+    mention === undefined ? undefined : completionNames(state, mention);
 
   if (
     mention === undefined ||
     mention.query === '' ||
-    state.files === undefined ||
+    names === undefined ||
+    ('quoted' in mention && names.length === 0) ||
     state.bash ||
     state.search !== undefined ||
     state.finder.dismissed ||
@@ -688,8 +722,7 @@ export function pendingMention(
     return undefined;
   }
 
-  const current =
-    state.matched?.files === state.files ? state.matched : undefined;
+  const current = state.matched?.files === names ? state.matched : undefined;
 
   return current?.query === mention.query ? undefined : mention;
 }
@@ -705,11 +738,13 @@ export function fileFinder(
   draft: string,
   cursor: Cursor,
 ): FileFinder | undefined {
-  const mention = mentionAt(draft, cursor);
+  const mention = completionAt(draft, cursor);
+  const names =
+    mention === undefined ? undefined : completionNames(state, mention);
 
   if (
     mention === undefined ||
-    state.files === undefined ||
+    names === undefined ||
     state.bash ||
     state.search !== undefined ||
     state.finder.dismissed ||
@@ -721,16 +756,16 @@ export function fileFinder(
 
   // An empty query shows the walk's first files at once, matching nothing;
   // any other waits for its match, the last one's list kept meanwhile.
-  const current =
-    state.matched?.files === state.files ? state.matched : undefined;
+  const current = state.matched?.files === names ? state.matched : undefined;
   const pending = mention.query !== '' && current?.query !== mention.query;
   const files =
     mention.query === ''
-      ? firstFiles(state.files)
-      : (current?.matched ?? firstFiles(state.files));
-  const searching = pending && state.matchSlow === mention.query;
+      ? firstFiles(names)
+      : (current?.matched ?? firstFiles(names));
+  const agent = 'quoted' in mention;
+  const searching = !agent && pending && state.matchSlow === mention.query;
 
-  if (files.length === 0 && !searching) {
+  if (!agent && files.length === 0 && !searching) {
     return undefined;
   }
 
@@ -744,5 +779,18 @@ export function fileFinder(
     top: state.finder.top,
     pending,
     searching,
+    ...(agent
+      ? {
+          agent: true as const,
+          ...(files.length === 0
+            ? {
+                empty:
+                  names.length === 0
+                    ? 'No agents to mention'
+                    : 'No matching agents',
+              }
+            : {}),
+        }
+      : {}),
   };
 }

@@ -831,3 +831,72 @@ describe("a picked code block's keys (CHD-394)", () => {
     ).toBeUndefined();
   });
 });
+
+describe('agent completion keys (CHD-519)', () => {
+  const names = ['parser', 'bugfix 2'];
+  const candidates = reduceApp(ready, { type: 'recipients_listed', names });
+  const tab = { ...plain, tab: true };
+
+  test('Tab and Enter accept without sending, and quote a spaced name', () => {
+    const state = typing('@@', candidates);
+
+    expect(keyCommand('', tab, state, state.draft)).toBe('complete_mention');
+    expect(submitSteps('@@', context(state))).toStrictEqual([
+      { type: 'show_draft', text: '@@parser ', cursor: [0, 9] },
+    ]);
+
+    const moved = reduceApp(state, {
+      type: 'finder_moved',
+      step: 1,
+      count: 2,
+      rows: 10,
+    });
+
+    expect(keySteps('', tab, context(moved))).toContainEqual({
+      type: 'show_draft',
+      text: '@@"bugfix 2" ',
+      cursor: [0, 13],
+    });
+    expect(keySteps('', escape, context(state))).toContainEqual(
+      dispatched({ type: 'finder_dismissed' }),
+    );
+  });
+
+  test('empty states never accept or steer; Enter sends literal text', () => {
+    for (const state of [
+      typing('@@', ready),
+      reduceApp(typing('@@zzz', candidates), {
+        type: 'files_matched',
+        files: names,
+        query: 'zzz',
+        matched: [],
+      }),
+    ]) {
+      expect(keyCommand('', tab, state, state.draft)).toBe('complete_mention');
+      expect(keySteps('', tab, context(state))).toStrictEqual([]);
+      expect(submitSteps(state.draft, context(state))).toContainEqual({
+        type: 'send',
+        text: state.draft,
+      });
+    }
+  });
+
+  test('closing a recipient invalidates stale matches and awaited acceptance', () => {
+    const state = reduceApp(typing('@@par', candidates), {
+      type: 'files_matched',
+      files: names,
+      query: 'par',
+      matched: ['parser'],
+    });
+    const closed = reduceApp(state, { type: 'recipients_listed', names: [] });
+
+    expect(
+      fileFinder(closed, closed.draft, closed.cursor)?.files,
+    ).toStrictEqual([]);
+    expect(submitSteps(closed.draft, context(closed))).toContainEqual({
+      type: 'send',
+      text: '@@par',
+    });
+    expect(keySteps('', tab, context(closed))).toStrictEqual([]);
+  });
+});

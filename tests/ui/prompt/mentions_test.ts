@@ -6,6 +6,8 @@ import { listFiles } from '../../../src/files.ts';
 import { agentNameProblem } from '../../../src/agent_name.ts';
 import {
   agentMentionAt,
+  completionAt,
+  mentionRecipients,
   insertAgentMention,
   insertMention,
   firstFiles,
@@ -225,6 +227,32 @@ describe('agent mentions remain plain text (CHD-519)', () => {
     expect(mentionAt('@@parser', [0, 8])).toBeUndefined();
     expect(mentionAt('@@"bugfix 2', [0, 11])).toBeUndefined();
     expect(mentionAt('@parser', [0, 7])?.query).toBe('parser');
+  });
+
+  test('equal recipient names keep only the first routing target', () => {
+    const member = { name: 'coder', key: 4 };
+    const otherLead = { name: 'coder', key: 8 };
+    const main = { name: 'main', key: 1 };
+
+    expect(mentionRecipients([main, member, otherLead])).toStrictEqual([
+      main,
+      member,
+    ]);
+    expect(mentionRecipients([otherLead, member, main])).toStrictEqual([
+      otherLead,
+      main,
+    ]);
+  });
+
+  test('closing a quoted name containing @ cannot reopen file completion', () => {
+    const text = '@@"a @notes.md"';
+
+    expect(completionAt(text, [0, text.length])).toBeUndefined();
+    expect(completionAt(`${text}x`, [0, text.length + 1])).toBeUndefined();
+    expect(completionAt(`${text} @real`, [0, text.length + 6])?.query).toBe(
+      'real',
+    );
+    expect(completionAt(text, [0, text.length - 1])?.query).toBe('a @notes.md');
   });
 
   test('picking replaces the whole bare or quoted token and preserves following text', () => {

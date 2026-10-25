@@ -72,7 +72,13 @@ import {
 import { PlanBox } from '../dialogs/PlanBox.tsx';
 import { DEFAULT_KEYMAP, hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import { placeholderBefore } from '../prompt/images.ts';
-import { matchFiles, mentionAt } from '../prompt/mentions.ts';
+import {
+  agentMentionAt,
+  completionAt,
+  matchFiles,
+  mentionAt,
+  mentionRecipients,
+} from '../prompt/mentions.ts';
 import { planRowLimit } from '../plan/plan.ts';
 import { queueRowLimit } from '../prompt/queue.ts';
 import { type Cursor, endOf, promptRows } from '../prompt/prompt.ts';
@@ -751,22 +757,48 @@ export function App({
     }
   }, [backgroundItems, state.backgroundView]);
 
+  const recipients = mentionRecipients(sessions.recipients());
+  const recipientNames = useMemo(
+    () => recipients.map((each) => each.name),
+    [JSON.stringify(recipients), all.front],
+  );
+
+  useLayoutEffect(() => {
+    dispatch({ type: 'recipients_listed', names: recipientNames });
+  }, [recipientNames]);
+
+  const mentionColours = Object.fromEntries(
+    recipients.flatMap((each) => {
+      const row = agentRows.find((row) => row.key === each.key);
+      const colour = agentColour(colours, row?.colour);
+
+      return colour === undefined ? [] : [[each.name, colour]];
+    }),
+  );
   const menu = commandMenu(state, draft);
   const finder = fileFinder(state, draft, cursor);
   const menuRows = menuRowLimit(rows);
   // Esc does not end the mention, so it counts as closed while put away;
   // the edit that brings it back opens it again.
+  const agentMention = agentMentionAt(draft, cursor);
   const mentioning =
-    mentionAt(draft, cursor) !== undefined && !state.finder.dismissed;
+    agentMention === undefined &&
+    completionAt(draft, cursor) !== undefined &&
+    !state.finder.dismissed;
 
   useFiles(files, here.cwd, mentioning, dispatch);
 
-  const query = mentioning ? mentionAt(draft, cursor)?.query : undefined;
+  const query = state.finder.dismissed
+    ? undefined
+    : (agentMention?.query ??
+      (mentioning ? mentionAt(draft, cursor)?.query : undefined));
+  const candidates =
+    agentMention === undefined ? state.files : state.recipients;
 
   useMatch(
-    state.files,
+    candidates,
     query,
-    state.matched?.files === state.files && state.matched?.query === query,
+    state.matched?.files === candidates && state.matched?.query === query,
     dispatch,
     match,
   );
@@ -1830,7 +1862,11 @@ export function App({
                 {state.search ? (
                   <SearchLine search={state.search} />
                 ) : finder ? (
-                  <FileList finder={finder} rows={menuRows} />
+                  <FileList
+                    finder={finder}
+                    rows={menuRows}
+                    agentColours={mentionColours}
+                  />
                 ) : menu ? (
                   <CommandList menu={menu} rows={menuRows} width={columns} />
                 ) : state.help ? (

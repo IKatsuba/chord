@@ -269,10 +269,10 @@ export const SHORTCUTS: readonly Shortcut[] = [
   // Typing either opens its list; it is the draft's, so no key command
   // answers. The commands and the files share their lines so the panel fits
   // 80x24 (CHD-386).
-  { key: '/ @', does: 'for commands or files', commands: [] },
+  { key: '/ @ @@', does: 'for commands, files or agents', commands: [] },
   {
     key: '↑ ↓',
-    does: 'to pick a command or file',
+    does: 'to pick a completion',
     commands: ['menu_up', 'menu_down', 'finder_up', 'finder_down'],
     presses: ['↑', '↓'],
     actions: ['autocomplete:previous', 'autocomplete:next'],
@@ -286,7 +286,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   // Enter picks too, through the prompt's own submit.
   {
     key: 'tab enter',
-    does: 'to add a file',
+    does: 'to add a file or agent',
     commands: ['complete_mention'],
     presses: ['tab'],
     actions: ['autocomplete:accept'],
@@ -294,7 +294,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   // One line for both lists, so the panel fits 80x24.
   {
     key: 'esc',
-    does: 'to close commands or files',
+    does: 'to close completions',
     commands: ['close_menu', 'close_finder'],
     actions: ['autocomplete:dismiss'],
   },

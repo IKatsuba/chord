@@ -8,7 +8,7 @@ import { render, type RenderOptions, type Theme } from 'markdansi';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import wrapAnsi from 'wrap-ansi';
-import { fenceLanguage, highlightLines } from './highlight.ts';
+import { brush, fenceLanguage, highlightLines, PAINT } from './highlight.ts';
 import { type Palette, PALETTES, PLAIN } from '../theme/theme.ts';
 
 /**
@@ -254,8 +254,9 @@ export function softMarkdown(
   width: number,
   color?: boolean,
   palette: Palette = PALETTES.dark,
+  picked?: number,
 ): Soft[] {
-  return laid(text, width, paint(color, palette), true);
+  return laid(text, width, paint(color, palette), true, picked);
 }
 
 /**
@@ -270,9 +271,21 @@ function paint(color: boolean | undefined, palette: Palette): Paint {
     : undefined;
 }
 
-/** `text`'s blocks, `soft` or in rows. */
-function laid(text: string, width: number, on: Paint, soft: boolean): Soft[] {
+/**
+ * `text`'s blocks, `soft` or in rows; the code block `picked`, by its
+ * `codeBlocks` index, drawn into a quote with its border in the accent
+ * colour (CHD-394 §1).
+ */
+function laid(
+  text: string,
+  width: number,
+  on: Paint,
+  soft: boolean,
+  picked?: number,
+): Soft[] {
   const tokens = lexer(text);
+  const held =
+    picked === undefined ? undefined : blockCode(tokens, 0)[picked]?.token;
   // A reference link resolves against definitions anywhere in the reply, but
   // each block goes to markdansi alone, so every block takes them along.
   const references = tokens
@@ -280,7 +293,7 @@ function laid(text: string, width: number, on: Paint, soft: boolean): Soft[] {
     .map((token) => token.raw.trimEnd())
     .join('\n');
 
-  return blocksOf(tokens, width, on, references, soft);
+  return blocksOf(tokens, width, on, references, soft, held);
 }
 
 function blocksOf(
@@ -289,6 +302,7 @@ function blocksOf(
   on: Paint,
   references: string,
   soft: boolean,
+  picked?: Tokens.Code,
 ): Soft[] {
   const block = (raw: string, width: number, options: RenderOptions = {}) =>
     renderBlock(raw, width, on, { wrap: !soft, ...options }, references);
@@ -299,7 +313,7 @@ function blocksOf(
     }
 
     if (soft && token.type === 'list') {
-      return [listOf(token as Tokens.List, width, on, references)];
+      return [listOf(token as Tokens.List, width, on, references, picked)];
     }
 
     if (soft && token.type === 'code') {
@@ -318,6 +332,7 @@ function blocksOf(
           on,
           { quotePrefix: '', wrap: !soft },
           references,
+          picked,
         )
       : token.type === 'table'
         ? renderTable(token.raw, width, on, references)
@@ -331,6 +346,7 @@ function blocksOf(
                 on,
                 {},
                 references,
+                picked,
               )
             : token.type === 'heading' && (token as Tokens.Heading).depth === 1
               ? block(token.raw, width, { theme: themeOf(on, true) })
@@ -355,6 +371,7 @@ function listOf(
   width: number,
   on: Paint,
   references: string,
+  picked?: Tokens.Code,
 ): Soft {
   return {
     kind: 'list',
@@ -376,6 +393,7 @@ function listOf(
           on,
           references,
           true,
+          picked,
         ),
       };
     }),
@@ -510,8 +528,18 @@ function closed(token: Tokens.Code): boolean {
  * highlight.js knows it. A line too long for the box is cut at its edge and
  * goes on below, as markdansi cuts one.
  */
-function renderCode(token: Tokens.Code, width: number, color: Paint): string {
+function renderCode(
+  token: Tokens.Code,
+  width: number,
+  color: Paint,
+  picked = false,
+): string {
   const { label, lines } = highlighted(token, color);
+  // Picked through ctrl+x b, its border is in the accent colour (CHD-394).
+  const rule = picked
+    ? (text: string) =>
+        color === undefined ? text : brush(PAINT, color.accent)(text)
+    : (text: string) => dim(text, color);
   // Highlighted whole, and only then cut to the box.
   const code = lines.flatMap((line) =>
     wrapAnsi(line, Math.max(1, width - CODE_INSET), {
@@ -528,14 +556,14 @@ function renderCode(token: Tokens.Code, width: number, color: Paint): string {
     label === ''
       ? `┌${'─'.repeat(inner + 2)}┐`
       : `┌ ${label} ${'─'.repeat(inner - stringWidth(label))}┐`;
-  const bar = dim('│', color);
+  const bar = rule('│');
 
   return [
-    dim(top, color),
+    rule(top),
     ...code.map(
       (line) => `${bar} ${line}${' '.repeat(inner - stringWidth(line))} ${bar}`,
     ),
-    dim(`└${'─'.repeat(inner + 2)}┘`, color),
+    rule(`└${'─'.repeat(inner + 2)}┘`),
   ].join('\n');
 }
 
@@ -556,6 +584,7 @@ function renderHoled(
   color: Paint,
   options: RenderOptions,
   references: string,
+  picked?: Tokens.Code,
 ): string {
   const codes = found.slice(0, HOLES.size);
   const raw = holed(text, codes);
@@ -591,7 +620,7 @@ function renderHoled(
         .replace(/[^│\s]/g, ' ')
         .replace(/│/g, (bar) => dim(bar, color));
 
-      return renderCode(code.token, width - inset, color)
+      return renderCode(code.token, width - inset, color, code.token === picked)
         .split('\n')
         .map((row, i) => `${i === 0 ? indent : hang}${row}`);
     })

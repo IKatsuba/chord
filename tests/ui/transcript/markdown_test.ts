@@ -16,6 +16,7 @@ import {
   softMarkdown,
 } from '../../../src/ui/transcript/markdown.ts';
 import { PALETTES } from '../../../src/ui/theme/theme.ts';
+import { brush, PAINT } from '../../../src/ui/transcript/highlight.ts';
 import {
   MARKDOWN_LINES,
   MARKDOWN_OPEN_FENCE,
@@ -931,4 +932,23 @@ describe('CHD-394 U1 tester: command and copy boundaries', () => {
     ]);
     expect(runCommand(blocks[0]?.text ?? '')).toBe('first\n\nsecond  ');
   });
+});
+
+test('a picked code block drawn into a quote has its border in the accent colour, and only it (CHD-394)', () => {
+  const text = '> ```sh\n> ls\n> ```\n\n> ```sh\n> pwd\n> ```';
+  // The dark palette's accent, painted as the terminal takes colour.
+  const accent = brush(PAINT, PALETTES.dark.accent)('┌ sh ──┐');
+  const quotes = (picked?: number) =>
+    softMarkdown(text, 80, true, PALETTES.dark, picked).map((block) =>
+      block.kind === 'quote' ? block.text : '',
+    );
+
+  expect(quotes().some((quote) => quote.includes(accent))).toBe(false);
+  expect(quotes()[1]).toContain('\x1b[2m┌ sh');
+
+  const [first, second] = quotes(1);
+
+  expect(first).not.toContain(accent);
+  expect(second).toContain(accent);
+  expect(stripAnsi(second!)).toContain('pwd');
 });

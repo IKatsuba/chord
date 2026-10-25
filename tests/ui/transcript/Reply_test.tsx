@@ -6,6 +6,14 @@ import { describe, expect, test } from 'bun:test';
 import { useState } from 'react';
 import stringWidth from 'string-width';
 import { Reply } from '../../../src/ui/transcript/Reply.tsx';
+import chalk from 'chalk';
+import {
+  type CodeActions,
+  CodeBlockActions,
+  Colours,
+} from '../../../src/ui/app/context.ts';
+import type { BlockRef } from '../../../src/ui/transcript/code_pick.ts';
+import { PALETTES } from '../../../src/ui/theme/theme.ts';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 import { clipboard, dragOver } from '../app/selecting.ts';
 import { type AppState, frontState } from '../../../src/ui/app/state.ts';
@@ -1249,4 +1257,66 @@ describe('CHD-394 U3 tester: clicks across boxes and drafts', () => {
       );
     });
   }
+});
+
+describe("a picked code box's look (CHD-394)", () => {
+  test('its border, label and buttons are in the accent colour, the buttons bold, and the pick drawn again only where it changed', async () => {
+    const level = chalk.level;
+    const refs: BlockRef[] = [];
+    const listeners = new Set<() => void>();
+    let pick: BlockRef | undefined;
+    const actions: CodeActions = {
+      copy: () => {},
+      prompt: () => {},
+      pressed: () => {},
+      released: () => false,
+      add: (block) => {
+        refs.push(block.ref);
+
+        return () => {};
+      },
+      picked: () => pick,
+      onPick: (listener) => {
+        listeners.add(listener);
+
+        return () => listeners.delete(listener);
+      },
+    };
+    const accent = '38;2;71;231;165';
+
+    chalk.level = 3;
+
+    const drawn = await draw(
+      <Colours.Provider value={PALETTES.dark}>
+        <CodeBlockActions.Provider value={actions}>
+          <Reply text={'```sh\nls\n```\n\n```ts\nx\n```'} width={80} />
+        </CodeBlockActions.Provider>
+      </Colours.Provider>,
+      { columns: 80, rows: 12 },
+    );
+    const row = (marker: string) =>
+      drawn
+        .frame()
+        .split('\n')
+        .find((line) => stripAnsi(line).includes(marker)) ?? '';
+
+    try {
+      expect(row('┌─ sh')).not.toContain(accent);
+
+      pick = refs[0];
+
+      for (const listener of listeners) {
+        listener();
+      }
+
+      await until('the accent', () => row('┌─ sh').includes(accent));
+
+      expect(row('┌─ sh')).toContain('\x1b[1m');
+      expect(row('┌─ ts')).not.toContain(accent);
+    } finally {
+      chalk.level = level;
+
+      await drawn.unmount();
+    }
+  });
 });

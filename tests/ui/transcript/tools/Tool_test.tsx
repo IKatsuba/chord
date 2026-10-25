@@ -1303,6 +1303,8 @@ describe("a message's code blocks are told to the window, a quoted one too (CHD-
       prompt: () => {},
       pressed: () => {},
       released: () => false,
+      picked: () => undefined,
+      onPick: () => () => {},
       add: (block) => {
         blocks.push(block);
 

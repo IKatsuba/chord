@@ -79,7 +79,7 @@ function sheet(paint: ChalkInstance, tones: Tones): Sheet {
  * The colour level the terminal takes, as chalk detects it; at
  * least 16 colours when the caller has decided on colour.
  */
-const PAINT = new Chalk({ level: Math.max(chalk.level, 1) as 1 });
+export const PAINT = new Chalk({ level: Math.max(chalk.level, 1) as 1 });
 
 /** Each set of tones' sheet, made the first time it is asked for. */
 const sheets = new WeakMap<Tones, { sheet: Sheet; id: number }>();

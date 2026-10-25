@@ -3,6 +3,8 @@
  * the keys that quit, clear and edit.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import chalk from 'chalk';
+import stripAnsi from 'strip-ansi';
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
@@ -1270,6 +1272,47 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
         expect(copies).toHaveLength(1);
       },
       { columns: 80, rows: 40, copy },
+    );
+  });
+
+  test("the picked box's buttons are bold until the pick ends, where the window draws with no colour", () => {
+    // A row as a terminal would be sent it, its colours written.
+    const row = (window: Window, marker: string) => {
+      const level = chalk.level;
+
+      chalk.level = 3;
+
+      try {
+        return (
+          window
+            .frame()
+            .split('\n')
+            .find((line) => stripAnsi(line).includes(marker)) ?? ''
+        );
+      } finally {
+        chalk.level = level;
+      }
+    };
+
+    const LISTED = '┌─ sh ─[copy]─[run]─┐';
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'markdowncode');
+        await window.shows('A paragraph after.');
+        await leader(window, 'b');
+        await until('the pick', () => statusRow(window).includes(HINT));
+
+        // Its buttons bold, which no border is; the accent is a colour's.
+        expect(row(window, LISTED)).toContain('\x1b[1m[copy]');
+        expect(row(window, '┌─ typescript')).not.toContain('\x1b[1m');
+        await window.press(ESC);
+        await until(
+          'the bold to go',
+          () => !row(window, LISTED).includes('\x1b[1m'),
+        );
+      },
+      { columns: 80, rows: 40 },
     );
   });
 

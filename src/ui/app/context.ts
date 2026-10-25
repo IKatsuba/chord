@@ -71,6 +71,10 @@ export interface CodeActions {
    * it gives back says it went (CHD-394).
    */
   add(block: DrawnBlock): () => void;
+  /** The block picked through `ctrl+x b`, drawn in the accent colour. */
+  picked(): BlockRef | undefined;
+  /** Hears each change of `picked`, until the function it gives back. */
+  onPick(listener: () => void): () => void;
 }
 
 /** A code block drawn in the transcript, for `ctrl+x b` to find (CHD-394). */

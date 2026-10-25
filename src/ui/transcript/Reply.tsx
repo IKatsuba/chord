@@ -5,6 +5,7 @@ import {
   useEffect,
   useMemo,
   useState,
+  useSyncExternalStore,
 } from 'react';
 import { useRenderer } from '@opentui/react';
 import type { MouseEvent, Renderable, RGBA } from '@opentui/core';
@@ -16,9 +17,9 @@ import {
   useColours,
   useSelectable,
 } from '../app/context.ts';
-import { drawnIds } from './code_pick.ts';
+import { type BlockRef, drawnIds } from './code_pick.ts';
 import { Ansi } from '../theme/Ansi.tsx';
-import { DIM_BORDER, FILL, TEXT } from '../theme/text.ts';
+import { BOLD, colour, DIM_BORDER, fg, FILL, TEXT } from '../theme/text.ts';
 import {
   type Button,
   type Code,
@@ -41,11 +42,13 @@ export function Reply({ text, width }: { text: string; width: number }) {
   const colours = useColours();
   // An agent's own escapes are text, not styling chord answers for.
   const plain = stripAnsi(text);
+  const entry = useDrawing();
+  const picked = pickedHere(usePicked(), entry);
   const blocks = useMemo(
-    () => softMarkdown(plain, width, undefined, colours),
-    [plain, width, colours],
+    () => softMarkdown(plain, width, undefined, colours, picked),
+    [plain, width, colours, picked],
   );
-  const ids = useCodeBlocks(plain, blocks);
+  const ids = useCodeBlocks(plain, blocks, entry);
 
   return (
     <CodeIds.Provider value={ids}>
@@ -61,6 +64,36 @@ export function Reply({ text, width }: { text: string; width: number }) {
 /** Each drawing of a text with code blocks, numbered as it mounts. */
 let drawings = 0;
 
+/** Nothing ever picked, where no window picks blocks, as in a test's draw. */
+const NO_PICK = () => () => {};
+
+/**
+ * The code block picked through `ctrl+x b`: what draws it reads it from the
+ * window, and draws again only when it changes (CHD-394).
+ */
+export function usePicked(): BlockRef | undefined {
+  const actions = useContext(CodeBlockActions);
+
+  return useSyncExternalStore(actions?.onPick ?? NO_PICK, () =>
+    actions?.picked(),
+  );
+}
+
+/** This drawing's number, the `entry` of its blocks' `BlockRef`s. */
+export function useDrawing(): number {
+  const [entry] = useState(() => (drawings += 1));
+
+  return entry;
+}
+
+/** The index of the block picked, when it is one of drawing `entry`'s. */
+export function pickedHere(
+  picked: BlockRef | undefined,
+  entry: number,
+): number | undefined {
+  return picked?.entry === entry ? picked.block : undefined;
+}
+
 /**
  * `text`'s code blocks, as `blocks` lays it out, told to the window while
  * they are drawn, for `ctrl+x b` to find (CHD-394): what each copies and
@@ -70,10 +103,10 @@ let drawings = 0;
 export function useCodeBlocks(
   text: string,
   blocks: readonly Soft[],
+  entry: number,
 ): ReadonlyMap<Soft, string> {
   const registry = useContext(CodeBlockActions);
   const renderer = useRenderer();
-  const [entry] = useState(() => (drawings += 1));
   // A block whose fence is still open is no key's yet (CHD-394 §1).
   const found = useMemo(() => {
     const open = openFences(text);
@@ -158,6 +191,13 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
   const selectable = useSelectable();
   const id = useContext(CodeIds)?.get(block);
   const named = id === undefined ? {} : { id };
+  const picked = usePicked();
+  const colours = useColours();
+  // The box picked through ctrl+x b: its border, label and buttons in the
+  // accent colour (CHD-394 §3).
+  const lit =
+    picked !== undefined && id === `code-${picked.entry}-${picked.block}`;
+  const border = lit ? (colour(colours.accent) ?? DIM_BORDER) : DIM_BORDER;
 
   if (block.kind === 'list') {
     // A loose list's blank rows are a copy's too; a tight one has none.
@@ -197,12 +237,12 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
         <box
           border
           borderStyle='single'
-          borderColor={DIM_BORDER}
+          borderColor={border}
           // OpenTUI sets a title one cell past the corner; chord takes it there.
           {...(block.label !== '' && {
             title: ` ${block.label} `,
             titleAlignment: 'left',
-            titleColor: DIM_BORDER,
+            titleColor: border,
           })}
           paddingLeft={1}
           paddingRight={1}
@@ -211,7 +251,7 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
             <Ansi text={block.code} />
           </text>
         </box>
-        {block.buttons.length > 0 && <Buttons code={block} />}
+        {block.buttons.length > 0 && <Buttons code={block} lit={lit} />}
       </box>
     );
   }
@@ -245,8 +285,11 @@ export function SoftBlock({ block, look }: { block: Soft; look?: Look }) {
  * something to press on the dim border, and no drag starts on them. A press
  * and a release on the same one is a click on it; the wheel is never one.
  */
-function Buttons({ code }: { code: Code }) {
+function Buttons({ code, lit }: { code: Code; lit: boolean }) {
   const actions = useContext(CodeBlockActions);
+  const colours = useColours();
+  // Picked, they are the box's accent, and bold.
+  const look = lit ? { ...fg(colours.accent), attributes: BOLD } : {};
   const act = (button: Button) =>
     button === 'copy'
       ? actions?.copy(code.copy)
@@ -258,6 +301,7 @@ function Buttons({ code }: { code: Code }) {
         <text
           key={button}
           {...TEXT}
+          {...look}
           onMouseDown={(event: MouseEvent) => {
             if (event.button === 0) {
               actions?.pressed(event.currentTarget);

@@ -24,7 +24,14 @@ import { Ansi } from '../../theme/Ansi.tsx';
 import { colour, CUT, DIM, fg, FILL, ROWS, TEXT } from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
 import { markdown, type Soft, softMarkdown } from '../markdown.ts';
-import { Reply, SoftBlock, useCodeBlocks } from '../Reply.tsx';
+import {
+  pickedHere,
+  Reply,
+  SoftBlock,
+  useCodeBlocks,
+  useDrawing,
+  usePicked,
+} from '../Reply.tsx';
 import { type ArrowTone, outArrow, wrapLine } from '../message.ts';
 import { diffHeadline, type DiffView } from './diff.ts';
 import {
@@ -215,13 +222,16 @@ export function MessageBody({
   const selectable = useSelectable();
   // An agent's own escapes are text, not styling chord answers for.
   const plain = stripAnsi(text);
+  const entry = useDrawing();
+  const picked = pickedHere(usePicked(), entry);
   const laid = useMemo(
-    () => softMarkdown(plain, Math.max(width - 5, 1), undefined, colours),
-    [plain, width, colours],
+    () =>
+      softMarkdown(plain, Math.max(width - 5, 1), undefined, colours, picked),
+    [plain, width, colours, picked],
   );
   // Its blocks are told to the window as laid out, a quote as a quote, so
   // the code drawn into one is found there (CHD-394).
-  const found = useCodeBlocks(plain, laid);
+  const found = useCodeBlocks(plain, laid, entry);
   const { blocks, ids } = useMemo(() => {
     // A quote reads as the rest of a message, with no bar.
     const shown = laid.map((block): Soft =>

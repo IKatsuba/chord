@@ -2,7 +2,14 @@ import type { BoxRenderable } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
 import process from 'node:process';
 import manifest from '../../../package.json' with { type: 'json' };
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react';
 import { listFiles } from '../../files.ts';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { editInEditor, type EditorEnd } from '../../editor.ts';
@@ -460,6 +467,18 @@ export function App({
   // The code blocks drawn, which tell the window as they mount and go, for
   // ctrl+x b to pick among (CHD-394).
   const drawnBlocks = useRef(new Map<string, DrawnBlock>());
+  // The block picked, and who draws it, told as the pick changes.
+  const pickNow = useRef(state.codePick);
+  const pickListeners = useRef(new Set<() => void>());
+
+  pickNow.current = state.codePick;
+
+  useLayoutEffect(() => {
+    for (const listener of pickListeners.current) {
+      listener();
+    }
+  }, [state.codePick]);
+
   const latestCode = useRef<Pick<CodeActions, 'copy' | 'prompt'>>({
     copy: () => {},
     prompt: () => {},
@@ -1231,6 +1250,14 @@ export function App({
           if (drawnBlocks.current.get(key) === block) {
             drawnBlocks.current.delete(key);
           }
+        };
+      },
+      picked: () => pickNow.current,
+      onPick: (listener) => {
+        pickListeners.current.add(listener);
+
+        return () => {
+          pickListeners.current.delete(listener);
         };
       },
     }),

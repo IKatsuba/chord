@@ -334,10 +334,12 @@ export interface TeamsAnswer {
     | {
         readonly name: string;
         readonly description: string;
+        readonly body: string;
         readonly lead: TeamAgentRow;
         readonly members: readonly (TeamAgentRow & {
           readonly name: string;
           readonly role: string;
+          readonly instructions: string;
         })[];
         /** Its runs open in this session, by their leads' names. */
         readonly runs: readonly string[];
@@ -349,22 +351,24 @@ export interface TeamsAnswer {
 interface TeamAgentRow {
   readonly agent: string;
   readonly model?: string;
+  readonly effort?: string;
   readonly mode?: string;
+  readonly instructions?: string;
 }
 
 function agentRow({
   agent,
   model,
+  effort,
   mode,
-}: {
-  agent: string;
-  model?: string | undefined;
-  mode?: string | undefined;
-}): TeamAgentRow {
+  instructions,
+}: Team['lead']): TeamAgentRow {
   return {
     agent,
     ...(model === undefined ? {} : { model }),
+    ...(effort === undefined ? {} : { effort }),
     ...(mode === undefined ? {} : { mode }),
+    ...(instructions === undefined ? {} : { instructions }),
   };
 }
 
@@ -384,11 +388,13 @@ export function teamsAnswer({ found, runs }: TeamsFound): TeamsAnswer {
         : {
             name: one.name,
             description: one.team.description,
+            body: one.team.body,
             lead: agentRow(one.team.lead),
             members: one.team.members.map((member) => ({
               name: member.name,
-              role: member.role,
               ...agentRow(member),
+              role: member.role,
+              instructions: member.instructions,
             })),
             runs: runs
               .filter((run) => run.team === one.name)
@@ -1232,8 +1238,11 @@ const listTeams: Register = (server, caller) =>
     {
       description:
         'The teams saved for this project and every project: ' +
-        "each one's description, lead, members with their roles, and the " +
-        'leads of its runs open in this session. Read it before run_team.',
+        "each one's description, shared body, lead/member instructions, " +
+        'configuration including effort, roles, and open runs. Read these ' +
+        'stored instructions before run_team. When the instructions or job ' +
+        'make resources relevant, read get_budgets and list_agents before ' +
+        'choosing per-run settings. Otherwise selection is not required.',
     },
     async () =>
       serve(
@@ -1256,7 +1265,12 @@ const runTeam: Register = (server, caller) =>
         "answer is the lead's name at once, or, where the team gives the " +
         'lead an effort, once it has started on it or been refused it; its ' +
         'reports come to you later as messages, send_message reaches it, and close_agent closes it ' +
-        'with its members.',
+        'with its members. Read list_teams instructions first. Omit selection ' +
+        'to run saved composition. Optional selection changes this run only, ' +
+        'preserving every saved role and instruction; provide a reason that ' +
+        'preserves their requirements and explains uncertainty. Read resource ' +
+        'facts when instructions or the job call for them. There is no ' +
+        'automatic retry, substitution or saved-team rewrite.',
       inputSchema: z
         .looseObject({
           team: z.string().describe('The team, as list_teams names it'),

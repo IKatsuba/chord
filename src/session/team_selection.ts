@@ -11,22 +11,47 @@ const reason = z
   .refine((text) => text.trim() !== '');
 
 export const RunChoice = z.strictObject({
-  agent: id.optional(),
-  model: id.optional(),
-  effort: id.optional(),
-  mode: id.optional(),
+  agent: id
+    .optional()
+    .describe(
+      'Runtime ID from list_agents; omitted fields inherit saved values only on the same runtime. A runtime change requires destination model and mode, plus effort when the saved role requests it.',
+    ),
+  model: id
+    .optional()
+    .describe('Supported destination model ID; no cross-runtime inheritance.'),
+  effort: id
+    .optional()
+    .describe(
+      'Supported soft effort request, never an exact-effort guarantee.',
+    ),
+  mode: id
+    .optional()
+    .describe(
+      'Supported exact destination mode ID; do not infer permission equivalence across runtimes.',
+    ),
 });
 
 export type RunChoice = z.infer<typeof RunChoice>;
 
-export const RunSelection = z.strictObject({
-  reason,
-  lead: RunChoice.optional(),
-  members: z
-    .record(id, RunChoice)
-    .refine((members) => Object.keys(members).length <= MAX_MEMBERS)
-    .optional(),
-});
+export const RunSelection = z
+  .strictObject({
+    reason: reason.describe(
+      'Explain the per-run choice, uncertainties and preservation of all saved role/instruction requirements.',
+    ),
+    lead: RunChoice.optional().describe(
+      'Overrides for the saved lead in this run only.',
+    ),
+    members: z
+      .record(id, RunChoice)
+      .refine((members) => Object.keys(members).length <= MAX_MEMBERS)
+      .optional()
+      .describe(
+        'Overrides keyed by existing saved member names; preserve every member and instruction.',
+      ),
+  })
+  .describe(
+    'Optional frozen per-run configuration; omission runs saved composition. Unknown fields or member names refuse before launch; no null/reset shorthand.',
+  );
 
 export type RunSelection = z.infer<typeof RunSelection>;
 

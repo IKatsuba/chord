@@ -286,13 +286,19 @@ test("list_teams gives each team's agents and its open runs, and a broken file's
           hides: false,
           team: {
             description: 'Fixes a bug',
-            lead: { agent: 'claude', model: 'opus' },
+            lead: {
+              agent: 'claude',
+              model: 'opus',
+              effort: 'high',
+              instructions: '  Keep lead requirements.\n',
+            },
             members: [
               {
                 name: 'tester',
                 role: 'Writes the test',
                 agent: 'claude',
                 mode: 'acceptEdits',
+                effort: 'medium',
                 instructions: 'Test it.',
               },
             ],
@@ -323,13 +329,21 @@ test("list_teams gives each team's agents and its open runs, and a broken file's
       {
         name: 'bugfix',
         description: 'Fixes a bug',
-        lead: { agent: 'claude', model: 'opus' },
+        body: 'How.',
+        lead: {
+          agent: 'claude',
+          model: 'opus',
+          effort: 'high',
+          instructions: '  Keep lead requirements.\n',
+        },
         members: [
           {
             name: 'tester',
             role: 'Writes the test',
             agent: 'claude',
             mode: 'acceptEdits',
+            effort: 'medium',
+            instructions: 'Test it.',
           },
         ],
         runs: ['bugfix', 'bugfix 2'],

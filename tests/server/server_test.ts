@@ -1055,3 +1055,78 @@ test('selected allocated refusal retains its receipt in scoped MCP structured co
       await client.close();
     }
   }));
+
+test('MCP discovery exposes stored routing instructions and per-run inheritance without starting runtimes', () =>
+  withServer(async (server) => {
+    let probes = 0;
+    const team = {
+      description: 'Discovery fixture',
+      body: 'Read resource facts when the job needs capacity-aware routing.\n',
+      lead: {
+        agent: 'fake',
+        effort: 'high',
+        instructions: '  Preserve permissions.\n',
+      },
+      members: [
+        {
+          name: 'reviewer',
+          role: 'Reviews changes',
+          agent: 'codex',
+          instructions: 'Review independently.\n',
+        },
+      ],
+    };
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          teams: () =>
+            Promise.resolve({
+              found: [
+                {
+                  name: 'fixture',
+                  file: '/project/team.md',
+                  place: 'project',
+                  hides: false,
+                  team,
+                },
+              ],
+              runs: [],
+            }),
+          offer: () => {
+            probes += 1;
+
+            return Promise.resolve(undefined);
+          },
+        },
+      }).token,
+    );
+
+    try {
+      const listed = (await client.listTools()).tools;
+      const launch = listed.find((tool) => tool.name === 'run_team');
+      const schema = JSON.stringify(launch?.inputSchema);
+
+      expect(launch?.description).toContain(
+        'Omit selection to run saved composition',
+      );
+      expect(schema).toContain('same runtime');
+      expect(schema).toContain('destination model and mode');
+      expect(schema).toContain('soft effort');
+      expect(schema).toContain('existing saved member names');
+
+      const answer = textOf(
+        await client.callTool({ name: 'list_teams', arguments: {} }),
+      );
+
+      expect(answer).toEqual({
+        runs: [],
+        teams: [{ name: 'fixture', ...team, runs: [] }],
+      });
+      expect(probes).toBe(0);
+    } finally {
+      await client.close();
+    }
+  }));

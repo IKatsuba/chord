@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-choose
+ █▀     ? for shortcuts · /help
+
+ › /team choose
+   ⎿  Which team? /team lists them
+
+ › /team choose fixture
+   ⎿  /team choose fixture takes the job after the name
+
+ › /team choose missing selectedidle
+   ⎿  No team named missing · /team lists them
+
+ › /team choose fixture selectedidle
+
+ ⏺ Resources
+   ⎿  Preferences: balanced
+      Read: 20:08:37 UTC · advisory snapshot
+      codex · billing unknown · identity unverified
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 21:08 UTC · models unknown
+      Received 14s before read · provider freshness unknown
+      Warning: Provider observation time unavailable.
+      7d: usage unknown · reset unknown · models unknown
+      Received time unknown · provider freshness unknown
+      Warning: Partial observation; weekly utilization/reset unavailable.
+      Warning: Scripted fixture; account and resource identity are unverified.
+      claude · billing unknown · identity unverified
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 21:08 UTC · models unknown
+      Received 12s before read · provider freshness unknown
+ ── ↓ 29 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 1s
+    fixture  team · codex · Fake Small · medium                    ◦ idle 1s  ✓ new reply

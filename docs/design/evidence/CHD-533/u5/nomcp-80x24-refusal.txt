@@ -1,0 +1,24 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-choose
+ █▀     ? for shortcuts · /help
+
+ ⏺ 1 MCP server was not passed to codex, which takes them over stdio and SSE
+   only: chord (http, chord's own). Without it, codex cannot start other agents
+   or use chord's tools. /mcp lists it.
+
+ › /team choose fixture selectedidle
+   ⎿  Main and chord's MCP tools must be available to choose a team; no
+      selection turn was sent.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

@@ -627,3 +627,43 @@ test('list_teams adds only actual known run IDs and keeps existing run names', (
     ],
   });
 });
+
+describe('CHD-533 tester: stored instruction fidelity', () => {
+  test('discovery preserves multiline Unicode and literal markup without interpreting instructions', () => {
+    const body =
+      '  Keep shared scope.\r\n> Read `get_budgets` only if relevant.\n\n${literal} <tag> λ\t\n';
+    const lead = '  Lead: preserve permissions.\nDo not expand ${settings}.\n';
+    const member = 'Reviewer: keep Ω and `literal code`.\r\n  Final line.\n';
+    const team: Team = {
+      description: 'Literal stored instructions',
+      body,
+      lead: { agent: 'fake', effort: 'high', instructions: lead },
+      members: [
+        {
+          name: 'reviewer',
+          role: 'Review',
+          agent: 'codex',
+          effort: 'low',
+          instructions: member,
+        },
+      ],
+    };
+    const before = JSON.stringify(team);
+    const answer = teamsAnswer({
+      found: [
+        {
+          name: 'literal',
+          file: '/project/team.md',
+          place: 'project',
+          hides: false,
+          team,
+        },
+      ],
+      runs: [],
+    });
+    const listed = JSON.parse(JSON.stringify(answer));
+
+    expect(listed.teams[0]).toEqual({ name: 'literal', ...team, runs: [] });
+    expect(JSON.stringify(team)).toBe(before);
+  });
+});

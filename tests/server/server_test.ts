@@ -1141,3 +1141,82 @@ test('MCP discovery exposes stored routing instructions and per-run inheritance 
       await client.close();
     }
   }));
+
+describe('CHD-533 tester: optional routing instructions over MCP', () => {
+  test('a team without routing prose can run saved composition without a budget read or added selection', () =>
+    withServer(async (server) => {
+      const calls: unknown[] = [];
+      let reads = 0;
+      let probes = 0;
+      const team = {
+        description: 'Ordinary saved composition',
+        body: '',
+        lead: { agent: 'fake' },
+        members: [
+          {
+            name: 'reviewer',
+            role: 'Review',
+            agent: 'codex',
+            instructions: 'Review the result.',
+          },
+        ],
+      };
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          window: {
+            ...WINDOW,
+            teams: () =>
+              Promise.resolve({
+                found: [
+                  {
+                    name: 'plain',
+                    file: '/project/team.md',
+                    place: 'project',
+                    hides: false,
+                    team,
+                  },
+                ],
+                runs: [],
+              }),
+            budgets: () => {
+              reads++;
+
+              throw new Error('no implicit resource read');
+            },
+            offer: () => {
+              probes++;
+
+              return Promise.resolve(undefined);
+            },
+            runTeam: (_caller, args) => {
+              calls.push(args);
+
+              return Promise.resolve({ error: 'fixture launch boundary' });
+            },
+          },
+        }).token,
+      );
+
+      try {
+        const listed = textOf(
+          await client.callTool({ name: 'list_teams', arguments: {} }),
+        );
+
+        expect(listed).toEqual({
+          runs: [],
+          teams: [{ name: 'plain', ...team, runs: [] }],
+        });
+        await client.callTool({
+          name: 'run_team',
+          arguments: { team: 'plain', job: 'Ordinary work.' },
+        });
+        expect(calls).toEqual([{ team: 'plain', job: 'Ordinary work.' }]);
+        expect(reads).toBe(0);
+        expect(probes).toBe(0);
+      } finally {
+        await client.close();
+      }
+    }));
+});

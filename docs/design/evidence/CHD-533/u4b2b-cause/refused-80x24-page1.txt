@@ -1,0 +1,24 @@
+      Warning: Partial observation; weekly utilization/reset unavailable.
+      Warning: Scripted fixture; account and resource identity are
+      unverified.
+      Active work: 1 reported · external work may be missing
+
+ ⏺ Team(fixture)
+   ⎿  Team launch aab5ee9e was refused before its first job; the attempted
+      lead is closing.
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements;
+      provider freshness is unknown.
+      Warning: Resource identity is unverified; observations remain separate.
+      Warning: Resource coverage is incomplete; external work may be missing.
+      Warning: Provider freshness is unknown for some resource windows.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): claude · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+ ── ↓ 11 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

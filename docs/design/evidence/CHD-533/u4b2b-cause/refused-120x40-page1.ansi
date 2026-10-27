@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+ [2m[39m›[0m[38;2;255;255;255m [39mselectedteam[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mResources[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mPreferences: balanced[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRead: 19:43:01 UTC · advisory snapshot[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mcodex · billing unknown · identity unverified[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSource: fixture 1 · coverage unknown · external activity unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m5h: 12.345% used · reset 20:43 UTC · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived 12s before read · provider freshness unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Provider observation time unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m7d: usage unknown · reset unknown · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived time unknown · provider freshness unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Partial observation; weekly utilization/reset unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Scripted fixture; account and resource identity are unverified.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActive work: 1 reported · external work may be missing[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(fixture)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mTeam launch 8e373f97 was refused before its first job; the attempted lead is closing.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mSelection: agent-selected · this run[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mReason: Preserve all instructions and exact permission requirements; provider freshness is unknown.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWarning: Resource identity is unverified; observations remain separate.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWarning: Resource coverage is incomplete; external work may be missing.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWarning: Provider freshness is unknown for some resource windows.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mBilling: unknown · advisory[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mPlanned for this run:[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead (lead): claude · model fake-small · effort agent default (unconfirmed) · mode plan[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mActual: refused · session runtime unknown · model unknown · effort unknown · mode unknown[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead: Initialization failed before the first job; the attempted agent is closing.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mActual: not opened · configuration unconfirmed[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mRead 2026-10-27 19:43:01.603 UTC · advisory[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mctrl+o for saved definition and changes[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mSelection attempt recorded; no automatic retry.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m

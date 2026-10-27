@@ -48,11 +48,6 @@ export interface CommandsSessions {
   /** A child, not `main`, is picked. */
   picked(): unknown;
   listTeams(): Promise<TeamListing | undefined>;
-  chooseTyped(
-    name: string,
-    job: string,
-    show: (shown: TeamShown) => void,
-  ): Promise<void>;
   runTyped(name: string, job: string): Promise<TeamShown>;
   stopTyped(name: string, show: (shown: TeamShown) => void): void;
   showTyped(name: string): Promise<TeamShown>;
@@ -223,8 +218,6 @@ export function useCommands(
         return sessions.sendToMain(`/${typed}`, newTeamPrompt(asked.words));
       case 'show':
         return void sessions.showTyped(asked.name).then(show);
-      case 'choose':
-        return void sessions.chooseTyped(asked.name, asked.job, show);
       case 'run':
         return void sessions.runTyped(asked.name, asked.job).then(show);
       case 'stop':

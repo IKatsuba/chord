@@ -18,8 +18,6 @@ import {
   moveHighlight,
   teamItems,
   teamQuery,
-  teamFormQuery,
-  TEAM_FORMS,
   visibleRange,
 } from './commands.ts';
 import { imagesIn, type PastedImage } from './images.ts';
@@ -629,13 +627,9 @@ export function commandMenu(
   const query = commandQuery(draft);
   const named = agentQuery(draft);
   const team = teamQuery(draft);
-  const form = teamFormQuery(draft);
 
   if (
-    (query === undefined &&
-      named === undefined &&
-      team === undefined &&
-      form === undefined) ||
+    (query === undefined && named === undefined && team === undefined) ||
     state.menu.dismissed ||
     state.bash ||
     state.search !== undefined ||
@@ -646,20 +640,18 @@ export function commandMenu(
   }
 
   const items =
-    form !== undefined
-      ? matchCommands(TEAM_FORMS, form)
-      : team !== undefined
-        ? matchAgents(
-            teamItems(
-              team.form,
-              state.teamNames?.teams ?? [],
-              state.teamNames?.runs ?? [],
-            ),
-            team.name,
-          )
-        : query === undefined
-          ? matchAgents(state.agents ?? [], named ?? '')
-          : matchCommands(commandItems(state.transcript.commands), query);
+    team !== undefined
+      ? matchAgents(
+          teamItems(
+            team.form,
+            state.teamNames?.teams ?? [],
+            state.teamNames?.runs ?? [],
+          ),
+          team.name,
+        )
+      : query === undefined
+        ? matchAgents(state.agents ?? [], named ?? '')
+        : matchCommands(commandItems(state.transcript.commands), query);
 
   if (items.length === 0) {
     return undefined;

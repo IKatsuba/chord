@@ -271,11 +271,6 @@ export const SHORTCUTS: readonly Shortcut[] = [
   // 80x24 (CHD-386).
   { key: '/ @ @@', does: 'for commands, files or agents', commands: [] },
   {
-    key: '/team choose',
-    does: 'uses a model turn',
-    commands: [],
-  },
-  {
     key: '↑ ↓',
     does: 'to pick a completion',
     commands: ['menu_up', 'menu_down', 'finder_up', 'finder_down'],

@@ -265,3 +265,97 @@ describe('official resource normalization', () => {
     }
   });
 });
+
+describe('tester: partial and bounded provider facts', () => {
+  test('Codex zero utilization alone is usable evidence with unknown time and reset', () => {
+    const result = normalizeCodex(
+      account,
+      {
+        rateLimits: {
+          primary: { usedPercent: 0, windowDurationMins: null, resetsAt: null },
+          secondary: null,
+        },
+        rateLimitsByLimitId: null,
+      },
+      source,
+    );
+
+    expect(result).toHaveProperty('observation');
+
+    if ('observation' in result) {
+      expect(result.observation.windows[0]).toMatchObject({
+        usedPercent: 0,
+        resetsAt: null,
+        windowSeconds: null,
+        observedAt: null,
+        receivedAt: source.receivedAt,
+        state: 'unknown',
+      });
+    }
+  });
+
+  test('the quota map bound refuses excess buckets instead of silently truncating', () => {
+    const limits = (count: number) => ({
+      rateLimits: bucket,
+      rateLimitsByLimitId: Object.fromEntries(
+        Array.from({ length: count }, (_, index) => [
+          `bucket-${index}`,
+          bucket,
+        ]),
+      ),
+    });
+    const bounded = normalizeCodex(account, limits(64), source);
+
+    expect('observation' in bounded && bounded.observation.windows.length).toBe(
+      128,
+    );
+    expect(normalizeCodex(account, limits(65), source)).toEqual({
+      unavailable: {
+        agent: 'codex',
+        reason:
+          'The quota map exceeds the supported snapshot bound; coverage is incomplete.',
+      },
+    });
+  });
+
+  test('same bucket labels from distinct emitters cannot link observations', () => {
+    const limits = { rateLimits: bucket, rateLimitsByLimitId: null };
+    const first = normalizeCodex(account, limits, source);
+    const second = normalizeCodex(account, limits, {
+      ...source,
+      sourceRef: 'other-source',
+    });
+
+    expect(first).toHaveProperty('observation');
+    expect(second).toHaveProperty('observation');
+
+    if ('observation' in first && 'observation' in second) {
+      const refs = new Set(
+        first.observation.windows.map((entry) => entry.windowRef),
+      );
+
+      expect(
+        second.observation.windows.every((entry) => !refs.has(entry.windowRef)),
+      ).toBe(true);
+    }
+  });
+
+  test('malformed availability never overrides otherwise plausible Claude usage', () => {
+    for (const available of [null, 'true', 1, {}, []]) {
+      expect(
+        normalizeClaude(
+          {
+            rate_limits_available: available,
+            rate_limits: { five_hour: { utilization: 10, resets_at: null } },
+          },
+          source,
+        ),
+      ).toEqual({
+        unavailable: {
+          agent: 'claude',
+          reason: 'Malformed experimental usage snapshot.',
+        },
+      });
+    }
+  });
+});

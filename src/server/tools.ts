@@ -1366,12 +1366,15 @@ const openMember: Register = (server, caller) =>
         prompt: z.string().describe('Its first message from you, in full'),
       },
     },
-    async (input) =>
+    async (input, extra) =>
       serve(
         caller,
         'open_agent',
         input,
-        await caller.window.openMember(caller, input),
+        await caller.window.openMember(
+          { ...caller, signal: extra.signal },
+          input,
+        ),
       ),
   );
 

@@ -46,6 +46,7 @@ async function selectedWindow(
     resources?: ResourceAccess;
     definition?: string;
     open?: typeof openSession;
+    refusedAgent?: string;
   } = {},
 ) {
   const server = serveChord();
@@ -76,7 +77,10 @@ async function selectedWindow(
           : { resources: options.resources }),
         teams: { fixture: options.definition ?? team },
         runtimes: ['fake', 'codex', 'claude'],
-        startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+        startupOf: (agent) =>
+          options.refusedAgent === agent
+            ? { refused: 'fixture configuration detail must stay private' }
+            : { agentCommand: fakeAgentCommand() },
         ...(options.policy === undefined
           ? {}
           : { selectionPolicy: options.policy }),
@@ -380,6 +384,9 @@ describe('selected frozen team startup', () => {
         );
         expect(answer.receipt.roles[0]?.state).toBe('refused');
         expect(answer.error).toContain('before its first job');
+        expect(answer.receipt.roles[0]?.note).toBe(
+          'lead.model: the runtime did not confirm the requested model fake-small.',
+        );
         expect(prompts).toEqual([]);
         expect((await main.window.teams(main)).runs).toEqual([]);
 
@@ -392,7 +399,10 @@ describe('selected frozen team startup', () => {
         await until('refusal kept in parent record', async () =>
           (await readPast(parent.path)).some(
             (entry) =>
-              entry.type === 'served' && entry.call.asked === answer.id,
+              entry.type === 'served' &&
+              recordedSelection(entry.call)?.runId === answer.id &&
+              recordedSelection(entry.call)?.roles[0]?.note ===
+                answer.receipt?.roles[0]?.note,
           ),
         );
       },
@@ -499,6 +509,9 @@ describe('selected frozen team startup', () => {
               answer.receipt !== undefined,
           );
           expect(answer.receipt.roles[0]?.state).toBe('refused');
+          expect(answer.receipt.roles[0]?.note).toContain(
+            'Cancelled before its first job',
+          );
           expect(answer.error).toContain('before its first job');
           expect(
             prompts.some((prompt) =>
@@ -510,6 +523,24 @@ describe('selected frozen team startup', () => {
               (record) => record.sessionId === original,
             ),
           );
+          await until('original persisted cancellation reason', async () => {
+            const parent = (await readRecords(join(window.dir, 'state'))).find(
+              (record) => record.sessionId === original,
+            );
+
+            if (parent === undefined) {
+              return false;
+            }
+
+            return (await readPast(parent.path)).some(
+              (entry) =>
+                entry.type === 'served' &&
+                recordedSelection(entry.call)?.runId === answer.id &&
+                recordedSelection(entry.call)?.roles[0]?.note?.includes(
+                  'Cancelled before its first job',
+                ),
+            );
+          });
         },
         {
           open: async (args) => {
@@ -672,3 +703,235 @@ describe('selected frozen team startup', () => {
     );
   });
 });
+
+test('known configured member refusal rejects the whole selected composition before allocation', () =>
+  selectedWindow(
+    async (window, main, _callers, prompts) => {
+      const answer = await main.window.runTeam(main, {
+        team: 'fixture',
+        job: 'Never start.',
+        selection,
+      });
+
+      expect(answer).toEqual({
+        error:
+          'reviewer.agent: The selected runtime configuration is unavailable. No run started.',
+      });
+      expect(prompts).toEqual([]);
+      expect(window.pids).toHaveLength(1);
+      expect((await main.window.teams(main)).runs).toEqual([]);
+    },
+    {
+      definition: team.replace(
+        'role: Review only\n    agent: fake',
+        'role: Review only\n    agent: claude',
+      ),
+      refusedAgent: 'claude',
+    },
+  ));
+
+async function leadClient(server: ChordServer, caller: Caller) {
+  const client = new Client({
+    name: 'selected-member-fixture',
+    version: '0.0.0',
+  });
+  const transport = new StreamableHTTPClientTransport(new URL(server.url), {
+    requestInit: {
+      headers: { Authorization: `Bearer ${server.admit(caller).token}` },
+    },
+  });
+
+  await client.connect(transport as Parameters<Client['connect']>[0]);
+
+  return client;
+}
+
+for (const action of ['cancel', 'duplicate'] as const) {
+  test(`real MCP selected member ${action} preserves admitted work and truthful receipt`, async () => {
+    const firstGate = Promise.withResolvers<void>();
+    const secondGate = Promise.withResolvers<void>();
+    let policies = 0;
+    let requestSignal: AbortSignal | undefined;
+    const abort = new AbortController();
+
+    try {
+      await selectedWindow(
+        async (window, main, callers, prompts, server) => {
+          const run = success(
+            await main.window.runTeam(main, {
+              team: 'fixture',
+              job: 'selectedidle',
+              selection,
+            }),
+          );
+          const lead = callers.find((caller) => caller.agent === run.id);
+
+          assert(lead !== undefined);
+
+          const original = lead.window.openMember;
+
+          lead.window.openMember = (caller, args) => {
+            requestSignal = caller.signal;
+
+            return original(caller, args);
+          };
+
+          const client = await leadClient(server, lead);
+
+          try {
+            const first = client
+              .callTool(
+                {
+                  name: 'open_agent',
+                  arguments: {
+                    member: 'reviewer',
+                    prompt: 'First member job.',
+                  },
+                },
+                undefined,
+                { signal: abort.signal },
+              )
+              .then(
+                (result) => result,
+                () => undefined,
+              );
+
+            await until('first member policy held', () => policies === 2);
+
+            if (action === 'cancel') {
+              abort.abort();
+              await until(
+                'supported SDK request cancellation observed',
+                () => requestSignal?.aborted === true,
+              );
+              firstGate.resolve();
+              await first;
+              await until('cancelled role recorded', async () => {
+                const records = await readRecords(join(window.dir, 'state'));
+
+                for (const record of records) {
+                  for (const entry of await readPast(record.path)) {
+                    const receipt =
+                      entry.type === 'served'
+                        ? recordedSelection(entry.call)
+                        : undefined;
+
+                    if (
+                      receipt?.runId === run.id &&
+                      receipt.roles[1]?.state === 'refused'
+                    ) {
+                      return true;
+                    }
+                  }
+                }
+
+                return false;
+              });
+
+              expect(
+                prompts.some((prompt) => prompt.includes('First member job.')),
+              ).toBe(false);
+              expect(window.pids).toHaveLength(2);
+              expect((await main.window.teams(main)).runs).toContainEqual({
+                team: 'fixture',
+                name: 'fixture',
+                id: run.id,
+              });
+            } else {
+              const second = client.callTool({
+                name: 'open_agent',
+                arguments: {
+                  member: 'reviewer',
+                  prompt: 'Duplicate member job.',
+                },
+              });
+
+              await until('second member policy held', () => policies === 3);
+              firstGate.resolve();
+              expect((await first)?.isError).not.toBe(true);
+              await until('first job delivered', () =>
+                prompts.some((prompt) => prompt.includes('First member job.')),
+              );
+              secondGate.resolve();
+
+              const result = await second;
+
+              expect(result.isError).toBe(true);
+              expect(JSON.stringify(result.content)).toContain(
+                'reviewer is open',
+              );
+              await until(
+                'duplicate response and confirmed role persisted in lead record',
+                async () => {
+                  const record = (
+                    await readRecords(join(window.dir, 'state'))
+                  ).find(
+                    (record) =>
+                      record.parent !== undefined && record.name === run.name,
+                  );
+
+                  if (record === undefined) {
+                    return false;
+                  }
+
+                  const past = await readPast(record.path);
+                  const refusedDuplicate = past.some(
+                    (entry) =>
+                      entry.type === 'served' &&
+                      entry.call.tool === 'open_agent' &&
+                      entry.call.error?.includes('reviewer is open'),
+                  );
+                  const receipts = past.flatMap((entry) =>
+                    entry.type === 'served' &&
+                    recordedSelection(entry.call)?.runId === run.id
+                      ? [recordedSelection(entry.call)!]
+                      : [],
+                  );
+
+                  return (
+                    refusedDuplicate &&
+                    receipts.at(-1)?.roles[1]?.state === 'confirmed'
+                  );
+                },
+              );
+
+              expect(
+                prompts.filter((prompt) =>
+                  prompt.includes('First member job.'),
+                ),
+              ).toHaveLength(1);
+              expect(
+                prompts.some((prompt) =>
+                  prompt.includes('Duplicate member job.'),
+                ),
+              ).toBe(false);
+              expect(window.pids).toHaveLength(3);
+            }
+          } finally {
+            lead.window.openMember = original;
+
+            await client.close();
+          }
+        },
+        {
+          policy: async () => {
+            const call = ++policies;
+
+            if (call === 2) {
+              await firstGate.promise;
+            }
+
+            if (call === 3) {
+              await secondGate.promise;
+            }
+
+            return { policy: {} };
+          },
+        },
+      );
+    } finally {
+      firstGate.resolve();
+      secondGate.resolve();
+    }
+  });
+}

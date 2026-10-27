@@ -1017,7 +1017,15 @@ export function useSessions(
 
     const effort = effortStart(args, () => conversationAt(childKey));
     const validation = Promise.withResolvers<string | undefined>();
+    let primaryRefusal: string | undefined;
     const refuse = (reason: string) => {
+      // Closing is a consequence, not a replacement for the actionable cause.
+      if (primaryRefusal !== undefined) {
+        return;
+      }
+
+      primaryRefusal = reason;
+
       opening.refused?.(reason);
       validation.resolve(reason);
     };
@@ -1058,7 +1066,9 @@ export function useSessions(
             if (event.type === 'closing' || event.type === 'disconnected') {
               if (!opening.launch?.committed) {
                 refuse(
-                  'Startup ended before the first job; the attempted agent is closing.',
+                  event.type === 'closing' || opening.launch?.valid() === false
+                    ? 'Cancelled before its first job; the attempted agent is closing.'
+                    : 'Startup ended before the first job; the attempted agent is closing.',
                 );
               }
 
@@ -1308,7 +1318,14 @@ export function useSessions(
   const selectedCapabilities = async (
     agent: string,
     key: number,
-  ): Promise<SelectionCapabilities | undefined> => {
+  ): Promise<
+    SelectionCapabilities | { readonly error: string } | undefined
+  > => {
+    // A configured refusal is known before probing; missing capability evidence is different.
+    if (place.startupOf(agent)?.refused !== undefined) {
+      return { error: 'The selected runtime configuration is unavailable.' };
+    }
+
     const offer = await view.offer(agent, false, key);
 
     if (offer === undefined || 'error' in offer) {
@@ -1427,6 +1444,19 @@ export function useSessions(
       ...preliminary.frozen.team.members.map((member) => member.agent),
     ])) {
       const known = await selectedCapabilities(agent, key);
+
+      if (known !== undefined && 'error' in known) {
+        const roles = [
+          ...(preliminary.frozen.team.lead.agent === agent ? ['lead'] : []),
+          ...preliminary.frozen.team.members
+            .filter((member) => member.agent === agent)
+            .map((member) => member.name),
+        ];
+
+        return {
+          error: `${roles.join(', ')}.agent: ${known.error} No run started.`,
+        };
+      }
 
       if (known !== undefined) {
         capabilities.set(agent, known);
@@ -1728,9 +1758,18 @@ export function useSessions(
     };
     // Asked again after the wait: two calls for one member may both have
     // passed the first look, and the lead may have closed meanwhile.
-    const refused =
-      (await startRefusal(key, lead.conversation, args, 'agent', member)) ??
-      occupied();
+    const refused = await startRefusal(
+      key,
+      lead.conversation,
+      args,
+      'agent',
+      member,
+    );
+    const raced = occupied();
+
+    if (raced !== undefined) {
+      return { error: raced };
+    }
 
     if (refused !== undefined) {
       if (run.selected !== undefined) {
@@ -1751,18 +1790,26 @@ export function useSessions(
       const invalid =
         'error' in policy
           ? policy.error
-          : validateSelectedRole(
-              member,
-              defined,
-              policy.policy,
-              runtimeNames,
-              capabilities,
-              selected.frozen.selection.members?.[member],
-              'member',
-            );
+          : capabilities !== undefined && 'error' in capabilities
+            ? `${member}.agent: ${capabilities.error}`
+            : validateSelectedRole(
+                member,
+                defined,
+                policy.policy,
+                runtimeNames,
+                capabilities,
+                selected.frozen.selection.members?.[member],
+                'member',
+              );
+      // A competing request's admission is not this role's startup failure.
+      const raced = occupied();
+
+      if (raced !== undefined) {
+        return { error: raced };
+      }
+
       const unavailable =
         invalid ??
-        occupied() ??
         (!launch.valid()
           ? 'The member request was cancelled before admission.'
           : undefined);

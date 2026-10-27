@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [2m[39m5h: 12.345% used · reset 22:13 UTC · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived 13s before read · provider freshness unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Provider observation time unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m7d: usage unknown · reset unknown · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived time unknown · provider freshness unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Partial observation; weekly utilization/reset unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Scripted fixture; account and resource identity are unverified.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActive work: 5 reported · external work may be missing[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(fixture 3)[2m · codex · fake-small · medium[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mselectedidle[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSelection: agent-selected · this run[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReason: Preserve all instructions and exact permission requirements; provider freshness is unknown.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Resource identity is unverified; observations remain separate.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Resource coverage is incomplete; external work may be missing.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Provider freshness is unknown for some resource windows.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mBilling: unknown · advisory[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mPlanned for this run:[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mlead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActual: confirmed · session runtime codex · model fake-small · effort medium · mode plan[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mreviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActual: not opened · configuration unconfirmed[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRead 2026-10-27 21:13:16.237 UTC · advisory[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRun: 2dfcf2f4 · saved definition: fixture (project)[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mlead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mChanges from saved: model, mode[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mreviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mdefault (unconfirmed)[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mChanges from saved: model, mode[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mSelection attempt recorded; no automatic retry.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m
+  [39m  [1mmain     [0;2m  codex · Fake Large with a 1M context window · medium         ◦ idle 1s[0m[38;2;255;255;255m
+  [39m  fixture  [2m  team · codex · Fake Large with a 1M context window · medium  ◦ idle 2s  ✓ new reply[0m[38;2;255;255;255m
+  [39m  fixture 2[2m  team · codex · Fake Large with a 1M context window · medium  ◦ idle 2s  ✓ new reply[0m[38;2;255;255;255m
+  [39m  fixture 3[2m  team · codex · Fake Small · medium                           ◦ idle 1s  ✓ new reply[0m[38;2;255;255;255m

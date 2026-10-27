@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-normal
+ █▀     ? for shortcuts · /help
+
+ › /team choose fixture job
+   ⎿  /team has no choose; it takes list, new, show, run or stop
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

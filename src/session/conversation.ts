@@ -251,6 +251,8 @@ export interface Recording {
   heard(event: ConversationEvent): void;
   /** Settles once what was heard so far is kept. */
   flushed(): Promise<void>;
+  /** A writer bound to the actual record open now, including after clear. */
+  captureServed?(): ((turnId: string, call: ChordCall) => void) | undefined;
 }
 
 /** What each session the conversation opens is put on before it is shown. */
@@ -412,6 +414,7 @@ export class Conversation {
   /** What the refusal of the starting effort said, for the tool's answer. */
   #effortRefused: string | undefined;
   #opening: Promise<Session | undefined> | undefined;
+  #launches = new AbortController();
   /** Gives up on the session `#opening` starts, and on those `clear` let go. */
   readonly #stops = new Set<AbortController>();
   #session: Session | undefined;
@@ -694,6 +697,16 @@ export class Conversation {
     return this.#session;
   }
 
+  /** Actual current work only; historical and cancelled steer IDs do not qualify. */
+  get activeTurnId(): string | undefined {
+    return this.#turn?.id ?? this.#cycle;
+  }
+
+  /** Capture before awaiting a launch; a later turn gets its own authority. */
+  get launchSignal(): AbortSignal {
+    return this.#launches.signal;
+  }
+
   /**
    * Why the session is not on the starting effort, as the transcript says
    * it: `Could not start on max effort, …`; none when it took it or none was
@@ -776,6 +789,10 @@ export class Conversation {
     if (!opening || this.#closing) {
       return Promise.resolve();
     }
+
+    this.#launches.abort();
+
+    this.#launches = new AbortController();
 
     const old = this.#session;
     const turn = this.#turn;
@@ -1994,6 +2011,30 @@ export class Conversation {
     this.#recording?.heard({ type: 'served', turnId: this.#stamp(), call });
   }
 
+  /** A late receipt belongs to the session that admitted its launch. */
+  captureServed(): ((call: ChordCall) => void) | undefined {
+    const session = this.#session;
+
+    if (session === undefined) {
+      return undefined;
+    }
+
+    const write = this.#recording?.captureServed?.();
+    const turnId = this.#stamp();
+
+    if (write === undefined) {
+      return undefined;
+    }
+
+    return (call) => {
+      if (this.#current(session)) {
+        this.served(call);
+      } else {
+        write(turnId, call);
+      }
+    };
+  }
+
   /**
    * Where a call served to task `id` after it ended goes: its block, drawn
    * while the session the task ran in is still the one here.
@@ -2211,6 +2252,10 @@ export class Conversation {
     if (this.#closing) {
       return;
     }
+
+    this.#launches.abort();
+
+    this.#launches = new AbortController();
 
     // Before the running turn's cancel, so its end does not start the next.
     // Messages stay, and go once the turn has ended, as after any turn.
@@ -2556,6 +2601,8 @@ export class Conversation {
       return this.#closing;
     }
 
+    this.#launches.abort();
+
     this.#emit({ type: 'closing' });
     this.#settling?.abort();
     this.#rouse();
@@ -2731,6 +2778,8 @@ export class Conversation {
     // a `/clear` is not news.
     void session.exited.then(() => {
       if (this.#current(session)) {
+        this.#launches.abort();
+
         // Nobody is left to hear them.
         void this.#stopMonitors();
         this.#emit({

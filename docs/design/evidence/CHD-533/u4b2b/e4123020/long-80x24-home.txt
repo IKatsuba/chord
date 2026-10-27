@@ -1,0 +1,24 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-long
+ █▀     ? for shortcuts · /help
+
+ › selectedteam
+
+ ⏺ Resources
+   ⎿  Preferences: balanced
+      Read: 19:15:00 UTC · advisory snapshot
+      codex · subscription · identity unverified
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 20:15 UTC · models unknown
+      Received 12s before read · provider freshness unknown
+      Warning: Provider observation time unavailable.
+      Warning: Scripted partial coverage warning: independent provider
+ ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 0s
+    fixture  team · codex  ◦ idle 0s  ✓ new reply

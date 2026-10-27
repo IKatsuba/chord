@@ -585,6 +585,7 @@ test('quoted team and member names are refused, including saved list_teams probl
     expect(
       teamsAnswer({ found: await findTeams(where, RUNTIMES), runs: [] }),
     ).toStrictEqual({
+      runs: [],
       teams: [
         {
           name: 'bugfix',
@@ -616,6 +617,7 @@ test('control characters in team and member names report list_teams problems (CH
       expect(
         teamsAnswer({ found: await findTeams(where, RUNTIMES), runs: [] }),
       ).toStrictEqual({
+        runs: [],
         teams: [
           {
             name: 'bugfix',

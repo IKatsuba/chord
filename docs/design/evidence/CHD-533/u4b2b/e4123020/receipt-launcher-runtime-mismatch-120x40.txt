@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-receipt
+ █▀     ? for shortcuts · /help
+
+ › /resume
+   ⎿  No earlier codex session to resume, here or in any other directory.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

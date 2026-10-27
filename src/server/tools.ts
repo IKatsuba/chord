@@ -12,6 +12,17 @@
  * is worked out here from what the window reads of itself, so it is tested
  * without a server.
  */
+import { performance } from 'node:perf_hooks';
+import { foldBudgetCache } from '../platform/budget_cache.ts';
+import type { BudgetSnapshot } from '../session/budgets.ts';
+import {
+  filterResourceFacts,
+  ResourceAgents,
+} from '../session/resource_filter.ts';
+import {
+  RunSelection,
+  type SelectionReceipt,
+} from '../session/team_selection.ts';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from '@zod/zod';
 import { formatElapsed } from '../session/elapsed.ts';
@@ -53,6 +64,14 @@ export type Role = 'person' | 'child';
 
 /** What a session's token says of it. */
 export interface Caller {
+  /** One admission generation; old tokens cannot borrow a replacement's state. */
+  readonly launch?: {
+    readonly valid: () => boolean;
+    readonly signal: () => AbortSignal;
+    decisionRead?: BudgetSnapshot;
+  };
+  /** The SDK cancels this request on cancellation or transport close. */
+  readonly signal?: AbortSignal;
   readonly role: Role;
   /** The main session's key; a child's parent's, which is the main session's. */
   readonly key: number;
@@ -128,6 +147,7 @@ export interface MemberArgs {
 export interface RunTeamArgs {
   readonly team: string;
   readonly job: string;
+  readonly selection?: RunSelection | undefined;
 }
 
 /**
@@ -142,8 +162,13 @@ export type RunTeamAnswer =
       readonly agent: string;
       readonly model?: string;
       readonly mode?: string;
+      readonly receipt?: SelectionReceipt;
     } & EffortStarted)
-  | { readonly error: string };
+  | {
+      readonly error: string;
+      readonly id?: string;
+      readonly receipt?: SelectionReceipt;
+    };
 
 /**
  * How a message went: straight to its recipient, queued, or refused; `to`
@@ -214,6 +239,12 @@ export type RuntimeOffer =
 
 /** What the tools read of the window. */
 export interface WindowView {
+  /** Immediate advisory facts; omission disables collection for an injected window. */
+  budgets?(
+    caller: Caller,
+    agents?: readonly string[],
+    admittedAt?: number,
+  ): BudgetSnapshot;
   /** The sessions open in the window, in the strip's order. */
   sessions(): readonly OpenSessionView[];
   /** Every runtime chord can start, by the name a session is opened with. */
@@ -297,19 +328,26 @@ export interface WindowView {
 export interface TeamsFound {
   readonly found: readonly FoundTeam[];
   /** Each open run's lead, by its name, with its team's. */
-  readonly runs: readonly { readonly team: string; readonly name: string }[];
+  readonly runs: readonly {
+    readonly team: string;
+    readonly name: string;
+    readonly id?: string;
+  }[];
 }
 
 /** `list_teams`' answer: each team, or why its file cannot be run. */
 export interface TeamsAnswer {
+  readonly runs?: TeamsFound['runs'];
   readonly teams: readonly (
     | {
         readonly name: string;
         readonly description: string;
+        readonly body: string;
         readonly lead: TeamAgentRow;
         readonly members: readonly (TeamAgentRow & {
           readonly name: string;
           readonly role: string;
+          readonly instructions: string;
         })[];
         /** Its runs open in this session, by their leads' names. */
         readonly runs: readonly string[];
@@ -321,27 +359,34 @@ export interface TeamsAnswer {
 interface TeamAgentRow {
   readonly agent: string;
   readonly model?: string;
+  readonly effort?: string;
   readonly mode?: string;
+  readonly instructions?: string;
 }
 
 function agentRow({
   agent,
   model,
+  effort,
   mode,
-}: {
-  agent: string;
-  model?: string | undefined;
-  mode?: string | undefined;
-}): TeamAgentRow {
+  instructions,
+}: Team['lead']): TeamAgentRow {
   return {
     agent,
     ...(model === undefined ? {} : { model }),
+    ...(effort === undefined ? {} : { effort }),
     ...(mode === undefined ? {} : { mode }),
+    ...(instructions === undefined ? {} : { instructions }),
   };
 }
 
 export function teamsAnswer({ found, runs }: TeamsFound): TeamsAnswer {
   return {
+    runs: runs.map((run) => ({
+      team: run.team,
+      name: run.name,
+      ...(run.id === undefined ? {} : { id: run.id }),
+    })),
     teams: found.map((one) =>
       'problem' in one
         ? {
@@ -351,11 +396,13 @@ export function teamsAnswer({ found, runs }: TeamsFound): TeamsAnswer {
         : {
             name: one.name,
             description: one.team.description,
+            body: one.team.body,
             lead: agentRow(one.team.lead),
             members: one.team.members.map((member) => ({
               name: member.name,
-              role: member.role,
               ...agentRow(member),
+              role: member.role,
+              instructions: member.instructions,
             })),
             runs: runs
               .filter((run) => run.team === one.name)
@@ -885,6 +932,59 @@ const listAgents: Register = (server, caller) =>
       ),
   );
 
+const getBudgets: Register = (server, caller) =>
+  server.registerTool(
+    'get_budgets',
+    {
+      description:
+        'Read cached advisory resource facts immediately, without waiting for providers. ' +
+        'Omit agents for existing current facts with no additional readers; [] returns no runtime facts. ' +
+        'An explicit agents filter uses runtime IDs from list_agents and retains only those configured readers ' +
+        'for at most 30 seconds from admission. Pending or missing capacity is unknown: retry with the same ' +
+        'filter to read completed facts; repeats do not extend the window, restart readers or redate observations. ' +
+        'Read team/person instructions first and request facts when resources matter to the job. ' +
+        'Consider each independent window, reset, unknown freshness and active work; never combine subscription ' +
+        'percentages with API dollars. Preferences are advisory and selected-run hard allowlists remain binding. ' +
+        'No scheduling, quota guarantee, auth change or payment-source fallback.',
+      inputSchema: {
+        agents: ResourceAgents.optional().describe(
+          'Optional runtime IDs from list_agents: explicit filter scopes facts and bounded background relevance; omission preserves current facts, [] requests none.',
+        ),
+      },
+    },
+    (input, extra) => {
+      const admittedAt = performance.now();
+      const request = { ...caller, signal: extra.signal };
+      let facts: BudgetSnapshot;
+
+      try {
+        facts = filterResourceFacts(
+          caller.window.budgets?.(request, input.agents, admittedAt) ??
+            foldBudgetCache(
+              [],
+              {},
+              { wall: Date.now(), monotonic: admittedAt },
+            ),
+          input.agents,
+        );
+      } catch {
+        return serve(request, 'get_budgets', input, {
+          error: 'Resource facts could not be read.',
+        });
+      }
+
+      const response = serve(request, 'get_budgets', input, facts, (value) =>
+        JSON.stringify(value, null, 2),
+      );
+
+      if (caller.launch?.valid()) {
+        caller.launch.decisionRead = structuredClone(facts);
+      }
+
+      return response;
+    },
+  );
+
 const listSessions: Register = (server, caller) =>
   server.registerTool(
     'list_sessions',
@@ -1159,8 +1259,11 @@ const listTeams: Register = (server, caller) =>
     {
       description:
         'The teams saved for this project and every project: ' +
-        "each one's description, lead, members with their roles, and the " +
-        'leads of its runs open in this session. Read it before run_team.',
+        "each one's description, shared body, lead/member instructions, " +
+        'configuration including effort, roles, and open runs. Read these ' +
+        'stored instructions before run_team. When the instructions or job ' +
+        'make resources relevant, read get_budgets and list_agents before ' +
+        'choosing per-run settings. Otherwise selection is not required.',
     },
     async () =>
       serve(
@@ -1183,21 +1286,70 @@ const runTeam: Register = (server, caller) =>
         "answer is the lead's name at once, or, where the team gives the " +
         'lead an effort, once it has started on it or been refused it; its ' +
         'reports come to you later as messages, send_message reaches it, and close_agent closes it ' +
-        'with its members.',
-      inputSchema: {
-        team: z.string().describe('The team, as list_teams names it'),
-        job: z
-          .string()
-          .describe('The job, in full: what to do, where, and when to report'),
-      },
+        'with its members. Read list_teams instructions first. Omit selection ' +
+        'to run saved composition. Optional selection changes this run only, ' +
+        'preserving every saved role and instruction; provide a reason that ' +
+        'preserves their requirements and explains uncertainty. Read resource ' +
+        'facts when instructions or the job call for them. There is no ' +
+        'automatic retry, substitution or saved-team rewrite.',
+      inputSchema: z
+        .looseObject({
+          team: z.string().describe('The team, as list_teams names it'),
+          job: z
+            .string()
+            .describe(
+              'The job, in full: what to do, where, and when to report',
+            ),
+          selection: RunSelection.optional(),
+        })
+        .superRefine((input, context) => {
+          if (input.selection !== undefined) {
+            const strict = z
+              .strictObject({
+                team: z.string(),
+                job: z.string(),
+                selection: RunSelection,
+              })
+              .safeParse(input);
+
+            if (!strict.success) {
+              for (const issue of strict.error.issues) {
+                context.addIssue({ ...issue });
+              }
+            }
+          }
+        }),
     },
-    async (input) =>
-      serve(
-        caller,
-        'run_team',
-        input,
-        await caller.window.runTeam(caller, input),
-      ),
+    async (input, extra) => {
+      const request = { ...caller, signal: extra.signal };
+      // Records keep our declared domain fields; SDK input stays untouched.
+      const recordedInput: RunTeamArgs = {
+        team: input.team,
+        job: input.job,
+        ...(input.selection === undefined
+          ? {}
+          : { selection: input.selection }),
+      };
+      const result = await caller.window.runTeam(request, input);
+
+      if (result.receipt !== undefined) {
+        caller.window.served(request, {
+          tool: 'run_team',
+          input: recordedInput,
+          asked: result.receipt.runId,
+          answer: result,
+          ...('error' in result ? { error: result.error } : {}),
+        });
+
+        return {
+          ...answer(result),
+          structuredContent: { ...result },
+          ...('error' in result ? { isError: true } : {}),
+        };
+      }
+
+      return serve(request, 'run_team', recordedInput, result);
+    },
   );
 
 const proposeTeamTool: Register = (server, caller) =>
@@ -1249,12 +1401,15 @@ const openMember: Register = (server, caller) =>
         prompt: z.string().describe('Its first message from you, in full'),
       },
     },
-    async (input) =>
+    async (input, extra) =>
       serve(
         caller,
         'open_agent',
         input,
-        await caller.window.openMember(caller, input),
+        await caller.window.openMember(
+          { ...caller, signal: extra.signal },
+          input,
+        ),
       ),
   );
 
@@ -1303,6 +1458,7 @@ function toolsOf(caller: Caller): readonly Register[] {
     case 'person':
       return [
         listAgents,
+        getBudgets,
         listSessions,
         listTeams,
         spawnTask,
@@ -1321,6 +1477,7 @@ function toolsOf(caller: Caller): readonly Register[] {
         : caller.team === 'lead'
           ? [
               listAgents,
+              getBudgets,
               spawnTask,
               openMember,
               tellTeam,
@@ -1328,8 +1485,8 @@ function toolsOf(caller: Caller): readonly Register[] {
               ...MONITORS,
             ]
           : caller.team === 'member'
-            ? [listAgents, spawnTask, tellTeam, ...MONITORS]
-            : [listAgents, spawnTask, messageParent, ...MONITORS];
+            ? [listAgents, getBudgets, spawnTask, tellTeam, ...MONITORS]
+            : [listAgents, getBudgets, spawnTask, messageParent, ...MONITORS];
   }
 }
 
@@ -1348,6 +1505,7 @@ export function toolNames(role: Role): readonly ChordTool[] {
   return role === 'person'
     ? [
         'list_agents',
+        'get_budgets',
         'list_sessions',
         'list_teams',
         'spawn_task',
@@ -1358,7 +1516,13 @@ export function toolNames(role: Role): readonly ChordTool[] {
         'close_agent',
         ...MONITOR_TOOLS,
       ]
-    : ['list_agents', 'spawn_task', 'send_message', ...MONITOR_TOOLS];
+    : [
+        'list_agents',
+        'get_budgets',
+        'spawn_task',
+        'send_message',
+        ...MONITOR_TOOLS,
+      ];
 }
 
 export function registerTools(server: McpServer, caller: Caller): void {

@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Resource identity is unverified; observations remain separate.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Resource coverage is incomplete; external work may be missing.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Provider freshness is unknown for some resource windows.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mBilling: unknown · advisory[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mPlanned for this run:[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mlead (lead): claude · model fake-small · effort high · mode plan[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActual: confirmed · session runtime claude · model fake-small · effort[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mmedium · mode plan[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mlead: The requested effort was not confirmed; the runtime effort[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mremains advisory.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mreviewer: claude · model fake-small · effort agent default[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m(unconfirmed) · mode plan[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActual: not opened · configuration unconfirmed[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRead 2026-10-27 19:14:54.605 UTC · advisory[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mctrl+o for saved definition and changes[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mSelection attempt recorded; no automatic retry.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m
+  [39m  [1mmain   [0;2m  codex          ◦ idle 0s[0m[38;2;255;255;255m
+  [39m  fixture[2m  team · claude  ◦ idle 0s  ✓ new reply[0m[38;2;255;255;255m

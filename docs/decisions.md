@@ -7295,3 +7295,110 @@ nor tell which word a press landed on.
   OpenTUI for an opaque default background. **The owner kept the `─`:**
   `┌─ sh ─[copy]─[run]─┐`, a `─` between the words and before the corner,
   which also makes each least width two cells narrower.
+
+## 2026-10-27 — CHD-533: official resource collectors and per-run team selection (owner, Q251/Q252)
+
+The owner approved option 1 of Q251 and Q252 for package `6461ce56` in
+[the CHD-533 design](design/CHD-533.md). Chord collects advisory resource
+facts; the launching agent chooses a supported composition for one run.
+Saved teams and running work stay unchanged. Q250 remains retired; no
+payment-source or paid-fallback framework is authorized. API money
+accounting is a separate advisory follow-up, not a subscription-routing gate.
+
+- **Libraries tried and selected.** Official Codex app-server and Claude SDK
+  no-prompt trials returned structured usage; unchanged-library host fake
+  trials tested compile and lifecycle behavior. Select exact
+  `codex-app-server-client@0.1.5` public `StdioTransport`/`AppServerClient`
+  exports on existing `spawnGroup`, and official
+  `@anthropic-ai/claude-agent-sdk@0.3.311`'s experimental usage getter in a
+  same-binary isolated worker. Retain existing ACP/MCP SDKs, Zod and OpenTUI.
+  CodexBar's reusable API loses quota-map buckets; cliMeter and the VS Code
+  extension have no standalone fitting collector; Roost requires excluded
+  credential access. Generic JSON-RPC clients do not fit Codex's framing
+  unchanged. The managed Codex close trial failed descendant cleanup;
+  the public-stream path passed host fake characterization without a patch.
+- **Exact deployment and accepted risks.** Use separately installed,
+  unmodified native Codex 0.163.0 and Claude Code 2.1.311 with the current
+  user's existing authentication. No provider install, extraction, new login
+  or direct credential access. Q251 accepts experimental compatibility and
+  routine managed startup/auth/cache/hooks/telemetry effects. Q252 accepts
+  Chord-owned stdin/signals/bounded waits and isolated-worker group
+  supervision, plus uncapped incomplete-frame buffering. Deadlines do not
+  cap memory. Host fixtures establish neither full Chord release fit nor
+  cross-target lifecycle, freshness, identity or zero billing.
+- **Terms evidence.** The
+  [official legal guidance](https://code.claude.com/docs/en/legal-and-compliance)
+  expressly allows an end user's own subscription authentication through an
+  unmodified Claude Code binary and restricts credential intermediation.
+  [SDK plan guidance](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan),
+  updated October 7, 2026, retains subscription limits for plan-authenticated
+  SDK use. This is no blanket SDK subscription prohibition, telemetry-specific
+  provider guarantee or legal certainty.
+- **Alternatives and boundary.** Upstream lifecycle/frame bounds, another
+  maintained fitting client, or reduced passive/legacy coverage were the
+  alternatives; reduced coverage leaves the automatic telemetry goal
+  incomplete. Approval covers only the specified public APIs and ownership.
+  No parser/input rewrite, tag insertion, SDK patch, custom lifecycle repair,
+  scheduler, migration or saved-team rewrite is authorized. A new library
+  mismatch returns to the owner with options; these trials and approvals
+  are not consent to future workarounds.
+
+## 2026-10-27 — CHD-533: the official Codex npm launcher is supported (owner)
+
+The owner approves the installed, unmodified official PATH Codex npm launcher
+or native binary for the resource collector. The successful live Codex trial
+invoked the PATH npm launcher, not a directly verified native binary; the
+previous native-only deployment description was incorrect. Existing Node is
+required only for official npm launcher installs. Claude remains an external
+native executable. The prior live trial is sufficient; no repeat is required.
+
+This corrects the earlier CHD-533 deployment decision without authorizing a
+private vendor-layout resolver, launcher patch, installation or authentication
+change. Keep the public-stream API, process-group ownership, experimental
+Claude API and uncapped-frame-buffer risk as approved. Deadlines do not cap
+memory. Existing trial, freshness, identity, billing and cross-target evidence
+limits remain unchanged.
+
+## 2026-10-27 — CHD-533: MCP-first selection; remove the unrequested choose surface (owner)
+
+The owner removes `/team choose` completely. It was unnecessary for the
+MCP-first goal: the launching agent reads existing team instructions, reads
+resource facts when relevant, and calls normal `run_team` with supported
+per-run overrides. Without such instructions, selection is not required;
+human direct runs and picker Enter keep saved composition with no extra
+main turn. No replacement command, flag, hidden prompt, opt-in or team schema.
+
+The bounded audit found that optional MCP selection already worked, but
+`list_teams` omitted shared body, lead/member instructions and effort, and
+`run_team` help/schema descriptions omitted selection semantics. Expose those
+stored fields additively through the existing tool and describe inheritance
+and runtime switches there, without interpreting or enforcing prose.
+
+Add optional `agents: string[]` to existing `get_budgets`, using existing
+runtime IDs (at most 128, each 1–128 characters). Omission preserves current
+facts; an explicit empty list adds no interest and returns empty runtime-scoped
+facts, never all providers. The launching agent discovers saved
+composition/instructions, extracts runtimes and requests facts. No team-name
+argument, team-keyed lease or team-budget API. Explicit filters return matching
+runtime observations, unavailable entries and active work while preserving
+shared-pool identity, global preferences and coverage truth. Never duplicate
+percentages or guess identity. Unknown/unsupported IDs are advisory unavailable,
+without probing or installation; facts retain account/pool scope.
+
+A unique sorted runtime filter has one temporary caller-generation owner,
+with a 30-second absolute admission deadline. Repeats do not extend, re-retain
+or restart it; replacement releases the prior owner. Expiry, request
+cancellation, actual turn terminal state when available, clear, close,
+disconnect and caller
+replacement release once, preserving independent main/run owners. Without an
+active turn, bounded refresh still works; invent no turn ID. Return cached or
+pending facts without provider wait; later explicit reads may see completed
+facts without redating them. Missing capacity stays advisory unknown. No
+list/discovery fanout, mandatory read, automatic routing, new payment policy
+or redundant team/configuration schema.
+
+The earlier choose specification and U5 captures are superseded. Their
+historical provenance and approved collector trials remain intact; they prove
+no corrected UI behavior. Existing Resources, selected receipts/reinspection,
+receipt-only Resume and historical unlinked receipt layouts remain. PR #145
+remains open and unmerged under the owner's hold.

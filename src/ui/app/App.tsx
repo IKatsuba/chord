@@ -1,3 +1,6 @@
+import { recordedReceipts } from '../teams/recorded_receipts.ts';
+import { RecordedReceipt } from '../teams/RecordedReceipt.tsx';
+import type { TeamSelectionPolicy } from '../../settings.ts';
 import type { BoxRenderable, Renderable } from '@opentui/core';
 import { useTerminalDimensions } from '@opentui/react';
 import process from 'node:process';
@@ -154,6 +157,8 @@ import {
   type Step,
   submitSteps,
 } from './keys.ts';
+import type { ResourceAccess } from '../../session/resource_access.ts';
+import type { TeamSelection } from '../../session/budgets.ts';
 import { type SessionStart, useSessions } from './sessions.ts';
 import {
   answerLink,
@@ -224,6 +229,9 @@ import { Splash } from '../splash/Splash.tsx';
 import { splashShown } from '../splash/splash.ts';
 
 export interface AppProps {
+  resources?: ResourceAccess | undefined;
+  teamSelection?: TeamSelection | undefined;
+  selectionPolicy?: (() => Promise<TeamSelectionPolicy>) | undefined;
   agent: string;
   cwd: string;
   /** Replaces chord's own command for `agent`. */
@@ -373,6 +381,9 @@ const FIRST_SESSION = noAgents().nextKey;
  * and the commands are driven by the hooks beside it.
  */
 export function App({
+  resources,
+  teamSelection,
+  selectionPolicy,
   agent,
   cwd,
   agentCommand,
@@ -530,7 +541,15 @@ export function App({
     {
       agent,
       typedCommand,
-      place: { cwd, startupOf, mcpServers, mcpIgnored },
+      place: {
+        cwd,
+        startupOf,
+        mcpServers,
+        mcpIgnored,
+        ...(teamSelection === undefined ? {} : { teamSelection }),
+        ...(selectionPolicy === undefined ? {} : { selectionPolicy }),
+      },
+      resources,
       stateDir,
       readRecords,
       open,
@@ -1568,6 +1587,14 @@ export function App({
                             </box>
                           );
                         })}
+                      {recordedReceipts(state.transcript).map((call) => (
+                        <RecordedReceipt
+                          key={call.asked}
+                          call={call}
+                          historical={state.resumed !== undefined}
+                          width={columns - TRANSCRIPT_INSET}
+                        />
+                      ))}
                     </box>
                     {/* Takes the rows a short transcript leaves, so that it stays
             on top; it has none to take once the transcript overflows, and

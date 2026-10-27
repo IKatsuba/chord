@@ -628,3 +628,10 @@ test("/team show's running form on a screen too narrow for the name, runtime and
     ['● permission 8s', '← new message'],
   ]);
 });
+
+test('removed choose form is an unknown command', () => {
+  expect(teamCommand('choose bugfix repair it')).toEqual({
+    form: 'refused',
+    problem: '/team has no choose; it takes list, new, show, run or stop',
+  });
+});

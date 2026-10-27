@@ -13,3 +13,17 @@ These rules also cover `src/acp/`.
   `true` overrides a default of none. Keep the held-back names and reasons.
 - The window's sessions are recorded; `-p`'s are not.
 - This layer is below the interface and shared with `-p`: nothing here or in `src/acp/` imports from `src/ui/`.
+- Resource facts keep provider observation time separate from local receipt;
+  unknown identity stays unbound. Cancelled reads publish nothing; retain
+  sanitized cleanup uncertainty even after a later successful read.
+- Runtime-filtered facts require explicit active-work resource refs for pools;
+  never infer account binding from runtime/provider names. Preserve shared
+  pools once and warn on omitted unattributed coverage. Empty filters expose
+  no runtime facts; omitted filters preserve current facts without new readers.
+- Selection allowlists apply only to selected runs, across every effective
+  role. Freeze composition; check current policy and observed startup before
+  each first job. Confirm runtime and requested model/mode; omitted defaults
+  stay unknown until observed. Effort stays soft.
+- Persist actual admitted receipts in existing records, including refused
+  attempts in the caller's record. Never invent provider IDs, ACP events or
+  prompts to make a receipt replay. Historical missing values stay unknown.

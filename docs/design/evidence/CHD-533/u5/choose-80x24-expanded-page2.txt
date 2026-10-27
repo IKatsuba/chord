@@ -1,0 +1,24 @@
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 21:08 UTC · models unknown
+      Received 12s before read · provider freshness unknown
+      Warning: Provider observation time unavailable.
+      7d: usage unknown · reset unknown · models unknown
+      Received time unknown · provider freshness unknown
+      Warning: Partial observation; weekly utilization/reset unavailable.
+      Warning: Scripted fixture; account and resource identity are
+      unverified.
+      Active work: 1 reported · external work may be missing
+
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements;
+      provider freshness is unknown.
+ ── ↓ 22 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 2s
+    fixture  team · codex  ◦ idle 2s  ✓ new reply

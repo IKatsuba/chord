@@ -1,3 +1,7 @@
+import {
+  freezeSelection,
+  selectionReceipt,
+} from '../../src/session/team_selection.ts';
 import { expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
@@ -1192,4 +1196,91 @@ test("a team lead's record names main as its parent and its team, and a member's
   } finally {
     await rm(stateDir, { recursive: true });
   }
+});
+
+test('admitted receipt-only records are discoverable without inventing prompts or activity times', () => {
+  const frozen = freezeSelection(
+    {
+      description: 'Attempt fixture',
+      lead: { agent: 'fake' },
+      members: [],
+      body: 'Keep instructions.',
+    },
+    { reason: 'Preserve instructions; capacity unknown.' },
+    {},
+    ['fake'],
+  );
+
+  assert('frozen' in frozen);
+
+  const receipt = selectionReceipt(
+    'attempt-id',
+    { name: 'fixture', place: 'project' },
+    frozen.frozen,
+  );
+  const served: RecordEntry = {
+    type: 'served',
+    turnId: 'attempt',
+    call: {
+      tool: 'run_team',
+      input: { team: 'fixture', job: 'Never delivered.' },
+      asked: receipt.runId,
+      answer: { id: receipt.runId, receipt },
+      error: 'Cancelled before first job; closing.',
+    },
+  };
+
+  expect(summaryOf('/r.jsonl', lines(HEADER, served))).toMatchObject({
+    sessionId: 'abc',
+    prompt: 'Team attempt: fixture',
+    lastUsedAt: 1,
+  });
+  expect(
+    summaryOf('/r.jsonl', lines(HEADER, { type: 'opened', at: 17 }, served)),
+  ).toMatchObject({ lastUsedAt: 17 });
+  expect(summaryOf('/r.jsonl', lines(HEADER))).toBeUndefined();
+  expect(
+    summaryOf(
+      '/r.jsonl',
+      lines(HEADER, {
+        ...served,
+        call: { ...served.call, asked: 'different-attempt' },
+      }),
+    ),
+  ).toBeUndefined();
+  expect(
+    summaryOf(
+      '/r.jsonl',
+      lines(HEADER, {
+        ...served,
+        call: {
+          ...served.call,
+          answer: { id: receipt.runId, receipt: { schemaVersion: 2 } },
+        },
+      }),
+    ),
+  ).toBeUndefined();
+
+  const titled: RecordEntry = {
+    type: 'update',
+    turnId: 'attempt',
+    update: { sessionUpdate: 'session_info_update', title: 'Actual title' },
+  };
+
+  expect(summaryOf('/r.jsonl', lines(HEADER, served, titled))).toMatchObject({
+    title: 'Actual title',
+    prompt: 'Team attempt: fixture',
+  });
+  expect(
+    summaryOf(
+      '/r.jsonl',
+      lines(HEADER, served, {
+        type: 'prompt',
+        turnId: 'real',
+        prompt: 'Actual prompted work',
+        images: 0,
+        at: 21,
+      }),
+    ),
+  ).toMatchObject({ prompt: 'Actual prompted work', lastUsedAt: 21 });
 });

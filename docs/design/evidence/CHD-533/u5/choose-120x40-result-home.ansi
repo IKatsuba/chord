@@ -1,0 +1,40 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.60.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mcodex · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chord-qa.chd533-selection-choose[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team choose[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mWhich team? /team lists them[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team choose fixture[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39m/team choose fixture takes the job after the name[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team choose missing selectedidle[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mNo team named missing · /team lists them[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team choose fixture selectedidle[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mResources[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mPreferences: balanced[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRead: 20:08:37 UTC · advisory snapshot[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mcodex · billing unknown · identity unverified[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSource: fixture 1 · coverage unknown · external activity unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m5h: 12.345% used · reset 21:08 UTC · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived 14s before read · provider freshness unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Provider observation time unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m7d: usage unknown · reset unknown · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived time unknown · provider freshness unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Partial observation; weekly utilization/reset unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Scripted fixture; account and resource identity are unverified.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mclaude · billing unknown · identity unverified[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSource: fixture 1 · coverage unknown · external activity unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m5h: 12.345% used · reset 21:08 UTC · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived 12s before read · provider freshness unknown[0m[38;2;255;255;255m
+ [2m[39m── ↓ 24 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m
+  [39m  [1mmain   [0;2m  codex · Fake Large with a 1M context window · medium  ◦ idle 0s[0m[38;2;255;255;255m
+  [39m  fixture[2m  team · codex · Fake Small · medium                    ◦ idle 0s  ✓ new reply[0m[38;2;255;255;255m

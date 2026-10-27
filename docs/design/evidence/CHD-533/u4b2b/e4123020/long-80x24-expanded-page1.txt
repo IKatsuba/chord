@@ -1,0 +1,24 @@
+      Warning: Scripted partial coverage warning: independent provider
+      windows may omit external work, model applicability, provider
+      observation times and current account association. Retained utilization
+      is historical context and never proves available capacity or authorizes
+      a different payment source. This deliberately long advisory verifies
+      ordinary wrapping without hidden uncertainty.
+      Active work: 1 reported · external work may be missing
+
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve every role instruction and exact permission
+      requirement. Capacity is advisory, provider observation age is unknown,
+      and external activity may be missing. Preserve every role instruction
+      and exact permission requirement. Capacity is advisory, provider
+      observation age is unknown, and external activity may be missing.
+ ── ↓ 25 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 0s
+    fixture  team · codex  ◦ idle 0s  ✓ new reply

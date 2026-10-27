@@ -1,0 +1,24 @@
+      lead (lead): codex · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual at recording: confirmed · session runtime codex · model
+      fake-small · effort medium · mode plan
+      reviewer: claude · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: not opened · configuration unconfirmed
+      Read: none recorded · capacity unknown · advisory
+      Run: 28ce705d · saved definition: fixture (project)
+      lead saved: codex · model fake-large · effort agent default
+      (unconfirmed) · mode default
+      Changes from saved: model, mode
+      reviewer saved: claude · model agent default (unconfirmed) · effort
+      agent default (unconfirmed) · mode agent default (unconfirmed)
+      Changes from saved: none
+
+ ››› Working… (2s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    main     codex         ✻ working 2s
+    fixture  team · codex  ◦ idle 1s     ✓ new reply

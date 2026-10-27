@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [39mChanges from saved: none[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer saved: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mdefault (unconfirmed)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mChanges from saved: none[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mRecorded failure: Team launch a794bcfb was refused before its first job; the attempted lead is closing.[38;2;255;255;255m
+
+ [39mRecorded Team receipt (fixture)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mRecorded by Chord · current state unknown · historical observation[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRecorded: time unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mActual admitted attempt 2; its first job is never delivered.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mSelection: agent-selected · this run[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mReason: Preserve every role instruction and exact permission requirement. Provider freshness is unknown;[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mexternal work and quota coverage may be incomplete. Preserve every role instruction and exact permission[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mrequirement. Provider freshness is unknown; external work and quota coverage may be incomplete. Preserve every[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mrole instruction and exact permission requirement. Provider freshness is unknown; external work and quota[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcoverage may be incomplete.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWarning: No resource decision read was recorded; capacity is unknown.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mBilling: unknown · advisory[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mPlanned for this run:[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead (lead): fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m(unconfirmed)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mActual at recording: refused · session runtime unknown · model unknown · effort unknown · mode unknown[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead: Startup ended before the first job; the attempted agent is closing.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m(unconfirmed)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mActual at recording: not opened · configuration unconfirmed[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRead: none recorded · capacity unknown · advisory[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRun: 7b34fd4a · saved definition: fixture (project)[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead saved: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m(unconfirmed)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mChanges from saved: none[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer saved: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mdefault (unconfirmed)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mChanges from saved: none[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mRecorded failure: Team launch 7b34fd4a was refused before its first job; the attempted lead is closing.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                                  [2m[39mFake Large with a 1M context window · medium effort[0m[38;2;255;255;255m

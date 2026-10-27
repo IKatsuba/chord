@@ -727,3 +727,28 @@ describe('CHD-483 V1 tester: wrapped team snapshots keep tone boundaries', () =>
     }
   }
 });
+
+test('removed choose command refuses locally without sending a main prompt', () =>
+  withTeams(async (window) => {
+    await ready(window);
+
+    const session = window.session();
+
+    assert(session);
+
+    const prompts: string[] = [];
+    const prompt = session.prompt.bind(session);
+
+    session.prompt = (text, ...rest) => {
+      prompts.push(text);
+
+      return prompt(text, ...rest);
+    };
+
+    await send(window, '/team choose bugfix repair it');
+    await window.shows(
+      '/team has no choose; it takes list, new, show, run or stop',
+    );
+    expect(prompts).toEqual([]);
+    expect(window.pids).toHaveLength(1);
+  }));

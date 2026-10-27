@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-choose
+ █▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  enter to send                           home end for the top and the bottom    ctrl + x a for what waits on you
+  tab to send into the running turn       ctrl + c to copy                       ctrl + x b to pick a code block
+  shift or \ + enter for a newline        / @ @@ for commands, files or agents   c r to copy or put in the prompt
+  ctrl + g to edit in $EDITOR             /team choose uses a model turn         1–9 to pick a choice
+  ctrl + v to paste an image              ↑ ↓ to pick a completion               ↑ ↓ or j k to move between choices
+  alt + ← → to move by word               tab to complete a command              enter to pick the highlighted choice
+  cmd + ← → to line start or end          tab enter to add a file or agent       esc to reject a permission
+  ↑ ↓ for prompts, agents, background     esc to close completions               esc ← to leave a picker or shortcuts
+  x to close an agent, stop background    ! for bash mode                        ctrl + a to show all directories
+  enter for background, details, a call   backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms
+  ctrl + r to search prompts              esc to interrupt or stop a command     ctrl + c to stop the turn and its form
+  tab enter to take a match               shift + tab to cycle modes             /vim for vim mode
+  esc to cancel a search                  ctrl + o for verbose output            ? for shortcuts
+  pgup pgdn or wheel to scroll            ctrl + c to clear input                any key to quit the crash screen
+  shift + ↑ ↓ to scroll a line            ctrl + d or ctrl + c twice to quit

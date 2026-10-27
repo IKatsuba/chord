@@ -1066,9 +1066,9 @@ interface Child {
 /**
  * Writes a conversation's sessions into their records as they go. A session
  * opened from a record goes on in that file; any other starts one of its own.
- * Nothing is written until a prompt is, or the agent works on its own, so a
- * session only looked at leaves no record, or no trace in the one it was
- * opened from.
+ * Work, including an admitted run receipt, makes the session worth keeping;
+ * a session only looked at leaves no record, or no trace in the one it was
+ * opened from. A receipt needs no invented prompt to retain its real caller.
  */
 export class FileRecording implements Recording {
   readonly #dir: string;
@@ -1117,6 +1117,26 @@ export class FileRecording implements Recording {
   /** The file the session is written to, once it is open. */
   get path(): string | undefined {
     return this.#path;
+  }
+
+  /** Capture only a genuinely opened record, never a replacement's path. */
+  captureServed(): ((turnId: string, call: ChordCall) => void) | undefined {
+    const path = this.#path;
+
+    if (path === undefined) {
+      return undefined;
+    }
+
+    // An admitted attempt is history even when the caller sent no prompt.
+    this.#begun();
+    this.#flush();
+
+    return (turnId, call) => {
+      const entry: RecordEntry = { type: 'served', turnId, call };
+
+      this.#queue.push({ path, line: `${JSON.stringify(entry)}\n` });
+      this.#flush();
+    };
   }
 
   opened(session: Session): void {

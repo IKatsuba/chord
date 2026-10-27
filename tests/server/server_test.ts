@@ -1,4 +1,11 @@
-import { expect, test } from 'bun:test';
+import {
+  freezeSelection,
+  selectionReceipt,
+} from '../../src/session/team_selection.ts';
+import { foldBudgetCache } from '../../src/platform/budget_cache.ts';
+import { BudgetSnapshot } from '../../src/session/budgets.ts';
+import { describe, expect, test } from 'bun:test';
+import { until } from '../session/conversation_fake.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {
@@ -110,6 +117,7 @@ test('a session the person opened lists the agents and the sessions', () =>
 
       expect(tools.map(({ name }) => name)).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'list_sessions',
         'list_teams',
         'spawn_task',
@@ -488,6 +496,7 @@ test('a long-lived child starts, stops and lists monitors of its own, each answe
 
       expect(tools.map(({ name }) => name)).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'spawn_task',
         'send_message',
         'monitor',
@@ -623,6 +632,7 @@ test("a team's lead opens, messages and closes members; a member only messages, 
         (await lead.listTools()).tools.map(({ name }) => name),
       ).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'spawn_task',
         'open_agent',
         'send_message',
@@ -635,6 +645,7 @@ test("a team's lead opens, messages and closes members; a member only messages, 
         (await member.listTools()).tools.map(({ name }) => name),
       ).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'spawn_task',
         'send_message',
         'monitor',
@@ -664,5 +675,666 @@ test("a team's lead opens, messages and closes members; a member only messages, 
     } finally {
       await lead.close();
       await member.close();
+    }
+  }));
+
+test('get_budgets serves immediate advisory facts without reading runtime offers', () =>
+  withServer(async (server) => {
+    let reads = 0;
+    let offers = 0;
+    const served: ChordCall[] = [];
+    const facts = foldBudgetCache(
+      [],
+      { intent: 'balanced' },
+      { wall: Date.now(), monotonic: 0 },
+    );
+    const caller: Caller = {
+      ...PERSON,
+      window: {
+        ...WINDOW,
+        budgets: () => {
+          reads++;
+
+          return facts;
+        },
+        runtimes: () => {
+          offers++;
+
+          return ['codex', 'claude'];
+        },
+        offer: () => {
+          offers++;
+
+          return Promise.resolve(undefined);
+        },
+        served: (_caller, call) => served.push(call),
+      },
+    };
+    const client = await connect(server.url, server.admit(caller).token);
+
+    try {
+      const result = await client.callTool({
+        name: 'get_budgets',
+        arguments: {},
+      });
+
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toEqual(facts);
+      expect(reads).toBe(1);
+      expect(offers).toBe(0);
+      expect(served[0]).toMatchObject({ tool: 'get_budgets', answer: facts });
+    } finally {
+      await client.close();
+    }
+  }));
+
+describe('selected launch request context', () => {
+  test('strict selection crosses MCP unchanged and carries the SDK request signal', () =>
+    withServer(async (server) => {
+      const calls: unknown[] = [];
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          window: {
+            ...WINDOW,
+            runTeam: (caller, input) => {
+              calls.push(input);
+              expect(caller.signal).toBeInstanceOf(AbortSignal);
+
+              return Promise.resolve({ error: 'fixture refusal' });
+            },
+          },
+        }).token,
+      );
+      const selection = {
+        reason: 'Keep all role instructions.',
+        lead: { model: 'fake-small' },
+        members: { reviewer: { mode: 'plan' } },
+      };
+
+      try {
+        await client.callTool({
+          name: 'run_team',
+          arguments: { team: 'fixture', job: 'Do the job.', selection },
+        });
+        expect(calls).toEqual([
+          { team: 'fixture', job: 'Do the job.', selection },
+        ]);
+
+        for (const invalid of [
+          { ...selection, unknown: true },
+          { reason: '' },
+          { reason: 'r'.repeat(501) },
+          { reason: 'reason', lead: { model: null } },
+          { reason: 'reason', lead: { command: 'other' } },
+        ]) {
+          const result = await client.callTool({
+            name: 'run_team',
+            arguments: {
+              team: 'fixture',
+              job: 'Do the job.',
+              selection: invalid,
+            },
+          });
+
+          expect(result.isError).toBe(true);
+        }
+
+        expect(calls).toHaveLength(1);
+      } finally {
+        await client.close();
+      }
+    }));
+
+  test('transport revocation aborts the supported SDK in-flight request signal', () =>
+    withServer(async (server) => {
+      const captured = Promise.withResolvers<AbortSignal>();
+      const finish = Promise.withResolvers<{ error: string }>();
+      const admitted = server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          runTeam: (caller) => {
+            if (caller.signal !== undefined) {
+              captured.resolve(caller.signal);
+            }
+
+            return finish.promise;
+          },
+        },
+      });
+      const client = await connect(server.url, admitted.token);
+      const pending = client
+        .callTool({
+          name: 'run_team',
+          arguments: { team: 'fixture', job: 'Job.' },
+        })
+        .catch(() => undefined);
+
+      try {
+        const signal = await captured.promise;
+
+        server.revoke(admitted.token);
+        await until(() => signal.aborted);
+        expect(signal.aborted).toBe(true);
+      } finally {
+        finish.resolve({ error: 'cancelled fixture' });
+        await client.close();
+        await pending;
+      }
+    }));
+
+  test('only a successful actual response updates that live generation decision read', () =>
+    withServer(async (server) => {
+      const facts = foldBudgetCache(
+        [],
+        {},
+        { wall: Date.parse('2026-10-27T13:00:00Z'), monotonic: 0 },
+      );
+      let live = true;
+      let failed = false;
+      const launch: NonNullable<Caller['launch']> = {
+        valid: () => live,
+        signal: () => new AbortController().signal,
+      };
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          launch,
+          window: {
+            ...WINDOW,
+            budgets: () => {
+              if (failed) {
+                throw new Error('fixture failure');
+              }
+
+              return facts;
+            },
+          },
+        }).token,
+      );
+
+      try {
+        expect(launch.decisionRead).toBeUndefined();
+        await client.callTool({ name: 'get_budgets', arguments: {} });
+        expect(launch.decisionRead).toEqual(facts);
+        facts.warnings.push('Later cache mutation.');
+        expect(launch.decisionRead?.warnings).toEqual([]);
+
+        failed = true;
+
+        await client.callTool({ name: 'get_budgets', arguments: {} });
+        expect(launch.decisionRead?.warnings).toEqual([]);
+
+        failed = false;
+        live = false;
+
+        await client.callTool({ name: 'get_budgets', arguments: {} });
+        expect(launch.decisionRead?.warnings).toEqual([]);
+      } finally {
+        await client.close();
+      }
+    }));
+});
+
+test('unexpected budget read failures use a fixed safe MCP error', () =>
+  withServer(async (server) => {
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          budgets: () => {
+            throw new Error('Private provider diagnostic.');
+          },
+        },
+      }).token,
+    );
+
+    try {
+      const result = await client.callTool({
+        name: 'get_budgets',
+        arguments: {},
+      });
+
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result)).toContain(
+        'Resource facts could not be read.',
+      );
+      expect(JSON.stringify(result)).not.toContain('Private provider');
+    } finally {
+      await client.close();
+    }
+  }));
+
+describe('selected run root schema and owned records', () => {
+  test('advertises its object fields, rejects selected unknown roots and preserves direct extra argument compatibility', () =>
+    withServer(async (server) => {
+      const calls: unknown[] = [];
+      const records: ChordCall[] = [];
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          window: {
+            ...WINDOW,
+            runTeam: (_caller, args) => {
+              calls.push(args);
+
+              return Promise.resolve({
+                id: 'actual-run',
+                name: 'fixture',
+                team: 'fixture',
+                agent: 'fake',
+              });
+            },
+            served: (_caller, call) => records.push(call),
+          },
+        }).token,
+      );
+
+      try {
+        const listed = (await client.listTools()).tools.find(
+          (tool) => tool.name === 'run_team',
+        );
+
+        expect(listed?.inputSchema.type).toBe('object');
+        expect(Object.keys(listed?.inputSchema.properties ?? {})).toEqual([
+          'team',
+          'job',
+          'selection',
+        ]);
+
+        const rejected = await client.callTool({
+          name: 'run_team',
+          arguments: {
+            team: 'fixture',
+            job: 'Never.',
+            selection: { reason: 'Keep permissions.' },
+            unexpected: true,
+          },
+        });
+
+        expect(rejected.isError).toBe(true);
+        expect(calls).toEqual([]);
+
+        const direct = await client.callTool({
+          name: 'run_team',
+          arguments: {
+            team: 'fixture',
+            job: 'Direct.',
+            legacyExtra: 'ignored by launch',
+          },
+        });
+
+        expect(direct.isError).not.toBe(true);
+        expect(calls).toEqual([
+          { team: 'fixture', job: 'Direct.', legacyExtra: 'ignored by launch' },
+        ]);
+        expect(records[0]?.input).toEqual({ team: 'fixture', job: 'Direct.' });
+      } finally {
+        await client.close();
+      }
+    }));
+});
+
+test('selected allocated refusal retains its receipt in scoped MCP structured content and its owned call', () =>
+  withServer(async (server) => {
+    const frozen = freezeSelection(
+      {
+        description: 'Fixture',
+        lead: { agent: 'fake' },
+        members: [],
+        body: 'Preserve permissions.',
+      },
+      { reason: 'Preserve permissions; resource state unknown.' },
+      {},
+      ['fake'],
+    );
+
+    if (!('frozen' in frozen)) {
+      throw new Error('fixture selection must freeze');
+    }
+
+    const initial = selectionReceipt(
+      'attempt-id',
+      { name: 'fixture', place: 'project' },
+      frozen.frozen,
+    );
+    const receipt = {
+      ...initial,
+      roles: initial.roles.map((role) => ({
+        ...role,
+        state: 'refused' as const,
+        note: 'Cancelled before its first job; closing.',
+      })),
+    };
+    const records: ChordCall[] = [];
+    const result = {
+      error: 'Attempt cancelled before its first job; closing.',
+      id: receipt.runId,
+      receipt,
+    };
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          runTeam: () => Promise.resolve(result),
+          served: (_caller, call) => records.push(call),
+        },
+      }).token,
+    );
+
+    try {
+      const input = {
+        team: 'fixture',
+        job: 'Never delivered.',
+        selection: { reason: receipt.reason },
+      };
+      const answer = await client.callTool({
+        name: 'run_team',
+        arguments: input,
+      });
+
+      expect(answer.isError).toBe(true);
+      expect(answer.structuredContent).toEqual(result);
+      expect(records).toEqual([
+        {
+          tool: 'run_team',
+          input,
+          asked: receipt.runId,
+          answer: result,
+          error: result.error,
+        },
+      ]);
+    } finally {
+      await client.close();
+    }
+  }));
+
+test('MCP discovery exposes stored routing instructions and per-run inheritance without starting runtimes', () =>
+  withServer(async (server) => {
+    let probes = 0;
+    const team = {
+      description: 'Discovery fixture',
+      body: 'Read resource facts when the job needs capacity-aware routing.\n',
+      lead: {
+        agent: 'fake',
+        effort: 'high',
+        instructions: '  Preserve permissions.\n',
+      },
+      members: [
+        {
+          name: 'reviewer',
+          role: 'Reviews changes',
+          agent: 'codex',
+          instructions: 'Review independently.\n',
+        },
+      ],
+    };
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          teams: () =>
+            Promise.resolve({
+              found: [
+                {
+                  name: 'fixture',
+                  file: '/project/team.md',
+                  place: 'project',
+                  hides: false,
+                  team,
+                },
+              ],
+              runs: [],
+            }),
+          offer: () => {
+            probes += 1;
+
+            return Promise.resolve(undefined);
+          },
+        },
+      }).token,
+    );
+
+    try {
+      const listed = (await client.listTools()).tools;
+      const launch = listed.find((tool) => tool.name === 'run_team');
+      const schema = JSON.stringify(launch?.inputSchema);
+
+      expect(launch?.description).toContain(
+        'Omit selection to run saved composition',
+      );
+      expect(schema).toContain('same runtime');
+      expect(schema).toContain('destination model and mode');
+      expect(schema).toContain('soft effort');
+      expect(schema).toContain('existing saved member names');
+      expect(schema).toContain(
+        'every effective selected role, including inherited roles',
+      );
+      expect(schema).toContain('omitted constraints add no restriction');
+      expect(schema).toContain('explicit empty allowlist denies');
+      expect(schema).toContain(
+        'unchanged direct saved path outside selection policy',
+      );
+      expect(schema).toContain(
+        'Preferences are advisory, not permission or payment grants',
+      );
+
+      const answer = textOf(
+        await client.callTool({ name: 'list_teams', arguments: {} }),
+      );
+
+      expect(answer).toEqual({
+        runs: [],
+        teams: [{ name: 'fixture', ...team, runs: [] }],
+      });
+      expect(probes).toBe(0);
+    } finally {
+      await client.close();
+    }
+  }));
+
+describe('CHD-533 tester: optional routing instructions over MCP', () => {
+  test('a team without routing prose can run saved composition without a budget read or added selection', () =>
+    withServer(async (server) => {
+      const calls: unknown[] = [];
+      let reads = 0;
+      let probes = 0;
+      const team = {
+        description: 'Ordinary saved composition',
+        body: '',
+        lead: { agent: 'fake' },
+        members: [
+          {
+            name: 'reviewer',
+            role: 'Review',
+            agent: 'codex',
+            instructions: 'Review the result.',
+          },
+        ],
+      };
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          window: {
+            ...WINDOW,
+            teams: () =>
+              Promise.resolve({
+                found: [
+                  {
+                    name: 'plain',
+                    file: '/project/team.md',
+                    place: 'project',
+                    hides: false,
+                    team,
+                  },
+                ],
+                runs: [],
+              }),
+            budgets: () => {
+              reads++;
+
+              throw new Error('no implicit resource read');
+            },
+            offer: () => {
+              probes++;
+
+              return Promise.resolve(undefined);
+            },
+            runTeam: (_caller, args) => {
+              calls.push(args);
+
+              return Promise.resolve({ error: 'fixture launch boundary' });
+            },
+          },
+        }).token,
+      );
+
+      try {
+        const listed = textOf(
+          await client.callTool({ name: 'list_teams', arguments: {} }),
+        );
+
+        expect(listed).toEqual({
+          runs: [],
+          teams: [{ name: 'plain', ...team, runs: [] }],
+        });
+        await client.callTool({
+          name: 'run_team',
+          arguments: { team: 'plain', job: 'Ordinary work.' },
+        });
+        expect(calls).toEqual([{ team: 'plain', job: 'Ordinary work.' }]);
+        expect(reads).toBe(0);
+        expect(probes).toBe(0);
+      } finally {
+        await client.close();
+      }
+    }));
+});
+
+test('runtime-filtered budgets use the public bounded schema, record actual scope and never probe runtimes', () =>
+  withServer(async (server) => {
+    const scopes: {
+      agents: readonly string[] | undefined;
+      admittedAt: number | undefined;
+    }[] = [];
+    const served: ChordCall[] = [];
+    const launch: NonNullable<Caller['launch']> = {
+      valid: () => true,
+      signal: () => new AbortController().signal,
+    };
+    const facts = foldBudgetCache(
+      [],
+      { intent: 'balanced' },
+      { wall: Date.now(), monotonic: 10 },
+    );
+    let probes = 0;
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        launch,
+        window: {
+          ...WINDOW,
+          budgets: (caller, agents, admittedAt) => {
+            expect(caller.signal).toBeInstanceOf(AbortSignal);
+            scopes.push({ agents, admittedAt });
+
+            return facts;
+          },
+          offer: () => {
+            probes += 1;
+
+            return Promise.resolve(undefined);
+          },
+          served: (_caller, call) => served.push(call),
+        },
+      }).token,
+    );
+
+    try {
+      const tool = (await client.listTools()).tools.find(
+        (tool) => tool.name === 'get_budgets',
+      );
+
+      expect(Object.keys(tool?.inputSchema.properties ?? {})).toEqual([
+        'agents',
+      ]);
+      expect(JSON.stringify(tool?.inputSchema)).toContain('"maxItems":128');
+      expect(tool?.description).toContain('repeats do not extend');
+
+      const current = await client.callTool({
+        name: 'get_budgets',
+        arguments: {},
+      });
+      const empty = await client.callTool({
+        name: 'get_budgets',
+        arguments: { agents: [] },
+      });
+      const filtered = await client.callTool({
+        name: 'get_budgets',
+        arguments: { agents: ['missing', 'missing'] },
+      });
+
+      expect(current.structuredContent).toEqual(facts);
+      expect(empty.structuredContent).toEqual(facts);
+      expect(filtered.structuredContent).toMatchObject({
+        unavailable: [
+          {
+            agent: 'missing',
+            reason:
+              'No resource observations for this runtime; capacity unknown.',
+          },
+        ],
+        pools: [],
+        unbound: [],
+        activeRuns: [],
+        preferences: { intent: 'balanced' },
+      });
+      expect(launch.decisionRead).toEqual(
+        BudgetSnapshot.parse(filtered.structuredContent),
+      );
+      expect(scopes.map((scope) => scope.agents)).toEqual([
+        undefined,
+        [],
+        ['missing', 'missing'],
+      ]);
+      expect(
+        scopes.every((scope) => typeof scope.admittedAt === 'number'),
+      ).toBe(true);
+      expect(served.map((call) => call.input)).toEqual([
+        {},
+        { agents: [] },
+        { agents: ['missing', 'missing'] },
+      ]);
+      expect(probes).toBe(0);
+
+      for (const agents of [
+        [''],
+        ['x'.repeat(129)],
+        Array<string>(129).fill('codex'),
+        'codex',
+      ]) {
+        const rejected = await client.callTool({
+          name: 'get_budgets',
+          arguments: { agents },
+        });
+
+        expect(rejected.isError).toBe(true);
+      }
+
+      expect(scopes).toHaveLength(3);
+    } finally {
+      await client.close();
     }
   }));

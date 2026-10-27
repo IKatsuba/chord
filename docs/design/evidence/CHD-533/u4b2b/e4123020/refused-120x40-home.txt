@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-refused
+ █▀     ? for shortcuts · /help
+
+ › selectedteam
+
+ ⏺ Resources
+   ⎿  Preferences: balanced
+      Read: 19:14:46 UTC · advisory snapshot
+      codex · billing unknown · identity unverified
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 20:14 UTC · models unknown
+      Received 12s before read · provider freshness unknown
+      Warning: Provider observation time unavailable.
+      7d: usage unknown · reset unknown · models unknown
+      Received time unknown · provider freshness unknown
+      Warning: Partial observation; weekly utilization/reset unavailable.
+      Warning: Scripted fixture; account and resource identity are unverified.
+      Active work: 1 reported · external work may be missing
+
+ ⏺ Team(fixture)
+   ⎿  Team launch 768c75eb was refused before its first job; the attempted lead is closing.
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements; provider freshness is unknown.
+      Warning: Resource identity is unverified; observations remain separate.
+      Warning: Resource coverage is incomplete; external work may be missing.
+      Warning: Provider freshness is unknown for some resource windows.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: refused · session runtime unknown · model unknown · effort unknown · mode unknown
+      lead: Startup ended before the first job; the attempted agent is closing.
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+ ── ↓ 5 lines below · end to jump to the bottom ───────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

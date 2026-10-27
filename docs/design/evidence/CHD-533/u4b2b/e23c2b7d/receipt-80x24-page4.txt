@@ -1,0 +1,24 @@
+      Recorded failure: Team launch 9e5c1e37 was refused before its first
+      job; the attempted lead is closing.
+
+ Recorded Team receipt (fixture)
+   ⎿  Recorded by Chord · current state unknown · historical observation
+      Recorded: time unknown
+      Actual admitted attempt 2; its first job is never delivered.
+      Selection: agent-selected · this run
+      Reason: Preserve every role instruction and exact permission
+      requirement. Provider freshness is unknown; external work and quota
+      coverage may be incomplete. Preserve every role instruction and exact
+      permission requirement. Provider freshness is unknown; external work
+      and quota coverage may be incomplete. Preserve every role instruction
+      and exact permission requirement. Provider freshness is unknown;
+      external work and quota coverage may be incomplete.
+      Warning: No resource decision read was recorded; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+ ── ↓ 19 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

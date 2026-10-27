@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-normal
+ █▀     ? for shortcuts · /help
+
+ › /team choose fixture job
+   ⎿  /team has no choose; it takes list, new, show, run or stop
+
+ › /team run fixture selectedidle
+
+ ⏺ Team(fixture) · codex · fake-large
+   ⎿  selectedidle
+
+ › /team run fixture selectedidle
+
+ ⏺ Team(fixture 2) · codex · fake-large
+   ⎿  selectedidle
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main       codex · Fake Large with a 1M context window · medium         ◦ idle 5s
+    fixture    team · codex · Fake Large with a 1M context window · medium  ◦ idle 0s  ✓ new reply
+    fixture 2  team · codex · Fake Large with a 1M context window · medium  ◦ idle 0s  ✓ new reply

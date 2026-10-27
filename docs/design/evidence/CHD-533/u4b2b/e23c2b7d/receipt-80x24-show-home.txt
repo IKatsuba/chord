@@ -1,0 +1,24 @@
+ █▄     chord v0.60.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-receipt
+ █▀     ? for shortcuts · /help
+        resumed · just now · Team attempt: fixture
+
+ ⏺ team fixture (1 agent) and team fixture 2 (1 agent) were open when this
+   session was left and are not reopened · /resume lists them · /team run
+   fixture starts the team again
+
+ › /team show 5197ff9c
+
+ Recorded Team receipt (fixture)
+   ⎿  Recorded by Chord · current state unknown · historical observation
+      Recorded: time unknown
+      Actual admitted attempt 2; its first job is never delivered.
+      Selection: agent-selected · this run
+      Reason: Preserve every role instruction and exact permission
+ ── ↓ 98 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

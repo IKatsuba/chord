@@ -1,0 +1,24 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-choose
+ █▀     ? for shortcuts · /help
+
+ › costwait
+
+ ⏺ Working until stopped.
+   ⎿  Interrupted by user
+
+ › costwait
+
+ ⏺ Working until stopped.
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+ › /team choose fixture selectedidle
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

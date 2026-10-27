@@ -286,13 +286,19 @@ test("list_teams gives each team's agents and its open runs, and a broken file's
           hides: false,
           team: {
             description: 'Fixes a bug',
-            lead: { agent: 'claude', model: 'opus' },
+            lead: {
+              agent: 'claude',
+              model: 'opus',
+              effort: 'high',
+              instructions: '  Keep lead requirements.\n',
+            },
             members: [
               {
                 name: 'tester',
                 role: 'Writes the test',
                 agent: 'claude',
                 mode: 'acceptEdits',
+                effort: 'medium',
                 instructions: 'Test it.',
               },
             ],
@@ -314,17 +320,30 @@ test("list_teams gives each team's agents and its open runs, and a broken file's
       ],
     }),
   ).toStrictEqual({
+    runs: [
+      { team: 'bugfix', name: 'bugfix' },
+      { team: 'bugfix', name: 'bugfix 2' },
+      { team: 'review', name: 'review' },
+    ],
     teams: [
       {
         name: 'bugfix',
         description: 'Fixes a bug',
-        lead: { agent: 'claude', model: 'opus' },
+        body: 'How.',
+        lead: {
+          agent: 'claude',
+          model: 'opus',
+          effort: 'high',
+          instructions: '  Keep lead requirements.\n',
+        },
         members: [
           {
             name: 'tester',
             role: 'Writes the test',
             agent: 'claude',
             mode: 'acceptEdits',
+            effort: 'medium',
+            instructions: 'Test it.',
           },
         ],
         runs: ['bugfix', 'bugfix 2'],
@@ -588,5 +607,63 @@ describe('CHD-493 U4 tester: list_sessions during startup', () => {
     }
 
     expect(probed).toStrictEqual([]);
+  });
+});
+
+test('list_teams adds only actual known run IDs and keeps existing run names', () => {
+  expect(
+    teamsAnswer({
+      found: [],
+      runs: [
+        { team: 'fixture', name: 'fixture', id: 'actual-id' },
+        { team: 'legacy', name: 'legacy' },
+      ],
+    }),
+  ).toEqual({
+    teams: [],
+    runs: [
+      { team: 'fixture', name: 'fixture', id: 'actual-id' },
+      { team: 'legacy', name: 'legacy' },
+    ],
+  });
+});
+
+describe('CHD-533 tester: stored instruction fidelity', () => {
+  test('discovery preserves multiline Unicode and literal markup without interpreting instructions', () => {
+    const body =
+      '  Keep shared scope.\r\n> Read `get_budgets` only if relevant.\n\n${literal} <tag> λ\t\n';
+    const lead = '  Lead: preserve permissions.\nDo not expand ${settings}.\n';
+    const member = 'Reviewer: keep Ω and `literal code`.\r\n  Final line.\n';
+    const team: Team = {
+      description: 'Literal stored instructions',
+      body,
+      lead: { agent: 'fake', effort: 'high', instructions: lead },
+      members: [
+        {
+          name: 'reviewer',
+          role: 'Review',
+          agent: 'codex',
+          effort: 'low',
+          instructions: member,
+        },
+      ],
+    };
+    const before = JSON.stringify(team);
+    const answer = teamsAnswer({
+      found: [
+        {
+          name: 'literal',
+          file: '/project/team.md',
+          place: 'project',
+          hides: false,
+          team,
+        },
+      ],
+      runs: [],
+    });
+    const listed = JSON.parse(JSON.stringify(answer));
+
+    expect(listed.teams[0]).toEqual({ name: 'literal', ...team, runs: [] });
+    expect(JSON.stringify(team)).toBe(before);
   });
 });

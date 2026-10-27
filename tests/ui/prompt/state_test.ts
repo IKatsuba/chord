@@ -954,3 +954,8 @@ test("the person's steer out with the agent shows in the queue, holds nothing, s
       .queue,
   ).toContainEqual({ turnId: 't3', text: 'Use the parser' });
 });
+
+test('removed team choice has no completion or model-turn disclosure', () => {
+  expect(commandMenu(withCommands, '/team ch')).toBeUndefined();
+  expect(commandMenu(withCommands, '/team choose ')).toBeUndefined();
+});

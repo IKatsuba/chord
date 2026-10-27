@@ -1,0 +1,24 @@
+      provider freshness is unknown.
+      Warning: Resource identity is unverified; observations remain separate.
+      Warning: Resource coverage is incomplete; external work may be missing.
+      Warning: Provider freshness is unknown for some resource windows.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort
+      medium · mode plan
+      reviewer: claude · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      Read 2026-10-27 20:08:44.191 UTC · advisory
+      ctrl+o for saved definition and changes
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 0s
+    fixture  team · codex  ◦ idle 0s  ✓ new reply

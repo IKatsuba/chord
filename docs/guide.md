@@ -62,8 +62,10 @@ side by side, run chord in separate terminal panes.
 
 Inside chord, `/resume` lists this agent's earlier sessions in this
 directory, newest first, with when each was last used and its title, or
-first prompt if untitled, after a child's name. Labels wrap, never cut;
-↑ ↓ read a row taller than the picker a line per press before moving on.
+first prompt if untitled, after a child's name. A recorded team attempt without
+a prompt can appear as `Team attempt: <saved name>`; it uses real recorded
+times and claims no startup or success. Looking at quota alone adds no entry.
+Labels wrap, never cut; ↑ ↓ read a row taller than the picker a line per press before moving on.
 `❯` stays on its first line; edge arrows mark more above or below. The
 picker stays within its room. Enter replaces main with the highlighted
 session; Esc leaves it alone. A child open now says `open now`; Enter picks
@@ -473,6 +475,7 @@ both.
 | `agents.<name>.effort`         | the effort each of its sessions starts on            | `--effort`          |
 | `agents.<name>.permissionMode` | the mode each of its sessions starts in              | `--permission-mode` |
 | `agents.<name>.mcpServers`    | `false` passes no MCP servers; `true` overrides openclaw's default of none |                     |
+| `teamSelection`               | preferences and allowlists for agent-selected team runs; see below |                     |
 | `preferredNotifChannel`        | how the terminal is told chord waits on you          |                     |
 | `theme`                        | chord's colours, as `/theme` chooses them; user's file only | `/theme`     |
 | `editorMode`                   | `vim` for vim mode in the prompt, as `/vim` leaves it; user's file only | `/vim` |
@@ -821,15 +824,18 @@ A team saved in `.chord/teams/<name>.md`, or in `teams/` beside your
 settings file for every project, takes a job from the session you talk to:
 say "hand it to bugfix" and the agent calls `run_team`, which chord draws
 as `Team(bugfix) · claude · opus` with the job under it. `list_teams` names
-the saved teams and their runs open. Team and member names cannot contain
+the saved teams and their open runs, with known opaque IDs in its top-level
+`runs` list; per-team run-name lists remain. It also exposes the saved shared
+body, lead/member instructions and effort so the launching agent can read the
+team's requirements before starting it. Team/member names cannot contain
 `"` or control characters; a saved file with one appears with a problem
 line in `list_teams`. The team's lead is a long-lived child
 named after the team, on the lead's runtime, model, effort and mode; a second run
 is `bugfix 2`, even if the first was closed. Its first prompt is the team's
 instructions, drawn as one line (`bugfix's instructions for the lead · 58
 lines`, ctrl+o for all of them), then the job as a message from `@main`.
-The lead's `open_agent` takes a member's name and opens only the file's
-members, on the file's runtime, model, effort and mode (`Open(tester) ·
+The lead's `open_agent` takes a member's name and opens only the run's frozen
+members, on their runtime, model, effort and mode (`Open(tester) ·
 claude · sonnet · high · acceptEdits`); an effort the runtime does not take
 leaves the agent on its own, which the answer and the agent's transcript
 say; its `send_message` reaches main, its members and
@@ -871,14 +877,149 @@ description, and a file that is not a team with its first problem. Enter
 puts `/team run bugfix ` in the box for you to type the job. `/team new
 <words>` asks the agent for a team through `propose_team`; to change one,
 ask the agent in plain words, and it proposes the change against the saved
-team through the same tool. `/team show bugfix`
-reports the team under the command, and while it runs each agent's state,
-unseen mark and latest call or message. Its cells wrap without cutting.
+team through the same tool. `/team show bugfix` reports the team under the
+command, and while it runs each agent's state, unseen mark and latest call or
+message. `/team show <run ID>` inspects a recorded selected run's receipt
+without a model turn or relaunch; its observations are historical, with current
+state unknown. Cells wrap without cutting.
 `/team run bugfix <job>` hands it your words as
 they are, drawn as `run_team`'s `Team(bugfix)` row, with no turn of the
-agent's; the agent hears of it with your next prompt. `/team stop bugfix`
-closes that run and its members at once, and chord tells the agent. A
-team's name is completed after `show`, `run` and `stop`.
+agent's; the agent hears of it with your next prompt.
+Picker Enter prepares that same direct run, preserving saved composition.
+`/team stop bugfix` closes the run and its members at once, and chord tells the
+agent. A team's name is completed after `show`, `run` and `stop`.
+
+### Resource facts and team selection
+
+`get_budgets {agents?: string[]}` reads cached advisory facts immediately:
+preferences, independent quota windows and resets, source/age/coverage warnings
+and reported
+active work. Main and long-lived agents can read it; task agents cannot. The
+`Resources` report preserves unknown values and each window's uncertainty.
+Neither a recent receipt nor a future reset proves provider freshness. Missing
+identity leaves observations unbound; Chord does not merge them into an account
+pool. Active work may be incomplete, includes non-team sessions with
+`team: null`, and treats unopened team members as planned, not spending.
+
+Omit `agents` for existing current facts without adding readers. An explicit
+list uses runtime IDs from `list_agents` (at most 128 IDs, each 1–128
+characters); `[]` returns no runtime-scoped facts and releases temporary
+interest. A filter returns matching observations, unavailable reasons and active
+work, keeping global preferences and coverage warnings. Verified pools appear
+once only through explicit matching active-work resource refs; unattributed
+pools are omitted with a coverage warning. Runtime names never prove provider
+or account identity. Current collectors return unbound observations. Unknown or
+unsupported IDs are advisory unavailable, without probing or installing them.
+
+Explicit filters retain configured readers for at most 30 seconds from request
+admission. Repeating the same normalized filter reads eventual completed facts
+without extending the deadline, restarting readers or redating observations.
+Replacing the filter, expiry, cancellation, session replacement/close or the
+actual turn ending releases temporary interest; independent session/run readers
+remain. A read between turns can still refresh within that bound. The tool
+returns pending/cache facts without waiting for providers, starting a model
+turn or looking up a team name.
+
+Chord refreshes only relevant session/team configurations in the background,
+sharing identical configurations within a process and keeping different working
+directories separate. It reads at most once per 120 seconds while relevant,
+with bounded acquisition/cleanup and failure backoff. It does not start every
+installed runtime or wait for quota before launching. Cache files under
+`~/.local/state/chord/resources/` are bounded replaceable observations, not a
+shared balance or ledger. Cancelled reads publish no facts. Sanitized cleanup
+and exit-verification uncertainty can persist after a later successful read.
+
+Production collectors initially support only `darwin-arm64`: Codex 0.163.0
+through its installed, unmodified official PATH npm launcher or native binary,
+and native Claude Code 2.1.311 through Agent SDK 0.3.311's experimental getter.
+The official npm Codex launcher needs an existing Node installation. Chord
+installs no provider executable and adds no login or credential reader; custom
+ACP commands have no verified association with the official reader's auth and
+are advisory unavailable. Other targets/versions or missing executables give
+source warnings; direct ACP remains supported on existing release targets.
+
+The Claude getter may change or disappear. Readers send no inference prompt,
+but provider-managed startup/auth/cache/hooks/telemetry effects can occur. A
+read is not a zero-billing, freshness or capacity guarantee. Codex's client has
+uncapped incomplete-frame buffering: a deadline does not cap memory. Null,
+partial, stale and unavailable data remain explicit. Subscription percentages
+are never added to API dollars. There is no quota enforcement, payment-source
+switch, paid fallback, scheduler or migration of running work.
+
+Existing team instructions can request resource-aware selection. For example,
+put ordinary text in the team's shared body:
+
+```text
+Before handing this team a job, read its role instructions and list_agents.
+Pass this team's runtime IDs as agents to get_budgets. Consider each applicable
+quota window and time to reset; missing capacity stays unknown. Choose
+supported settings for this run, preserve every role and instruction, explain
+uncertainty, and call run_team with selection.
+```
+
+The launching agent reads those instructions through `list_teams`, requests
+facts when relevant, then uses normal `run_team` overrides. Chord does not
+interpret or enforce this prose, require a quota read or add an opt-in field,
+hidden prompt or extra selection turn. Without such instructions, selection is
+not required. Human direct runs keep saved composition.
+
+`teamSelection` optionally supplies preferences and selected-run allowlists in
+the existing user/project settings, for example:
+
+```json
+{
+  "teamSelection": {
+    "intent": "balanced",
+    "constraints": { "agents": ["claude", "codex"] }
+  }
+}
+```
+
+`intent` defaults to `fixed`, retaining saved choices. `balanced` asks the agent
+to consider applicable windows and time to reset with reserve; `economy` prefers
+lower known monetary spend, without converting quota to dollars. `prefer` uses
+soft `prefer.agent` and nullable `prefer.model` fields. `constraints.agents`,
+`constraints.models.<agent>` and `constraints.modes.<agent>` are exact
+allowlists: omitted means no added restriction, empty means no allowed choice.
+These constrain every effective role of calls carrying `selection`; direct
+`/team run` and `run_team` without selection keep saved composition and existing
+startup checks. They are selection policy, not global security controls.
+
+Project settings override user settings: `intent` replaces, `prefer` merges by
+key, `constraints.agents` replaces, and model/mode maps merge by runtime with
+each runtime's list replaced. Selected admission rereads current policy; invalid
+selection settings or unreadable/unparseable files refuse it. An unopened member
+can therefore be refused after a policy edit; running work is untouched.
+
+For a selected run, the agent calls normal `run_team` with optional
+`selection: {reason, lead, members}` after reading the saved requirements and
+applicable runtime facts. `reason` is required, nonblank and at most 500
+characters; `lead` and each named member may
+set `agent`, `model`, `effort` and `mode`. Unknown selected fields/member names
+are refused. Same-runtime omissions inherit saved values. A runtime switch
+requires explicit destination model/mode and effort if the saved role requested
+it. The runtime must confirm the model/mode; no permission ordering or mode
+equivalence is inferred. Effort remains a soft request, with actual value and
+refusal note visible. The agent must preserve role instructions and hard prose
+requirements; Chord checks structured choices, not arbitrary prose.
+
+Selected runs freeze composition and instructions without rewriting team files.
+Lead and later members must pass current policy and observed runtime/model/mode
+checks before their first job. Preflight refusal starts nobody. A failed lead
+attempt is closed without its first job; its safe ID/refused receipt may remain
+in the caller's record even if no lead session record opened. Later member
+refusal leaves existing work alone and updates that run's receipt. Cancellation
+or caller replacement revokes pending launch authority; a timeout is not proof
+nothing started. Inspect `list_teams` or the known run ID before retrying.
+
+Receipts distinguish saved, planned and observed configuration, reason,
+resource warnings and per-role planned/confirmed/refused state. Missing actual
+runtime stays unknown in older receipts; runtime identity proves no account or
+auth identity. Replay does not reopen work. An actual receipt without an ACP
+call appears as `Recorded Team receipt (<name>)`, with Chord provenance and
+current state unknown; inspection also labels it historical. Same-run revisions
+show the latest valid receipt, and genuine ACP linkage replaces that fallback
+with one ordinary Team row. No prompt or successful startup is invented.
 
 `monitor` runs a command in the background for the agent that asks, a
 session's or a long-lived child's, and each batch of lines it prints reaches

@@ -45,6 +45,7 @@ export function chord(
   fake: boolean,
   args: readonly string[],
   run: Run = spawn,
+  fixtureResources = false,
 ): number {
   const agent = quote([
     process.execPath,
@@ -55,6 +56,9 @@ export function chord(
     process.execPath,
     '--define',
     'process.env.NODE_ENV:"production"',
+    ...(fake || fixtureResources
+      ? ['--define', 'process.env.CHORD_RESOURCE_FIXTURE:"true"']
+      : []),
     'src/main.tsx',
     ...(fake ? ['fake', '--agent-command', agent] : []),
     ...args,

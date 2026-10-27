@@ -1,0 +1,24 @@
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permissions; provider
+      freshness is unknown.
+      Warning: No resource decision read was recorded; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort
+      medium · mode plan
+      reviewer: claude · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual: not opened · configuration unconfirmed
+      Read: none recorded · capacity unknown · advisory
+      ctrl+o for saved definition and changes
+
+ ⏺ Late ACP link completed.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 1s
+    fixture  team · codex  ◦ idle 5s  ✓ new reply

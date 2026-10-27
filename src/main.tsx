@@ -1,3 +1,8 @@
+import { createResources } from './platform/resources.ts';
+import {
+  resourceFixtureCase,
+  resourceSourceMode,
+} from './platform/resource_fixture.ts';
 import { ValidationError } from '@cliffy/command';
 import {
   CliRenderEvents,
@@ -12,6 +17,7 @@ import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import {
   type Instance,
+  closeOnForcedExit,
   openTerminal,
   render,
   type Terminal,
@@ -50,6 +56,10 @@ import {
 } from './session/sessions.ts';
 import { snapshotOnSignal } from './platform/heap.ts';
 import { execPath } from './platform/process.ts';
+import {
+  RESOURCE_WORKER_FLAG,
+  runResourceWorker,
+} from './platform/resource_worker.ts';
 import { serveChord } from './server/server.ts';
 import { upgradeCommand } from './upgrade.ts';
 import { chordStateDir } from './session/state_dir.ts';
@@ -59,6 +69,7 @@ import {
   knownAgents,
   loadKeybindings,
   loadSettings,
+  readTeamSelection,
   problemLine,
   problemNote,
   refusalLine,
@@ -399,6 +410,7 @@ const cli = chordCommand().action(async (options, named) => {
       cwd: dir,
       layers: there.layers,
       channel: there.settings.preferredNotifChannel,
+      teamSelection: there.settings.teamSelection,
       mcp,
       ...resumedStartup(invokedAs, flags, there.layers),
     };
@@ -415,6 +427,7 @@ const cli = chordCommand().action(async (options, named) => {
     model,
     effort,
     permissionMode,
+    teamSelection,
   }: Awaited<ReturnType<typeof readPlace>>): Place => {
     const shown = { cwd, home };
     const starting = (value: Sourced | undefined) =>
@@ -424,6 +437,13 @@ const cli = chordCommand().action(async (options, named) => {
 
     return {
       cwd,
+      selectionPolicy: () =>
+        readTeamSelection({
+          configHome: xdgConfig,
+          cwd,
+          ...(home === undefined ? {} : { home }),
+        }),
+      ...(teamSelection === undefined ? {} : { teamSelection }),
       startupOf: (name) => {
         const found = startupOf(
           name,
@@ -504,9 +524,39 @@ const cli = chordCommand().action(async (options, named) => {
   let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = serveChord();
+  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
+  const fixtureResources = collectors === 'fixture';
+  const resources = createResources({
+    stateDirectory: fixtureResources
+      ? join(chordStateDir(), 'fixture')
+      : chordStateDir(),
+    collectors,
+    ...(fixtureResources
+      ? {
+          fixtureCase: resourceFixtureCase(
+            process.env['CHORD_FAKE_RESOURCE_CASE'],
+          ),
+        }
+      : {}),
+  });
+
+  await resources.start();
+
+  let closingResources: Promise<void> | undefined;
+  const closeResources = () =>
+    (closingResources ??= resources.close().then((warnings) => {
+      for (const warning of warnings) {
+        process.stderr.write(`${warning}\n`);
+      }
+    }));
+
+  const forgetResources = closeOnForcedExit(closeResources);
   const listed = await listedAgents(agentCommands(loaded.layers));
   const window = (
     <App
+      resources={resources}
+      teamSelection={first.teamSelection}
+      selectionPolicy={first.selectionPolicy}
       agent={agent}
       cwd={resume?.cwd ?? options.cwd}
       agentCommand={agentCommand}
@@ -564,7 +614,13 @@ const cli = chordCommand().action(async (options, named) => {
 
   start = undefined;
 
-  await app.waitUntilExit();
+  try {
+    await app.waitUntilExit();
+  } finally {
+    await closeResources();
+    forgetResources();
+  }
+
   await server.close();
   await clipboard?.disposed();
 
@@ -640,5 +696,11 @@ function copier(renderer: Terminal['renderer']): {
 }
 
 if (import.meta.main) {
-  await cli.parse(process.argv.slice(2));
+  const args = process.argv.slice(2);
+
+  if (args[0] === RESOURCE_WORKER_FLAG) {
+    await runResourceWorker(args.slice(1));
+  } else {
+    await cli.parse(args);
+  }
 }

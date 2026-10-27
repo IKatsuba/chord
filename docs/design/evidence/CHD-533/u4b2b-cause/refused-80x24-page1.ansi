@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Partial observation; weekly utilization/reset unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Scripted fixture; account and resource identity are[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39munverified.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActive work: 1 reported · external work may be missing[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(fixture)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mTeam launch aab5ee9e was refused before its first job; the attempted[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead is closing.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mSelection: agent-selected · this run[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mReason: Preserve all instructions and exact permission requirements;[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mprovider freshness is unknown.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWarning: Resource identity is unverified; observations remain separate.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWarning: Resource coverage is incomplete; external work may be missing.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mWarning: Provider freshness is unknown for some resource windows.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mBilling: unknown · advisory[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mPlanned for this run:[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead (lead): claude · model fake-small · effort agent default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m(unconfirmed) · mode plan[38;2;255;255;255m
+ [2m[39m── ↓ 11 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

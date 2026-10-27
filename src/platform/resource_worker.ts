@@ -36,6 +36,7 @@ const WorkerResult = z.union([
       agent: z.literal('claude'),
       reason: z.string().min(1).max(500),
     }),
+    retry: z.enum(['configuration', 'transient']).optional(),
   }),
 ]);
 

@@ -154,3 +154,23 @@ describe('public-stream Codex resource collector', () => {
     await expect(readFile(file)).rejects.toThrow();
   });
 });
+
+describe('Codex resource authentication relevance', () => {
+  test('known API authentication is advisory and never requests subscription windows', async () => {
+    const file = await record();
+    const result = await collectCodexResources(
+      [process.execPath, fixture, 'api-account', file],
+      { cwd: process.cwd(), signal: new AbortController().signal, source },
+    );
+
+    expect(result).toMatchObject({
+      unavailable: { agent: 'codex' },
+      retry: 'configuration',
+    });
+    expect(await readFile(file, 'utf8')).not.toContain(
+      'account/rateLimits/read',
+    );
+
+    await gone(file);
+  });
+});

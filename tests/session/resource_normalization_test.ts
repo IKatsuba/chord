@@ -359,3 +359,18 @@ describe('tester: partial and bounded provider facts', () => {
     }
   });
 });
+
+describe('resource retry classification', () => {
+  test('unsupported auth/scope is configuration failure while malformed snapshots remain transient', () => {
+    expect(
+      normalizeCodex({ account: { type: 'apiKey' } }, {}, source),
+    ).toHaveProperty('retry', 'configuration');
+    expect(
+      normalizeClaude(
+        { rate_limits_available: false, rate_limits: null },
+        source,
+      ),
+    ).toHaveProperty('retry', 'configuration');
+    expect(normalizeClaude({}, source)).not.toHaveProperty('retry');
+  });
+});

@@ -13,6 +13,7 @@ export type NormalizedResources =
   | { readonly observation: UnboundObservation }
   | {
       readonly unavailable: { readonly agent: string; readonly reason: string };
+      readonly retry?: 'configuration' | 'transient' | undefined;
     };
 
 const Percent = z.number().min(0).max(100).nullable();
@@ -123,6 +124,7 @@ export function normalizeCodex(
         agent: 'codex',
         reason: 'Subscription account metadata is unavailable or unsupported.',
       },
+      retry: 'configuration',
     };
   }
 
@@ -220,6 +222,7 @@ export function normalizeClaude(
         reason:
           'Subscription limits unavailable: unsupported authentication source or missing profile scope.',
       },
+      retry: 'configuration',
     };
   }
 

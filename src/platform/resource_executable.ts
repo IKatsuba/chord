@@ -5,6 +5,7 @@ import { open, realpath } from 'node:fs/promises';
 import process from 'node:process';
 import { finished } from 'node:stream/promises';
 import {
+  ResourceReadError,
   resourceSignal,
   resourceWait,
   withResourceProcess,
@@ -13,7 +14,10 @@ import {
 export type ResourceProvider = 'codex' | 'claude';
 export type ResourceExecutable =
   | { readonly path: string; readonly version: string }
-  | { readonly unavailable: string };
+  | {
+      readonly unavailable: string;
+      readonly retry?: 'configuration' | 'transient';
+    };
 
 const VERSIONS = { codex: '0.163.0', claude: '2.1.311' } as const;
 const VERSION_OUTPUT = {
@@ -149,7 +153,23 @@ export async function resolveResourceExecutable(
     }
 
     return { path, version: VERSIONS[provider] };
-  } catch {
-    return { unavailable: 'Native provider executable could not be verified.' };
+  } catch (error) {
+    if (
+      options.signal.aborted ||
+      (error instanceof ResourceReadError && error.kind === 'cleanup')
+    ) {
+      throw error;
+    }
+
+    return {
+      unavailable: 'Official provider executable could not be verified.',
+      retry:
+        error instanceof ResourceReadError &&
+        (error.kind === 'timeout' ||
+          error.kind === 'protocol' ||
+          error.kind === 'rate-limit')
+          ? 'transient'
+          : 'configuration',
+    };
   }
 }

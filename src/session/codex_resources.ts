@@ -64,6 +64,14 @@ export function collectCodexResources(
           timeoutMs: bounds.requestMs,
         },
       );
+
+      if (account.account?.type !== 'chatgpt') {
+        return normalizeCodex(account, undefined, {
+          ...options.source,
+          receivedAt: new Date().toISOString(),
+        });
+      }
+
       const limits = await client.account.rateLimitsRead({
         signal: resourceSignal(signal, bounds.requestMs),
         timeoutMs: bounds.requestMs,

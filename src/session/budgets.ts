@@ -120,7 +120,7 @@ export const ActiveRun = z.strictObject({
   processRef: ref,
   runRef: ref,
   sessionRef: ref,
-  team: ref,
+  team: ref.nullable(),
   member: ref,
   agent: ref,
   model: ref.nullable(),

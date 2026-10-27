@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { ResourceReadError } from '../../src/platform/resource_process.ts';
 import {
   resolveResourceExecutable,
   type ExecutableInspection,
@@ -72,5 +73,27 @@ describe('official native collector resolution', () => {
         }),
       ).toHaveProperty('unavailable');
     }
+  });
+});
+
+describe('executable read lifecycle classification', () => {
+  test('transient version timeout remains retryable, but cleanup failure is not swallowed', async () => {
+    const result = await resolveResourceExecutable('codex', options, {
+      ...inspection,
+      version: () =>
+        Promise.reject(new ResourceReadError('timeout', 'Version timeout.')),
+    });
+
+    expect(result).toHaveProperty('retry', 'transient');
+
+    await expect(
+      resolveResourceExecutable('codex', options, {
+        ...inspection,
+        version: () =>
+          Promise.reject(
+            new ResourceReadError('cleanup', 'Owned group exit unverified.'),
+          ),
+      }),
+    ).rejects.toMatchObject({ kind: 'cleanup' });
   });
 });

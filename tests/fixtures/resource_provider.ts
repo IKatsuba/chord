@@ -121,7 +121,7 @@ process.stdin.pipe(split()).on('data', (line: string) => {
       : request.method === 'account/read'
         ? {
             account: {
-              type: 'chatgpt',
+              type: scenario === 'api-account' ? 'apiKey' : 'chatgpt',
               email: 'excluded@example.test',
               planType: 'pro',
             },

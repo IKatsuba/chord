@@ -18,7 +18,8 @@ These rules also cover `src/acp/`.
   sanitized cleanup uncertainty even after a later successful read.
 - Selection allowlists apply only to selected runs, across every effective
   role. Freeze composition; check current policy and observed startup before
-  each first job. Effort stays soft; runtime/model/mode must be confirmed.
+  each first job. Confirm runtime and requested model/mode; omitted defaults
+  stay unknown until observed. Effort stays soft.
 - Persist actual admitted receipts in existing records, including refused
   attempts in the caller's record. Never invent provider IDs, ACP events or
   prompts to make a receipt replay. Historical missing values stay unknown.

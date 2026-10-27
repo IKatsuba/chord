@@ -200,7 +200,7 @@ test('the credentials and the identity are asked only for the stages that need t
 
   expect(ran().filter((line) => !line.startsWith('npm '))).toStrictEqual([
     'bun install --frozen-lockfile',
-    'bun check',
+    'bun quality',
   ]);
 });
 
@@ -480,8 +480,8 @@ describe('a version given', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'check' ]; then cat package.json >"$STATE/checked.json"; fi
-if [ -n "$FAIL_CHECK" ] && [ "$1" = 'check' ]; then exit 2; fi
+if [ "$1" = 'quality' ]; then cat package.json >"$STATE/checked.json"; fi
+if [ -n "$FAIL_CHECK" ] && [ "$1" = 'quality' ]; then exit 2; fi
 `,
     );
     // Every binary the compile faked is every kind it should be.
@@ -520,7 +520,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$1" = 'check' ]; then exit 2; fi
       await died(
         releasedAt('9.9.10', { to: 'compile' }, { FAIL_CHECK: 'yes' }),
       ),
-    ).toBe('bun check failed');
+    ).toBe('bun quality failed');
     expect(checked()).toBe('9.9.10');
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(version()).toBe(VERSION);
@@ -646,7 +646,7 @@ describe('a signal while the version commit is held', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'check' ]; then kill -${signal} $PPID; exit 2; fi
+if [ "$1" = 'quality' ]; then kill -${signal} $PPID; exit 2; fi
 `,
     );
 

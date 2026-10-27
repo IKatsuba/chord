@@ -17,8 +17,8 @@ export function install(release: Release): void {
 }
 
 export function check(release: Release): void {
-  if (run(release, 'bun', ['check'], loud).status !== 0) {
-    die('bun check failed');
+  if (run(release, 'bun', ['quality'], loud).status !== 0) {
+    die('bun quality failed');
   }
 }
 

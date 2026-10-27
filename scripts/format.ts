@@ -1,14 +1,27 @@
-import { format, resolveConfig } from 'prettier';
+import { spawnSync } from 'node:child_process';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 
-/**
- * A generated module laid out by the tree's formatter, so what
- * `bun dev mark` and `bun dev registry` write is what the format check
- * accepts, and a test can compare the two.
- */
-export async function formatModule(source: string): Promise<string> {
-  const config = await resolveConfig(
-    new URL('../src/main.tsx', import.meta.url),
+/** Generated TypeScript laid out by the same native formatter as the tree. */
+export function formatModule(source: string): string {
+  const child = spawnSync(
+    process.execPath,
+    ['fmt', '--stdin-filepath', 'src/generated.ts'],
+    {
+      cwd: fileURLToPath(new URL('../', import.meta.url)),
+      input: source,
+      encoding: 'utf8',
+      maxBuffer: 16 * 1024 * 1024,
+    },
   );
 
-  return await format(source, { ...config, parser: 'typescript' });
+  if (child.error !== undefined) {
+    throw child.error;
+  }
+
+  if (child.status !== 0) {
+    throw new Error(`bun fmt failed: ${child.stderr}`);
+  }
+
+  return child.stdout;
 }

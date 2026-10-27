@@ -18,7 +18,6 @@ import { quote } from 'shell-quote';
 import {
   check,
   chord,
-  fmt,
   lint,
   qaPlace,
   type Run,
@@ -100,24 +99,20 @@ test("test runs the whole suite placed by the record's times, its arguments afte
   ]);
 });
 
-test('lint and fmt run ESLint and Prettier over the tree', () => {
+test('lint runs ESLint over the tree', () => {
   const { run, ran } = faked();
 
   lint(['--fix'], run);
-  fmt(run);
 
-  expect(ran).toStrictEqual([
-    [bun, 'run', 'eslint', '.', '--fix'],
-    [bun, 'run', 'prettier', '--write', '.'],
-  ]);
+  expect(ran).toStrictEqual([[bun, 'run', 'eslint', '.', '--fix']]);
 });
 
 describe('check', () => {
   const STATIC = [
-    [bun, 'run', 'tsc'],
+    [bun, 'check'],
     [bun, 'scripts/dev/covered.ts'],
     [bun, 'run', 'eslint', '.'],
-    [bun, 'run', 'prettier', '--check', '.'],
+    [bun, 'fmt', '--check', '.'],
     [bun, 'test', 'lint/'],
   ];
 

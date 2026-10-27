@@ -97,7 +97,7 @@ The version is package.json's, or the one given: package.json's own, an exact ve
 
 Stages:
   install    bun install --frozen-lockfile
-  check      bun check
+  check      bun quality
   natives    every platform's packages installed; the macOS native libraries signed
   compile    bun dev compile --all; each binary's kind checked with file(1)
   sign       both macOS binaries signed, verified and their entitlements compared

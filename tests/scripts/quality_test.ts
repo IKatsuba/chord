@@ -1,14 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { ValidationError } from '@cliffy/command';
 import { spawnSync } from 'node:child_process';
-import {
-  cp,
-  mkdtemp,
-  readFile,
-  rm,
-  symlink,
-  writeFile,
-} from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -16,13 +9,9 @@ import { qualityCommand } from '../../scripts/quality.ts';
 
 /** Parses without running a tool. */
 async function parsed(argv: string[]) {
-  const calls: unknown[][] = [];
+  const calls: unknown[] = [];
 
-  await qualityCommand({
-    check: (options) => void calls.push(['check', options]),
-    lint: (args) => void calls.push(['lint', args]),
-    fmt: () => void calls.push(['fmt']),
-  })
+  await qualityCommand((options) => void calls.push(options))
     .noExit()
     .throwErrors()
     .parse(argv);
@@ -30,91 +19,54 @@ async function parsed(argv: string[]) {
   return calls;
 }
 
-describe('quality package commands', () => {
-  test('check runs everything, or only static checks', async () => {
-    expect(await parsed(['check'])).toEqual([['check', { static: false }]]);
-    expect(await parsed(['check', '--static'])).toEqual([
-      ['check', { static: true }],
-    ]);
+describe('quality aggregate', () => {
+  test('runs everything, or only static checks', async () => {
+    expect(await parsed([])).toEqual([{ static: false }]);
+    expect(await parsed(['--static'])).toEqual([{ static: true }]);
   });
 
-  test('check and fmt refuse extra arguments and unknown options', async () => {
-    for (const argv of [
-      ['check', 'tests/'],
-      ['check', '--fix'],
-      ['check', '--static', 'extra'],
-      ['fmt', 'src/'],
-      ['fmt', '--fix'],
-    ]) {
+  test('refuses extra arguments and unknown options', async () => {
+    for (const argv of [['tests/'], ['--fix'], ['--static', 'extra']]) {
       await expect(parsed(argv)).rejects.toThrow(ValidationError);
     }
-
-    expect(await parsed(['fmt'])).toEqual([['fmt']]);
-  });
-
-  test('lint forwards words and options, with literal empty arguments', async () => {
-    expect(await parsed(['lint', '--fix', 'a b', '--', ''])).toEqual([
-      ['lint', ['--fix', 'a b', '']],
-    ]);
-    expect(await parsed(['lint', '--', '--help'])).toEqual([
-      ['lint', ['--help']],
-    ]);
   });
 
   test('action failures reach the caller', async () => {
     const failure = new Error('fixture action failed');
 
     await expect(
-      qualityCommand({
-        check: () => {},
-        fmt: () => {},
-        lint: async () => {
-          await Promise.resolve();
+      qualityCommand(async () => {
+        await Promise.resolve();
 
-          throw failure;
-        },
+        throw failure;
       })
         .noExit()
         .throwErrors()
-        .parse(['lint']),
+        .parse([]),
     ).rejects.toBe(failure);
   });
 });
 
-test('Bun resolves quality scripts and preserves forwarded argv and tool status', async () => {
+test('native formatting and types retain their own arguments and failure statuses', async () => {
   const root = join(import.meta.dir, '..', '..');
-  const dir = await mkdtemp(join(tmpdir(), 'chord-quality-'));
-  const manifest = JSON.parse(
-    await readFile(join(root, 'package.json'), 'utf8'),
-  ) as {
-    scripts: Record<string, string>;
-  };
+  const dir = await mkdtemp(join(tmpdir(), 'chord-native-quality-'));
 
   try {
-    await cp(join(root, 'scripts'), join(dir, 'scripts'), { recursive: true });
-    await symlink(join(root, 'node_modules'), join(dir, 'node_modules'));
+    await writeFile(join(dir, 'package.json'), '{"type":"module"}');
     await writeFile(
-      join(dir, 'package.json'),
-      JSON.stringify({
-        type: 'module',
-        scripts: {
-          ...manifest.scripts,
-          eslint: 'bun tool.ts',
-          prettier: 'bun tool.ts',
-          tsc: 'bun tool.ts',
-        },
-      }),
+      join(dir, '.prettierrc.json'),
+      await readFile(join(root, '.prettierrc.json')),
     );
     await writeFile(
-      join(dir, 'tool.ts'),
-      "await Bun.write('argv.json', JSON.stringify(process.argv.slice(2))); process.exit(Number(process.env.TOOL_STATUS ?? 0));\n",
+      join(dir, 'tsconfig.json'),
+      '{"compilerOptions":{"strict":true},"include":["sample.ts"]}',
     );
+    await writeFile(join(dir, 'sample.ts'), 'export const value:number="hi"');
 
-    const run = (args: string[], status = 0) => {
+    const run = (args: string[]) => {
       const result = spawnSync(process.execPath, args, {
         cwd: dir,
         encoding: 'utf8',
-        env: { ...process.env, TOOL_STATUS: String(status) },
         timeout: 20_000,
       });
 
@@ -123,31 +75,22 @@ test('Bun resolves quality scripts and preserves forwarded argv and tool status'
       return result;
     };
 
-    const argv = async () =>
-      JSON.parse(await readFile(join(dir, 'argv.json'), 'utf8')) as unknown;
+    expect(run(['fmt', '--check', 'sample.ts']).status).toBe(1);
+    expect(run(['fmt', 'sample.ts']).status).toBe(0);
+    expect(await readFile(join(dir, 'sample.ts'), 'utf8')).toBe(
+      "export const value: number = 'hi';\n",
+    );
+    expect(run(['fmt', '--check', 'sample.ts']).status).toBe(0);
 
-    expect(run(['lint', '--fix', 'a b', '--', ''], 7).status).toBe(7);
-    expect(await argv()).toEqual(['.', '--fix', 'a b', '']);
-    expect(run(['run', 'fmt']).status).toBe(0);
-    expect(await argv()).toEqual(['--write', '.']);
-    expect(run(['run', 'fmt', '--fix']).status).not.toBe(0);
+    const failed = run(['check']);
 
-    for (const args of [
-      ['run', 'fmt', '--help'],
-      ['run', 'check', '--help'],
-    ]) {
-      const result = run(args);
-
-      expect(result.status).toBe(0);
-      expect(result.stdout).toContain('Usage:');
-      expect(result.stdout).toContain('bun run');
-    }
-
-    const failed = run(['check', '--static'], 9);
-
-    expect(failed.status).toBe(9);
-    expect(failed.stderr).toContain('check: tsc failed with status 9');
-    expect(await argv()).toEqual([]);
+    expect(failed.status).toBe(1);
+    expect(failed.stdout).toContain('TS2322');
+    await writeFile(
+      join(dir, 'sample.ts'),
+      'export const value: number = 1;\n',
+    );
+    expect(run(['check']).status).toBe(0);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

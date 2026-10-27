@@ -50,6 +50,10 @@ import {
 } from './session/sessions.ts';
 import { snapshotOnSignal } from './platform/heap.ts';
 import { execPath } from './platform/process.ts';
+import {
+  RESOURCE_WORKER_FLAG,
+  runResourceWorker,
+} from './platform/resource_worker.ts';
 import { serveChord } from './server/server.ts';
 import { upgradeCommand } from './upgrade.ts';
 import { chordStateDir } from './session/state_dir.ts';
@@ -640,5 +644,11 @@ function copier(renderer: Terminal['renderer']): {
 }
 
 if (import.meta.main) {
-  await cli.parse(process.argv.slice(2));
+  const args = process.argv.slice(2);
+
+  if (args[0] === RESOURCE_WORKER_FLAG) {
+    await runResourceWorker(args.slice(1));
+  } else {
+    await cli.parse(args);
+  }
 }

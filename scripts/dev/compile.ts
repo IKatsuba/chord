@@ -87,7 +87,10 @@ export function otherNatives(
  */
 export function buildOptions(
   entry: string,
-  { host = false }: { host?: boolean } = {},
+  {
+    host = false,
+    compiled = false,
+  }: { host?: boolean; compiled?: boolean } = {},
 ): BuildConfig & { target: 'bun' } {
   return {
     entrypoints: [entry],
@@ -103,7 +106,10 @@ export function buildOptions(
     // keeps a performance.measure for every render and a stack on every fiber,
     // never cleared (CHD-344). Defined rather than --production, which also
     // minifies and leaves heap snapshots and stack traces without names.
-    define: { 'process.env.NODE_ENV': '"production"' },
+    define: {
+      'process.env.NODE_ENV': '"production"',
+      ...(compiled ? { CHORD_RESOURCE_COMPILED: 'true' } : {}),
+    },
     plugins: [jsxDevRuntime],
   };
 }
@@ -140,7 +146,7 @@ export async function compile(args: CompileOptions): Promise<void> {
 
     // The JS API, as the command line takes no plugin.
     const built = await Bun.build({
-      ...buildOptions(join(root, 'src', 'main.tsx')),
+      ...buildOptions(join(root, 'src', 'main.tsx'), { compiled: true }),
       compile: { target: target.bun, outfile: output },
     });
 

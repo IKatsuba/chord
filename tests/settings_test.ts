@@ -1123,3 +1123,30 @@ test("an agent's mcpServers setting is read from the last file that sets it, tru
     ).problems,
   ).not.toStrictEqual([]);
 });
+
+describe('tester: resource preference layering', () => {
+  test('an empty later map preserves denied runtime lists and an explicit model reset', () => {
+    const base = {
+      teamSelection: {
+        intent: 'prefer' as const,
+        prefer: { agent: 'codex', model: 'large' },
+        constraints: {
+          agents: ['codex'],
+          models: { codex: [] },
+          modes: { codex: [] },
+        },
+      },
+    };
+    const result = mergeSettings(
+      base,
+      { teamSelection: { prefer: { model: null } } },
+      { teamSelection: { constraints: { models: {}, modes: {} } } },
+    );
+
+    expect(result.teamSelection).toEqual({
+      ...base.teamSelection,
+      prefer: { agent: 'codex', model: null },
+    });
+    expect(base.teamSelection.prefer.model).toBe('large');
+  });
+});

@@ -249,3 +249,61 @@ describe('process resource cache', () => {
     });
   });
 });
+
+describe('tester: cache time and source boundaries', () => {
+  test('future write skew has an inclusive five-second boundary and sanitized warning', async () => {
+    const cache = new BudgetCache(await scratch());
+
+    await cache.write({ ...facts(), writtenAt: iso(5000) });
+
+    expect((await readBudgetCache(cache.directory, wall)).files).toHaveLength(
+      1,
+    );
+
+    await cache.write({ ...facts(), writtenAt: iso(5001) });
+
+    const read = await readBudgetCache(cache.directory, wall);
+
+    expect(read.files).toEqual([]);
+    expect(read.warnings).toEqual([
+      'Resource cache coverage is incomplete: future-dated cache file skipped.',
+    ]);
+  });
+
+  test('old filesystem metadata alone cannot delete a current embedded observation', async () => {
+    const cache = new BudgetCache(await scratch());
+
+    await cache.write(facts());
+
+    const path = join(cache.directory, `${cache.processRef}.json`);
+    const old = new Date(iso(-CACHE_RETENTION_MS - 1));
+
+    await utimes(path, old, old);
+
+    expect((await readBudgetCache(cache.directory, wall)).files).toHaveLength(
+      1,
+    );
+
+    await cache.close(wall);
+
+    expect(await readdir(cache.directory)).toEqual([
+      `${cache.processRef}.json`,
+    ]);
+  });
+
+  test('a missing cache directory has unknown coverage rather than invented pools or active work', async () => {
+    const directory = join(await scratch(), 'absent');
+    const read = await readBudgetCache(directory, wall);
+    const result = foldBudgetCache(
+      read.files,
+      {},
+      { wall, monotonic: 0 },
+      read.warnings,
+    );
+
+    expect(result.pools).toEqual([]);
+    expect(result.unbound).toEqual([]);
+    expect(result.activeRuns).toEqual([]);
+    expect(result.preferences.intent).toBe('fixed');
+  });
+});

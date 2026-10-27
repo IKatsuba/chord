@@ -28,6 +28,64 @@ import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
 import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
 
+describe('resource selection preferences', () => {
+  test('strict nested fields report problems and retain explicit empty constraints', () => {
+    const parsed = parseSettings(
+      'settings.json',
+      JSON.stringify({
+        teamSelection: {
+          intent: 'balanced',
+          constraints: { agents: [], models: { codex: [] } },
+          unknown: true,
+        },
+      }),
+    );
+
+    expect(parsed.problems).toHaveLength(1);
+    expect(parsed.settings.teamSelection).toEqual({
+      intent: 'balanced',
+      constraints: { agents: [], models: { codex: [] } },
+    });
+  });
+
+  test('project precedence replaces lists while merging preference fields and runtime maps', () => {
+    expect(
+      mergeSettings(
+        {
+          teamSelection: {
+            intent: 'prefer',
+            prefer: { agent: 'codex', model: 'large' },
+            constraints: {
+              agents: ['codex'],
+              models: { codex: ['large'], claude: ['small'] },
+              modes: { codex: ['auto'] },
+            },
+          },
+        },
+        {
+          teamSelection: {
+            intent: 'balanced',
+            prefer: { model: null },
+            constraints: {
+              agents: [],
+              models: { codex: [] },
+              modes: { claude: ['plan'] },
+            },
+          },
+        },
+      ).teamSelection,
+    ).toEqual({
+      intent: 'balanced',
+      prefer: { agent: 'codex', model: null },
+      constraints: {
+        agents: [],
+        models: { codex: [], claude: ['small'] },
+        modes: { codex: ['auto'], claude: ['plan'] },
+      },
+    });
+  });
+});
+
 describe('tester: copyOnSelect settings edges', () => {
   test('invalid booleans are reported without losing valid settings', () => {
     for (const copyOnSelect of ['false', 0, null, {}, []]) {

@@ -3,6 +3,7 @@ import { dirname, isAbsolute, join, relative, sep } from 'node:path';
 import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { notFound } from './not_found.ts';
 import { NOTIF_CHANNELS } from './notify.ts';
+import { mergeTeamSelection, TeamSelection } from './session/budgets.ts';
 import {
   DEFAULT_KEYMAP,
   type Keymap,
@@ -58,6 +59,7 @@ const SettingsFile = z
     /** The agent `chord` starts when none is named. */
     agent: z.string().min(1),
     agents: z.record(z.string(), AgentSettings),
+    teamSelection: TeamSelection,
     /**
      * MCP servers handed to the agent for each session, by name, as
      * `.mcp.json` writes them; each is checked on its own by `src/mcp.ts`, so a
@@ -351,6 +353,13 @@ export function mergeSettings(...layers: readonly Settings[]): Settings {
   const merged: Settings = {};
 
   for (const layer of layers) {
+    if (layer.teamSelection !== undefined) {
+      merged.teamSelection = mergeTeamSelection(
+        merged.teamSelection,
+        layer.teamSelection,
+      );
+    }
+
     if (layer.agent !== undefined) {
       merged.agent = layer.agent;
     }

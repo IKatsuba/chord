@@ -7342,3 +7342,19 @@ accounting is a separate advisory follow-up, not a subscription-routing gate.
   scheduler, migration or saved-team rewrite is authorized. A new library
   mismatch returns to the owner with options; these trials and approvals
   are not consent to future workarounds.
+
+## 2026-10-27 — CHD-533: the official Codex npm launcher is supported (owner)
+
+The owner approves the installed, unmodified official PATH Codex npm launcher
+or native binary for the resource collector. The successful live Codex trial
+invoked the PATH npm launcher, not a directly verified native binary; the
+previous native-only deployment description was incorrect. Existing Node is
+required only for official npm launcher installs. Claude remains an external
+native executable. The prior live trial is sufficient; no repeat is required.
+
+This corrects the earlier CHD-533 deployment decision without authorizing a
+private vendor-layout resolver, launcher patch, installation or authentication
+change. Keep the public-stream API, process-group ownership, experimental
+Claude API and uncapped-frame-buffer risk as approved. Deadlines do not cap
+memory. Existing trial, freshness, identity, billing and cross-target evidence
+limits remain unchanged.

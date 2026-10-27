@@ -6,7 +6,14 @@
 import { execFile } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -37,12 +44,20 @@ import { isAlive, withSession, collect, calls } from './session_fake.ts';
 
 describe('CHD-534 synthetic fx failure', () => {
   test('an exact Russian request receives completed tools before the notice and terminal error, then another turn succeeds', () => {
-    const request = 'Проверь учебные навыки на упоминание agent-browser.';
+    const request = ' \nПроверь учебные навыки на упоминание agent-browser.\n ';
 
     return withSession(
       async (session) => {
-        // The fake selects this scenario only for this exact request text.
+        const gate = join(session.cwd, '.fake-gate');
+
+        await mkdir(gate);
+        await writeFile(join(gate, 'capture-prompt'), '');
+
         const { updates, result } = await run(session, request);
+        const captured = await readFile(join(gate, 'prompt.json'), 'utf8');
+
+        expect(JSON.parse(captured)).toEqual([{ type: 'text', text: request }]);
+
         const completed = calls(updates).filter(
           (call) => call.status === 'completed',
         );
@@ -70,12 +85,15 @@ describe('CHD-534 synthetic fx failure', () => {
 
         const next = await run(session, 'text');
 
+        expect(await readFile(join(gate, 'prompt.json'), 'utf8')).toBe(
+          captured,
+        );
         expect(next.result.status).toBe('completed');
         expect(said(next.updates).join('')).toContain('Hello, world.');
       },
       undefined,
       '--said',
-      JSON.stringify({ fxerror: request }),
+      JSON.stringify({ fxerror: request.trim() }),
     );
   });
 });

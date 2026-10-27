@@ -250,6 +250,8 @@
  * nowhere (Q200).
  */
 import process from 'node:process';
+import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
@@ -1397,6 +1399,15 @@ const connection = acp
     },
   )
   .onRequest('session/prompt', async ({ params, client }) => {
+    const gate = join(cwds.get(params.sessionId) ?? '.', '.fake-gate');
+    const capture = join(gate, 'capture-prompt');
+
+    // Observe the SDK's received blocks before scenario dispatch strips context.
+    if (existsSync(capture)) {
+      unlinkSync(capture);
+      writeFileSync(join(gate, 'prompt.json'), JSON.stringify(params.prompt));
+    }
+
     const held = heldCosts.get(params.sessionId);
 
     // The last turn's cost, held for this one, which has now begun.

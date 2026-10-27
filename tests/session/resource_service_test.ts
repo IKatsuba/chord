@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { ResourceReadError } from '../../src/platform/resource_process.ts';
 import {
   ResourceService,
   type ResourceRead,
@@ -452,7 +453,41 @@ describe('resource service bounded failures', () => {
       }),
       new AbortController().signal,
     );
+
+    const cleanup = deferred<void>();
+
+    service.retain(
+      target(
+        (input) =>
+          new Promise((_, reject) => {
+            input.addEventListener(
+              'abort',
+              () => {
+                reject(
+                  new ResourceReadError(
+                    'cleanup',
+                    'Private fixture diagnostic must not escape.',
+                  ),
+                );
+                cleanup.resolve();
+              },
+              { once: true },
+            );
+          }),
+        'cleanup-on-deadline',
+      ),
+      new AbortController().signal,
+    );
     await aborted.promise;
+    await cleanup.promise;
+    await flush();
+
+    expect(service.read().warnings).toContain(
+      'Resource collector cleanup failed; owned process exit is unverified.',
+    );
+    expect(JSON.stringify(service.read())).not.toContain(
+      'Private fixture diagnostic',
+    );
 
     expect(signal?.aborted).toBe(true);
     expect(service.read().unavailable[0]?.reason).toContain('deadline');
@@ -595,6 +630,115 @@ describe('resource cache anchor continuity', () => {
     clock(60000);
 
     expect(service.read().unbound[0]?.windows[0]?.state).toBe('stale');
+
+    await service.close();
+  });
+});
+
+describe('resource collector exit verification', () => {
+  const cleanupTarget = () =>
+    target(
+      (signal) =>
+        new Promise((_, reject) => {
+          signal.addEventListener(
+            'abort',
+            () =>
+              reject(
+                new ResourceReadError(
+                  'cleanup',
+                  'Private fixture cleanup detail.',
+                ),
+              ),
+            { once: true },
+          );
+        }),
+    );
+
+  test('last-consumer cancellation retains sanitized cleanup diagnostics without late facts', async () => {
+    const { service } = setup();
+    const controller = new AbortController();
+
+    service.retain(cleanupTarget(), controller.signal);
+    await flush();
+    controller.abort();
+    await flush();
+
+    expect(service.read().warnings).toContain(
+      'Resource collector cleanup failed; owned process exit is unverified.',
+    );
+    expect(service.read().unbound).toEqual([]);
+    expect(JSON.stringify(service.read())).not.toContain('Private fixture');
+
+    service.retain(
+      target(
+        () => Promise.resolve({ facts: { observation: observation() } }),
+        'later-success',
+      ),
+      new AbortController().signal,
+    );
+    await flush();
+
+    expect(service.read().unbound).toHaveLength(1);
+    expect(service.read().warnings).toContain(
+      'Resource collector cleanup failed; owned process exit is unverified.',
+    );
+
+    await service.close();
+  });
+
+  test('shutdown returns an explicit sanitized cleanup-failure warning', async () => {
+    const { service } = setup();
+
+    service.retain(cleanupTarget(), new AbortController().signal);
+    await flush();
+
+    const warnings = await service.close();
+
+    expect(warnings).toContain(
+      'Resource collector cleanup failed; owned process exit is unverified.',
+    );
+    expect(service.read().warnings).toEqual([...warnings]);
+    expect(service.read().unbound).toEqual([]);
+    expect(JSON.stringify(warnings)).not.toContain('Private fixture');
+  });
+});
+
+describe('resource replacement eligibility', () => {
+  test('replacement retries a configuration failure when the old generation invalidates before tick', async () => {
+    const { service, clock } = setup();
+    let valid = true;
+    let calls = 0;
+    const source = target(() => {
+      calls++;
+
+      return Promise.resolve<ResourceRead>(
+        calls === 1
+          ? {
+              facts: {
+                unavailable: {
+                  agent: 'codex',
+                  reason: 'Configuration unsupported.',
+                },
+              },
+              retry: 'configuration',
+            }
+          : { facts: { observation: observation(120000) } },
+      );
+    });
+
+    service.retain(source, new AbortController().signal, () => valid);
+    await flush();
+
+    valid = false;
+
+    clock(120000);
+    service.retain(source, new AbortController().signal);
+    service.tick();
+    await flush();
+
+    expect(calls).toBe(2);
+    expect(service.read().unavailable).toEqual([]);
+    expect(service.read().unbound[0]?.windows[0]?.receivedAt).toBe(iso(120000));
 
     await service.close();
   });

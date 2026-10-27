@@ -78,6 +78,8 @@ interface SourceState {
 
 const CADENCE_MS = 120_000;
 const DEADLINE_MS = 20_000;
+const CLEANUP_FAILED =
+  'Resource collector cleanup failed; owned process exit is unverified.';
 const BACKOFF_MS = [120_000, 240_000, 480_000, 900_000] as const;
 const nowClock = (): BudgetClock => ({
   wall: Date.now(),
@@ -165,9 +167,17 @@ export class ResourceService {
       };
 
       this.#sources.set(target.key, source);
-    } else if (source.consumers.size === 0) {
-      // A new session/configuration may make a previously unsupported source usable.
-      source.permanent = false;
+    } else {
+      for (const consumer of source.consumers) {
+        if (!consumer.valid()) {
+          consumer.release();
+        }
+      }
+
+      if (source.consumers.size === 0) {
+        // A replacement generation may make a previously unsupported source usable.
+        source.permanent = false;
+      }
     }
 
     const state = source;
@@ -375,7 +385,7 @@ export class ResourceService {
     return result;
   }
 
-  async close(): Promise<void> {
+  async close(): Promise<readonly string[]> {
     this.#closed = true;
 
     this.#stopTimer?.();
@@ -398,7 +408,7 @@ export class ResourceService {
 
     const settled = await settledWithin(Promise.all(pending), 2000);
 
-    if (settled === undefined) {
+    if (settled?.status !== 'fulfilled') {
       this.#warn(
         'Collector shutdown could not be verified within its cleanup bound.',
       );
@@ -406,6 +416,8 @@ export class ResourceService {
 
     await this.#writing;
     await this.#options.storage?.close(this.#now().wall);
+
+    return [...this.#warnings];
   }
 
   #live(source: SourceState): boolean {
@@ -530,6 +542,11 @@ export class ResourceService {
           this.#persist();
         },
         (error: unknown) => {
+          // Exit verification remains relevant even after facts lose publication authority.
+          if (error instanceof ResourceReadError && error.kind === 'cleanup') {
+            this.#warn(CLEANUP_FAILED);
+          }
+
           if (
             !flight.invalidated &&
             !flight.timedOut &&
@@ -539,7 +556,9 @@ export class ResourceService {
             this.#failure(
               source,
               error instanceof ResourceReadError
-                ? error.message
+                ? error.kind === 'cleanup'
+                  ? CLEANUP_FAILED
+                  : error.message
                 : 'Resource collector failed.',
               error instanceof ResourceReadError &&
                 error.kind === 'authentication'

@@ -13,6 +13,7 @@ import {
   problemLine,
   problemNote,
   refusalLine,
+  readTeamSelection,
   resolveStartup,
   resumedStartup,
   saveEditorMode,
@@ -27,6 +28,136 @@ import { parse } from 'shell-quote';
 import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
 import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
+
+describe('selected policy admission diagnostics', () => {
+  test('invalid nested policy keeps structured paths and refuses selected admission only', async () => {
+    await place(
+      {
+        project: JSON.stringify({
+          agent: 'fake',
+          teamSelection: { constraints: { agents: null } },
+        }),
+      },
+      async (where) => {
+        const loaded = await loadSettings(where);
+
+        expect(loaded.settings.agent).toBe('fake');
+        expect(loaded.problems[0]).toMatchObject({
+          kind: 'validation',
+          key: ['teamSelection', 'constraints', 'agents'],
+        });
+        expect(await readTeamSelection(where)).toEqual({
+          error:
+            'Team selection settings could not be validated. Correct the settings before selecting a team.',
+        });
+        expect(JSON.stringify(await readTeamSelection(where))).not.toContain(
+          where.cwd,
+        );
+      },
+    );
+  });
+
+  test('ordinary unrelated validation and user-only scope warnings do not block selection', async () => {
+    await place(
+      {
+        user: JSON.stringify({
+          mouse: false,
+          theme: 7,
+          teamSelection: { constraints: { modes: { fake: ['plan'] } } },
+        }),
+        project: JSON.stringify({ mouse: true }),
+      },
+      async (where) => {
+        const loaded = await loadSettings(where);
+
+        expect(loaded.problems.map(({ kind, key }) => ({ kind, key }))).toEqual(
+          [
+            { kind: 'validation', key: ['theme'] },
+            { kind: 'scope', key: ['mouse'] },
+          ],
+        );
+        expect(await readTeamSelection(where)).toEqual({
+          policy: { constraints: { modes: { fake: ['plan'] } } },
+        });
+      },
+    );
+  });
+
+  test('fresh reads use ordinary layer merge and observe changed explicit empty lists', async () => {
+    await place(
+      {
+        user: JSON.stringify({
+          teamSelection: {
+            intent: 'prefer',
+            prefer: { agent: 'codex', model: 'large' },
+            constraints: {
+              agents: ['codex', 'claude'],
+              modes: { codex: ['auto'], claude: ['plan'] },
+            },
+          },
+        }),
+        project: JSON.stringify({
+          teamSelection: {
+            prefer: { model: null },
+            constraints: { agents: ['claude'] },
+          },
+        }),
+      },
+      async (where) => {
+        expect(await readTeamSelection(where)).toEqual({
+          policy: {
+            intent: 'prefer',
+            prefer: { agent: 'codex', model: null },
+            constraints: {
+              agents: ['claude'],
+              modes: { codex: ['auto'], claude: ['plan'] },
+            },
+          },
+        });
+
+        const project = settingsFiles(where)[1];
+
+        await writeFile(
+          project!,
+          JSON.stringify({
+            teamSelection: {
+              constraints: { agents: [], modes: { claude: [] } },
+            },
+          }),
+        );
+        expect(await readTeamSelection(where)).toEqual({
+          policy: {
+            intent: 'prefer',
+            prefer: { agent: 'codex', model: 'large' },
+            constraints: { agents: [], modes: { codex: ['auto'], claude: [] } },
+          },
+        });
+      },
+    );
+  });
+
+  test('missing files mean defaults; whole-file parse/read failures refuse without fallback', async () => {
+    await place({}, async (where) => {
+      expect(await readTeamSelection(where)).toEqual({ policy: {} });
+
+      const project = settingsFiles(where)[1]!;
+
+      await mkdir(project, { recursive: true });
+      expect((await loadSettings(where)).problems[0]?.kind).toBe('read');
+      expect(await readTeamSelection(where)).toHaveProperty('error');
+    });
+
+    for (const project of ['not-json', 'null', '[]']) {
+      await place(
+        { user: '{"teamSelection":{"intent":"balanced"}}', project },
+        async (where) => {
+          expect((await loadSettings(where)).problems[0]?.kind).toBe('parse');
+          expect(await readTeamSelection(where)).toHaveProperty('error');
+        },
+      );
+    }
+  });
+});
 
 describe('resource selection preferences', () => {
   test('strict nested fields report problems and retain explicit empty constraints', () => {
@@ -384,7 +515,14 @@ test("a session resumed from another directory starts on that directory's settin
       ).toStrictEqual({ id: 'default', from: '--permission-mode' });
       expect(
         unseenProblems((await loadSettings(here)).problems, loaded.problems),
-      ).toStrictEqual([{ file, message: 'unknown key "colour", ignored' }]);
+      ).toStrictEqual([
+        {
+          file,
+          kind: 'validation',
+          key: ['colour'],
+          message: 'unknown key "colour", ignored',
+        },
+      ]);
     },
   );
 });
@@ -442,6 +580,7 @@ test('a malformed file is named and ignored, and the other file still counts', a
     problems: [
       {
         file: 'f',
+        kind: 'parse',
         message: 'not a JSON object; the file is ignored',
       },
     ],
@@ -581,6 +720,8 @@ test("the theme is read from the user's file, never the project's", async () => 
       expect(problems).toStrictEqual([
         {
           file: project!,
+          kind: 'scope',
+          key: ['theme'],
           message:
             '"theme" is read only from ~/config/chord/settings.json, ignored',
         },
@@ -698,6 +839,8 @@ test("the editor mode is read from the user's file, never the project's", async 
       expect(problems).toStrictEqual([
         {
           file: project!,
+          kind: 'scope',
+          key: ['editorMode'],
           message:
             '"editorMode" is read only from ~/config/chord/settings.json, ignored',
         },
@@ -723,6 +866,8 @@ test("the mouse is read from the user's file, never the project's", async () => 
       expect(problems).toStrictEqual([
         {
           file: project!,
+          kind: 'scope',
+          key: ['mouse'],
           message:
             '"mouse" is read only from ~/config/chord/settings.json, ignored',
         },
@@ -748,6 +893,8 @@ test("copyOnSelect is read from the user's file, never the project's", async () 
       expect(problems).toStrictEqual([
         {
           file: project!,
+          kind: 'scope',
+          key: ['copyOnSelect'],
           message:
             '"copyOnSelect" is read only from ~/config/chord/settings.json, ignored',
         },

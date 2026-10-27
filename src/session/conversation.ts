@@ -251,6 +251,8 @@ export interface Recording {
   heard(event: ConversationEvent): void;
   /** Settles once what was heard so far is kept. */
   flushed(): Promise<void>;
+  /** A writer bound to the actual record open now, including after clear. */
+  captureServed?(): ((turnId: string, call: ChordCall) => void) | undefined;
 }
 
 /** What each session the conversation opens is put on before it is shown. */
@@ -2002,6 +2004,30 @@ export class Conversation {
    */
   servedEnded(call: ChordCall): void {
     this.#recording?.heard({ type: 'served', turnId: this.#stamp(), call });
+  }
+
+  /** A late receipt belongs to the session that admitted its launch. */
+  captureServed(): ((call: ChordCall) => void) | undefined {
+    const session = this.#session;
+
+    if (session === undefined) {
+      return undefined;
+    }
+
+    const write = this.#recording?.captureServed?.();
+    const turnId = this.#stamp();
+
+    if (write === undefined) {
+      return undefined;
+    }
+
+    return (call) => {
+      if (this.#current(session)) {
+        this.served(call);
+      } else {
+        write(turnId, call);
+      }
+    };
   }
 
   /**

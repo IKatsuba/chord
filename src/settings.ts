@@ -104,6 +104,9 @@ export type Settings = z.infer<typeof SettingsFile>;
 export interface SettingsProblem {
   readonly file: string;
   readonly message: string;
+  /** Admission checks use structure rather than interpreting display prose. */
+  readonly kind?: 'read' | 'parse' | 'validation' | 'scope';
+  readonly key?: readonly string[];
 }
 
 /** The user's own settings file, which chord also writes; none without a home. */
@@ -267,6 +270,7 @@ export function parseSettings(
       problems: [
         {
           file,
+          kind: 'parse',
           message: `not valid JSON (${
             error instanceof Error ? error.message : String(error)
           }); the file is ignored`,
@@ -318,6 +322,7 @@ export function parseSettings(
               ...problems,
               {
                 file,
+                kind: 'parse',
                 message: 'not a JSON object; the file is ignored',
               },
             ],
@@ -326,6 +331,8 @@ export function parseSettings(
 
         problems.push({
           file,
+          kind: 'validation',
+          key: path.map(String),
           // A refused command is not ignored: its agent will not start, which
           // the person learns before trying it.
           message:
@@ -341,7 +348,10 @@ export function parseSettings(
 
   return {
     settings: {},
-    problems: [...problems, { file, message: 'the file is ignored' }],
+    problems: [
+      ...problems,
+      { file, kind: 'parse', message: 'the file is ignored' },
+    ],
   };
 }
 
@@ -437,6 +447,7 @@ export async function loadSettings(where: {
 
       problems.push({
         file,
+        kind: 'read',
         message: `cannot be read (${
           error instanceof Error ? error.message : String(error)
         }); the file is ignored`,
@@ -459,6 +470,8 @@ export async function loadSettings(where: {
       delete settings[key];
       problems.push({
         file,
+        kind: 'scope',
+        key: [key],
         message: `"${key}" is read only from ${
           user === undefined
             ? "the user's settings file"
@@ -479,6 +492,29 @@ export async function loadSettings(where: {
     layers,
     problems,
   };
+}
+
+/** Fresh configuration for selected admission; direct runs keep their path. */
+export type TeamSelectionPolicy =
+  { readonly policy: TeamSelection } | { readonly error: string };
+
+export async function readTeamSelection(
+  where: Parameters<typeof loadSettings>[0],
+): Promise<TeamSelectionPolicy> {
+  const loaded = await loadSettings(where);
+  const invalid = loaded.problems.some(
+    (problem) =>
+      problem.kind === 'read' ||
+      problem.kind === 'parse' ||
+      (problem.kind === 'validation' && problem.key?.[0] === 'teamSelection'),
+  );
+
+  return invalid
+    ? {
+        error:
+          'Team selection settings could not be validated. Correct the settings before selecting a team.',
+      }
+    : { policy: loaded.settings.teamSelection ?? {} };
 }
 
 /** What the command line gave; anything left out falls back to the files. */

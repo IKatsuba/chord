@@ -20,7 +20,9 @@
 - `dev/compile.ts` uses `Bun.build` with a plugin resolving OpenTUI's
   `react/jsx-dev-runtime` imports to `dev/jsx_dev_runtime.ts` on React's
   production runtime. Its `buildOptions` also builds the boundary test.
-- `targets.ts` is the one list of release platforms.
+- `targets.ts` is the one list of release platforms. Resource collector support
+  is separately guarded; compiling a target does not enable its collectors.
+  Keep the resource worker in the same binary and provider executables external.
 - `bun dev memory` is too slow for `bun quality` (`docs/memory.md`).
 - Scripts run on Bun; no `npx`. The release runs npm on node through
   `dev/release/lib.ts` (the owner's exception in `docs/decisions.md`).

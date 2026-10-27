@@ -26,4 +26,6 @@
 - Add a new test to `tsconfig.json`'s `files` when its path differs from
   another file only by case, so `bun check` checks both on a case-blind
   file system.
-- Never reach a real model or a real agent.
+- Never reach a real model, agent or resource provider. Inject fixture resource
+  access explicitly; omitted access is disabled, never an official fallback.
+  Fake/QA launches use fixture collectors even if real provider CLIs exist.

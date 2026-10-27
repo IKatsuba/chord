@@ -89,7 +89,11 @@ work or a monitor's command and latest output; `x` stops where offered.
 
 Describe how you work and the agent proposes a team: a lead and its members,
 each on the runtime, model and mode you want. Save it once, then hand it any
-job with `/team run bugfix <job>`.
+job with `/team run bugfix <job>`. `/team choose bugfix <job>` asks main to
+choose this run's composition using advisory resource facts; it uses a model
+turn and leaves the saved team unchanged. Automatic quota readers initially
+support Apple silicon Macs with specific Codex/Claude versions; see
+[the guide](docs/guide.md#resource-facts-and-team-selection) for their limits.
 
 <img src="docs/images/proposal.png" alt="A proposed team as a table of agents, with a box asking where to save it" width="900">
 

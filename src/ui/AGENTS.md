@@ -16,3 +16,9 @@
   transcript, spacer rows in background logs. OpenTUI #1739 omits margins
   from a one-row scrollbox's height; `tests/ui/transcript/gap_test.tsx`
   pins it so the spacer can go once the pinned library counts them.
+- `/team choose` sends one visible main selection turn; direct run and picker
+  Enter send none. Bind queued choice and launch authority to the caller;
+  cancellation/replacement must release resource relevance.
+- Resource reports preserve per-window scope and uncertainty. Recorded Team
+  receipts show actual history, with current state unknown; genuine ACP
+  linkage replaces the Chord-owned fallback rather than duplicating it.

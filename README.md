@@ -115,7 +115,7 @@ chord starts each agent for you (through `npx` or `uvx`, or the agent's own
 CLI where it has one), so the agent's own login is all it needs: sign in to
 Claude Code, Codex or Gemini as you normally would.
 
-To build from source, with [Bun](https://bun.sh) 1.4.2 or newer:
+To build from source, with [Bun](https://bun.sh) 1.4.4 or newer:
 
 ```sh
 git clone https://github.com/IKatsuba/chord && cd chord

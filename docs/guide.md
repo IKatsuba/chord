@@ -36,7 +36,7 @@ The macOS binaries are signed and notarised.
 that installed chord (npm, bun, pnpm or yarn); `chord upgrade --version
 <version>` installs that one, and `chord upgrade -l` lists them.
 
-Or build from source with [Bun](https://bun.sh) 1.4.2 or newer:
+Or build from source with [Bun](https://bun.sh) 1.4.4 or newer:
 
 ```sh
 bun install
@@ -1096,7 +1096,10 @@ and no dismissal is recorded.
 ```sh
 bun install       # the dependencies
 bun dev chord     # run from source
-bun dev check     # types, lint, format and tests
+bun quality       # types, lint, format and tests
+bun check         # native type checker
+bun lint --fix    # what ESLint can fix
+bun fmt           # native formatter
 bun dev compile   # this machine's binary into dist/
 bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 ```
@@ -1104,20 +1107,24 @@ bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 `AGENTS.md` is binding for people and agents and says which checks a change
 needs. `docs/decisions.md` records why the stack is what it is.
 
-`bun dev --help` lists all development commands: `chord` (`--fake` for the
-test agent), `test`, `check` (`--static` to leave out the suite), `fmt`,
-`lint`, `compile`
-(`--all` or `--install`), `npm`, `registry`, `mark`, `screenshots` (optionally
-shot names), `memory`, `selftest <binary>` and `release [version]`.
-Arguments after `chord`, `test` and `lint` pass on as written; an empty
-argument needs `--` (`bun dev test -- -t ''`). Use `bun dev chord -- --help`
-for chord's own help.
+`bun dev --help` lists runtime, test and build commands: `chord` (`--fake`
+for the test agent), `test`, `compile` (`--all` or `--install`), `npm`,
+`registry`, `mark`, `screenshots` (optionally shot names), `memory`,
+`selftest <binary>` and `release [version]`.
+
+`bun quality` runs native type and format checks, tracked-file coverage,
+ESLint and `lint/` tests, then the suite; `--static` leaves out the suite.
+`bun lint` runs ESLint. Arguments after `bun dev chord`, `bun dev test`
+and `bun lint` pass on as written; empty arguments need `--`
+(`bun dev test -- -t ''`), as does the tool's help (`bun lint -- --help`
+or `bun dev chord -- --help`).
 
 `bun dev test` reports the tests' status. `tests/timings.json` only places
 files: Bun uses it to balance shards and start each worker's slowest files
 first; an unlisted file takes the median. No refresh is required.
-CI runs `static`, three `tests` shards (`--shard=1/3`, `2/3`, `3/3`) and
-`compile`. The required `check` job passes only when all of them succeed.
+CI runs `static` (`bun quality --static`), three `tests` shards
+(`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
+passes only when all of them succeed.
 
 The owner's `bun dev release [version|major|minor|patch|fix]` releases
 package.json's version when none is given. An exact version must equal it
@@ -1126,7 +1133,7 @@ or be above it, in canonical `X.Y.Z` form with no prefix or build metadata.
 when package.json's current version is a pre-release. Give the command a
 version or bump instead of editing package.json's version by hand.
 
-The release runs `install`, `check`, `natives`, `compile`, `sign`,
+The release runs `install`, `check` (`bun quality`), `natives`, `compile`, `sign`,
 `selftest`, `notarise`, `pack` and `publish` in order. `--skip` and `--only`
 take comma-separated stages; `--from` and `--to` bound the run. `--only`
 cannot combine with the other three. A new version needs `compile` among

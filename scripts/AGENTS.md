@@ -1,7 +1,9 @@
 # Script rules
 
 - `bun dev <command>` is the Cliffy CLI in `dev.ts`, with modules in
-  `dev/`; declare arguments there, not in each module.
+  `dev/`; declare its arguments there, not in each module. `bun quality`
+  and `bun lint` use `quality.ts` and `lint.ts`; `bun check` and `bun fmt`
+  are native Bun commands.
 - `bun dev release [version|major|minor|patch|fix]` is the owner's
   (`docs/decisions.md`, "Releasing"); nobody else publishes. Give it the
   version instead of editing package.json's by hand. It needs an arm64 Mac
@@ -19,6 +21,6 @@
   `react/jsx-dev-runtime` imports to `dev/jsx_dev_runtime.ts` on React's
   production runtime. Its `buildOptions` also builds the boundary test.
 - `targets.ts` is the one list of release platforms.
-- `bun dev memory` is too slow for `bun dev check` (`docs/memory.md`).
+- `bun dev memory` is too slow for `bun quality` (`docs/memory.md`).
 - Scripts run on Bun; no `npx`. The release runs npm on node through
   `dev/release/lib.ts` (the owner's exception in `docs/decisions.md`).

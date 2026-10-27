@@ -24,5 +24,6 @@
   system time cannot stop their deadline. Reuse `until` from
   `ui/app/render.tsx` or `session/conversation_fake.ts` (10 s by default).
 - Add a new test to `tsconfig.json`'s `files` when its path differs from
-  another file only by case, so tsc checks both on a case-blind file system.
+  another file only by case, so `bun check` checks both on a case-blind
+  file system.
 - Never reach a real model or a real agent.

@@ -229,7 +229,7 @@ test('qaPlace makes a capture directory afresh, emptying one left from before (C
 });
 
 describe('CHD-513 U1 tester: command status without timing gates', () => {
-  for (const command of ['test', 'quality']) {
+  for (const command of ['test', 'quality', 'quality --static']) {
     for (const failing of [false, true]) {
       test(`${command} keeps timing files untouched when its tests ${failing ? 'fail' : 'pass'}`, async () => {
         const checkout = await mkdtemp(join(tmpdir(), 'chord-status-'));
@@ -284,7 +284,7 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
 
           const result = spawnSync(
             bun,
-            command === 'quality' ? ['quality'] : ['dev', 'test'],
+            command === 'test' ? ['dev', 'test'] : command.split(' '),
             {
               cwd: checkout,
               encoding: 'utf8',
@@ -294,7 +294,7 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
 
           expect(result.error).toBeUndefined();
           expect(result.status, result.stdout + result.stderr).toBe(
-            failing ? 1 : 0,
+            failing && command !== 'quality --static' ? 1 : 0,
           );
           expect(result.stdout + result.stderr).not.toContain('timings:');
           expect(

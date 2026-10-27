@@ -207,7 +207,10 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
           ...(options.path === undefined ? {} : { PATH: options.path }),
           COVERED_MARKER: join(repo, 'compiler.called'),
           COVERED_LISTED: JSON.stringify(
-            options.listed ?? names.map((name) => join(base, name)),
+            options.listed ?? [
+              'bundled:///lib.esnext.d.ts',
+              ...names.map((name) => join(base, name)),
+            ],
           ),
           COVERED_STATUS: String(options.status ?? 0),
           COVERED_ERROR: options.status ? 'compiler refused on purpose\n' : '',

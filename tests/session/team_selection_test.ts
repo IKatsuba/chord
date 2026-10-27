@@ -507,3 +507,151 @@ describe('selection decision receipts', () => {
     ]);
   });
 });
+
+describe('tester: selected receipt bounds and role isolation', () => {
+  test('an overridden member saved value must still fit its historical receipt without mutating the team', () => {
+    for (const field of ['agent', 'model', 'mode', 'effort'] as const) {
+      const source = structuredClone(saved);
+
+      source.members[0]![field] = 'x'.repeat(129);
+
+      const before = structuredClone(source);
+      const result = freezeSelection(
+        source,
+        {
+          reason,
+          members: {
+            reviewer: {
+              agent: 'claude',
+              model: 'sonnet',
+              mode: 'plan',
+              effort: 'medium',
+            },
+          },
+        },
+        {},
+        runtimes,
+      );
+
+      expect(result).toEqual({
+        error: `reviewer.${field}: the saved value cannot fit a bounded run receipt. No run started. Choose a supported configuration.`,
+      });
+      expect(source).toEqual(before);
+    }
+  });
+
+  test('known capabilities reject an unchanged member even when the overridden lead is supported', () => {
+    const before = structuredClone(saved);
+    const result = freezeSelection(
+      saved,
+      {
+        reason,
+        lead: {
+          agent: 'claude',
+          model: 'sonnet',
+          mode: 'plan',
+          effort: 'medium',
+        },
+      },
+      {},
+      runtimes,
+      new Map([
+        [
+          'claude',
+          {
+            models: [{ id: 'sonnet', efforts: [{ id: 'medium' }] }],
+            modes: [{ id: 'plan' }],
+          },
+        ],
+        ['codex', { models: [{ id: 'old-model' }], modes: [{ id: 'auto' }] }],
+      ]),
+    );
+
+    assert('error' in result);
+    expect(result.error).toContain('reviewer.mode: old-mode is not supported');
+    expect(saved).toEqual(before);
+  });
+
+  test('receipt warning overflow is explicit and duplicate served observation refs count once', () => {
+    const selected = freezeSelection(saved, { reason }, {}, runtimes);
+
+    assert('frozen' in selected);
+
+    const observation: BudgetSnapshot['unbound'][number] = {
+      observationRef: 'same-observation',
+      sourceRef: 'source',
+      sessionRef: 'session',
+      agent: 'codex',
+      source: 'fixture',
+      sourceVersion: '1',
+      observedAt: null,
+      billingKind: 'unknown',
+      coverage: 'unknown',
+      externalActivity: 'unknown',
+      windows: [],
+      reason: 'Identity unverified.',
+    };
+    const read: BudgetSnapshot = {
+      schemaVersion: 1,
+      observedAt: '2026-10-27T13:00:00Z',
+      preferences: {},
+      pools: [],
+      unbound: [observation, { ...observation, sourceRef: 'other-source' }],
+      unavailable: [{ agent: 'claude', reason: 'Fixture unavailable.' }],
+      activeRuns: [],
+      warnings: Array.from(
+        { length: 256 },
+        (_, index) => `Fixture warning ${index}.`,
+      ),
+    };
+    const receipt = selectionReceipt(
+      'run',
+      { name: 'fixture', place: 'project' },
+      selected.frozen,
+      read,
+    );
+
+    expect(receipt.decisionRead).toEqual({
+      readAt: read.observedAt,
+      observationRefs: ['same-observation'],
+    });
+    expect(receipt.warnings).toHaveLength(256);
+    expect(receipt.warnings.at(-1)).toBe(
+      'Additional resource warnings are omitted.',
+    );
+    expect(read.warnings.at(-1)).toBe('Fixture warning 255.');
+    expect(SelectionReceipt.safeParse(receipt).success).toBe(true);
+  });
+
+  test('actual confirmation copies runtime values without changing planned or unopened roles', () => {
+    const selected = freezeSelection(saved, { reason }, {}, runtimes);
+
+    assert('frozen' in selected);
+
+    const receipt = selectionReceipt(
+      'run',
+      { name: 'fixture', place: 'user' },
+      selected.frozen,
+    );
+    const actual = { model: 'old-model', mode: 'old-mode', effort: 'low' };
+    const confirmed = confirmSelectionRole(
+      receipt.roles[0]!,
+      actual,
+      'Soft effort refused.',
+    );
+
+    actual.effort = 'medium';
+    actual.model = 'later-model';
+
+    expect(confirmed).toMatchObject({
+      state: 'confirmed',
+      actual: { model: 'old-model', mode: 'old-mode', effort: 'low' },
+      note: 'Soft effort refused.',
+    });
+    expect(receipt.roles.map((role) => [role.state, role.actual])).toEqual([
+      ['planned', null],
+      ['planned', null],
+    ]);
+    expect(receipt.roles[0]?.planned.effort).toBe('high');
+  });
+});

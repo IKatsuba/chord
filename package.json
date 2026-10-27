@@ -8,7 +8,10 @@
     "bun": ">=1.4.2"
   },
   "scripts": {
-    "dev": "bun scripts/dev.ts"
+    "dev": "bun scripts/dev.ts",
+    "check": "bun scripts/quality.ts check",
+    "lint": "bun scripts/quality.ts lint",
+    "fmt": "bun scripts/quality.ts fmt"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^1.7.0",

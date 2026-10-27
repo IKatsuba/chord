@@ -24,9 +24,6 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     chord: record('chord'),
     qa: record('qa'),
     test: record('test'),
-    check: record('check'),
-    fmt: record('fmt'),
-    lint: record('lint'),
   };
 
   await devCommand(actions).noExit().throwErrors().parse(argv);
@@ -210,33 +207,10 @@ describe('test', () => {
   });
 });
 
-describe('check', () => {
-  test('runs everything, or only the static steps', async () => {
-    expect(await parsed(['check'])).toStrictEqual([
-      ['check', { static: false }],
-    ]);
-    expect(await parsed(['check', '--static'])).toStrictEqual([
-      ['check', { static: true }],
-    ]);
-  });
-
-  test('takes no arguments and no other option', async () => {
-    await expect(parsed(['check', 'tests/'])).rejects.toThrow(ValidationError);
-    await expect(parsed(['check', '--fix'])).rejects.toThrow(ValidationError);
-  });
-});
-
-test('fmt takes no arguments', async () => {
-  expect(await parsed(['fmt'])).toStrictEqual([['fmt']]);
-  await expect(parsed(['fmt', 'src/'])).rejects.toThrow(ValidationError);
-});
-
-test('lint passes every argument on to ESLint', async () => {
-  expect(await parsed(['lint'])).toStrictEqual([['lint', []]]);
-  expect(await parsed(['lint', '--fix'])).toStrictEqual([['lint', ['--fix']]]);
-  expect(await parsed(['lint', '--fix', '--', '--quiet'])).toStrictEqual([
-    ['lint', ['--fix', '--quiet']],
-  ]);
+test('quality commands are no longer dev commands', async () => {
+  for (const command of ['check', 'lint', 'fmt']) {
+    await expect(parsed([command])).rejects.toThrow(ValidationError);
+  }
 });
 
 test('--help lists every command', () => {
@@ -245,9 +219,6 @@ test('--help lists every command', () => {
   for (const name of [
     'chord',
     'test',
-    'check',
-    'fmt',
-    'lint',
     'compile',
     'npm',
     'registry',
@@ -338,9 +309,6 @@ describe('tester: migrated command boundaries', () => {
       chord: unexpected,
       qa: unexpected,
       test: unexpected,
-      check: unexpected,
-      fmt: unexpected,
-      lint: unexpected,
     };
 
     await expect(

@@ -2,7 +2,7 @@
  * The long-run memory check (CHD-343): chord's window on the fake agent, a
  * team at work in it for as long as asked, its memory sampled and its heap
  * snapshotted over the run, and the first snapshot compared with the last.
- * Too slow for `bun dev check`, whose tests must end in seconds: memory that
+ * Too slow for `bun check`, whose tests must end in seconds: memory that
  * grows only shows over minutes.
  *
  *   bun dev memory                        10 minutes from source

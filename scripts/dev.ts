@@ -39,9 +39,6 @@ export interface DevActions {
   /** Makes `dir`, a capture's directory for `chord --qa`, afresh. */
   qa(dir: string): void | Promise<void>;
   test(args: readonly string[]): void | Promise<void>;
-  check(options: { static: boolean }): void | Promise<void>;
-  fmt(): void | Promise<void>;
-  lint(args: readonly string[]): void | Promise<void>;
 }
 
 /**
@@ -92,15 +89,6 @@ const RUN: DevActions = {
   test: async (args) => {
     process.exitCode = (await import('./dev/tools.ts')).test(args);
   },
-  check: async (options) => {
-    process.exitCode = (await import('./dev/tools.ts')).check(options);
-  },
-  fmt: async () => {
-    process.exitCode = (await import('./dev/tools.ts')).fmt();
-  },
-  lint: async (args) => {
-    process.exitCode = (await import('./dev/tools.ts')).lint(args);
-  },
 };
 
 const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version. Preflight runs on every run, whatever is skipped. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
@@ -109,7 +97,7 @@ The version is package.json's, or the one given: package.json's own, an exact ve
 
 Stages:
   install    bun install --frozen-lockfile
-  check      bun dev check
+  check      bun check
   natives    every platform's packages installed; the macOS native libraries signed
   compile    bun dev compile --all; each binary's kind checked with file(1)
   sign       both macOS binaries signed, verified and their entitlements compared
@@ -178,38 +166,6 @@ export function devCommand(actions: DevActions = RUN) {
           .example('an empty pattern, after --', "bun dev test -- -t ''")
           .action(function (_options, ...args) {
             return actions.test([...args, ...this.getLiteralArgs()]);
-          }),
-      )
-      .command(
-        'check',
-        new Command()
-          .description(
-            "The full validation: tsc, ESLint, Prettier and lint/'s own test, then the whole suite. It stops at the first step that fails, with that step's exit status.",
-          )
-          .option(
-            '--static',
-            "Only tsc, ESLint, Prettier and lint/'s own test, not the suite.",
-            { default: false },
-          )
-          .action((options) => actions.check(options)),
-      )
-      .command(
-        'fmt',
-        new Command()
-          .description("Lay the tree out with Prettier's --write.")
-          .action(() => actions.fmt()),
-      )
-      .command(
-        'lint',
-        new Command()
-          .description(
-            "Run ESLint over the tree; the rest of the arguments are ESLint's, an empty one only after --.",
-          )
-          .arguments('[args...:string]')
-          .stopEarly()
-          .example('what ESLint can fix, fixed', 'bun dev lint --fix')
-          .action(function (_options, ...args) {
-            return actions.lint([...args, ...this.getLiteralArgs()]);
           }),
       )
       .command(

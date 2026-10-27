@@ -1,8 +1,8 @@
 /**
- * The commands that were package.json scripts (CHD-411): chord from source,
- * the tests, the checks, Prettier and ESLint. Each spawns its tool from the
+ * The tool runners shared by the dev CLI and the quality package scripts:
+ * chord from source, the tests, the checks, Prettier and ESLint. Each spawns its tool from the
  * repository's root with the terminal handed over and answers the tool's
- * exit status, which `bun dev` exits with.
+ * exit status, which the calling command exits with.
  *
  * tsc, ESLint and Prettier run as `bun run <bin>`, as the scripts ran them:
  * Bun finds the bin in node_modules/.bin and, by bunfig.toml's

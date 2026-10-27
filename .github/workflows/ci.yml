@@ -14,7 +14,7 @@ jobs:
         with:
           bun-version: 1.4.x
       - run: bun install --frozen-lockfile
-      - run: bun dev check --static
+      - run: bun check --static
 
   # The suite in three, each test file in exactly one: Bun's --shard cuts
   # the sorted files by the times in tests/timings.json (CHD-513).

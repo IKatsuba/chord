@@ -509,3 +509,53 @@ describe('tester: launch commitment and replacement boundaries', () => {
     );
   });
 });
+
+describe('CHD-533 tester: removed choice during a running turn', () => {
+  for (const columns of [80, 120]) {
+    test(`local refusal cannot queue a hidden selection at ${columns} columns`, async () => {
+      const prompts: string[] = [];
+      const completed: string[] = [];
+
+      await withLaunch(
+        async (window) => {
+          await window.resize({ columns, rows: columns === 80 ? 24 : 40 });
+          await send(window, 'costwait');
+          await window.shows('Working until stopped.');
+          await send(window, '/team choose fixture repair it');
+          await window.shows(
+            '/team has no choose; it takes list, new, show, run or stop',
+          );
+          expect(prompts).toEqual(['costwait']);
+          expect(window.pids).toHaveLength(1);
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await send(window, 'text');
+          await until('ordinary next turn completes', () =>
+            completed.includes('text'),
+          );
+          expect(prompts).toEqual(['costwait', 'text']);
+          expect(window.pids).toHaveLength(1);
+        },
+        async (options) => {
+          const session = await openSession(options);
+          const prompt = session.prompt.bind(session);
+
+          session.prompt = (text, ...rest) => {
+            prompts.push(text);
+
+            const answer = prompt(text, ...rest);
+            const done = () => {
+              completed.push(text);
+            };
+
+            void answer.result.then(done, done);
+
+            return answer;
+          };
+
+          return session;
+        },
+      );
+    });
+  }
+});

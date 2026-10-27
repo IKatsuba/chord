@@ -295,6 +295,7 @@ import { RESOURCES } from './scenarios/resources.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORMS } from './scenarios/forms.ts';
+import { FX } from './scenarios/fx.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
 import { MODES } from './scenarios/modes.ts';
@@ -341,6 +342,7 @@ import {
 } from './turn.ts';
 
 const SCENARIOS = [
+  'fxerror',
   'resources',
   'selectedteam',
   'budgetawareteam',
@@ -624,6 +626,7 @@ const PLAY: Record<Scenario, Play> = {
   ...MODES,
   ...SUBAGENTS,
   ...MISBEHAVING,
+  ...FX,
   ...CHORD_TOOLS,
   ...RESOURCES,
   ...SELECTED_TEAMS,

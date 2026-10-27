@@ -23,6 +23,43 @@ import { SHIFT_UP, PAGE_UP } from './transcript_keys.ts';
 
 const HOME = '\x1b[H';
 
+describe('CHD-534 synthetic fx failure', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`the error and usable next prompt stay visible at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'fxerror');
+          await window.shows('ResponseLanguageMismatch');
+          await until(
+            'the failed turn to become idle',
+            () => !window.frame().includes('Working…'),
+          );
+
+          const frame = window.frame();
+
+          expect(frame.split('ResponseLanguageMismatch')).toHaveLength(2);
+          expect(frame).toContain(
+            'The model response used a different language',
+          );
+          expect(frame).toContain('language explicitly.');
+          expect(frame).toContain('│ ›');
+
+          await send(window, 'text');
+          await window.shows('Hello, world. This reply came in chunks.');
+          await until(
+            'the successful turn to become idle',
+            () => !window.frame().includes('Working…'),
+          );
+          expect(window.frame()).toContain('│ ›');
+        },
+        { columns, rows },
+      ));
+  }
+});
+
 test('Enter sends the prompt and the reply streams in', () =>
   withWindow(async (window) => {
     await send(window, 'text');

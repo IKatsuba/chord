@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { getEventListeners } from 'node:events';
 import { serveChord } from '../../../src/server/server.ts';
 import { openSession } from '../../../src/session/session.ts';
@@ -476,4 +476,120 @@ test('selection completion leaves independent run interests until run close, the
   } finally {
     await server.close();
   }
+});
+
+describe('CHD-533 tester: interrupted choice ownership', () => {
+  test('a wedged selection is revoked by clear without entering the replacement session', async () => {
+    const server = serveChord();
+    const { live, resources, signals } = chooseInterests();
+    const prompts: string[] = [];
+    let replacementReady = false;
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/team choose fixture wedged selection');
+          await until(
+            'selection reached the wedged fake',
+            () => prompts.length === 1,
+          );
+          expect([...live.values()].sort()).toEqual([
+            'claude',
+            'codex',
+            'fake',
+          ]);
+          await send(window, '/clear');
+          await until(
+            'replacement is ready',
+            () => window.pids.length === 2 && replacementReady,
+          );
+          await until('old choice interests released', () =>
+            [...live.values()].every((agent) => agent === 'fake'),
+          );
+          expect(prompts).toHaveLength(1);
+
+          for (const signal of signals) {
+            expect(getEventListeners(signal, 'abort')).toHaveLength(0);
+          }
+        },
+        {
+          server,
+          resources,
+          columns: 80,
+          rows: 24,
+          teams: { fixture: team },
+          runtimes: ['fake', 'codex', 'claude'],
+          startupOf: () => ({
+            agentCommand: fakeAgentCommand(undefined, '--hang', 'turn'),
+          }),
+          onState: (state) => {
+            replacementReady =
+              state.sessions[state.front]?.connection.status === 'ready';
+          },
+          openWith: async (args) => {
+            const session = await openSession(args);
+            const prompt = session.prompt.bind(session);
+
+            session.prompt = (text, ...rest) => {
+              prompts.push(text);
+
+              return prompt(text, ...rest);
+            };
+
+            return session;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('main exiting during a choice releases its interests without a direct retry', async () => {
+    const server = serveChord();
+    const { live, resources, signals } = chooseInterests();
+    let requests = 0;
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/team choose fixture crash');
+          await until('choice reached main', () => requests === 1);
+          await until('crashed choice releases team interests', () =>
+            [...live.values()].every((agent) => agent === 'fake'),
+          );
+          expect(window.pids).toHaveLength(1);
+          expect(requests).toBe(1);
+          expect(signals.size).toBeGreaterThan(0);
+
+          for (const signal of signals) {
+            expect(getEventListeners(signal, 'abort')).toHaveLength(0);
+          }
+        },
+        {
+          server,
+          resources,
+          teams: { fixture: team },
+          runtimes: ['fake', 'codex', 'claude'],
+          startupOf: () => ({ agentCommand: fakeAgentCommand('crash') }),
+          openWith: async (args) => {
+            const session = await openSession(args);
+            const prompt = session.prompt.bind(session);
+
+            session.prompt = (text, ...rest) => {
+              requests++;
+
+              return prompt(text, ...rest);
+            };
+
+            return session;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });

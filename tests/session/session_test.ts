@@ -1729,3 +1729,56 @@ describe('CHD-519 U2 tester: agent mentions on the fake ACP transport', () => {
       ).toEqual([`Received a link: real.ts, ${uri}\n\n`]);
     }));
 });
+
+describe('CHD-534 tester: failure boundaries', () => {
+  test('a failed turn and its one-shot capture stay isolated from another active session', () =>
+    withSession((failedSession) =>
+      withSession(async (otherSession) => {
+        const gate = join(failedSession.cwd, '.fake-gate');
+
+        await mkdir(gate);
+        await writeFile(join(gate, 'capture-prompt'), '');
+
+        const [failed, healthy] = await Promise.all([
+          run(failedSession, 'fxerror'),
+          run(otherSession, 'text'),
+        ]);
+
+        expect(failed.result.status).toBe('failed');
+        expect(said(failed.updates)).toEqual([FX_ERROR_NOTICE]);
+        expect(healthy.result.status).toBe('completed');
+        expect(said(healthy.updates).join('')).toContain('Hello, world.');
+        expect(calls(healthy.updates)).toEqual([]);
+
+        const captured = await readFile(join(gate, 'prompt.json'), 'utf8');
+
+        expect(JSON.parse(captured)).toEqual([
+          { type: 'text', text: 'fxerror' },
+        ]);
+        await expect(
+          readFile(join(gate, 'capture-prompt')),
+        ).rejects.toMatchObject({
+          code: 'ENOENT',
+        });
+        await expect(
+          readFile(join(otherSession.cwd, '.fake-gate', 'prompt.json')),
+        ).rejects.toMatchObject({ code: 'ENOENT' });
+
+        const [recovered, otherFailed] = await Promise.all([
+          run(failedSession, 'text'),
+          run(otherSession, 'fxerror'),
+        ]);
+
+        expect(recovered.result.status).toBe('completed');
+        expect(said(recovered.updates).join('')).toContain('Hello, world.');
+        expect(otherFailed.result.status).toBe('failed');
+        expect(said(otherFailed.updates)).toEqual([FX_ERROR_NOTICE]);
+        expect(await readFile(join(gate, 'prompt.json'), 'utf8')).toBe(
+          captured,
+        );
+        await expect(
+          readFile(join(otherSession.cwd, '.fake-gate', 'prompt.json')),
+        ).rejects.toMatchObject({ code: 'ENOENT' });
+      }),
+    ));
+});

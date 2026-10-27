@@ -804,3 +804,83 @@ describe('CHD-426 U3 tester: several held requests keep the cycle clock', () => 
     });
   }
 });
+
+describe('CHD-534 tester: failure boundaries', () => {
+  test('cancelling after a completed shell preserves it without inventing a mismatch, then a failed retry stays distinct', () =>
+    withSession(
+      async (session) => {
+        let didCancel = false;
+        const unsubscribe = session.subscribe((update) => {
+          if (
+            !didCancel &&
+            update.sessionUpdate === 'tool_call_update' &&
+            update.status === 'completed'
+          ) {
+            didCancel = true;
+
+            void session.cancel();
+          }
+        });
+
+        const cancelled = fold(
+          await play(session, 'fxerror').finally(unsubscribe),
+        );
+
+        const completed = cancelled.entries.flatMap((entry) =>
+          entry.kind === 'tool' && entry.call.status === 'completed'
+            ? [entry.call]
+            : [],
+        );
+
+        expect(didCancel).toBe(true);
+        expect(completed).toHaveLength(1);
+        expect(completed[0]?.kind).toBe('execute');
+        expect(cancelled.turn).toEqual({ status: 'idle' });
+        expect(cancelled.entries.at(-1)?.kind).toBe('cancelled');
+        expect(
+          cancelled.entries.filter((entry) => entry.kind === 'error'),
+        ).toEqual([]);
+        expect(
+          cancelled.entries.filter(
+            (entry) =>
+              entry.kind === 'assistant' && entry.text === FX_ERROR_NOTICE,
+          ),
+        ).toEqual([]);
+
+        const retried = fold(await play(session, 'fxerror'), cancelled);
+        const errors = retried.entries.filter(
+          (entry) => entry.kind === 'error',
+        );
+        const tools = retried.entries.flatMap((entry) =>
+          entry.kind === 'tool' ? [entry.call] : [],
+        );
+
+        expect(retried.turn).toEqual({ status: 'idle' });
+        expect(errors).toHaveLength(1);
+        expect(errors[0]?.message).toBe('ResponseLanguageMismatch');
+        expect(
+          tools.filter((call) => call.status === 'completed'),
+        ).toHaveLength(8);
+        expect(tools.find((call) => call.id === completed[0]?.id)).toEqual(
+          completed[0],
+        );
+        expect(
+          retried.entries.filter((entry) => entry.kind === 'cancelled'),
+        ).toHaveLength(1);
+
+        const next = fold(await play(session, 'text'), retried);
+
+        expect(next.turn).toEqual({ status: 'idle' });
+        expect(next.entries.filter((entry) => entry.kind === 'error')).toEqual(
+          errors,
+        );
+        expect(next.entries.at(-1)).toMatchObject({
+          kind: 'assistant',
+          text: 'Hello, world. This reply came in chunks.',
+        });
+      },
+      undefined,
+      '--step-ms',
+      '40',
+    ));
+});

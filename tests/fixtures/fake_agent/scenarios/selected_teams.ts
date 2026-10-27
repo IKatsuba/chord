@@ -1,10 +1,73 @@
 /** Fake-only selected compositions travel through the ordinary MCP surface. */
 import process from 'node:process';
+import assert from 'node:assert/strict';
+import type { TeamsAnswer } from '../../../../src/server/tools.ts';
 import type { Play } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 import { gateOpened } from './agents.ts';
 
+/** These fixtures follow their fixed saved instructions, never interpret prose. */
+async function discoveredTeam(turn: Parameters<Play>[0], select: boolean) {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    return 'end_turn' as const;
+  }
+
+  try {
+    await client.listTools();
+
+    const listed = await callChord(turn, client, 'list_teams', {});
+
+    assert(listed !== undefined);
+
+    const answer = JSON.parse(listed) as TeamsAnswer;
+    const definition = answer.teams.find((one) => one.name === 'fixture');
+
+    assert(definition !== undefined && 'lead' in definition);
+
+    if (select) {
+      await callChord(turn, client, 'list_agents', {});
+
+      const agents = [
+        ...new Set([
+          definition.lead.agent,
+          ...definition.members.map((member) => member.agent),
+        ]),
+      ];
+
+      await callChord(turn, client, 'get_budgets', { agents });
+      await callChord(turn, client, 'get_budgets', { agents });
+    }
+
+    await callChord(turn, client, 'run_team', {
+      team: 'fixture',
+      job: 'selectedidle',
+      ...(select
+        ? {
+            selection: {
+              reason:
+                'Preserve every saved role, instruction and permission; filtered capacity and freshness are advisory unknown.',
+              lead: { model: 'fake-small', mode: 'plan' },
+            },
+          }
+        : {}),
+    });
+    await turn.say(
+      select
+        ? 'Ordinary budget-aware handoff completed.'
+        : 'Ordinary saved-composition handoff completed.',
+    );
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn' as const;
+}
+
 export const SELECTED_TEAMS = {
+  budgetawareteam: (turn) => discoveredTeam(turn, true),
+  savedteamplain: (turn) => discoveredTeam(turn, false),
   async selectedteam(turn) {
     const client = await chordClient(turn);
 

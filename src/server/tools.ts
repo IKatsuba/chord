@@ -16,6 +16,10 @@ import { performance } from 'node:perf_hooks';
 import { foldBudgetCache } from '../platform/budget_cache.ts';
 import type { BudgetSnapshot } from '../session/budgets.ts';
 import {
+  filterResourceFacts,
+  ResourceAgents,
+} from '../session/resource_filter.ts';
+import {
   RunSelection,
   type SelectionReceipt,
 } from '../session/team_selection.ts';
@@ -236,7 +240,11 @@ export type RuntimeOffer =
 /** What the tools read of the window. */
 export interface WindowView {
   /** Immediate advisory facts; omission disables collection for an injected window. */
-  budgets?(caller: Caller): BudgetSnapshot;
+  budgets?(
+    caller: Caller,
+    agents?: readonly string[],
+    admittedAt?: number,
+  ): BudgetSnapshot;
   /** The sessions open in the window, in the strip's order. */
   sessions(): readonly OpenSessionView[];
   /** Every runtime chord can start, by the name a session is opened with. */
@@ -929,30 +937,43 @@ const getBudgets: Register = (server, caller) =>
     'get_budgets',
     {
       description:
-        'Read cached advisory resource facts immediately without starting a provider or waiting for refresh. Consider each independent window, reset, unknown freshness and active work; never combine subscription percentages with API dollars. Read list_agents before selecting a supported per-run composition; fixed keeps the saved team, prefer is soft, hard allowlists remain binding. No scheduling, quota guarantee, auth change or payment-source fallback.',
-      inputSchema: {},
+        'Read cached advisory resource facts immediately, without waiting for providers. ' +
+        'Omit agents for existing current facts with no additional readers; [] returns no runtime facts. ' +
+        'An explicit agents filter uses runtime IDs from list_agents and retains only those configured readers ' +
+        'for at most 30 seconds from admission. Pending or missing capacity is unknown: retry with the same ' +
+        'filter to read completed facts; repeats do not extend the window, restart readers or redate observations. ' +
+        'Read team/person instructions first and request facts when resources matter to the job. ' +
+        'Consider each independent window, reset, unknown freshness and active work; never combine subscription ' +
+        'percentages with API dollars. Preferences are advisory and selected-run hard allowlists remain binding. ' +
+        'No scheduling, quota guarantee, auth change or payment-source fallback.',
+      inputSchema: {
+        agents: ResourceAgents.optional().describe(
+          'Optional runtime IDs from list_agents: explicit filter scopes facts and bounded background relevance; omission preserves current facts, [] requests none.',
+        ),
+      },
     },
-    () => {
+    (input, extra) => {
+      const admittedAt = performance.now();
+      const request = { ...caller, signal: extra.signal };
       let facts: BudgetSnapshot;
 
       try {
-        facts =
-          caller.window.budgets?.(caller) ??
-          foldBudgetCache(
-            [],
-            {},
-            { wall: Date.now(), monotonic: performance.now() },
-          );
-      } catch {
-        return serve(
-          caller,
-          'get_budgets',
-          {},
-          { error: 'Resource facts could not be read.' },
+        facts = filterResourceFacts(
+          caller.window.budgets?.(request, input.agents, admittedAt) ??
+            foldBudgetCache(
+              [],
+              {},
+              { wall: Date.now(), monotonic: admittedAt },
+            ),
+          input.agents,
         );
+      } catch {
+        return serve(request, 'get_budgets', input, {
+          error: 'Resource facts could not be read.',
+        });
       }
 
-      const response = serve(caller, 'get_budgets', {}, facts, (value) =>
+      const response = serve(request, 'get_budgets', input, facts, (value) =>
         JSON.stringify(value, null, 2),
       );
 

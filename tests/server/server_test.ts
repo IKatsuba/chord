@@ -3,6 +3,7 @@ import {
   selectionReceipt,
 } from '../../src/session/team_selection.ts';
 import { foldBudgetCache } from '../../src/platform/budget_cache.ts';
+import { BudgetSnapshot } from '../../src/session/budgets.ts';
 import { describe, expect, test } from 'bun:test';
 import { until } from '../session/conversation_fake.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -1220,3 +1221,120 @@ describe('CHD-533 tester: optional routing instructions over MCP', () => {
       }
     }));
 });
+
+test('runtime-filtered budgets use the public bounded schema, record actual scope and never probe runtimes', () =>
+  withServer(async (server) => {
+    const scopes: {
+      agents: readonly string[] | undefined;
+      admittedAt: number | undefined;
+    }[] = [];
+    const served: ChordCall[] = [];
+    const launch: NonNullable<Caller['launch']> = {
+      valid: () => true,
+      signal: () => new AbortController().signal,
+    };
+    const facts = foldBudgetCache(
+      [],
+      { intent: 'balanced' },
+      { wall: Date.now(), monotonic: 10 },
+    );
+    let probes = 0;
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        launch,
+        window: {
+          ...WINDOW,
+          budgets: (caller, agents, admittedAt) => {
+            expect(caller.signal).toBeInstanceOf(AbortSignal);
+            scopes.push({ agents, admittedAt });
+
+            return facts;
+          },
+          offer: () => {
+            probes += 1;
+
+            return Promise.resolve(undefined);
+          },
+          served: (_caller, call) => served.push(call),
+        },
+      }).token,
+    );
+
+    try {
+      const tool = (await client.listTools()).tools.find(
+        (tool) => tool.name === 'get_budgets',
+      );
+
+      expect(Object.keys(tool?.inputSchema.properties ?? {})).toEqual([
+        'agents',
+      ]);
+      expect(JSON.stringify(tool?.inputSchema)).toContain('"maxItems":128');
+      expect(tool?.description).toContain('repeats do not extend');
+
+      const current = await client.callTool({
+        name: 'get_budgets',
+        arguments: {},
+      });
+      const empty = await client.callTool({
+        name: 'get_budgets',
+        arguments: { agents: [] },
+      });
+      const filtered = await client.callTool({
+        name: 'get_budgets',
+        arguments: { agents: ['missing', 'missing'] },
+      });
+
+      expect(current.structuredContent).toEqual(facts);
+      expect(empty.structuredContent).toEqual(facts);
+      expect(filtered.structuredContent).toMatchObject({
+        unavailable: [
+          {
+            agent: 'missing',
+            reason:
+              'No resource observations for this runtime; capacity unknown.',
+          },
+        ],
+        pools: [],
+        unbound: [],
+        activeRuns: [],
+        preferences: { intent: 'balanced' },
+      });
+      expect(launch.decisionRead).toEqual(
+        BudgetSnapshot.parse(filtered.structuredContent),
+      );
+      expect(scopes.map((scope) => scope.agents)).toEqual([
+        undefined,
+        [],
+        ['missing', 'missing'],
+      ]);
+      expect(
+        scopes.every((scope) => typeof scope.admittedAt === 'number'),
+      ).toBe(true);
+      expect(served.map((call) => call.input)).toEqual([
+        {},
+        { agents: [] },
+        { agents: ['missing', 'missing'] },
+      ]);
+      expect(probes).toBe(0);
+
+      for (const agents of [
+        [''],
+        ['x'.repeat(129)],
+        Array<string>(129).fill('codex'),
+        'codex',
+      ]) {
+        const rejected = await client.callTool({
+          name: 'get_budgets',
+          arguments: { agents },
+        });
+
+        expect(rejected.isError).toBe(true);
+      }
+
+      expect(scopes).toHaveLength(3);
+    } finally {
+      await client.close();
+    }
+  }));

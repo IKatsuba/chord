@@ -1,3 +1,4 @@
+import { ResourceRequests } from '../../session/resource_requests.ts';
 /**
  * The window's agents, driven through `OpenAgents`: main and each child
  * opened with a conversation of its own whose events go into the reducer
@@ -304,7 +305,11 @@ export function useSessions(
   const { all, state, dispatch, redraw, showDraft, stopCommand } = host;
   const { exit } = useApp();
   const resourceTasks = useRef(new Map<string, ResourceTask>());
-  const retainResources = (agents: readonly string[], signal: AbortSignal) => {
+  const retainResources = (
+    agents: readonly string[],
+    signal: AbortSignal,
+    valid?: () => boolean,
+  ) => {
     if (resources === undefined) {
       return () => {};
     }
@@ -325,6 +330,7 @@ export function useSessions(
           ...(command === undefined ? {} : { command }),
         },
         signal,
+        valid,
       );
     });
 
@@ -333,6 +339,35 @@ export function useSessions(
         release?.();
       }
     };
+  };
+
+  const retainRequestResources = useRef(retainResources);
+
+  retainRequestResources.current = retainResources;
+
+  const [resourceRequests] = useState(
+    () =>
+      new ResourceRequests((agents, signal, valid) =>
+        retainRequestResources.current(
+          agents.filter((agent) => runtimeNames.includes(agent)),
+          signal,
+          valid,
+        ),
+      ),
+  );
+  const resourceHeard = (
+    conversation: Conversation,
+    event: ConversationEvent,
+  ) => {
+    if (event.type === 'result' || event.type === 'failed') {
+      resourceRequests.ended(conversation, event.turnId);
+    } else if (
+      event.type === 'cleared' ||
+      event.type === 'closing' ||
+      event.type === 'disconnected'
+    ) {
+      resourceRequests.release(conversation);
+    }
   };
 
   // The session main opens next resumes: the one `--resume` asks for, and
@@ -523,6 +558,8 @@ export function useSessions(
         );
       },
       (event) => {
+        resourceHeard(conversation, event);
+
         if (event.type === 'cleared' || event.type === 'closing') {
           releaseCurrentCaller();
           releaseCurrentResources();
@@ -708,6 +745,8 @@ export function useSessions(
         );
       },
       (event) => {
+        resourceHeard(conversation, event);
+
         if (event.type === 'cleared' || event.type === 'closing') {
           releaseCurrentCaller();
           releaseCurrentResources();
@@ -2313,12 +2352,44 @@ export function useSessions(
 
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
-    budgets: () =>
-      resources?.read(place.teamSelection) ??
-      foldBudgetCache([], place.teamSelection ?? {}, {
-        wall: Date.now(),
-        monotonic: performance.now(),
-      }),
+    budgets: (caller, agents, admittedAt = performance.now()) => {
+      if (agents !== undefined) {
+        const actor = callerConversation(caller.key, caller.agent);
+        const session = actor?.session;
+        const turnId = actor?.activeTurnId;
+
+        if (actor !== undefined && session !== undefined) {
+          const signal = AbortSignal.any([
+            actor.launchSignal,
+            ...(caller.signal === undefined ? [] : [caller.signal]),
+            ...(caller.launch === undefined ? [] : [caller.launch.signal()]),
+          ]);
+
+          resourceRequests.retain({
+            caller: actor,
+            generation: caller.launch ?? session,
+            agents,
+            signal,
+            admittedAt,
+            ...(turnId === undefined ? {} : { turnId }),
+            valid: () =>
+              !signal.aborted &&
+              caller.launch?.valid() !== false &&
+              callerConversation(caller.key, caller.agent) === actor &&
+              actor.session === session &&
+              (turnId === undefined || actor.activeTurnId === turnId),
+          });
+        }
+      }
+
+      return (
+        resources?.read(place.teamSelection) ??
+        foldBudgetCache([], place.teamSelection ?? {}, {
+          wall: Date.now(),
+          monotonic: performance.now(),
+        })
+      );
+    },
     sessions: () => {
       const agents = front();
       const session = agents?.main.conversation.session;
@@ -2481,16 +2552,20 @@ export function useSessions(
     sessions.start(agent);
 
     // A crash or a signal closes and reaps them too before chord exits.
-    const forget = closeOnForcedExit(() => sessions.closeAll());
+    const forget = closeOnForcedExit(() => {
+      resourceRequests.close();
+
+      return sessions.closeAll();
+    });
 
     return () => {
       forget();
-
+      resourceRequests.close();
       runtimesMade.current?.close();
 
       void sessions.closeAll().catch(() => {});
     };
-  }, [sessions]);
+  }, [sessions, resourceRequests]);
 
   /**
    * The session in front, read when a key or a pick acts rather than when

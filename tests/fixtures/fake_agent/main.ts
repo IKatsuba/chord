@@ -343,6 +343,8 @@ import {
 const SCENARIOS = [
   'resources',
   'selectedteam',
+  'budgetawareteam',
+  'savedteamplain',
   'selectedlate',
   'selectedlead',
   'selectedidle',

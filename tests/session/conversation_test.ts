@@ -1404,3 +1404,23 @@ test("on Claude's adapter, a message held behind an open call goes as the next t
     ]);
     expect(queued).toStrictEqual(1);
   }));
+
+test('active turn identity exposes current work only and never the last completed turn', () =>
+  onFake([], async (conversation, events) => {
+    expect(conversation.activeTurnId).toBeUndefined();
+    conversation.send('costwait');
+    await until(() => saidIn(events).includes('Working until stopped.'));
+
+    const prompt = events.find((event) => event.type === 'prompt');
+
+    assert(prompt?.type === 'prompt');
+    expect(conversation.activeTurnId).toBe(prompt.turnId);
+    conversation.interrupt();
+    await until(() => events.some((event) => event.type === 'result'));
+    expect(conversation.activeTurnId).toBeUndefined();
+    conversation.send('text');
+    await until(
+      () => events.filter((event) => event.type === 'result').length === 2,
+    );
+    expect(conversation.activeTurnId).toBeUndefined();
+  }));

@@ -1,5 +1,5 @@
 /** Runtime-scoped factual reads through the real MCP server, with fixture-only collectors. */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -411,3 +411,76 @@ test('actual fake-provider disconnect releases an idle temporary filter', () =>
     );
     expect(live(retained, 'fake')).toBe(0);
   }));
+
+describe('CHD-533 tester: production factual-read boundaries', () => {
+  test('idle SDK repeats expire at the original real deadline without a synthetic turn', () =>
+    withRequests(async ({ main, client, retained }) => {
+      const sdk = await client(main);
+      const started = performance.now();
+
+      await read(sdk, ['claude']);
+      expect(live(retained, 'claude')).toBe(1);
+      await until(
+        'near the original request deadline',
+        () => performance.now() - started >= 25_000,
+        28_000,
+      );
+      await read(sdk, ['claude', 'claude']);
+      expect(retained.filter((entry) => entry.agent === 'claude')).toHaveLength(
+        1,
+      );
+      expect(live(retained, 'claude')).toBe(1);
+      await until(
+        'original absolute expiry releases the idle filter',
+        () => live(retained, 'claude') === 0,
+        10_000,
+      );
+      expect(live(retained, 'fake')).toBe(1);
+    }));
+
+  test('pre-cancelled SDK clearing and an expired late admission cannot release the current owner', () =>
+    withRequests(async ({ main, client, retained }) => {
+      const sdk = await client(main);
+      const cancelled = new AbortController();
+
+      await read(sdk, ['claude']);
+      cancelled.abort();
+      await expect(
+        sdk.callTool(
+          { name: 'get_budgets', arguments: { agents: [] } },
+          undefined,
+          { signal: cancelled.signal },
+        ),
+      ).rejects.toThrow();
+      main.window.budgets?.(main, [], performance.now() - 30_001);
+      await read(sdk);
+      expect(live(retained, 'claude')).toBe(1);
+      expect(live(retained, 'fake')).toBe(1);
+      expect(retained.map((entry) => entry.agent)).toEqual(['fake', 'claude']);
+    }));
+
+  test('request cancellation at window admission releases only its temporary source and a later SDK read recovers', () =>
+    withRequests(async ({ main, client, retained }) => {
+      const request = new AbortController();
+
+      main.window.budgets?.(
+        { ...main, signal: request.signal },
+        ['claude'],
+        performance.now(),
+      );
+      expect(live(retained, 'claude')).toBe(1);
+      request.abort();
+      await until(
+        'request-only cancellation releases its source',
+        () => live(retained, 'claude') === 0,
+      );
+      expect(live(retained, 'fake')).toBe(1);
+
+      const sdk = await client(main);
+
+      await read(sdk, ['claude']);
+      request.abort();
+      expect(live(retained, 'claude')).toBe(1);
+      expect(live(retained, 'fake')).toBe(1);
+    }));
+});

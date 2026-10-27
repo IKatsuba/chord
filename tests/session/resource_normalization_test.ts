@@ -23,6 +23,91 @@ const bucket = {
 };
 
 describe('official resource normalization', () => {
+  test('all-null, empty and wholly malformed source windows are unavailable', () => {
+    for (const windows of [
+      {},
+      { primary: null, secondary: null },
+      {
+        primary: {
+          usedPercent: null,
+          windowDurationMins: null,
+          resetsAt: null,
+        },
+        secondary: null,
+      },
+      {
+        primary: { usedPercent: null, windowDurationMins: 60, resetsAt: null },
+        secondary: null,
+      },
+      { primary: { usedPercent: 101 }, secondary: 'malformed' },
+    ]) {
+      expect(
+        normalizeCodex(
+          account,
+          { rateLimits: windows, rateLimitsByLimitId: null },
+          source,
+        ),
+      ).toHaveProperty('unavailable');
+    }
+
+    for (const rateLimits of [
+      {},
+      { five_hour: null, seven_day: null },
+      { five_hour: { utilization: null, resets_at: null } },
+      {
+        five_hour: { utilization: -1, resets_at: 'malformed' },
+        model_scoped: 'invalid',
+      },
+    ]) {
+      expect(
+        normalizeClaude(
+          { rate_limits_available: true, rate_limits: rateLimits },
+          source,
+        ),
+      ).toHaveProperty('unavailable');
+    }
+  });
+
+  test('valid reset alone remains partial timing evidence without a capacity claim', () => {
+    const codex = normalizeCodex(
+      account,
+      {
+        rateLimits: {
+          primary: {
+            usedPercent: null,
+            windowDurationMins: null,
+            resetsAt: 1_800_000_000,
+          },
+          secondary: null,
+        },
+        rateLimitsByLimitId: null,
+      },
+      source,
+    );
+    const claude = normalizeClaude(
+      {
+        rate_limits_available: true,
+        rate_limits: {
+          five_hour: { utilization: null, resets_at: '2026-10-28T13:00:00Z' },
+        },
+      },
+      source,
+    );
+
+    for (const result of [codex, claude]) {
+      if ('observation' in result) {
+        expect(result.observation.windows[0]).toMatchObject({
+          usedPercent: null,
+          observedAt: null,
+          state: 'unknown',
+        });
+        expect(result.observation.windows[0]!.resetsAt).not.toBeNull();
+      } else {
+        throw new Error('Expected explicit partial timing facts.');
+      }
+    }
+  });
+
   test('Codex prefers all map buckets, without adding the legacy duplicate or exporting account IDs', () => {
     const result = normalizeCodex(
       account,
@@ -163,7 +248,7 @@ describe('official resource normalization', () => {
       {
         rate_limits_available: true,
         rate_limits: {
-          five_hour: { utilization: -1, resets_at: null },
+          five_hour: { utilization: 0, resets_at: null },
           model_scoped: 'invalid',
         },
       },
@@ -171,7 +256,7 @@ describe('official resource normalization', () => {
     );
 
     if ('observation' in partial) {
-      expect(partial.observation.windows[0]!.usedPercent).toBeNull();
+      expect(partial.observation.windows[0]!.usedPercent).toBe(0);
       expect(partial.observation.windows.at(-1)!.reason).toContain(
         'incomplete',
       );

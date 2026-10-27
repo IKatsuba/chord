@@ -3,7 +3,10 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import { withResourceProcess } from '../../src/platform/resource_process.ts';
+import {
+  COLLECTOR_BOUNDS,
+  withResourceProcess,
+} from '../../src/platform/resource_process.ts';
 
 test('late read resolution after cancellation cannot publish and no group remains', async () => {
   const directory = await mkdtemp(join(tmpdir(), 'chord-late-resource-'));
@@ -87,4 +90,39 @@ test('cancellation while a successful read closes still revokes publication', as
   release.resolve();
 
   await expect(result).rejects.toThrow('cancelled');
+});
+
+test('total deadline while a successful read closes revokes publication', async () => {
+  let enteredClose = false;
+  let pid: number | undefined;
+  const result = withResourceProcess(
+    [
+      process.execPath,
+      new URL('../fixtures/resource_provider.ts', import.meta.url).pathname,
+      'normal',
+    ],
+    {
+      cwd: process.cwd(),
+      signal: new AbortController().signal,
+      bounds: { ...COLLECTOR_BOUNDS, totalMs: 250 },
+    },
+    (group, signal, onClose) => {
+      pid = group.pid;
+
+      onClose(
+        () =>
+          new Promise<void>((resolve) => {
+            enteredClose = true;
+
+            signal.addEventListener('abort', () => resolve(), { once: true });
+          }),
+      );
+
+      return Promise.resolve('observation before deadline');
+    },
+  );
+
+  await expect(result).rejects.toThrow('deadline');
+  expect(enteredClose).toBe(true);
+  expect(() => process.kill(pid!, 0)).toThrow();
 });

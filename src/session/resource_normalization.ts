@@ -76,7 +76,11 @@ function observation(
   agent: 'claude' | 'codex',
   windows: WindowSnapshot[],
 ): NormalizedResources {
-  if (windows.length === 0) {
+  if (
+    !windows.some(
+      (window) => window.usedPercent !== null || window.resetsAt !== null,
+    )
+  ) {
     return {
       unavailable: {
         agent,

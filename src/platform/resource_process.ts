@@ -239,5 +239,12 @@ export async function withResourceProcess<T>(
     throw new ResourceReadError('cancelled', 'Resource read cancelled.');
   }
 
+  if (deadline.aborted) {
+    throw new ResourceReadError(
+      'timeout',
+      'Resource acquisition exceeded its deadline.',
+    );
+  }
+
   return result;
 }

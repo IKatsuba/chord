@@ -7358,3 +7358,47 @@ change. Keep the public-stream API, process-group ownership, experimental
 Claude API and uncapped-frame-buffer risk as approved. Deadlines do not cap
 memory. Existing trial, freshness, identity, billing and cross-target evidence
 limits remain unchanged.
+
+## 2026-10-27 — CHD-533: MCP-first selection; remove the unrequested choose surface (owner)
+
+The owner removes `/team choose` completely. It was unnecessary for the
+MCP-first goal: the launching agent reads existing team instructions, reads
+resource facts when relevant, and calls normal `run_team` with supported
+per-run overrides. Without such instructions, selection is not required;
+human direct runs and picker Enter keep saved composition with no extra
+main turn. No replacement command, flag, hidden prompt, opt-in or team schema.
+
+The bounded audit found that optional MCP selection already worked, but
+`list_teams` omitted shared body, lead/member instructions and effort, and
+`run_team` help/schema descriptions omitted selection semantics. Expose those
+stored fields additively through the existing tool and describe inheritance
+and runtime switches there, without interpreting or enforcing prose.
+
+Add optional `agents: string[]` to existing `get_budgets`, using existing
+runtime IDs (at most 128, each 1–128 characters). Omission preserves current
+facts; an explicit empty list adds no interest and returns empty runtime-scoped
+facts, never all providers. The launching agent discovers saved
+composition/instructions, extracts runtimes and requests facts. No team-name
+argument, team-keyed lease or team-budget API. Explicit filters return matching
+runtime observations, unavailable entries and active work while preserving
+shared-pool identity, global preferences and coverage truth. Never duplicate
+percentages or guess identity. Unknown/unsupported IDs are advisory unavailable,
+without probing or installation; facts retain account/pool scope.
+
+A unique sorted runtime filter has one temporary caller-generation owner,
+with a 30-second absolute admission deadline. Repeats do not extend, re-retain
+or restart it; replacement releases the prior owner. Expiry, request
+cancellation, actual turn terminal state when available, clear, close,
+disconnect and caller
+replacement release once, preserving independent main/run owners. Without an
+active turn, bounded refresh still works; invent no turn ID. Return cached or
+pending facts without provider wait; later explicit reads may see completed
+facts without redating them. Missing capacity stays advisory unknown. No
+list/discovery fanout, mandatory read, automatic routing, new payment policy
+or redundant team/configuration schema.
+
+The earlier choose specification and U5 captures are superseded. Their
+historical provenance and approved collector trials remain intact; they prove
+no corrected UI behavior. Existing Resources, selected receipts/reinspection,
+receipt-only Resume and historical unlinked receipt layouts remain. PR #145
+remains open and unmerged under the owner's hold.

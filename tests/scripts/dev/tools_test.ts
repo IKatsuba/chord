@@ -229,7 +229,7 @@ test('qaPlace makes a capture directory afresh, emptying one left from before (C
 });
 
 describe('CHD-513 U1 tester: command status without timing gates', () => {
-  for (const command of ['test', 'check']) {
+  for (const command of ['test', 'quality']) {
     for (const failing of [false, true]) {
       test(`${command} keeps timing files untouched when its tests ${failing ? 'fail' : 'pass'}`, async () => {
         const checkout = await mkdtemp(join(tmpdir(), 'chord-status-'));
@@ -256,9 +256,10 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
               version: '0.0.0',
               scripts: {
                 dev: 'bun scripts/dev.ts',
-                tsc: 'bun -e "0"',
+                quality: 'bun scripts/quality.ts',
+                check: 'bun -e "0"',
                 eslint: 'bun -e "0"',
-                prettier: 'bun -e "0"',
+                fmt: 'bun -e "0"',
               },
             }),
           );
@@ -281,11 +282,15 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
             measured,
           );
 
-          const result = spawnSync(bun, ['dev', command], {
-            cwd: checkout,
-            encoding: 'utf8',
-            timeout: 20_000,
-          });
+          const result = spawnSync(
+            bun,
+            command === 'quality' ? ['quality'] : ['dev', 'test'],
+            {
+              cwd: checkout,
+              encoding: 'utf8',
+              timeout: 20_000,
+            },
+          );
 
           expect(result.error).toBeUndefined();
           expect(result.status, result.stdout + result.stderr).toBe(

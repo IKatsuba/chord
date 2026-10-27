@@ -155,7 +155,7 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
       );
       await writeFile(
         join(repo, 'package.json'),
-        JSON.stringify({ scripts: { tsc: 'bun compiler.ts' } }),
+        JSON.stringify({ scripts: { check: 'bun compiler.ts' } }),
       );
       await writeFile(
         join(repo, 'compiler.ts'),
@@ -241,7 +241,7 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
 
       expect(result.status).toBe(1);
       expect(result.stderr).toBe(
-        "tsc leaves out 1 tracked file; list each in tsconfig.json's files:\n" +
+        "bun check leaves out 1 tracked file; list each in tsconfig.json's files:\n" +
           '  src/Case.tsx\n',
       );
     }));
@@ -256,7 +256,7 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
       });
 
       expect(result.status).toBe(1);
-      expect(result.stderr).toContain('tsc leaves out 2 tracked files');
+      expect(result.stderr).toContain('bun check leaves out 2 tracked files');
 
       for (const name of omitted) {
         expect(result.stderr).toContain(`  ${name}\n`);
@@ -269,7 +269,7 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
 
       expect(result.status).toBe(23);
       expect(result.stderr).toContain('compiler refused on purpose');
-      expect(result.stderr).not.toContain('tsc leaves out');
+      expect(result.stderr).not.toContain('bun check leaves out');
     }));
 
   test('Git failure keeps its status and never starts the compiler', () =>
@@ -302,7 +302,7 @@ describe('CHD-474 tester: actual guard process boundaries', () => {
 
       expect(omitted.status).toBe(1);
       expect(omitted.stderr).toBe(
-        "tsc leaves out 1 tracked file; list each in tsconfig.json's files:\n" +
+        "bun check leaves out 1 tracked file; list each in tsconfig.json's files:\n" +
           '  eslint.config.ts\n',
       );
 

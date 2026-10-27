@@ -270,3 +270,92 @@ describe('captured run receipt records', () => {
       }
     }));
 });
+
+describe('tester: captured writer close and queue isolation', () => {
+  test('interleaved captures preserve both actual record identities and append order', () =>
+    withRecord(async (_directory, recording) => {
+      const { call } = selected();
+
+      recording.opened(looked('first-actual-caller'));
+
+      const firstPath = recording.path;
+      const first = recording.captureServed();
+
+      recording.heard({ type: 'cleared' });
+      recording.opened(looked('second-actual-caller'));
+
+      const secondPath = recording.path;
+      const second = recording.captureServed();
+
+      assert(firstPath !== undefined && secondPath !== undefined);
+      assert(first !== undefined && second !== undefined);
+
+      second('second-turn', { ...call, asked: 'second-first' });
+      first('first-turn', { ...call, asked: 'first-first' });
+      second('second-turn', { ...call, asked: 'second-last' });
+      first('first-turn', { ...call, asked: 'first-last' });
+      await recording.flushed();
+
+      for (const [path, identity, asks] of [
+        [firstPath, 'first-actual-caller', ['first-first', 'first-last']],
+        [secondPath, 'second-actual-caller', ['second-first', 'second-last']],
+      ] as const) {
+        const entries = await readPast(path);
+
+        expect(entries.filter((entry) => entry.type === 'session')).toEqual([
+          expect.objectContaining({ sessionId: identity }),
+        ]);
+        expect(
+          entries
+            .filter((entry) => entry.type === 'served')
+            .map((entry) => entry.call.asked),
+        ).toEqual([...asks]);
+        expect(entries.some((entry) => entry.type === 'prompt')).toBe(false);
+      }
+    }));
+
+  test('a captured Conversation writer persists after close without emitting a live served event', () =>
+    withRecord(async (directory, recording) => {
+      const events: ConversationEvent[] = [];
+      const { call } = selected();
+      const conversation = new Conversation(
+        (signal) =>
+          openSession({
+            agent: 'fake',
+            cwd: directory,
+            agentCommand: fakeAgentCommand(),
+            signal,
+          }),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        recording,
+      );
+
+      try {
+        conversation.start();
+        await until(() => events.some((event) => event.type === 'connected'));
+
+        const path = recording.path;
+        const write = conversation.captureServed();
+
+        assert(path !== undefined && write !== undefined);
+
+        await conversation.close();
+
+        const before = events.length;
+
+        write(call);
+        await recording.flushed();
+
+        expect(
+          events.slice(before).some((event) => event.type === 'served'),
+        ).toBe(false);
+        expect(
+          (await readPast(path)).filter((entry) => entry.type === 'served'),
+        ).toEqual([expect.objectContaining({ call })]);
+      } finally {
+        await conversation.close();
+      }
+    }));
+});

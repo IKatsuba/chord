@@ -1297,3 +1297,57 @@ describe('tester: resource preference layering', () => {
     expect(base.teamSelection.prefer.model).toBe('large');
   });
 });
+
+describe('tester: fresh selected policy failure and repair', () => {
+  test('a valid project override cannot hide an invalid policy in the user layer', async () => {
+    await place(
+      {
+        user: JSON.stringify({
+          teamSelection: { constraints: { models: { codex: null } } },
+        }),
+        project: JSON.stringify({
+          teamSelection: { constraints: { models: { codex: ['supported'] } } },
+        }),
+      },
+      async (where) => {
+        expect(
+          (await loadSettings(where)).settings.teamSelection?.constraints
+            ?.models?.codex,
+        ).toEqual(['supported']);
+        expect(await readTeamSelection(where)).toHaveProperty('error');
+      },
+    );
+  });
+
+  test('repair and removal are observed without retaining an earlier failure or deny list', async () => {
+    await place(
+      {
+        user: JSON.stringify({
+          teamSelection: { constraints: { agents: ['codex'] } },
+        }),
+        project: JSON.stringify({
+          teamSelection: { constraints: { agents: null } },
+        }),
+      },
+      async (where) => {
+        expect(await readTeamSelection(where)).toHaveProperty('error');
+
+        const project = settingsFiles(where)[1]!;
+
+        await writeFile(
+          project,
+          JSON.stringify({ teamSelection: { constraints: { agents: [] } } }),
+        );
+        expect(await readTeamSelection(where)).toEqual({
+          policy: { constraints: { agents: [] } },
+        });
+
+        await rm(project);
+
+        expect(await readTeamSelection(where)).toEqual({
+          policy: { constraints: { agents: ['codex'] } },
+        });
+      },
+    );
+  });
+});

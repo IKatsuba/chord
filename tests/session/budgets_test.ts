@@ -100,6 +100,22 @@ describe('resource windows', () => {
     );
   });
 
+  test('slightly future observation and receipt expire 60 seconds after first evaluation', () => {
+    const future = window({ observedAt: iso(5000), receivedAt: iso(5000) });
+
+    expect(ageWindow(future, now, now).state).toBe('fresh');
+    expect(
+      ageWindow(future, { wall: wall + 59_999, monotonic: 159_999 }, now).state,
+    ).toBe('fresh');
+    expect(
+      ageWindow(future, { wall: wall + 60_000, monotonic: 160_000 }, now),
+    ).toMatchObject({
+      state: 'stale',
+      observedAt: iso(5000),
+      receivedAt: iso(5000),
+    });
+  });
+
   test('partial updates do not refresh omitted or newer windows and failures retain original times', () => {
     const weekly = window();
     const short = window({

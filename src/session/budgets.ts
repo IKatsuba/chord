@@ -227,7 +227,8 @@ export function ageWindow(
   }
 
   if (
-    effective - Math.min(observed, received ?? anchor?.wall ?? now.wall) >=
+    effective -
+      Math.min(observed, received ?? now.wall, anchor?.wall ?? now.wall) >=
     WINDOW_FRESH_MS
   ) {
     return mark('stale', 'Provider observation is at least 60 seconds old.');

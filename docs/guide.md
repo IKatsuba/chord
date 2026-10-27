@@ -825,7 +825,9 @@ settings file for every project, takes a job from the session you talk to:
 say "hand it to bugfix" and the agent calls `run_team`, which chord draws
 as `Team(bugfix) · claude · opus` with the job under it. `list_teams` names
 the saved teams and their open runs, with known opaque IDs in its top-level
-`runs` list; per-team run-name lists remain. Team/member names cannot contain
+`runs` list; per-team run-name lists remain. It also exposes the saved shared
+body, lead/member instructions and effort so the launching agent can read the
+team's requirements before starting it. Team/member names cannot contain
 `"` or control characters; a saved file with one appears with a problem
 line in `list_teams`. The team's lead is a long-lived child
 named after the team, on the lead's runtime, model, effort and mode; a second run
@@ -883,24 +885,40 @@ state unknown. Cells wrap without cutting.
 `/team run bugfix <job>` hands it your words as
 they are, drawn as `run_team`'s `Team(bugfix)` row, with no turn of the
 agent's; the agent hears of it with your next prompt.
-`/team choose bugfix <job>` asks main to choose this run's composition in one
-visible model turn, subject to ordinary queueing and Esc cancellation. It
-requires main and chord's MCP tools; a missing/unknown team or missing job is
-refused before that turn. It considers only the named saved team's runtimes.
-Picker Enter still prepares a direct run. `/team stop bugfix`
-closes that run and its members at once, and chord tells the agent. A
-team's name is completed after `show`, `run`, `choose` and `stop`.
+Picker Enter prepares that same direct run, preserving saved composition.
+`/team stop bugfix` closes the run and its members at once, and chord tells the
+agent. A team's name is completed after `show`, `run` and `stop`.
 
 ### Resource facts and team selection
 
-`get_budgets {}` reads cached advisory facts immediately: preferences,
-independent quota windows and resets, source/age/coverage warnings and reported
+`get_budgets {agents?: string[]}` reads cached advisory facts immediately:
+preferences, independent quota windows and resets, source/age/coverage warnings
+and reported
 active work. Main and long-lived agents can read it; task agents cannot. The
 `Resources` report preserves unknown values and each window's uncertainty.
 Neither a recent receipt nor a future reset proves provider freshness. Missing
 identity leaves observations unbound; Chord does not merge them into an account
 pool. Active work may be incomplete, includes non-team sessions with
 `team: null`, and treats unopened team members as planned, not spending.
+
+Omit `agents` for existing current facts without adding readers. An explicit
+list uses runtime IDs from `list_agents` (at most 128 IDs, each 1–128
+characters); `[]` returns no runtime-scoped facts and releases temporary
+interest. A filter returns matching observations, unavailable reasons and active
+work, keeping global preferences and coverage warnings. Verified pools appear
+once only through explicit matching active-work resource refs; unattributed
+pools are omitted with a coverage warning. Runtime names never prove provider
+or account identity. Current collectors return unbound observations. Unknown or
+unsupported IDs are advisory unavailable, without probing or installing them.
+
+Explicit filters retain configured readers for at most 30 seconds from request
+admission. Repeating the same normalized filter reads eventual completed facts
+without extending the deadline, restarting readers or redating observations.
+Replacing the filter, expiry, cancellation, session replacement/close or the
+actual turn ending releases temporary interest; independent session/run readers
+remain. A read between turns can still refresh within that bound. The tool
+returns pending/cache facts without waiting for providers, starting a model
+turn or looking up a team name.
 
 Chord refreshes only relevant session/team configurations in the background,
 sharing identical configurations within a process and keeping different working
@@ -926,10 +944,27 @@ read is not a zero-billing, freshness or capacity guarantee. Codex's client has
 uncapped incomplete-frame buffering: a deadline does not cap memory. Null,
 partial, stale and unavailable data remain explicit. Subscription percentages
 are never added to API dollars. There is no quota enforcement, payment-source
-switch, paid fallback, scheduler or migration of running work; `/team choose`
-itself uses the main model's turn.
+switch, paid fallback, scheduler or migration of running work.
 
-Set `teamSelection` in the existing user/project settings, for example:
+Existing team instructions can request resource-aware selection. For example,
+put ordinary text in the team's shared body:
+
+```text
+Before handing this team a job, read its role instructions and list_agents.
+Pass this team's runtime IDs as agents to get_budgets. Consider each applicable
+quota window and time to reset; missing capacity stays unknown. Choose
+supported settings for this run, preserve every role and instruction, explain
+uncertainty, and call run_team with selection.
+```
+
+The launching agent reads those instructions through `list_teams`, requests
+facts when relevant, then uses normal `run_team` overrides. Chord does not
+interpret or enforce this prose, require a quota read or add an opt-in field,
+hidden prompt or extra selection turn. Without such instructions, selection is
+not required. Human direct runs keep saved composition.
+
+`teamSelection` optionally supplies preferences and selected-run allowlists in
+the existing user/project settings, for example:
 
 ```json
 {
@@ -956,9 +991,10 @@ each runtime's list replaced. Selected admission rereads current policy; invalid
 selection settings or unreadable/unparseable files refuse it. An unopened member
 can therefore be refused after a policy edit; running work is untouched.
 
-An agent reads `get_budgets`, `list_agents` and the saved team, then calls
-`run_team` with optional `selection: {reason, lead, members}`. `reason` is
-required, nonblank and at most 500 characters; `lead` and each named member may
+For a selected run, the agent calls normal `run_team` with optional
+`selection: {reason, lead, members}` after reading the saved requirements and
+applicable runtime facts. `reason` is required, nonblank and at most 500
+characters; `lead` and each named member may
 set `agent`, `model`, `effort` and `mode`. Unknown selected fields/member names
 are refused. Same-runtime omissions inherit saved values. A runtime switch
 requires explicit destination model/mode and effort if the saved role requested

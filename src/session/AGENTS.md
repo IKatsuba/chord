@@ -16,6 +16,10 @@ These rules also cover `src/acp/`.
 - Resource facts keep provider observation time separate from local receipt;
   unknown identity stays unbound. Cancelled reads publish nothing; retain
   sanitized cleanup uncertainty even after a later successful read.
+- Runtime-filtered facts require explicit active-work resource refs for pools;
+  never infer account binding from runtime/provider names. Preserve shared
+  pools once and warn on omitted unattributed coverage. Empty filters expose
+  no runtime facts; omitted filters preserve current facts without new readers.
 - Selection allowlists apply only to selected runs, across every effective
   role. Freeze composition; check current policy and observed startup before
   each first job. Confirm runtime and requested model/mode; omitted defaults

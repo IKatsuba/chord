@@ -15,6 +15,7 @@
 import { performance } from 'node:perf_hooks';
 import { foldBudgetCache } from '../platform/budget_cache.ts';
 import type { BudgetSnapshot } from '../session/budgets.ts';
+import { RunSelection } from '../session/team_selection.ts';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from '@zod/zod';
 import { formatElapsed } from '../session/elapsed.ts';
@@ -56,6 +57,14 @@ export type Role = 'person' | 'child';
 
 /** What a session's token says of it. */
 export interface Caller {
+  /** One admission generation; old tokens cannot borrow a replacement's state. */
+  readonly launch?: {
+    readonly valid: () => boolean;
+    readonly signal: () => AbortSignal;
+    decisionRead?: BudgetSnapshot;
+  };
+  /** The SDK cancels this request on cancellation or transport close. */
+  readonly signal?: AbortSignal;
   readonly role: Role;
   /** The main session's key; a child's parent's, which is the main session's. */
   readonly key: number;
@@ -131,6 +140,7 @@ export interface MemberArgs {
 export interface RunTeamArgs {
   readonly team: string;
   readonly job: string;
+  readonly selection?: RunSelection | undefined;
 }
 
 /**
@@ -918,9 +928,15 @@ const getBudgets: Register = (server, caller) =>
         );
       }
 
-      return serve(caller, 'get_budgets', {}, facts, (value) =>
+      const response = serve(caller, 'get_budgets', {}, facts, (value) =>
         JSON.stringify(value, null, 2),
       );
+
+      if (caller.launch?.valid()) {
+        caller.launch.decisionRead = structuredClone(facts);
+      }
+
+      return response;
     },
   );
 
@@ -1228,15 +1244,19 @@ const runTeam: Register = (server, caller) =>
         job: z
           .string()
           .describe('The job, in full: what to do, where, and when to report'),
+        selection: RunSelection.optional(),
       },
     },
-    async (input) =>
-      serve(
-        caller,
+    async (input, extra) => {
+      const request = { ...caller, signal: extra.signal };
+
+      return serve(
+        request,
         'run_team',
         input,
-        await caller.window.runTeam(caller, input),
-      ),
+        await caller.window.runTeam(request, input),
+      );
+    },
   );
 
 const proposeTeamTool: Register = (server, caller) =>

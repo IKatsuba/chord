@@ -412,6 +412,7 @@ export class Conversation {
   /** What the refusal of the starting effort said, for the tool's answer. */
   #effortRefused: string | undefined;
   #opening: Promise<Session | undefined> | undefined;
+  #launches = new AbortController();
   /** Gives up on the session `#opening` starts, and on those `clear` let go. */
   readonly #stops = new Set<AbortController>();
   #session: Session | undefined;
@@ -694,6 +695,11 @@ export class Conversation {
     return this.#session;
   }
 
+  /** Capture before awaiting a launch; a later turn gets its own authority. */
+  get launchSignal(): AbortSignal {
+    return this.#launches.signal;
+  }
+
   /**
    * Why the session is not on the starting effort, as the transcript says
    * it: `Could not start on max effort, …`; none when it took it or none was
@@ -776,6 +782,10 @@ export class Conversation {
     if (!opening || this.#closing) {
       return Promise.resolve();
     }
+
+    this.#launches.abort();
+
+    this.#launches = new AbortController();
 
     const old = this.#session;
     const turn = this.#turn;
@@ -2212,6 +2222,10 @@ export class Conversation {
       return;
     }
 
+    this.#launches.abort();
+
+    this.#launches = new AbortController();
+
     // Before the running turn's cancel, so its end does not start the next.
     // Messages stay, and go once the turn has ended, as after any turn.
     const withdrawn = this.#queued.filter((queued) => !queued.from);
@@ -2556,6 +2570,8 @@ export class Conversation {
       return this.#closing;
     }
 
+    this.#launches.abort();
+
     this.#emit({ type: 'closing' });
     this.#settling?.abort();
     this.#rouse();
@@ -2731,6 +2747,8 @@ export class Conversation {
     // a `/clear` is not news.
     void session.exited.then(() => {
       if (this.#current(session)) {
+        this.#launches.abort();
+
         // Nobody is left to hear them.
         void this.#stopMonitors();
         this.#emit({

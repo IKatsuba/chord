@@ -436,7 +436,9 @@ export function useSessions(
     } = startupOf(agent) ?? {};
     let releaseCurrentResources = () => {};
 
-    return new Conversation(
+    let releaseCurrentCaller = () => {};
+
+    const conversation = new Conversation(
       (signal) => {
         if (refused !== undefined) {
           throw new Error(refused);
@@ -445,7 +447,24 @@ export function useSessions(
         const next = resuming.current;
         // A token for each session main opens, `/clear`'s included, good
         // until that session's agent has gone.
-        const admitted = server?.admit({ role: 'person', key, window: view });
+        let live = true;
+        const launch = {
+          valid: () => live,
+          signal: () => conversation.launchSignal,
+        };
+        const admitted = server?.admit({
+          role: 'person',
+          key,
+          window: view,
+          launch,
+        });
+
+        releaseCurrentCaller();
+
+        releaseCurrentCaller = () => {
+          live = false;
+        };
+
         const options = {
           agent,
           cwd,
@@ -468,6 +487,8 @@ export function useSessions(
         releaseCurrentResources = releaseResources;
 
         const revoke = () => {
+          live = false;
+
           releaseResources();
 
           if (admitted !== undefined) {
@@ -490,6 +511,7 @@ export function useSessions(
       },
       (event) => {
         if (event.type === 'cleared' || event.type === 'closing') {
+          releaseCurrentCaller();
           releaseCurrentResources();
         }
 
@@ -506,6 +528,8 @@ export function useSessions(
         }),
       ),
     );
+
+    return conversation;
   };
 
   /** Each task agent's own conversation, by its id, while it runs. */
@@ -599,13 +623,27 @@ export function useSessions(
     const startup = startupOf(args.agent) ?? {};
     let releaseCurrentResources = () => {};
 
-    return new Conversation(
+    let releaseCurrentCaller = () => {};
+
+    const conversation = new Conversation(
       (signal) => {
         if (startup.refused !== undefined) {
           throw new Error(startup.refused);
         }
 
-        const admitted = server?.admit(caller);
+        let live = true;
+        const launch = {
+          valid: () => live,
+          signal: () => conversation.launchSignal,
+        };
+        const admitted = server?.admit({ ...caller, launch });
+
+        releaseCurrentCaller();
+
+        releaseCurrentCaller = () => {
+          live = false;
+        };
+
         const options = {
           agent: args.agent,
           cwd,
@@ -630,6 +668,8 @@ export function useSessions(
         releaseCurrentResources = releaseResources;
 
         const revoke = () => {
+          live = false;
+
           releaseResources();
 
           if (caller.task !== undefined) {
@@ -656,6 +696,7 @@ export function useSessions(
       },
       (event) => {
         if (event.type === 'cleared' || event.type === 'closing') {
+          releaseCurrentCaller();
           releaseCurrentResources();
         }
 
@@ -693,6 +734,8 @@ export function useSessions(
         ...(team === undefined ? {} : { team }),
       }),
     );
+
+    return conversation;
   };
 
   /**
@@ -866,8 +909,34 @@ export function useSessions(
   /** How the parent's messages read to a child: from `main`. */
   const MAIN: MessageFrom = { name: 'main', reachable: true };
 
+  interface LaunchGuard {
+    readonly signal: AbortSignal;
+    readonly valid: () => boolean;
+  }
+
+  const captureLaunch = (key: number, caller?: Caller): LaunchGuard => {
+    const parent = conversationAt(key);
+    const session = parent?.session;
+    const signal = AbortSignal.any([
+      ...(parent === undefined ? [] : [parent.launchSignal]),
+      ...(caller?.signal === undefined ? [] : [caller.signal]),
+      ...(caller?.launch === undefined ? [] : [caller.launch.signal()]),
+    ]);
+
+    return {
+      signal,
+      valid: () =>
+        !signal.aborted &&
+        session !== undefined &&
+        conversationAt(key) === parent &&
+        parent?.session === session &&
+        caller?.launch?.valid() !== false,
+    };
+  };
+
   /** How a long-lived child opens, besides its runtime, model and prompt. */
   interface Opening {
+    readonly launch?: LaunchGuard;
     readonly name: string;
     /** The conversation it answers to: main's, or its lead's. */
     readonly parent: () => Conversation | undefined;
@@ -924,6 +993,12 @@ export function useSessions(
     dispatch({ type: 'agent_opened', key: childKey });
 
     const effort = effortStart(args, () => conversationAt(childKey));
+    const cancelLaunch = () => {
+      if (opening.launch?.valid() === false) {
+        dropChild(childKey);
+      }
+    };
+
     const placed = sessions.openChild(
       {
         id,
@@ -948,6 +1023,10 @@ export function useSessions(
             tellEnded(key, own, event);
             effort.settle(event);
 
+            if (event.type === 'closing' || event.type === 'disconnected') {
+              opening.launch?.signal.removeEventListener('abort', cancelLaunch);
+            }
+
             if (event.type === 'connected' || event.type === 'connect_failed') {
               const held = early.current.get(own) ?? [];
 
@@ -955,7 +1034,18 @@ export function useSessions(
 
               // After the event is drawn, so the first turn comes after it.
               queueMicrotask(() => {
+                opening.launch?.signal.removeEventListener(
+                  'abort',
+                  cancelLaunch,
+                );
+
                 const child = agentOf(sessions.agents, own)?.child;
+
+                if (opening.launch?.valid() === false) {
+                  dropChild(own);
+
+                  return;
+                }
 
                 if (event.type === 'connected') {
                   // The first prompt starts its first turn; the messages
@@ -991,6 +1081,11 @@ export function useSessions(
 
     if (placed === undefined) {
       effort.never();
+    } else {
+      opening.launch?.signal.addEventListener('abort', cancelLaunch, {
+        once: true,
+      });
+      cancelLaunch();
     }
 
     return {
@@ -1116,8 +1211,9 @@ export function useSessions(
    */
   const runTeamAt = async (
     key: number,
-    { team, job }: RunTeamArgs,
+    { team, job, selection }: RunTeamArgs,
     lists: string,
+    launch = captureLaunch(key),
   ): Promise<
     | { readonly error: string }
     | {
@@ -1125,6 +1221,16 @@ export function useSessions(
         readonly started: Promise<EffortStarted>;
       }
   > => {
+    if (!launch.valid()) {
+      return { error: 'This launch was cancelled; no run started.' };
+    }
+
+    if (selection !== undefined) {
+      return {
+        error: 'Selected team launches are not available yet. No run started.',
+      };
+    }
+
     const found = (await teamsAt(key)).find((each) => each.name === team);
 
     if (found === undefined) {
@@ -1150,6 +1256,10 @@ export function useSessions(
       fullRefusal(key);
     const agents = ownedBy(sessions.agents, key);
 
+    if (!launch.valid()) {
+      return { error: 'This launch was cancelled; no run started.' };
+    }
+
     if (agents === undefined || refused !== undefined) {
       return { error: refused ?? 'This session has closed' };
     }
@@ -1166,7 +1276,14 @@ export function useSessions(
       part: teamPart(team, found.team, { lead: name, others }, place.cwd),
       asked: `set by team ${team}`,
       resourceAgents: found.team.members.map((member) => member.agent),
+      launch,
     });
+
+    if (!launch.valid()) {
+      return {
+        error: `Team launch ${opened.id} was cancelled before its first job; the attempted lead is closing.`,
+      };
+    }
 
     runs.current.set(opened.id, { ...found, job });
 
@@ -1761,7 +1878,13 @@ export function useSessions(
     },
     // As open_agent's, the answer waits on a lead given an effort.
     runTeam: async (caller, args) => {
-      const answer = await runTeamAt(caller.key, args, 'list_teams lists them');
+      const launch = captureLaunch(caller.key, caller);
+      const answer = await runTeamAt(
+        caller.key,
+        args,
+        'list_teams lists them',
+        launch,
+      );
 
       return 'error' in answer
         ? answer
@@ -1779,12 +1902,17 @@ export function useSessions(
       startMonitorIn(sessions.agents, caller, args, place.cwd),
     stopMonitor: (caller, id) => stopMonitorIn(sessions.agents, caller, id),
     monitors: (caller) => monitorsIn(sessions.agents, caller),
-    served: (caller, call) =>
-      caller.task !== undefined
+    served: (caller, call) => {
+      if (caller.launch?.valid() === false || caller.signal?.aborted) {
+        return;
+      }
+
+      return caller.task !== undefined
         ? children.current.get(caller.task)?.served(call)
         : caller.agent !== undefined
           ? childOf(caller.key, caller.agent)?.conversation.served(call)
-          : conversationAt(caller.key)?.served(call),
+          : conversationAt(caller.key)?.served(call);
+    },
     servedLater: (caller) => {
       const { task } = caller;
       const child = task === undefined ? undefined : children.current.get(task);
@@ -2196,6 +2324,7 @@ export function useSessions(
    */
   const runTyped = async (name: string, job: string): Promise<TeamShown> => {
     const agents = front();
+    const launch = captureLaunch(agents?.main.key ?? -1);
     const refused = teamRefusal(name, await teamNamed(name));
 
     if (agents === undefined || refused !== undefined) {
@@ -2210,6 +2339,7 @@ export function useSessions(
       agents.main.key,
       { team: name, job },
       '/team lists them',
+      launch,
     );
 
     if ('error' in answer) {

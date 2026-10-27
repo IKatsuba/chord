@@ -1,5 +1,6 @@
 import { foldBudgetCache } from '../../src/platform/budget_cache.ts';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
+import { until } from '../session/conversation_fake.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import {
@@ -721,6 +722,157 @@ test('get_budgets serves immediate advisory facts without reading runtime offers
       await client.close();
     }
   }));
+
+describe('selected launch request context', () => {
+  test('strict selection crosses MCP unchanged and carries the SDK request signal', () =>
+    withServer(async (server) => {
+      const calls: unknown[] = [];
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          window: {
+            ...WINDOW,
+            runTeam: (caller, input) => {
+              calls.push(input);
+              expect(caller.signal).toBeInstanceOf(AbortSignal);
+
+              return Promise.resolve({ error: 'fixture refusal' });
+            },
+          },
+        }).token,
+      );
+      const selection = {
+        reason: 'Keep all role instructions.',
+        lead: { model: 'fake-small' },
+        members: { reviewer: { mode: 'plan' } },
+      };
+
+      try {
+        await client.callTool({
+          name: 'run_team',
+          arguments: { team: 'fixture', job: 'Do the job.', selection },
+        });
+        expect(calls).toEqual([
+          { team: 'fixture', job: 'Do the job.', selection },
+        ]);
+
+        for (const invalid of [
+          { ...selection, unknown: true },
+          { reason: '' },
+          { reason: 'r'.repeat(501) },
+          { reason: 'reason', lead: { model: null } },
+          { reason: 'reason', lead: { command: 'other' } },
+        ]) {
+          const result = await client.callTool({
+            name: 'run_team',
+            arguments: {
+              team: 'fixture',
+              job: 'Do the job.',
+              selection: invalid,
+            },
+          });
+
+          expect(result.isError).toBe(true);
+        }
+
+        expect(calls).toHaveLength(1);
+      } finally {
+        await client.close();
+      }
+    }));
+
+  test('transport revocation aborts the supported SDK in-flight request signal', () =>
+    withServer(async (server) => {
+      const captured = Promise.withResolvers<AbortSignal>();
+      const finish = Promise.withResolvers<{ error: string }>();
+      const admitted = server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          runTeam: (caller) => {
+            if (caller.signal !== undefined) {
+              captured.resolve(caller.signal);
+            }
+
+            return finish.promise;
+          },
+        },
+      });
+      const client = await connect(server.url, admitted.token);
+      const pending = client
+        .callTool({
+          name: 'run_team',
+          arguments: { team: 'fixture', job: 'Job.' },
+        })
+        .catch(() => undefined);
+
+      try {
+        const signal = await captured.promise;
+
+        server.revoke(admitted.token);
+        await until(() => signal.aborted);
+        expect(signal.aborted).toBe(true);
+      } finally {
+        finish.resolve({ error: 'cancelled fixture' });
+        await client.close();
+        await pending;
+      }
+    }));
+
+  test('only a successful actual response updates that live generation decision read', () =>
+    withServer(async (server) => {
+      const facts = foldBudgetCache(
+        [],
+        {},
+        { wall: Date.parse('2026-10-27T13:00:00Z'), monotonic: 0 },
+      );
+      let live = true;
+      let failed = false;
+      const launch: NonNullable<Caller['launch']> = {
+        valid: () => live,
+        signal: () => new AbortController().signal,
+      };
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          launch,
+          window: {
+            ...WINDOW,
+            budgets: () => {
+              if (failed) {
+                throw new Error('fixture failure');
+              }
+
+              return facts;
+            },
+          },
+        }).token,
+      );
+
+      try {
+        expect(launch.decisionRead).toBeUndefined();
+        await client.callTool({ name: 'get_budgets', arguments: {} });
+        expect(launch.decisionRead).toEqual(facts);
+        facts.warnings.push('Later cache mutation.');
+        expect(launch.decisionRead?.warnings).toEqual([]);
+
+        failed = true;
+
+        await client.callTool({ name: 'get_budgets', arguments: {} });
+        expect(launch.decisionRead?.warnings).toEqual([]);
+
+        failed = false;
+        live = false;
+
+        await client.callTool({ name: 'get_budgets', arguments: {} });
+        expect(launch.decisionRead?.warnings).toEqual([]);
+      } finally {
+        await client.close();
+      }
+    }));
+});
 
 test('unexpected budget read failures use a fixed safe MCP error', () =>
   withServer(async (server) => {

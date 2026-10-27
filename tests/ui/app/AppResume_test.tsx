@@ -784,11 +784,19 @@ describe('CHD-445 U2 tester: an open resume picker keeps its title snapshot', ()
           expect(window.frame()).not.toContain(title);
           expect(reads).toBe(1);
           await window.press(ESC);
+          await until(
+            'resume picker closed',
+            () => !window.frame().includes('Resume a session'),
+          );
           await send(window, '/resume');
           await window.shows(title);
           expect(window.frame()).not.toContain('First recorded title');
           expect(reads).toBe(2);
           await window.press(ESC);
+          await until(
+            'resume picker closed',
+            () => !window.frame().includes('Resume a session'),
+          );
           expect(window.frame()).not.toContain('Resume a session');
         },
         {

@@ -120,3 +120,47 @@ describe('owned unlinked Team receipt selection', () => {
     ).toEqual([]);
   });
 });
+
+describe('tester: receipt revision after genuine linkage', () => {
+  test('a linked run updates its one ordinary row while another unlinked run remains separate', () => {
+    const linked = call('linked-run');
+    const unlinked = call('unlinked-run');
+    let state = reduceTranscript(emptyTranscript, {
+      type: 'served',
+      turnId: 'actual',
+      call: linked,
+    });
+
+    state = reduceTranscript(state, {
+      type: 'update',
+      turnId: 'actual',
+      update: {
+        sessionUpdate: 'tool_call',
+        toolCallId: 'real-link',
+        title: 'mcp__chord__run_team',
+        status: 'completed',
+        rawInput: linked.input,
+      },
+    });
+    state = reduceTranscript(state, {
+      type: 'served',
+      turnId: 'other',
+      call: unlinked,
+    });
+
+    const revision = { ...linked, error: 'Actual late recorded refusal.' };
+
+    state = reduceTranscript(state, {
+      type: 'served',
+      turnId: 'actual',
+      call: revision,
+    });
+
+    expect(recordedReceipts(state)).toEqual([unlinked]);
+
+    const rows = state.entries.filter((entry) => entry.kind === 'tool');
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.call.chord).toEqual(revision);
+  });
+});

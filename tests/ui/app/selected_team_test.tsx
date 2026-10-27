@@ -935,3 +935,210 @@ for (const action of ['cancel', 'duplicate'] as const) {
     }
   });
 }
+
+describe('tester: selected member admission ordering and actual refusal', () => {
+  test('a later request admitted first keeps its confirmed receipt when the earlier policy wait resumes', async () => {
+    const earlierGate = Promise.withResolvers<void>();
+    const laterGate = Promise.withResolvers<void>();
+    let policies = 0;
+
+    try {
+      await selectedWindow(
+        async (window, main, callers, prompts) => {
+          const callerSessionId = window.session()?.id;
+
+          assert(callerSessionId !== undefined);
+
+          const run = success(
+            await main.window.runTeam(main, {
+              team: 'fixture',
+              job: 'selectedidle',
+              selection,
+            }),
+          );
+          const lead = callers.find((caller) => caller.agent === run.id);
+
+          assert(lead !== undefined);
+
+          const earlier = main.window.openMember(lead, {
+            member: 'reviewer',
+            prompt: 'Earlier request must not deliver.',
+          });
+          let later: ReturnType<typeof main.window.openMember> | undefined;
+
+          try {
+            await until(
+              'tester earlier member policy held',
+              () => policies === 2,
+            );
+
+            later = main.window.openMember(lead, {
+              member: 'reviewer',
+              prompt: 'Later admitted job delivers once.',
+            });
+
+            await until(
+              'tester later member policy held',
+              () => policies === 3,
+            );
+
+            laterGate.resolve();
+
+            expect(await later).not.toHaveProperty('error');
+            await until('tester later admitted job delivered', () =>
+              prompts.some((prompt) =>
+                prompt.includes('Later admitted job delivers once.'),
+              ),
+            );
+
+            earlierGate.resolve();
+
+            expect(await earlier).toMatchObject({
+              error: 'reviewer is open; send_message reaches it',
+            });
+            await until(
+              'tester confirmed member receipt retained',
+              async () => {
+                const parent = (
+                  await readRecords(join(window.dir, 'state'))
+                ).find((record) => record.sessionId === callerSessionId);
+
+                if (parent === undefined) {
+                  return false;
+                }
+
+                const receipts = (await readPast(parent.path)).flatMap(
+                  (entry) =>
+                    entry.type === 'served' &&
+                    recordedSelection(entry.call)?.runId === run.id
+                      ? [recordedSelection(entry.call)!]
+                      : [],
+                );
+
+                return receipts.at(-1)?.roles[1]?.state === 'confirmed';
+              },
+            );
+            expect(
+              prompts.filter((prompt) =>
+                prompt.includes('Later admitted job delivers once.'),
+              ),
+            ).toHaveLength(1);
+            expect(
+              prompts.some((prompt) =>
+                prompt.includes('Earlier request must not deliver.'),
+              ),
+            ).toBe(false);
+            expect(window.pids).toHaveLength(3);
+          } finally {
+            earlierGate.resolve();
+            laterGate.resolve();
+            await Promise.allSettled([
+              earlier,
+              ...(later === undefined ? [] : [later]),
+            ]);
+          }
+        },
+        {
+          policy: async () => {
+            const call = ++policies;
+
+            if (call === 2) {
+              await earlierGate.promise;
+            }
+
+            if (call === 3) {
+              await laterGate.promise;
+            }
+
+            return { policy: {} };
+          },
+        },
+      );
+    } finally {
+      earlierGate.resolve();
+      laterGate.resolve();
+    }
+  });
+
+  test('member model mismatch retains the primary recorded cause without stopping its lead or delivering the member job', () => {
+    let opens = 0;
+
+    return selectedWindow(
+      async (window, main, callers, prompts) => {
+        const callerSessionId = window.session()?.id;
+
+        assert(callerSessionId !== undefined);
+
+        const run = success(
+          await main.window.runTeam(main, {
+            team: 'fixture',
+            job: 'selectedidle',
+            selection: {
+              ...selection,
+              members: { reviewer: { model: 'fake-small' } },
+            },
+          }),
+        );
+        const lead = callers.find((caller) => caller.agent === run.id);
+
+        assert(lead !== undefined);
+
+        expect(
+          await main.window.openMember(lead, {
+            member: 'reviewer',
+            prompt: 'Do not deliver mismatched member job.',
+          }),
+        ).toHaveProperty('error');
+        await until('tester member mismatch cause persisted', async () => {
+          const parent = (await readRecords(join(window.dir, 'state'))).find(
+            (record) => record.sessionId === callerSessionId,
+          );
+
+          if (parent === undefined) {
+            return false;
+          }
+
+          const receipts = (await readPast(parent.path)).flatMap((entry) =>
+            entry.type === 'served' &&
+            recordedSelection(entry.call)?.runId === run.id
+              ? [recordedSelection(entry.call)!]
+              : [],
+          );
+          const role = receipts.at(-1)?.roles[1];
+
+          return (
+            role?.state === 'refused' &&
+            role.note ===
+              'reviewer.model: the runtime did not confirm the requested model fake-small.'
+          );
+        });
+
+        expect((await main.window.teams(main)).runs).toHaveLength(1);
+        expect(
+          prompts.some((prompt) =>
+            prompt.includes('Do not deliver mismatched member job.'),
+          ),
+        ).toBe(false);
+      },
+      {
+        open: async (args) => {
+          const session = await openSession(args);
+
+          if (++opens === 3) {
+            const models = session.models.bind(session);
+
+            session.models = () => {
+              const current = models();
+
+              return current === undefined
+                ? undefined
+                : { ...current, current: 'fake-large' };
+            };
+          }
+
+          return session;
+        },
+      },
+    );
+  });
+});

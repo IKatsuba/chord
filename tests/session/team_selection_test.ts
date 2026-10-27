@@ -37,6 +37,62 @@ const runtimes = ['codex', 'claude'];
 const reason = 'Preserve every role and permission; capacity is unknown.';
 
 describe('strict per-run selection', () => {
+  test('unrepresentable inherited and overridden saved IDs fail before freezing', () => {
+    for (const field of ['agent', 'model', 'mode', 'effort'] as const) {
+      const source = structuredClone(saved);
+
+      source.lead[field] = 'x'.repeat(129);
+
+      for (const override of [
+        undefined,
+        { agent: 'claude', model: 'sonnet', mode: 'plan', effort: 'medium' },
+      ]) {
+        expect(
+          freezeSelection(
+            source,
+            { reason, ...(override === undefined ? {} : { lead: override }) },
+            {},
+            runtimes,
+          ),
+        ).toEqual({
+          error: `lead.${field}: the saved value cannot fit a bounded run receipt. No run started. Choose a supported configuration.`,
+        });
+      }
+
+      const memberSource = structuredClone(saved);
+
+      memberSource.members[0]![field] = 'x'.repeat(129);
+
+      expect(freezeSelection(memberSource, { reason }, {}, runtimes)).toEqual({
+        error: `reviewer.${field}: the saved value cannot fit a bounded run receipt. No run started. Choose a supported configuration.`,
+      });
+    }
+  });
+
+  test('boundary-length saved IDs remain unchanged and produce a valid receipt', () => {
+    const source = structuredClone(saved);
+
+    source.lead.model = 'm'.repeat(128);
+    source.lead.effort = 'e'.repeat(128);
+    source.lead.mode = 'p'.repeat(128);
+
+    const result = freezeSelection(source, { reason }, {}, runtimes);
+
+    assert('frozen' in result);
+    expect(
+      selectionReceipt(
+        'run',
+        { name: 'fixture', place: 'project' },
+        result.frozen,
+      ).roles[0]?.saved,
+    ).toEqual({
+      agent: 'codex',
+      model: source.lead.model,
+      effort: source.lead.effort,
+      mode: source.lead.mode,
+    });
+  });
+
   test('rejects unknown keys, null shorthand, blank reasons and oversized input', () => {
     for (const value of [
       { agent: null },

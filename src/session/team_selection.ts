@@ -188,6 +188,21 @@ export function freezeSelection(
         [member.name, member, parsed.data.members?.[member.name]] as const,
     ),
   ] as const) {
+    // Saved values remain in the receipt even when an override replaces them.
+    const represented = RunChoice.safeParse(configuration(savedRole));
+
+    if (!represented.success) {
+      const field = String(represented.error.issues[0]?.path[0] ?? 'agent');
+
+      return {
+        error: refusal(
+          name,
+          field,
+          'the saved value cannot fit a bounded run receipt',
+        ),
+      };
+    }
+
     const merged = mergeChoice(name, savedRole, override);
 
     if ('error' in merged) {

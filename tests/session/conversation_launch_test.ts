@@ -113,3 +113,33 @@ describe('pending launch authority', () => {
     expect(conversation.launchSignal.aborted).toBe(true);
   });
 });
+
+describe('tester: repeated launch authority revocation', () => {
+  test('successive idle interrupts revoke every earlier signal without replacing the live session', async () => {
+    const { conversation, events } = fixture();
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+
+      const session = conversation.session;
+      const first = conversation.launchSignal;
+
+      conversation.interrupt();
+
+      const second = conversation.launchSignal;
+
+      conversation.interrupt();
+
+      expect(first.aborted).toBe(true);
+      expect(second.aborted).toBe(true);
+      expect(conversation.launchSignal.aborted).toBe(false);
+      expect(conversation.session).toBe(session);
+      expect(events.filter((event) => event.type === 'connected')).toHaveLength(
+        1,
+      );
+    } finally {
+      await conversation.close();
+    }
+  });
+});

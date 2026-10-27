@@ -389,3 +389,139 @@ describe('team launch generation boundary', () => {
     }
   });
 });
+
+describe('tester: launch commitment and replacement boundaries', () => {
+  test('clear during a saved-effort startup reports the closing attempt without delivering into the replacement', async () => {
+    const gate = Promise.withResolvers<void>();
+    const prompts: string[] = [];
+    let opens = 0;
+    let held = false;
+
+    try {
+      await withLaunch(
+        async (window, callers) => {
+          const old = person(callers);
+          const pending = old.window.runTeam(old, {
+            team: 'fixture',
+            job: 'Never deliver this obsolete saved-effort job.',
+          });
+
+          try {
+            await until('tester saved-effort startup gate', () => held);
+
+            const allocated = old.window
+              .sessions()
+              .flatMap((session) => session.children)
+              .find((child) => child.name === 'fixture')?.id;
+
+            assert(allocated !== undefined);
+
+            await send(window, '/clear');
+            await until(
+              'tester replacement admission',
+              () => callers.length === 2,
+            );
+
+            gate.resolve();
+
+            const result = await pending;
+
+            expect(result).toEqual({
+              error: `Team launch ${allocated} was cancelled before its first job; the attempted lead is closing.`,
+            });
+            await ready(window);
+
+            expect(prompts).toEqual([]);
+            expect(person(callers).launch?.valid()).toBe(true);
+            expect(person(callers).launch?.signal().aborted).toBe(false);
+            expect(
+              (await person(callers).window.teams(person(callers))).runs,
+            ).toEqual([]);
+          } finally {
+            gate.resolve();
+            await pending;
+          }
+        },
+        async (options) => {
+          const child = opens++ > 0;
+          const session = await openSession(options);
+
+          if (child) {
+            const prompt = session.prompt.bind(session);
+
+            session.prompt = (text, ...rest) => {
+              prompts.push(text);
+
+              return prompt(text, ...rest);
+            };
+
+            held = true;
+
+            await gate.promise;
+          }
+
+          return session;
+        },
+        team.replace(
+          'lead:\n  agent: fake\n',
+          'lead:\n  agent: fake\n  effort: high\n',
+        ),
+      );
+    } finally {
+      gate.resolve();
+    }
+  });
+
+  test('request cancellation after the first job commits preserves the run without a duplicate job', async () => {
+    const request = new AbortController();
+    const prompts: string[] = [];
+    let opens = 0;
+
+    await withLaunch(
+      async (_window, callers) => {
+        const caller = person(callers);
+        const pending = caller.window.runTeam(
+          { ...caller, signal: request.signal },
+          {
+            team: 'fixture',
+            job: 'This committed job must remain delivered once.',
+          },
+        );
+
+        await until('tester first job committed', () => prompts.length === 1);
+
+        request.abort();
+
+        const result = await pending;
+
+        assert('id' in result);
+        expect(
+          caller.window
+            .sessions()
+            .flatMap((session) => session.children)
+            .map((child) => child.id),
+        ).toContain(result.id);
+        expect(prompts).toHaveLength(1);
+        expect(prompts[0]).toContain(
+          'This committed job must remain delivered once.',
+        );
+      },
+      async (options) => {
+        const child = opens++ > 0;
+        const session = await openSession(options);
+
+        if (child) {
+          const prompt = session.prompt.bind(session);
+
+          session.prompt = (text, ...rest) => {
+            prompts.push(text);
+
+            return prompt(text, ...rest);
+          };
+        }
+
+        return session;
+      },
+    );
+  });
+});

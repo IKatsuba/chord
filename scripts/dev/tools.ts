@@ -1,10 +1,11 @@
 /**
- * The commands that were package.json scripts (CHD-411): chord from source,
- * the tests, the checks, Prettier and ESLint. Each spawns its tool from the
- * repository's root with the terminal handed over and answers the tool's
- * exit status, which `bun dev` exits with.
+ * The tool runners shared by the dev CLI and the quality package scripts:
+ * chord from source, the tests, the checks, formatting and ESLint. Each
+ * spawns its tool from the repository's root with the terminal handed over
+ * and answers the tool's
+ * exit status, which the calling command exits with.
  *
- * tsc, ESLint and Prettier run as `bun run <bin>`, as the scripts ran them:
+ * ESLint runs as `bun run eslint`, on Bun through bunfig.toml:
  * Bun finds the bin in node_modules/.bin and, by bunfig.toml's
  * `[run] bun = true`, runs it on Bun, when `bun scripts/dev.ts` is started
  * directly (the release) as much as through `bun dev`.
@@ -89,14 +90,9 @@ export function lint(args: readonly string[], run: Run = spawn): number {
   return run([process.execPath, 'run', 'eslint', '.', ...args]);
 }
 
-/** Prettier's layout written over the tree. */
-export function fmt(run: Run = spawn): number {
-  return run([process.execPath, 'run', 'prettier', '--write', '.']);
-}
-
 /**
  * The static checks in order, then the suite unless `only` static; after
- * tsc, that it checked every tracked TypeScript file (`covered.ts`). The
+ * Bun's type check, that it checked every tracked TypeScript file (`covered.ts`). The
  * step that fails is named through `say`, as one that ends without a word
  * of its own would otherwise leave nothing to read (CHD-467).
  */
@@ -106,13 +102,10 @@ export function check(
   say: (line: string) => void = (line) => void process.stderr.write(line),
 ): number {
   const steps: [string, () => number][] = [
-    ['tsc', () => run([process.execPath, 'run', 'tsc'])],
+    ['types', () => run([process.execPath, 'check'])],
     ['covered', () => run([process.execPath, 'scripts/dev/covered.ts'])],
     ['eslint', () => lint([], run)],
-    [
-      'prettier',
-      () => run([process.execPath, 'run', 'prettier', '--check', '.']),
-    ],
+    ['format', () => run([process.execPath, 'fmt', '--check', '.'])],
     ["lint/'s tests", () => run([process.execPath, 'test', 'lint/'])],
     ...(only.static === true
       ? []

@@ -14,7 +14,7 @@ does, `docs/FEATURES.md` is the map of what gets built and in which order,
 The repository is public-ready from the first commit: everything in it — code,
 comments, docs, commit messages, test names — is in English, and nothing in it
 names a private path, a key, or a person's machine. `tests/privacy_test.ts`
-fails `bun dev check` on any file git tracks that names a home directory,
+fails `bun quality` on any file git tracks that names a home directory,
 the name of the home of whoever runs it, or a path in Claude Code's own
 directory there other than its public settings files.
 
@@ -42,28 +42,30 @@ owner's consent.
 bun install                    # the dependencies, as bun.lock pins them
 bun dev chord [agent]           # run from source
 bun dev chord --fake            # run against the scripted test agent
-bun dev check                   # types, lint, fmt and all tests
-bun dev check --static          # tsc, ESLint, Prettier and lint/'s own test
+bun quality                    # types, lint, format and all tests
+bun quality --static           # types, coverage, lint, format and lint/ tests
+bun check                      # Bun's native type checker
 bun dev test [args…]            # tests, a worker per core; Bun's test arguments
 bun dev test -t '…'             # matching tests
 bun dev test --changed          # uncommitted changes
 bun dev test --changed=<commit> # since a commit
 bun test --isolate --timeout=60000 ./tests/x_test.ts -t '…' # Bun's own runner
-bun dev lint --fix              # what ESLint can fix
-bun dev fmt                    # lay out the tree with Prettier
+bun lint --fix                 # what ESLint can fix
+bun fmt                        # lay out the tree with Bun's native formatter
 ```
 
-Arguments after `chord`, `test` and `lint` pass on as written. An empty
-argument needs `--` (`bun dev test -- -t ''`); the tool's own help does too
-(`bun dev chord -- --help`).
+Arguments after `bun dev chord`, `bun dev test` and `bun lint` pass on
+as written. An empty argument needs `--` (`bun dev test -- -t ''`);
+the tool's own help does too (`bun lint -- --help`).
 
 `bun dev test` reports the tests' status. `tests/timings.json` only places
 files: Bun uses it to balance shards and start each worker's slowest files
 first; an unlisted file takes the median. No refresh is required.
-CI runs `static`, three `tests` shards (`--shard=1/3`, `2/3`, `3/3`) and
-`compile`. The required `check` job passes only when all of them succeed.
+CI runs `static` (`bun quality --static`), three `tests` shards
+(`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
+passes only when all of them succeed.
 
-The binary is built by Bun's compile API, Bun 1.4.2 or newer. Build,
+The binary is built by Bun's compile API, Bun 1.4.4 or newer. Build,
 release and maintenance commands share `bun dev <command>` (Cliffy):
 
 ```sh
@@ -88,7 +90,8 @@ leave that stage out. See `docs/guide.md` for failure and signal cleanup.
 
 ## How code is written
 
-- **Bun runs chord.** `bun dev check` runs `tsc`, ESLint, Prettier and
+- **Bun runs chord.** `bun quality` runs native `bun check` and
+  `bun fmt --check`, tracked-file coverage, ESLint, `lint/` tests and
   `bun dev test`. Tests use `test`, `describe`, `expect` and the fake timers of
   `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
   folder holds Bun's runtime calls. The binary embeds OpenTUI's native
@@ -100,9 +103,9 @@ leave that stage out. See `docs/guide.md` for failure and signal cleanup.
   `bun.lock` is committed.
 - **The style is what the tools hold.** `tsconfig.json` holds the strict
   compiler flags, `eslint.config.ts` the lint rules, `lint/style.ts` what
-  Prettier cannot express (blank lines, imports first), and
+  the formatter cannot express (blank lines, imports first), and
   `.prettierrc.json` the layout (80 columns, single quotes, JSX's too).
-  `bun dev lint --fix` then `bun dev fmt` lays code out. A lint rule added
+  `bun lint --fix` then `bun fmt` lays code out. A lint rule added
   to `eslint.config.ts` gets its snippet in `lint/config_test.ts`.
 - **Logic lives where a test reaches it.** Reducers from runtime events to
   transcript state, key handling, history, completion, settings merge — pure
@@ -110,13 +113,13 @@ leave that stage out. See `docs/guide.md` for failure and signal cleanup.
   mirrors `src/`: a module's tests are at the mirrored path
   (`tests/settings_test.ts` for `src/settings.ts`).
   If a test's path differs from another only by case, add it to
-  `tsconfig.json`'s `files`: tsc can skip it on a case-blind file system.
-  `bun dev check --static` runs `scripts/dev/covered.ts`, which fails and
+  `tsconfig.json`'s `files`: `bun check` can skip it on a case-blind file
+  system. `bun quality --static` runs `scripts/dev/covered.ts`, which fails and
   names any tracked TS/TSX file left unchecked, with no exemptions.
 - **Tests never reach a real model or a real agent.** Drive the UI through
   `tests/ui/harness.tsx`, on OpenTUI's test renderer; drive the session layer
   with a fake ACP agent in `tests/fixtures/` speaking the protocol over stdio. A live agent is for a
-  person checking by hand, not for `bun dev check`.
+  person checking by hand, not for `bun quality`.
 - **Comments say why, not what.** A doc comment on a type says what it is for.
 - **Every action has a key.** Nothing on screen needs a pointer. A new action
   names its key in the same change, and the shortcuts panel (`?` on an empty
@@ -131,7 +134,7 @@ leave that stage out. See `docs/guide.md` for failure and signal cleanup.
 ## Choosing checks for a change
 
 Run checks that match the changed files and the behavior they can affect.
-A full `bun dev check` is not required before every commit.
+A full `bun quality` is not required before every commit.
 
 - For prose-only documentation, repository metadata or agent instructions,
   review the diff and check formatting of the changed files. Check links or
@@ -141,7 +144,7 @@ A full `bun dev check` is not required before every commit.
 - For code changes, run the relevant tests and static checks for the affected
   code. For interface changes, also check the behavior and layout by hand
   where automated checks do not cover them.
-- Use the full `bun dev check`, locally or in pull request CI, for broad
+- Use the full `bun quality`, locally or in pull request CI, for broad
   changes (shared runtime behavior, dependencies, build or test configuration)
   or concrete concerns left by targeted checks. Do not broaden or repeat
   checks without a reason tied to the change or a failure.

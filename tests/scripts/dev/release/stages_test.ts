@@ -200,7 +200,7 @@ test('the credentials and the identity are asked only for the stages that need t
 
   expect(ran().filter((line) => !line.startsWith('npm '))).toStrictEqual([
     'bun install --frozen-lockfile',
-    'bun scripts/dev.ts check',
+    'bun quality',
   ]);
 });
 
@@ -300,12 +300,12 @@ describe('tester: CHD-412 release transaction boundaries', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$2" = 'check' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
+if [ "$1" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
 `,
     );
 
     expect(await died(versioned('patch', { only: ['check', 'compile'] }))).toBe(
-      'bun scripts/dev.ts check failed',
+      'bun quality failed',
     );
     expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(readFileSync(join(at.root, '.gitignore'), 'utf8')).toBe(
@@ -317,7 +317,7 @@ if [ "$2" = 'check' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
       version: VERSION,
     });
     expect(ran().filter((line) => line.startsWith('bun '))).toEqual([
-      'bun scripts/dev.ts check',
+      'bun quality',
     ]);
   });
 
@@ -341,7 +341,7 @@ describe('tester: CHD-411 release check caller', () => {
     await released({ only: ['check'] });
 
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
-      'bun scripts/dev.ts check',
+      'bun quality',
     ]);
     expect(at.out).toEqual([]);
   });
@@ -396,7 +396,7 @@ describe('tester: release orchestration boundaries', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$2" = 'check' ]; then exit 2; fi
+if [ "$1" = 'quality' ]; then exit 2; fi
 `,
     );
 
@@ -404,10 +404,10 @@ if [ "$2" = 'check' ]; then exit 2; fi
       await died(
         released({ dryRun: true, only: ['install', 'check', 'compile'] }),
       ),
-    ).toBe('bun scripts/dev.ts check failed');
+    ).toBe('bun quality failed');
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
       'bun install --frozen-lockfile',
-      'bun scripts/dev.ts check',
+      'bun quality',
     ]);
     expect(at.out).toEqual([]);
   });
@@ -480,8 +480,8 @@ describe('a version given', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$2" = 'check' ]; then cat package.json >"$STATE/checked.json"; fi
-if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
+if [ "$1" = 'quality' ]; then cat package.json >"$STATE/checked.json"; fi
+if [ -n "$FAIL_CHECK" ] && [ "$1" = 'quality' ]; then exit 2; fi
 `,
     );
     // Every binary the compile faked is every kind it should be.
@@ -520,7 +520,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'check' ]; then exit 2; fi
       await died(
         releasedAt('9.9.10', { to: 'compile' }, { FAIL_CHECK: 'yes' }),
       ),
-    ).toBe('bun scripts/dev.ts check failed');
+    ).toBe('bun quality failed');
     expect(checked()).toBe('9.9.10');
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(version()).toBe(VERSION);
@@ -646,7 +646,7 @@ describe('a signal while the version commit is held', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$2" = 'check' ]; then kill -${signal} $PPID; exit 2; fi
+if [ "$1" = 'quality' ]; then kill -${signal} $PPID; exit 2; fi
 `,
     );
 

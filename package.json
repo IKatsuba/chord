@@ -5,10 +5,12 @@
   "license": "MIT",
   "type": "module",
   "engines": {
-    "bun": ">=1.4.2"
+    "bun": ">=1.4.4"
   },
   "scripts": {
-    "dev": "bun scripts/dev.ts"
+    "dev": "bun scripts/dev.ts",
+    "quality": "bun scripts/quality.ts",
+    "lint": "bun scripts/lint.ts"
   },
   "dependencies": {
     "@agentclientprotocol/sdk": "^1.7.0",
@@ -67,14 +69,12 @@
     "@types/shell-quote": "^1.7.5",
     "@types/split2": "^4.2.3",
     "@typescript-eslint/utils": "^8.71.1",
-    "@typescript/native": "npm:typescript@^7.0.2",
     "ansi_up": "^6.0.6",
     "eslint": "^10.12.0",
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.1.1",
     "globals": "^17.13.0",
     "jiti": "^2.7.0",
-    "prettier": "^3.9.9",
     "puppeteer-core": "^25.13.0",
     "semver": "^7.8.5",
     "typescript": "npm:@typescript/typescript6@^6.0.2",

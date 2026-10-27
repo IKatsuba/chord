@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import { ValidationError } from '@cliffy/command';
 import stripAnsi from 'strip-ansi';
 import { type DevActions, devCommand } from '../../scripts/dev.ts';
+import { lintCommand } from '../../scripts/lint.ts';
+import { qualityCommand } from '../../scripts/quality.ts';
 
 /** Each command `argv` ran, with what it was given; nothing is run. */
 async function parsed(argv: string[]): Promise<unknown[][]> {
@@ -24,9 +26,6 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     chord: record('chord'),
     qa: record('qa'),
     test: record('test'),
-    check: record('check'),
-    fmt: record('fmt'),
-    lint: record('lint'),
   };
 
   await devCommand(actions).noExit().throwErrors().parse(argv);
@@ -210,33 +209,10 @@ describe('test', () => {
   });
 });
 
-describe('check', () => {
-  test('runs everything, or only the static steps', async () => {
-    expect(await parsed(['check'])).toStrictEqual([
-      ['check', { static: false }],
-    ]);
-    expect(await parsed(['check', '--static'])).toStrictEqual([
-      ['check', { static: true }],
-    ]);
-  });
-
-  test('takes no arguments and no other option', async () => {
-    await expect(parsed(['check', 'tests/'])).rejects.toThrow(ValidationError);
-    await expect(parsed(['check', '--fix'])).rejects.toThrow(ValidationError);
-  });
-});
-
-test('fmt takes no arguments', async () => {
-  expect(await parsed(['fmt'])).toStrictEqual([['fmt']]);
-  await expect(parsed(['fmt', 'src/'])).rejects.toThrow(ValidationError);
-});
-
-test('lint passes every argument on to ESLint', async () => {
-  expect(await parsed(['lint'])).toStrictEqual([['lint', []]]);
-  expect(await parsed(['lint', '--fix'])).toStrictEqual([['lint', ['--fix']]]);
-  expect(await parsed(['lint', '--fix', '--', '--quiet'])).toStrictEqual([
-    ['lint', ['--fix', '--quiet']],
-  ]);
+test('quality commands are no longer dev commands', async () => {
+  for (const command of ['check', 'lint', 'fmt']) {
+    await expect(parsed([command])).rejects.toThrow(ValidationError);
+  }
 });
 
 test('--help lists every command', () => {
@@ -245,9 +221,6 @@ test('--help lists every command', () => {
   for (const name of [
     'chord',
     'test',
-    'check',
-    'fmt',
-    'lint',
     'compile',
     'npm',
     'registry',
@@ -338,9 +311,6 @@ describe('tester: migrated command boundaries', () => {
       chord: unexpected,
       qa: unexpected,
       test: unexpected,
-      check: unexpected,
-      fmt: unexpected,
-      lint: unexpected,
     };
 
     await expect(
@@ -352,9 +322,18 @@ describe('tester: migrated command boundaries', () => {
 describe('tester: CHD-411 forwarding boundaries', () => {
   test('quoted and dash-prefixed values retain their boundaries', async () => {
     const args = ['-t', 'a stop with spaces', '--unknown=value'];
+    const forwarded: string[][] = [];
 
     expect(await parsed(['test', ...args])).toStrictEqual([['test', args]]);
-    expect(await parsed(['lint', ...args])).toStrictEqual([['lint', args]]);
+
+    await lintCommand((values) => {
+      forwarded.push([...values]);
+    })
+      .noExit()
+      .throwErrors()
+      .parse(args);
+
+    expect(forwarded).toStrictEqual([args]);
     expect(await parsed(['chord', '--fake', ...args])).toStrictEqual([
       ['chord', true, args],
     ]);
@@ -378,13 +357,28 @@ describe('tester: CHD-411 forwarding boundaries', () => {
     }
   });
 
-  test('strict commands refuse options meant for forwarded tools', async () => {
+  test('quality accepts only its static option', async () => {
+    const calls: { static: boolean }[] = [];
+    const parse = (argv: string[]) =>
+      qualityCommand((options) => {
+        calls.push(options);
+      })
+        .noExit()
+        .throwErrors()
+        .parse(argv);
+
+    await parse([]);
+    await parse(['--static']);
+
+    expect(calls).toStrictEqual([{ static: false }, { static: true }]);
+
     for (const argv of [
-      ['fmt', '--fix'],
-      ['check', '--update-timings'],
-      ['check', '--static', 'extra'],
+      ['--fix'],
+      ['--update-timings'],
+      ['--static', 'extra'],
+      ['check'],
     ]) {
-      await expect(parsed(argv)).rejects.toThrow(ValidationError);
+      await expect(parse(argv)).rejects.toThrow(ValidationError);
     }
   });
 });

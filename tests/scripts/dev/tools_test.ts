@@ -18,7 +18,6 @@ import { quote } from 'shell-quote';
 import {
   check,
   chord,
-  fmt,
   lint,
   qaPlace,
   type Run,
@@ -100,24 +99,20 @@ test("test runs the whole suite placed by the record's times, its arguments afte
   ]);
 });
 
-test('lint and fmt run ESLint and Prettier over the tree', () => {
+test('lint runs ESLint over the tree', () => {
   const { run, ran } = faked();
 
   lint(['--fix'], run);
-  fmt(run);
 
-  expect(ran).toStrictEqual([
-    [bun, 'run', 'eslint', '.', '--fix'],
-    [bun, 'run', 'prettier', '--write', '.'],
-  ]);
+  expect(ran).toStrictEqual([[bun, 'run', 'eslint', '.', '--fix']]);
 });
 
 describe('check', () => {
   const STATIC = [
-    [bun, 'run', 'tsc'],
+    [bun, 'check'],
     [bun, 'scripts/dev/covered.ts'],
     [bun, 'run', 'eslint', '.'],
-    [bun, 'run', 'prettier', '--check', '.'],
+    [bun, 'fmt', '--check', '.'],
     [bun, 'test', 'lint/'],
   ];
 
@@ -234,7 +229,7 @@ test('qaPlace makes a capture directory afresh, emptying one left from before (C
 });
 
 describe('CHD-513 U1 tester: command status without timing gates', () => {
-  for (const command of ['test', 'check']) {
+  for (const command of ['test', 'quality', 'quality --static']) {
     for (const failing of [false, true]) {
       test(`${command} keeps timing files untouched when its tests ${failing ? 'fail' : 'pass'}`, async () => {
         const checkout = await mkdtemp(join(tmpdir(), 'chord-status-'));
@@ -261,9 +256,10 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
               version: '0.0.0',
               scripts: {
                 dev: 'bun scripts/dev.ts',
-                tsc: 'bun -e "0"',
+                quality: 'bun scripts/quality.ts',
+                check: 'bun -e "0"',
                 eslint: 'bun -e "0"',
-                prettier: 'bun -e "0"',
+                fmt: 'bun -e "0"',
               },
             }),
           );
@@ -286,15 +282,19 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
             measured,
           );
 
-          const result = spawnSync(bun, ['dev', command], {
-            cwd: checkout,
-            encoding: 'utf8',
-            timeout: 20_000,
-          });
+          const result = spawnSync(
+            bun,
+            command === 'test' ? ['dev', 'test'] : command.split(' '),
+            {
+              cwd: checkout,
+              encoding: 'utf8',
+              timeout: 20_000,
+            },
+          );
 
           expect(result.error).toBeUndefined();
           expect(result.status, result.stdout + result.stderr).toBe(
-            failing ? 1 : 0,
+            failing && command !== 'quality --static' ? 1 : 0,
           );
           expect(result.stdout + result.stderr).not.toContain('timings:');
           expect(

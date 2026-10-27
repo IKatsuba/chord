@@ -1,10 +1,10 @@
 /**
- * Whether tsc checks every TypeScript file git tracks (CHD-474). On a file
- * system that ignores case, tsc's own discovery keeps one file of each pair
+ * Whether Bun checks every TypeScript file git tracks (CHD-474). On a file
+ * system that ignores case, the compiler's discovery keeps one file of each pair
  * whose names differ only by case (`Strip_test.tsx` beside
  * `strip_test.ts`), so a type error in the other passes the local check and
  * fails CI on Linux; tsconfig.json's `files` lists such files by name.
- * Run as a script, it compares `tsc --listFilesOnly` with `git ls-files -z`
+ * Run as a script, it compares `bun check --listFilesOnly` with `git ls-files -z`
  * and exits 1, naming each file left out.
  */
 import { spawnSync } from 'node:child_process';
@@ -13,13 +13,13 @@ import { relative, sep } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
-// Real paths on both sides: Bun gives a script its real path, tsc lists
+// Real paths on both sides: Bun gives a script its real path, Bun lists
 // files by the one they were found by (`/tmp` for `/private/tmp`).
 const root = realpathSync(fileURLToPath(new URL('../..', import.meta.url)));
 
 /**
  * The tracked `.ts` and `.tsx` files, from the root, that
- * tsc's list leaves out: `listed` is its absolute paths, a file in node_modules or Bun's types
+ * the compiler's list leaves out: `listed` is its absolute paths, a file in node_modules or Bun's types
  * among them; `tracked` git's paths. Compared by exact name, as a file
  * system that ignores case would not.
  */
@@ -100,15 +100,16 @@ export function trackedFiles(cwd: string): string[] {
 if (import.meta.main) {
   const left = uncovered(
     trackedFiles(root),
-    output([process.execPath, 'run', 'tsc', '--listFilesOnly'], root, '\n').map(
-      (file) => realpathSync(file),
-    ),
+    output([process.execPath, 'check', '--listFilesOnly'], root, '\n')
+      // Bun's standard libraries are virtual files, never tracked source files.
+      .filter((file) => !file.startsWith('bundled:///'))
+      .map((file) => realpathSync(file)),
     root,
   );
 
   if (left.length > 0) {
     process.stderr.write(
-      `tsc leaves out ${left.length} tracked file${left.length === 1 ? '' : 's'}; ` +
+      `bun check leaves out ${left.length} tracked file${left.length === 1 ? '' : 's'}; ` +
         "list each in tsconfig.json's files:\n" +
         left.map((file) => `  ${file}\n`).join(''),
     );

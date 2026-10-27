@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-late
+ █▀     ? for shortcuts · /help
+
+ › selectedlate
+
+ ⏺ Selected startup waits for the start gate (bounded to 30 seconds).Selected receipt revised; ACP link waits for the
+   link gate (at most 10 seconds).
+
+ Recorded Team receipt (fixture)
+   ⎿  Recorded by Chord · current state unknown
+      Recorded: time unknown
+      selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permissions; provider freshness is unknown.
+      Warning: No resource decision read was recorded; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual at recording: confirmed · session runtime codex · model fake-small · effort medium · mode plan
+      reviewer: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default
+      (unconfirmed)
+      Actual at recording: not opened · configuration unconfirmed
+      Read: none recorded · capacity unknown · advisory
+      Run: 402ae7a3 · saved definition: fixture (project)
+      lead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default
+      Changes from saved: model, mode
+      reviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+      default (unconfirmed)
+      Changes from saved: none
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main     codex · Fake Large with a 1M context window · medium  ✻ working 1s
+    fixture  team · codex · Fake Small · medium                    ◦ idle 0s     ✓ new reply

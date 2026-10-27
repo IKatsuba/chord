@@ -1,0 +1,24 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-late
+ █▀     ? for shortcuts · /help
+
+ › selectedlate
+
+ ⏺ Selected startup waits for the start gate (bounded to 30 seconds).Selected
+   receipt revised; ACP link waits for the link gate (at most 10 seconds).
+
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permissions; provider
+      freshness is unknown.
+      Warning: No resource decision read was recorded; capacity is unknown.
+ ── ↓ 13 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 0s
+    fixture  team · codex  ◦ idle 4s  ✓ new reply

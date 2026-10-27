@@ -1,0 +1,40 @@
+      Read: 19:14:57 UTC · advisory snapshot
+      codex · subscription · identity unverified
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 20:14 UTC · models unknown
+      Received 12s before read · provider freshness unknown
+      Warning: Provider observation time unavailable.
+      Warning: Scripted partial coverage warning: independent provider windows may omit external work, model
+      applicability, provider observation times and current account association. Retained utilization is historical
+      context and never proves available capacity or authorizes a different payment source. This deliberately long
+      advisory verifies ordinary wrapping without hidden uncertainty.
+      Active work: 1 reported · external work may be missing
+
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve every role instruction and exact permission requirement. Capacity is advisory, provider
+      observation age is unknown, and external activity may be missing. Preserve every role instruction and exact
+      permission requirement. Capacity is advisory, provider observation age is unknown, and external activity may be
+      missing. Preserve every role instruction and exact permission requirement. Capacity is advisory, provider
+      observation age is unknown, and external activity may be missing.
+      Warning: Resource identity is unverified; observations remain separate.
+      Warning: Resource coverage is incomplete; external work may be missing.
+      Warning: Provider freshness is unknown for some resource windows.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort medium · mode plan
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      Read 2026-10-27 19:14:57.821 UTC · advisory
+      ctrl+o for saved definition and changes
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 0s
+    fixture  team · codex · Fake Small · medium                    ◦ idle 0s  ✓ new reply

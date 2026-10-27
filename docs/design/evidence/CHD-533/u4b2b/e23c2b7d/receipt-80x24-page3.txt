@@ -1,0 +1,24 @@
+      lead (lead): fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: refused · session runtime unknown · model unknown
+      · effort unknown · mode unknown
+      lead: Startup ended before the first job; the attempted agent is
+      closing.
+      reviewer: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: not opened · configuration unconfirmed
+      Read: none recorded · capacity unknown · advisory
+      Run: 9e5c1e37 · saved definition: fixture (project)
+      lead saved: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Changes from saved: none
+      reviewer saved: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Changes from saved: none
+      Recorded failure: Team launch 9e5c1e37 was refused before its first
+ ── ↓ 36 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

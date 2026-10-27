@@ -1,0 +1,40 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-selection-late
+ █▀     ? for shortcuts · /help
+
+ › selectedlate
+
+ ⏺ Selected startup waits for the start gate (bounded to 30 seconds).Selected receipt revised; ACP link waits for the
+   link gate (at most 10 seconds).
+
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permissions; provider freshness is unknown.
+      Warning: No resource decision read was recorded; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort medium · mode plan
+      reviewer: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default
+      (unconfirmed)
+      Actual: not opened · configuration unconfirmed
+      Read: none recorded · capacity unknown · advisory
+      ctrl+o for saved definition and changes
+
+ ⏺ Late ACP link completed.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 0s
+    fixture  team · codex · Fake Small · medium                    ◦ idle 0s  ✓ new reply

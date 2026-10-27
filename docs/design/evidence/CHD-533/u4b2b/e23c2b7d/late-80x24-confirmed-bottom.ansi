@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [39mlead (lead): codex · model fake-small · effort agent default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m(unconfirmed) · mode plan[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mActual at recording: confirmed · session runtime codex · model[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mfake-small · effort medium · mode plan[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer: claude · model agent default (unconfirmed) · effort agent[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mdefault (unconfirmed) · mode agent default (unconfirmed)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mActual at recording: not opened · configuration unconfirmed[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRead: none recorded · capacity unknown · advisory[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRun: 28ce705d · saved definition: fixture (project)[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mlead saved: codex · model fake-large · effort agent default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m(unconfirmed) · mode default[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mChanges from saved: model, mode[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer saved: claude · model agent default (unconfirmed) · effort[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39magent default (unconfirmed) · mode agent default (unconfirmed)[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mChanges from saved: none[38;2;255;255;255m
+
+ [2m[39m›[0m›[2m›[0m[38;2;255;255;255m [39mWorking…[38;2;255;255;255m [2m[39m(2s · esc to interrupt)[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m          [2m[39mFake Large with a 1M context window · medium effort[0m[38;2;255;255;255m
+  [39m  [1mmain   [0;2m  codex         ✻ working 2s[0m[38;2;255;255;255m
+  [39m  fixture[2m  team · codex  ◦ idle 1s     ✓ new reply[0m[38;2;255;255;255m

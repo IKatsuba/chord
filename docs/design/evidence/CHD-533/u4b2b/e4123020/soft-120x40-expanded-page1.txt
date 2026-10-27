@@ -1,0 +1,40 @@
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 20:14 UTC · models unknown
+      Received 12s before read · provider freshness unknown
+      Warning: Provider observation time unavailable.
+      7d: usage unknown · reset unknown · models unknown
+      Received time unknown · provider freshness unknown
+      Warning: Partial observation; weekly utilization/reset unavailable.
+      Warning: Scripted fixture; account and resource identity are unverified.
+      Active work: 1 reported · external work may be missing
+
+ ⏺ Team(fixture) · claude · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements; provider freshness is unknown.
+      Warning: Resource identity is unverified; observations remain separate.
+      Warning: Resource coverage is incomplete; external work may be missing.
+      Warning: Provider freshness is unknown for some resource windows.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): claude · model fake-small · effort high · mode plan
+      Actual: confirmed · session runtime claude · model fake-small · effort medium · mode plan
+      lead: The requested effort was not confirmed; the runtime effort remains advisory.
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      Read 2026-10-27 19:14:51.962 UTC · advisory
+      Run: 7d293992 · saved definition: fixture (project)
+      lead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default
+      Changes from saved: agent, model, effort, mode
+      reviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+      default (unconfirmed)
+      Changes from saved: model, mode
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main     codex · Fake Large with a 1M context window · medium  ◦ idle 0s
+    fixture  team · claude · Fake Small · medium                   ◦ idle 0s  ✓ new reply

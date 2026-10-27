@@ -1,0 +1,24 @@
+   receipt revised; ACP link waits for the link gate (at most 10 seconds).
+
+ Recorded Team receipt (fixture)
+   ⎿  Recorded by Chord · current state unknown
+      Recorded: time unknown
+      selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permissions; provider
+      freshness is unknown.
+      Warning: No resource decision read was recorded; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+ ── ↓ new output · 13 lines below · end to jump to the bottom ─────────────────
+
+ ››› Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    main     codex         ✻ working 0s
+    fixture  team · codex  ◦ idle 0s     ✓ new reply

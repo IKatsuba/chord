@@ -1,0 +1,24 @@
+      observation age is unknown, and external activity may be missing.
+      Preserve every role instruction and exact permission requirement.
+      Capacity is advisory, provider observation age is unknown, and external
+      activity may be missing.
+      Warning: Resource identity is unverified; observations remain separate.
+      Warning: Resource coverage is incomplete; external work may be missing.
+      Warning: Provider freshness is unknown for some resource windows.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort
+      medium · mode plan
+      reviewer: claude · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+ ── ↓ 10 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 1s
+    fixture  team · codex  ◦ idle 1s  ✓ new reply

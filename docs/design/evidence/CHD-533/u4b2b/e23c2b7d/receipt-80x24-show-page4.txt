@@ -1,0 +1,24 @@
+      reviewer: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: not opened · configuration unconfirmed
+      Read: none recorded · capacity unknown · advisory
+      Run: 9e5c1e37 · saved definition: fixture (project)
+      lead saved: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Changes from saved: none
+      reviewer saved: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Changes from saved: none
+      Recorded failure: Team launch 9e5c1e37 was refused before its first
+      job; the attempted lead is closing.
+
+ Recorded Team receipt (fixture)
+   ⎿  Recorded by Chord · current state unknown · historical observation
+      Recorded: time unknown
+      Actual admitted attempt 2; its first job is never delivered.
+ ── ↓ 30 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

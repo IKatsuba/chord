@@ -1,0 +1,24 @@
+      coverage may be incomplete. Preserve every role instruction and exact
+      permission requirement. Provider freshness is unknown; external work
+      and quota coverage may be incomplete. Preserve every role instruction
+      and exact permission requirement. Provider freshness is unknown;
+      external work and quota coverage may be incomplete.
+      Warning: No resource decision read was recorded; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: refused · session runtime unknown · model unknown
+      · effort unknown · mode unknown
+      lead: Startup ended before the first job; the attempted agent is
+      closing.
+      reviewer: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: not opened · configuration unconfirmed
+      Read: none recorded · capacity unknown · advisory
+ ── ↓ 44 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

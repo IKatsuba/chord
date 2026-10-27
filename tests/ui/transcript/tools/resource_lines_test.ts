@@ -141,3 +141,53 @@ describe('Resources report', () => {
     expect(drawn.lines.length).toBeGreaterThan(10);
   });
 });
+
+describe('tester: Resources time and identity display boundaries', () => {
+  test('future receipt and unsupported freshness stay unknown independently from known model scope', async () => {
+    const snapshot = await facts();
+    const window = snapshot.unbound[0]!.windows[0]!;
+
+    window.receivedAt = new Date(wall + 1000).toISOString();
+    window.models = ['model-a', 'model-b'];
+    window.state = 'unsupported';
+
+    const text = resourceLines(snapshot).join('\n');
+
+    expect(text).toContain(
+      'Received time unknown · provider freshness unsupported',
+    );
+    expect(text).toContain('models model-a, model-b');
+    expect(text).not.toContain('Received -');
+  });
+
+  test('verified pool references stay hidden while independent windows retain their own values', async () => {
+    const snapshot = await facts();
+    const observation = snapshot.unbound[0]!;
+
+    snapshot.unbound = [];
+    snapshot.pools = [
+      {
+        poolRef: 'hidden-pool-reference',
+        accountRef: 'hidden-account-reference',
+        provider: 'codex',
+        billing: 'subscription',
+        source: 'fixture',
+        sourceVersion: '1',
+        identityObservedAt: snapshot.observedAt,
+        identity: 'verified',
+        coverage: 'account',
+        externalActivity: 'visible',
+        windows: observation.windows,
+      },
+    ];
+
+    const text = resourceLines(snapshot).join('\n');
+
+    expect(text).toContain('codex · subscription · identity verified');
+    expect(text).toContain('coverage account · external activity visible');
+    expect(text).toContain('5h: 12.345% used');
+    expect(text).toContain('7d: usage unknown');
+    expect(text).not.toContain('hidden-pool-reference');
+    expect(text).not.toContain('hidden-account-reference');
+  });
+});

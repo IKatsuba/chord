@@ -372,3 +372,33 @@ test('an omitted harness resource service stays disabled even for provider-named
     await server.close();
   }
 });
+
+describe('tester: Resources keyboard and snapshot continuity', () => {
+  for (const columns of [120, 80]) {
+    test(`${columns}-column ctrl+o preserves the advisory report and unsent prompt`, () =>
+      withResourcesWindow(
+        async (window) => {
+          await send(window, 'resources');
+          await window.shows('Resource facts are advisory');
+
+          const read = window.frame().match(/Read: [0-9:]+ UTC/);
+
+          assert(read);
+
+          await window.type('unsent draft');
+          await window.press('\x0f');
+
+          expect(window.frame()).toContain(read[0]);
+          expect(window.frame()).toContain('unsent draft');
+          expect(window.mounted('provider freshness unknown')).toBe(true);
+          expect(window.mounted('external work may be missing')).toBe(true);
+
+          await window.press('\x0f');
+
+          expect(window.frame()).toContain(read[0]);
+          expect(window.frame()).toContain('unsent draft');
+        },
+        { columns },
+      ));
+  }
+});

@@ -1,5 +1,10 @@
 /** Shared advisory reads: relevance owns collectors, never a scheduler of agent work. */
 import { performance } from 'node:perf_hooks';
+import {
+  RESOURCE_CLEANUP_FAILED,
+  RESOURCE_SHUTDOWN_UNVERIFIED,
+  RESOURCE_CACHE_CLEANUP_FAILED,
+} from './resource_warnings.ts';
 import { randomUUID } from 'node:crypto';
 import { settledWithin } from '../acp/process.ts';
 import {
@@ -78,8 +83,6 @@ interface SourceState {
 
 const CADENCE_MS = 120_000;
 const DEADLINE_MS = 20_000;
-const CLEANUP_FAILED =
-  'Resource collector cleanup failed; owned process exit is unverified.';
 const BACKOFF_MS = [120_000, 240_000, 480_000, 900_000] as const;
 const nowClock = (): BudgetClock => ({
   wall: Date.now(),
@@ -409,9 +412,7 @@ export class ResourceService {
     const settled = await settledWithin(Promise.all(pending), 2000);
 
     if (settled?.status !== 'fulfilled') {
-      this.#warn(
-        'Collector shutdown could not be verified within its cleanup bound.',
-      );
+      this.#warn(RESOURCE_SHUTDOWN_UNVERIFIED);
     }
 
     await this.#writing;
@@ -419,7 +420,7 @@ export class ResourceService {
     try {
       await this.#options.storage?.close(this.#now().wall);
     } catch {
-      this.#warn('Resource cache cleanup could not be completed.');
+      this.#warn(RESOURCE_CACHE_CLEANUP_FAILED);
     }
 
     return [...this.#warnings];
@@ -549,7 +550,7 @@ export class ResourceService {
         (error: unknown) => {
           // Exit verification remains relevant even after facts lose publication authority.
           if (error instanceof ResourceReadError && error.kind === 'cleanup') {
-            this.#warn(CLEANUP_FAILED);
+            this.#warn(RESOURCE_CLEANUP_FAILED);
           }
 
           if (
@@ -562,7 +563,7 @@ export class ResourceService {
               source,
               error instanceof ResourceReadError
                 ? error.kind === 'cleanup'
-                  ? CLEANUP_FAILED
+                  ? RESOURCE_CLEANUP_FAILED
                   : error.message
                 : 'Resource collector failed.',
               error instanceof ResourceReadError &&

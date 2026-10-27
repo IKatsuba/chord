@@ -69,6 +69,7 @@ import {
   knownAgents,
   loadKeybindings,
   loadSettings,
+  readTeamSelection,
   problemLine,
   problemNote,
   refusalLine,
@@ -436,6 +437,12 @@ const cli = chordCommand().action(async (options, named) => {
 
     return {
       cwd,
+      selectionPolicy: () =>
+        readTeamSelection({
+          configHome: xdgConfig,
+          cwd,
+          ...(home === undefined ? {} : { home }),
+        }),
       ...(teamSelection === undefined ? {} : { teamSelection }),
       startupOf: (name) => {
         const found = startupOf(
@@ -549,6 +556,7 @@ const cli = chordCommand().action(async (options, named) => {
     <App
       resources={resources}
       teamSelection={first.teamSelection}
+      selectionPolicy={first.selectionPolicy}
       agent={agent}
       cwd={resume?.cwd ?? options.cwd}
       agentCommand={agentCommand}

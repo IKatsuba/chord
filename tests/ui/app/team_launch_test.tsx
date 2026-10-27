@@ -199,22 +199,6 @@ describe('team launch generation boundary', () => {
     );
   });
 
-  test('selection is explicitly refused until selected startup integration is enabled', () =>
-    withLaunch(async (window, callers) => {
-      const caller = person(callers);
-      const result = await caller.window.runTeam(caller, {
-        team: 'fixture',
-        job: 'Job.',
-        selection: { reason: 'Preserve every role.' },
-      });
-
-      expect(result).toEqual({
-        error: 'Selected team launches are not available yet. No run started.',
-      });
-      expect(window.pids).toHaveLength(1);
-      expect((await caller.window.teams(caller)).runs).toEqual([]);
-    }));
-
   for (const cancel of ['request', 'interrupt', 'clear'] as const) {
     test(`${cancel} while preflight waits cannot start a late run`, () =>
       withLaunch(async (window, callers) => {

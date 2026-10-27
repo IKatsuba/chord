@@ -314,6 +314,11 @@ test("list_teams gives each team's agents and its open runs, and a broken file's
       ],
     }),
   ).toStrictEqual({
+    runs: [
+      { team: 'bugfix', name: 'bugfix' },
+      { team: 'bugfix', name: 'bugfix 2' },
+      { team: 'review', name: 'review' },
+    ],
     teams: [
       {
         name: 'bugfix',
@@ -588,5 +593,23 @@ describe('CHD-493 U4 tester: list_sessions during startup', () => {
     }
 
     expect(probed).toStrictEqual([]);
+  });
+});
+
+test('list_teams adds only actual known run IDs and keeps existing run names', () => {
+  expect(
+    teamsAnswer({
+      found: [],
+      runs: [
+        { team: 'fixture', name: 'fixture', id: 'actual-id' },
+        { team: 'legacy', name: 'legacy' },
+      ],
+    }),
+  ).toEqual({
+    teams: [],
+    runs: [
+      { team: 'fixture', name: 'fixture', id: 'actual-id' },
+      { team: 'legacy', name: 'legacy' },
+    ],
   });
 });

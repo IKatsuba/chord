@@ -138,6 +138,7 @@ export function stoppedLine(run: string, members: readonly string[]): string {
 
 /** A team's runs open in the window, as the picker and `/team show` read them. */
 export interface TeamRun {
+  readonly id?: string;
   /** The team's file name. */
   readonly team: string;
   /** The run's name, its lead's: `bugfix`, `bugfix 2`. */

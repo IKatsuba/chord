@@ -1,3 +1,4 @@
+import type { SelectionReceipt } from '../team_selection.ts';
 /**
  * The transcript's shapes, which every module of the reducer and everything
  * that draws a transcript share, and the transcript a session starts with.
@@ -587,6 +588,7 @@ export type ItemEnd = 'done' | 'failed' | 'stopped' | 'ended' | 'disconnected';
 
 /** What one `/team` command left in the transcript. */
 export type TeamShown =
+  | { readonly kind: 'receipt'; readonly call: ChordCall }
   /** `/team`: the command as typed, while its picker is open. */
   | { readonly kind: 'listed' }
   | {
@@ -612,6 +614,7 @@ export type TeamShown =
 
 /** A run of a team as `/team show` caught it: a snapshot, as `/status` is. */
 export interface TeamRunShown {
+  readonly receipt?: SelectionReceipt;
   /** The run's name: `bugfix`, `bugfix 2`. */
   readonly name: string;
   /** When its lead opened, on chord's clock. */

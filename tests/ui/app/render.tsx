@@ -1,3 +1,4 @@
+import type { TeamSelectionPolicy } from '../../../src/settings.ts';
 /** The window on the fake agent, rendered for the tests of every feature it draws. */
 import { execFile } from 'node:child_process';
 import type { matchFiles } from '../../../src/ui/prompt/mentions.ts';
@@ -136,6 +137,7 @@ export async function withWindow(
     server,
     resources,
     teamSelection,
+    selectionPolicy,
     runtimes,
     listed,
     keybindings,
@@ -184,6 +186,7 @@ export async function withWindow(
     server?: ChordServer;
     resources?: ResourceAccess;
     teamSelection?: TeamSelection;
+    selectionPolicy?: () => Promise<TeamSelectionPolicy>;
     /** The runtimes `list_agents` names; the fake and the registry's else. */
     runtimes?: readonly string[];
     /** The agents as `chord agents` lists them, for `/new` to describe. */
@@ -269,6 +272,7 @@ export async function withWindow(
     <App
       resources={resources}
       teamSelection={teamSelection}
+      selectionPolicy={selectionPolicy}
       agent={agent}
       {...(configHome === undefined ? {} : { configHome: configHome(dir) })}
       cwd={resume?.cwd ?? dir}

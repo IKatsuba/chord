@@ -8,6 +8,7 @@ import {
   selectionReceipt,
   SelectionReceipt,
   validateSelectedRole,
+  withSelectionCleanupWarning,
 } from '../../src/session/team_selection.ts';
 import type { Team } from '../../src/teams.ts';
 import type { BudgetSnapshot } from '../../src/session/budgets.ts';
@@ -497,6 +498,7 @@ describe('selection decision receipts', () => {
     expect(receipt.warnings).toEqual([
       ...read.warnings,
       'Resource identity is unverified; observations remain separate.',
+      'Resource coverage is incomplete; external work may be missing.',
     ]);
     expect(JSON.stringify(receipt)).not.toContain('source-one');
     expect(JSON.stringify(receipt)).not.toContain('session-one');
@@ -504,6 +506,7 @@ describe('selection decision receipts', () => {
     expect(receipt.warnings).toEqual([
       'Coverage is unknown.',
       'Resource identity is unverified; observations remain separate.',
+      'Resource coverage is incomplete; external work may be missing.',
     ]);
   });
 });
@@ -654,4 +657,51 @@ describe('tester: selected receipt bounds and role isolation', () => {
     ]);
     expect(receipt.roles[0]?.planned.effort).toBe('high');
   });
+});
+
+test('cleanup warning preserves explicit omission and uncertainty within the receipt cap without mutating the plan', () => {
+  const chosen = freezeSelection(
+    saved,
+    { reason: 'Preserve all instructions.' },
+    {},
+    ['codex', 'claude'],
+  );
+
+  assert('frozen' in chosen);
+
+  const initial = selectionReceipt(
+    'actual-run',
+    { name: 'fixture', place: 'project' },
+    chosen.frozen,
+  );
+  const receipt = {
+    ...initial,
+    warnings: [
+      ...Array.from(
+        { length: 255 },
+        (_, index) => `Source uncertainty ${index}.`,
+      ),
+      'Additional resource warnings are omitted.',
+    ],
+  };
+  const changed = withSelectionCleanupWarning(receipt);
+
+  expect(changed.warnings).toHaveLength(256);
+  expect(new Set(changed.warnings).size).toBe(256);
+  expect(changed.warnings).toContain(
+    'Additional resource warnings are omitted.',
+  );
+  expect(changed.warnings).toContain(
+    'An attempted agent cleanup could not be verified; process exit is uncertain.',
+  );
+  expect(withSelectionCleanupWarning(changed).warnings).toEqual(
+    changed.warnings,
+  );
+  expect(receipt.warnings).toHaveLength(256);
+  expect(receipt.warnings).not.toContain(
+    'An attempted agent cleanup could not be verified; process exit is uncertain.',
+  );
+  expect(changed.roles).toBe(receipt.roles);
+  expect(changed.policy).toBe(receipt.policy);
+  expect(SelectionReceipt.safeParse(changed).success).toBe(true);
 });

@@ -429,7 +429,7 @@ export function summary(
       ? [...chordLines(cut), cutLine(cut.tool)]
       : call.chord === undefined
         ? content.flatMap(contentLines)
-        : chordLines(call.chord);
+        : chordLines(call.chord, expanded);
   const diffs = content.flatMap((item) =>
     item.type === 'diff'
       ? [diffView(item.path, item.oldText, item.newText, true, tones)]
@@ -473,6 +473,12 @@ export function summary(
 
   const folds =
     chordCallOf(call, chordServer)?.tool !== 'get_budgets' &&
+    !(
+      call.chord?.tool === 'run_team' &&
+      typeof call.chord.answer === 'object' &&
+      call.chord.answer !== null &&
+      'receipt' in call.chord.answer
+    ) &&
     !expanded &&
     FOLDED_KINDS.has(call.kind ?? '') &&
     shown.length > SUMMARY_LINES;

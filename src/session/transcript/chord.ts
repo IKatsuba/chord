@@ -1,3 +1,4 @@
+import { recordedSelection } from '../team_selection.ts';
 /**
  * chord's own calls: a request chord's MCP server served, tied to the tool
  * call the agent made for it by the arguments both carry, since chord knows
@@ -121,6 +122,14 @@ export function served(
  * queued after all is; a call served pending itself never does.
  */
 function answers(call: ChordCall, earlier: ChordCall): boolean {
+  // Invalid late metadata cannot erase inspectable, validated history.
+  if (
+    recordedSelection(earlier) !== undefined &&
+    recordedSelection(call) === undefined
+  ) {
+    return false;
+  }
+
   return (
     call.pending !== true &&
     earlier.asked !== undefined &&

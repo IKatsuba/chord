@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { readdir, readFile } from 'node:fs/promises';
 import { notFound } from '../not_found.ts';
 import { parseRecord, promptLine, recordsDir } from './record.ts';
+import { recordedSelection } from './team_selection.ts';
 
 /** An earlier session to open again, and what chord knows of it. */
 export interface Resume {
@@ -50,9 +51,9 @@ export interface SessionRecord {
   readonly sessionId: string;
   readonly agent: string;
   readonly cwd: string;
-  /** When its last prompt was sent, epoch milliseconds. */
+  /** Last recorded prompt, or receipt-only actual opening, epoch milliseconds. */
   readonly lastUsedAt: number;
-  /** Its first prompt, on one line. */
+  /** First prompt, or an explicit receipt-only team-attempt preview. */
   readonly prompt: string;
   /** A task agent's: the session that started it, by the agent's id. */
   readonly parent?: string;
@@ -68,9 +69,8 @@ export interface SessionRecord {
 }
 
 /**
- * Every session record in `stateDir` a prompt was sent in. Only the first
- * line, the prompts and the agent's titles are parsed, as a list needs no
- * more; the past is read when a session is opened.
+ * Session records with a prompt or an admitted selected attempt. The list
+ * reads their header, prompts, receipt and titles; the past opens on demand.
  */
 export async function readRecords(stateDir: string): Promise<SessionRecord[]> {
   const dir = recordsDir(stateDir);
@@ -104,7 +104,7 @@ export async function readRecords(stateDir: string): Promise<SessionRecord[]> {
   return read.filter((record) => record !== undefined);
 }
 
-/** What `path`'s record says of its session; none for one never prompted. */
+/** A real recorded session with work; looked-only records stay hidden. */
 export function summaryOf(
   path: string,
   text: string,
@@ -119,9 +119,42 @@ export function summaryOf(
   const first = prompts.at(0);
   const last = prompts.at(-1);
 
-  if (header?.type !== 'session' || !first || !last) {
+  if (header?.type !== 'session') {
     return undefined;
   }
+
+  const receipts =
+    first === undefined
+      ? parseRecord(
+          lines
+            .filter((line) => line.startsWith('{"type":"served"'))
+            .join('\n'),
+        ).flatMap((entry) => {
+          if (entry.type !== 'served' || entry.call.tool !== 'run_team') {
+            return [];
+          }
+
+          const receipt = recordedSelection(entry.call);
+
+          return receipt === undefined ? [] : [receipt];
+        })
+      : [];
+  const receipt = receipts.at(-1);
+
+  if (first === undefined && receipt === undefined) {
+    return undefined;
+  }
+
+  const opened =
+    first === undefined
+      ? parseRecord(
+          lines
+            .filter((line) => line.startsWith('{"type":"opened"'))
+            .join('\n'),
+        )
+          .filter((entry) => entry.type === 'opened')
+          .at(-1)
+      : undefined;
 
   // A task is known by its spawn_task title alone, as its caller named it,
   // not by its agent's own (the owner, Q200).
@@ -132,8 +165,11 @@ export function summaryOf(
     sessionId: header.sessionId,
     agent: header.agent,
     cwd: header.cwd,
-    lastUsedAt: last.at,
-    prompt: promptLine(first.prompt),
+    lastUsedAt: last?.at ?? opened?.at ?? header.at,
+    prompt:
+      first === undefined
+        ? `Team attempt: ${receipt!.saved.name}`
+        : promptLine(first.prompt),
     ...(header.parent === undefined ? {} : { parent: header.parent }),
     ...(header.name === undefined ? {} : { name: header.name }),
     ...(title === undefined ? {} : { title }),

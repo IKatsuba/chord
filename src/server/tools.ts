@@ -15,7 +15,10 @@
 import { performance } from 'node:perf_hooks';
 import { foldBudgetCache } from '../platform/budget_cache.ts';
 import type { BudgetSnapshot } from '../session/budgets.ts';
-import { RunSelection } from '../session/team_selection.ts';
+import {
+  RunSelection,
+  type SelectionReceipt,
+} from '../session/team_selection.ts';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from '@zod/zod';
 import { formatElapsed } from '../session/elapsed.ts';
@@ -155,8 +158,13 @@ export type RunTeamAnswer =
       readonly agent: string;
       readonly model?: string;
       readonly mode?: string;
+      readonly receipt?: SelectionReceipt;
     } & EffortStarted)
-  | { readonly error: string };
+  | {
+      readonly error: string;
+      readonly id?: string;
+      readonly receipt?: SelectionReceipt;
+    };
 
 /**
  * How a message went: straight to its recipient, queued, or refused; `to`
@@ -312,11 +320,16 @@ export interface WindowView {
 export interface TeamsFound {
   readonly found: readonly FoundTeam[];
   /** Each open run's lead, by its name, with its team's. */
-  readonly runs: readonly { readonly team: string; readonly name: string }[];
+  readonly runs: readonly {
+    readonly team: string;
+    readonly name: string;
+    readonly id?: string;
+  }[];
 }
 
 /** `list_teams`' answer: each team, or why its file cannot be run. */
 export interface TeamsAnswer {
+  readonly runs?: TeamsFound['runs'];
   readonly teams: readonly (
     | {
         readonly name: string;
@@ -357,6 +370,11 @@ function agentRow({
 
 export function teamsAnswer({ found, runs }: TeamsFound): TeamsAnswer {
   return {
+    runs: runs.map((run) => ({
+      team: run.team,
+      name: run.name,
+      ...(run.id === undefined ? {} : { id: run.id }),
+    })),
     teams: found.map((one) =>
       'problem' in one
         ? {
@@ -1239,23 +1257,63 @@ const runTeam: Register = (server, caller) =>
         'lead an effort, once it has started on it or been refused it; its ' +
         'reports come to you later as messages, send_message reaches it, and close_agent closes it ' +
         'with its members.',
-      inputSchema: {
-        team: z.string().describe('The team, as list_teams names it'),
-        job: z
-          .string()
-          .describe('The job, in full: what to do, where, and when to report'),
-        selection: RunSelection.optional(),
-      },
+      inputSchema: z
+        .looseObject({
+          team: z.string().describe('The team, as list_teams names it'),
+          job: z
+            .string()
+            .describe(
+              'The job, in full: what to do, where, and when to report',
+            ),
+          selection: RunSelection.optional(),
+        })
+        .superRefine((input, context) => {
+          if (input.selection !== undefined) {
+            const strict = z
+              .strictObject({
+                team: z.string(),
+                job: z.string(),
+                selection: RunSelection,
+              })
+              .safeParse(input);
+
+            if (!strict.success) {
+              for (const issue of strict.error.issues) {
+                context.addIssue({ ...issue });
+              }
+            }
+          }
+        }),
     },
     async (input, extra) => {
       const request = { ...caller, signal: extra.signal };
+      // Records keep our declared domain fields; SDK input stays untouched.
+      const recordedInput: RunTeamArgs = {
+        team: input.team,
+        job: input.job,
+        ...(input.selection === undefined
+          ? {}
+          : { selection: input.selection }),
+      };
+      const result = await caller.window.runTeam(request, input);
 
-      return serve(
-        request,
-        'run_team',
-        input,
-        await caller.window.runTeam(request, input),
-      );
+      if (result.receipt !== undefined) {
+        caller.window.served(request, {
+          tool: 'run_team',
+          input: recordedInput,
+          asked: result.receipt.runId,
+          answer: result,
+          ...('error' in result ? { error: result.error } : {}),
+        });
+
+        return {
+          ...answer(result),
+          structuredContent: { ...result },
+          ...('error' in result ? { isError: true } : {}),
+        };
+      }
+
+      return serve(request, 'run_team', recordedInput, result);
     },
   );
 

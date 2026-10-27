@@ -1,3 +1,5 @@
+import { RecordedReceipt } from './RecordedReceipt.tsx';
+import { selectionLines } from '../transcript/tools/selection_lines.ts';
 import { useTerminalDimensions } from '@opentui/react';
 import { Fragment, useMemo } from 'react';
 import type {
@@ -63,6 +65,9 @@ export function TeamEntry({
         <Gutter dimColor>›</Gutter>
         <text {...FILL}>{`/${command}`}</text>
       </box>
+      {shown.kind === 'receipt' && (
+        <RecordedReceipt call={shown.call} historical width={width} />
+      )}
       {shown.kind === 'ran' && (
         <Tool
           call={{ id: turnId, status: 'completed', chord: shown.call }}
@@ -97,6 +102,7 @@ export function TeamEntry({
             file={shown.file}
             team={shown.team}
             run={shown.running}
+            expanded={expanded}
             width={inside}
           />
         ))}
@@ -177,12 +183,14 @@ function RunningTeam({
   file,
   team,
   run,
+  expanded,
   width,
 }: {
   name: string;
   file: string;
   team: Team;
   run: TeamRunShown;
+  expanded: boolean;
   width: number;
 }) {
   const colours = useColours();
@@ -196,6 +204,15 @@ function RunningTeam({
           </Under>
         ),
       )}
+      {selectionLines(run.receipt, expanded)
+        .flatMap((line) => wrapLine(line, width))
+        .map((line, index) => (
+          <Under key={`selection${index}`} first={false}>
+            <text {...ROWS}>
+              <Ansi text={line} />
+            </text>
+          </Under>
+        ))}
       {/* Held: the report sits in the scrolling transcript (CHD-471). */}
       <box height={1} flexShrink={0} />
       {runningTable(team, run.agents, width).map((line, index) => {

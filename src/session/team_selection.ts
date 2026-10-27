@@ -47,8 +47,13 @@ export interface FrozenSelection {
   readonly selection: RunSelection;
 }
 
-function refusal(role: string, field: string, message: string): string {
-  return `${role}.${field}: ${message}. No run started. Choose a supported configuration.`;
+function refusal(
+  role: string,
+  field: string,
+  message: string,
+  admission: 'run' | 'member' = 'run',
+): string {
+  return `${role}.${field}: ${message}. ${admission === 'run' ? 'No run started. Choose a supported configuration.' : 'This member was not started.'}`;
 }
 
 function mergeChoice(
@@ -96,9 +101,15 @@ export function validateSelectedRole(
   runtimes: readonly string[],
   capabilities?: SelectionCapabilities,
   explicit: RunChoice = {},
+  admission: 'run' | 'member' = 'run',
 ): string | undefined {
   if (!runtimes.includes(choice.agent)) {
-    return refusal(role, 'agent', 'the selected runtime is not configured');
+    return refusal(
+      role,
+      'agent',
+      'the selected runtime is not configured',
+      admission,
+    );
   }
 
   const constraints = policy.constraints;
@@ -116,6 +127,7 @@ export function validateSelectedRole(
         role,
         field,
         'the choice is outside the configured allowlist',
+        admission,
       );
     }
   }
@@ -133,6 +145,7 @@ export function validateSelectedRole(
         role,
         field,
         `${value} is not supported by the selected runtime`,
+        admission,
       );
     }
   }
@@ -153,6 +166,7 @@ export function validateSelectedRole(
       role,
       'effort',
       `${explicit.effort} is not supported by the selected model`,
+      admission,
     );
   }
 
@@ -255,6 +269,7 @@ function freezeValues(value: object): void {
 }
 
 const actual = z.strictObject({
+  agent: id.nullable().optional(),
   model: id.nullable(),
   effort: id.nullable(),
   mode: id.nullable(),
@@ -291,6 +306,33 @@ export const SelectionReceipt = z.strictObject({
 
 export type SelectionReceipt = z.infer<typeof SelectionReceipt>;
 
+/** Only a receipt tied to its actual admitted call is inspectable history. */
+export function recordedSelection(call: {
+  readonly tool: string;
+  readonly asked?: string;
+  readonly answer?: unknown;
+}): SelectionReceipt | undefined {
+  const answer = call.answer;
+
+  if (
+    call.tool !== 'run_team' ||
+    typeof answer !== 'object' ||
+    answer === null ||
+    !('receipt' in answer)
+  ) {
+    return undefined;
+  }
+
+  const parsed = SelectionReceipt.safeParse(answer.receipt);
+
+  return parsed.success &&
+    call.asked === parsed.data.runId &&
+    'id' in answer &&
+    answer.id === parsed.data.runId
+    ? parsed.data
+    : undefined;
+}
+
 function configuration(role: TeamLead): RunChoice & { agent: string } {
   return {
     agent: role.agent,
@@ -306,7 +348,11 @@ export function confirmSelectionRole(
   actual: NonNullable<SelectionReceipt['roles'][number]['actual']>,
   note: string | null = null,
 ): SelectionReceipt['roles'][number] {
-  for (const field of ['model', 'mode'] as const) {
+  for (const field of ['agent', 'model', 'mode'] as const) {
+    if (field === 'agent' && actual.agent === undefined) {
+      continue;
+    }
+
     const requested = role.planned[field];
 
     if (requested !== undefined && actual[field] !== requested) {
@@ -320,6 +366,40 @@ export function confirmSelectionRole(
   }
 
   return { ...role, state: 'confirmed', actual: { ...actual }, note };
+}
+
+function boundedWarnings(
+  warnings: readonly string[],
+  required: readonly string[] = [],
+): string[] {
+  const unique = [...new Set([...warnings, ...required])];
+
+  if (unique.length <= 256) {
+    return unique;
+  }
+
+  const tail = [
+    ...new Set(['Additional resource warnings are omitted.', ...required]),
+  ];
+
+  return [
+    ...unique
+      .filter((warning) => !tail.includes(warning))
+      .slice(0, 256 - tail.length),
+    ...tail,
+  ];
+}
+
+/** Cleanup uncertainty cannot disappear behind a full source warning list. */
+export function withSelectionCleanupWarning(
+  receipt: SelectionReceipt,
+): SelectionReceipt {
+  return {
+    ...receipt,
+    warnings: boundedWarnings(receipt.warnings, [
+      'An attempted agent cleanup could not be verified; process exit is uncertain.',
+    ]),
+  };
 }
 
 /** Only a response actually served to this caller can be decision provenance. */
@@ -361,15 +441,41 @@ export function selectionReceipt(
     );
   }
 
-  const uniqueWarnings = [...new Set(warnings)];
+  const sources = [
+    ...(decisionRead?.pools ?? []),
+    ...(decisionRead?.unbound ?? []),
+  ];
 
-  if (uniqueWarnings.length > 256) {
-    uniqueWarnings.splice(
-      255,
-      Infinity,
-      'Additional resource warnings are omitted.',
+  if (
+    sources.some(
+      (source) =>
+        source.coverage !== 'account' || source.externalActivity === 'unknown',
+    )
+  ) {
+    warnings.push(
+      'Resource coverage is incomplete; external work may be missing.',
     );
   }
+
+  const windows = sources.flatMap((source) => source.windows);
+
+  if (windows.some((window) => window.state === 'stale')) {
+    warnings.push(
+      'Some resource windows are stale; current capacity is unknown.',
+    );
+  }
+
+  if (windows.some((window) => window.state === 'unknown')) {
+    warnings.push('Provider freshness is unknown for some resource windows.');
+  }
+
+  if (windows.some((window) => window.state === 'unsupported')) {
+    warnings.push(
+      'Some resource windows are unsupported; capacity is unknown.',
+    );
+  }
+
+  const uniqueWarnings = boundedWarnings(warnings);
 
   const receipt = SelectionReceipt.parse({
     schemaVersion: 1,

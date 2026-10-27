@@ -1,3 +1,7 @@
+import {
+  freezeSelection,
+  selectionReceipt,
+} from '../../src/session/team_selection.ts';
 import { foldBudgetCache } from '../../src/platform/budget_cache.ts';
 import { describe, expect, test } from 'bun:test';
 import { until } from '../session/conversation_fake.ts';
@@ -900,6 +904,153 @@ test('unexpected budget read failures use a fixed safe MCP error', () =>
         'Resource facts could not be read.',
       );
       expect(JSON.stringify(result)).not.toContain('Private provider');
+    } finally {
+      await client.close();
+    }
+  }));
+
+describe('selected run root schema and owned records', () => {
+  test('advertises its object fields, rejects selected unknown roots and preserves direct extra argument compatibility', () =>
+    withServer(async (server) => {
+      const calls: unknown[] = [];
+      const records: ChordCall[] = [];
+      const client = await connect(
+        server.url,
+        server.admit({
+          ...PERSON,
+          window: {
+            ...WINDOW,
+            runTeam: (_caller, args) => {
+              calls.push(args);
+
+              return Promise.resolve({
+                id: 'actual-run',
+                name: 'fixture',
+                team: 'fixture',
+                agent: 'fake',
+              });
+            },
+            served: (_caller, call) => records.push(call),
+          },
+        }).token,
+      );
+
+      try {
+        const listed = (await client.listTools()).tools.find(
+          (tool) => tool.name === 'run_team',
+        );
+
+        expect(listed?.inputSchema.type).toBe('object');
+        expect(Object.keys(listed?.inputSchema.properties ?? {})).toEqual([
+          'team',
+          'job',
+          'selection',
+        ]);
+
+        const rejected = await client.callTool({
+          name: 'run_team',
+          arguments: {
+            team: 'fixture',
+            job: 'Never.',
+            selection: { reason: 'Keep permissions.' },
+            unexpected: true,
+          },
+        });
+
+        expect(rejected.isError).toBe(true);
+        expect(calls).toEqual([]);
+
+        const direct = await client.callTool({
+          name: 'run_team',
+          arguments: {
+            team: 'fixture',
+            job: 'Direct.',
+            legacyExtra: 'ignored by launch',
+          },
+        });
+
+        expect(direct.isError).not.toBe(true);
+        expect(calls).toEqual([
+          { team: 'fixture', job: 'Direct.', legacyExtra: 'ignored by launch' },
+        ]);
+        expect(records[0]?.input).toEqual({ team: 'fixture', job: 'Direct.' });
+      } finally {
+        await client.close();
+      }
+    }));
+});
+
+test('selected allocated refusal retains its receipt in scoped MCP structured content and its owned call', () =>
+  withServer(async (server) => {
+    const frozen = freezeSelection(
+      {
+        description: 'Fixture',
+        lead: { agent: 'fake' },
+        members: [],
+        body: 'Preserve permissions.',
+      },
+      { reason: 'Preserve permissions; resource state unknown.' },
+      {},
+      ['fake'],
+    );
+
+    if (!('frozen' in frozen)) {
+      throw new Error('fixture selection must freeze');
+    }
+
+    const initial = selectionReceipt(
+      'attempt-id',
+      { name: 'fixture', place: 'project' },
+      frozen.frozen,
+    );
+    const receipt = {
+      ...initial,
+      roles: initial.roles.map((role) => ({
+        ...role,
+        state: 'refused' as const,
+        note: 'Cancelled before its first job; closing.',
+      })),
+    };
+    const records: ChordCall[] = [];
+    const result = {
+      error: 'Attempt cancelled before its first job; closing.',
+      id: receipt.runId,
+      receipt,
+    };
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          runTeam: () => Promise.resolve(result),
+          served: (_caller, call) => records.push(call),
+        },
+      }).token,
+    );
+
+    try {
+      const input = {
+        team: 'fixture',
+        job: 'Never delivered.',
+        selection: { reason: receipt.reason },
+      };
+      const answer = await client.callTool({
+        name: 'run_team',
+        arguments: input,
+      });
+
+      expect(answer.isError).toBe(true);
+      expect(answer.structuredContent).toEqual(result);
+      expect(records).toEqual([
+        {
+          tool: 'run_team',
+          input,
+          asked: receipt.runId,
+          answer: result,
+          error: result.error,
+        },
+      ]);
     } finally {
       await client.close();
     }

@@ -146,7 +146,7 @@ describe('captured run receipt records', () => {
       write('selection', {
         ...call,
         error: 'Lead initialization failed before its first job.',
-        answer: { receipt: refused },
+        answer: { id: receipt.runId, receipt: refused },
       });
       await recording.flushed();
       assert(replacement !== undefined);
@@ -160,7 +160,10 @@ describe('captured run receipt records', () => {
       const teamCall = replay.entries.find((entry) => entry.kind === 'tool');
 
       assert(teamCall?.kind === 'tool');
-      expect(teamCall.call.chord?.answer).toEqual({ receipt: refused });
+      expect(teamCall.call.chord?.answer).toEqual({
+        id: receipt.runId,
+        receipt: refused,
+      });
       expect(
         originalEntries.filter((entry) => entry.type === 'served'),
       ).toHaveLength(2);

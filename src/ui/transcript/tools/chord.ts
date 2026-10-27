@@ -11,6 +11,7 @@ import type {
   ChordTool,
 } from '../../../session/transcript/types.ts';
 import { resourceLines } from './resource_lines.ts';
+import { selectionLines } from './selection_lines.ts';
 import { MESSAGE_LINES } from '../message.ts';
 import type { Headline } from './tools.ts';
 
@@ -167,9 +168,14 @@ function plural(count: number, one: string, many: string): string {
  * The lines under the call, before folding: chord's refusal, what was
  * sent, or what the answer comes to. None while it has no answer.
  */
-export function chordLines(call: ChordCall): string[] {
+export function chordLines(call: ChordCall, expanded = false): string[] {
   if (call.error !== undefined) {
-    return [call.error];
+    return [
+      call.error,
+      ...(call.tool === 'run_team'
+        ? selectionLines(record(call.answer).receipt, expanded)
+        : []),
+    ];
   }
 
   const input = record(call.input);
@@ -242,7 +248,10 @@ export function chordLines(call: ChordCall): string[] {
         ? (text(input.prompt) ?? '').split('\n')
         : [`opened with ${text(input.typed)}`];
     case 'run_team':
-      return (text(input.job) ?? '').split('\n');
+      return [
+        ...(text(input.job) ?? '').split('\n'),
+        ...selectionLines(answer.receipt, expanded),
+      ];
     case 'list_teams': {
       const teams = Array.isArray(answer.teams)
         ? answer.teams.map((team) => String(record(team).name ?? ''))

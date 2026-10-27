@@ -292,6 +292,7 @@ import {
 } from './options.ts';
 import { COMPACTION } from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
+import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORMS } from './scenarios/forms.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
@@ -341,6 +342,9 @@ import {
 
 const SCENARIOS = [
   'resources',
+  'selectedteam',
+  'selectedlead',
+  'selectedidle',
   'guardian',
   'guardiangated',
   'text',
@@ -619,6 +623,7 @@ const PLAY: Record<Scenario, Play> = {
   ...MISBEHAVING,
   ...CHORD_TOOLS,
   ...RESOURCES,
+  ...SELECTED_TEAMS,
   ...TASKS,
   ...CYCLES,
   ...AGENTS,

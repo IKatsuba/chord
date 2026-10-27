@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived time unknown · provider freshness unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Partial observation; weekly utilization/reset unavailable.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Scripted fixture; account and resource identity are[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39munverified.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mActive work: 5 reported · external work may be missing[0m[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(fixture 3)[2m · codex · fake-small · medium[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mselectedidle[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSelection: agent-selected · this run[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReason: Preserve all instructions and exact permission requirements;[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mprovider freshness is unknown.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Resource identity is unverified; observations remain separate.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Resource coverage is incomplete; external work may be missing.[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mWarning: Provider freshness is unknown for some resource windows.[0m[38;2;255;255;255m
+ [2m[39m── ↓ 19 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m
+  [39m  [1mmain     [0;2m  codex         ◦ idle 3s[0m[38;2;255;255;255m
+  [39m  fixture  [2m  team · codex  ◦ idle 4s  ✓ new reply[0m[38;2;255;255;255m
+  [39m  fixture 2[2m  team · codex  ◦ idle 4s  ✓ new reply[0m[38;2;255;255;255m
+  [39m  fixture 3[2m  team · codex  ◦ idle 3s  ✓ new reply[0m[38;2;255;255;255m

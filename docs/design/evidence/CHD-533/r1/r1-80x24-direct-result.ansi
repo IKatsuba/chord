@@ -1,0 +1,24 @@
+[38;2;255;255;255m [39m▀██▄[38;2;255;255;255m   [2m[39mcodex · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chord-qa.chd533-selection-normal[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team choose fixture job[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39m/team has no choose; it takes list, new, show, run or stop[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team run fixture selectedidle[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(fixture)[2m · codex · fake-large[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mselectedidle[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39m/team run fixture selectedidle[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mTeam[0m(fixture 2)[2m · codex · fake-large[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mselectedidle[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m          [2m[39mFake Large with a 1M context window · medium effort[0m[38;2;255;255;255m
+  [39m  [1mmain     [0;2m  codex         ◦ idle 6s[0m[38;2;255;255;255m
+  [39m  fixture  [2m  team · codex  ◦ idle 0s  ✓ new reply[0m[38;2;255;255;255m
+  [39m  fixture 2[2m  team · codex  ◦ idle 0s  ✓ new reply[0m[38;2;255;255;255m

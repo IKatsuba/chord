@@ -1,0 +1,24 @@
+ › /team run fixture selectedidle
+
+ ⏺ Team(fixture 2) · codex · fake-large
+   ⎿  selectedidle
+
+ › selectedteam
+
+ ⏺ Resources
+   ⎿  Preferences: balanced
+      Read: 21:13:26 UTC · advisory snapshot
+      codex · billing unknown · identity unverified
+      Source: fixture 1 · coverage unknown · external activity unknown
+      5h: 12.345% used · reset 22:13 UTC · models unknown
+      Received 18s before read · provider freshness unknown
+ ── ↓ 45 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main       codex         ◦ idle 3s
+    fixture    team · codex  ◦ idle 4s  ✓ new reply
+    fixture 2  team · codex  ◦ idle 4s  ✓ new reply
+    fixture 3  team · codex  ◦ idle 3s  ✓ new reply

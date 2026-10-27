@@ -743,3 +743,174 @@ describe('resource replacement eligibility', () => {
     await service.close();
   });
 });
+
+describe('tester: resource recovery and retained time boundaries', () => {
+  test('success resets transient backoff without shortening the next normal cadence', async () => {
+    const { service, clock } = setup();
+    let calls = 0;
+
+    service.retain(
+      target(() => {
+        calls++;
+
+        return Promise.resolve<ResourceRead>(
+          calls % 2 === 1
+            ? {
+                facts: {
+                  unavailable: {
+                    agent: 'codex',
+                    reason: 'Temporary fixture failure.',
+                  },
+                },
+              }
+            : {
+                facts: {
+                  observation: observation(calls === 2 ? 120000 : 360000),
+                },
+              },
+        );
+      }),
+      new AbortController().signal,
+    );
+    await flush();
+
+    for (const [at, count] of [
+      [119999, 1],
+      [120000, 2],
+      [239999, 2],
+      [240000, 3],
+      [359999, 3],
+      [360000, 4],
+    ] as const) {
+      clock(at);
+      service.tick();
+      await flush();
+
+      expect(calls).toBe(count);
+    }
+
+    expect(service.read().unavailable).toEqual([]);
+    expect(service.read().unbound[0]?.windows[0]?.receivedAt).toBe(iso(360000));
+
+    await service.close();
+  });
+
+  test('invalid Retry-After values cannot poison or shorten the retry deadline', async () => {
+    for (const retryAfterMs of [NaN, Infinity, -1, 0]) {
+      const { service, clock } = setup();
+      let calls = 0;
+
+      service.retain(
+        target(() => {
+          calls++;
+
+          return Promise.resolve({
+            facts: {
+              unavailable: {
+                agent: 'codex',
+                reason: 'Temporary fixture failure.',
+              },
+            },
+            retryAfterMs,
+          });
+        }),
+        new AbortController().signal,
+      );
+      await flush();
+      clock(119999);
+      service.tick();
+      await flush();
+
+      expect(calls).toBe(1);
+
+      clock(120000);
+      service.tick();
+      await flush();
+
+      expect(calls).toBe(2);
+
+      await service.close();
+    }
+  });
+
+  test('cache read recovery clears its warning without reviving retained observation times', async () => {
+    let reads = 0;
+    const { service, clock } = setup({
+      read: () => {
+        reads++;
+
+        return reads === 2
+          ? Promise.reject(new Error('Excluded raw cache diagnostic.'))
+          : Promise.resolve({ files: [file()], warnings: [] });
+      },
+      write: async () => {},
+      close: async () => {},
+    });
+
+    await service.start();
+    clock(60000);
+    service.tick();
+    await flush();
+
+    expect(service.read().warnings).toEqual([
+      'Resource cache coverage is incomplete: cache read failed.',
+    ]);
+    expect(service.read().unbound[0]?.windows[0]).toMatchObject({
+      state: 'stale',
+      receivedAt: iso(),
+    });
+
+    service.tick();
+    await flush();
+
+    expect(service.read().warnings).toEqual([]);
+    expect(service.read().unbound[0]?.windows[0]).toMatchObject({
+      state: 'stale',
+      observedAt: iso(),
+      receivedAt: iso(),
+    });
+
+    await service.close();
+  });
+
+  test('a refreshed independent window cannot refresh omitted timestamped windows', async () => {
+    const { service, clock } = setup();
+    let calls = 0;
+
+    service.retain(
+      target(() => {
+        calls++;
+
+        const value = observation(calls === 1 ? 0 : 120000);
+
+        if (calls === 2) {
+          value.windows[0]!.windowRef = 'weekly';
+        }
+
+        return Promise.resolve({ facts: { observation: value } });
+      }),
+      new AbortController().signal,
+    );
+    await flush();
+    clock(120000);
+    service.tick();
+    await flush();
+
+    expect(service.read().unbound[0]?.windows).toMatchObject([
+      {
+        windowRef: 'five-hour',
+        state: 'stale',
+        observedAt: iso(),
+        receivedAt: iso(),
+      },
+      {
+        windowRef: 'weekly',
+        state: 'fresh',
+        observedAt: iso(120000),
+        receivedAt: iso(120000),
+      },
+    ]);
+
+    await service.close();
+  });
+});

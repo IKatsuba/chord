@@ -60,6 +60,13 @@ export class ResourceRequests {
   }
 
   retain(request: Request): void {
+    const deadline = request.admittedAt + RESOURCE_REQUEST_MS;
+
+    // A late request has no authority over a replacement's existing owner.
+    if (this.#now() >= deadline || request.signal.aborted || !request.valid()) {
+      return;
+    }
+
     const agents = [...new Set(request.agents)].sort();
     const filter = JSON.stringify(agents);
     const previous = this.#owners.get(request.caller);
@@ -69,8 +76,6 @@ export class ResourceRequests {
       previous.generation === request.generation &&
       previous.filter === filter &&
       this.#now() < previous.deadline &&
-      !request.signal.aborted &&
-      request.valid() &&
       (previous.turnId === undefined || previous.turnId === request.turnId)
     ) {
       // Only the current request's cancellation listener is retained; repeats
@@ -90,14 +95,7 @@ export class ResourceRequests {
 
     previous?.release();
 
-    const deadline = request.admittedAt + RESOURCE_REQUEST_MS;
-
-    if (
-      agents.length === 0 ||
-      this.#now() >= deadline ||
-      request.signal.aborted ||
-      !request.valid()
-    ) {
+    if (agents.length === 0) {
       return;
     }
 

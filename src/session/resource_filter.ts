@@ -7,6 +7,9 @@ export const ResourceAgents = z.array(z.string().min(1).max(128)).max(128);
 export const POOL_SCOPE_INCOMPLETE =
   'Some pool observations have no explicit link to requested runtimes; filtered coverage is incomplete.';
 
+export const UNAVAILABLE_SCOPE_INCOMPLETE =
+  'Additional runtime unavailability facts are omitted; filtered coverage is incomplete.';
+
 export function filterResourceFacts(
   facts: BudgetSnapshot,
   agents: readonly string[] | undefined,
@@ -20,9 +23,18 @@ export function filterResourceFacts(
   const poolRefs = new Set(activeRuns.flatMap((run) => run.resourceRefs));
   const pools = facts.pools.filter((pool) => poolRefs.has(pool.poolRef));
   const unbound = facts.unbound.filter((one) => requested.has(one.agent));
-  const unavailable = facts.unavailable.filter((one) =>
-    requested.has(one.agent),
-  );
+  const reasons = new Set<string>();
+  const unavailable = facts.unavailable.filter((one) => {
+    const key = JSON.stringify([one.agent, one.reason]);
+
+    if (!requested.has(one.agent) || reasons.has(key)) {
+      return false;
+    }
+
+    reasons.add(key);
+
+    return true;
+  });
 
   for (const agent of requested) {
     if (
@@ -47,13 +59,13 @@ export function filterResourceFacts(
     ...facts,
     pools,
     unbound,
-    unavailable,
+    unavailable: unavailable.slice(0, 128),
     activeRuns,
-    warnings: boundedWarnings(
-      facts.warnings,
-      requested.size > 0 && pools.length < facts.pools.length
+    warnings: boundedWarnings(facts.warnings, [
+      ...(requested.size > 0 && pools.length < facts.pools.length
         ? [POOL_SCOPE_INCOMPLETE]
-        : [],
-    ),
+        : []),
+      ...(unavailable.length > 128 ? [UNAVAILABLE_SCOPE_INCOMPLETE] : []),
+    ]),
   };
 }

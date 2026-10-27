@@ -252,3 +252,49 @@ test('the existing service receives live caller validity without owning unrelate
 
   expect(check?.()).toBe(false);
 });
+
+test('invalid late admissions cannot release a replacement generation or its expiry', () => {
+  const f = fixture();
+  const old = f.request();
+
+  f.requests.retain({ ...old, turnId: 'old' });
+  f.advance(20_000);
+  f.requests.retain({
+    ...f.request(),
+    generation: {},
+    agents: ['claude'],
+    turnId: 'replacement',
+  });
+  f.advance(10_000);
+
+  const cancelled = new AbortController();
+
+  cancelled.abort();
+  f.requests.retain({
+    ...f.request(),
+    generation: old.generation,
+    valid: () => false,
+  });
+  f.requests.retain({
+    ...f.request(),
+    generation: old.generation,
+    signal: cancelled.signal,
+  });
+  f.requests.retain(old);
+  f.requests.retain({
+    ...f.request(),
+    generation: old.generation,
+    agents: [],
+    valid: () => false,
+  });
+  f.requests.ended(old.caller, 'old');
+  expect(f.calls).toHaveLength(2);
+  expect(f.released()).toBe(1);
+  expect(f.calls[1]?.signal.aborted).toBe(false);
+  expect(f.timers.size).toBe(1);
+  f.advance(19_999);
+  expect(f.released()).toBe(1);
+  f.advance(1);
+  expect(f.released()).toBe(2);
+  expect(f.timers.size).toBe(0);
+});

@@ -3,6 +3,7 @@ import { BudgetSnapshot } from '../../src/session/budgets.ts';
 import {
   filterResourceFacts,
   POOL_SCOPE_INCOMPLETE,
+  UNAVAILABLE_SCOPE_INCOMPLETE,
   ResourceAgents,
 } from '../../src/session/resource_filter.ts';
 
@@ -135,4 +136,51 @@ test('runtime filter is bounded without rewriting supplied IDs', () => {
   ]) {
     expect(ResourceAgents.safeParse(value).success).toBe(false);
   }
+});
+
+test('full duplicate-source unavailability plus missing requested IDs stays within the public cap', () => {
+  const requested = [
+    'codex',
+    ...Array.from({ length: 127 }, (_, i) => `missing-${i}`),
+  ];
+  const before = {
+    ...facts(),
+    pools: [],
+    unbound: [],
+    activeRuns: [],
+    unavailable: Array.from({ length: 128 }, () => ({
+      agent: 'codex',
+      reason: 'Unsupported.',
+    })),
+  };
+  const copy = structuredClone(before);
+
+  expect(BudgetSnapshot.safeParse(before).success).toBe(true);
+
+  const result = filterResourceFacts(before, requested);
+
+  expect(result.unavailable).toHaveLength(128);
+  expect(new Set(result.unavailable.map((one) => one.agent)).size).toBe(128);
+  expect(result.unavailable[0]).toEqual({
+    agent: 'codex',
+    reason: 'Unsupported.',
+  });
+  expect(result.warnings).not.toContain(UNAVAILABLE_SCOPE_INCOMPLETE);
+  expect(BudgetSnapshot.safeParse(result).success).toBe(true);
+  expect(before).toEqual(copy);
+
+  const distinct = filterResourceFacts(
+    {
+      ...before,
+      unavailable: Array.from({ length: 128 }, (_, i) => ({
+        agent: 'codex',
+        reason: `Unavailable source ${i}.`,
+      })),
+    },
+    requested,
+  );
+
+  expect(distinct.unavailable).toHaveLength(128);
+  expect(distinct.warnings).toContain(UNAVAILABLE_SCOPE_INCOMPLETE);
+  expect(BudgetSnapshot.safeParse(distinct).success).toBe(true);
 });

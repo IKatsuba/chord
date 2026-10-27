@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { BudgetSnapshot } from '../../src/session/budgets.ts';
 import {
   filterResourceFacts,
@@ -6,6 +6,11 @@ import {
   UNAVAILABLE_SCOPE_INCOMPLETE,
   ResourceAgents,
 } from '../../src/session/resource_filter.ts';
+
+import {
+  RESOURCE_CLEANUP_FAILED,
+  WARNINGS_OMITTED,
+} from '../../src/session/resource_warnings.ts';
 
 const time = '2026-10-27T12:00:00.000Z';
 const window = {
@@ -183,4 +188,63 @@ test('full duplicate-source unavailability plus missing requested IDs stays with
   expect(distinct.unavailable).toHaveLength(128);
   expect(distinct.warnings).toContain(UNAVAILABLE_SCOPE_INCOMPLETE);
   expect(BudgetSnapshot.safeParse(distinct).success).toBe(true);
+});
+
+describe('CHD-533 tester: filtered evidence boundaries', () => {
+  test('dangling active references never make a provider-spelled pool usable', () => {
+    const before = {
+      ...facts(),
+      unbound: [],
+      unavailable: [],
+      activeRuns: [active('codex', ['missing-ref'])],
+    };
+    const copy = structuredClone(before);
+    const result = filterResourceFacts(before, ['codex']);
+
+    expect(result.pools).toEqual([]);
+    expect(result.activeRuns).toEqual(before.activeRuns);
+    expect(result.unavailable).toEqual([
+      {
+        agent: 'codex',
+        reason: 'No resource observations for this runtime; capacity unknown.',
+      },
+    ]);
+    expect(result.warnings).toContain(POOL_SCOPE_INCOMPLETE);
+    expect(BudgetSnapshot.safeParse(result).success).toBe(true);
+    expect(before).toEqual(copy);
+  });
+
+  test('maximum runtime projection preserves cleanup and both coverage warnings under saturated input', () => {
+    const agents = [
+      'codex',
+      ...Array.from({ length: 127 }, (_, i) => `runtime-${i}`.padEnd(128, 'x')),
+    ];
+    const before = {
+      ...facts(),
+      unbound: [],
+      activeRuns: [],
+      unavailable: [
+        { agent: 'codex', reason: 'First source unavailable.' },
+        { agent: 'codex', reason: 'Second source unavailable.' },
+      ],
+      warnings: [
+        ...Array.from({ length: 255 }, (_, i) => `Original warning ${i}.`),
+        RESOURCE_CLEANUP_FAILED,
+      ],
+    };
+    const copy = structuredClone(before);
+    const result = filterResourceFacts(before, ResourceAgents.parse(agents));
+
+    expect(result.unavailable).toHaveLength(128);
+    expect(result.warnings).toHaveLength(256);
+    expect(new Set(result.warnings).size).toBe(256);
+    expect(result.warnings).toContain(RESOURCE_CLEANUP_FAILED);
+    expect(result.warnings).toContain(POOL_SCOPE_INCOMPLETE);
+    expect(result.warnings).toContain(UNAVAILABLE_SCOPE_INCOMPLETE);
+    expect(result.warnings).toContain(WARNINGS_OMITTED);
+    expect(result.observedAt).toBe(before.observedAt);
+    expect(result.preferences).toEqual(before.preferences);
+    expect(BudgetSnapshot.safeParse(result).success).toBe(true);
+    expect(before).toEqual(copy);
+  });
 });

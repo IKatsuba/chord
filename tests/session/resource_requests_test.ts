@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { getEventListeners } from 'node:events';
 import {
   ResourceRequests,
@@ -297,4 +297,80 @@ test('invalid late admissions cannot release a replacement generation or its exp
   f.advance(1);
   expect(f.released()).toBe(2);
   expect(f.timers.size).toBe(0);
+});
+
+describe('CHD-533 tester: factual request ownership boundaries', () => {
+  test('an actual turn adopted by a repeated filter ends only its owner without moving expiry', () => {
+    const f = fixture();
+    const next = new AbortController();
+
+    f.requests.retain(f.request());
+
+    const originalExpiry = [...f.timers.keys()][0]!;
+    const deadline = [...f.timers.values()][0]!;
+
+    f.advance(RESOURCE_REQUEST_MS - 1);
+    f.requests.retain({
+      ...f.request(),
+      signal: next.signal,
+      turnId: 'actual-turn',
+    });
+    expect(f.calls).toHaveLength(1);
+    expect([...f.timers.values()]).toEqual([deadline]);
+    f.requests.ended(f.request().caller, 'unrelated-turn');
+    expect(f.released()).toBe(0);
+    f.requests.ended(f.request().caller, 'actual-turn');
+    expect(f.released()).toBe(1);
+    expect(getEventListeners(next.signal, 'abort')).toHaveLength(0);
+    f.requests.retain({ ...f.request(), turnId: 'next-turn' });
+    originalExpiry();
+    f.requests.ended(f.request().caller, 'actual-turn');
+    expect(f.calls[1]?.signal.aborted).toBe(false);
+    expect(f.released()).toBe(1);
+    f.requests.close();
+    expect(f.released()).toBe(2);
+    expect(f.timers.size).toBe(0);
+  });
+
+  test('synchronous loss of validity drains a returned retain without caller abort', () => {
+    let valid = true;
+    let releases = 0;
+    let cancelledTimers = 0;
+    let resourceSignal: AbortSignal | undefined;
+    const caller = new AbortController();
+    const requests = new ResourceRequests(
+      (_agents, signal) => {
+        resourceSignal = signal;
+        valid = false;
+
+        return () => {
+          releases++;
+        };
+      },
+      {
+        now: () => 10,
+        after: () => () => {
+          cancelledTimers++;
+        },
+      },
+    );
+
+    requests.retain({
+      caller: {},
+      generation: {},
+      agents: ['codex'],
+      signal: caller.signal,
+      valid: () => valid,
+      admittedAt: 10,
+    });
+    expect(caller.signal.aborted).toBe(false);
+    expect(resourceSignal?.aborted).toBe(true);
+    expect(getEventListeners(caller.signal, 'abort')).toHaveLength(0);
+    expect(releases).toBe(1);
+    expect(cancelledTimers).toBe(1);
+    requests.close();
+    requests.close();
+    expect(releases).toBe(1);
+    expect(cancelledTimers).toBe(1);
+  });
 });

@@ -912,6 +912,7 @@ export function useSessions(
   interface LaunchGuard {
     readonly signal: AbortSignal;
     readonly valid: () => boolean;
+    committed: boolean;
   }
 
   const captureLaunch = (key: number, caller?: Caller): LaunchGuard => {
@@ -925,6 +926,7 @@ export function useSessions(
 
     return {
       signal,
+      committed: false,
       valid: () =>
         !signal.aborted &&
         session !== undefined &&
@@ -1052,6 +1054,10 @@ export function useSessions(
                   // sent while it started go into that turn.
                   for (const [index, [from, text, part]] of held.entries()) {
                     if (index === 0) {
+                      if (child !== undefined && opening.launch !== undefined) {
+                        opening.launch.committed = true;
+                      }
+
                       child?.conversation.deliver(from, text, part);
                     } else {
                       child?.conversation.tell(from, text);
@@ -1886,9 +1892,22 @@ export function useSessions(
         launch,
       );
 
-      return 'error' in answer
-        ? answer
-        : { ...answer.ran, ...(await answer.started) };
+      if ('error' in answer) {
+        return answer;
+      }
+
+      const started = await answer.started;
+
+      if (
+        !launch.committed &&
+        (!launch.valid() || childOf(caller.key, answer.ran.id) === undefined)
+      ) {
+        return {
+          error: `Team launch ${answer.ran.id} was cancelled before its first job; the attempted lead is closing.`,
+        };
+      }
+
+      return { ...answer.ran, ...started };
     },
     teamPlaces: (caller, name) => teamPlaces(caller.key, name),
     askPerson: (caller, wait, signal) =>

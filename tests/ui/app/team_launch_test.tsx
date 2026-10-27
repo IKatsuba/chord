@@ -22,6 +22,7 @@ Preserve the saved job and permissions.
 async function withLaunch(
   body: (window: Window, callers: Caller[]) => Promise<void>,
   openWith: typeof openSession = openSession,
+  definition = team,
 ) {
   const server = serveChord();
   const admit = server.admit.bind(server);
@@ -46,7 +47,7 @@ async function withLaunch(
         agentCommand: fakeAgentCommand(),
         startupOf: () => ({ agentCommand: fakeAgentCommand() }),
         runtimes: ['fake'],
-        teams: { fixture: team },
+        teams: { fixture: definition },
         openWith,
       },
     );
@@ -64,6 +65,94 @@ function person(callers: Caller[]) {
 }
 
 describe('team launch generation boundary', () => {
+  test('cancelled saved-effort startup returns the allocated closing attempt after its await', async () => {
+    const gate = Promise.withResolvers<void>();
+    const request = new AbortController();
+    const prompts: string[] = [];
+    let opens = 0;
+    let held = false;
+    let closed = false;
+
+    try {
+      await withLaunch(
+        async (_window, callers) => {
+          const caller = person(callers);
+          let answered = false;
+          const pending = caller.window
+            .runTeam(
+              { ...caller, signal: request.signal },
+              { team: 'fixture', job: 'Never deliver this effort job.' },
+            )
+            .then((answer) => {
+              answered = true;
+
+              return answer;
+            });
+
+          try {
+            await until('saved-effort lead held before startup', () => held);
+            expect(answered).toBe(false);
+
+            const runs = (await caller.window.teams(caller)).runs;
+            const allocated = caller.window
+              .sessions()
+              .flatMap((session) => session.children)
+              .find((child) => child.name === 'fixture')?.id;
+
+            expect(runs).toHaveLength(1);
+            assert(allocated !== undefined);
+            request.abort();
+            gate.resolve();
+
+            const answer = await pending;
+
+            assert('error' in answer);
+            expect(answer.error).toBe(
+              `Team launch ${allocated} was cancelled before its first job; the attempted lead is closing.`,
+            );
+            expect(answer).not.toHaveProperty('id');
+            expect(prompts).toEqual([]);
+            await until('cancelled saved-effort lead exited', () => closed);
+            expect((await caller.window.teams(caller)).runs).toEqual([]);
+          } finally {
+            gate.resolve();
+            await pending;
+          }
+        },
+        async (options) => {
+          const child = opens++ > 0;
+          const session = await openSession(options);
+
+          if (child) {
+            const prompt = session.prompt.bind(session);
+
+            session.prompt = (text, ...rest) => {
+              prompts.push(text);
+
+              return prompt(text, ...rest);
+            };
+
+            void session.exited.then(() => {
+              closed = true;
+            });
+
+            held = true;
+
+            await gate.promise;
+          }
+
+          return session;
+        },
+        team.replace(
+          'lead:\n  agent: fake\n',
+          'lead:\n  agent: fake\n  effort: high\n',
+        ),
+      );
+    } finally {
+      gate.resolve();
+    }
+  });
+
   test('synchronous cancellation during open reports the allocated attempt truthfully', async () => {
     const request = new AbortController();
     let opens = 0;

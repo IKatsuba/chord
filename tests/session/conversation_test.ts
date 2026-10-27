@@ -1404,3 +1404,53 @@ test("on Claude's adapter, a message held behind an open call goes as the next t
     ]);
     expect(queued).toStrictEqual(1);
   }));
+
+test('owned turn identity follows actual queued prompts, withdrawal and terminal results', () =>
+  onFake([], async (conversation, events) => {
+    const first = crypto.randomUUID();
+    const second = crypto.randomUUID();
+
+    expect(conversation.send('slow', undefined, [], [], first)).toBe(true);
+    expect(conversation.send('text', undefined, [], [], second)).toBe(true);
+    expect(
+      events.some(
+        (event) => event.type === 'queued' && event.turnId === second,
+      ),
+    ).toBe(true);
+    await until(() =>
+      events.some(
+        (event) => event.type === 'result' && event.turnId === second,
+      ),
+    );
+    expect(
+      events.filter(
+        (event) => event.type === 'prompt' && event.turnId === second,
+      ),
+    ).toHaveLength(1);
+    expect(
+      events.some((event) => event.type === 'result' && event.turnId === first),
+    ).toBe(true);
+
+    const held = crypto.randomUUID();
+    const withdrawn = crypto.randomUUID();
+
+    conversation.send('costwait', undefined, [], [], held);
+    await until(() => saidIn(events).includes('Working until stopped.'));
+    conversation.send('text', undefined, [], [], withdrawn);
+    expect(
+      events.some(
+        (event) => event.type === 'queued' && event.turnId === withdrawn,
+      ),
+    ).toBe(true);
+    conversation.interrupt();
+    await until(() =>
+      events.some((event) => event.type === 'result' && event.turnId === held),
+    );
+    expect(
+      events.some(
+        (event) =>
+          (event.type === 'prompt' || event.type === 'result') &&
+          event.turnId === withdrawn,
+      ),
+    ).toBe(false);
+  }));

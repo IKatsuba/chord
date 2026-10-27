@@ -1006,13 +1006,15 @@ export class Conversation {
    * before the session is up and once closing. `prompt` is what the agent
    * gets, when it is more than the `text` the transcript shows, such as held
    * shell output ahead of it; `attachments` go after it, and a link to each
-   * of the `mentions` that is a file.
+   * of the `mentions` that is a file. `turnId` lets an owned caller bind
+   * temporary resources before synchronous prompt/queue events are emitted.
    */
   send(
     text: string,
     prompt: string = text,
     attachments: readonly Attachment[] = [],
     mentions: readonly string[] = [],
+    turnId: string = crypto.randomUUID(),
   ): boolean {
     const session = this.#session;
 
@@ -1022,7 +1024,7 @@ export class Conversation {
 
     const ahead = this.#ahead.splice(0);
     const next = {
-      turnId: crypto.randomUUID(),
+      turnId,
       text,
       prompt: [...ahead, prompt].join('\n\n'),
       attachments,

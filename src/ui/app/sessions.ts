@@ -336,10 +336,43 @@ export function useSessions(
     };
   };
 
+  const choosing = useRef(
+    new Map<
+      string,
+      {
+        readonly key: number;
+        started: boolean;
+        readonly release: () => void;
+      }
+    >(),
+  );
+
   // The session main opens next resumes: the one `--resume` asks for, and
   // each `/resume` picks; the one `/clear` opens is new.
   const resuming = useRef<Resume | undefined>(resume);
   const heard = (key: number, event: ConversationEvent, wait?: Wait) => {
+    if (
+      event.type === 'prompt' ||
+      event.type === 'result' ||
+      event.type === 'failed'
+    ) {
+      const lease = choosing.current.get(event.turnId);
+
+      if (lease?.key === key) {
+        if (event.type === 'prompt') {
+          lease.started = true;
+        } else {
+          lease.release();
+        }
+      }
+    } else if (event.type === 'queue_withdrawn') {
+      for (const lease of choosing.current.values()) {
+        if (lease.key === key && !lease.started) {
+          lease.release();
+        }
+      }
+    }
+
     if (retiredHeard(key, event)) {
       return;
     }
@@ -2891,7 +2924,7 @@ export function useSessions(
       return;
     }
 
-    const release = retainResources(
+    const releaseResources = retainResources(
       [
         found.team.lead.agent,
         ...found.team.members.map((member) => member.agent),
@@ -2899,6 +2932,21 @@ export function useSessions(
       launch.signal,
     );
 
+    const turnId = crypto.randomUUID();
+    let released = false;
+    const release = () => {
+      if (released) {
+        return;
+      }
+
+      released = true;
+
+      launch.signal.removeEventListener('abort', release);
+      choosing.current.delete(turnId);
+      releaseResources();
+    };
+
+    choosing.current.set(turnId, { key, started: false, release });
     launch.signal.addEventListener('abort', release, { once: true });
 
     if (!launch.valid()) {
@@ -2916,6 +2964,9 @@ export function useSessions(
       !parent.send(
         typed,
         withContext(heldContext(now), chooseTeamPrompt(name, job)),
+        [],
+        [],
+        turnId,
       )
     ) {
       release();

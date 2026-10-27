@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { getEventListeners } from 'node:events';
 import { serveChord } from '../../../src/server/server.ts';
 import { openSession } from '../../../src/session/session.ts';
 import type { ResourceAccess } from '../../../src/session/resource_access.ts';
@@ -336,3 +337,143 @@ for (const direct of ['typed', 'picker'] as const) {
     }
   });
 }
+
+function chooseInterests() {
+  const signals = new Set<AbortSignal>();
+  const live = new Map<number, string>();
+  let next = 0;
+  const resources: ResourceAccess = {
+    processRef: 'choose-lifetime-fixture',
+    start: () => Promise.resolve(),
+    retain: (interest, signal) => {
+      const id = ++next;
+
+      if (interest.agent !== 'fake') {
+        signals.add(signal);
+      }
+
+      const release = () => {
+        live.delete(id);
+        signal.removeEventListener('abort', release);
+      };
+
+      live.set(id, interest.agent);
+      signal.addEventListener('abort', release, { once: true });
+
+      if (signal.aborted) {
+        release();
+      }
+
+      return release;
+    },
+    read: () => ({
+      schemaVersion: 1,
+      observedAt: new Date().toISOString(),
+      preferences: {},
+      pools: [],
+      unbound: [],
+      unavailable: [],
+      activeRuns: [],
+      warnings: [],
+    }),
+    active: () => {},
+    close: () => Promise.resolve([]),
+  };
+
+  return { live, resources, signals };
+}
+
+for (const scenario of ['text', 'error'] as const) {
+  test(`choose-only interests and listeners detach after ${scenario} completion and repeated choices retain only main`, async () => {
+    const server = serveChord();
+    const { live, resources, signals } = chooseInterests();
+    let requests = 0;
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+
+          for (let choice = 1; choice <= 3; choice++) {
+            await send(window, `/team choose fixture job ${choice}`);
+            await until(
+              'this selection prompt reached the fake agent',
+              () => requests === choice,
+            );
+            await until(
+              'this completed selection released its interests',
+              () => live.size === 1,
+            );
+            expect([...live.values()]).toEqual(['fake']);
+
+            for (const signal of signals) {
+              expect(getEventListeners(signal, 'abort')).toHaveLength(0);
+            }
+          }
+
+          expect(window.pids).toHaveLength(1);
+        },
+        {
+          server,
+          resources,
+          teams: { fixture: team },
+          runtimes: ['fake', 'codex', 'claude'],
+          startupOf: () => ({ agentCommand: fakeAgentCommand(scenario) }),
+          openWith: async (args) => {
+            const session = await openSession(args);
+            const prompt = session.prompt.bind(session);
+
+            session.prompt = (text, ...rest) => {
+              if (text.includes('through /team choose')) {
+                requests++;
+              }
+
+              return prompt(text, ...rest);
+            };
+
+            return session;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+}
+
+test('selection completion leaves independent run interests until run close, then only main', async () => {
+  const server = serveChord();
+  const { live, resources } = chooseInterests();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/team choose fixture selectedidle');
+        await until('selection completed', () =>
+          window.mounted('Selection attempt recorded; no automatic retry.'),
+        );
+        await until(
+          'only main and run interests remain',
+          () => live.size === 3,
+        );
+        expect([...live.values()].sort()).toEqual(['claude', 'codex', 'fake']);
+        await send(window, '/team stop fixture');
+        await until(
+          'run interests close without a retained choose owner',
+          () => live.size === 1,
+        );
+        expect([...live.values()]).toEqual(['fake']);
+      },
+      {
+        server,
+        resources,
+        teams: { fixture: team },
+        runtimes: ['fake', 'codex', 'claude'],
+        startupOf: () => ({ agentCommand: fakeAgentCommand('selectedteam') }),
+      },
+    );
+  } finally {
+    await server.close();
+  }
+});

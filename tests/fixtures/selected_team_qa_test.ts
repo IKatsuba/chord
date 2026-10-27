@@ -13,6 +13,7 @@ for (const scenario of [
   'long',
   'receipt',
   'late',
+  'choose',
 ]) {
   test(`selection QA ${scenario} explicitly isolates every candidate runtime and collector`, async () => {
     const directory = `/tmp/chord-qa.chd533-selection-${scenario}`;

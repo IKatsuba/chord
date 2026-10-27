@@ -3,6 +3,7 @@ import type { TeamAgentShown } from '../../../src/session/transcript/types.ts';
 import type { Team } from '../../../src/teams.ts';
 import {
   headlineText,
+  chooseTeamPrompt,
   type ListedTeam,
   messageHeadline,
   newTeamPrompt,
@@ -112,12 +113,13 @@ test('/team reads its forms: list, new, show, run, stop', () => {
 test('/team refuses a form it does not know, and one missing what it takes', () => {
   expect(teamCommand('delete bugfix')).toStrictEqual({
     form: 'refused',
-    problem: '/team has no delete; it takes list, new, show, run or stop',
+    problem:
+      '/team has no delete; it takes list, new, show, run, choose or stop',
   });
   // A team is changed by asking main in plain words.
   expect(teamCommand('edit bugfix')).toStrictEqual({
     form: 'refused',
-    problem: '/team has no edit; it takes list, new, show, run or stop',
+    problem: '/team has no edit; it takes list, new, show, run, choose or stop',
   });
   expect(teamCommand('run bugfix')).toStrictEqual({
     form: 'refused',
@@ -627,4 +629,32 @@ test("/team show's running form on a screen too narrow for the name, runtime and
     ['◦ idle 9s', undefined],
     ['● permission 8s', '← new message'],
   ]);
+});
+
+test('explicit choose requires a team/job and preserves ordinary multiline job content', () => {
+  expect(teamCommand('choose')).toEqual({
+    form: 'refused',
+    problem: 'Which team? /team lists them',
+  });
+  expect(teamCommand('choose bugfix')).toEqual({
+    form: 'refused',
+    problem: '/team choose bugfix takes the job after the name',
+  });
+  expect(teamCommand('choose bugfix \t\n ')).toEqual(
+    teamCommand('choose bugfix'),
+  );
+
+  const job = 'Fix "quoted" text\nKeep $HOME and `literal` as job content.';
+
+  expect(teamCommand(`choose bugfix ${job}`)).toEqual({
+    form: 'choose',
+    name: 'bugfix',
+    job,
+  });
+
+  const prompt = chooseTeamPrompt('bugfix', job);
+
+  expect(prompt).toContain('uses a model turn');
+  expect(prompt).toContain('call run_team once');
+  expect(prompt.endsWith(job)).toBe(true);
 });

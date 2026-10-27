@@ -954,3 +954,23 @@ test("the person's steer out with the agent shows in the queue, holds nothing, s
       .queue,
   ).toContainEqual({ turnId: 't3', text: 'Use the parser' });
 });
+
+test('explicit team chooser menu advertises the turn and uses only saved valid team names', () => {
+  const state = {
+    ...withCommands,
+    teamNames: {
+      teams: [
+        { name: 'fixture', broken: false },
+        { name: 'broken', broken: true },
+      ],
+      runs: [],
+    },
+  };
+
+  expect(menuNames(state, '/team ch')).toEqual(['choose']);
+  expect(commandMenu(state, '/team choose')?.items[0]?.description).toBe(
+    'Ask main to select a run (uses a model turn)',
+  );
+  expect(menuNames(state, '/team choose ')).toEqual(['fixture']);
+  expect(commandMenu(state, '/team choose fixture job')).toBeUndefined();
+});

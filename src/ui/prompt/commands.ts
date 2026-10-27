@@ -145,8 +145,22 @@ export function agentQuery(draft: string): string | undefined {
   return /^\/new +(\S*)$/.exec(draft)?.[1];
 }
 
+/** The explicit chooser advertises that selection spends one ordinary turn. */
+export function teamFormQuery(draft: string): string | undefined {
+  return /^\/team +(\S*)$/.exec(draft)?.[1];
+}
+
+export const TEAM_FORMS: readonly CommandItem[] = [
+  {
+    name: 'choose',
+    of: 'team',
+    owner: 'chord',
+    description: 'Ask main to select a run (uses a model turn)',
+  },
+];
+
 /** The forms of `/team` that take a team's name next. */
-export type NamedForm = 'show' | 'run' | 'stop';
+export type NamedForm = 'show' | 'run' | 'choose' | 'stop';
 
 /**
  * The form and the name being typed after `/team show `, `run ` or `stop `
@@ -157,7 +171,7 @@ export type NamedForm = 'show' | 'run' | 'stop';
 export function teamQuery(
   draft: string,
 ): { readonly form: NamedForm; readonly name: string } | undefined {
-  const match = /^\/team +(show|run|stop) +([^\n]*)$/.exec(draft);
+  const match = /^\/team +(show|run|choose|stop) +([^\n]*)$/.exec(draft);
   const form = match?.[1] as NamedForm | undefined;
   const name = match?.[2];
 
@@ -338,8 +352,28 @@ export type Submitted =
  * anything else, an agent's command among it, goes to the agent as written.
  */
 export function submitted(draft: string, highlighted?: CommandItem): Submitted {
+  // Complete partial names; an exact explicit chooser still validates its missing arguments locally.
+  if (
+    highlighted?.of === 'team' &&
+    (highlighted.verb === 'choose' ||
+      (highlighted.verb === undefined && highlighted.name === 'choose')) &&
+    draft.trim() === completion(highlighted).trim()
+  ) {
+    return {
+      type: 'chord',
+      name: 'team',
+      args: [highlighted.verb, highlighted.name].filter(Boolean).join(' '),
+    };
+  }
+
   // A team's run needs its job after the name, which is still to be typed.
-  if (highlighted?.verb === 'run') {
+  if (
+    highlighted?.verb === 'run' ||
+    highlighted?.verb === 'choose' ||
+    (highlighted?.of === 'team' &&
+      highlighted.name === 'choose' &&
+      highlighted.verb === undefined)
+  ) {
     return { type: 'complete', text: completion(highlighted) };
   }
 

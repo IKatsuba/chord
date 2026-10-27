@@ -171,6 +171,7 @@ import {
 } from '../background/view.ts';
 import {
   headlineText,
+  chooseTeamPrompt,
   type ListedTeam,
   messageHeadline,
   ranNote,
@@ -2847,6 +2848,92 @@ export function useSessions(
       : (await teamsAt(agents.main.key)).find((each) => each.name === name);
   };
 
+  /** Resolve only the requested team before main can read its resource facts. */
+  const chooseTyped = async (
+    name: string,
+    job: string,
+    show: (shown: TeamShown) => void,
+  ): Promise<void> => {
+    const key = front()?.main.key;
+    const parent = key === undefined ? undefined : conversationAt(key);
+    const unavailable = () =>
+      show({
+        kind: 'said',
+        text: "Main and chord's MCP tools must be available to choose a team; no selection turn was sent.",
+        failed: true,
+      });
+
+    if (
+      key === undefined ||
+      parent?.session?.chordServer === undefined ||
+      stateOf(key)?.connection.status !== 'ready'
+    ) {
+      return unavailable();
+    }
+
+    const launch = captureLaunch(key);
+    const found = (await teamsAt(key)).find((team) => team.name === name);
+
+    // File discovery must not transfer an old request into a replacement turn.
+    if (!launch.valid()) {
+      return;
+    }
+
+    const refused = teamRefusal(name, found);
+
+    if (refused !== undefined || found === undefined || !('team' in found)) {
+      show({
+        kind: 'said',
+        text: refused ?? 'This team is unavailable',
+        failed: true,
+      });
+
+      return;
+    }
+
+    const release = retainResources(
+      [
+        found.team.lead.agent,
+        ...found.team.members.map((member) => member.agent),
+      ],
+      launch.signal,
+    );
+
+    launch.signal.addEventListener('abort', release, { once: true });
+
+    if (!launch.valid()) {
+      release();
+
+      return;
+    }
+
+    const now = stateOf(key);
+    const typed = `/team choose ${name} ${job}`;
+
+    if (
+      now === undefined ||
+      !canSend(now, typed) ||
+      !parent.send(
+        typed,
+        withContext(heldContext(now), chooseTeamPrompt(name, job)),
+      )
+    ) {
+      release();
+
+      if (launch.valid()) {
+        unavailable();
+      }
+
+      return;
+    }
+
+    dispatch({
+      type: 'in_session',
+      key,
+      action: { type: 'context_sent', held: now.held },
+    });
+  };
+
   /**
    * `/team run`: the run `run_team` starts, for `main`, with
    * the person's words as the job, drawn as its call is; main, which took
@@ -3769,6 +3856,7 @@ export function useSessions(
     frontKey: () => front()?.main.key,
     listTeams,
     runTyped,
+    chooseTyped,
     newTyped,
     stopTyped,
     showTyped,

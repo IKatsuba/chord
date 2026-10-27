@@ -13,6 +13,8 @@ import {
   moveHighlight,
   submitted,
   teamItems,
+  teamFormQuery,
+  TEAM_FORMS,
   teamQuery,
   visibleRange,
 } from '../../../src/ui/prompt/commands.ts';
@@ -350,5 +352,39 @@ test('Tab and Enter on an agent are /new with its name', () => {
     type: 'chord',
     name: 'new',
     args: 'mine',
+  });
+});
+
+test('choose completion advertises its model turn and waits for the job', () => {
+  expect(teamFormQuery('/team ch')).toBe('ch');
+
+  const form = matchCommands(TEAM_FORMS, 'ch')[0]!;
+
+  expect(form.description).toBe('Ask main to select a run (uses a model turn)');
+  expect(submitted('/team ch', form)).toEqual({
+    type: 'complete',
+    text: '/team choose ',
+  });
+  expect(submitted('/team choose', form)).toEqual({
+    type: 'chord',
+    name: 'team',
+    args: 'choose',
+  });
+  expect(teamQuery('/team choose bug')).toEqual({
+    form: 'choose',
+    name: 'bug',
+  });
+  expect(teamQuery('/team choose bugfix job')).toBeUndefined();
+
+  const item = teamItems('choose', [{ name: 'bugfix', broken: false }], [])[0]!;
+
+  expect(submitted('/team choose bug', item)).toEqual({
+    type: 'complete',
+    text: '/team choose bugfix ',
+  });
+  expect(submitted('/team choose bugfix', item)).toEqual({
+    type: 'chord',
+    name: 'team',
+    args: 'choose bugfix',
   });
 });

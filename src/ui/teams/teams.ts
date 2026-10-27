@@ -23,7 +23,11 @@ export type TeamCommand =
   | { readonly form: 'list' }
   | { readonly form: 'new'; readonly words: string }
   | { readonly form: 'show'; readonly name: string }
-  | { readonly form: 'run'; readonly name: string; readonly job: string }
+  | {
+      readonly form: 'run' | 'choose';
+      readonly name: string;
+      readonly job: string;
+    }
   | { readonly form: 'stop'; readonly name: string }
   /** Words `/team` cannot read, and what it says of them. */
   | { readonly form: 'refused'; readonly problem: string };
@@ -55,14 +59,15 @@ export function teamCommand(args: string): TeamCommand {
         ? { form: 'refused', problem: which }
         : { form: 'show', name };
     case 'run':
+    case 'choose':
       return name === ''
         ? { form: 'refused', problem: which }
         : words === ''
           ? {
               form: 'refused',
-              problem: `/team run ${name} takes the job after the name`,
+              problem: `/team ${form} ${name} takes the job after the name`,
             }
-          : { form: 'run', name, job: words };
+          : { form, name, job: words };
     case 'stop':
       return rest === ''
         ? {
@@ -73,7 +78,7 @@ export function teamCommand(args: string): TeamCommand {
     default:
       return {
         form: 'refused',
-        problem: `/team has no ${form}; it takes list, new, show, run or stop`,
+        problem: `/team has no ${form}; it takes list, new, show, run, choose or stop`,
       };
   }
 }
@@ -94,6 +99,18 @@ export function newTeamPrompt(words: string): string {
     "out the team for what they describe below, then call chord's " +
     "propose_team with it (list_agents gives each runtime's models and " +
     `modes).\n\n${words}`
+  );
+}
+
+/** The explicit selection turn keeps the person's job as ordinary content. */
+export function chooseTeamPrompt(name: string, job: string): string {
+  return (
+    `The person asks you to choose this run of saved team ${name} through /team choose (uses a model turn). ` +
+    'Read get_budgets and team/runtime capabilities; preserve all saved instructions and hard constraints. ' +
+    'Choose supported new-run settings within the existing permissions, explain the choice and uncertainties, ' +
+    'and call run_team once with overrides and reason. Unknown capacity is not unlimited. ' +
+    'A rejected choice requires a visible revised choice; do not silently fall back or retry. ' +
+    `Do this job:\n\n${job}`
   );
 }
 

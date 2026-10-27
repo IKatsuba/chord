@@ -16,6 +16,7 @@ export const SELECTION_CASES = [
   'long',
   'receipt',
   'late',
+  'choose',
 ] as const;
 
 export async function selectedTeamQa(

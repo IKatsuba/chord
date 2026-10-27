@@ -313,7 +313,7 @@ test('/team new goes to main, which proposes through propose_team, and a change 
       await window.shows('Saved to .chord/teams/bugfix.md');
       await send(window, '/team edit bugfix');
       await window.shows(
-        '/team has no edit; it takes list, new, show, run or stop',
+        '/team has no edit; it takes list, new, show, run, choose or stop',
       );
       await send(window, 'put the reviewer on codex');
       await window.shows('Team(bugfix) · change');

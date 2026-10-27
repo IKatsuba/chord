@@ -1116,6 +1116,17 @@ test('MCP discovery exposes stored routing instructions and per-run inheritance 
       expect(schema).toContain('destination model and mode');
       expect(schema).toContain('soft effort');
       expect(schema).toContain('existing saved member names');
+      expect(schema).toContain(
+        'every effective selected role, including inherited roles',
+      );
+      expect(schema).toContain('omitted constraints add no restriction');
+      expect(schema).toContain('explicit empty allowlist denies');
+      expect(schema).toContain(
+        'unchanged direct saved path outside selection policy',
+      );
+      expect(schema).toContain(
+        'Preferences are advisory, not permission or payment grants',
+      );
 
       const answer = textOf(
         await client.callTool({ name: 'list_teams', arguments: {} }),

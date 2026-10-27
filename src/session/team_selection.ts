@@ -50,7 +50,7 @@ export const RunSelection = z
       ),
   })
   .describe(
-    'Optional frozen per-run configuration; omission runs saved composition. Unknown fields or member names refuse before launch; no null/reset shorthand.',
+    'Optional frozen per-run configuration. Current hard constraints apply to every effective selected role, including inherited roles: omitted constraints add no restriction, an explicit empty allowlist denies. Omitted selection uses the unchanged direct saved path outside selection policy. Preferences are advisory, not permission or payment grants. Unknown fields or member names refuse before launch; no null/reset shorthand.',
   );
 
 export type RunSelection = z.infer<typeof RunSelection>;

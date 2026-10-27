@@ -343,6 +343,7 @@ import {
 const SCENARIOS = [
   'resources',
   'selectedteam',
+  'selectedlate',
   'selectedlead',
   'selectedidle',
   'guardian',

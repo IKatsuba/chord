@@ -2,6 +2,7 @@
 import process from 'node:process';
 import type { Play } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
+import { gateOpened } from './agents.ts';
 
 export const SELECTED_TEAMS = {
   async selectedteam(turn) {
@@ -35,6 +36,71 @@ export const SELECTED_TEAMS = {
         },
       });
       await turn.say('Selection attempt recorded; no automatic retry.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+  async selectedlate(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      return 'end_turn';
+    }
+
+    const input = {
+      team: 'fixture',
+      job: 'selectedidle',
+      selection: {
+        reason:
+          'Preserve all instructions and exact permissions; provider freshness is unknown.',
+        lead: { agent: 'codex', model: 'fake-small', mode: 'plan' },
+      },
+    };
+    const toolCallId = turn.callId('run_team');
+
+    try {
+      const pending = client.callTool(
+        { name: 'run_team', arguments: input },
+        undefined,
+        { timeout: 45_000, signal: turn.signal },
+      );
+
+      await turn.say(
+        'Selected startup waits for the start gate (bounded to 30 seconds).',
+      );
+
+      const result = await pending;
+
+      await turn.say(
+        'Selected receipt revised; ACP link waits for the link gate (at most 10 seconds).',
+      );
+      await gateOpened(turn, 'link');
+      // This is the fake provider's delayed notification for its actual request.
+      await turn.send({
+        sessionUpdate: 'tool_call',
+        toolCallId,
+        title: 'mcp__chord__run_team',
+        kind: 'other',
+        status: 'pending',
+        rawInput: input,
+      });
+      await turn.send({
+        sessionUpdate: 'tool_call_update',
+        toolCallId,
+        status: result.isError === true ? 'failed' : 'completed',
+        content: [
+          {
+            type: 'content',
+            content: {
+              type: 'text',
+              text: JSON.stringify(result.structuredContent ?? {}),
+            },
+          },
+        ],
+      });
+      await turn.say('Late ACP link completed.');
     } finally {
       await client.close();
     }

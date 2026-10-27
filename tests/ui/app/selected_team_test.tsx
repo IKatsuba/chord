@@ -12,6 +12,7 @@ import { openSession } from '../../../src/session/session.ts';
 import type { TeamSelection } from '../../../src/session/budgets.ts';
 import type { TeamSelectionPolicy } from '../../../src/settings.ts';
 import { readPast } from '../../../src/session/record.ts';
+import { recordedSelection } from '../../../src/session/team_selection.ts';
 import { readRecords } from '../../../src/session/sessions.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { ready, send, until, withWindow, type Window } from './render.tsx';
@@ -435,6 +436,23 @@ describe('selected frozen team startup', () => {
         );
         expect(answer.receipt.roles[0]?.state).toBe('refused');
         expect(prompts).toEqual([]);
+
+        await until('actual caller receipt persisted', async () => {
+          const records = await readRecords(join(window.dir, 'state'));
+          const caller = records.find(
+            (record) => record.sessionId === window.session()?.id,
+          );
+
+          if (caller === undefined) {
+            return false;
+          }
+
+          return (await readPast(caller.path)).some(
+            (entry) =>
+              entry.type === 'served' &&
+              recordedSelection(entry.call)?.runId === answer.id,
+          );
+        });
 
         const records = await readRecords(join(window.dir, 'state'));
 

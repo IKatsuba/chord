@@ -6,7 +6,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { quote } from 'shell-quote';
 import { chord, qaPlace } from '../../scripts/dev/tools.ts';
-import { fakeAgentCommand } from './fake.ts';
+import { fakeAgentCommand, gatedCommand } from './fake.ts';
 
 export const SELECTION_CASES = [
   'normal',
@@ -15,6 +15,7 @@ export const SELECTION_CASES = [
   'soft',
   'long',
   'receipt',
+  'late',
 ] as const;
 
 export async function selectedTeamQa(
@@ -29,12 +30,25 @@ export async function selectedTeamQa(
   qaPlace(directory);
   await mkdir(join(config, 'chord'), { recursive: true });
   await mkdir(join(directory, '.chord/teams'), { recursive: true });
+
+  if (scenario === 'late') {
+    await mkdir(join(directory, '.fake-gate'), { recursive: true });
+  }
+
   await writeFile(
     join(config, 'chord/settings.json'),
     JSON.stringify({
       agents: {
         fake: { command: fakeAgentCommand() },
-        codex: { command: fakeAgentCommand('selectedteam') },
+        codex: {
+          command:
+            scenario === 'late'
+              ? gatedCommand(
+                  join(directory, '.fake-gate/start'),
+                  fakeAgentCommand(),
+                )
+              : fakeAgentCommand('selectedteam'),
+        },
         claude: {
           command: fakeAgentCommand(
             undefined,
@@ -85,9 +99,17 @@ Keep all instructions and project handoffs unchanged.
   return chord(
     false,
     [
-      'codex',
+      scenario === 'receipt' ? 'fake' : 'codex',
       '--agent-command',
-      quote(fakeAgentCommand('selectedteam')),
+      quote(
+        fakeAgentCommand(
+          scenario === 'receipt'
+            ? undefined
+            : scenario === 'late'
+              ? 'selectedlate'
+              : 'selectedteam',
+        ),
+      ),
       '-C',
       directory,
     ],

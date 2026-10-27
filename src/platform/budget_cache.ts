@@ -21,6 +21,7 @@ import {
   mergeWindows,
   ResourceFacts,
   type TeamSelection,
+  type WindowSnapshot,
 } from '../session/budgets.ts';
 
 export const CACHE_FILES = 256;
@@ -43,6 +44,7 @@ const INCOMPLETE = 'Resource cache coverage is incomplete';
 export async function readBudgetCache(
   directory: string,
   now: number,
+  { cleanupExpired = true }: { readonly cleanupExpired?: boolean } = {},
 ): Promise<{ files: BudgetCacheFile[]; warnings: string[] }> {
   const files: BudgetCacheFile[] = [];
   const warnings = new Set<string>();
@@ -145,6 +147,7 @@ export async function readBudgetCache(
 
         if (now - written > CACHE_RETENTION_MS) {
           if (
+            cleanupExpired &&
             removed < CACHE_CLEANUP_FILES &&
             now - metadata.mtimeMs > CACHE_RETENTION_MS
           ) {
@@ -287,6 +290,9 @@ export function foldBudgetCache(
   preferences: TeamSelection,
   now: BudgetClock,
   warnings: readonly string[] = [],
+  age: (window: WindowSnapshot, sourceKey: string) => WindowSnapshot = (
+    window,
+  ) => ageWindow(window, now),
 ): BudgetSnapshot {
   const pools = new Map<string, BudgetCacheFile['pools'][number]>();
   const unbound = new Map<string, BudgetCacheFile['unbound'][number]>();
@@ -343,10 +349,11 @@ export function foldBudgetCache(
     T extends { windows: BudgetCacheFile['pools'][number]['windows'] },
   >(
     observation: T,
+    sourceKey: string,
   ): T => ({
     ...observation,
     windows: bounded(observation.windows, 128).map((window) =>
-      ageWindow(window, now),
+      age(window, sourceKey),
     ),
   });
 
@@ -363,8 +370,12 @@ export function foldBudgetCache(
     schemaVersion: 1,
     observedAt: new Date(now.wall).toISOString(),
     preferences: { ...preferences, intent: preferences.intent ?? 'fixed' },
-    pools: bounded([...pools.values()].map(aged), 128),
-    unbound: bounded([...unbound.values()].map(aged), 128),
+    pools: bounded([...pools.entries()], 128).map(([key, pool]) =>
+      aged(pool, key),
+    ),
+    unbound: bounded([...unbound.entries()], 128).map(([key, value]) =>
+      aged(value, key),
+    ),
     unavailable: bounded([...unavailable.values()], 128),
     activeRuns: bounded([...active.values()], 256),
     warnings: [...completeness].slice(0, 256),

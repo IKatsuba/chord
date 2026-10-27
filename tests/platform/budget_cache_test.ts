@@ -48,6 +48,30 @@ afterEach(async () => {
 });
 
 describe('process resource cache', () => {
+  test('ongoing cache reads ignore expired foreign files without startup cleanup', async () => {
+    const cache = new BudgetCache(await scratch());
+    const old = iso(-CACHE_RETENTION_MS - 1000);
+
+    await cache.write({ ...facts(), writtenAt: old });
+    await utimes(
+      join(cache.directory, `${cache.processRef}.json`),
+      new Date(old),
+      new Date(old),
+    );
+
+    expect(
+      (await readBudgetCache(cache.directory, wall, { cleanupExpired: false }))
+        .files,
+    ).toEqual([]);
+    expect(await readdir(cache.directory)).toEqual([
+      `${cache.processRef}.json`,
+    ]);
+
+    await readBudgetCache(cache.directory, wall, { cleanupExpired: true });
+
+    expect(await readdir(cache.directory)).toEqual([]);
+  });
+
   test('close preserves current own facts and never cleans another writer', async () => {
     const directory = await scratch();
     const own = new BudgetCache(directory);

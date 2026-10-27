@@ -7295,3 +7295,50 @@ nor tell which word a press landed on.
   OpenTUI for an opaque default background. **The owner kept the `─`:**
   `┌─ sh ─[copy]─[run]─┐`, a `─` between the words and before the corner,
   which also makes each least width two cells narrower.
+
+## 2026-10-27 — CHD-533: official resource collectors and per-run team selection (owner, Q251/Q252)
+
+The owner approved option 1 of Q251 and Q252 for package `6461ce56` in
+[the CHD-533 design](design/CHD-533.md). Chord collects advisory resource
+facts; the launching agent chooses a supported composition for one run.
+Saved teams and running work stay unchanged. Q250 remains retired; no
+payment-source or paid-fallback framework is authorized. API money
+accounting is a separate advisory follow-up, not a subscription-routing gate.
+
+- **Libraries tried and selected.** Official Codex app-server and Claude SDK
+  no-prompt trials returned structured usage; unchanged-library host fake
+  trials tested compile and lifecycle behavior. Select exact
+  `codex-app-server-client@0.1.5` public `StdioTransport`/`AppServerClient`
+  exports on existing `spawnGroup`, and official
+  `@anthropic-ai/claude-agent-sdk@0.3.311`'s experimental usage getter in a
+  same-binary isolated worker. Retain existing ACP/MCP SDKs, Zod and OpenTUI.
+  CodexBar's reusable API loses quota-map buckets; cliMeter and the VS Code
+  extension have no standalone fitting collector; Roost requires excluded
+  credential access. Generic JSON-RPC clients do not fit Codex's framing
+  unchanged. The managed Codex close trial failed descendant cleanup;
+  the public-stream path passed host fake characterization without a patch.
+- **Exact deployment and accepted risks.** Use separately installed,
+  unmodified native Codex 0.163.0 and Claude Code 2.1.311 with the current
+  user's existing authentication. No provider install, extraction, new login
+  or direct credential access. Q251 accepts experimental compatibility and
+  routine managed startup/auth/cache/hooks/telemetry effects. Q252 accepts
+  Chord-owned stdin/signals/bounded waits and isolated-worker group
+  supervision, plus uncapped incomplete-frame buffering. Deadlines do not
+  cap memory. Host fixtures establish neither full Chord release fit nor
+  cross-target lifecycle, freshness, identity or zero billing.
+- **Terms evidence.** The
+  [official legal guidance](https://code.claude.com/docs/en/legal-and-compliance)
+  expressly allows an end user's own subscription authentication through an
+  unmodified Claude Code binary and restricts credential intermediation.
+  [SDK plan guidance](https://support.claude.com/en/articles/15036540-use-the-claude-agent-sdk-with-your-claude-plan),
+  updated October 7, 2026, retains subscription limits for plan-authenticated
+  SDK use. This is no blanket SDK subscription prohibition, telemetry-specific
+  provider guarantee or legal certainty.
+- **Alternatives and boundary.** Upstream lifecycle/frame bounds, another
+  maintained fitting client, or reduced passive/legacy coverage were the
+  alternatives; reduced coverage leaves the automatic telemetry goal
+  incomplete. Approval covers only the specified public APIs and ownership.
+  No parser/input rewrite, tag insertion, SDK patch, custom lifecycle repair,
+  scheduler, migration or saved-team rewrite is authorized. A new library
+  mismatch returns to the owner with options; these trials and approvals
+  are not consent to future workarounds.

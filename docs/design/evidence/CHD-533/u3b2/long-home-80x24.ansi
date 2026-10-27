@@ -1,0 +1,24 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.60.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mcodex · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chord-qa.chd533-resources-long[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mresources[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mResources[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mPreferences: prefer · codex /[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mfake-large-with-an-illustrative-long-preference-name[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mAllowed agents: codex, claude[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mAllowed models (codex): none[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mAllowed modes (codex): default, plan[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mRead: 17:05:53 UTC · advisory snapshot[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mcodex · subscription · identity unverified[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mSource: fixture 1 · coverage unknown · external activity unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m5h: 12.345% used · reset 18:05 UTC · models unknown[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mReceived 12s before read · provider freshness unknown[0m[38;2;255;255;255m
+ [2m[39m── ↓ 10 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

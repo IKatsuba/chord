@@ -1,0 +1,24 @@
+ █▄     chord v0.60.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.chd533-resources-unavailable
+ █▀     ? for shortcuts · /help
+
+ › resources
+
+ ⏺ Resources
+   ⎿  Preferences: balanced
+      Read: 17:05:51 UTC · advisory snapshot
+      codex: unavailable · Scripted unsupported provider version; current
+      capacity unknown.
+      Active work: 1 reported · external work may be missing
+
+ ⏺ Resource facts are advisory; unknown data remains unknown.
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

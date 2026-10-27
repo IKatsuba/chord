@@ -1,0 +1,40 @@
+ chord
+ ⏺ Existing transcript
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  enter to send                  esc to interrupt
+  alt + ← → to move by word       ctrl + v to paste an image
+  cmd + ← → to line start or end  ctrl + r to search prompts
+  tab enter to take a match       ? for shortcuts
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  default · Fake Large
+    main    fake  idle
+    parser  fake  idle
+    background  1 task

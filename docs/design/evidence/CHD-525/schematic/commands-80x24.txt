@@ -1,0 +1,24 @@
+ chord
+ ⏺ Existing transcript
+
+
+
+
+
+
+
+
+
+
+
+  ❯ /help       Show help
+    /clear      Start a new session
+    /status     Show status
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  default · Fake Large
+    main    fake  idle
+    parser  fake  idle
+    background  1 task

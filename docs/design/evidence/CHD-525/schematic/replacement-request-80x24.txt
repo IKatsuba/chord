@@ -1,0 +1,24 @@
+ chord
+ ⏺ Existing transcript
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input (replacement dialog)                                     │
+│ ❯ 1. Continue                                                                │
+│ Enter to pick · Esc to cancel                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  default · Fake Large
+    main    fake  idle
+    parser  fake  idle
+    background  1 task

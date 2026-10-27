@@ -1,0 +1,40 @@
+ chord
+ ⏺ Existing transcript
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /model (existing picker owns keys)
+  ❯ Fake Large
+    Fake Small
+  transient command state retained but no new routing rule
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /                                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  default · Fake Large
+    main    fake  idle
+    parser  fake  idle
+    background  1 task

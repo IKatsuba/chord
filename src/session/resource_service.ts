@@ -415,7 +415,12 @@ export class ResourceService {
     }
 
     await this.#writing;
-    await this.#options.storage?.close(this.#now().wall);
+
+    try {
+      await this.#options.storage?.close(this.#now().wall);
+    } catch {
+      this.#warn('Resource cache cleanup could not be completed.');
+    }
 
     return [...this.#warnings];
   }

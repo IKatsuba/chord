@@ -1,3 +1,8 @@
+import { createResources } from './platform/resources.ts';
+import {
+  resourceFixtureCase,
+  resourceSourceMode,
+} from './platform/resource_fixture.ts';
 import { ValidationError } from '@cliffy/command';
 import {
   CliRenderEvents,
@@ -12,6 +17,7 @@ import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import {
   type Instance,
+  closeOnForcedExit,
   openTerminal,
   render,
   type Terminal,
@@ -403,6 +409,7 @@ const cli = chordCommand().action(async (options, named) => {
       cwd: dir,
       layers: there.layers,
       channel: there.settings.preferredNotifChannel,
+      teamSelection: there.settings.teamSelection,
       mcp,
       ...resumedStartup(invokedAs, flags, there.layers),
     };
@@ -419,6 +426,7 @@ const cli = chordCommand().action(async (options, named) => {
     model,
     effort,
     permissionMode,
+    teamSelection,
   }: Awaited<ReturnType<typeof readPlace>>): Place => {
     const shown = { cwd, home };
     const starting = (value: Sourced | undefined) =>
@@ -428,6 +436,7 @@ const cli = chordCommand().action(async (options, named) => {
 
     return {
       cwd,
+      ...(teamSelection === undefined ? {} : { teamSelection }),
       startupOf: (name) => {
         const found = startupOf(
           name,
@@ -508,9 +517,38 @@ const cli = chordCommand().action(async (options, named) => {
   let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = serveChord();
+  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
+  const fixtureResources = collectors === 'fixture';
+  const resources = createResources({
+    stateDirectory: fixtureResources
+      ? join(chordStateDir(), 'fixture')
+      : chordStateDir(),
+    collectors,
+    ...(fixtureResources
+      ? {
+          fixtureCase: resourceFixtureCase(
+            process.env['CHORD_FAKE_RESOURCE_CASE'],
+          ),
+        }
+      : {}),
+  });
+
+  await resources.start();
+
+  let closingResources: Promise<void> | undefined;
+  const closeResources = () =>
+    (closingResources ??= resources.close().then((warnings) => {
+      for (const warning of warnings) {
+        process.stderr.write(`${warning}\n`);
+      }
+    }));
+
+  const forgetResources = closeOnForcedExit(closeResources);
   const listed = await listedAgents(agentCommands(loaded.layers));
   const window = (
     <App
+      resources={resources}
+      teamSelection={first.teamSelection}
       agent={agent}
       cwd={resume?.cwd ?? options.cwd}
       agentCommand={agentCommand}
@@ -568,7 +606,13 @@ const cli = chordCommand().action(async (options, named) => {
 
   start = undefined;
 
-  await app.waitUntilExit();
+  try {
+    await app.waitUntilExit();
+  } finally {
+    await closeResources();
+    forgetResources();
+  }
+
   await server.close();
   await clipboard?.disposed();
 

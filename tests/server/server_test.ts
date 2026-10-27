@@ -1,3 +1,4 @@
+import { foldBudgetCache } from '../../src/platform/budget_cache.ts';
 import { expect, test } from 'bun:test';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -110,6 +111,7 @@ test('a session the person opened lists the agents and the sessions', () =>
 
       expect(tools.map(({ name }) => name)).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'list_sessions',
         'list_teams',
         'spawn_task',
@@ -488,6 +490,7 @@ test('a long-lived child starts, stops and lists monitors of its own, each answe
 
       expect(tools.map(({ name }) => name)).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'spawn_task',
         'send_message',
         'monitor',
@@ -623,6 +626,7 @@ test("a team's lead opens, messages and closes members; a member only messages, 
         (await lead.listTools()).tools.map(({ name }) => name),
       ).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'spawn_task',
         'open_agent',
         'send_message',
@@ -635,6 +639,7 @@ test("a team's lead opens, messages and closes members; a member only messages, 
         (await member.listTools()).tools.map(({ name }) => name),
       ).toStrictEqual([
         'list_agents',
+        'get_budgets',
         'spawn_task',
         'send_message',
         'monitor',
@@ -664,5 +669,86 @@ test("a team's lead opens, messages and closes members; a member only messages, 
     } finally {
       await lead.close();
       await member.close();
+    }
+  }));
+
+test('get_budgets serves immediate advisory facts without reading runtime offers', () =>
+  withServer(async (server) => {
+    let reads = 0;
+    let offers = 0;
+    const served: ChordCall[] = [];
+    const facts = foldBudgetCache(
+      [],
+      { intent: 'balanced' },
+      { wall: Date.now(), monotonic: 0 },
+    );
+    const caller: Caller = {
+      ...PERSON,
+      window: {
+        ...WINDOW,
+        budgets: () => {
+          reads++;
+
+          return facts;
+        },
+        runtimes: () => {
+          offers++;
+
+          return ['codex', 'claude'];
+        },
+        offer: () => {
+          offers++;
+
+          return Promise.resolve(undefined);
+        },
+        served: (_caller, call) => served.push(call),
+      },
+    };
+    const client = await connect(server.url, server.admit(caller).token);
+
+    try {
+      const result = await client.callTool({
+        name: 'get_budgets',
+        arguments: {},
+      });
+
+      expect(result.isError).not.toBe(true);
+      expect(result.structuredContent).toEqual(facts);
+      expect(reads).toBe(1);
+      expect(offers).toBe(0);
+      expect(served[0]).toMatchObject({ tool: 'get_budgets', answer: facts });
+    } finally {
+      await client.close();
+    }
+  }));
+
+test('unexpected budget read failures use a fixed safe MCP error', () =>
+  withServer(async (server) => {
+    const client = await connect(
+      server.url,
+      server.admit({
+        ...PERSON,
+        window: {
+          ...WINDOW,
+          budgets: () => {
+            throw new Error('Private provider diagnostic.');
+          },
+        },
+      }).token,
+    );
+
+    try {
+      const result = await client.callTool({
+        name: 'get_budgets',
+        arguments: {},
+      });
+
+      expect(result.isError).toBe(true);
+      expect(JSON.stringify(result)).toContain(
+        'Resource facts could not be read.',
+      );
+      expect(JSON.stringify(result)).not.toContain('Private provider');
+    } finally {
+      await client.close();
     }
   }));

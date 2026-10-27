@@ -12,6 +12,9 @@
  * is worked out here from what the window reads of itself, so it is tested
  * without a server.
  */
+import { performance } from 'node:perf_hooks';
+import { foldBudgetCache } from '../platform/budget_cache.ts';
+import type { BudgetSnapshot } from '../session/budgets.ts';
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from '@zod/zod';
 import { formatElapsed } from '../session/elapsed.ts';
@@ -214,6 +217,8 @@ export type RuntimeOffer =
 
 /** What the tools read of the window. */
 export interface WindowView {
+  /** Immediate advisory facts; omission disables collection for an injected window. */
+  budgets?(caller: Caller): BudgetSnapshot;
   /** The sessions open in the window, in the strip's order. */
   sessions(): readonly OpenSessionView[];
   /** Every runtime chord can start, by the name a session is opened with. */
@@ -885,6 +890,40 @@ const listAgents: Register = (server, caller) =>
       ),
   );
 
+const getBudgets: Register = (server, caller) =>
+  server.registerTool(
+    'get_budgets',
+    {
+      description:
+        'Read cached advisory resource facts immediately without starting a provider or waiting for refresh. Consider each independent window, reset, unknown freshness and active work; never combine subscription percentages with API dollars. Read list_agents before selecting a supported per-run composition; fixed keeps the saved team, prefer is soft, hard allowlists remain binding. No scheduling, quota guarantee, auth change or payment-source fallback.',
+      inputSchema: {},
+    },
+    () => {
+      let facts: BudgetSnapshot;
+
+      try {
+        facts =
+          caller.window.budgets?.(caller) ??
+          foldBudgetCache(
+            [],
+            {},
+            { wall: Date.now(), monotonic: performance.now() },
+          );
+      } catch {
+        return serve(
+          caller,
+          'get_budgets',
+          {},
+          { error: 'Resource facts could not be read.' },
+        );
+      }
+
+      return serve(caller, 'get_budgets', {}, facts, (value) =>
+        JSON.stringify(value, null, 2),
+      );
+    },
+  );
+
 const listSessions: Register = (server, caller) =>
   server.registerTool(
     'list_sessions',
@@ -1303,6 +1342,7 @@ function toolsOf(caller: Caller): readonly Register[] {
     case 'person':
       return [
         listAgents,
+        getBudgets,
         listSessions,
         listTeams,
         spawnTask,
@@ -1321,6 +1361,7 @@ function toolsOf(caller: Caller): readonly Register[] {
         : caller.team === 'lead'
           ? [
               listAgents,
+              getBudgets,
               spawnTask,
               openMember,
               tellTeam,
@@ -1328,8 +1369,8 @@ function toolsOf(caller: Caller): readonly Register[] {
               ...MONITORS,
             ]
           : caller.team === 'member'
-            ? [listAgents, spawnTask, tellTeam, ...MONITORS]
-            : [listAgents, spawnTask, messageParent, ...MONITORS];
+            ? [listAgents, getBudgets, spawnTask, tellTeam, ...MONITORS]
+            : [listAgents, getBudgets, spawnTask, messageParent, ...MONITORS];
   }
 }
 
@@ -1348,6 +1389,7 @@ export function toolNames(role: Role): readonly ChordTool[] {
   return role === 'person'
     ? [
         'list_agents',
+        'get_budgets',
         'list_sessions',
         'list_teams',
         'spawn_task',
@@ -1358,7 +1400,13 @@ export function toolNames(role: Role): readonly ChordTool[] {
         'close_agent',
         ...MONITOR_TOOLS,
       ]
-    : ['list_agents', 'spawn_task', 'send_message', ...MONITOR_TOOLS];
+    : [
+        'list_agents',
+        'get_budgets',
+        'spawn_task',
+        'send_message',
+        ...MONITOR_TOOLS,
+      ];
 }
 
 export function registerTools(server: McpServer, caller: Caller): void {

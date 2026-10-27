@@ -35,7 +35,11 @@ export interface DevActions {
     options: ReleaseOptions,
     version: string | undefined,
   ): void | Promise<void>;
-  chord(fake: boolean, args: readonly string[]): void | Promise<void>;
+  chord(
+    fake: boolean,
+    args: readonly string[],
+    fixtureResources?: boolean,
+  ): void | Promise<void>;
   /** Makes `dir`, a capture's directory for `chord --qa`, afresh. */
   qa(dir: string): void | Promise<void>;
   test(args: readonly string[]): void | Promise<void>;
@@ -82,8 +86,13 @@ const RUN: DevActions = {
 
     await dying(() => runRelease(release(), stages, options, process, version));
   },
-  chord: async (fake, args) => {
-    process.exitCode = (await import('./dev/tools.ts')).chord(fake, args);
+  chord: async (fake, args, fixtureResources) => {
+    process.exitCode = (await import('./dev/tools.ts')).chord(
+      fake,
+      args,
+      undefined,
+      fixtureResources,
+    );
   },
   qa: async (dir) => (await import('./dev/tools.ts')).qaPlace(dir),
   test: async (args) => {
@@ -151,7 +160,7 @@ export function devCommand(actions: DevActions = RUN) {
 
             await actions.qa(dir);
 
-            return actions.chord(fake, ['-C', dir, ...given]);
+            return actions.chord(fake, ['-C', dir, ...given], true);
           }),
       )
       .command(

@@ -154,6 +154,8 @@ import {
   type Step,
   submitSteps,
 } from './keys.ts';
+import type { ResourceAccess } from '../../session/resource_access.ts';
+import type { TeamSelection } from '../../session/budgets.ts';
 import { type SessionStart, useSessions } from './sessions.ts';
 import {
   answerLink,
@@ -224,6 +226,8 @@ import { Splash } from '../splash/Splash.tsx';
 import { splashShown } from '../splash/splash.ts';
 
 export interface AppProps {
+  resources?: ResourceAccess | undefined;
+  teamSelection?: TeamSelection | undefined;
   agent: string;
   cwd: string;
   /** Replaces chord's own command for `agent`. */
@@ -373,6 +377,8 @@ const FIRST_SESSION = noAgents().nextKey;
  * and the commands are driven by the hooks beside it.
  */
 export function App({
+  resources,
+  teamSelection,
   agent,
   cwd,
   agentCommand,
@@ -530,7 +536,14 @@ export function App({
     {
       agent,
       typedCommand,
-      place: { cwd, startupOf, mcpServers, mcpIgnored },
+      place: {
+        cwd,
+        startupOf,
+        mcpServers,
+        mcpIgnored,
+        ...(teamSelection === undefined ? {} : { teamSelection }),
+      },
+      resources,
       stateDir,
       readRecords,
       open,

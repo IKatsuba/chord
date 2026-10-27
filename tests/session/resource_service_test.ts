@@ -914,3 +914,20 @@ describe('tester: resource recovery and retained time boundaries', () => {
     await service.close();
   });
 });
+
+describe('resource cache close diagnostics', () => {
+  test('cache close failure is a fixed bounded warning without raw filesystem detail', async () => {
+    const { service } = setup({
+      read: () => Promise.resolve({ files: [], warnings: [] }),
+      write: () => Promise.resolve(),
+      close: () => Promise.reject(new Error('Private cache diagnostics.')),
+    });
+
+    const warnings = await service.close();
+
+    expect(warnings).toEqual([
+      'Resource cache cleanup could not be completed.',
+    ]);
+    expect(JSON.stringify(service.read())).not.toContain('Private cache');
+  });
+});

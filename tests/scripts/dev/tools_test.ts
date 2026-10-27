@@ -70,6 +70,8 @@ describe('chord', () => {
         bun,
         '--define',
         'process.env.NODE_ENV:"production"',
+        '--define',
+        'process.env.CHORD_RESOURCE_FIXTURE:"true"',
         'src/main.tsx',
         'fake',
         '--agent-command',
@@ -315,4 +317,13 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
       });
     }
   }
+});
+
+test('QA isolates resource sources even when the agent is named Codex without --fake', () => {
+  const { run, ran } = faked();
+
+  chord(false, ['codex'], run, true);
+
+  expect(ran[0]).toContain('process.env.CHORD_RESOURCE_FIXTURE:"true"');
+  expect(ran[0]?.at(-1)).toBe('codex');
 });

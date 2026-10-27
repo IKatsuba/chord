@@ -80,6 +80,7 @@ export interface ToolCall {
 
 /** The tools chord's own MCP server offers. */
 export type ChordTool =
+  | 'get_budgets'
   | 'list_agents'
   | 'list_sessions'
   | 'spawn_task'

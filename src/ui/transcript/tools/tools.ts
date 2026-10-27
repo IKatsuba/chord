@@ -472,6 +472,7 @@ export function summary(
       : lines;
 
   const folds =
+    chordCallOf(call, chordServer)?.tool !== 'get_budgets' &&
     !expanded &&
     FOLDED_KINDS.has(call.kind ?? '') &&
     shown.length > SUMMARY_LINES;

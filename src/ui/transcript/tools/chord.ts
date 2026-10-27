@@ -10,6 +10,7 @@ import type {
   ChordCall,
   ChordTool,
 } from '../../../session/transcript/types.ts';
+import { resourceLines } from './resource_lines.ts';
 import { MESSAGE_LINES } from '../message.ts';
 import type { Headline } from './tools.ts';
 
@@ -68,6 +69,8 @@ export function chordHeadline(call: ChordCall): Headline {
   };
 
   switch (call.tool) {
+    case 'get_budgets':
+      return named('Resources', undefined);
     case 'list_agents':
       return named('List agents', text(input.agent));
     case 'list_sessions':
@@ -172,6 +175,7 @@ export function chordLines(call: ChordCall): string[] {
   const input = record(call.input);
   const answer = record(call.answer);
   const listing =
+    call.tool === 'get_budgets' ||
     call.tool === 'list_agents' ||
     call.tool === 'list_sessions' ||
     call.tool === 'list_monitors' ||
@@ -182,6 +186,8 @@ export function chordLines(call: ChordCall): string[] {
   }
 
   switch (call.tool) {
+    case 'get_budgets':
+      return resourceLines(call.answer);
     case 'list_agents': {
       const agents = Array.isArray(answer.agents)
         ? answer.agents.map(record)

@@ -291,6 +291,7 @@ import {
   TOKENS_ONLY,
 } from './options.ts';
 import { COMPACTION } from './scenarios/compaction.ts';
+import { RESOURCES } from './scenarios/resources.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORMS } from './scenarios/forms.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
@@ -339,6 +340,7 @@ import {
 } from './turn.ts';
 
 const SCENARIOS = [
+  'resources',
   'guardian',
   'guardiangated',
   'text',
@@ -616,6 +618,7 @@ const PLAY: Record<Scenario, Play> = {
   ...SUBAGENTS,
   ...MISBEHAVING,
   ...CHORD_TOOLS,
+  ...RESOURCES,
   ...TASKS,
   ...CYCLES,
   ...AGENTS,

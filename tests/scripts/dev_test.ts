@@ -140,17 +140,17 @@ describe('chord', () => {
       await parsed(['chord', '--qa', 'tabs', '--fake', '-p', 'hi']),
     ).toStrictEqual([
       ['qa', '/tmp/chord-qa.tabs'],
-      ['chord', true, ['-C', '/tmp/chord-qa.tabs', '-p', 'hi']],
+      ['chord', true, ['-C', '/tmp/chord-qa.tabs', '-p', 'hi'], true],
     ]);
 
     // Bare, the default place, the owner's Q65, before chord's own options.
     expect(await parsed(['chord', '--qa', '--fake'])).toStrictEqual([
       ['qa', '/tmp/chord-qa'],
-      ['chord', true, ['-C', '/tmp/chord-qa']],
+      ['chord', true, ['-C', '/tmp/chord-qa'], true],
     ]);
     expect(await parsed(['chord', '--qa'])).toStrictEqual([
       ['qa', '/tmp/chord-qa'],
-      ['chord', false, ['-C', '/tmp/chord-qa']],
+      ['chord', false, ['-C', '/tmp/chord-qa'], true],
     ]);
     // An empty name the parser drops: a run as with no --qa, as its help
     // says (Q65).

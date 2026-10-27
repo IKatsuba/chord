@@ -11,6 +11,8 @@ import type { EditorEnd } from '../../../src/editor.ts';
 import type { ClipboardReader, ImageFileReader } from '../../../src/images.ts';
 import type { LinkOpener } from '../../../src/links.ts';
 import type { DefinedServer, Ignored } from '../../../src/mcp.ts';
+import type { ResourceAccess } from '../../../src/session/resource_access.ts';
+import type { TeamSelection } from '../../../src/session/budgets.ts';
 import type { ChordServer } from '../../../src/server/server.ts';
 import type { Notifications } from '../../../src/notify.ts';
 import type { EditorMode } from '../../../src/settings.ts';
@@ -132,6 +134,8 @@ export async function withWindow(
     mcpServers,
     mcpIgnored,
     server,
+    resources,
+    teamSelection,
     runtimes,
     listed,
     keybindings,
@@ -178,6 +182,8 @@ export async function withWindow(
     mcpIgnored?: readonly Ignored[];
     /** chord's own MCP server, which the test closes; none by default. */
     server?: ChordServer;
+    resources?: ResourceAccess;
+    teamSelection?: TeamSelection;
     /** The runtimes `list_agents` names; the fake and the registry's else. */
     runtimes?: readonly string[];
     /** The agents as `chord agents` lists them, for `/new` to describe. */
@@ -261,6 +267,8 @@ export async function withWindow(
     keybindings === undefined ? undefined : readKeybindings(keybindings);
   const app = await draw(
     <App
+      resources={resources}
+      teamSelection={teamSelection}
       agent={agent}
       {...(configHome === undefined ? {} : { configHome: configHome(dir) })}
       cwd={resume?.cwd ?? dir}

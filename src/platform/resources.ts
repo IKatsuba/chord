@@ -10,7 +10,6 @@ import type {
 } from '../session/resource_normalization.ts';
 import {
   ResourceService,
-  type ResourceRead,
   type ResourceTarget,
 } from '../session/resource_service.ts';
 import { collectCodexResources } from '../session/codex_resources.ts';
@@ -21,6 +20,10 @@ import {
   type ResourceProvider,
 } from './resource_executable.ts';
 import { collectClaudeResources } from './resource_worker.ts';
+import {
+  fixtureResourceRead,
+  type ResourceFixtureCase,
+} from './resource_fixture.ts';
 
 export interface ResourceCollectors {
   resolve(
@@ -50,47 +53,10 @@ const official: ResourceCollectors = {
       : collectClaudeResources(path, { cwd, signal, source }),
 };
 
-function fixtureRead(
-  agent: string,
-  source: Omit<ResourceSource, 'receivedAt'>,
-): ResourceRead {
-  const receivedAt = new Date().toISOString();
-
-  return {
-    facts: {
-      observation: {
-        observationRef: source.sourceRef,
-        ...source,
-        agent,
-        source: 'fixture',
-        sourceVersion: '1',
-        coverage: 'unknown',
-        externalActivity: 'unknown',
-        billingKind: 'subscription',
-        observedAt: null,
-        reason:
-          'Scripted fixture; account and resource identity are unverified.',
-        windows: [
-          {
-            windowRef: 'fixture-five-hour',
-            models: null,
-            usedPercent: 12.345,
-            windowSeconds: 18000,
-            resetsAt: new Date(Date.now() + 3600000).toISOString(),
-            observedAt: null,
-            receivedAt,
-            state: 'unknown',
-            reason: 'Provider observation time unavailable.',
-          },
-        ],
-      },
-    },
-  };
-}
-
 export function createResources(options: {
   readonly stateDirectory: string;
   readonly collectors: 'official' | 'fixture' | ResourceCollectors;
+  readonly fixtureCase?: ResourceFixtureCase;
 }): ResourceAccess {
   const cache = new BudgetCache(options.stateDirectory);
   const service = new ResourceService({
@@ -134,7 +100,12 @@ export function createResources(options: {
           agent: interest.agent,
           read: async (readSignal) => {
             if (collectors === 'fixture') {
-              return fixtureRead(interest.agent, source);
+              return fixtureResourceRead(
+                interest.agent,
+                source,
+                options.fixtureCase ?? 'normal',
+                readSignal,
+              );
             }
 
             if (interest.agent !== 'codex' && interest.agent !== 'claude') {

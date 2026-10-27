@@ -21,6 +21,7 @@ import type {
 export const MCP_TITLE = /^mcp__(.+?)__(.+)$/s;
 
 const CHORD_TOOLS: ReadonlySet<string> = new Set<ChordTool>([
+  'get_budgets',
   'list_agents',
   'list_sessions',
   'spawn_task',

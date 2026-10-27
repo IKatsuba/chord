@@ -171,3 +171,85 @@ describe('active resource roles', () => {
     ]);
   });
 });
+
+describe('tester: active work state precedence and run isolation', () => {
+  test('ended sessions override a working wait and starting tasks retain only planned model facts', () => {
+    const agents: Work = {
+      ...noAgents<Driven>(),
+      main: {
+        key: 1,
+        agent: 'codex',
+        conversation: {
+          session: { ...conversation.session!, gone: () => 'Fixture exited.' },
+        },
+        wait: { ...idle, working: now },
+      },
+    };
+    const roles = activeResourceRuns(
+      agents,
+      new Map(),
+      [
+        {
+          id: 'starting-task',
+          name: 'helper',
+          agent: 'claude',
+          model: 'planned-model',
+          team: null,
+          runRef: 'main-1',
+          conversation: { session: undefined },
+        },
+      ],
+      processRef,
+      now,
+    );
+
+    expect(roles.map((role) => [role.state, role.model, role.team])).toEqual([
+      ['ended', 'current-model', null],
+      ['starting', 'planned-model', null],
+    ]);
+    expect(roles.every((role) => role.resourceRefs.length === 0)).toBe(true);
+  });
+
+  test('an opened member in one run cannot consume the same planned role in another', () => {
+    const lead = {
+      id: 'first-lead',
+      key: 2,
+      name: 'first',
+      runtime: 'codex',
+      conversation,
+      wait: idle,
+      openedAt: now,
+      colour: 0,
+      team: 'first',
+    };
+    const agents: Work = {
+      ...noAgents<Driven>(),
+      children: [
+        lead,
+        { ...lead, id: 'second-lead', key: 3, name: 'second', team: 'second' },
+        {
+          ...lead,
+          id: 'opened-reviewer',
+          key: 4,
+          name: 'reviewer',
+          runtime: 'claude',
+          lead: 'first-lead',
+        },
+      ],
+    };
+    const runs = new Map([
+      ['first-lead', { name: 'first', team }],
+      ['second-lead', { name: 'second', team }],
+    ]);
+    const roles = activeResourceRuns(agents, runs, [], processRef, now);
+
+    expect(
+      roles
+        .filter((role) => role.member === 'reviewer')
+        .map((role) => [role.runRef, role.state]),
+    ).toEqual([
+      ['second-lead', 'planned'],
+      ['first-lead', 'idle'],
+    ]);
+  });
+});

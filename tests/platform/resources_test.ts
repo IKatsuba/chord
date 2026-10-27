@@ -8,6 +8,7 @@ import {
   type ResourceCollectors,
 } from '../../src/platform/resources.ts';
 import { normalizeCodex } from '../../src/session/resource_normalization.ts';
+import { ResourceReadError } from '../../src/platform/resource_process.ts';
 import type { ResourceAccess } from '../../src/session/resource_access.ts';
 import { until } from '../session/conversation_fake.ts';
 
@@ -176,5 +177,116 @@ describe('explicit resource factory', () => {
         process.env['PATH'] = previous;
       }
     }
+  });
+});
+
+describe('tester: resource factory cancellation and diagnostics', () => {
+  test('last-consumer cancellation during resolution cannot start a late collector', async () => {
+    const entered = Promise.withResolvers<void>();
+    const resolved = Promise.withResolvers<{ path: string; version: string }>();
+    const controller = new AbortController();
+    let readCalls = 0;
+
+    await withResources(
+      {
+        resolve: () => {
+          entered.resolve();
+
+          return resolved.promise;
+        },
+        read: () => {
+          readCalls++;
+
+          return Promise.resolve({
+            unavailable: { agent: 'codex', reason: 'Must not read.' },
+          });
+        },
+      },
+      async (resources) => {
+        resources.retain(
+          { agent: 'codex', cwd: '/fixture/project' },
+          controller.signal,
+        );
+        await entered.promise;
+
+        controller.abort();
+        resolved.resolve({ path: '/fixture/late-provider', version: '1' });
+        await resources.close();
+
+        expect(readCalls).toBe(0);
+        expect(resources.read().unbound).toEqual([]);
+      },
+    );
+  });
+
+  test('resolver cleanup failure remains a sanitized lifecycle warning through the factory', async () => {
+    let readCalls = 0;
+
+    await withResources(
+      {
+        resolve: () =>
+          Promise.reject(
+            new ResourceReadError('cleanup', 'Excluded resolver detail.'),
+          ),
+        read: () => {
+          readCalls++;
+
+          return Promise.resolve({
+            unavailable: { agent: 'codex', reason: 'Must not read.' },
+          });
+        },
+      },
+      async (resources) => {
+        resources.retain(
+          { agent: 'codex', cwd: '/fixture/project' },
+          new AbortController().signal,
+        );
+        await until(() => resources.read().warnings.length > 0);
+
+        expect(resources.read().warnings).toEqual([
+          'Resource collector cleanup failed; owned process exit is unverified.',
+        ]);
+        expect(JSON.stringify(resources.read())).not.toContain(
+          'Excluded resolver',
+        );
+        expect(readCalls).toBe(0);
+      },
+    );
+  });
+
+  test('collector retry metadata never enters public cached unavailable facts', async () => {
+    const calls: string[] = [];
+    const collectors = readers(calls);
+
+    await withResources(
+      {
+        ...collectors,
+        read: () =>
+          Promise.resolve({
+            unavailable: {
+              agent: 'codex',
+              reason: 'Temporary fixture failure.',
+            },
+            retry: 'transient',
+          }),
+      },
+      async (resources) => {
+        resources.retain(
+          { agent: 'codex', cwd: '/fixture/project' },
+          new AbortController().signal,
+        );
+        await until(
+          () =>
+            resources.read().unavailable[0]?.reason ===
+            'Temporary fixture failure.',
+        );
+
+        expect(resources.read().unavailable).toEqual([
+          { agent: 'codex', reason: 'Temporary fixture failure.' },
+        ]);
+        expect(JSON.stringify(resources.read())).not.toContain('retry');
+        expect(resources.read().unbound).toEqual([]);
+      },
+    );
   });
 });

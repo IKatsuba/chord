@@ -1,0 +1,24 @@
+
+ ⏺ Running
+   ⎿  {"session_id":null,"state":"completed","output_delta":"Fixture
+
+ ⏺ The model response used a different language than your request, and fx could
+   not accept it. Retry or name the response language explicitly.
+
+ ⏺ ResponseLanguageMismatch
+
+ › fxerror
+
+ ⏺ Running
+   ⎿  {"session_id":null,"state":"completed","output_delta":"Fixture
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Searching
+ ── ↓ 18 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

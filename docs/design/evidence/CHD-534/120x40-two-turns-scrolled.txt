@@ -1,0 +1,40 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd534-designer-wide
+ ▀▀     ? for shortcuts · /help
+
+ › fxerror
+
+ ⏺ Running
+   ⎿  {"session_id":null,"state":"completed","output_delta":"Fixture
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Running
+   ⎿  {"session_id":null,"state":"completed","output_delta":"Fixture
+
+ ⏺ The model response used a different language than your request, and fx could not accept it. Retry or name the
+   response language explicitly.
+
+ ⏺ ResponseLanguageMismatch
+
+ › fxerror
+ ── ↓ 26 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

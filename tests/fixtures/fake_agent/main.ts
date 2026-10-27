@@ -250,6 +250,8 @@
  * nowhere (Q200).
  */
 import process from 'node:process';
+import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { setTimeout as delay } from 'node:timers/promises';
 import * as acp from '@agentclientprotocol/sdk';
@@ -295,6 +297,7 @@ import { RESOURCES } from './scenarios/resources.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORMS } from './scenarios/forms.ts';
+import { FX } from './scenarios/fx.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
 import { MODES } from './scenarios/modes.ts';
@@ -341,6 +344,7 @@ import {
 } from './turn.ts';
 
 const SCENARIOS = [
+  'fxerror',
   'resources',
   'selectedteam',
   'budgetawareteam',
@@ -624,6 +628,7 @@ const PLAY: Record<Scenario, Play> = {
   ...MODES,
   ...SUBAGENTS,
   ...MISBEHAVING,
+  ...FX,
   ...CHORD_TOOLS,
   ...RESOURCES,
   ...SELECTED_TEAMS,
@@ -1394,6 +1399,15 @@ const connection = acp
     },
   )
   .onRequest('session/prompt', async ({ params, client }) => {
+    const gate = join(cwds.get(params.sessionId) ?? '.', '.fake-gate');
+    const capture = join(gate, 'capture-prompt');
+
+    // Observe the SDK's received blocks before scenario dispatch strips context.
+    if (existsSync(capture)) {
+      unlinkSync(capture);
+      writeFileSync(join(gate, 'prompt.json'), JSON.stringify(params.prompt));
+    }
+
     const held = heldCosts.get(params.sessionId);
 
     // The last turn's cost, held for this one, which has now begun.

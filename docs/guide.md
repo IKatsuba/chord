@@ -1196,6 +1196,8 @@ cause. Below it, when available, are stderr's last six non-empty lines,
 with `… +N lines` for omitted lines and `…` on cut long lines. Plain stdout
 messages are not shown. `-p` reports the same details on stderr; a lead's
 failed-child note keeps the step, pin and stderr's last line.
+For recorded fx `ResponseLanguageMismatch` turn failures, see the
+[investigation and evidence limits](design/CHD-534.md).
 A session request refused with `Method not found` means the program does not
 serve ACP sessions: it is not an ACP agent, or not at this version. If
 zeroclaw needs an agent alias, set `[acp] default_agent = "<alias>"` in

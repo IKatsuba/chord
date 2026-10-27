@@ -11,8 +11,52 @@ import type {
 import { EDIT_NEW, EDIT_OLD } from '../../fixtures/edits.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { MARKDOWN_REPLY } from '../../fixtures/markdown.ts';
+import { FX_ERROR_NOTICE } from '../../fixtures/fake_agent/scenarios/fx.ts';
+import { withSession } from '../session_fake.ts';
 import { play, type PlayOptions } from '../../fixtures/recorder.ts';
 import { fold, states } from './fold.ts';
+
+describe('CHD-534 synthetic fx failures', () => {
+  test('two synthetic failed turns retain separate errors and completed tools before a subsequent success', () =>
+    withSession(async (session) => {
+      // Repeated synthetic turns cover retention, not the historical session.
+      const first = await play(session, 'fxerror');
+      const second = await play(session, 'fxerror');
+      const failed = fold([...first, ...second]);
+      const errors = failed.entries.filter((entry) => entry.kind === 'error');
+      const tools = failed.entries.flatMap((entry) =>
+        entry.kind === 'tool' ? [entry.call] : [],
+      );
+
+      expect(errors).toHaveLength(2);
+      expect(new Set(errors.map((entry) => entry.turnId)).size).toBe(2);
+      expect(errors.map((entry) => entry.message)).toEqual([
+        'ResponseLanguageMismatch',
+        'ResponseLanguageMismatch',
+      ]);
+      expect(tools).toHaveLength(14);
+      expect(new Set(tools.map((call) => call.id)).size).toBe(14);
+      expect(tools.every((call) => call.status === 'completed')).toBe(true);
+      expect(
+        failed.entries.filter(
+          (entry) =>
+            entry.kind === 'assistant' && entry.text === FX_ERROR_NOTICE,
+        ),
+      ).toHaveLength(2);
+      expect(failed.turn).toEqual({ status: 'idle' });
+
+      const next = fold(await play(session, 'text'), failed);
+
+      expect(next.turn).toEqual({ status: 'idle' });
+      expect(next.entries.filter((entry) => entry.kind === 'error')).toEqual(
+        errors,
+      );
+      expect(next.entries.at(-1)).toMatchObject({
+        kind: 'assistant',
+        text: 'Hello, world. This reply came in chunks.',
+      });
+    }));
+});
 
 function at(actions: readonly TranscriptAction[], type: string): number {
   const action = actions.find((candidate) => candidate.type === type);
@@ -759,4 +803,84 @@ describe('CHD-426 U3 tester: several held requests keep the cycle clock', () => 
       expect(fold(order.map(settle), ended).turn).toEqual({ status: 'idle' });
     });
   }
+});
+
+describe('CHD-534 tester: failure boundaries', () => {
+  test('cancelling after a completed shell preserves it without inventing a mismatch, then a failed retry stays distinct', () =>
+    withSession(
+      async (session) => {
+        let didCancel = false;
+        const unsubscribe = session.subscribe((update) => {
+          if (
+            !didCancel &&
+            update.sessionUpdate === 'tool_call_update' &&
+            update.status === 'completed'
+          ) {
+            didCancel = true;
+
+            void session.cancel();
+          }
+        });
+
+        const cancelled = fold(
+          await play(session, 'fxerror').finally(unsubscribe),
+        );
+
+        const completed = cancelled.entries.flatMap((entry) =>
+          entry.kind === 'tool' && entry.call.status === 'completed'
+            ? [entry.call]
+            : [],
+        );
+
+        expect(didCancel).toBe(true);
+        expect(completed).toHaveLength(1);
+        expect(completed[0]?.kind).toBe('execute');
+        expect(cancelled.turn).toEqual({ status: 'idle' });
+        expect(cancelled.entries.at(-1)?.kind).toBe('cancelled');
+        expect(
+          cancelled.entries.filter((entry) => entry.kind === 'error'),
+        ).toEqual([]);
+        expect(
+          cancelled.entries.filter(
+            (entry) =>
+              entry.kind === 'assistant' && entry.text === FX_ERROR_NOTICE,
+          ),
+        ).toEqual([]);
+
+        const retried = fold(await play(session, 'fxerror'), cancelled);
+        const errors = retried.entries.filter(
+          (entry) => entry.kind === 'error',
+        );
+        const tools = retried.entries.flatMap((entry) =>
+          entry.kind === 'tool' ? [entry.call] : [],
+        );
+
+        expect(retried.turn).toEqual({ status: 'idle' });
+        expect(errors).toHaveLength(1);
+        expect(errors[0]?.message).toBe('ResponseLanguageMismatch');
+        expect(
+          tools.filter((call) => call.status === 'completed'),
+        ).toHaveLength(8);
+        expect(tools.find((call) => call.id === completed[0]?.id)).toEqual(
+          completed[0],
+        );
+        expect(
+          retried.entries.filter((entry) => entry.kind === 'cancelled'),
+        ).toHaveLength(1);
+
+        const next = fold(await play(session, 'text'), retried);
+
+        expect(next.turn).toEqual({ status: 'idle' });
+        expect(next.entries.filter((entry) => entry.kind === 'error')).toEqual(
+          errors,
+        );
+        expect(next.entries.at(-1)).toMatchObject({
+          kind: 'assistant',
+          text: 'Hello, world. This reply came in chunks.',
+        });
+      },
+      undefined,
+      '--step-ms',
+      '40',
+    ));
 });

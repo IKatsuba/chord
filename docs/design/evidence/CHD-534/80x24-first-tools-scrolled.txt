@@ -1,0 +1,24 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd534-designer-narrow
+ ▀▀     ? for shortcuts · /help
+
+ › fxerror
+
+ ⏺ Running
+   ⎿  {"session_id":null,"state":"completed","output_delta":"Fixture
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+
+ ⏺ Searching
+   ⎿  [grep] no matches for agent-browser
+ ── ↓ 14 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

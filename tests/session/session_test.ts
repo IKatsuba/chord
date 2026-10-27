@@ -6,7 +6,14 @@
 import { execFile } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { chmod, mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -30,9 +37,66 @@ import { FAKE_COMMANDS } from '../fixtures/commands.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
 import { CRASH_WORDS } from '../fixtures/fake_agent/scenarios/agents.ts';
+import { FX_ERROR_NOTICE } from '../fixtures/fake_agent/scenarios/fx.ts';
 import { mentionsIn } from '../../src/ui/prompt/mentions.ts';
 import { run, said } from '../fixtures/recorder.ts';
 import { isAlive, withSession, collect, calls } from './session_fake.ts';
+
+describe('CHD-534 synthetic fx failure', () => {
+  test('an exact Russian request receives completed tools before the notice and terminal error, then another turn succeeds', () => {
+    const request = ' \nПроверь учебные навыки на упоминание agent-browser.\n ';
+
+    return withSession(
+      async (session) => {
+        const gate = join(session.cwd, '.fake-gate');
+
+        await mkdir(gate);
+        await writeFile(join(gate, 'capture-prompt'), '');
+
+        const { updates, result } = await run(session, request);
+        const captured = await readFile(join(gate, 'prompt.json'), 'utf8');
+
+        expect(JSON.parse(captured)).toEqual([{ type: 'text', text: request }]);
+
+        const completed = calls(updates).filter(
+          (call) => call.status === 'completed',
+        );
+
+        expect(completed).toHaveLength(7);
+        expect(new Set(completed.map((call) => call.toolCallId)).size).toBe(7);
+        expect(completed.map((call) => call.kind)).toEqual([
+          'execute',
+          'search',
+          'search',
+          'search',
+          'search',
+          'search',
+          'execute',
+        ]);
+        expect(said(updates)).toEqual([FX_ERROR_NOTICE]);
+        expect(updates.at(-1)).toMatchObject({
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: FX_ERROR_NOTICE },
+        });
+        expect(result).toEqual({
+          status: 'failed',
+          error: { message: 'ResponseLanguageMismatch', code: '-32603' },
+        });
+
+        const next = await run(session, 'text');
+
+        expect(await readFile(join(gate, 'prompt.json'), 'utf8')).toBe(
+          captured,
+        );
+        expect(next.result.status).toBe('completed');
+        expect(said(next.updates).join('')).toContain('Hello, world.');
+      },
+      undefined,
+      '--said',
+      JSON.stringify({ fxerror: request.trim() }),
+    );
+  });
+});
 
 test("each turn's answer carries its tokens, and usage_update the session's cost", () =>
   withSession(async (session) => {
@@ -1664,4 +1728,57 @@ describe('CHD-519 U2 tester: agent mentions on the fake ACP transport', () => {
         ),
       ).toEqual([`Received a link: real.ts, ${uri}\n\n`]);
     }));
+});
+
+describe('CHD-534 tester: failure boundaries', () => {
+  test('a failed turn and its one-shot capture stay isolated from another active session', () =>
+    withSession((failedSession) =>
+      withSession(async (otherSession) => {
+        const gate = join(failedSession.cwd, '.fake-gate');
+
+        await mkdir(gate);
+        await writeFile(join(gate, 'capture-prompt'), '');
+
+        const [failed, healthy] = await Promise.all([
+          run(failedSession, 'fxerror'),
+          run(otherSession, 'text'),
+        ]);
+
+        expect(failed.result.status).toBe('failed');
+        expect(said(failed.updates)).toEqual([FX_ERROR_NOTICE]);
+        expect(healthy.result.status).toBe('completed');
+        expect(said(healthy.updates).join('')).toContain('Hello, world.');
+        expect(calls(healthy.updates)).toEqual([]);
+
+        const captured = await readFile(join(gate, 'prompt.json'), 'utf8');
+
+        expect(JSON.parse(captured)).toEqual([
+          { type: 'text', text: 'fxerror' },
+        ]);
+        await expect(
+          readFile(join(gate, 'capture-prompt')),
+        ).rejects.toMatchObject({
+          code: 'ENOENT',
+        });
+        await expect(
+          readFile(join(otherSession.cwd, '.fake-gate', 'prompt.json')),
+        ).rejects.toMatchObject({ code: 'ENOENT' });
+
+        const [recovered, otherFailed] = await Promise.all([
+          run(failedSession, 'text'),
+          run(otherSession, 'fxerror'),
+        ]);
+
+        expect(recovered.result.status).toBe('completed');
+        expect(said(recovered.updates).join('')).toContain('Hello, world.');
+        expect(otherFailed.result.status).toBe('failed');
+        expect(said(otherFailed.updates)).toEqual([FX_ERROR_NOTICE]);
+        expect(await readFile(join(gate, 'prompt.json'), 'utf8')).toBe(
+          captured,
+        );
+        await expect(
+          readFile(join(otherSession.cwd, '.fake-gate', 'prompt.json')),
+        ).rejects.toMatchObject({ code: 'ENOENT' });
+      }),
+    ));
 });

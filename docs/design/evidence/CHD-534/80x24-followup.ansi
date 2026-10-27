@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m[grep] no matches for agent-browser[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mSearching[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m[grep] no matches for agent-browser[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mSearching[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m[grep] no matches for agent-browser[0m[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mRunning[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m{"session_id":null,"state":"completed","output_delta":"Fixture[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mThe model response used a different language than your request, and fx could[38;2;255;255;255m
+   [39mnot accept it. Retry or name the response language explicitly.[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [38;2;255;107;128mResponseLanguageMismatch[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mtext[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mHello, world. This reply came in chunks.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

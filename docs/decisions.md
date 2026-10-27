@@ -7402,3 +7402,21 @@ historical provenance and approved collector trials remain intact; they prove
 no corrected UI behavior. Existing Resources, selected receipts/reinspection,
 receipt-only Resume and historical unlinked receipt layouts remain. PR #145
 remains open and unmerged under the owner's hold.
+
+## 2026-10-27 — CHD-534: the fx regression uses standard ACP content (owner)
+
+The existing `@agentclientprotocol/sdk` fixture successfully played completed
+tools, an explanatory assistant chunk and a terminal `RequestError`. Its
+`ToolCallUpdate` type does not include fx's top-level `command_result`
+extension: static checking rejected that field with TS2353.
+
+- **Options considered.** Add a local type assertion or intersection for the
+  extension; omit it and keep standard ACP text content; wait for upstream
+  SDK support.
+- **Choice (the owner): standard content only.** Keep safe synthetic clipped
+  JSON as ordinary tool content, seven completed calls, the explanation and
+  the terminal error. No assertion, intersection, parser or SDK patch is
+  needed. The fixture covers client ordering, distinct failures and session
+  reuse, not exact historical extension replay, model language acceptance
+  or the original mismatch's cause. The original private evidence stays
+  unchanged; no production behavior changes.

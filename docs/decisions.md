@@ -7622,3 +7622,20 @@ reader cleanup and reports failures. TeamSelection settings and per-run
 `run_team` overrides remain; saved teams and running work stay unchanged.
 The historical CHD-533 design and collector trials remain as evidence, not
 the current resource contract.
+
+## 2026-10-28 — CHD-535: Tab sends the oldest queued message (owner, Q281–Q283)
+
+Enter queues the draft during a turn; Tab sends the oldest personal plain
+queued row into that turn, leaving the draft untouched. Further presses send
+the next eligible row, skipping agent messages and sent or held rows. Images
+and file links go with the same entry. Accepted, it leaves the queue as its
+transcript row appears; Esc cannot take it back once sent. Refused, it returns
+to its original queue place with a 3-second status note. An agent without
+steering keeps it queued with a 3-second note. If the turn ends meanwhile,
+the message is delivered once, into that turn or next in queue order.
+
+This supersedes the draft-Tab rule in CHD-378's opening and §§1–3, its refusal
+order and lack of a note in §5, its empty-box rule in §6 and draft attachment
+handling in §7. Keep the transcript row, 500 ms sent label, held rows,
+`startedNewTurn` handling, scrolling and colours. The historical design stays
+as written; [CHD-535](design/CHD-535.md) gives the current interaction.

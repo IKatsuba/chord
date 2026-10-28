@@ -20,6 +20,9 @@
   it permits no arbitrary shifts. At zero visible completion rows, suppress
   paint, navigation and acceptance, including pending picks; preserve normal
   draft submission and restore completion when room returns.
+- Tab sends the oldest personal plain queued row into the running turn; leave
+  the draft untouched and skip agent messages and sent/held rows. Esc leaves
+  a row while its send is pending. Refusals restore its original queue place.
 - Transcript blocks use `transcript/gap.ts`'s `useGap`: margins in the
   transcript, spacer rows in background logs. OpenTUI #1739 omits margins
   from a one-row scrollbox's height; `tests/ui/transcript/gap_test.tsx`

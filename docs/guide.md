@@ -820,25 +820,28 @@ adapter does, chord cancels that turn at once, closes it with a dim
 `Interrupted · the agent started this on its own` line, and sends the
 message as the next turn. A monitor's events wait for the turn's end.
 
-Enter during a turn queues your prompt until the turn ends. Tab sends the
-whole message into the running turn where the agent supports it, without
-stopping the agent: text, pasted images and `@path` links. Named image files
-are read first, as with Enter. Earlier Enter-queued prompts stay queued.
-The box clears, and your message appears as a plain `›` row among the
-turn's steps. A held message waits as `› after the running calls: …` or
-`› after your answer: …`, with an open question taking priority over calls.
-Once sent to the agent, it shows `› into the running turn: …` if unanswered
-for 500 ms, or at once if its held row was already showing. Esc takes held
-messages back into the draft; one already sent to the agent stays. A
-refused or late message becomes an ordinary queued prompt, including an
-image Codex refuses on a model without image input. If it started its own
-turn, chord cancels that turn with
+Enter during a turn queues your draft. Tab sends the oldest of your plain
+queued rows into the running turn, with its images and `@path` links; press
+again for the next. The draft stays untouched. Agent `←` messages and rows
+already sent or held are skipped. With no eligible row or no running turn,
+Tab does nothing. Bash mode, permissions, forms, questions and open `/`, `@`
+or `@@` lists keep their own Tab. Rebind it with `chat:steer` in `Chat`;
+`?` lists `tab to send the oldest queued now`.
+
+An accepted row leaves the queue as its `›` row appears in the transcript.
+While held, it reads `› after the running calls: …` or
+`› after your answer: …`, with an open question taking priority. Sent but
+unanswered for 500 ms, it reads `› into the running turn: …`; Esc leaves it,
+even before that label appears. A refusal during the turn returns it to its
+original place, ahead of your later rows and behind any earlier agent message.
+For 3 seconds,
+the status line says `Not taken into the running turn · it stays queued`.
+An agent without steering leaves it queued and shows
+`This agent does not take messages into a running turn · it stays queued`
+for 3 seconds. If the turn ends meanwhile, the message is delivered once:
+accepted into that turn, or in its queue order as the next turn. A late answer
+shows no status note. If the agent started its own turn, chord cancels it with
 `Interrupted · the agent started this on its own; your message goes as the next turn`.
-On an agent without steering, Tab leaves the draft and sends nothing; the
-status line says so for 3 seconds and names the key that queues it. Tab
-does nothing with an empty box, no running turn or in bash mode; an open
-`/`, `@` or `@@` list keeps Tab for completion. Rebind it with `chat:steer` in
-`Chat`.
 
 A child that waits on you is named on the status line, ctrl+x a picks it, and
 its permission box opens there. `x` in the list closes the picked child, a

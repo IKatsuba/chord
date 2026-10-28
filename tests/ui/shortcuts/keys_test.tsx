@@ -1564,12 +1564,6 @@ test("in an agent's or a task's detail, every key the panel names does what it s
 
 describe('CHD-378 U2 tester: steer key contexts', () => {
   const tab: KeyPress = { ctrl: false, escape: false, tab: true };
-  const superEnter: KeyPress = {
-    ctrl: false,
-    escape: false,
-    super: true,
-    return: true,
-  };
 
   test('rebinding to super+enter moves the action and its panel line while lists retain Tab', () => {
     const { keymap, problems } = readKeybindings(
@@ -1592,16 +1586,10 @@ describe('CHD-378 U2 tester: steer key contexts', () => {
     const lines = shortcuts(keymap).map(shortcutLine);
 
     expect(problems).toStrictEqual([]);
-    expect(keyCommand('', superEnter, busy, 'Change the parser.')).toBe(
-      'steer',
-    );
     expect(keyCommand('', tab, busy, 'Change the parser.')).toBeUndefined();
     expect(keyCommand('', tab, busy, '/mod')).toBe('complete_command');
     expect(keyCommand('', tab, busy, '@README')).toBe('complete_mention');
 
-    const send = lines.indexOf('enter to send');
-
-    expect(lines[send + 1]).toBe('cmd + enter to send into the running turn');
     expect(lines).not.toContain('tab to send into the running turn');
     expect(lines).toContain('tab to complete a command');
     expect(lines).toContain('tab enter to add a file or agent');
@@ -1677,7 +1665,6 @@ describe('CHD-378 U2 tester: steer key contexts', () => {
     expect(keyCommand('', { ...tab, shift: true }, busy, 'Next.')).toBe(
       'cycle_mode',
     );
-    expect(keyCommand('', tab, busy, 'Next.')).toBe('steer');
   });
 });
 

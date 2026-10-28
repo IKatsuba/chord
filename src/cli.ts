@@ -11,7 +11,9 @@ export function chordCommand() {
   return new Command()
     .name('chord')
     .version(manifest.version)
-    .description('A full-screen terminal client for ACP coding agents.')
+    .description(
+      'A full-screen terminal client for ACP coding agents. A new unnamed interactive start asks which agent to use for this invocation; explicit commands, headless and resume routes keep their existing behavior.',
+    )
     .type('format', new EnumType(OUTPUT_FORMATS))
     .arguments('[agent:string]')
     .option('-C, --cwd <dir:string>', 'Directory the session works in.', {

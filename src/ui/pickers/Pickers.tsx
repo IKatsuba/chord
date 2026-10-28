@@ -1,4 +1,5 @@
 import process from 'node:process';
+import type { ListedAgent } from '../../agents.ts';
 import { useTerminalDimensions } from '@opentui/react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import wrapAnsi from 'wrap-ansi';
@@ -63,6 +64,7 @@ import {
   withHeldBack,
 } from './mcp.ts';
 import {
+  agentChoices,
   choiceKey,
   initialChoice,
   modelChoices,
@@ -91,6 +93,54 @@ export function borderOf(colour: string | undefined) {
     borderStyle: 'rounded',
     borderColor: colour === undefined ? DIM_BORDER : paletteColour(colour),
   } as const;
+}
+
+/** The catalog before any agent owns the terminal or starts a session. */
+export function AgentPicker({
+  agents,
+  preferred,
+  rows,
+  active,
+  onPick,
+}: {
+  agents: readonly ListedAgent[];
+  preferred: string;
+  rows: number;
+  active: boolean;
+  onPick: (id: string) => void;
+}) {
+  const choices = agentChoices(agents, preferred);
+  const closeHint = useCloseHint('to cancel');
+
+  return (
+    <box paddingX={1} flexShrink={0}>
+      <text {...TEXT}>Select agent</text>
+      {choices.length === 0 ? (
+        <box marginTop={1}>
+          <text {...TEXT} attributes={DIM}>
+            No agents available
+          </text>
+        </box>
+      ) : (
+        <PickerList
+          choices={choices}
+          rows={rows}
+          active={active}
+          onPick={onPick}
+        />
+      )}
+      <box marginTop={1}>
+        <text {...TEXT} attributes={DIM}>
+          {hintOf(
+            ...(choices.length === 0
+              ? []
+              : ['↑↓ or j/k to move', 'Enter or 1–9 to select']),
+            closeHint,
+          )}
+        </text>
+      </box>
+    </box>
+  );
 }
 
 /**
@@ -676,7 +726,7 @@ export function McpPanel({
  * hidden that way, and how many are hidden under it, as Claude Code's picker
  * does.
  */
-function PickerList({
+export function PickerList({
   choices,
   rows,
   active,

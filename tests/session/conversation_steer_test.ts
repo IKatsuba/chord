@@ -2294,3 +2294,182 @@ test("the fake's texttillsteeredheld reads a steer, then holds its turn with not
     });
     expect(saidIn(events)).toStrictEqual(said);
   }));
+
+describe("the person's oldest queued message sent into the running turn (CHD-535)", () => {
+  /** The `queued` events of message `text`, in order. */
+  const rows = (events: readonly ConversationEvent[], text: string) =>
+    events.filter((event) => event.type === 'queued' && event.text === text);
+
+  for (const adapter of ['claude', 'codex']) {
+    test(`on ${adapter}'s adapter the oldest goes in, the next only on the next press, each once`, () =>
+      onFake(['--steering', adapter], async (conversation, events) => {
+        conversation.send('slow');
+        await until(() => saidIn(events).startsWith('Working'));
+        conversation.send('Then the docs.');
+        conversation.send('And the tests.');
+
+        expect(conversation.steerQueued()).toStrictEqual('sent');
+        await until(() => promptsIn(events).length === 2);
+
+        expect(promptsIn(events)).toStrictEqual([
+          ['slow', undefined],
+          ['Then the docs.', firstTurn(events)],
+        ]);
+        expect(conversation.steerQueued()).toStrictEqual('sent');
+        await until(() => promptsIn(events).length === 3);
+
+        expect(promptsIn(events).at(-1)).toStrictEqual([
+          'And the tests.',
+          firstTurn(events),
+        ]);
+        expect(conversation.steerQueued()).toStrictEqual('none');
+        conversation.interrupt();
+        await ended(events, 1);
+        expect(promptsIn(events)).toHaveLength(3);
+      }));
+  }
+
+  test('nothing goes with no turn running, an empty queue, or only messages not the person’s', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      expect(conversation.steerQueued()).toStrictEqual('none');
+      conversation.send('slow');
+      await until(() => saidIn(events).startsWith('Working'));
+
+      expect(conversation.steerQueued()).toStrictEqual('none');
+      conversation.deliver(MAIN, 'From main.');
+
+      expect(conversation.steerQueued()).toStrictEqual('none');
+      expect(promptsIn(events)).toStrictEqual([['slow', undefined]]);
+      conversation.interrupt();
+      await ended(events, 1);
+    }));
+
+  test('on an agent that takes no steering it stays queued, nothing sent', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('slow');
+      await until(() => saidIn(events).startsWith('Working'));
+      conversation.send('Then the docs.');
+
+      expect(conversation.steerQueued()).toStrictEqual('unsteerable');
+      expect(rows(events, 'Then the docs.')).toHaveLength(1);
+      expect(promptsIn(events)).toStrictEqual([['slow', undefined]]);
+      conversation.interrupt();
+      await ended(events, 1);
+    }));
+
+  test('refused while the turn runs, it and the one sent behind it go back to the top in their order, marked, and go first, once each', async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers, prompts } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+    conversation.send('First.');
+    conversation.send('Second.');
+    conversation.send('Third.');
+
+    expect(conversation.steerQueued()).toStrictEqual('sent');
+    expect(conversation.steerQueued()).toStrictEqual('sent');
+    await until(() => steers.length === 1);
+    steers[0]!.answer('refused');
+    await until(() => rows(events, 'Second.').length === 2);
+
+    // The turn refused one: the second is not sent into it either.
+    expect(steers).toHaveLength(1);
+    expect(rows(events, 'First.').at(-1)).toMatchObject({ refused: true });
+    expect(rows(events, 'Second.').at(-1)).toMatchObject({ refused: true });
+    stub.end();
+    await until(() => prompts.length === 4);
+
+    expect(prompts).toStrictEqual(['go', 'First.', 'Second.', 'Third.']);
+    expect(promptsIn(events).map(([text, into]) => [text, into])).toStrictEqual(
+      [
+        ['go', undefined],
+        ['First.', undefined],
+        ['Second.', undefined],
+        ['Third.', undefined],
+      ],
+    );
+    await conversation.close();
+  });
+
+  for (const outcome of ['injected', 'refused'] as const) {
+    test(`out when the turn ends, the end does not send it; ${outcome} late, it is ${outcome === 'injected' ? 'drawn in that turn' : 'the next turn, ahead of the rest'}, once`, async () => {
+      const stub = await steeringStub();
+      const { conversation, events, steers, prompts } = stub;
+
+      conversation.send('go');
+      stub.go();
+      await stub.settled();
+      conversation.send('Out.');
+      conversation.send('Behind.');
+      conversation.steerQueued();
+      await until(() => steers.length === 1);
+      stub.end();
+      await ended(events, 1);
+      await stub.settled();
+
+      expect(prompts).toStrictEqual(['go']);
+      steers[0]!.answer(outcome);
+      await until(() => prompts.length === (outcome === 'injected' ? 2 : 3));
+
+      expect(prompts).toStrictEqual(
+        outcome === 'injected' ? ['go', 'Behind.'] : ['go', 'Out.', 'Behind.'],
+      );
+      expect(promptsIn(events)).toStrictEqual(
+        outcome === 'injected'
+          ? [
+              ['go', undefined],
+              ['Out.', firstTurn(events)],
+              ['Behind.', undefined],
+            ]
+          : [
+              ['go', undefined],
+              ['Out.', undefined],
+              ['Behind.', undefined],
+            ],
+      );
+      // A late refusal is the next turn, which says so; no note.
+      expect(
+        rows(events, 'Out.').some((event) => 'refused' in event),
+      ).toBeFalse();
+      await conversation.close();
+    });
+  }
+
+  test("its image and file link go with it into the turn on Codex's adapter", () =>
+    onFake(
+      ['--steering', 'codex'],
+      async (conversation, events) => {
+        conversation.send('slow');
+        await until(() => saidIn(events).startsWith('Working'));
+        conversation.send(
+          'See @a.ts and [Image #1]',
+          undefined,
+          [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+          ['a.ts'],
+        );
+
+        expect(conversation.steerQueued()).toStrictEqual('sent');
+        await until(() =>
+          saidIn(events).includes('Read the message from nobody.'),
+        );
+
+        expect(saidIn(events)).toContain(
+          'Received an image: image/png, 5 bytes',
+        );
+        expect(saidIn(events)).toContain('Received a link: a.ts, file://');
+        expect(promptsIn(events).at(-1)).toStrictEqual([
+          'See @a.ts and [Image #1]',
+          firstTurn(events),
+        ]);
+        conversation.interrupt();
+        await ended(events, 1);
+      },
+      (session) => {
+        writeFileSync(join(session.cwd, 'a.ts'), '');
+
+        return session;
+      },
+    ));
+});

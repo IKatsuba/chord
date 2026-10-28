@@ -94,6 +94,11 @@ const STATES: Record<string, AppState> = {
   ready: after({ type: 'connected', sessionId: 'session-1' }),
   failed: after({ type: 'connect_failed', message: 'no' }),
   busy: after({ type: 'connected', sessionId: 'session-1' }, prompt),
+  'busy, queued': after({ type: 'connected', sessionId: 'session-1' }, prompt, {
+    type: 'queued',
+    turnId: 'waiting',
+    text: 'Then the docs',
+  }),
   asked: after({ type: 'connected', sessionId: 'session-1' }, prompt, {
     type: 'permission_requested',
     turnId: 't1',
@@ -689,25 +694,71 @@ test('the scroll keys move the open panel while it overflows, and the transcript
   ).toStrictEqual('scroll_page_down');
 });
 
-test('tab sends the draft into a running turn, and only there (CHD-378)', () => {
+test("tab sends the oldest queued message into a running turn, whatever the draft, and only with one of the person's waiting (CHD-535)", () => {
   const tab = { ctrl: false, escape: false, tab: true };
   const { ready, busy, asked } = STATES;
+  const queued = reduceApp(busy!, {
+    type: 'queued',
+    turnId: 'waiting',
+    text: 'Then the docs',
+  });
 
-  expect(keyCommand('', tab, busy!, 'Then the docs')).toStrictEqual('steer');
-  // No turn, an empty box or a shell command: nothing, as before.
-  expect(keyCommand('', tab, ready!, 'Then the docs')).toStrictEqual(undefined);
-  expect(keyCommand('', tab, busy!, '  ')).toStrictEqual(undefined);
+  expect(keyCommand('', tab, queued, '')).toStrictEqual('steer');
+  expect(keyCommand('', tab, queued, 'A draft')).toStrictEqual('steer');
+  // Nothing of the person's waiting, no turn, or a shell command: nothing.
+  expect(keyCommand('', tab, busy!, 'Then the docs')).toStrictEqual(undefined);
   expect(
     keyCommand(
       '',
       tab,
-      reduceApp(busy!, { type: 'bash_mode', on: true }),
+      reduceApp(busy!, {
+        type: 'queued',
+        turnId: 'told',
+        text: 'From main',
+        from: { name: 'main', reachable: true },
+      }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(queued, {
+        type: 'queued',
+        turnId: 'waiting',
+        text: 'Then the docs',
+        steering: true,
+      }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(ready!, { type: 'queued', turnId: 'q', text: 'Later' }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(queued, { type: 'bash_mode', on: true }),
       'ls',
     ),
   ).toStrictEqual(undefined);
   // The lists keep their Tab, and a permission has the keys.
-  expect(keyCommand('', tab, busy!, '/')).toStrictEqual('complete_command');
-  expect(keyCommand('', tab, asked!, 'Then the docs')).toStrictEqual(undefined);
+  expect(keyCommand('', tab, queued, '/')).toStrictEqual('complete_command');
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(asked!, { type: 'queued', turnId: 'q', text: 'Later' }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
 });
 
 test('? on an empty prompt opens the panel, and text anywhere else', () => {
@@ -1564,12 +1615,6 @@ test("in an agent's or a task's detail, every key the panel names does what it s
 
 describe('CHD-378 U2 tester: steer key contexts', () => {
   const tab: KeyPress = { ctrl: false, escape: false, tab: true };
-  const superEnter: KeyPress = {
-    ctrl: false,
-    escape: false,
-    super: true,
-    return: true,
-  };
 
   test('rebinding to super+enter moves the action and its panel line while lists retain Tab', () => {
     const { keymap, problems } = readKeybindings(
@@ -1592,16 +1637,10 @@ describe('CHD-378 U2 tester: steer key contexts', () => {
     const lines = shortcuts(keymap).map(shortcutLine);
 
     expect(problems).toStrictEqual([]);
-    expect(keyCommand('', superEnter, busy, 'Change the parser.')).toBe(
-      'steer',
-    );
     expect(keyCommand('', tab, busy, 'Change the parser.')).toBeUndefined();
     expect(keyCommand('', tab, busy, '/mod')).toBe('complete_command');
     expect(keyCommand('', tab, busy, '@README')).toBe('complete_mention');
 
-    const send = lines.indexOf('enter to send');
-
-    expect(lines[send + 1]).toBe('cmd + enter to send into the running turn');
     expect(lines).not.toContain('tab to send into the running turn');
     expect(lines).toContain('tab to complete a command');
     expect(lines).toContain('tab enter to add a file or agent');
@@ -1677,7 +1716,6 @@ describe('CHD-378 U2 tester: steer key contexts', () => {
     expect(keyCommand('', { ...tab, shift: true }, busy, 'Next.')).toBe(
       'cycle_mode',
     );
-    expect(keyCommand('', tab, busy, 'Next.')).toBe('steer');
   });
 });
 
@@ -1939,4 +1977,65 @@ test('CHD-524 focused Note word and visual-line presses share the existing panel
   } finally {
     await view.unmount();
   }
+});
+
+describe('CHD-535 U2 tester: rebound queued action', () => {
+  test('the bound key and panel act on an eligible row and stop when it is taken', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          {
+            context: 'Chat',
+            bindings: { tab: null, 'super+enter': 'chat:steer' },
+          },
+        ],
+      }),
+    );
+    const enter: KeyPress = {
+      ctrl: false,
+      escape: false,
+      return: true,
+      super: true,
+    };
+    const queued = {
+      ...reduceApp(STATES.busy!, {
+        type: 'queued',
+        turnId: 'q',
+        text: 'queued',
+      }),
+      keys: keymap,
+    };
+    const lines = shortcuts(keymap).map(shortcutLine);
+
+    expect(problems).toEqual([]);
+    expect(keyCommand('', enter, queued, '')).toBe('steer');
+    expect(keyCommand('', enter, queued, 'draft stays')).toBe('steer');
+    expect(lines[lines.indexOf('enter to send') + 1]).toBe(
+      'cmd + enter to send the oldest queued now',
+    );
+    expect(
+      keyCommand('', enter, { ...STATES.busy!, keys: keymap }, 'draft stays'),
+    ).toBeUndefined();
+    expect(
+      keyCommand(
+        '',
+        enter,
+        reduceApp(queued, {
+          type: 'queued',
+          turnId: 'q',
+          text: 'queued',
+          taken: true,
+        }),
+        'draft stays',
+      ),
+    ).toBeUndefined();
+    expect(
+      keyCommand(
+        '',
+        { ctrl: false, escape: false, tab: true },
+        queued,
+        'draft stays',
+      ),
+    ).toBeUndefined();
+  });
 });

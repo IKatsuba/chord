@@ -1,7 +1,8 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, jest, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { createElement } from 'react';
+import { act, createElement, useState } from 'react';
 import {
+  type AppAction,
   COPIED_NOTE_MS,
   initialAppState,
   reduceApp,
@@ -58,6 +59,70 @@ describe('CHD-394 U3 tester: note timer lapse', () => {
       expect(selectionEvents).toStrictEqual([]);
       expect(selection.copied?.result.kind).toBe('failed');
     } finally {
+      await screen.unmount();
+    }
+  });
+});
+
+describe('CHD-535 U2 tester: steering note lifetime', () => {
+  test('the hook restarts three seconds from the latest note and ignores a stale expiry', async () => {
+    let current = initialAppState;
+    let change: (action: WindowedAction) => void = () => {};
+
+    const events: WindowedAction[] = [];
+    const Probe = () => {
+      const [state, setState] = useState(initialAppState);
+
+      current = state;
+      change = (action) =>
+        setState((before) => reduceApp(before, action as AppAction));
+
+      useTimers(state, (action) => {
+        events.push(action);
+        change(action);
+      });
+
+      return createElement('text', null, 'steering note');
+    };
+
+    const screen = await draw(createElement(Probe), { columns: 80, rows: 24 });
+
+    const environment = globalThis as {
+      IS_REACT_ACT_ENVIRONMENT?: boolean | undefined;
+    };
+    const previous = environment.IS_REACT_ACT_ENVIRONMENT;
+
+    environment.IS_REACT_ACT_ENVIRONMENT = true;
+
+    jest.useFakeTimers({ now: 0 });
+
+    try {
+      act(() => change({ type: 'steer_refused', refused: false }));
+
+      const first = current.steerRefused;
+
+      assert(first !== undefined);
+      act(() => jest.advanceTimersByTime(2999));
+      expect(events).toEqual([]);
+      act(() => change({ type: 'steer_refused', refused: true }));
+
+      const latest = current.steerRefused;
+
+      assert(latest !== undefined);
+      expect(latest.id).not.toBe(first.id);
+      act(() => change({ type: 'steer_note_gone', id: first.id }));
+      expect(current.steerRefused).toEqual(latest);
+      act(() => jest.advanceTimersByTime(2999));
+      expect(events).toEqual([]);
+      expect(current.steerRefused).toEqual(latest);
+      act(() => jest.advanceTimersByTime(1));
+      expect(events).toEqual([{ type: 'steer_note_gone', id: latest.id }]);
+      expect(current.steerRefused).toBeUndefined();
+    } finally {
+      jest.useRealTimers();
+
+      environment.IS_REACT_ACT_ENVIRONMENT = previous;
+
       await screen.unmount();
     }
   });

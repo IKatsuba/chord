@@ -738,7 +738,7 @@ test('a message steered into a turn is recorded where it went, and a reopened se
     ]);
   }));
 
-test("the person's prompt steered into a turn is recorded where it went, as theirs, and a reopened session draws it there (CHD-378)", () =>
+test("the person's queued message steered into a turn is recorded where it went, as theirs, and a reopened session draws it there (CHD-378)", () =>
   withPlace(async (place) => {
     const steering = fakeAgentCommand(undefined, '--steering', 'claude');
     const events: ConversationEvent[] = [];
@@ -759,7 +759,8 @@ test("the person's prompt steered into a turn is recorded where it went, as thei
       await until(() =>
         events.some((event) => event.type === 'permission_requested'),
       );
-      conversation.steerIn('Then the docs.');
+      conversation.send('Then the docs.');
+      conversation.steerQueued();
 
       const asked = events.find(
         (event) => event.type === 'permission_requested',
@@ -825,113 +826,6 @@ test("the person's prompt steered into a turn is recorded where it went, as thei
       'assistant: Read the message from nobody.\n\nPermission: allow.',
     ]);
   }));
-
-describe('CHD-378 U4 tester: attachment record replay', () => {
-  for (const late of [false, true]) {
-    test(`${late ? 'a refused' : 'an injected'} personal steer records its image count and link and replays once`, () =>
-      withPlace(async (place) => {
-        await writeFile(join(place.dir, 'a.ts'), 'export {};');
-
-        const events: ConversationEvent[] = [];
-        const failures: string[] = [];
-        const command = fakeAgentCommand(
-          undefined,
-          '--steering',
-          'claude',
-          '--step-ms',
-          '30',
-          ...(late ? ['--steer-late'] : []),
-        );
-        const conversation = new Conversation(
-          () =>
-            openSession({
-              agent: 'fake',
-              cwd: place.dir,
-              agentCommand: command,
-            }),
-          (event) => events.push(event),
-          Date.now,
-          {},
-          new FileRecording(place.stateDir, (failure) =>
-            failures.push(failure),
-          ),
-        );
-        const text = 'Look at [Image #1] and @a.ts';
-
-        try {
-          conversation.start();
-          await until(() => events.some((event) => event.type === 'connected'));
-          conversation.send(late ? 'text' : 'texttillsteered');
-          await until(() =>
-            events.some(
-              (event) =>
-                event.type === 'update' &&
-                event.update.sessionUpdate === 'agent_message_chunk',
-            ),
-          );
-          conversation.steerIn(
-            text,
-            undefined,
-            [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
-            ['a.ts'],
-          );
-          await until(
-            () =>
-              events.filter((event) => event.type === 'result').length ===
-              (late ? 2 : 1),
-          );
-        } finally {
-          await conversation.close();
-        }
-
-        const [record] = await readRecords(place.stateDir);
-
-        assert(record !== undefined);
-
-        const past = await readPast(record.path);
-        const prompts = past.filter(
-          (entry) => entry.type === 'prompt' && entry.prompt === text,
-        );
-
-        expect(failures).toStrictEqual([]);
-        expect(prompts).toHaveLength(1);
-
-        const [sent] = prompts;
-
-        assert(sent?.type === 'prompt');
-        expect(sent.images).toBe(1);
-        expect(sent.links).toMatchObject([
-          { name: 'a.ts', uri: pathToFileURL(join(place.dir, 'a.ts')).href },
-        ]);
-        expect(sent.into === undefined).toBe(late);
-        expect(sent.from).toBeUndefined();
-
-        const session = await open(place, place.resuming, {
-          sessionId: record.sessionId,
-          cwd: place.dir,
-          record: record.path,
-        });
-
-        try {
-          const live = drawn(
-            events
-              .filter((event): event is TranscriptAction =>
-                ['prompt', 'update', 'result'].includes(event.type),
-              )
-              .reduce(reduceTranscript, emptyTranscript).entries,
-          );
-          const replay = replayed(session.history());
-
-          expect(replay).toStrictEqual(live);
-          expect(
-            replay.filter((line) => line === 'user: ' + text),
-          ).toHaveLength(1);
-        } finally {
-          await session.close();
-        }
-      }));
-  }
-});
 
 test('--resume by an id chord has a record of opens it in its own directory', () =>
   withPlace(async (place) => {
@@ -2223,6 +2117,154 @@ describe('CHD-472 Q133 tester: the resumed fake counter resets and grows again',
           tokens: 4000,
           amount: expect.closeTo(0.01407, 9),
         });
+      }));
+  }
+});
+
+describe('CHD-535 U2 tester: queued attachment records', () => {
+  for (const [adapter, late] of [
+    ['claude', false],
+    ['claude', true],
+    ['codex', true],
+  ] as const) {
+    test(`${adapter} ${late ? 'late fallback' : 'injection'} records and replays the queued image and link once`, () =>
+      withPlace(async (place) => {
+        await writeFile(join(place.dir, 'a.ts'), '');
+
+        const events: ConversationEvent[] = [];
+        const failures: string[] = [];
+        const text = 'Queued [Image #1] @a.ts';
+        const conversation = new Conversation(
+          () =>
+            openSession({
+              agent: 'fake',
+              cwd: place.dir,
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--steering',
+                adapter,
+                ...(late ? ['--steer-late'] : []),
+              ),
+            }),
+          (event) => events.push(event),
+          Date.now,
+          {},
+          new FileRecording(place.stateDir, (message) =>
+            failures.push(message),
+          ),
+        );
+
+        try {
+          conversation.start();
+          await until(() => events.some((event) => event.type === 'connected'));
+          conversation.send(late ? 'texttillsteered' : 'texttillsteeredheld');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'update' &&
+                event.update.sessionUpdate === 'agent_message_chunk',
+            ),
+          );
+          conversation.send(
+            text,
+            undefined,
+            [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+            ['a.ts'],
+          );
+          expect(conversation.steerQueued()).toBe('sent');
+
+          if (!late) {
+            await until(() =>
+              events
+                .flatMap((event) =>
+                  event.type === 'update' &&
+                  event.update.sessionUpdate === 'agent_message_chunk' &&
+                  event.update.content.type === 'text'
+                    ? [event.update.content.text]
+                    : [],
+                )
+                .join('')
+                .includes('Received a link: a.ts'),
+            );
+            conversation.interrupt();
+          }
+
+          await until(() => {
+            const delivered = events.flatMap((event) =>
+              event.type === 'prompt' && event.text === text ? [event] : [],
+            )[0];
+
+            return (
+              delivered !== undefined &&
+              events.some(
+                (event) =>
+                  event.type === 'result' &&
+                  event.turnId === (delivered.into ?? delivered.turnId),
+              )
+            );
+          });
+        } finally {
+          await conversation.close();
+        }
+
+        expect(failures).toEqual([]);
+
+        const [record] = await readRecords(place.stateDir);
+
+        assert(record !== undefined);
+
+        const past = await readPast(record.path);
+        const stored = past.flatMap((entry) =>
+          entry.type === 'prompt' && entry.prompt === text ? [entry] : [],
+        );
+
+        expect(stored).toHaveLength(1);
+        expect(stored[0]).toMatchObject({
+          images: 1,
+          links: [
+            {
+              type: 'resource_link',
+              name: 'a.ts',
+              uri: pathToFileURL(join(place.dir, 'a.ts')).href,
+            },
+          ],
+        });
+        expect(stored[0]).not.toHaveProperty('from');
+        expect(stored[0]?.into !== undefined).toBe(!late);
+
+        const live = drawn(
+          events
+            .filter((event): event is TranscriptAction =>
+              ['prompt', 'update', 'result', 'self_started'].includes(
+                event.type,
+              ),
+            )
+            .reduce(reduceTranscript, emptyTranscript).entries,
+        );
+        const connected = events.find((event) => event.type === 'connected');
+
+        assert(connected?.type === 'connected');
+
+        const session = await open(place, place.resuming, {
+          sessionId: connected.sessionId,
+          cwd: place.dir,
+          record: record.path,
+        });
+
+        try {
+          const replay = replayed(session.history());
+
+          expect(replay).toEqual(live);
+          expect(replay.filter((row) => row === `user: ${text}`)).toHaveLength(
+            1,
+          );
+          expect(replay.join('\n')).toContain(
+            'Received an image: image/png, 5 bytes',
+          );
+          expect(replay.join('\n')).toContain('Received a link: a.ts');
+        } finally {
+          await session.close();
+        }
       }));
   }
 });

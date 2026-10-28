@@ -40,6 +40,11 @@ export interface Queued {
    * leaves it, as it is no longer in the window's hands (CHD-378).
    */
   readonly steering?: true;
+  /**
+   * The person's message Tab sent into the running turn, not yet answered:
+   * Esc leaves it, though its row reads as queued for a while (CHD-535).
+   */
+  readonly taken?: true;
 }
 
 export type QueueRow =
@@ -83,7 +88,26 @@ export function restoredDraft(queue: readonly Queued[], draft: string): string {
 /** The person's own prompts among `queue`, which Esc takes back. */
 export function mine(queue: readonly Queued[]): readonly Queued[] {
   return queue.filter(
-    (queued) => queued.from === undefined && queued.steering === undefined,
+    (queued) =>
+      queued.from === undefined &&
+      queued.steering === undefined &&
+      queued.taken === undefined,
+  );
+}
+
+/**
+ * Whether the person has a message waiting in the queue that Tab can send
+ * into the running turn: theirs, not held for an answer or calls, not on its
+ * way already (CHD-535).
+ */
+export function sendable(queue: readonly Queued[]): boolean {
+  return queue.some(
+    (queued) =>
+      queued.from === undefined &&
+      !queued.afterAnswer &&
+      !queued.afterCalls &&
+      !queued.steering &&
+      !queued.taken,
   );
 }
 

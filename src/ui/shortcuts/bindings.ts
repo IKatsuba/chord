@@ -58,8 +58,8 @@ export const ACTIONS = {
     context: 'Chat',
     keys: ['shift+enter', 'alt+enter', 'ctrl+j', 'ctrl+enter'],
   },
-  // The draft into the running turn, not the queue (CHD-378); a terminal
-  // that reports it can bind super+enter.
+  // The oldest queued message into the running turn, the draft left as it
+  // is (CHD-535).
   'chat:steer': { context: 'Chat', keys: ['tab'] },
   'chat:cancel': { context: 'Chat', keys: ['escape'] },
   'chat:cycleMode': { context: 'Chat', keys: ['shift+tab'] },

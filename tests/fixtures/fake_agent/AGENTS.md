@@ -445,9 +445,12 @@
   lines; with none, Claude's `promptRequired`
   where the request asks for it, else, and always for Codex, a turn of the
   agent's own, `startedNewTurn`, answered before that turn says anything,
-  as Codex's adapter answers once it has started. Without the flag it advertises nothing and
-  refuses the method. `--steer-late` (`CHORD_FAKE_STEER_LATE=1`) lands a
-  steer only once the turn playing has answered, as one that meets a turn's
+  as Codex's adapter answers once it has started. Without the flag it
+  advertises nothing and refuses the method. With `--steering`, `--steer-refuse`
+  (`CHORD_FAKE_STEER_REFUSE=1`) answers every steer with `promptRequired`,
+  whether a turn is running or not. `--steer-late`
+  (`CHORD_FAKE_STEER_LATE=1`) lands a steer only once the turn playing has
+  answered, as one that meets a turn's
   end does, Codex's answering a while after; as Codex's, a prompt that comes
   while a turn plays opens with `Started alongside a turn still playing.`.
   `--adapter claude` (`CHORD_FAKE_ADAPTER=claude`) names it in `initialize`

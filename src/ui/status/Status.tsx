@@ -98,15 +98,15 @@ export function Working({
 }
 
 /**
- * What Tab says on an agent that takes no steering, and the way out by the
- * key bound to send, if any (CHD-378); 72 cells with Enter, whole at 80
- * columns.
+ * What Tab says on an agent that takes no steering (CHD-535): 72 cells,
+ * whole at 80 columns.
  */
-export function unsteeredNote(submit: string | undefined): string {
-  const note = 'This agent does not take messages into a running turn';
+export const UNSTEERED =
+  'This agent does not take messages into a running turn · it stays queued';
 
-  return submit === undefined ? note : `${note} · ${submit} queues it`;
-}
+/** What a queued message the running turn refused says (CHD-535). */
+export const STEER_REFUSED =
+  'Not taken into the running turn · it stays queued';
 
 /**
  * What a code block put into the prompt says where a draft is in the box,
@@ -177,7 +177,9 @@ export function StatusLine({
   const unsteered =
     state.steerRefused === undefined
       ? undefined
-      : unsteeredNote(hintKey(state.keys, 'chat:submit'));
+      : state.steerRefused.refused
+        ? STEER_REFUSED
+        : UNSTEERED;
   // A picked code block's line of keys comes before every note but an
   // armed quit's: they are what the keys do now (CHD-394 §3).
   const notice =

@@ -186,7 +186,9 @@
  * none, so a test sees what chord holds back. Without it, the method is not
  * found. With
  * `--steer-late`, or `CHORD_FAKE_STEER_LATE=1`, a steer lands only once the
- * turn playing has ended, as one that meets a turn's end does. As Codex's, a
+ * turn playing has ended, as one that meets a turn's end does. With
+ * `--steer-refuse`, or `CHORD_FAKE_STEER_REFUSE=1`, every steer is answered
+ * `promptRequired`, a turn playing or not. As Codex's, a
  * prompt that comes while a turn plays opens with `Started alongside a turn
  * still playing.`, which chord must never cause.
  * `permissionsteer` asks for a write as `permission` does, then takes its
@@ -278,6 +280,7 @@ import {
   START_FAILS,
   TRACEBACK_ERROR,
   STEER_LATE,
+  STEER_REFUSE,
   HOLD_REPLY,
   STEERING,
   ADAPTER,
@@ -1443,6 +1446,10 @@ const connection = acp
       }
 
       steers.emit(params.sessionId);
+
+      if (STEER_REFUSE) {
+        return { outcome: 'promptRequired', reason: 'noRunningTurn' };
+      }
 
       const late = STEER_LATE ? prompted.get(params.sessionId) : undefined;
 

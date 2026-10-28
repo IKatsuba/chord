@@ -328,6 +328,14 @@ export const STEER_LATE =
   ARGS.includes('--steer-late') || process.env.CHORD_FAKE_STEER_LATE === '1';
 
 /**
+ * Every steer is refused, the turn playing or not, as an agent that will
+ * not take a message into the turn it runs does (CHD-535).
+ */
+export const STEER_REFUSE =
+  ARGS.includes('--steer-refuse') ||
+  process.env.CHORD_FAKE_STEER_REFUSE === '1';
+
+/**
  * A turn on a message ends only once `GATE_RELEASE` is in its session's
  * gate, or 10 s on, so a test says when it is answered: a reply that comes
  * after a moment the test chose, rather than a while after (CHD-501).

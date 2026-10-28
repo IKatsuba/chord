@@ -236,11 +236,13 @@ export function promptsIn(
 /**
  * A session that steers, whose first turn runs until `end`, with every
  * steer's answer and its prompt's going out in the test's hands, and its
- * permissions and forms asked from the test.
+ * permissions and forms asked from the test. With `everyTurn`, each turn
+ * runs until its own `end`, its prompt out at once.
  */
-export async function steeringStub() {
+export async function steeringStub(everyTurn = false) {
   const { session } = heldSession();
   const { promise: ended, resolve: end } = Promise.withResolvers<TurnResult>();
+  const results: ((result: TurnResult) => void)[] = [end];
   const { promise: went, resolve: go } =
     Promise.withResolvers<readonly never[]>();
   const permissions: ((request: PendingPermission) => void)[] = [];
@@ -284,13 +286,24 @@ export async function steeringStub() {
     prompt: (text: string) => {
       prompts.push(text);
 
+      const later = Promise.withResolvers<TurnResult>();
+
+      if (prompts.length > 1 && everyTurn) {
+        results.push(later.resolve);
+      }
+
       return {
         id: text,
         sent: prompts.length === 1 ? went : Promise.resolve([]),
         result:
           prompts.length === 1
             ? ended
-            : Promise.resolve({ status: 'completed', stopReason: 'end_turn' }),
+            : everyTurn
+              ? later.promise
+              : Promise.resolve({
+                  status: 'completed',
+                  stopReason: 'end_turn',
+                }),
         cancel: () => Promise.resolve(),
       };
     },
@@ -346,7 +359,8 @@ export async function steeringStub() {
     steers,
     prompts,
     go: () => go([]),
-    end: () => end({ status: 'completed', stopReason: 'end_turn' }),
+    end: () =>
+      results.shift()?.({ status: 'completed', stopReason: 'end_turn' }),
     ask,
     form,
     say,

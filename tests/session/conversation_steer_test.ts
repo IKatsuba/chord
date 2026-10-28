@@ -7,12 +7,13 @@ import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setImmediate as settleQueued } from 'node:timers/promises';
 import { type SessionUpdate } from '@agentclientprotocol/sdk';
 import {
   Conversation,
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
-import { type Session } from '../../src/session/session.ts';
+import { type Session, type SteerOutcome } from '../../src/session/session.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
   emptyTranscript,
@@ -1574,67 +1575,6 @@ describe('a request with no turn running (CHD-158)', () => {
 });
 
 describe("the person's prompt steered into the running turn (CHD-378)", () => {
-  for (const adapter of ['claude', 'codex']) {
-    test(`on ${adapter}'s adapter it goes into the turn at once, drawn there as the person's and never queued`, () =>
-      onFake(['--steering', adapter], async (conversation, events) => {
-        conversation.send('slow');
-        await until(() => saidIn(events).startsWith('Working'));
-
-        expect(conversation.steerIn('Then the docs.')).toStrictEqual('sent');
-        await until(() =>
-          saidIn(events).includes('Read the message from nobody.'),
-        );
-
-        const into = events.findLast((event) => event.type === 'prompt');
-
-        assert(into?.type === 'prompt');
-        expect(promptsIn(events)).toStrictEqual([
-          ['slow', undefined],
-          ['Then the docs.', firstTurn(events)],
-        ]);
-        expect(into.from).toBeUndefined();
-        expect(!events.some((event) => event.type === 'queued')).toBeTruthy();
-        conversation.interrupt();
-        await until(() => events.some((event) => event.type === 'result'));
-      }));
-  }
-
-  test('on an agent that takes no steering nothing is sent or queued, and the shell output held for the next prompt stays', async () => {
-    const sent: string[] = [];
-
-    await onFake(
-      [],
-      async (conversation, events) => {
-        conversation.send('slow');
-        await until(() => saidIn(events).startsWith('Working'));
-        conversation.aside(MAIN, 'parser exited.');
-
-        expect(conversation.steerIn('Then the docs.')).toStrictEqual(
-          'unsteerable',
-        );
-        expect(promptsIn(events)).toStrictEqual([['slow', undefined]]);
-        expect(!events.some((event) => event.type === 'queued')).toBeTruthy();
-        conversation.interrupt();
-        await until(() => events.some((event) => event.type === 'result'));
-        conversation.send('text');
-        await until(() => sent.length === 2);
-
-        expect(sent[1]).toContain('parser exited.');
-      },
-      (session) => {
-        const prompt = session.prompt.bind(session);
-
-        return Object.assign(session, {
-          prompt: ((text, ...rest) => {
-            sent.push(text);
-
-            return prompt(text, ...rest);
-          }) as Session['prompt'],
-        });
-      },
-    );
-  });
-
   test("one that meets the turn's end on Claude's adapter is refused, and goes as the next turn", () =>
     onFake(
       ['--steering', 'claude', '--steer-late'],
@@ -1642,7 +1582,9 @@ describe("the person's prompt steered into the running turn (CHD-378)", () => {
         conversation.send('text');
         await went();
 
-        expect(conversation.steerIn('Stop.')).toStrictEqual('sent');
+        conversation.send('Stop.');
+
+        expect(conversation.steerQueued()).toStrictEqual('sent');
         await ended(events, 2);
 
         expect(promptsIn(events)).toStrictEqual([
@@ -1661,7 +1603,9 @@ describe("the person's prompt steered into the running turn (CHD-378)", () => {
         conversation.send('text');
         await went();
 
-        expect(conversation.steerIn('slow')).toStrictEqual('sent');
+        conversation.send('slow');
+
+        expect(conversation.steerQueued()).toStrictEqual('sent');
         await until(
           () =>
             promptsIn(events).length === 2 &&
@@ -1706,7 +1650,10 @@ describe("the person's prompt steered into the running turn (CHD-378)", () => {
     await stub.settled();
     stub.ask('first');
 
-    expect(conversation.steerIn('Run the tests.')).toStrictEqual('queued');
+    conversation.send('Run the tests.');
+
+    expect(conversation.steerQueued()).toStrictEqual('sent');
+    await stub.settled();
     expect(events.at(-1)).toMatchObject({
       type: 'queued',
       text: 'Run the tests.',
@@ -1726,58 +1673,6 @@ describe("the person's prompt steered into the running turn (CHD-378)", () => {
     stub.end();
     await conversation.close();
   });
-
-  test('several go one at a time in the order pressed, each with what is held ahead of it, and the prompts queued with Enter stay queued', async () => {
-    const stub = await steeringStub();
-    const { conversation, events, steers, prompts } = stub;
-
-    conversation.send('go');
-    stub.go();
-    await stub.settled();
-
-    expect(conversation.send('Queued with Enter.')).toStrictEqual(true);
-    conversation.aside(MAIN, 'parser exited.');
-    conversation.steerIn('Run the tests.');
-    conversation.steerIn('Then the docs.');
-    await until(() => steers.length === 1);
-    await stub.settled();
-
-    // The second waits for the first's answer.
-    expect(steers).toHaveLength(1);
-    expect(steers[0]!.text).toContain('parser exited.');
-    expect(steers[0]!.text).toEndWith('Run the tests.');
-    steers[0]!.answer('injected');
-    await until(() => steers.length === 2);
-
-    expect(steers[1]!.text).toStrictEqual('Then the docs.');
-    steers[1]!.answer('injected');
-    await until(() => promptsIn(events).length === 3);
-    expect(prompts).toHaveLength(1);
-    stub.end();
-    await until(() => prompts.length === 2);
-
-    expect(promptsIn(events)).toStrictEqual([
-      ['go', undefined],
-      ['Run the tests.', firstTurn(events)],
-      ['Then the docs.', firstTurn(events)],
-      ['Queued with Enter.', undefined],
-    ]);
-    await conversation.close();
-  });
-
-  test('with no turn running it goes as the next turn, as Enter sends it', async () => {
-    const stub = await steeringStub();
-    const { conversation, events, steers, prompts } = stub;
-
-    expect(conversation.steerIn('go')).toStrictEqual('sent');
-    await until(() => prompts.length === 1);
-
-    expect(steers).toHaveLength(0);
-    expect(promptsIn(events)).toStrictEqual([['go', undefined]]);
-    stub.go();
-    stub.end();
-    await conversation.close();
-  });
 });
 
 test("Esc takes the person's steer held behind Claude's open calls back with the queue, never to be sent, while another agent's held message still goes (CHD-378)", () =>
@@ -1785,10 +1680,12 @@ test("Esc takes the person's steer held behind Claude's open calls back with the
     conversation.send('bashcut');
     await callOpen(events);
 
-    expect(conversation.steerIn('Skip the slow tests')).toStrictEqual('sent');
+    conversation.send('Skip the slow tests');
+
+    expect(conversation.steerQueued()).toStrictEqual('sent');
     conversation.tell(MAIN, 'Then the docs.');
     await until(
-      () => events.filter((event) => event.type === 'queued').length === 2,
+      () => events.filter((event) => event.type === 'queued').length === 4,
     );
     expect(events.at(-2)).toMatchObject({
       type: 'queued',
@@ -1807,140 +1704,6 @@ test("Esc takes the person's steer held behind Claude's open calls back with the
     ]);
   }));
 
-describe('CHD-378 U1 tester: personal steer boundaries', () => {
-  test('two running fake sessions keep personal steers and interrupted queues separate', () =>
-    onFake(['--steering', 'claude'], (first, firstEvents) =>
-      onFake(['--steering', 'codex'], async (second, secondEvents) => {
-        first.send('slow');
-        second.send('slow');
-        await until(() =>
-          [firstEvents, secondEvents].every((events) =>
-            saidIn(events).startsWith('Working'),
-          ),
-        );
-        first.send('Only first queued.');
-        first.steerIn('Only first steered.');
-        second.steerIn('Only second steered.');
-        await until(() =>
-          [firstEvents, secondEvents].every(
-            (events) => promptsIn(events).length === 2,
-          ),
-        );
-        first.interrupt();
-        await ended(firstEvents, 1);
-
-        expect(promptsIn(firstEvents)).toStrictEqual([
-          ['slow', undefined],
-          ['Only first steered.', firstTurn(firstEvents)],
-        ]);
-        expect(promptsIn(secondEvents)).toStrictEqual([
-          ['slow', undefined],
-          ['Only second steered.', firstTurn(secondEvents)],
-        ]);
-        expect(secondEvents.some((event) => event.type === 'result')).toBe(
-          false,
-        );
-        expect(
-          secondEvents.some((event) => event.type === 'queue_withdrawn'),
-        ).toBe(false);
-        second.interrupt();
-        await ended(secondEvents, 1);
-      }),
-    ));
-
-  test('Esc withdraws several held personal steers and Enter prompts while preserving an agent message between them', () =>
-    onFake(['--steering', 'claude'], async (conversation, events) => {
-      conversation.send('bashcut');
-      await callOpen(events);
-      conversation.send('Queued with Enter.');
-      conversation.steerIn('First held steer.');
-      conversation.tell(MAIN, 'Agent message.');
-      conversation.steerIn('Second held steer.');
-      await until(
-        () => events.filter((event) => event.type === 'queued').length === 4,
-      );
-      conversation.interrupt();
-      await ended(events, 2);
-
-      expect(promptsIn(events)).toStrictEqual([
-        ['bashcut', undefined],
-        ['Agent message.', undefined],
-      ]);
-      expect(
-        events.filter((event) => event.type === 'queue_withdrawn'),
-      ).toHaveLength(1);
-    }));
-
-  test('a held personal steer refused after the calls keeps its row identity behind an earlier Enter prompt', () =>
-    onFake(
-      ['--steering', 'claude', '--steer-late'],
-      async (conversation, events) => {
-        conversation.send('bash');
-        await callOpen(events);
-        conversation.send('Earlier Enter prompt.');
-        conversation.steerIn('Later held steer.');
-        await ended(events, 3);
-
-        const rows = events.flatMap((event) =>
-          event.type === 'queued' && event.text === 'Later held steer.'
-            ? [event]
-            : [],
-        );
-        const sent = events.find(
-          (event) =>
-            event.type === 'prompt' && event.text === 'Later held steer.',
-        );
-
-        assert(sent?.type === 'prompt');
-        expect(rows[0]?.afterCalls).toBe(true);
-        expect(rows.at(-1)?.afterCalls).toBeUndefined();
-        expect(new Set(rows.map((row) => row.turnId))).toEqual(
-          new Set([sent.turnId]),
-        );
-        expect(sent.from).toBeUndefined();
-        expect(promptsIn(events)).toStrictEqual([
-          ['bash', undefined],
-          ['Earlier Enter prompt.', undefined],
-          ['Later held steer.', undefined],
-        ]);
-      },
-    ));
-
-  test('a wedged fake turn with a refused personal steer still closes and leaves no agent process', async () => {
-    const pids: number[] = [];
-
-    await onFake(
-      ['--steering', 'claude', '--hang', 'turn'],
-      async (conversation, events) => {
-        conversation.send('text');
-        await until(() => promptsIn(events).length === 1);
-        await went();
-        conversation.steerIn('After the wedged turn.');
-        await until(() =>
-          events.some(
-            (event) =>
-              event.type === 'queued' &&
-              event.text === 'After the wedged turn.',
-          ),
-        );
-        conversation.interrupt();
-        expect(events).toContainEqual({ type: 'queue_withdrawn' });
-      },
-      (session) => {
-        pids.push(...session.agentPids);
-
-        return session;
-      },
-    );
-
-    expect(pids.length).toBeGreaterThan(0);
-
-    for (const pid of pids) {
-      expect(await isAlive(pid)).toBe(false);
-    }
-  });
-});
-
 describe("the person's steer the agent has not answered yet (CHD-378)", () => {
   /** What the queue was told of `text`, each time: its reason, if any. */
   const told = (events: readonly ConversationEvent[], text: string) =>
@@ -1949,11 +1712,13 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
         ? [
             event.steering
               ? 'steering'
-              : event.afterCalls
-                ? 'calls'
-                : event.afterAnswer
-                  ? 'answer'
-                  : 'plain',
+              : event.taken
+                ? 'taken'
+                : event.afterCalls
+                  ? 'calls'
+                  : event.afterAnswer
+                    ? 'answer'
+                    : 'plain',
           ]
         : [],
     );
@@ -1965,13 +1730,21 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
         conversation.send('slow');
         await until(() => saidIn(events).startsWith('Working'));
 
-        expect(conversation.steerIn('Then the docs.')).toStrictEqual('sent');
-        await until(() => told(events, 'Then the docs.').length === 1);
+        conversation.send('Then the docs.');
+
+        expect(conversation.steerQueued()).toStrictEqual('sent');
+        await until(() => told(events, 'Then the docs.').length === 3);
         conversation.interrupt();
         await ended(events, 2);
 
-        // Nothing waits ahead of it, so it starts at once, under its row's id.
-        expect(told(events, 'Then the docs.')).toStrictEqual(['steering']);
+        // Back in the queue as the turn ended, then the next turn, under its
+        // row's id.
+        expect(told(events, 'Then the docs.')).toStrictEqual([
+          'plain',
+          'taken',
+          'steering',
+          'plain',
+        ]);
         expect(
           events.findLast((event) => event.type === 'prompt')?.turnId,
         ).toStrictEqual(
@@ -1988,12 +1761,15 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
     onFake(['--steering', 'claude'], async (conversation, events) => {
       conversation.send('bashone');
       await callOpen(events);
-      conversation.steerIn('Skip the slow tests');
+      conversation.send('Skip the slow tests');
+      conversation.steerQueued();
       await until(() =>
         promptsIn(events).some(([text]) => text === 'Skip the slow tests'),
       );
 
       expect(told(events, 'Skip the slow tests')).toStrictEqual([
+        'plain',
+        'taken',
         'calls',
         'steering',
       ]);
@@ -2044,7 +1820,9 @@ test("the person's unanswered steer of a session /clear let go never shows in th
   opened[0]!.went();
   await went();
 
-  expect(conversation.steerIn('Use the parser')).toStrictEqual('sent');
+  conversation.send('Use the parser');
+
+  expect(conversation.steerQueued()).toStrictEqual('sent');
   await until(() => steered === 1);
   void conversation.clear();
   await connected(2);
@@ -2062,45 +1840,6 @@ test("the person's unanswered steer of a session /clear let go never shows in th
   await conversation.close();
 });
 
-describe('CHD-378 U3 tester: closing with a delayed steer', () => {
-  test('closing suppresses the delayed queue timer and a later injected response', async () => {
-    const stub = await steeringStub();
-    const { conversation, events, steers } = stub;
-
-    try {
-      conversation.send('go');
-      stub.go();
-      await went();
-      conversation.steerIn('Only in the old session.');
-      await until(() => steers.length === 1);
-
-      const closing = conversation.close();
-      const afterClose = events.length;
-
-      stub.end();
-      await closing;
-      // Past the 500 ms callback: it must remain silent after close.
-      await new Promise((resolve) => setTimeout(resolve, 650));
-      steers[0]!.answer('injected');
-      await went();
-
-      expect(
-        events
-          .slice(afterClose)
-          .filter(
-            (event) =>
-              (event.type === 'queued' || event.type === 'prompt') &&
-              event.text === 'Only in the old session.',
-          ),
-      ).toStrictEqual([]);
-    } finally {
-      stub.end();
-      steers[0]?.answer('refused');
-      await conversation.close();
-    }
-  });
-});
-
 describe('a steer held for the running calls while a question opens and is answered (CHD-378)', () => {
   /** Each reason the queue was told for `text`, in order. */
   const reasons = (events: readonly ConversationEvent[], text: string) =>
@@ -2109,11 +1848,13 @@ describe('a steer held for the running calls while a question opens and is answe
         ? [
             event.steering
               ? 'steering'
-              : event.afterAnswer
-                ? 'answer'
-                : event.afterCalls
-                  ? 'calls'
-                  : 'plain',
+              : event.taken
+                ? 'taken'
+                : event.afterAnswer
+                  ? 'answer'
+                  : event.afterCalls
+                    ? 'calls'
+                    : 'plain',
           ]
         : [],
     );
@@ -2134,7 +1875,8 @@ describe('a steer held for the running calls while a question opens and is answe
         );
 
         if (whose === 'the person') {
-          conversation.steerIn(text);
+          conversation.send(text);
+          conversation.steerQueued();
         } else {
           conversation.tell(MAIN, text);
         }
@@ -2155,6 +1897,7 @@ describe('a steer held for the running calls while a question opens and is answe
         );
 
         expect(reasons(events, text)).toStrictEqual([
+          ...(whose === 'the person' ? ['plain', 'taken'] : []),
           'calls',
           'answer',
           'calls',
@@ -2165,48 +1908,7 @@ describe('a steer held for the running calls while a question opens and is answe
   }
 });
 
-describe('CHD-378 U4 tester: attachment fallback after a Codex own turn', () => {
-  test('the replacement prompt keeps its image and resource link after Codex starts a turn of its own', () =>
-    onFake(
-      ['--steering', 'codex', '--steer-late'],
-      async (conversation, events) => {
-        conversation.send('text');
-        await went();
-        conversation.steerIn(
-          'Look [Image #1] @a.ts',
-          undefined,
-          [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
-          ['a.ts'],
-        );
-        await ended(events, 2);
-
-        const sent = events.findLast((event) => event.type === 'prompt');
-
-        assert(sent?.type === 'prompt');
-
-        const reply = saidIn(
-          events.filter(
-            (event) => event.type === 'update' && event.turnId === sent.turnId,
-          ),
-        );
-
-        expect(promptsIn(events)).toStrictEqual([
-          ['text', undefined],
-          ['Look [Image #1] @a.ts', undefined],
-        ]);
-        expect(reply).toContain('Received an image: image/png, 5 bytes');
-        expect(reply).toContain('Received a link: a.ts, file://');
-        expect(reply).not.toContain('Started alongside');
-      },
-      (session) => {
-        writeFileSync(join(session.cwd, 'a.ts'), '');
-
-        return session;
-      },
-    ));
-});
-
-describe("the person's draft with an image or a mention steered whole, as a new turn would send it (CHD-378, the owner's Q215, Q216)", () => {
+describe("the person's queued message with an image or a mention steered whole, as a new turn would send it (CHD-378, the owner's Q215, Q216)", () => {
   /** A session on the fake whose directory holds `a.ts`, to mention. */
   const withFile = (session: Session): Session => {
     writeFileSync(join(session.cwd, 'a.ts'), '');
@@ -2222,14 +1924,14 @@ describe("the person's draft with an image or a mention steered whole, as a new 
           conversation.send('slow');
           await until(() => saidIn(events).startsWith('Working'));
 
-          expect(
-            conversation.steerIn(
-              'See @a.ts and [Image #1]',
-              undefined,
-              [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
-              ['a.ts'],
-            ),
-          ).toStrictEqual('sent');
+          conversation.send(
+            'See @a.ts and [Image #1]',
+            undefined,
+            [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+            ['a.ts'],
+          );
+
+          expect(conversation.steerQueued()).toStrictEqual('sent');
           await until(() =>
             saidIn(events).includes('Read the message from nobody.'),
           );
@@ -2255,12 +1957,13 @@ describe("the person's draft with an image or a mention steered whole, as a new 
       async (conversation, events) => {
         conversation.send('text');
         await went();
-        conversation.steerIn(
+        conversation.send(
           'See @a.ts and [Image #1]',
           undefined,
           [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
           ['a.ts'],
         );
+        conversation.steerQueued();
         await ended(events, 2);
 
         expect(promptsIn(events).at(-1)).toStrictEqual([
@@ -2294,3 +1997,599 @@ test("the fake's texttillsteeredheld reads a steer, then holds its turn with not
     });
     expect(saidIn(events)).toStrictEqual(said);
   }));
+
+describe("the person's oldest queued message sent into the running turn (CHD-535)", () => {
+  /** The `queued` events of message `text`, in order. */
+  const rows = (events: readonly ConversationEvent[], text: string) =>
+    events.filter((event) => event.type === 'queued' && event.text === text);
+
+  for (const adapter of ['claude', 'codex']) {
+    test(`on ${adapter}'s adapter the oldest goes in, the next only on the next press, each once`, () =>
+      onFake(['--steering', adapter], async (conversation, events) => {
+        conversation.send('slow');
+        await until(() => saidIn(events).startsWith('Working'));
+        conversation.send('Then the docs.');
+        conversation.send('And the tests.');
+
+        expect(conversation.steerQueued()).toStrictEqual('sent');
+        await until(() => promptsIn(events).length === 2);
+
+        expect(promptsIn(events)).toStrictEqual([
+          ['slow', undefined],
+          ['Then the docs.', firstTurn(events)],
+        ]);
+        expect(conversation.steerQueued()).toStrictEqual('sent');
+        await until(() => promptsIn(events).length === 3);
+
+        expect(promptsIn(events).at(-1)).toStrictEqual([
+          'And the tests.',
+          firstTurn(events),
+        ]);
+        expect(conversation.steerQueued()).toStrictEqual('none');
+        conversation.interrupt();
+        await ended(events, 1);
+        expect(promptsIn(events)).toHaveLength(3);
+      }));
+  }
+
+  test('nothing goes with no turn running, an empty queue, or only messages not the person’s', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      expect(conversation.steerQueued()).toStrictEqual('none');
+      conversation.send('slow');
+      await until(() => saidIn(events).startsWith('Working'));
+
+      expect(conversation.steerQueued()).toStrictEqual('none');
+      conversation.deliver(MAIN, 'From main.');
+
+      expect(conversation.steerQueued()).toStrictEqual('none');
+      expect(promptsIn(events)).toStrictEqual([['slow', undefined]]);
+      conversation.interrupt();
+      await ended(events, 1);
+    }));
+
+  test('on an agent that takes no steering it stays queued, nothing sent', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('slow');
+      await until(() => saidIn(events).startsWith('Working'));
+      conversation.send('Then the docs.');
+
+      expect(conversation.steerQueued()).toStrictEqual('unsteerable');
+      expect(rows(events, 'Then the docs.')).toHaveLength(1);
+      expect(promptsIn(events)).toStrictEqual([['slow', undefined]]);
+      conversation.interrupt();
+      await ended(events, 1);
+    }));
+
+  test('refused while the turn runs, it and the one sent behind it go back to the top in their order, marked, and go first, once each', async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers, prompts } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+    conversation.send('First.');
+    conversation.send('Second.');
+    conversation.send('Third.');
+
+    expect(conversation.steerQueued()).toStrictEqual('sent');
+    expect(conversation.steerQueued()).toStrictEqual('sent');
+    await until(() => steers.length === 1);
+    steers[0]!.answer('refused');
+    await until(() => rows(events, 'Second.').length === 3);
+
+    // The turn refused one: the second is not sent into it either.
+    expect(steers).toHaveLength(1);
+    expect(rows(events, 'First.').at(-1)).toMatchObject({ refused: true });
+    expect(rows(events, 'Second.').at(-1)).toMatchObject({ refused: true });
+    stub.end();
+    await until(() => prompts.length === 4);
+
+    expect(prompts).toStrictEqual(['go', 'First.', 'Second.', 'Third.']);
+    expect(promptsIn(events).map(([text, into]) => [text, into])).toStrictEqual(
+      [
+        ['go', undefined],
+        ['First.', undefined],
+        ['Second.', undefined],
+        ['Third.', undefined],
+      ],
+    );
+    await conversation.close();
+  });
+
+  test("refused, it goes back where its row is: behind another agent's message queued before it, ahead of the rest", async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers, prompts } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+    conversation.deliver(MAIN, 'From main.');
+    conversation.send('Mine.');
+    conversation.send('After.');
+    conversation.steerQueued();
+    await until(() => steers.length === 1);
+    steers[0]!.answer('refused');
+    await until(() => rows(events, 'Mine.').length === 2);
+    stub.end();
+    await until(() => prompts.length === 4);
+
+    expect(promptsIn(events).map(([text]) => text)).toStrictEqual([
+      'go',
+      'From main.',
+      'Mine.',
+      'After.',
+    ]);
+    await conversation.close();
+  });
+
+  test('put back in one turn and refused again in the next, they keep the order they were queued in', async () => {
+    const stub = await steeringStub(true);
+    const { conversation, events, steers, prompts } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+    conversation.send('A.');
+    conversation.send('B.');
+    conversation.send('C.');
+    conversation.steerQueued();
+    conversation.steerQueued();
+    conversation.steerQueued();
+    await until(() => steers.length === 1);
+    steers[0]!.answer('refused');
+    await until(() => rows(events, 'C.').length === 3);
+    stub.end();
+    await until(() => prompts.length === 2);
+    await until(() => promptsIn(events).length === 2);
+
+    // A runs as its own turn; B is sent into it, refused, and goes back.
+    expect(conversation.steerQueued()).toStrictEqual('sent');
+    await until(() => steers.length === 2);
+
+    expect(steers[1]!.text).toStrictEqual('B.');
+    steers[1]!.answer('refused');
+    await until(() => rows(events, 'B.').length === 5);
+    stub.end();
+    await until(() => prompts.length === 3);
+    stub.end();
+    await until(() => prompts.length === 4);
+    stub.end();
+
+    expect(prompts).toStrictEqual(['go', 'A.', 'B.', 'C.']);
+    await conversation.close();
+  });
+
+  for (const outcome of ['injected', 'refused'] as const) {
+    test(`out when the turn ends, the end does not send it; ${outcome} late, it is ${outcome === 'injected' ? 'drawn in that turn' : 'the next turn, ahead of the rest'}, once`, async () => {
+      const stub = await steeringStub();
+      const { conversation, events, steers, prompts } = stub;
+
+      conversation.send('go');
+      stub.go();
+      await stub.settled();
+      conversation.send('Out.');
+      conversation.send('Behind.');
+      conversation.steerQueued();
+      await until(() => steers.length === 1);
+      stub.end();
+      await ended(events, 1);
+      await stub.settled();
+
+      expect(prompts).toStrictEqual(['go']);
+      steers[0]!.answer(outcome);
+      await until(() => prompts.length === (outcome === 'injected' ? 2 : 3));
+
+      expect(prompts).toStrictEqual(
+        outcome === 'injected' ? ['go', 'Behind.'] : ['go', 'Out.', 'Behind.'],
+      );
+      expect(promptsIn(events)).toStrictEqual(
+        outcome === 'injected'
+          ? [
+              ['go', undefined],
+              ['Out.', firstTurn(events)],
+              ['Behind.', undefined],
+            ]
+          : [
+              ['go', undefined],
+              ['Out.', undefined],
+              ['Behind.', undefined],
+            ],
+      );
+      // A late refusal is the next turn, which says so; no note.
+      expect(
+        rows(events, 'Out.').some((event) => 'refused' in event),
+      ).toBeFalse();
+      await conversation.close();
+    });
+  }
+
+  test("its image and file link go with it into the turn on Codex's adapter", () =>
+    onFake(
+      ['--steering', 'codex'],
+      async (conversation, events) => {
+        conversation.send('slow');
+        await until(() => saidIn(events).startsWith('Working'));
+        conversation.send(
+          'See @a.ts and [Image #1]',
+          undefined,
+          [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+          ['a.ts'],
+        );
+
+        expect(conversation.steerQueued()).toStrictEqual('sent');
+        await until(() =>
+          saidIn(events).includes('Read the message from nobody.'),
+        );
+
+        expect(saidIn(events)).toContain(
+          'Received an image: image/png, 5 bytes',
+        );
+        expect(saidIn(events)).toContain('Received a link: a.ts, file://');
+        expect(promptsIn(events).at(-1)).toStrictEqual([
+          'See @a.ts and [Image #1]',
+          firstTurn(events),
+        ]);
+        conversation.interrupt();
+        await ended(events, 1);
+      },
+      (session) => {
+        writeFileSync(join(session.cwd, 'a.ts'), '');
+
+        return session;
+      },
+    ));
+});
+
+describe('CHD-535 U1 tester: queued steering boundaries', () => {
+  const queueRows = (events: readonly ConversationEvent[], text: string) =>
+    events.flatMap((event) =>
+      event.type === 'queued' && event.text === text ? [event] : [],
+    );
+
+  const sentRows = (events: readonly ConversationEvent[], text: string) =>
+    events.flatMap((event) =>
+      event.type === 'prompt' && event.text === text ? [event] : [],
+    );
+
+  for (const adapter of ['claude', 'codex']) {
+    test(`${adapter} refusal or own-turn fallback keeps the original row, image and link exactly once`, async () => {
+      const release = Promise.withResolvers<void>();
+      let firstFinished = false;
+      const outcomes: SteerOutcome[] = [];
+      const promptInputs: Parameters<Session['prompt']>[] = [];
+      const steerInputs: Parameters<Session['steer']>[] = [];
+      const text = 'Queued [Image #1] @a.ts';
+
+      try {
+        await onFake(
+          ['--steering', adapter],
+          async (conversation, events) => {
+            try {
+              conversation.send('text');
+              await until(() => firstFinished);
+              expect(events.some((event) => event.type === 'result')).toBe(
+                false,
+              );
+              conversation.send(
+                text,
+                undefined,
+                [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+                ['a.ts'],
+              );
+              conversation.send('After the attachment.');
+
+              const original = queueRows(events, text)[0];
+
+              assert(original !== undefined);
+              expect(conversation.steerQueued()).toBe('sent');
+              await until(() => outcomes.length === 1);
+              expect(outcomes).toEqual([
+                adapter === 'codex' ? 'startedNewTurn' : 'refused',
+              ]);
+              await until(() => queueRows(events, text).length >= 2);
+              release.resolve();
+              await ended(events, 3);
+
+              const delivered = events.find(
+                (event) => event.type === 'prompt' && event.text === text,
+              );
+
+              assert(delivered?.type === 'prompt');
+              expect(delivered.turnId).toBe(original.turnId);
+              expect(delivered.into).toBeUndefined();
+              expect(steerInputs[0]?.slice(0, 3)).toEqual([
+                text,
+                [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+                ['a.ts'],
+              ]);
+
+              const fallback = promptInputs.filter(([prompt]) =>
+                prompt.includes(text),
+              );
+
+              expect(fallback).toHaveLength(1);
+              expect(fallback[0]?.slice(1, 3)).toEqual([
+                [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+                ['a.ts'],
+              ]);
+              expect(promptsIn(events).map(([prompt]) => prompt)).toEqual([
+                'text',
+                text,
+                'After the attachment.',
+              ]);
+              expect(
+                new Set(queueRows(events, text).map((row) => row.turnId)),
+              ).toEqual(new Set([original.turnId]));
+
+              const reply = saidIn(
+                events.filter(
+                  (event) =>
+                    event.type === 'update' &&
+                    event.turnId === delivered.turnId,
+                ),
+              );
+
+              expect(reply).toContain('Received an image: image/png, 5 bytes');
+              expect(reply).toContain('Received a link: a.ts, file://');
+              expect(
+                events.filter((event) => event.type === 'self_started'),
+              ).toHaveLength(adapter === 'codex' ? 1 : 0);
+            } finally {
+              release.resolve();
+            }
+          },
+          (session) => {
+            writeFileSync(join(session.cwd, 'a.ts'), '');
+
+            const prompt = session.prompt.bind(session);
+            const steer = session.steer.bind(session);
+            let first = true;
+
+            session.prompt = (...args) => {
+              promptInputs.push(args);
+
+              const turn = prompt(...args);
+
+              if (!first) {
+                return turn;
+              }
+
+              first = false;
+
+              return {
+                ...turn,
+                result: turn.result.then(async (result) => {
+                  firstFinished = true;
+
+                  await release.promise;
+
+                  return result;
+                }),
+              };
+            };
+
+            session.steer = async (...args) => {
+              steerInputs.push(args);
+
+              const outcome = await steer(...args);
+
+              outcomes.push(outcome);
+
+              return outcome;
+            };
+
+            return session;
+          },
+        );
+      } finally {
+        release.resolve();
+      }
+    });
+  }
+
+  test('two fake sessions keep accepted queue IDs and an interrupt independent', () =>
+    onFake(['--steering', 'claude'], (first, firstEvents) =>
+      onFake(['--steering', 'codex'], async (second, secondEvents) => {
+        first.send('slow');
+        second.send('slow');
+        await until(() =>
+          [firstEvents, secondEvents].every((events) =>
+            saidIn(events).startsWith('Working'),
+          ),
+        );
+        first.send('Only first queued.');
+        first.send('Only first still waiting.');
+        second.send('Only second queued.');
+
+        const firstRow = queueRows(firstEvents, 'Only first queued.')[0];
+        const secondRow = queueRows(secondEvents, 'Only second queued.')[0];
+
+        assert(firstRow !== undefined && secondRow !== undefined);
+        expect(first.steerQueued()).toBe('sent');
+        expect(second.steerQueued()).toBe('sent');
+        await until(() =>
+          [firstEvents, secondEvents].every(
+            (events) => promptsIn(events).length === 2,
+          ),
+        );
+        first.interrupt();
+        await ended(firstEvents, 1);
+        expect(promptsIn(firstEvents).map(([text]) => text)).toEqual([
+          'slow',
+          'Only first queued.',
+        ]);
+        expect(promptsIn(secondEvents).map(([text]) => text)).toEqual([
+          'slow',
+          'Only second queued.',
+        ]);
+        expect(sentRows(firstEvents, 'Only first queued.')[0]?.turnId).toBe(
+          firstRow.turnId,
+        );
+        expect(sentRows(secondEvents, 'Only second queued.')[0]?.turnId).toBe(
+          secondRow.turnId,
+        );
+        expect(
+          secondEvents.some((event) => event.type === 'queue_withdrawn'),
+        ).toBe(false);
+        expect(secondEvents.some((event) => event.type === 'result')).toBe(
+          false,
+        );
+        second.interrupt();
+        await ended(secondEvents, 1);
+      }),
+    ));
+
+  test('Esc withdraws queued rows held behind calls but preserves the agent message between them', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('bashcut');
+      await callOpen(events);
+      conversation.send('First held row.');
+      conversation.deliver(MAIN, 'Agent row.');
+      conversation.send('Second held row.');
+
+      const first = queueRows(events, 'First held row.')[0];
+      const second = queueRows(events, 'Second held row.')[0];
+
+      assert(first !== undefined && second !== undefined);
+      expect(conversation.steerQueued()).toBe('sent');
+      expect(conversation.steerQueued()).toBe('sent');
+      await until(() =>
+        ['First held row.', 'Second held row.'].every((text) =>
+          queueRows(events, text).some((row) => row.afterCalls),
+        ),
+      );
+      expect(
+        new Set(queueRows(events, 'First held row.').map((row) => row.turnId)),
+      ).toEqual(new Set([first.turnId]));
+      expect(
+        new Set(queueRows(events, 'Second held row.').map((row) => row.turnId)),
+      ).toEqual(new Set([second.turnId]));
+      conversation.interrupt();
+      await ended(events, 2);
+      expect(promptsIn(events).map(([text]) => text)).toEqual([
+        'bashcut',
+        'Agent row.',
+      ]);
+      expect(
+        events.filter((event) => event.type === 'queue_withdrawn'),
+      ).toHaveLength(1);
+    }));
+
+  test('late acceptance after clear cannot add the old row to the replacement session', async () => {
+    const late = Promise.withResolvers<SteerOutcome>();
+    const pids: number[] = [];
+    let steers = 0;
+    let opened = 0;
+
+    try {
+      await onFake(
+        ['--steering', 'claude'],
+        async (conversation, events) => {
+          conversation.send('slow');
+          await until(() => saidIn(events).startsWith('Working'));
+          conversation.send('Old queued row.');
+          expect(conversation.steerQueued()).toBe('sent');
+          await until(() => steers === 1);
+          conversation.clear();
+          await until(
+            () =>
+              events.filter((event) => event.type === 'connected').length === 2,
+          );
+
+          const afterClear = events.length;
+
+          late.resolve('injected');
+          await settleQueued();
+          expect(
+            events
+              .slice(afterClear)
+              .some(
+                (event) =>
+                  (event.type === 'prompt' || event.type === 'queued') &&
+                  event.text === 'Old queued row.',
+              ),
+          ).toBe(false);
+          conversation.send('text');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'result' &&
+                event.turnId === sentRows(events, 'text').at(-1)?.turnId,
+            ),
+          );
+          expect(promptsIn(events).map(([text]) => text)).toEqual([
+            'slow',
+            'text',
+          ]);
+        },
+        (session) => {
+          pids.push(...session.agentPids);
+
+          if (++opened === 1) {
+            session.steer = () => {
+              steers++;
+
+              return late.promise;
+            };
+          }
+
+          return session;
+        },
+      );
+    } finally {
+      late.resolve('refused');
+    }
+
+    for (const pid of pids) {
+      expect(await isAlive(pid)).toBe(false);
+    }
+  });
+
+  test('a wedged fake turn keeps a refused queued row until Esc and closes every agent process', async () => {
+    const pids: number[] = [];
+    let sent = false;
+
+    await onFake(
+      ['--steering', 'claude', '--hang', 'turn'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await until(() => sent);
+        conversation.send('After the wedged turn.');
+        expect(conversation.steerQueued()).toBe('sent');
+        await until(() =>
+          queueRows(events, 'After the wedged turn.').some(
+            (row) => row.refused,
+          ),
+        );
+        expect(promptsIn(events).map(([text]) => text)).toEqual(['text']);
+        conversation.interrupt();
+        expect(events).toContainEqual({ type: 'queue_withdrawn' });
+      },
+      (session) => {
+        pids.push(...session.agentPids);
+
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          const turn = prompt(...args);
+
+          return {
+            ...turn,
+            sent: turn.sent.then((links) => {
+              sent = true;
+
+              return links;
+            }),
+          };
+        };
+
+        return session;
+      },
+    );
+    expect(pids.length).toBeGreaterThan(0);
+
+    for (const pid of pids) {
+      expect(await isAlive(pid)).toBe(false);
+    }
+  });
+});

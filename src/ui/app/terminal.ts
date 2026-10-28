@@ -236,15 +236,6 @@ export interface ImageSessions {
     images?: readonly PastedImage[],
     left?: string,
   ): void;
-  /** Steers a prompt into the running turn of `key`; whether it went. */
-  steer(
-    text: string,
-    key: number,
-    images?: readonly PastedImage[],
-    left?: string,
-  ): boolean;
-  /** Whether the agent of `key` takes a prompt into its running turn. */
-  steers(key: number): boolean;
 }
 
 /**
@@ -270,7 +261,7 @@ export function useImages({
 }): {
   paste: (quiet?: boolean) => Promise<void>;
   takePastedPaths: (draft: string, end: number) => Promise<void>;
-  sendWithPaths: (text: string, steer?: boolean) => Promise<boolean>;
+  sendWithPaths: (text: string) => Promise<boolean>;
   /** Whether the session `key`'s Enter is still reading image paths. */
   submitting: (key: number) => boolean;
 } {
@@ -384,17 +375,10 @@ export function useImages({
 
   /**
    * Enter on a draft that names image files by path, as typed: each one
-   * read and put in as `[Image #N]` before the prompt goes; Tab's the same,
-   * into the running turn (CHD-378). Whether it went.
+   * read and put in as `[Image #N]` before the prompt goes. Whether it went.
    */
-  const sendWithPaths = async (text: string, steer = false) => {
+  const sendWithPaths = async (text: string) => {
     const key = sessions.front;
-
-    // Nothing is read for an agent that takes no steering: the box keeps
-    // the draft as typed, and the status line says why.
-    if (steer && !sessions.steers(key)) {
-      return sessions.steer(text, key);
-    }
 
     submitting.current.add(key);
 
@@ -420,10 +404,6 @@ export function useImages({
 
       const sending = [...now.images, ...taken.images];
       const left = now.draft === text ? '' : now.draft;
-
-      if (steer) {
-        return sessions.steer(taken.text, key, sending, left);
-      }
 
       sessions.send(taken.text, key, sending, left);
 

@@ -3284,47 +3284,22 @@ export function useSessions(
   };
 
   /**
-   * Steers `text` into the running turn of the session `key`, as `send`
-   * sends it: with the images its placeholders stand for, its mentions'
-   * links and the shell output held there for it (CHD-378). Whether it
-   * went, into the turn or the queue; on an agent that takes no steering
-   * the box keeps it and the status line says why.
+   * Tab: the oldest of the person's queued messages into the running turn
+   * of the session `key`, the draft left as it is (CHD-535); on an agent
+   * that takes no steering it stays queued, and the status line says why.
    */
-  const steer = (
-    text: string,
-    key = all.front,
-    images?: readonly PastedImage[],
-    left = '',
-  ): boolean => {
-    const now = stateOf(key);
-    const sending = images ?? now?.images ?? [];
-
-    if (now === undefined || !canSend(now, text)) {
-      return false;
+  const steerQueued = (key = all.front) => {
+    if (conversationAt(key)?.steerQueued() === 'unsteerable') {
+      dispatch({
+        type: 'in_session',
+        key,
+        action: { type: 'steer_refused', refused: false },
+      });
     }
-
-    const steered = conversationAt(key)?.steerIn(
-      text,
-      withContext(heldContext(now), text),
-      attachmentsOf(text, sending),
-      mentionsIn(text),
-    );
-
-    if (steered === 'unsteerable') {
-      dispatch({ type: 'in_session', key, action: { type: 'steer_refused' } });
-    }
-
-    if (steered !== 'sent' && steered !== 'queued') {
-      return false;
-    }
-
-    went(key, now, text, sending, left);
-
-    return true;
   };
 
   /**
-   * A prompt gone from the box of `key`, by Enter or Tab: its held output
+   * A prompt gone from the box of `key` by Enter: its held output
    * and images went with it, history has it, and the box is what is `left`.
    */
   const went = (
@@ -3654,8 +3629,7 @@ export function useSessions(
     stateOf,
     showDraftIn,
     send,
-    steer,
-    steers: (key: number) => conversationAt(key)?.steers() ?? false,
+    steerQueued,
     quit,
     takeBackQueue,
     spend,

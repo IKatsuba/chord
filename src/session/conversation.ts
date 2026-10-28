@@ -176,6 +176,16 @@ export type ConversationEvent =
        * it is no longer theirs to take back (CHD-378).
        */
       readonly steering?: true;
+      /**
+       * The person's queued message Tab sent into the running turn, no longer
+       * theirs to take back, before its row says so (CHD-535).
+       */
+      readonly taken?: true;
+      /**
+       * The person's queued message, sent into the running turn, which the
+       * agent refused while the turn still runs: back at the top (CHD-535).
+       */
+      readonly refused?: true;
     }
   /**
    * An interrupt took every queued prompt of the person's back; none of them
@@ -285,16 +295,15 @@ interface Prompt {
    * if the turn ends first, it goes as the next one.
    */
   readonly afterAnswer?: true;
+  /**
+   * Its place in the queue's order, so a steer of it refused puts it back
+   * where its row still is (CHD-535).
+   */
+  readonly place?: number;
 }
 
 /** How a message to the session went: straight into a turn, or queued. */
 export type Delivery = 'sent' | 'queued';
-
-/**
- * How the person's prompt steered into a running turn went: as a message
- * does, or not at all, as the agent takes no steering.
- */
-export type Steered = Delivery | 'unsteerable';
 
 /** A monitor started, as `monitor` answers it. */
 export interface MonitorStarted {
@@ -482,6 +491,8 @@ export class Conversation {
    * back to the box with the prompts queued (CHD-378).
    */
   #heldSteers = new Set<string>();
+  /** The place the next message held in the queue takes there. */
+  #places = 0;
   /** The person's held steers Esc took back, which go nowhere now. */
   #takenBack = new Set<string>();
   /**
@@ -975,11 +986,6 @@ export class Conversation {
     }
   }
 
-  /** Whether the agent takes a prompt into its running turn (CHD-378). */
-  steers(): boolean {
-    return this.#session?.steers() ?? false;
-  }
-
   /**
    * Reports the agent's slash commands if they moved: the interface asks when
    * it is about to show them.
@@ -1103,23 +1109,26 @@ export class Conversation {
   }
 
   /**
-   * The person's prompt put into the running turn, as `tell` puts another
-   * agent's message (CHD-378): built as `send` builds it, held shell
-   * output ahead, its images and mentions too. `unsteerable` on an agent that takes no steering,
-   * with nothing sent or queued, the draft the caller's to keep; with no
-   * turn to go into it goes as `send` sends it.
+   * Sends the oldest of the person's queued messages into the running turn
+   * (CHD-535): the same queue entry, its images and links with it, never a
+   * copy. Refused, it goes back to the top of the queue; `unsteerable` on an
+   * agent that takes no steering, the queue untouched; `none` with no turn
+   * to go into or no message of the person's waiting in the queue.
    * Undefined before the session is up and once closing.
    */
-  steerIn(
-    text: string,
-    prompt: string = text,
-    attachments: readonly Attachment[] = [],
-    mentions: readonly string[] = [],
-  ): Steered | undefined {
+  steerQueued(): 'sent' | 'unsteerable' | 'none' | undefined {
     const session = this.#session;
 
     if (!session || this.#closing) {
       return undefined;
+    }
+
+    const index = this.#queued.findIndex(
+      (queued) => queued.from === undefined && !queued.afterAnswer,
+    );
+
+    if (index === -1 || !this.#turn) {
+      return 'none';
     }
 
     if (!session.steers()) {
@@ -1127,34 +1136,51 @@ export class Conversation {
     }
 
     const into = this.#steerable(session);
-    const ahead = this.#ahead.splice(0);
-    const next: Prompt = {
-      turnId: crypto.randomUUID(),
-      text,
-      prompt: [...ahead, prompt].join('\n\n'),
-      attachments,
-      mentions,
-    };
 
     if (into === undefined) {
-      return this.#enqueue(session, next);
+      return 'none';
     }
 
-    if (this.#waitsOnPerson()) {
-      this.#queued.push({ ...next, afterAnswer: true });
-      this.#emit({
-        type: 'queued',
-        turnId: next.turnId,
-        text,
-        afterAnswer: true,
-      });
+    const [next] = this.#queued.splice(index, 1);
 
-      return 'queued';
-    }
+    // Out of the queue now: Esc no longer takes it back into the box.
+    this.#emit({
+      type: 'queued',
+      turnId: next!.turnId,
+      text: next!.text,
+      taken: true,
+    });
 
-    void this.#steer(session, into, next);
+    void this.#steer(session, into, next!, undefined, true);
 
     return 'sent';
+  }
+
+  /**
+   * The person's queued message a steer did not put into the turn, back in
+   * the queue where its row still is, ahead of all queued after it: the top,
+   * as Tab takes the oldest (CHD-535); `refused` while the turn it was sent
+   * into still runs.
+   */
+  #putBack(next: Prompt, refused: boolean): void {
+    const at = this.#queued.findIndex(
+      (queued) => (queued.place ?? Infinity) > (next.place ?? Infinity),
+    );
+
+    // Behind a request between turns it waits for the answer, as #hold's do.
+    const held =
+      !this.#turn && this.#waitsBetween()
+        ? { ...next, afterAnswer: true as const }
+        : next;
+
+    this.#queued.splice(at === -1 ? this.#queued.length : at, 0, held);
+    this.#emit({
+      type: 'queued',
+      turnId: next.turnId,
+      text: next.text,
+      ...(held.afterAnswer ? { afterAnswer: true } : {}),
+      ...(refused ? { refused: true } : {}),
+    });
   }
 
   /**
@@ -1273,13 +1299,15 @@ export class Conversation {
   /**
    * Puts a message into turn `into`, drawn and recorded there once the agent
    * has taken it; refused, it goes as the next turn, as a message queued
-   * behind the turn does, and `queued` is called.
+   * behind the turn does, and `queued` is called. One `taken` from the
+   * queue goes back to its top instead (CHD-535).
    */
   async #steer(
     session: Session,
     into: string,
     next: Prompt,
     queued?: () => void,
+    taken = false,
   ): Promise<void> {
     const steer = {};
     const ahead = this.#steering;
@@ -1404,7 +1432,14 @@ export class Conversation {
     }
 
     if (outcome === 'refused') {
-      this.#enqueue(session, next);
+      // The person's goes back to the top of the queue, where it was taken
+      // from, and as the next turn if this one has ended (CHD-535).
+      if (taken) {
+        this.#putBack(next, this.#turn?.id === into);
+      } else {
+        this.#enqueue(session, next);
+      }
+
       void this.#advance(session);
 
       return;
@@ -1435,7 +1470,12 @@ export class Conversation {
 
       const quiet = this.#quieten(session);
 
-      this.#hold(next);
+      if (taken) {
+        this.#putBack(next, false);
+      } else {
+        this.#hold(next);
+      }
+
       await quiet;
       await this.#advance(session);
 
@@ -1946,10 +1986,11 @@ export class Conversation {
    * answer, as no turn starts while one waits (CHD-158).
    */
   #hold(next: Prompt): void {
+    const place = (this.#places += 1);
     const held =
       !this.#turn && this.#waitsBetween()
-        ? { ...next, afterAnswer: true as const }
-        : next;
+        ? { ...next, afterAnswer: true as const, place }
+        : { ...next, place };
 
     this.#queued.push(held);
     this.#emit({

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import assert from 'node:assert/strict';
 import {
   existsSync,
@@ -15,6 +15,70 @@ import { fileURLToPath } from 'node:url';
 import { quote } from 'shell-quote';
 import { until } from './ui/app/render.tsx';
 import { fakeAgentCommand } from './fixtures/fake.ts';
+
+const alive = (pid: number) => {
+  try {
+    process.kill(pid, 0);
+
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const stop = (pid: number | undefined, signal: NodeJS.Signals) => {
+  if (pid === undefined || pid <= 0) {
+    return;
+  }
+
+  try {
+    process.kill(pid, signal);
+  } catch (failure) {
+    if ((failure as NodeJS.ErrnoException).code !== 'ESRCH') {
+      throw failure;
+    }
+  }
+};
+
+interface OwnedStartup {
+  readonly targetPid?: number;
+  readonly controllerPid: number;
+}
+
+async function stopOwned(child: OwnedStartup, grace = 3_000) {
+  stop(child.controllerPid, 'SIGTERM');
+
+  try {
+    await until(
+      'owned CLI and controller cleanup',
+      () =>
+        (!child.targetPid || !alive(child.targetPid)) &&
+        (!child.controllerPid || !alive(child.controllerPid)),
+      grace,
+    );
+  } catch {
+    stop(child.targetPid, 'SIGKILL');
+    // Keep its parent alive to reap the child and finish its exit receipt.
+    await until(
+      `owned CLI ${child.targetPid} reaped`,
+      () => !child.targetPid || !alive(child.targetPid),
+    );
+
+    try {
+      await until(
+        `owned controller ${child.controllerPid} exited`,
+        () => !child.controllerPid || !alive(child.controllerPid),
+        3_000,
+      );
+    } catch {
+      stop(child.controllerPid, 'SIGKILL');
+      await until(
+        `owned controller ${child.controllerPid} killed`,
+        () => !child.controllerPid || !alive(child.controllerPid),
+      );
+    }
+  }
+}
 
 for (const choose of [false, true]) {
   test(`CHD-532 actual handler keeps all startup factories behind choice, choose=${choose}`, () => {
@@ -267,30 +331,6 @@ for (const mode of [
 
       expect(readFileSync(settings, 'utf8')).toBe(content);
     } finally {
-      const alive = (pid: number) => {
-        try {
-          process.kill(pid, 0);
-
-          return true;
-        } catch {
-          return false;
-        }
-      };
-
-      const stop = (pid: number | undefined, signal: NodeJS.Signals) => {
-        if (pid === undefined || pid <= 0) {
-          return;
-        }
-
-        try {
-          process.kill(pid, signal);
-        } catch (failure) {
-          if ((failure as NodeJS.ErrnoException).code !== 'ESRCH') {
-            throw failure;
-          }
-        }
-      };
-
       // The controller reaps its direct child before tmux tears down its pane.
       const child = owned();
       const controller =
@@ -306,28 +346,11 @@ for (const mode of [
         );
 
       try {
-        if (controller > 0) {
-          stop(controller, 'SIGTERM');
-        }
-
-        try {
-          await until(
-            'owned CLI and controller cleanup',
-            () =>
-              (!child?.targetPid || !alive(child.targetPid)) &&
-              (!controller || !alive(controller)),
-            3_000,
-          );
-        } catch {
-          stop(child?.targetPid, 'SIGKILL');
-          stop(controller, 'SIGKILL');
-          await until(
-            'owned CLI and controller killed',
-            () =>
-              (!child?.targetPid || !alive(child.targetPid)) &&
-              (!controller || !alive(controller)),
-          );
-        }
+        await stopOwned({ ...child, controllerPid: controller }).catch(
+          (failure: Error) => {
+            throw new Error(`${failure.message}; ${diagnostic()}`);
+          },
+        );
       } finally {
         tmux('kill-server');
 
@@ -353,6 +376,75 @@ for (const mode of [
     }
   });
 }
+
+test('CHD-532 cleanup fallback reaps its target before stopping the controller', async () => {
+  const place = mkdtempSync(join(tmpdir(), 'chord-start-cleanup-'));
+  const receipt = join(place, 'exit.json');
+  const ownership = join(place, 'owned.json');
+  const ready = join(place, 'ready');
+  const controller = spawn(
+    process.execPath,
+    [
+      fileURLToPath(
+        new URL('./fixtures/startup_controller.ts', import.meta.url),
+      ),
+      receipt,
+      ownership,
+      process.execPath,
+      '-e',
+      "const fs = require('node:fs'); process.on('SIGTERM', () => {}); fs.writeFileSync(process.argv[1], 'ready'); setInterval(() => {}, 1000);",
+      ready,
+    ],
+    { stdio: 'ignore' },
+  );
+  const finished = new Promise<{
+    code: number | null;
+    signal: NodeJS.Signals | null;
+  }>((resolve, reject) => {
+    controller.once('error', reject);
+    controller.once('exit', (code, signal) => resolve({ code, signal }));
+  });
+
+  let child: OwnedStartup | undefined;
+
+  try {
+    await until(
+      'fixture target ignores TERM',
+      () => existsSync(ready) && existsSync(ownership),
+    );
+
+    child = JSON.parse(readFileSync(ownership, 'utf8')) as OwnedStartup;
+
+    expect(child.controllerPid).toBe(controller.pid!);
+    // No grace forces the parent's TERM handler and the fallback to race.
+    await stopOwned(child, 0);
+
+    const result = JSON.parse(readFileSync(receipt, 'utf8')) as {
+      targetPid: number;
+      signal: string;
+      code: null;
+      error: null;
+    };
+
+    expect(result.targetPid).toBe(child.targetPid!);
+    expect(result.signal).toBe('SIGKILL');
+    expect(result.code).toBeNull();
+    expect(result.error).toBeNull();
+    expect(await finished).toEqual({ code: 1, signal: null });
+    expect(alive(child.targetPid!)).toBe(false);
+  } finally {
+    try {
+      child ??= existsSync(ownership)
+        ? (JSON.parse(readFileSync(ownership, 'utf8')) as OwnedStartup)
+        : { controllerPid: controller.pid ?? 0 };
+
+      await stopOwned(child);
+      await finished;
+    } finally {
+      rmSync(place, { recursive: true, force: true });
+    }
+  }
+});
 
 describe('CHD-532 tester: actual handler bypass routes', () => {
   for (const mode of [

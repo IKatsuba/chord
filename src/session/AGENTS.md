@@ -7,10 +7,13 @@ These rules also cover `src/acp/`.
 - `transcript/` is a pure reducer, one module per kind of update.
 - Session records (`record.ts`) are a stored format: older records must still
   read back. Legacy `windows/` files are ignored and left untouched.
-- MCP servers go through `servers.ts` on new, load and resume: stdio always,
+- MCP servers go through `servers.ts` on new, fork, load and resume: stdio always,
   HTTP, SSE and ACP only when advertised. The agent's `mcpServers: false`
   setting holds every server back, chord's own included; its setting of
   `true` overrides a default of none. Keep the held-back names and reasons.
+- Forks use ACP `session/fork` in their own agent process, as resume does.
+  Route the answer to the new session ID, not the source. Record the divider
+  and subsequent work; the copied source transcript stays out of the record.
 - The window's sessions are recorded; `-p`'s are not.
 - This layer is below the interface and shared with `-p`: nothing here or in `src/acp/` imports from `src/ui/`.
 - `get_budgets` returns per-call provider windows or unavailable reasons;

@@ -3,8 +3,8 @@
 - `tests/fixtures/fake_agent/` — a scripted ACP agent on the SDK's agent side.
   `main.ts` is the agent, which `bun dev chord --fake` and
   `tests/fixtures/fake.ts`'s `fakeAgentCommand` start: the scenario chosen,
-  every request answered, sessions listed, loaded and resumed, and a turn's
-  usage; it plays one table spread from a module per family under
+  every request answered, sessions listed, forked, loaded and resumed, and
+  a turn's usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
   (`text`, `texttillsteered`, `texttillsteeredheld`, `readsheld`, `thought`,
   `todos`, `mcp`, `opened`, `markdown`,
@@ -162,7 +162,7 @@
   renames it `Fix the parser`; `titledlook` and `titledfix` give those last
   two titles in separate prompts, so a test can observe each; `titledlong`
   sends a title long enough to wrap. `--title <text>` or `CHORD_FAKE_TITLE`
-  names every session at new, load or resume, before any prompt;
+  names every session at new, fork, load or resume, before any prompt;
   `chordtools` connects to chord's own, through the MCP SDK's client, calls
   `list_agents` and `list_sessions` and answers with what came back, as
   JSON; `chordcalls` makes the same calls as tool calls, titled as Claude's
@@ -366,9 +366,9 @@
   change to it; `--no-modes` or `CHORD_FAKE_NO_MODES=1` offers no modes and
   refuses `session/set_mode`.
   `--auth-required <kind>` (`CHORD_FAKE_AUTH_REQUIRED`) checks failed starts
-  on `session/new`, `session/load` and `session/resume`: `methods` refuses
-  with `authRequired` (-32000), a message naming `fake login` or
-  `FAKE_API_KEY`, and two methods offered at `initialize`, one with a
+  on `session/new`, `session/fork`, `session/load` and `session/resume`:
+  `methods` refuses with `authRequired` (-32000), naming `fake login` or
+  `FAKE_API_KEY` and offering two methods at `initialize`, one with a
   description; `bare` refuses with `Authentication required` and no methods. `link` asks a
   sign-in link first and fails with `authRequired` unless accepted;
   `linkother` asks the same link but fails with -32603 unless accepted, so
@@ -440,6 +440,12 @@
   offers `session/resume`, which takes the same ids and replays nothing.
   Adding `--no-load` leaves out `session/load`, so chord resumes even a
   session it has no record of.
+  `--fork` (`CHORD_FAKE_FORK=1`) advertises `session/fork`: any valid UUID
+  source, including one from another fake process, gets a new session ID
+  without replay. The `opened` scenario includes `from`, the source ID.
+  `CHORD_FAKE_REFUSE_FORK=1` refuses the advertised method;
+  `CHORD_FAKE_HANG_FORK=1` leaves it unanswered. These fixtures prove transport
+  and lifecycle behavior, not live cross-process context inheritance.
   `--steering claude` or `--steering codex` (`CHORD_FAKE_STEERING`)
   advertises `_session/steering` and answers it as that adapter does: into
   the turn playing, `injected`, read at its next step or as it ends with

@@ -102,7 +102,9 @@ mode. Its first turn is your first prompt to it. Main hears of the child
 ahead of its next prompt; its running turn continues. `/new` followed by
 a space lists the agents chord can start; Tab completes one. The child
 belongs to main even when opened from another child's view, and closes
-with `x`, main's `close_agent` or `/clear`.
+with `x`, main's `close_agent` or `/clear`. `/fork [name]` instead continues
+main or a picked fork in a new top-level agent and picks it; see
+[forking a conversation](#forking-a-conversation).
 
 An agent asking for permission or a form, or ending its turn, never takes
 the view by itself. The status line names what waits, and ctrl+x a goes to
@@ -119,7 +121,7 @@ permission in that session, otherwise its oldest form or link. With several
 asking, `● N agents wait` counts a task as one agent. ctrl+x a reaches its
 box through its owner session; the background summary keeps `● 1 task asking`.
 
-ctrl+d and `/exit` quit at once, closing the main session and its children
+ctrl+d and `/exit` quit at once, closing main, its children and forks,
 and waiting for their agents to exit. chord prints a
 `chord <agent> --resume <id>` for the main session if a prompt went to it.
 It repeats `--agent-command` only when given as a flag; settings commands
@@ -485,6 +487,36 @@ task summaries. Closed children stay counted, as do sessions cleared or
 resumed in place, under `before /clear`. The table also carries dirac's
 no-cost and missing-price notes.
 
+### Forking a conversation
+
+`/fork` on main or a picked fork continues its whole conversation in a new
+top-level agent, in a separate agent process through ACP `session/fork`.
+It picks the new agent at once. `/fork <name>` names it; otherwise names are
+`fork`, `fork 2`, and so on. Names follow `open_agent`'s rules; taken names
+are numbered. The source stays open. The fork's header says
+`forked from <source>`, and its view starts with a copy of the source's
+transcript, then `── forked from <source> · HH:MM ──` and its own turns.
+
+The runtime must advertise `session/fork`; otherwise the command says
+`This agent does not fork sessions`. Claude Code and Codex adapters advertise
+it; see the [session capabilities table](agent-capabilities.md#sessions-b3b8)
+for other runtimes and evidence limits. A source with work, an open request or
+queued prompts refuses until its turn ends. On an ordinary child, the command
+says `/fork forks main or a fork`. A fork can itself be forked.
+
+A fork has main's tools except `open_agent`, `run_team`, `propose_team` and
+`close_agent`, which answer
+`This tool works only from main and its agents, not from a fork.`
+It can use task agents and monitors. Main and forks cannot message one another.
+Pick a fork in the agents list and press `x` to close it with its tasks and
+monitors. Main's `/clear` leaves forks open; `/clear` on a fork is refused:
+`A fork cannot be cleared yet · close it with x and /fork again`.
+
+Forks close on quit and are not reopened automatically. `/resume` or
+`chord -r <id>` opens a fork later as a session of its own. Its record starts
+at the divider: the copied source transcript is only in the original view,
+while the agent retains the fork's conversation context.
+
 ## Settings
 
 chord reads two settings files before it starts: the user's,
@@ -682,7 +714,7 @@ found on any layout, Greek, Ukrainian or Hebrew as well, by the key in its
 place that the terminal names, so there the key in `?`'s place opens the
 panel on an empty prompt too, and types its `,` after a draft.
 
-chord hands the agent MCP servers for each session it opens, new or
+chord hands the agent MCP servers for each session it opens, new, forked or
 resumed, from three places, each over the one before: `mcpServers` in the
 user's settings file, the `.mcp.json` in the directory the session works in
 (the file Claude Code and other tools share), and `mcpServers` in the
@@ -758,10 +790,10 @@ be up.
 `open_agent` opens a long-lived agent the same way, with the prompt as its
 first turn, a message from `main`. Its name cannot contain `"` or a control
 character; a refusal names the character. Task names are unaffected.
-While a session has children, a list of its agents sits under the status
-line, `main` and each child in the order it opened, each child in a colour
-of its own. Each agent has one row, with no session title, including team
-leads and unfolded members.
+While a session has children or forks, a list sits under the status line:
+`main` and its children in opening order, then top-level forks in theirs.
+Each child or fork has its own colour and one row without a session title,
+as do team leads and unfolded members. A fork's runtime starts with `fork ·`.
 Each row has its runtime, model, effort (`open_agent` takes one as
 `spawn_task` does) and state: `● permission 17s`, `✻ working 41s`, `◦ idle 3m`,
 `✗ exited` or `✗ failed to start`. Asking counts from the request, working

@@ -965,13 +965,14 @@ installed runtime or wait for quota before launching. Cache files under
 shared balance or ledger. Cancelled reads publish no facts. Sanitized cleanup
 and exit-verification uncertainty can persist after a later successful read.
 
-Production collectors initially support only `darwin-arm64`: Codex 0.163.0
+Production collectors try any version on `darwin-arm64`: Codex
 through its installed, unmodified official PATH npm launcher or native binary,
-and native Claude Code 2.1.311 through Agent SDK 0.3.311's experimental getter.
-The official npm Codex launcher needs an existing Node installation. Chord
-installs no provider executable and adds no login or credential reader; custom
-ACP commands have no verified association with the official reader's auth and
-are advisory unavailable. Other targets/versions or missing executables give
+and native Claude Code through Agent SDK 0.3.311's experimental getter. Codex
+reports the executable's version; Claude reports the bundled SDK's. Failed or
+malformed reads are unavailable with a reason. The npm Codex launcher needs
+existing Node. Chord installs no provider and adds no login or credential
+reader; custom ACP commands have no verified association with the reader's
+auth and are advisory unavailable. Other targets or missing executables give
 source warnings; direct ACP remains supported on existing release targets.
 
 The Claude getter may change or disappear. Readers send no inference prompt,

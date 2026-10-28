@@ -7565,3 +7565,19 @@ The limited owner acceptance supersedes the need to resolve this particular
 demonstrated shift; it does not approve either investigation's code, a
 custom baseline measurement path, sticky height policy or layout engine.
 No new library or production layout change accompanies this disposition.
+
+## 2026-10-28 — CHD-546: resource collectors read any provider version (owner)
+
+The owner drops the exact-version gate for the Claude Code and Codex resource
+collectors. Chord always tries to read: it still runs the provider's
+`--version` and takes the version from `codex-cli <version>` or
+`<version> (Claude Code)`. A successful read is reported as read; empty,
+failed or unrecognised output is unavailable with its reason. Zod validation
+of the provider's answer stays the guard against a changed format. The
+version read from `--version` is the Codex source version; Claude's source
+stays the bundled `claude-agent-sdk` version.
+
+This supersedes only the exact Codex 0.163.0 and Claude Code 2.1.311 part of
+the 2026-10-27 CHD-533 "Exact deployment and accepted risks" entry. The
+custom-command, platform, PATH, native-binary and npm-launcher checks, the
+approved public APIs, ownership and accepted risks are unchanged.

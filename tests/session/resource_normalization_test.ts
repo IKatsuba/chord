@@ -108,6 +108,18 @@ describe('official resource normalization', () => {
     }
   });
 
+  test('Codex reports the executable version it was read from as its source version', () => {
+    const limits = { rateLimits: bucket, rateLimitsByLimitId: null };
+    const read = normalizeCodex(account, limits, {
+      ...source,
+      version: '0.164.0',
+    });
+    const unread = normalizeCodex(account, limits, source);
+
+    expect(read).toHaveProperty('observation.sourceVersion', '0.164.0');
+    expect(unread).toHaveProperty('observation.sourceVersion', 'unknown');
+  });
+
   test('Codex prefers all map buckets, without adding the legacy duplicate or exporting account IDs', () => {
     const result = normalizeCodex(
       account,

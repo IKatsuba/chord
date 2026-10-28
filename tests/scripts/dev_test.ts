@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { ValidationError } from '@cliffy/command';
 import stripAnsi from 'strip-ansi';
 import { type DevActions, devCommand } from '../../scripts/dev.ts';
@@ -614,4 +615,32 @@ describe('tester: release parsing boundaries', () => {
       ).rejects.toThrow(ValidationError);
     }
   });
+});
+
+test('CHD-531 release help discloses mandatory authentication and dry-run effects', () => {
+  const result = spawnSync(
+    process.execPath,
+    [
+      new URL('../../scripts/dev.ts', import.meta.url).pathname,
+      'release',
+      '--help',
+    ],
+    { encoding: 'utf8', timeout: 10_000 },
+  );
+
+  expect(result.status).toBe(0);
+
+  const help = stripAnsi(result.stdout).replace(/\s+/g, ' ');
+
+  for (const text of [
+    'mandatory npm authentication runs for every invocation',
+    'including dry runs and runs without publish',
+    'stdin and stdout must be terminals',
+    'plain npm login once with inherited stdio',
+    'then rechecks npm whoami',
+    'npm may open a browser and save credentials or registry settings',
+    'Stage selection cannot skip authentication',
+  ]) {
+    expect(help).toContain(text);
+  }
 });

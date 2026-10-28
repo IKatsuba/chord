@@ -1,0 +1,24 @@
+[38;2;255;255;255m [39m⏺[38;2;255;255;255m [39mAgent completion sessions opened.[38;2;255;255;255m
+
+ [38;2;86;212;221m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;86;212;221m@bugfix[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; [0m[38;2;255;255;255m
+      [2m[39mcoder waits for it and will edit src/parse/tokenize.ts only. I will [0m[38;2;255;255;255m
+      [2m[39mreport when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix · fake.[38;2;255;255;255m
+
+ [38;2;124;207;127m←[38;2;255;255;255m [2m[39mfrom [0;1m[38;2;124;207;127m@bugfix 2[0;2m · fake[0m[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; [0m[38;2;255;255;255m
+      [2m[39mcoder waits for it and will edit src/parse/tokenize.ts only. I will [0m[38;2;255;255;255m
+      [2m[39mreport when the test fails for the bug's own reason.[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mReceived the message from bugfix 2 · fake.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m [39m@@[38;2;255;255;255m                                                                         [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m         [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[39mmain     [0;2m  fake                    ◦ idle 0s[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;108;182;255mparser   [2m[39m  fake                    ◦ idle 0s            ✓ new reply[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [38;2;196;156;255mdocs     [2m[39m  fake                    ◦ idle 0s            ✓ new reply[0m[38;2;255;255;255m
+  [2m[39m  … +2 more[0m[38;2;255;255;255m

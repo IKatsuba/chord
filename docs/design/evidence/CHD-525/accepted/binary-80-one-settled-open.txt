@@ -1,0 +1,25 @@
+
+ ››› Working… (1s · esc to interrupt)
+  ⎿  ◐ Read the code
+     ☐ Write the change
+     ☐ Run the tests
+ › queued 0
+ › queued 1
+ › queued 2
+ › queued 3
+  pressure-file5.ts
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft 0                                                                    │
+│   draft 1                                                                    │
+│   draft 2                                                                    │
+│   draft 3                                                                    │
+│   draft 4                                                                    │
+│   draft 5                                                                    │
+│   draft 6                                                                    │
+│   @                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  This agent does not take messages into a running turn · enter queues it
+    main       fake                    ✻ working 0s
+    parser     fake                    ◦ idle 0s     ✓ new reply
+    … +3 more

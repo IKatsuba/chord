@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
@@ -270,3 +270,112 @@ for (const mode of [
     }
   });
 }
+
+describe('CHD-532 tester: actual handler bypass routes', () => {
+  for (const mode of [
+    'explicit',
+    'command',
+    'stdin-only',
+    'stdout-only',
+    'continue',
+    'resume-id',
+    'resume-picker',
+    'headless',
+  ] as const) {
+    test(`${mode} never enters the new agent picker`, () => {
+      const place = mkdtempSync(join(tmpdir(), 'chord-start-skip-'));
+      const project = join(place, 'project');
+      const settings = join(project, '.chord', 'settings.json');
+      const script = join(place, 'route.ts');
+      const command = fakeAgentCommand();
+      const content = JSON.stringify({
+        agent: 'fixture',
+        agents: { fixture: { command } },
+      });
+      const args: string[] = ['-C', project];
+
+      if (mode === 'explicit') {
+        args.push('fixture');
+      }
+
+      if (mode === 'command') {
+        args.push('--agent-command', quote(command));
+      }
+
+      if (mode === 'continue') {
+        args.push('--continue');
+      }
+
+      if (mode === 'resume-id') {
+        args.push('--resume=unrecorded-fixture');
+      }
+
+      if (mode === 'resume-picker') {
+        args.push('--resume');
+      }
+
+      if (mode === 'headless') {
+        args.push('-p', 'text');
+      }
+
+      mkdirSync(join(project, '.chord'), { recursive: true });
+      writeFileSync(settings, content);
+      writeFileSync(
+        script,
+        `import { spyOn } from 'bun:test';
+import { writeFileSync } from 'node:fs';
+const mark = () => writeFileSync(${JSON.stringify(join(place, 'called'))}, 'called');
+Object.defineProperty(process.stdin, 'isTTY', { value: ${mode !== 'stdout-only'}, configurable: true });
+Object.defineProperty(process.stdout, 'isTTY', { value: ${mode !== 'stdin-only'}, configurable: true });
+const { cli, startServices } = await import(${JSON.stringify(new URL('../src/main.tsx', import.meta.url).pathname)});
+const calls = { terminal: 0, render: 0, copier: 0 };
+const stop = new Error('fixture boundary');
+spyOn(startServices, 'openTerminal').mockImplementation(async () => { calls.terminal++; mark(); return { renderer: {}, dark: true }; });
+spyOn(startServices, 'render').mockImplementation(() => { calls.render++; mark(); throw stop; });
+spyOn(startServices, 'copier').mockImplementation(() => { calls.copier++; mark(); throw stop; });
+try {
+  await cli.noExit().throwErrors().parse(${JSON.stringify(args)});
+} catch (error) {
+  console.log(JSON.stringify({ calls, error: error.message }));
+}
+`,
+      );
+
+      try {
+        const ran = spawnSync(process.execPath, [script], {
+          env: {
+            ...process.env,
+            XDG_CONFIG_HOME: join(place, 'config'),
+            XDG_STATE_HOME: join(place, 'state'),
+            CHORD_RESOURCE_FIXTURE: 'true',
+          },
+          encoding: 'utf8',
+          timeout: 15_000,
+        });
+
+        if (mode === 'continue' || mode === 'resume-picker') {
+          expect(ran.status).toBe(2);
+          expect(ran.stderr).toContain('No earlier fixture session');
+          expect(existsSync(join(place, 'called'))).toBe(false);
+        } else if (mode === 'headless') {
+          expect(ran.status, ran.stderr).toBe(0);
+          expect(ran.stdout).toContain('Hello, world.');
+          expect(existsSync(join(place, 'called'))).toBe(false);
+        } else {
+          const result = JSON.parse(ran.stdout.trim());
+
+          expect(ran.status, ran.stderr).toBe(0);
+          expect(result.calls.terminal).toBe(1);
+          expect(result.calls.render).toBe(0);
+
+          expect(result.calls.copier).toBe(1);
+          expect(result.error).toBe('fixture boundary');
+        }
+
+        expect(readFileSync(settings, 'utf8')).toBe(content);
+      } finally {
+        rmSync(place, { recursive: true, force: true });
+      }
+    });
+  }
+});

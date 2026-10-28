@@ -1420,7 +1420,7 @@ describe('CHD-535 U2 tester: queued ownership through the window', () => {
 
     return withWindow(
       async (window) => {
-        await send(window, 'slow');
+        await send(window, 'readsheld');
         await window.shows('esc to interrupt');
         await window.type('keep this draft');
         await window.press('\x19');
@@ -1449,7 +1449,7 @@ describe('CHD-535 U2 tester: queued ownership through the window', () => {
         await window.press(ESC);
         await window.press('\x15');
 
-        for (const previous of ['second queued', 'first queued', 'slow']) {
+        for (const previous of ['second queued', 'first queued', 'readsheld']) {
           await window.press(UP);
           await until(
             'unchanged submission history',
@@ -1573,7 +1573,7 @@ describe('CHD-535 U2 tester: queued ownership through the window', () => {
     await withWindow(
       async (window) => {
         try {
-          await send(window, 'slow');
+          await send(window, 'readsheld');
           await window.shows('esc to interrupt');
           await send(window, 'old queued');
 

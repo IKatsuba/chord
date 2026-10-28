@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -160,4 +160,56 @@ authenticate({
   );
   expect(child.stderr).toBe('fixture-login-error\n');
   expect(ran()).toEqual(['whoami', 'login', 'whoami']);
+});
+
+describe('CHD-531 tester: interrupted identity checks and later invocations', () => {
+  test.each([false, true])(
+    'a signal-terminated identity check cannot bypass authentication, tty=%s',
+    (tty) => {
+      at.fake(
+        'npm',
+        `printf '%s\\n' "$*" >>"$STATE/ran.log"
+case "$1" in
+whoami)
+  if [ ! -f "$STATE/recovered" ]; then kill -TERM $$; fi
+  ;;
+login) touch "$STATE/recovered" ;;
+esac`,
+      );
+
+      if (tty) {
+        authenticate(context({}, true));
+        expect(ran()).toEqual(['whoami', 'login', 'whoami']);
+      } else {
+        expect(() => authenticate(context({}, false))).toThrow(
+          'npm login needs stdin and stdout on a terminal',
+        );
+        expect(ran()).toEqual(['whoami']);
+      }
+    },
+  );
+
+  test('a signal-terminated recheck stops after one login', () => {
+    at.fake(
+      'npm',
+      `printf '%s\\n' "$*" >>"$STATE/ran.log"
+case "$1" in
+whoami) kill -TERM $$ ;;
+esac`,
+    );
+
+    expect(() => authenticate(context())).toThrow(
+      'npm whoami still failed after login; release stopped',
+    );
+    expect(ran()).toEqual(['whoami', 'login', 'whoami']);
+  });
+
+  test('a later invocation may recover after the first login was cancelled', () => {
+    loggedOut();
+    expect(() => authenticate(context({ LOGIN_RESULT: '130' }))).toThrow(
+      'npm login did not complete; release stopped',
+    );
+    authenticate(context());
+    expect(ran()).toEqual(['whoami', 'login', 'whoami', 'login', 'whoami']);
+  });
 });

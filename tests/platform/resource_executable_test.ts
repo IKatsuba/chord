@@ -123,3 +123,34 @@ describe('executable read lifecycle classification', () => {
     ).rejects.toMatchObject({ kind: 'cleanup' });
   });
 });
+
+describe('tester: provider version read failures', () => {
+  test('both providers report malformed version reads as unavailable with a reason', async () => {
+    for (const provider of ['codex', 'claude'] as const) {
+      for (const output of ['', 'unknown', 'codex-cli ', ' (Claude Code)']) {
+        expect(
+          await resolveResourceExecutable(provider, options, {
+            ...inspection,
+            version: () => Promise.resolve(output),
+          }),
+        ).toEqual({
+          unavailable: 'Native provider version could not be read.',
+        });
+      }
+    }
+  });
+
+  test('both providers retain an unavailable reason when the version command fails', async () => {
+    for (const provider of ['codex', 'claude'] as const) {
+      expect(
+        await resolveResourceExecutable(provider, options, {
+          ...inspection,
+          version: () => Promise.reject(new Error('Fixture version failure.')),
+        }),
+      ).toEqual({
+        unavailable: 'Official provider executable could not be verified.',
+        retry: 'configuration',
+      });
+    }
+  });
+});

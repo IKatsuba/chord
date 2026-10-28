@@ -54,6 +54,7 @@ import {
   resumeMessage,
   sessionById,
 } from './session/sessions.ts';
+import { openSession } from './session/session.ts';
 import { snapshotOnSignal } from './platform/heap.ts';
 import { execPath } from './platform/process.ts';
 import {
@@ -85,6 +86,7 @@ import {
   userSettingsFile,
 } from './settings.ts';
 import { App } from './ui/app/App.tsx';
+import { chooseAgentAtStart } from './ui/app/startup_choice.ts';
 import { Start } from './ui/app/Start.tsx';
 import { COLOUR } from './ui/app/context.ts';
 import type { Place } from './ui/app/sessions.ts';
@@ -102,7 +104,17 @@ function writeAll(to: Writable) {
     );
 }
 
-const cli = chordCommand().action(async (options, named) => {
+/** Startup factories stay behind the choice boundary; tests can observe them directly. */
+export const startServices = {
+  openTerminal,
+  render,
+  copier,
+  serveChord,
+  createResources,
+  openSession,
+};
+
+export const cli = chordCommand().action(async (options, named) => {
   // A flag rather than a settings key, so it is typed each time; checked
   // here rather than by Cliffy so its refusal says what it is for.
   if (options.dangerouslySkipPermissions && options.print === undefined) {
@@ -118,10 +130,26 @@ const cli = chordCommand().action(async (options, named) => {
     ...(home === undefined ? {} : { home }),
   });
   const problems = [...loaded.problems];
-  // The start picker's tree, while `chord --resume` with no id has it on
-  // screen; App takes its renderer over, so the alternate screen is never
+  // The agent or resume picker before a session starts. App takes its
+  // renderer over, so the alternate screen is never
   // left between the two.
   let start: Instance | undefined;
+  let terminal:
+    (Terminal & { found: ReturnType<typeof background> }) | undefined;
+  const terminalSetup = async () => {
+    const opened = await startServices.openTerminal({
+      mouse: loaded.settings.mouse !== false,
+    });
+
+    return {
+      ...opened,
+      found: background(opened.dark, process.env['COLORFGBG']),
+    };
+  };
+
+  let keys: Awaited<ReturnType<typeof loadKeybindings>> | undefined;
+  let listed: Awaited<ReturnType<typeof listedAgents>> | undefined;
+
   // Anything said on stderr, or a refusal, is said once the picker has
   // gone, or the alternate screen would take it; the window then opens the
   // terminal afresh.
@@ -150,6 +178,52 @@ const cli = chordCommand().action(async (options, named) => {
 
   await report(problems);
 
+  let selected = named;
+
+  if (
+    chooseAgentAtStart({
+      ...options,
+      named,
+      stdinTTY: process.stdin.isTTY === true,
+      stdoutTTY: process.stdout.isTTY === true,
+    })
+  ) {
+    listed = await listedAgents(agentCommands(loaded.layers));
+    keys = await loadKeybindings(keybindingsFile(xdgConfig));
+    terminal = await terminalSetup();
+
+    const { promise, resolve: picked } = Promise.withResolvers<
+      string | undefined
+    >();
+
+    start = startServices.render(
+      <Start
+        kind='agents'
+        agents={listed}
+        preferred={loaded.settings.agent ?? DEFAULT_AGENT}
+        directory={shownPath(resolve(options.cwd), {
+          cwd: resolve(options.cwd),
+          home,
+        })}
+        colours={paletteOf(
+          resolveTheme(loaded.settings.theme ?? 'auto', terminal.found),
+          COLOUR,
+        )}
+        keymap={keys.keymap}
+        onPick={picked}
+      />,
+      terminal,
+    );
+
+    selected = await promise;
+
+    if (selected === undefined) {
+      await start.waitUntilExit();
+
+      return;
+    }
+  }
+
   // One id and no agent named on the command line: the session's own
   // agent, as its record says (Q180). An --agent-command still goes with
   // the default agent alone (Q56), so it leaves the id to be refused there.
@@ -162,7 +236,7 @@ const cli = chordCommand().action(async (options, named) => {
       ? recordedAgent(await readRecords(chordStateDir()), given)
       : undefined;
   const flags = {
-    agent: named ?? recorded,
+    agent: selected ?? recorded,
     agentCommand: options.agentCommand,
     model: options.model,
     effort: options.effort,
@@ -186,6 +260,8 @@ const cli = chordCommand().action(async (options, named) => {
     agentCommand === undefined &&
     findAgent(agent) === undefined
   ) {
+    await leaveStart();
+
     throw new ValidationError(
       `Unknown agent "${agent}". \`chord agents\` lists them.`,
     );
@@ -281,26 +357,9 @@ const cli = chordCommand().action(async (options, named) => {
   let resume: Resume | undefined;
   const find = { agent, cwd: resolve(options.cwd) };
 
-  // Opened once for the start picker and the window both, unless the picker
-  // gave it up first; the `auto` theme is the background it answered, then
-  // `COLORFGBG`'s, then dark.
-  let terminal:
-    (Terminal & { found: ReturnType<typeof background> }) | undefined;
-  const terminalSetup = async () => {
-    // `"mouse": false` leaves the mouse to the terminal.
-    const opened = await openTerminal({
-      mouse: loaded.settings.mouse !== false,
-    });
-
-    return {
-      ...opened,
-      found: background(opened.dark, process.env['COLORFGBG']),
-    };
-  };
-
   const env = terminalEnv((name) => process.env[name]);
 
-  const keys = await loadKeybindings(keybindingsFile(xdgConfig));
+  keys ??= await loadKeybindings(keybindingsFile(xdgConfig));
 
   if (picking) {
     // A picker needs a person at a terminal to pick.
@@ -322,7 +381,7 @@ const cli = chordCommand().action(async (options, named) => {
       EarlierSession | undefined
     >();
 
-    start = render(
+    start = startServices.render(
       <Start
         agent={agent}
         directory={shownPath(resolve(options.cwd), {
@@ -516,17 +575,19 @@ const cli = chordCommand().action(async (options, named) => {
   const { found } = terminal;
   // With the mouse the terminal's, chord selects nothing to copy.
   const clipboard =
-    loaded.settings.mouse === false ? undefined : copier(terminal.renderer);
+    loaded.settings.mouse === false
+      ? undefined
+      : startServices.copier(terminal.renderer);
   const starting = (value: Sourced | undefined) =>
     value === undefined
       ? undefined
       : { id: value.id, from: setWhere(value.from, shown) };
   let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
-  const server = serveChord();
+  const server = startServices.serveChord();
   const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
   const fixtureResources = collectors === 'fixture';
-  const resources = createResources({
+  const resources = startServices.createResources({
     stateDirectory: fixtureResources
       ? join(chordStateDir(), 'fixture')
       : chordStateDir(),
@@ -551,9 +612,12 @@ const cli = chordCommand().action(async (options, named) => {
     }));
 
   const forgetResources = closeOnForcedExit(closeResources);
-  const listed = await listedAgents(agentCommands(loaded.layers));
+
+  listed ??= await listedAgents(agentCommands(loaded.layers));
+
   const window = (
     <App
+      open={startServices.openSession}
       resources={resources}
       teamSelection={first.teamSelection}
       selectionPolicy={first.selectionPolicy}
@@ -608,7 +672,7 @@ const cli = chordCommand().action(async (options, named) => {
     />
   );
   // The start picker's renderer goes on as the window's, on the same screen.
-  const app = start ?? render(window, terminal);
+  const app = start ?? startServices.render(window, terminal);
 
   app.rerender(window);
 

@@ -16,7 +16,7 @@ const ALIASES: Readonly<Record<string, string>> = {
   codex: 'codex-acp',
 };
 
-/** chord opens on Claude Code, the client it is modelled on. */
+/** Fallback agent and initial startup-picker preference. */
 export const DEFAULT_AGENT = 'claude';
 
 /** An agent chord can start by name. */

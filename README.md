@@ -29,7 +29,7 @@ take on your next task.
 
 ```sh
 npm install -g @chorded/chord
-chord            # Claude Code, here
+chord            # choose an agent, here
 chord codex      # or any other agent
 ```
 
@@ -131,9 +131,9 @@ bun dev compile --install   # into ~/.local/bin/chord
 ## Use
 
 ```sh
-chord                  # your default agent in this directory
+chord                  # choose an agent in this directory
 chord gemini -C ~/src/app
-chord agents           # every agent chord can start, and whether it is installed
+chord agents           # agents, startup commands and own CLI availability
 chord --continue       # the latest session here, again
 chord --resume <id>     # a recorded session, on its own agent
 chord --resume         # pick an earlier session
@@ -160,8 +160,10 @@ Inside the window:
 | `esc`             | interrupt the turn                           |
 
 Settings live in `~/.config/chord/settings.json` and the project's
-`.chord/settings.json`: the default agent, each agent's model, effort and
-mode, MCP servers, theme and notifications.
+`.chord/settings.json`: the default agent (initially highlighted in the
+startup picker), each agent's model, effort and mode, MCP servers, theme
+and notifications. Each new unnamed interactive start asks again; the pick
+applies to that run and is not saved.
 
 **[The guide](docs/guide.md)** has everything else: every flag, setting, key,
 the team file format, chord's MCP tools for agents, and how sessions are

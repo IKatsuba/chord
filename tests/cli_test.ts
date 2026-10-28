@@ -496,3 +496,14 @@ describe('CHD-493 U9 tester: native duplicate-option boundaries', () => {
     });
   }
 });
+
+test('CHD-532 CLI help explains invocation-only unnamed interactive choice', () => {
+  const help = chordCommand().getHelp().replace(/\s+/g, ' ');
+
+  expect(help).toContain(
+    'A new unnamed interactive start asks which agent to use for this invocation',
+  );
+  expect(help).toContain(
+    'explicit commands, headless and resume routes keep their existing behavior',
+  );
+});

@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import {
+  agentChoices,
   choiceKey,
   choiceLines,
   CURRENT_MARK,
@@ -626,4 +627,31 @@ test('a row as tall as the picker is drawn whole while highlighted, the +N more 
     ' f',
     ' next',
   ]);
+});
+
+test('CHD-532 agent adaptation retains catalog order and only marks the preferred initial position', () => {
+  const choices = agentChoices(
+    [
+      {
+        name: 'second',
+        title: 'Second title',
+        start: 'fixture',
+        from: 'settings',
+      },
+      {
+        name: 'first',
+        title: 'first',
+        start: 'fixture',
+        from: 'cli',
+        found: false,
+      },
+    ],
+    'first',
+  );
+
+  expect(choices.map(({ value }) => value)).toEqual(['second', 'first']);
+  expect(choices[0]?.label).toBe('second\x1b[2m · Second title\x1b[22m');
+  expect(choices[1]?.label).toBe('first\x1b[2m · not found\x1b[22m');
+  expect(openView(choices, 6).highlighted).toBe(1);
+  expect(openView(agentChoices([], 'absent'), 6).highlighted).toBe(0);
 });

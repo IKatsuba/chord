@@ -86,3 +86,52 @@ describe('Resources report', () => {
     expect(drawn.lines.join('\n')).toContain('codex: unavailable');
   });
 });
+
+describe('tester: plain limits preserve precision and unknown fields', () => {
+  test('zero, a ninety-minute duration, and a reset on another day retain their meanings', () => {
+    expect(
+      resourceLines({
+        readAt: '2026-10-28T00:00:00Z',
+        providers: [
+          {
+            agent: 'codex',
+            windows: [
+              {
+                name: 'primary',
+                usedPercent: 0,
+                windowSeconds: 5400,
+                resetsAt: '2026-10-27T23:59:00Z',
+                models: [],
+              },
+            ],
+          },
+        ],
+      }),
+    ).toEqual([
+      'Read: 00:00:00 UTC · advisory snapshot',
+      'codex · 90m: 0% used · reset 2026-10-27 23:59 UTC · models none',
+    ]);
+  });
+
+  test('an older-format answer stays one line in collapsed and expanded summaries', () => {
+    const answer = {
+      schemaVersion: 1,
+      observedAt: '2026-10-27T13:00:00Z',
+      pools: [],
+      warnings: ['Old warning must not be reinterpreted.'],
+    };
+    const call = {
+      id: 'legacy-resources',
+      status: 'completed' as const,
+      chord: { tool: 'get_budgets' as const, input: {}, answer },
+    };
+
+    for (const expanded of [false, true]) {
+      expect(summary(call, expanded).lines).toEqual([
+        'Recorded in an older format; not shown.',
+      ]);
+    }
+
+    expect(call.chord.answer).toEqual(answer);
+  });
+});

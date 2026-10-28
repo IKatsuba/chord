@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -307,3 +307,22 @@ for (const scenario of [
     }
   }, 30_000);
 }
+
+describe('tester: private usage worker argument boundaries', () => {
+  for (const compiled of [false, true]) {
+    test(`${compiled ? 'compiled' : 'source'} missing, empty and oversized paths start no provider`, async () => {
+      for (const [index, args] of [[], [''], ['x'.repeat(4097)]].entries()) {
+        const record = join(
+          directory,
+          `tester-invalid-${compiled}-${index}.jsonl`,
+        );
+
+        expect(await privateEntry(compiled, args, record)).toEqual({
+          agent: 'claude',
+          unavailable: 'Invalid isolated collector arguments.',
+        });
+        expect(existsSync(record)).toBe(false);
+      }
+    });
+  }
+});

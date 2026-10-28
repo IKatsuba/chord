@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import {
   normalizeClaude,
   normalizeCodex,
@@ -156,5 +157,64 @@ describe('official resource normalization', () => {
         models: null,
       })),
     });
+  });
+});
+
+describe('tester: bounded provider limits without inference', () => {
+  test('Codex keeps genuine zero while unknown duration and reset stay null', () => {
+    expect(
+      normalizeCodex(account, {
+        rateLimits: {
+          primary: { usedPercent: 0, windowDurationMins: null, resetsAt: null },
+          secondary: null,
+        },
+        rateLimitsByLimitId: null,
+      }),
+    ).toEqual({
+      agent: 'codex',
+      windows: [
+        {
+          name: 'primary',
+          usedPercent: 0,
+          windowSeconds: null,
+          resetsAt: null,
+          models: null,
+        },
+      ],
+    });
+  });
+
+  test('the quota map accepts 64 buckets and refuses 65 rather than silently clipping', () => {
+    const limits = (length: number) => ({
+      rateLimits: bucket,
+      rateLimitsByLimitId: Object.fromEntries(
+        Array.from({ length }, (_, index) => [`bucket${index}`, bucket]),
+      ),
+    });
+    const accepted = normalizeCodex(account, limits(64));
+
+    expect(ProviderLimits.safeParse(accepted).success).toBe(true);
+    assert('windows' in accepted);
+    expect(accepted.windows).toHaveLength(64);
+    expect(accepted.windows.at(-1)?.name).toBe('bucket63.primary');
+
+    expect(normalizeCodex(account, limits(65))).toEqual({
+      agent: 'codex',
+      unavailable: 'The quota map exceeds the supported bound.',
+    });
+  });
+
+  test('malformed Claude availability never permits otherwise valid usage to become a limit', () => {
+    for (const availability of [undefined, null, 'true', 1]) {
+      expect(
+        normalizeClaude({
+          rate_limits_available: availability,
+          rate_limits: { five_hour: { utilization: 0, resets_at: null } },
+        }),
+      ).toEqual({
+        agent: 'claude',
+        unavailable: 'Malformed experimental usage snapshot.',
+      });
+    }
   });
 });

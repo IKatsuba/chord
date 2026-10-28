@@ -1312,6 +1312,8 @@ or be above it, in canonical `X.Y.Z` form with no prefix or build metadata.
 `fix` means `patch`. Pre-releases are refused, including a version argument
 when package.json's current version is a pre-release. Give the command a
 version or bump instead of editing package.json's version by hand.
+A different version or bump is refused while package.json's version is not
+on npm; `bun dev release` without a version finishes that release.
 
 The release runs `install`, `check` (`bun quality`), `natives`, `compile`, `sign`,
 `selftest`, `notarise`, `pack` and `publish` in order. `--skip` and `--only`

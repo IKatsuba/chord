@@ -25,7 +25,8 @@ import { executable, type Scratch, scratch } from './scratch.ts';
 
 // A whole run's guards and their order, on a scratch repository with a bare
 // origin: npm, bun, security and xcrun faked, each logging what it was asked,
-// so a test sees what ran before a run died.
+// so a test sees what ran before a run died. A file in published/ names a
+// package npm has at any version, or one name@version.
 
 const VERSION = '9.9.9';
 const MAC = { platform: 'darwin', arch: 'arm64' };
@@ -73,7 +74,7 @@ login)
   ;;
 view)
 	spec=\${2#@chorded/}
-	if [ -f "$STATE/published/\${spec%@*}" ]; then echo "\${spec##*@}"; exit 0; fi
+	if [ -f "$STATE/published/\${spec%@*}" ] || [ -f "$STATE/published/$spec" ]; then echo "\${spec##*@}"; exit 0; fi
 	echo 'npm error code E404' >&2
 	exit 1
 	;;
@@ -275,6 +276,37 @@ test('--package publishes the one package, and prints no version while others ar
   expect(at.err.at(-1)).toStartWith('not tagged: ');
 });
 
+describe('tester: CHD-547 explicit version eligibility', () => {
+  test.each([false, true])(
+    'an explicit new version with only compile cannot skip the publication guard (dry run: %s)',
+    async (dryRun) => {
+      const options: ReleaseOptions = { dryRun, only: ['compile'] };
+      const before = readFileSync(join(at.root, 'package.json'), 'utf8');
+
+      expect(
+        await died(
+          runRelease(
+            context({ AUTH_FAIL: 'yes' }),
+            selectStages(options),
+            options,
+            MAC,
+            '9.9.10',
+          ),
+        ),
+      ).toBe(
+        '@chorded/chord@9.9.9 is not published yet; `bun dev release` without a version finishes it',
+      );
+      expect(ran()).toEqual(['npm view @chorded/chord@9.9.9 version']);
+      expect(readFileSync(join(at.root, 'package.json'), 'utf8')).toBe(before);
+      expect(
+        String(
+          spawnSync('git', ['status', '--porcelain'], { cwd: at.root }).stdout,
+        ).trim(),
+      ).toBe('');
+    },
+  );
+});
+
 describe('tester: CHD-412 release transaction boundaries', () => {
   function output(cwd: string, ...args: string[]): string {
     const child = spawnSync('git', args, { cwd, encoding: 'utf8' });
@@ -289,6 +321,8 @@ describe('tester: CHD-412 release transaction boundaries', () => {
   }
 
   test('a successful local run drops its version commit without a dry-run flag', async () => {
+    writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
+
     const head = output(at.root, 'rev-parse', 'HEAD');
 
     at.fake('file', `echo "$1: ${Object.values(KINDS).join(' ')}"\n`);
@@ -303,6 +337,8 @@ describe('tester: CHD-412 release transaction boundaries', () => {
   });
 
   test('dropping a failed local version preserves unrelated tracked stage edits', async () => {
+    writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
+
     const head = output(at.root, 'rev-parse', 'HEAD');
 
     at.fake(
@@ -484,6 +520,8 @@ describe('a version given', () => {
     ).version;
 
   beforeEach(() => {
+    // The last release reached npm, so a new version may follow it.
+    writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
     // The bun faked records the version package.json had when check ran.
     at.fake(
       'bun',
@@ -608,6 +646,8 @@ if [ -n "$FAIL_CHECK" ] && [ "$1" = 'quality' ]; then exit 2; fi
   });
 
   test("package.json's own version makes no commit", async () => {
+    rmSync(join(at.place, 'published', `chord@${VERSION}`));
+
     const head = out(at.root, 'rev-parse', 'HEAD');
 
     await releasedAt(VERSION, { to: 'check' });
@@ -636,6 +676,35 @@ if [ -n "$FAIL_CHECK" ] && [ "$1" = 'quality' ]; then exit 2; fi
   });
 
   test("package.json's own version needs no compile", async () => {
+    rmSync(join(at.place, 'published', `chord@${VERSION}`));
+    await releasedAt(VERSION, { dryRun: true, only: ['check'] });
+
+    expect(checked()).toBe(VERSION);
+  });
+
+  test("a new version is refused while package.json's is unpublished, before authentication", async () => {
+    rmSync(join(at.place, 'published', `chord@${VERSION}`));
+
+    const head = out(at.root, 'rev-parse', 'HEAD');
+
+    for (const options of [{}, { dryRun: true }]) {
+      expect(await died(releasedAt('minor', options))).toBe(
+        '@chorded/chord@9.9.9 is not published yet; `bun dev release` without a version finishes it',
+      );
+    }
+
+    expect(
+      ran().some((line) => line === 'npm whoami' || line === 'npm login'),
+    ).toBeFalse();
+    expect(ran().some((line) => line.startsWith('bun '))).toBeFalse();
+    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(version()).toBe(VERSION);
+  });
+
+  test("a run without a version needs no published package.json's version", async () => {
+    rmSync(join(at.place, 'published', `chord@${VERSION}`));
+
+    await released({ dryRun: true, only: ['check'] });
     await releasedAt(VERSION, { dryRun: true, only: ['check'] });
 
     expect(checked()).toBe(VERSION);
@@ -651,6 +720,7 @@ describe('a signal while the version commit is held', () => {
    * chord's release together, then fails.
    */
   function interrupted(signal: string, options: ReleaseOptions) {
+    writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
@@ -772,6 +842,8 @@ describe('CHD-531 mandatory authentication preparation', () => {
   ])(
     'authentication failure %j precedes Apple checks, version mutation and all stages',
     async (failure) => {
+      writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
+
       const before = readFileSync(join(at.root, 'package.json'), 'utf8');
       const head = String(
         spawnSync('git', ['rev-parse', 'HEAD'], { cwd: at.root }).stdout,
@@ -902,6 +974,7 @@ describe('CHD-531 mandatory authentication preparation', () => {
         git(at.root, 'tag', '-d', `v${VERSION}`);
       }
     } else {
+      writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
       writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
 
       wanted = 'patch';

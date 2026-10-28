@@ -1,0 +1,40 @@
+[38;2;255;255;255m [38;2;128;243;177m[48;2;116;241;175m▀[38;2;110;239;173m[49m▄[39m  [38;2;255;255;255m   [1m[39mchord[0;2m v0.60.0[0m[38;2;255;255;255m
+ [38;2;105;238;172m▀[38;2;99;237;171m[48;2;87;234;168m▀[38;2;92;236;170m[48;2;81;233;167m▀[38;2;74;232;166m[49m▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [38;2;70;231;165m▄[38;2;75;232;166m[48;2;64;227;165m▀[38;2;69;230;165m[48;2;59;223;164m▀[38;2;63;226;165m[49m▀[38;2;255;255;255m   [2m[39m/tmp/chord-qa.chd525-designer-baseline-120x40[0m[38;2;255;255;255m
+ [38;2;60;224;164m[48;2;49;217;164m▀[38;2;54;220;164m[49m▀[39m  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39menter to send                           home end for the top and the bottom    ctrl + x b to pick a code block[0m[38;2;255;255;255m
+  [2m[39mtab to send into the running turn       ctrl + c to copy                       c r to copy or put in the prompt[0m[38;2;255;255;255m
+  [2m[39mshift or \ + enter for a newline        / @ @@ for commands, files or agents   1–9 to pick a choice[0m[38;2;255;255;255m
+  [2m[39mctrl + g to edit in $EDITOR             ↑ ↓ to pick a completion               ↑ ↓ or j k to move between choices[0m[38;2;255;255;255m
+  [2m[39mctrl + v to paste an image              tab to complete a command              enter to pick the highlighted choice[0m[38;2;255;255;255m
+  [2m[39malt + ← → to move by word               tab enter to add a file or agent       esc to reject a permission[0m[38;2;255;255;255m
+  [2m[39mcmd + ← → to line start or end          esc to close completions               esc ← to leave a picker or shortcuts[0m[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents, background     ! for bash mode                        ctrl + a to show all directories[0m[38;2;255;255;255m
+  [2m[39mx to close an agent, stop background    backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms[0m[38;2;255;255;255m
+  [2m[39menter for background, details, a call   esc to interrupt or stop a command     ctrl + c to stop the turn and its form[0m[38;2;255;255;255m
+  [2m[39mctrl + r to search prompts              shift + tab to cycle modes             /vim for vim mode[0m[38;2;255;255;255m
+  [2m[39mtab enter to take a match               ctrl + o for verbose output            ? for shortcuts[0m[38;2;255;255;255m
+  [2m[39mesc to cancel a search                  ctrl + c to clear input                any key to quit the crash screen[0m[38;2;255;255;255m
+  [2m[39mpgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit[0m[38;2;255;255;255m
+  [2m[39mshift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you[0m[38;2;255;255;255m

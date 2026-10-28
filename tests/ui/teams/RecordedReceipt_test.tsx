@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { DIM, runs } from '../../../src/ui/theme/text.ts';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import {
   freezeSelection,
@@ -93,3 +93,63 @@ for (const columns of [80, 120]) {
     }
   });
 }
+
+describe('tester: historical decision reads in recorded receipt frames', () => {
+  for (const columns of [80, 120]) {
+    test(`keeps original read and warnings at ${columns} columns`, async () => {
+      const frozen = freezeSelection(
+        {
+          description: 'Fixture',
+          lead: { agent: 'fake' },
+          members: [],
+          body: '',
+        },
+        { reason: 'Preserve the original selection.' },
+        {},
+        ['fake'],
+      );
+
+      assert('frozen' in frozen);
+
+      const receipt = {
+        ...selectionReceipt(
+          'historical-run',
+          { name: 'fixture', place: 'project' },
+          frozen.frozen,
+        ),
+        decisionRead: {
+          readAt: '2026-10-27T13:40:00Z',
+          observationRefs: ['original-observation'],
+        },
+        warnings: ['Original unavailable provider.'],
+      };
+      const rendered = await draw(
+        <Colours.Provider value={paletteOf('dark', false)}>
+          <RecordedReceipt
+            historical
+            width={columns}
+            call={{
+              tool: 'run_team',
+              asked: receipt.runId,
+              input: { team: 'fixture', job: 'Original recorded job.' },
+              answer: { id: receipt.runId, receipt },
+            }}
+          />
+        </Colours.Provider>,
+        { columns, rows: 24 },
+      );
+
+      try {
+        const frame = rendered.frame();
+
+        expect(frame).toContain('Read 2026-10-27 13:40:00 UTC · advisory');
+        expect(frame).toContain('Warning: Original unavailable provider.');
+        expect(frame).toContain('Actual at recording: not opened');
+        expect(frame).toContain('saved definition: fixture (project)');
+        expect(frame).not.toContain('none recorded');
+      } finally {
+        await rendered.unmount();
+      }
+    });
+  }
+});

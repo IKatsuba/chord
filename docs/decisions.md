@@ -7595,3 +7595,30 @@ version is not on npm, before authentication and any release work, dry runs
 included. It says that version is not published yet and that
 `bun dev release` without a version finishes it. A run without a version and
 the existing resume path are unchanged.
+
+## 2026-10-28 — CHD-548: get_budgets just reads the limits (owner)
+
+The owner replaces the CHD-533 resource snapshot with a read per call.
+`get_budgets` reads Claude Code and Codex in parallel, waiting up to 10 seconds
+per provider. Optional `agents` filters runtime IDs; omission reads both, `[]`
+reads none, and a runtime without a reader returns unavailable. The answer is
+`{readAt, providers}`, each provider carrying `agent` and either `windows` or
+an `unavailable` reason. Windows carry `name`, nullable `usedPercent`,
+`windowSeconds`, `resetsAt` and `models`. Preferences are not in the answer.
+
+This supersedes the CHD-533 shared cache and 24-hour fold, freshness states,
+`activeRuns`, background collectors and 15-second heartbeat, 30-second filter
+retention, and `run_team` decision read and budget warnings. Old resource cache
+files are left on disk, neither read nor written. Historical receipts retain
+their recorded reads and warnings; receipts without a read show no Read line.
+Older `get_budgets` answers show only `Recorded in an older format; not shown.`
+in the interface, with their JSON preserved in the session record.
+
+Keep the approved Codex app-server client, Claude SDK usage getter in the
+isolated worker, executable resolution and fixture isolation, with their
+existing compatibility and lifecycle risks. Readers send no inference prompt;
+a timeout does not cap buffering or prove cleanup. Window exit waits for
+reader cleanup and reports failures. TeamSelection settings and per-run
+`run_team` overrides remain; saved teams and running work stay unchanged.
+The historical CHD-533 design and collector trials remain as evidence, not
+the current resource contract.

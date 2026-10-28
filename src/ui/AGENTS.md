@@ -27,9 +27,10 @@
 - Direct team runs and picker Enter keep saved composition with no extra main
   turn. Existing team instructions and MCP tools drive optional selection;
   never inject a selection prompt or add an enabling team field.
-- Bind runtime-filtered reads to the actual caller/session/turn when present,
-  with absolute expiry and cancellation/replacement release. Idle reads can
-  refresh within the same bound; never invent a turn ID.
-- Resource reports preserve per-window scope and uncertainty. Recorded Team
-  receipts show actual history, with current state unknown; genuine ACP
+- Resource reads belong to the caller and request cancellation; never retain
+  readers between calls. Window exit waits for their process-group cleanup.
+- Resource reports show per-provider windows or unavailable reasons. Older
+  answer formats show only the older-format notice. Recorded Team receipts
+  keep historical reads and warnings; no read means no Read line. Their
+  current state stays unknown; genuine ACP
   linkage replaces the Chord-owned fallback rather than duplicating it.

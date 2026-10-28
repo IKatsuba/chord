@@ -90,10 +90,10 @@ work or a monitor's command and latest output; `x` stops where offered.
 Describe how you work and the agent proposes a team: a lead and its members,
 each on the runtime, model and mode you want. Save it once, then hand it any
 job with `/team run bugfix <job>` using its saved composition. In conversation,
-its instructions can ask the launching agent to consider advisory resource facts
-and select supported settings for that run,
-leaving the saved team unchanged. Automatic quota readers initially support
-Apple silicon Macs with installed official Codex or native Claude Code; see
+its instructions can ask the launching agent to read provider limits and select
+supported settings for that run, leaving the saved team unchanged. Limits are
+read on request on Apple silicon Macs with installed official Codex or native
+Claude Code; see
 [the guide](docs/guide.md#resource-facts-and-team-selection) for their limits.
 
 <img src="docs/images/proposal.png" alt="A proposed team as a table of agents, with a box asking where to save it" width="900">

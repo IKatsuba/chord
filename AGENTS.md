@@ -82,7 +82,9 @@ bun dev memory            # long-run memory check; options in docs/memory.md
 ```
 
 `bun dev release --help` lists its stages and selection flags. Give it the
-version or bump instead of editing package.json's version by hand. After all
+version or bump instead of editing package.json's version by hand. A different
+version or bump is refused while package.json's version is not on npm;
+`bun dev release` without a version finishes that release. After all
 eligibility guards, every run requires npm authentication, including dry runs
 and runs without publish. A failed `npm whoami` requires stdin and stdout
 terminals for one plain `npm login`, then a successful `npm whoami` recheck;

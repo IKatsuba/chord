@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import assert from 'node:assert/strict';
 import {
   existsSync,
@@ -45,39 +45,44 @@ interface OwnedStartup {
   readonly controllerPid: number;
 }
 
-async function stopOwned(child: OwnedStartup, grace = 3_000) {
+async function stopTarget(child: OwnedStartup, grace = 3_000) {
+  if (child.targetPid && !alive(child.targetPid)) {
+    return;
+  }
+
   stop(child.controllerPid, 'SIGTERM');
 
   try {
     await until(
-      'owned CLI and controller cleanup',
-      () =>
-        (!child.targetPid || !alive(child.targetPid)) &&
-        (!child.controllerPid || !alive(child.controllerPid)),
+      `owned CLI ${child.targetPid} reaped`,
+      () => !child.targetPid || !alive(child.targetPid),
       grace,
     );
   } catch {
     stop(child.targetPid, 'SIGKILL');
-    // Keep its parent alive to reap the child and finish its exit receipt.
+    // Only the still-live controller can reap its direct child.
     await until(
       `owned CLI ${child.targetPid} reaped`,
       () => !child.targetPid || !alive(child.targetPid),
     );
-
-    try {
-      await until(
-        `owned controller ${child.controllerPid} exited`,
-        () => !child.controllerPid || !alive(child.controllerPid),
-        3_000,
-      );
-    } catch {
-      stop(child.controllerPid, 'SIGKILL');
-      await until(
-        `owned controller ${child.controllerPid} killed`,
-        () => !child.controllerPid || !alive(child.controllerPid),
-      );
-    }
   }
+}
+
+async function directExit<T>(
+  controller: ChildProcess,
+  finished: Promise<T>,
+): Promise<T> {
+  const ended = () =>
+    controller.exitCode !== null || controller.signalCode !== null;
+
+  try {
+    await until('direct controller exit', ended, 3_000);
+  } catch {
+    stop(controller.pid, 'SIGKILL');
+    await until('direct controller killed', ended);
+  }
+
+  return await finished;
 }
 
 for (const choose of [false, true]) {
@@ -184,6 +189,9 @@ for (const mode of [
     const tmux = (...args: string[]) =>
       spawnSync('tmux', ['-L', socket, ...args], { env, encoding: 'utf8' });
     const frame = () => tmux('capture-pane', '-t', 'picker', '-p').stdout;
+    let serverPid = 0;
+    const observations: unknown[] = [];
+    const errors: unknown[] = [];
     const owned = () =>
       existsSync(ownership)
         ? (JSON.parse(readFileSync(ownership, 'utf8')) as {
@@ -191,17 +199,42 @@ for (const mode of [
             controllerPid: number;
           })
         : undefined;
-    const diagnostic = () =>
-      JSON.stringify({
-        version: tmux('-V'),
+    const observed = (phase: string) => {
+      const child = owned();
+      const pids = [child?.targetPid, child?.controllerPid, serverPid]
+        .filter((pid) => pid !== undefined && pid > 0)
+        .join(',');
+
+      return {
+        phase,
+        socket,
+        serverPid,
+        ownership: child,
+        receipt: existsSync(receipt)
+          ? readFileSync(receipt, 'utf8')
+          : undefined,
+        processes:
+          pids === ''
+            ? undefined
+            : spawnSync('ps', ['-o', 'pid=,ppid=,stat=,args=', '-p', pids], {
+                encoding: 'utf8',
+                timeout: 1_000,
+              }),
         pane: tmux(
           'display-message',
           '-p',
           '-t',
           'picker',
-          '#{pane_pid}|#{pane_current_command}|#{pane_dead}|#{pane_dead_status}|#{pane_dead_signal}',
+          '#{pid}|#{pane_pid}|#{pane_current_command}|#{pane_dead}|#{pane_dead_status}|#{pane_dead_signal}',
         ),
-        ownership: owned(),
+      };
+    };
+
+    const diagnostic = () =>
+      JSON.stringify({
+        version: tmux('-V'),
+        current: observed('diagnostic'),
+        observations,
         controllerError: existsSync(`${receipt}.error`)
           ? readFileSync(`${receipt}.error`, 'utf8')
           : undefined,
@@ -225,6 +258,9 @@ for (const mode of [
         signal: string | null;
         error: string | null;
       };
+
+      observations.push(observed('target-exit-receipt'));
+
       const detail = diagnostic();
       const owner = owned();
 
@@ -281,6 +317,12 @@ for (const mode of [
       );
 
       expect(opened.status, opened.stderr).toBe(0);
+
+      serverPid = Number(
+        tmux('display-message', '-p', '-t', 'picker', '#{pid}').stdout.trim(),
+      );
+
+      expect(serverPid).toBeGreaterThan(0);
       expect(
         tmux('set-option', '-t', 'picker', 'remain-on-exit', 'on').status,
       ).toBe(0);
@@ -330,49 +372,84 @@ for (const mode of [
       }
 
       expect(readFileSync(settings, 'utf8')).toBe(content);
+    } catch (failure) {
+      errors.push(failure);
     } finally {
-      // The controller reaps its direct child before tmux tears down its pane.
-      const child = owned();
-      const controller =
-        child?.controllerPid ??
-        Number(
-          tmux(
-            'display-message',
-            '-p',
-            '-t',
-            'picker',
-            '#{pane_pid}',
-          ).stdout.trim(),
-        );
-
       try {
-        await stopOwned({ ...child, controllerPid: controller }).catch(
-          (failure: Error) => {
-            throw new Error(`${failure.message}; ${diagnostic()}`);
-          },
-        );
+        const child = owned();
+        const controller =
+          child?.controllerPid ??
+          Number(
+            tmux(
+              'display-message',
+              '-p',
+              '-t',
+              'picker',
+              '#{pane_pid}',
+            ).stdout.trim(),
+          );
+
+        observations.push(observed('before-cleanup-signals'));
+
+        try {
+          await stopTarget({ ...child, controllerPid: controller });
+        } catch (failure) {
+          errors.push(new Error(`${String(failure)}; ${diagnostic()}`));
+        }
+
+        observations.push(observed('target-reap-before-tmux-release'));
+        // tmux owns this controller: release its parent before requiring PID absence.
+        tmux('kill-server');
+        observations.push(observed('after-tmux-release'));
+
+        try {
+          await until('tmux-owned target, controller and server reaped', () =>
+            [child?.targetPid, controller, serverPid].every(
+              (pid) => !pid || !alive(pid),
+            ),
+          );
+          observations.push(observed('all-owned-PIDs-absent'));
+        } catch (failure) {
+          errors.push(new Error(`${String(failure)}; ${diagnostic()}`));
+        }
+
+        for (const pid of starts()) {
+          stop(pid, 'SIGTERM');
+
+          try {
+            await until(`fake process ${pid} exited`, () => !alive(pid), 3_000);
+          } catch {
+            stop(pid, 'SIGKILL');
+
+            try {
+              await until(`fake process ${pid} killed`, () => !alive(pid));
+            } catch (failure) {
+              errors.push(new Error(`${String(failure)}; ${diagnostic()}`));
+            }
+          }
+        }
+      } catch (failure) {
+        errors.push(failure);
       } finally {
         tmux('kill-server');
 
         try {
-          for (const pid of starts()) {
-            stop(pid, 'SIGTERM');
-
-            try {
-              await until(
-                `fake process ${pid} exited`,
-                () => !alive(pid),
-                3_000,
-              );
-            } catch {
-              stop(pid, 'SIGKILL');
-              await until(`fake process ${pid} killed`, () => !alive(pid));
-            }
-          }
-        } finally {
           rmSync(place, { recursive: true, force: true });
+        } catch (failure) {
+          errors.push(failure);
         }
       }
+    }
+
+    if (errors.length > 1) {
+      throw new AggregateError(
+        errors,
+        'Startup assertion and/or owned cleanup failed',
+      );
+    }
+
+    if (errors.length === 1) {
+      throw errors[0];
     }
   });
 }
@@ -406,6 +483,7 @@ test('CHD-532 cleanup fallback reaps its target before stopping the controller',
   });
 
   let child: OwnedStartup | undefined;
+  const failures: unknown[] = [];
 
   try {
     await until(
@@ -417,7 +495,8 @@ test('CHD-532 cleanup fallback reaps its target before stopping the controller',
 
     expect(child.controllerPid).toBe(controller.pid!);
     // No grace forces the parent's TERM handler and the fallback to race.
-    await stopOwned(child, 0);
+    await stopTarget(child, 0);
+    await directExit(controller, finished);
 
     const result = JSON.parse(readFileSync(receipt, 'utf8')) as {
       targetPid: number;
@@ -432,17 +511,36 @@ test('CHD-532 cleanup fallback reaps its target before stopping the controller',
     expect(result.error).toBeNull();
     expect(await finished).toEqual({ code: 1, signal: null });
     expect(alive(child.targetPid!)).toBe(false);
+  } catch (failure) {
+    failures.push(failure);
   } finally {
     try {
       child ??= existsSync(ownership)
         ? (JSON.parse(readFileSync(ownership, 'utf8')) as OwnedStartup)
         : { controllerPid: controller.pid ?? 0 };
 
-      await stopOwned(child);
-      await finished;
+      await stopTarget(child);
+      await directExit(controller, finished);
+    } catch (failure) {
+      failures.push(failure);
     } finally {
-      rmSync(place, { recursive: true, force: true });
+      try {
+        rmSync(place, { recursive: true, force: true });
+      } catch (failure) {
+        failures.push(failure);
+      }
     }
+  }
+
+  if (failures.length > 1) {
+    throw new AggregateError(
+      failures,
+      'Direct child assertion and/or cleanup failed',
+    );
+  }
+
+  if (failures.length === 1) {
+    throw failures[0];
   }
 });
 

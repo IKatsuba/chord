@@ -7480,3 +7480,26 @@ The public child-process API fits this fixture boundary under Bun. Source and
 the existing compiled binary exercise the same target argv; the controller
 itself is test infrastructure and is not embedded in the application. Local
 passes do not establish a green remote CI run or identify a tmux defect.
+
+A subsequent CI run passed the direct-target refusal receipts but timed out
+checking controller disappearance on cancel and explicit starts. That check
+used PID existence before releasing tmux, although tmux, not the test, owns
+and reaps the pane controller. The CI process state was not captured, so a
+zombie, running process or cause is not established by those failures.
+
+A bounded disposable Linux arm64 trial used official Bun 1.4.4, tmux 3.4,
+the unchanged controller fixture and minimal targets exiting zero and one.
+Public PID/PPID/STAT observations confirmed server → controller → target
+parentage, exact target receipts and all owned PIDs absent after teardown.
+It did not reproduce the CI hang: both controllers were already reaped
+before teardown. The trial used no application dependencies or actual CLI
+routes and establishes neither the CI cause nor remote acceptance.
+
+The approved fixture correction separates parents: a controller spawned by
+the test is awaited through its public ChildProcess exit promise; a tmux
+controller first reaps its target, then the test releases the owned tmux
+parent before bounded verification that target, controller and server PIDs
+are absent. PID/PPID/STAT, receipt and pane snapshots diagnose failures;
+a zombie is not accepted as cleanup success. Primary assertion failures and
+cleanup failures are retained separately in an AggregateError when both
+occur. No application behavior or timeout increase is involved.

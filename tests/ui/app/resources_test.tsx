@@ -28,7 +28,7 @@ async function withResourcesWindow(
           collectors: 'fixture',
           fixtureCase: options.scenario ?? 'normal',
           timeoutMs: 50,
-        }),
+        }).read,
         columns: options.columns ?? 120,
         rows: options.columns === 80 ? 24 : 40,
       },

@@ -697,11 +697,6 @@ export class Conversation {
     return this.#session;
   }
 
-  /** Actual current work only; historical and cancelled steer IDs do not qualify. */
-  get activeTurnId(): string | undefined {
-    return this.#turn?.id ?? this.#cycle;
-  }
-
   /** Capture before awaiting a launch; a later turn gets its own authority. */
   get launchSignal(): AbortSignal {
     return this.#launches.signal;

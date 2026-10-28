@@ -80,8 +80,12 @@ export function normalizeCodex(
   for (const [id, value] of buckets) {
     const bucket = CodexBucket.safeParse(value);
 
+    if (!bucket.success) {
+      return { agent: 'codex', unavailable: 'Malformed rate-limit snapshot.' };
+    }
+
     for (const kind of ['primary', 'secondary'] as const) {
-      const raw = bucket.success ? bucket.data[kind] : undefined;
+      const raw = bucket.data[kind];
       const name = id === undefined ? kind : `${id}.${kind}`;
 
       if (raw === null || raw === undefined) {

@@ -17,6 +17,7 @@ import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import {
   type Instance,
+  closeOnForcedExit,
   openTerminal,
   render,
   type Terminal,
@@ -596,12 +597,22 @@ export const cli = chordCommand().action(async (options, named) => {
       : {}),
   });
 
+  let closingResources: Promise<void> | undefined;
+  const closeResources = () =>
+    (closingResources ??= resources.close().then((warnings) => {
+      for (const warning of warnings) {
+        process.stderr.write(`${warning}\n`);
+      }
+    }));
+
+  const forgetResources = closeOnForcedExit(closeResources);
+
   listed ??= await listedAgents(agentCommands(loaded.layers));
 
   const window = (
     <App
       open={startServices.openSession}
-      resources={resources}
+      resources={resources.read}
       teamSelection={first.teamSelection}
       selectionPolicy={first.selectionPolicy}
       agent={agent}
@@ -661,7 +672,12 @@ export const cli = chordCommand().action(async (options, named) => {
 
   start = undefined;
 
-  await app.waitUntilExit();
+  try {
+    await app.waitUntilExit();
+  } finally {
+    await closeResources();
+    forgetResources();
+  }
 
   await server.close();
   await clipboard?.disposed();

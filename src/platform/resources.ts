@@ -40,14 +40,25 @@ const official: ResourceCollectors = {
       : collectClaudeResources(path, { cwd, signal }),
 };
 
+/** The window's limits read, and the close that waits out readers still cleaning up. */
+export interface Resources {
+  readonly read: ReadLimits;
+  /** Every reader's cleanup failures, once each reader has finished. */
+  close(): Promise<readonly string[]>;
+}
+
 export function createResources(options: {
   readonly collectors: 'official' | 'fixture' | ResourceCollectors;
   readonly fixtureCase?: ResourceFixtureCase;
   readonly timeoutMs?: number;
-}): ReadLimits {
+}): Resources {
   const collectors =
     options.collectors === 'official' ? official : options.collectors;
   const timeoutMs = options.timeoutMs ?? READ_TIMEOUT_MS;
+  // An answer past its deadline does not wait for its reader's cleanup;
+  // close does, so chord never exits ahead of a provider's process group.
+  const running = new Set<Promise<void>>();
+  const failures = new Set<string>();
 
   const readOne = async (
     agent: string,
@@ -76,16 +87,32 @@ export function createResources(options: {
     return collectors.read(agent, executable.path, place.cwd, signal);
   };
 
-  return async (agents, place, caller) => {
+  const read: ReadLimits = async (agents, place, caller) => {
     const readAt = new Date().toISOString();
     const providers = await Promise.all(
       [...new Set(agents ?? PROVIDERS)].map(async (agent) => {
         const timeout = AbortSignal.timeout(timeoutMs);
         const signal = AbortSignal.any([caller, timeout]);
 
+        const reading = readOne(agent, place, signal);
+        const owned: Promise<void> = reading
+          .then(
+            () => {},
+            (error: unknown) => {
+              if (
+                error instanceof ResourceReadError &&
+                error.kind === 'cleanup'
+              ) {
+                failures.add(error.message);
+              }
+            },
+          )
+          .finally(() => running.delete(owned));
+
+        running.add(owned);
+
         try {
-          // The wait ends at the deadline; the reader cleans up after it.
-          return await resourceWait(readOne(agent, place, signal), signal);
+          return await resourceWait(reading, signal);
         } catch (error) {
           if (caller.aborted) {
             throw error;
@@ -104,5 +131,16 @@ export function createResources(options: {
     );
 
     return { readAt, providers } satisfies Budgets;
+  };
+
+  return {
+    read,
+    close: async () => {
+      while (running.size > 0) {
+        await Promise.all(running);
+      }
+
+      return [...failures];
+    },
   };
 }

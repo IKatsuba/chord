@@ -9,7 +9,7 @@ if (mode !== 'fixture') {
   throw new Error('Fixture mode is required by this probe.');
 }
 
-const read = createResources({ collectors: mode });
+const { read } = createResources({ collectors: mode });
 
 process.stdout.write(
   JSON.stringify(

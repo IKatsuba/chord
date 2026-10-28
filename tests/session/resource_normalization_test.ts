@@ -38,7 +38,7 @@ describe('official resource normalization', () => {
     expect(JSON.stringify(result)).not.toContain('excluded@example.test');
   });
 
-  test('Codex legacy, empty map, malformed windows and unsupported auth', () => {
+  test('Codex legacy, empty map, malformed windows or buckets and unsupported auth', () => {
     expect(
       normalizeCodex(account, {
         rateLimits: bucket,
@@ -68,6 +68,15 @@ describe('official resource normalization', () => {
         },
         expect.objectContaining({ name: 'secondary', usedPercent: 12.345 }),
       ],
+    });
+    expect(
+      normalizeCodex(account, {
+        rateLimits: bucket,
+        rateLimitsByLimitId: { codex: 'bad' },
+      }),
+    ).toEqual({
+      agent: 'codex',
+      unavailable: 'Malformed rate-limit snapshot.',
     });
     expect(normalizeCodex({ account: { type: 'apiKey' } }, {})).toHaveProperty(
       'unavailable',

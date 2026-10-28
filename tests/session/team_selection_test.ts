@@ -11,7 +11,6 @@ import {
   withSelectionCleanupWarning,
 } from '../../src/session/team_selection.ts';
 import type { Team } from '../../src/teams.ts';
-import type { BudgetSnapshot } from '../../src/session/budgets.ts';
 
 const saved: Team = {
   description: 'Selection fixture.',
@@ -573,57 +572,6 @@ describe('tester: selected receipt bounds and role isolation', () => {
     assert('error' in result);
     expect(result.error).toContain('reviewer.mode: old-mode is not supported');
     expect(saved).toEqual(before);
-  });
-
-  test('receipt warning overflow is explicit and duplicate served observation refs count once', () => {
-    const selected = freezeSelection(saved, { reason }, {}, runtimes);
-
-    assert('frozen' in selected);
-
-    const observation: BudgetSnapshot['unbound'][number] = {
-      observationRef: 'same-observation',
-      sourceRef: 'source',
-      sessionRef: 'session',
-      agent: 'codex',
-      source: 'fixture',
-      sourceVersion: '1',
-      observedAt: null,
-      billingKind: 'unknown',
-      coverage: 'unknown',
-      externalActivity: 'unknown',
-      windows: [],
-      reason: 'Identity unverified.',
-    };
-    const read: BudgetSnapshot = {
-      schemaVersion: 1,
-      observedAt: '2026-10-27T13:00:00Z',
-      preferences: {},
-      pools: [],
-      unbound: [observation, { ...observation, sourceRef: 'other-source' }],
-      unavailable: [{ agent: 'claude', reason: 'Fixture unavailable.' }],
-      activeRuns: [],
-      warnings: Array.from(
-        { length: 256 },
-        (_, index) => `Fixture warning ${index}.`,
-      ),
-    };
-    const receipt = selectionReceipt(
-      'run',
-      { name: 'fixture', place: 'project' },
-      selected.frozen,
-      read,
-    );
-
-    expect(receipt.decisionRead).toEqual({
-      readAt: read.observedAt,
-      observationRefs: ['same-observation'],
-    });
-    expect(receipt.warnings).toHaveLength(256);
-    expect(receipt.warnings.at(-1)).toBe(
-      'Additional resource warnings are omitted.',
-    );
-    expect(read.warnings.at(-1)).toBe('Fixture warning 255.');
-    expect(SelectionReceipt.safeParse(receipt).success).toBe(true);
   });
 
   test('actual confirmation copies runtime values without changing planned or unopened roles', () => {

@@ -312,6 +312,10 @@ function keptLeft(context: KeyContext): Step[] {
  * runs, waits for that match and picks its first file (`awaitedSteps`).
  */
 function mention({ state }: KeyContext, enter: boolean): Step[] {
+  if (state.completionHidden) {
+    return [];
+  }
+
   const finder = fileFinder(state, state.draft, state.cursor);
   // With no list on screen yet, after an empty one, it waits all the same.
   const waiting = pendingMention(state, state.draft, state.cursor);
@@ -352,6 +356,7 @@ export function awaitedSteps(context: KeyContext): Step[] {
   const settled = dispatch({ type: 'pick_settled' });
 
   if (
+    state.completionHidden ||
     now === undefined ||
     now.query !== pick.mention.query ||
     now.line !== pick.mention.line ||
@@ -396,8 +401,8 @@ export function olderSteps(context: KeyContext): Step[] {
   // While a code block is picked ↑ is the pick's (CHD-394).
   const step =
     state.codePick === undefined &&
-    !commandMenu(state, draft) &&
-    !fileFinder(state, draft, cursor) &&
+    (state.completionHidden || !commandMenu(state, draft)) &&
+    (state.completionHidden || !fileFinder(state, draft, cursor)) &&
     older(history, typedText(state.bash, draft), keptTexts(state));
 
   // A recalled `/command` is history's, not the list's.
@@ -416,8 +421,8 @@ export function newerSteps(context: KeyContext): Step[] {
   // While a code block is picked ↓ is the pick's (CHD-394).
   const listed =
     state.codePick === undefined &&
-    !commandMenu(state, draft) &&
-    !fileFinder(state, draft, cursor);
+    (state.completionHidden || !commandMenu(state, draft)) &&
+    (state.completionHidden || !fileFinder(state, draft, cursor));
   const step = listed && newer(history, keptTexts(state));
 
   if (step) {
@@ -449,8 +454,9 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
   // Enter in the finder picks, as Tab does, rather than sending; a match
   // still running waits to pick, list or none.
   if (
-    (fileFinder(state, draft, cursor)?.files.length ?? 0) > 0 ||
-    pendingMention(state, draft, cursor)
+    !state.completionHidden &&
+    ((fileFinder(state, draft, cursor)?.files.length ?? 0) > 0 ||
+      pendingMention(state, draft, cursor))
   ) {
     return mention(context, true);
   }
@@ -480,7 +486,7 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
     ];
   }
 
-  const menu = commandMenu(state, draft);
+  const menu = state.completionHidden ? undefined : commandMenu(state, draft);
   const action = submitted(value, menu?.items[menu.highlighted]);
 
   if (action.type === 'send' && context.submitting) {
@@ -670,8 +676,10 @@ function commandSteps(
 ): Step[] {
   const { state, history, rows } = context;
   const { draft, cursor } = state;
-  const menu = commandMenu(state, draft);
-  const finder = fileFinder(state, draft, cursor);
+  const menu = state.completionHidden ? undefined : commandMenu(state, draft);
+  const finder = state.completionHidden
+    ? undefined
+    : fileFinder(state, draft, cursor);
   const menuRows = menuRowLimit(rows);
 
   switch (command) {

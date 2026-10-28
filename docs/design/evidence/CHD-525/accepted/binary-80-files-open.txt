@@ -1,0 +1,24 @@
+
+ ⏺ Received the message from bugfix · fake.
+
+ ← from @bugfix 2 · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts;
+      coder waits for it and will edit src/parse/tokenize.ts only. I will
+      report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix 2 · fake.
+  pressure-file0.ts
+  pressure-file1.ts
+  pressure-file2.ts
+  pressure-file3.ts
+  pressure-file4.ts
+  pressure-file5.ts
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › @                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used
+    main       fake                    ◦ idle 0s
+    parser     fake                    ◦ idle 0s            ✓ new reply
+    docs       fake                    ◦ idle 0s            ✓ new reply
+    … +2 more

@@ -1,0 +1,24 @@
+ chord
+ ⏺ Existing transcript
+
+
+
+
+
+
+
+
+
+
+
+
+  ❯ claude      Claude Code
+    codex       Codex
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  default · Fake Large
+    main    fake  idle
+    parser  fake  idle
+    background  1 task

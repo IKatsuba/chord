@@ -1,0 +1,40 @@
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ › planshrinkgated
+
+ ⏺ Planned.
+
+ ››› Working… (4s · esc to interrupt)
+  ⎿  ◐ Read the code
+     ☐ Write the change
+     ☐ Run the tests
+ › queued 0
+ › queued 1
+ › queued 2
+ › queued 3
+  pressure-file0.ts
+  pressure-file1.ts
+  pressure-file2.ts
+  pressure-file3.ts
+  pressure-file4.ts
+  pressure-file5.ts
+  .chord/settings.json
+  .chord/teams/bugfix.md
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › draft 0                                                                                                            │
+│   draft 1                                                                                                            │
+│   draft 2                                                                                                            │
+│   draft 3                                                                                                            │
+│   draft 4                                                                                                            │
+│   draft 5                                                                                                            │
+│   draft 6                                                                                                            │
+│   @                                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  This agent does not take messages into a running turn · enter queues it  Fake Large with a 1M context win… · 1% used
+    main       fake · Fake Large with a 1M context window · medium  ✻ working 4s
+    parser     fake · Fake Large with a 1M context window · medium  ◦ idle 6s     ✓ new reply
+    … +3 more

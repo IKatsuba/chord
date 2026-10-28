@@ -1,0 +1,24 @@
+
+ ››› Working… (0s · esc to interrupt)
+  ⎿  ◐ Read the code
+     ☐ Write the change
+     ☐ Run the tests
+ › queued 0
+ › queued 1
+ › queued 2
+ › queued 3
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft 0                                                                    │
+│   draft 1                                                                    │
+│   draft 2                                                                    │
+│   draft 3                                                                    │
+│   draft 4                                                                    │
+│   draft 5                                                                    │
+│   draft 6                                                                    │
+│   @                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  not enough space      Fake Large with a 1M context window · medium · 1% used
+    main       fake                    ✻ working 0s
+    parser     fake                    ◦ idle 0s            ✓ new reply
+    docs       fake                    ◦ idle 0s            ✓ new reply

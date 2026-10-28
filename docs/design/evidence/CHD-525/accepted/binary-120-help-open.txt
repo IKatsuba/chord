@@ -1,0 +1,40 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd525-designer-current-binary/project
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  enter to send                           home end for the top and the bottom    ctrl + x b to pick a code block
+  tab to send into the running turn       ctrl + c to copy                       c r to copy or put in the prompt
+  shift or \ + enter for a newline        / @ @@ for commands, files or agents   1–9 to pick a choice
+  ctrl + g to edit in $EDITOR             ↑ ↓ to pick a completion               ↑ ↓ or j k to move between choices
+  ctrl + v to paste an image              tab to complete a command              enter to pick the highlighted choice
+  alt + ← → to move by word               tab enter to add a file or agent       esc to reject a permission
+  cmd + ← → to line start or end          esc to close completions               esc ← to leave a picker or shortcuts
+  ↑ ↓ for prompts, agents, background     ! for bash mode                        ctrl + a to show all directories
+  x to close an agent, stop background    backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms
+  enter for background, details, a call   esc to interrupt or stop a command     ctrl + c to stop the turn and its form
+  ctrl + r to search prompts              shift + tab to cycle modes             /vim for vim mode
+  tab enter to take a match               ctrl + o for verbose output            ? for shortcuts
+  esc to cancel a search                  ctrl + c to clear input                any key to quit the crash screen
+  pgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit
+  shift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd525-designer-devqa
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /clear    Start a new session with an empty transcript
+  /config   Change the agent's settings for this session, such as effort
+  /context  Show how full the agent's context window is
+  /cost     Show the tokens and cost this session has spent
+  /echo     Repeat what follows the command
+  /exit     Quit chord
+  /greet    Say hello from the fake agent
+  /help     Show keyboard shortcuts
+  /mcp      Show the MCP servers chord passed to the agent
+  /model    Switch the agent's model
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /                                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort

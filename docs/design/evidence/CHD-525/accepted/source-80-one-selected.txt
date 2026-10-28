@@ -1,0 +1,25 @@
+
+ ››› Working… (3s · esc to interrupt)
+  ⎿  ◐ Read the code
+     ☐ Write the change
+     ☐ Run the tests
+ › queued 0
+ › queued 1
+ › queued 2
+ › queued 3
+  pressure-file5.ts
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft 0                                                                    │
+│   draft 1                                                                    │
+│   draft 2                                                                    │
+│   draft 3                                                                    │
+│   draft 4                                                                    │
+│   draft 5                                                                    │
+│   draft 6                                                                    │
+│   @                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used
+    main       fake                    ✻ working 3s
+    parser     fake                    ◦ idle 5s     ✓ new reply
+    … +3 more

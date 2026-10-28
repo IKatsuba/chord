@@ -1,0 +1,24 @@
+ chord
+ ⏺ Existing transcript
+
+
+
+
+ › queued prompt one
+ › queued prompt two
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › a long draft, retained identically through open and close                  │
+│   continuation 2                                                             │
+│   continuation 3                                                             │
+│   continuation 4                                                             │
+│   continuation 5                                                             │
+│   continuation 6                                                             │
+│   continuation 7                                                             │
+│   continuation 8                                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  default · Fake Large
+    main    fake  idle
+    parser  fake  idle
+    … +2 more
+    background  1 task

@@ -1,0 +1,40 @@
+ chord
+ ⏺ Existing transcript
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  ❯ /review     Review changes (skill)
+    /review-ui  Review interface (skill)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /review                                                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  default · Fake Large
+    main    fake  idle
+    parser  fake  idle
+    background  1 task

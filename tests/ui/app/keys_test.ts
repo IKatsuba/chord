@@ -900,3 +900,55 @@ describe('agent completion keys (CHD-519)', () => {
     expect(keySteps('', tab, context(closed))).toStrictEqual([]);
   });
 });
+
+describe('CHD-525 zero-room completion keys', () => {
+  const tab = { ...plain, tab: true };
+  const down = { ...plain, downArrow: true };
+  const up = { ...plain, upArrow: true };
+
+  for (const draft of ['/', '@', '@@']) {
+    test(`${draft} keeps literal submit and no invisible completion navigation`, () => {
+      const typed = reduceApp(typing(draft), {
+        type: 'files_listed',
+        files: ['chosen.ts'],
+      });
+      const hidden = reduceApp(typed, { type: 'completion_room', room: false });
+
+      expect(keyCommand('', tab, hidden, draft)).toBeUndefined();
+      expect(keyCommand('', down, hidden, draft)).toBeUndefined();
+      expect(keyCommand('', up, hidden, draft)).toBeUndefined();
+
+      const steps = submitSteps(draft, context(hidden));
+
+      expect(steps).not.toContainEqual(
+        expect.objectContaining({ type: 'show_draft', text: '@chosen.ts ' }),
+      );
+      expect(steps).toContainEqual({ type: 'send', text: draft });
+
+      const shown = reduceApp(hidden, { type: 'completion_room', room: true });
+
+      expect(shown.completionHidden).toBeUndefined();
+
+      if (draft !== '@@') {
+        expect(keyCommand('', tab, shown, draft)).toBeDefined();
+      }
+    });
+  }
+
+  test('a pending match cannot apply after its completion viewport loses its rows', () => {
+    const files = reduceApp(typing('@chosen'), {
+      type: 'files_listed',
+      files: ['chosen.ts'],
+    });
+    const waiting = reduceApp(files, {
+      type: 'pick_awaited',
+      mention: { query: 'chosen', line: 0, column: 0 },
+      enter: true,
+    });
+    const hidden = reduceApp(waiting, { type: 'completion_room', room: false });
+
+    expect(awaitedSteps(context(hidden))).toEqual([
+      dispatched({ type: 'pick_settled' }),
+    ]);
+  });
+});

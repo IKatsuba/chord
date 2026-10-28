@@ -68,9 +68,27 @@ const SHIFT_DOWN = '\x1b[1;2B';
 /** An SGR wheel report, `up` or down, at the 0-based cell `x`, `y`. */
 const wheel = (x: number, y: number, up: boolean) =>
   `\x1b[<${up ? 64 : 65};${x + 1};${y + 1}M`;
-const BELOW = '── ↓ 3 lines below · pagedown to scroll ──';
-const ABOVE = '── ↑ 3 lines above · pageup to scroll ──';
+const BELOW = '── ↓ 4 lines below · pagedown to scroll ──';
+const ABOVE = '── ↑ 4 lines above · pageup to scroll ──';
 const LAST = 'tab enter to add a file';
+
+/** The existing help rows above the prompt, excluding its gap and status. */
+function shortcutPanel(frame: string, width: number): string[] {
+  const captured = frame.split('\n').map((line) => line.trimEnd());
+  const lines = shortcuts().map(shortcutLine);
+  const first = `  ${panelRows(lines, columnCount(lines, width))[0]}`.trimEnd();
+  const start = captured.findIndex(
+    (line) => line.startsWith('  ── ↑') || line === first,
+  );
+  const end = captured.findIndex(
+    (line, at) => at > start && line.startsWith('╭'),
+  );
+
+  expect(start, frame).toBeGreaterThanOrEqual(0);
+  expect(end, frame).toBeGreaterThan(start);
+
+  return captured.slice(start, end).filter((line) => line !== '');
+}
 
 describe('CHD-378 U5 tester: panel ownership and resize', () => {
   test('resizing a scrolled panel to fit releases its keys and shrinking again clamps to the top', () => {
@@ -202,7 +220,7 @@ test("at 80x24 the panel shows what fits, a rule saying what is below, and every
       await window.shows(BELOW);
 
       // The rule takes the last row; the panel's last entry is past it.
-      expect(window.frame().split('\n').at(-1)).toContain(BELOW);
+      expect(shortcutPanel(window.frame(), 80).at(-1)).toContain(BELOW);
       expect(window.frame()).not.toContain(LAST);
 
       const seen = new Set(
@@ -247,7 +265,7 @@ test('the wheel over the panel scrolls it, and it opens again at the top', () =>
       await window.shows(BELOW);
 
       // As many rows as the rule says are below.
-      for (let row = 0; row < 3; row++) {
+      for (let row = 0; row < 4; row++) {
         await window.press(wheel(10, 10, false));
       }
 
@@ -554,9 +572,10 @@ test("an open list's chord leaves the draft as it was, and a closed one's key ed
       await window.type('/mod');
       await window.shows('/model');
       // Left to time out, the first key cuts nothing while the list is open.
-      // The list stands where the status line would say a key is waited for.
+      // The list stays above the prompt while the permanent leader names the key.
       await window.press('\x01');
       await window.press('\x0b');
+      await window.shows('ctrl+k …');
       await new Promise((resolve) => setTimeout(resolve, CHORD_WAIT_MS + 500));
       // The cursor, drawn on the `/`, splits the row's text.
       expect(promptRow(window)!).toContain('mod');
@@ -731,12 +750,7 @@ describe('shortcuts scroll rules occupy their own rows (CHD-528)', () => {
     }
 
     for (const { name, frame, above, below, top } of frames) {
-      const captured = frame.split('\n').map((line) => line.trimEnd());
-      const start = captured.findIndex((line) => line.startsWith('╰─')) + 1;
-      const end = captured.findIndex(
-        (line, at) => at > start && /^ +main +fake/.test(line),
-      );
-      const actual = captured.slice(start, end).filter((line) => line !== '');
+      const actual = shortcutPanel(frame, 80);
       const count = actual.length - Number(above) - Number(below);
       const offset = top ?? rows.length - count;
       const expected = [
@@ -829,12 +843,7 @@ test('shortcuts keep their last row or a below rule when a message starts a turn
             frame,
           ).toBe(true);
 
-          const captured = frame.split('\n').map((line) => line.trimEnd());
-          const start = captured.findIndex((line) => line.startsWith('╰─')) + 1;
-          const end = captured.findIndex(
-            (line, at) => at >= start && /^ +main +fake/.test(line),
-          );
-          const actual = captured.slice(start, end);
+          const actual = shortcutPanel(frame, 80);
           const above = actual[0]?.match(/↑ (\d+) lines? above/);
           const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
           const offset = Number(above?.[1] ?? 0);
@@ -914,17 +923,7 @@ describe('CHD-528 tester: page boundaries at other terminal sizes', () => {
 
               const inspect = () => {
                 const frame = window.frame();
-                const captured = frame
-                  .split('\n')
-                  .map((line) => line.trimEnd());
-                const start =
-                  captured.findIndex((line) => line.startsWith('╰─')) + 1;
-                const rosterStart = captured.findIndex(
-                  (line, at) => at >= start && /^ +main +fake/.test(line),
-                );
-                const actual = captured
-                  .slice(start, rosterStart < 0 ? undefined : rosterStart)
-                  .filter((line) => line !== '');
+                const actual = shortcutPanel(frame, columns!);
                 const above = actual[0]?.match(/↑ (\d+) lines? above/);
                 const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
                 const offset = Number(above?.[1] ?? 0);

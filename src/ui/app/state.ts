@@ -206,6 +206,8 @@ export interface WindowState
     PickersState,
     ShortcutsState,
     BackgroundState {
+  /** The completion viewport has no rows; its items cannot take keys. */
+  readonly completionHidden?: true;
   /** ctrl+c was pressed once; a second press quits. */
   readonly quitArmed: false | 'ctrl+c';
   /**
@@ -302,6 +304,8 @@ export type AppAction =
   /** ctrl+c asks for a second press. */
   | { readonly type: 'quit_armed' }
   | { readonly type: 'quit_disarmed' }
+  /** An invisible completion must not receive acceptance or navigation. */
+  | { readonly type: 'completion_room'; readonly room: boolean }
   /** A one-time notice came due, or its box was answered (CHD-434). */
   | { readonly type: 'notice_opened'; readonly id: string }
   | { readonly type: 'notice_closed' }
@@ -548,6 +552,17 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'keys_pending':
     case 'panel_overflowed':
       return reduceShortcuts(state, action) as AppState;
+    case 'completion_room': {
+      if (action.room) {
+        const { completionHidden: _, ...rest } = state;
+
+        return state.completionHidden ? rest : state;
+      }
+
+      return state.completionHidden
+        ? state
+        : { ...state, completionHidden: true };
+    }
     case 'background_opened':
     case 'background_closed':
     case 'background_resized':
@@ -1895,31 +1910,32 @@ function boundCommand(
   const finder = fileFinder(state, draft, cursor);
 
   if (
+    !state.completionHidden &&
     (finder || pendingMention(state, draft, cursor)) &&
     on('autocomplete:accept')
   ) {
     return 'complete_mention';
   }
 
-  if (finder && on('autocomplete:previous')) {
+  if (!state.completionHidden && finder && on('autocomplete:previous')) {
     return 'finder_up';
   }
 
-  if (finder && on('autocomplete:next')) {
+  if (!state.completionHidden && finder && on('autocomplete:next')) {
     return 'finder_down';
   }
 
   const menu = !finder && commandMenu(state, draft);
 
-  if (menu && on('autocomplete:accept')) {
+  if (!state.completionHidden && menu && on('autocomplete:accept')) {
     return 'complete_command';
   }
 
-  if (menu && on('autocomplete:previous')) {
+  if (!state.completionHidden && menu && on('autocomplete:previous')) {
     return 'menu_up';
   }
 
-  if (menu && on('autocomplete:next')) {
+  if (!state.completionHidden && menu && on('autocomplete:next')) {
     return 'menu_down';
   }
 

@@ -33,7 +33,7 @@ import {
 } from './keys.ts';
 
 /**
- * The `?` panel in place of the status line, in as many of Claude Code's three
+ * The `?` panel above the prompt, in as many of Claude Code's three
  * columns as fit the window unfolded. Taller than the rows the window has
  * left it, it scrolls as an overflowing permission request does: in
  * OpenTUI's scrollbox, by the wheel over it and the scroll keys the window

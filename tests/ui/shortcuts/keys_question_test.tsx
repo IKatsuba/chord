@@ -6,6 +6,7 @@ import { expect, test } from 'bun:test';
 import * as harness from '../harness.tsx';
 import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
 import { ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
+import { openAsk } from '../../../src/ui/dialogs/questions.ts';
 import { SHORTCUTS } from '../../../src/ui/shortcuts/keys.ts';
 import {
   NINE,
@@ -29,6 +30,7 @@ test('every key the question box answers is in the panel', async () => {
 
   for (const [state, prelude, typing] of QUESTION_STATES) {
     const answers: unknown[] = [];
+    let filled = '';
     const draw = async () => {
       const app = await harness.draw(
         <QuestionBox
@@ -37,6 +39,25 @@ test('every key the question box answers is in the panel', async () => {
             mode: 'form',
             message: 'Go?',
             schema: { type: 'object', properties: {} },
+          }}
+          filled={
+            state === 'note'
+              ? {
+                  ...openAsk(ASKED),
+                  answers: {
+                    one: {
+                      picks: [],
+                      text: '',
+                      own: 'alpha beta gamma',
+                      ownChosen: false,
+                    },
+                  },
+                  noteCursors: { one: 6 },
+                }
+              : undefined
+          }
+          onFill={(next) => {
+            filled = JSON.stringify(next);
           }}
           questions={ASKED}
           agent='fake'
@@ -59,8 +80,15 @@ test('every key the question box answers is in the panel', async () => {
     let app = await draw();
 
     try {
-      for (const { name, sequence } of FORM_PRESSES) {
+      for (const { name, sequence } of [
+        ...FORM_PRESSES,
+        { name: 'alt + ←', sequence: '\x1b[1;3D' },
+        { name: 'alt + →', sequence: '\x1b[1;3C' },
+        { name: 'cmd + ←', sequence: '\x1b[1;9D' },
+        { name: 'cmd + →', sequence: '\x1b[1;9C' },
+      ]) {
         const before = app.frame();
+        const beforeFill = filled;
 
         await app.write(sequence);
 
@@ -68,7 +96,11 @@ test('every key the question box answers is in the panel', async () => {
           await escaped();
         }
 
-        if (app.frame() === before && answers.length === 0) {
+        if (
+          app.frame() === before &&
+          filled === beforeFill &&
+          answers.length === 0
+        ) {
           continue;
         }
 

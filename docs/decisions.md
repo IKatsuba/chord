@@ -7420,3 +7420,35 @@ extension: static checking rejected that field with TS2353.
   reuse, not exact historical extension replay, model language acceptance
   or the original mismatch's cause. The original private evidence stays
   unchanged; no production behavior changes.
+
+
+## 2026-10-28 — CHD-524: public Note editor and existing paste policy
+
+The non-secret Note beside question choices uses the existing OpenTUI 0.6.6
+`TextArea` wrapper and its public edit buffer, cursor offsets, word actions
+and visual-line actions. Modified arrows belong to this focused Note; bare
+arrows and Tab keep question navigation. Other text fields remain unchanged.
+The request's existing saved answer state also keeps each Note cursor, so
+question and agent focus changes do not reset it.
+
+A fixture-only public-widget trial pasted `A\nB\r\nC\tD\x01E` into a
+character-wrapped textarea. The widget retained newlines (CRLF became LF),
+tab and the control character. The existing question `askPaste` instead
+converts CR, LF and CRLF to spaces. The public `Input` API was also inspected:
+it fixes height to one, disables wrapping and strips newlines, so it cannot
+provide the required wrapped visual-line behavior unchanged.
+
+The measured paste mismatch was escalated with three options: preserve the
+existing normalization before public insertion; accept native multiline
+pastes; or defer until a fitting public API exists. Main selected the first
+under the owner's delegated authority to implement reviewed recommendations;
+this is not a separately recorded individual owner answer to that option.
+The scope is exactly the unchanged `askPaste` value policy followed by public
+`insertText` at the Note cursor. There is no new sanitizer, parser, editor
+engine, library patch, dependency or multiline-answer policy. New library
+mismatches still require escalation.
+
+Harness checks cover modified moves, wrapped-line edges, in-place repairs,
+choice retention, paste controls, Unicode, navigation and cursor restoration.
+The isolated trial and harness checks alone establish no physical macOS key
+delivery, native clipboard behavior or compiled-binary result.

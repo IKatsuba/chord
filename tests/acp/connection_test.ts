@@ -322,6 +322,23 @@ test('session/resume is asked only of an agent that offers it', async () => {
   });
 });
 
+test('session/fork is asked only of an agent that offers it, and answers a new session (CHD-101)', async () => {
+  await withAgent([], async (agent, seen, cwd) => {
+    const refused = agent.forkSession({ sessionId: crypto.randomUUID(), cwd });
+
+    await expect(refused).rejects.toThrow('does not offer session/fork');
+    expect(!seen.sent().includes('session/fork')).toBeTruthy();
+  });
+
+  await withAgent(['--fork'], async (agent, seen, cwd) => {
+    const source = await agent.newSession({ cwd, mcpServers: [] });
+    const fork = await agent.forkSession({ sessionId: source.sessionId, cwd });
+
+    expect(seen.sent().includes('session/fork')).toBeTruthy();
+    expect(fork.sessionId).not.toStrictEqual(source.sessionId);
+  });
+});
+
 test('session/list gives the sessions in a directory', () =>
   withAgent([], async (agent, _seen, cwd) => {
     const first = await agent.newSession({ cwd, mcpServers: [] });

@@ -76,6 +76,12 @@ export interface OpenSessionOptions {
    */
   resume?: Resume;
   /**
+   * The session, by the agent's id, a new one starts from instead of
+   * nothing: the whole of its conversation, as ACP's `session/fork` copies it
+   * (CHD-101). The agent's process is this session's own.
+   */
+  fork?: string;
+  /**
    * MCP servers for the agent, sent with `session/new`, `session/load` and
    * `session/resume`, those whose transport it does not advertise held back
    * (`serversFor`); none by default.
@@ -232,6 +238,8 @@ export interface Session {
    * `initialize` answer advertises `_session/steering`.
    */
   steers(): boolean;
+  /** Whether the agent forks a session, as `initialize` says (CHD-101). */
+  forks(): boolean;
   /**
    * Whether a steer cuts off the tool calls the turn has open: Claude's
    * adapter, told by the name it gives in `initialize`, delivers a steer
@@ -335,7 +343,7 @@ export interface Session {
 export async function openSession(
   options: OpenSessionOptions,
 ): Promise<Session> {
-  const { agent, cwd, resume, signal } = options;
+  const { agent, cwd, resume, fork, signal } = options;
   const permissions = new PermissionBridge();
   const elicitations = new ElicitationBridge();
   const plans = new PlanBridge();
@@ -456,7 +464,18 @@ export async function openSession(
   let step: StartStep = 'session/new';
 
   try {
-    if (resume === undefined) {
+    if (fork !== undefined) {
+      step = 'session/fork';
+
+      const forked = await connection.forkSession(
+        { sessionId: fork, cwd, mcpServers, ...openingMeta(connection) },
+        signal,
+      );
+
+      sessionId = forked.sessionId;
+      tree = sessionTree(sessionId);
+      answer = forked;
+    } else if (resume === undefined) {
       const created = await connection.newSession(
         { cwd, mcpServers, ...openingMeta(connection) },
         signal,
@@ -675,6 +694,8 @@ export async function openSession(
     takesImages: () =>
       connection.init.agentCapabilities?.promptCapabilities?.image === true,
     steers: () => connection.steering,
+    forks: () =>
+      Boolean(connection.init.agentCapabilities?.sessionCapabilities?.fork),
     cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     startsOwnCycles: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     steer: async (text, attachments = [], mentions = [], went) => {

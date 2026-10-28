@@ -319,6 +319,42 @@ test("a model the older way, by session/new's models, is priced too", () => {
   expect(updates(prompt(TOKENS)).length).toStrictEqual(1);
 });
 
+test("a fork's answer is the new session's, not its source's (CHD-101)", () => {
+  const { relay, ask } = relayOn(
+    [windowFromModel],
+    [modelOption('fake-large')],
+  );
+  const usage = (sessionId: string) =>
+    updates(
+      relay.fromAgent({
+        jsonrpc: '2.0',
+        method: 'session/update',
+        params: {
+          sessionId,
+          update: { sessionUpdate: 'usage_update', used: 1, size: 0 },
+        },
+      }),
+    );
+
+  ask(
+    'session/fork',
+    { sessionId: SESSION, cwd: '/' },
+    { sessionId: 'forked', configOptions: [modelOption('gpt-5.3-codex')] },
+  );
+
+  expect(usage('forked')).toStrictEqual([
+    {
+      sessionUpdate: 'usage_update',
+      used: 1,
+      size: 400_000,
+      _meta: { [FILLED]: ['size'] },
+    },
+  ]);
+  expect(usage(SESSION)).toStrictEqual([
+    { sessionUpdate: 'usage_update', used: 1, size: 0 },
+  ]);
+});
+
 test("a usage_update with no window gets the model's, and one with a window keeps it", () => {
   const { update } = relayOn([windowFromModel]);
 

@@ -176,7 +176,11 @@ export function heardFromAgent(wire: Wire, message: AnyMessage): Wire {
   }
 
   const result = recordOf(answer.result);
-  const sessionId = answer.sessionId ?? stringOf(result.sessionId);
+  // A fork's answer is the new session's; the request named its source.
+  const sessionId =
+    answer.method === 'session/fork'
+      ? stringOf(result.sessionId)
+      : (answer.sessionId ?? stringOf(result.sessionId));
 
   if (sessionId === undefined) {
     return answered;
@@ -184,6 +188,7 @@ export function heardFromAgent(wire: Wire, message: AnyMessage): Wire {
 
   switch (answer.method) {
     case 'session/new':
+    case 'session/fork':
     case 'session/load':
     case 'session/resume':
       return withSession(answered, sessionId, (session) => ({

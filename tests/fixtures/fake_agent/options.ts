@@ -12,6 +12,13 @@ export const ARGS = process.argv.slice(2);
 export const RESUME_ONLY = ARGS.includes('--resume-only');
 
 /**
+ * It offers `session/fork`, as Claude's and Codex's adapters do, forking any
+ * session id it is given into a new one (CHD-101).
+ */
+export const FORKS =
+  ARGS.includes('--fork') || process.env.CHORD_FAKE_FORK === '1';
+
+/**
  * It offers no `session/load`, so chord resumes a session it has no record
  * of too, and nothing is replayed (CHD-492).
  */

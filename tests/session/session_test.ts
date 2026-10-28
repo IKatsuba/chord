@@ -833,6 +833,68 @@ async function openedBy(
   }
 }
 
+describe('a session forked from another (CHD-101)', () => {
+  test('it opens in a process of its own by session/fork, from the session named, and outlives it', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-fork-'));
+    const agentCommand = fakeAgentCommand(undefined, '--fork');
+    const source = await openSession({ agent: 'fake', cwd: dir, agentCommand });
+    const sourceId = source.id;
+
+    try {
+      const fork = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand,
+        fork: sourceId,
+      });
+
+      expect(source.forks()).toBe(true);
+      // Its source's process gone, the fork's own still answers.
+      await source.close();
+
+      try {
+        const reply = said((await run(fork, 'opened')).updates).join('');
+
+        expect(fork.id).not.toStrictEqual(sourceId);
+        expect(JSON.parse(reply.replace(/^```json\n|\n```$/g, ''))).toEqual({
+          method: 'session/fork',
+          from: sourceId,
+        });
+      } finally {
+        await fork.close();
+      }
+    } finally {
+      await source.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('an agent that does not fork says so, and a fork of it fails at session/fork without asking', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-fork-'));
+    const agentCommand = fakeAgentCommand();
+    const source = await openSession({ agent: 'fake', cwd: dir, agentCommand });
+
+    try {
+      const failed = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand,
+        fork: source.id,
+      }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+      expect(source.forks()).toBe(false);
+      expect(startFailureOf(failed)).toMatchObject({ step: 'session/fork' });
+      expect(String(failed)).toContain('does not offer session/fork');
+    } finally {
+      await source.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
 describe("Claude's prompt suggestions are off in every session chord opens (CHD-439)", () => {
   const inDir = async (body: (dir: string) => Promise<void>) => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-opened-'));

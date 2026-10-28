@@ -7,12 +7,16 @@ import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { setImmediate as settleQueued } from 'node:timers/promises';
 import { type SessionUpdate } from '@agentclientprotocol/sdk';
 import {
   Conversation,
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
-import { type Session } from '../../src/session/session.ts';
+import {
+  type Session,
+  type SteerOutcome,
+} from '../../src/session/session.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
   emptyTranscript,
@@ -2535,4 +2539,358 @@ describe("the person's oldest queued message sent into the running turn (CHD-535
         return session;
       },
     ));
+});
+
+describe('CHD-535 U1 tester: queued steering boundaries', () => {
+  const queueRows = (events: readonly ConversationEvent[], text: string) =>
+    events.flatMap((event) =>
+      event.type === 'queued' && event.text === text ? [event] : [],
+    );
+
+  const sentRows = (events: readonly ConversationEvent[], text: string) =>
+    events.flatMap((event) =>
+      event.type === 'prompt' && event.text === text ? [event] : [],
+    );
+
+  for (const adapter of ['claude', 'codex']) {
+    test(`${adapter} refusal or own-turn fallback keeps the original row, image and link exactly once`, async () => {
+      const release = Promise.withResolvers<void>();
+      let firstFinished = false;
+      const outcomes: SteerOutcome[] = [];
+      const promptInputs: Parameters<Session['prompt']>[] = [];
+      const steerInputs: Parameters<Session['steer']>[] = [];
+      const text = 'Queued [Image #1] @a.ts';
+
+      try {
+        await onFake(
+          ['--steering', adapter],
+          async (conversation, events) => {
+            try {
+              conversation.send('text');
+              await until(() => firstFinished);
+              expect(events.some((event) => event.type === 'result')).toBe(
+                false,
+              );
+              conversation.send(
+                text,
+                undefined,
+                [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+                ['a.ts'],
+              );
+              conversation.send('After the attachment.');
+
+              const original = queueRows(events, text)[0];
+
+              assert(original !== undefined);
+              expect(conversation.steerQueued()).toBe('sent');
+              await until(() => outcomes.length === 1);
+              expect(outcomes).toEqual([
+                adapter === 'codex' ? 'startedNewTurn' : 'refused',
+              ]);
+              await until(() => queueRows(events, text).length >= 2);
+              release.resolve();
+              await ended(events, 3);
+
+              const delivered = events.find(
+                (event) => event.type === 'prompt' && event.text === text,
+              );
+
+              assert(delivered?.type === 'prompt');
+              expect(delivered.turnId).toBe(original.turnId);
+              expect(delivered.into).toBeUndefined();
+              expect(steerInputs[0]?.slice(0, 3)).toEqual([
+                text,
+                [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+                ['a.ts'],
+              ]);
+
+              const fallback = promptInputs.filter(([prompt]) =>
+                prompt.includes(text),
+              );
+
+              expect(fallback).toHaveLength(1);
+              expect(fallback[0]?.slice(1, 3)).toEqual([
+                [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+                ['a.ts'],
+              ]);
+              expect(promptsIn(events).map(([prompt]) => prompt)).toEqual([
+                'text',
+                text,
+                'After the attachment.',
+              ]);
+              expect(
+                new Set(queueRows(events, text).map((row) => row.turnId)),
+              ).toEqual(new Set([original.turnId]));
+
+              const reply = saidIn(
+                events.filter(
+                  (event) =>
+                    event.type === 'update' &&
+                    event.turnId === delivered.turnId,
+                ),
+              );
+
+              expect(reply).toContain('Received an image: image/png, 5 bytes');
+              expect(reply).toContain('Received a link: a.ts, file://');
+              expect(
+                events.filter((event) => event.type === 'self_started'),
+              ).toHaveLength(adapter === 'codex' ? 1 : 0);
+            } finally {
+              release.resolve();
+            }
+          },
+          (session) => {
+            writeFileSync(join(session.cwd, 'a.ts'), '');
+
+            const prompt = session.prompt.bind(session);
+            const steer = session.steer.bind(session);
+            let first = true;
+
+            session.prompt = (...args) => {
+              promptInputs.push(args);
+
+              const turn = prompt(...args);
+
+              if (!first) {
+                return turn;
+              }
+
+              first = false;
+
+              return {
+                ...turn,
+                result: turn.result.then(async (result) => {
+                  firstFinished = true;
+
+                  await release.promise;
+
+                  return result;
+                }),
+              };
+            };
+
+            session.steer = async (...args) => {
+              steerInputs.push(args);
+
+              const outcome = await steer(...args);
+
+              outcomes.push(outcome);
+
+              return outcome;
+            };
+
+            return session;
+          },
+        );
+      } finally {
+        release.resolve();
+      }
+    });
+  }
+
+  test('two fake sessions keep accepted queue IDs and an interrupt independent', () =>
+    onFake(['--steering', 'claude'], (first, firstEvents) =>
+      onFake(['--steering', 'codex'], async (second, secondEvents) => {
+        first.send('slow');
+        second.send('slow');
+        await until(() =>
+          [firstEvents, secondEvents].every((events) =>
+            saidIn(events).startsWith('Working'),
+          ),
+        );
+        first.send('Only first queued.');
+        first.send('Only first still waiting.');
+        second.send('Only second queued.');
+
+        const firstRow = queueRows(firstEvents, 'Only first queued.')[0];
+        const secondRow = queueRows(secondEvents, 'Only second queued.')[0];
+
+        assert(firstRow !== undefined && secondRow !== undefined);
+        expect(first.steerQueued()).toBe('sent');
+        expect(second.steerQueued()).toBe('sent');
+        await until(() =>
+          [firstEvents, secondEvents].every(
+            (events) => promptsIn(events).length === 2,
+          ),
+        );
+        first.interrupt();
+        await ended(firstEvents, 1);
+        expect(promptsIn(firstEvents).map(([text]) => text)).toEqual([
+          'slow',
+          'Only first queued.',
+        ]);
+        expect(promptsIn(secondEvents).map(([text]) => text)).toEqual([
+          'slow',
+          'Only second queued.',
+        ]);
+        expect(sentRows(firstEvents, 'Only first queued.')[0]?.turnId).toBe(
+          firstRow.turnId,
+        );
+        expect(sentRows(secondEvents, 'Only second queued.')[0]?.turnId).toBe(
+          secondRow.turnId,
+        );
+        expect(
+          secondEvents.some((event) => event.type === 'queue_withdrawn'),
+        ).toBe(false);
+        expect(secondEvents.some((event) => event.type === 'result')).toBe(
+          false,
+        );
+        second.interrupt();
+        await ended(secondEvents, 1);
+      }),
+    ));
+
+  test('Esc withdraws queued rows held behind calls but preserves the agent message between them', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('bashcut');
+      await callOpen(events);
+      conversation.send('First held row.');
+      conversation.deliver(MAIN, 'Agent row.');
+      conversation.send('Second held row.');
+
+      const first = queueRows(events, 'First held row.')[0];
+      const second = queueRows(events, 'Second held row.')[0];
+
+      assert(first !== undefined && second !== undefined);
+      expect(conversation.steerQueued()).toBe('sent');
+      expect(conversation.steerQueued()).toBe('sent');
+      await until(() =>
+        ['First held row.', 'Second held row.'].every((text) =>
+          queueRows(events, text).some((row) => row.afterCalls),
+        ),
+      );
+      expect(
+        new Set(queueRows(events, 'First held row.').map((row) => row.turnId)),
+      ).toEqual(new Set([first.turnId]));
+      expect(
+        new Set(queueRows(events, 'Second held row.').map((row) => row.turnId)),
+      ).toEqual(new Set([second.turnId]));
+      conversation.interrupt();
+      await ended(events, 2);
+      expect(promptsIn(events).map(([text]) => text)).toEqual([
+        'bashcut',
+        'Agent row.',
+      ]);
+      expect(
+        events.filter((event) => event.type === 'queue_withdrawn'),
+      ).toHaveLength(1);
+    }));
+
+  test('late acceptance after clear cannot add the old row to the replacement session', async () => {
+    const late = Promise.withResolvers<SteerOutcome>();
+    const pids: number[] = [];
+    let steers = 0;
+    let opened = 0;
+
+    try {
+      await onFake(
+        ['--steering', 'claude'],
+        async (conversation, events) => {
+          conversation.send('slow');
+          await until(() => saidIn(events).startsWith('Working'));
+          conversation.send('Old queued row.');
+          expect(conversation.steerQueued()).toBe('sent');
+          await until(() => steers === 1);
+          conversation.clear();
+          await until(
+            () =>
+              events.filter((event) => event.type === 'connected').length === 2,
+          );
+
+          const afterClear = events.length;
+
+          late.resolve('injected');
+          await settleQueued();
+          expect(
+            events
+              .slice(afterClear)
+              .some(
+                (event) =>
+                  (event.type === 'prompt' || event.type === 'queued') &&
+                  event.text === 'Old queued row.',
+              ),
+          ).toBe(false);
+          conversation.send('text');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'result' &&
+                event.turnId === sentRows(events, 'text').at(-1)?.turnId,
+            ),
+          );
+          expect(promptsIn(events).map(([text]) => text)).toEqual([
+            'slow',
+            'text',
+          ]);
+        },
+        (session) => {
+          pids.push(...session.agentPids);
+
+          if (++opened === 1) {
+            session.steer = () => {
+              steers++;
+
+              return late.promise;
+            };
+          }
+
+          return session;
+        },
+      );
+    } finally {
+      late.resolve('refused');
+    }
+
+    for (const pid of pids) {
+      expect(await isAlive(pid)).toBe(false);
+    }
+  });
+
+  test('a wedged fake turn keeps a refused queued row until Esc and closes every agent process', async () => {
+    const pids: number[] = [];
+    let sent = false;
+
+    await onFake(
+      ['--steering', 'claude', '--hang', 'turn'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await until(() => sent);
+        conversation.send('After the wedged turn.');
+        expect(conversation.steerQueued()).toBe('sent');
+        await until(() =>
+          queueRows(events, 'After the wedged turn.').some(
+            (row) => row.refused,
+          ),
+        );
+        expect(promptsIn(events).map(([text]) => text)).toEqual(['text']);
+        conversation.interrupt();
+        expect(events).toContainEqual({ type: 'queue_withdrawn' });
+      },
+      (session) => {
+        pids.push(...session.agentPids);
+
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          const turn = prompt(...args);
+
+          return {
+            ...turn,
+            sent: turn.sent.then((links) => {
+              sent = true;
+
+              return links;
+            }),
+          };
+        };
+
+        return session;
+      },
+    );
+    expect(pids.length).toBeGreaterThan(0);
+
+    for (const pid of pids) {
+      expect(await isAlive(pid)).toBe(false);
+    }
+  });
 });

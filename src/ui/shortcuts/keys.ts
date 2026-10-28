@@ -132,12 +132,14 @@ export const SHORTCUTS: readonly Shortcut[] = [
     does: 'to move by word',
     commands: [],
     prompt: ['alt + ←', 'alt + →', 'alt + b', 'alt + f'],
+    questions: ['alt + ←', 'alt + →'],
   },
   {
     key: 'cmd + ← →',
     does: 'to line start or end',
     commands: [],
     prompt: ['cmd + ←', 'cmd + →'],
+    questions: ['cmd + ←', 'cmd + →'],
   },
   // ↓ past the newest prompt, on an empty draft, goes into the list under
   // the prompt of the session's agents, while a child is open, and on to

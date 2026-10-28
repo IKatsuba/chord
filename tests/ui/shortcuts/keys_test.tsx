@@ -38,6 +38,9 @@ import {
   reduceApp,
 } from '../../../src/ui/app/state.ts';
 import { usePress } from '../../../src/ui/app/input.ts';
+import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
+import { openAsk, type AskState } from '../../../src/ui/dialogs/questions.ts';
+import { ASKED } from './keys_presses.tsx';
 import { CrashBoundary } from '../../../src/ui/app/Crash.tsx';
 import { until } from '../app/render.tsx';
 import type { KeyCommand, KeyPress } from '../../../src/ui/shortcuts/state.ts';
@@ -1887,4 +1890,53 @@ describe('agent completion shares documented keys (CHD-519)', () => {
     expect(lines).toContain('tab enter to add a file or agent');
     expect(lines).toContain('esc to close completions');
   });
+});
+
+test('CHD-524 focused Note word and visual-line presses share the existing panel entries', async () => {
+  let state: AskState = {
+    ...openAsk(ASKED),
+    row: 9,
+    answers: {
+      one: {
+        picks: ['1'],
+        text: '',
+        own: 'alpha beta gamma',
+        ownChosen: false,
+      },
+    },
+  };
+  const view = await harness.draw(
+    <QuestionBox
+      wait={{ id: 'note-shortcuts', mode: 'form', message: 'Go?', schema: {} }}
+      questions={ASKED}
+      filled={state}
+      agent='fake'
+      width={120}
+      windowRows={40}
+      active
+      onFill={(next) => {
+        state = next;
+      }}
+      onAnswer={() => {}}
+    />,
+    { columns: 120, rows: 40 },
+  );
+
+  try {
+    for (const [name, bytes, offset] of [
+      ['alt + ←', '\x1b[1;3D', 11],
+      ['alt + →', '\x1b[1;3C', 16],
+      ['cmd + ←', '\x1b[1;9D', 0],
+      ['cmd + →', '\x1b[1;9C', 16],
+    ] as const) {
+      await view.write(bytes);
+      expect(state.noteCursors?.one).toBe(offset);
+      expect(state.step).toBe(0);
+      expect(SHORTCUTS.some((entry) => entry.questions?.includes(name))).toBe(
+        true,
+      );
+    }
+  } finally {
+    await view.unmount();
+  }
 });

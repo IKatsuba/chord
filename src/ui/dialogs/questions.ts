@@ -26,6 +26,8 @@ export interface AskState {
   /** The row the `❯` is on within the step. */
   readonly row: number;
   readonly answers: Readonly<Record<string, QuestionAnswer>>;
+  /** Public editor offsets, kept with this request across focus changes. */
+  readonly noteCursors?: Readonly<Record<string, number>>;
 }
 
 /** One row a question step's `❯` moves through. */
@@ -50,6 +52,15 @@ export function rowsOf(question: Question): StepRow[] {
     ...(question.options.length === 0 ? [{ kind: 'text' } as const] : []),
     ...(question.own === undefined ? [] : [{ kind: 'own' } as const]),
   ];
+}
+
+/** Only non-secret notes beside choices use the public cursor editor. */
+export function editableNote(question: Question): boolean {
+  return (
+    question.secret !== true &&
+    question.options.length > 0 &&
+    question.own?.mode === 'beside'
+  );
 }
 
 /** Whether the own answer is a numbered option of its own, not a note. */
@@ -159,6 +170,19 @@ function setAnswer(
   };
 }
 
+/** A Note event keeps its choice and the cursor with the request's answers. */
+export function changedNote(
+  state: AskState,
+  question: Question,
+  own: string,
+  cursor: number,
+): AskState {
+  return {
+    ...setAnswer(state, question, { own }),
+    noteCursors: { ...state.noteCursors, [question.id]: cursor },
+  };
+}
+
 /** What a key press did: the box after it, and the answer if it gave one. */
 export interface AskStep {
   readonly state: AskState;
@@ -174,6 +198,34 @@ export interface AskStep {
 export interface AskKey extends KeyPress {
   readonly leftArrow?: boolean;
   readonly rightArrow?: boolean;
+}
+
+/** Keys owned by the Note's public editor; navigation stays with the dialog. */
+export function noteEdits(input: string, key: AskKey): boolean {
+  if (
+    !key.shift &&
+    !key.ctrl &&
+    (key.meta || key.super) &&
+    (key.leftArrow || key.rightArrow)
+  ) {
+    return true;
+  }
+
+  return Boolean(
+    key.backspace ||
+    (key.ctrl && input === 'w') ||
+    (input !== '' &&
+      !key.ctrl &&
+      !key.meta &&
+      !key.super &&
+      !key.return &&
+      !key.tab &&
+      !key.escape &&
+      !key.upArrow &&
+      !key.downArrow &&
+      !key.leftArrow &&
+      !key.rightArrow),
+  );
 }
 
 /** Typing and deleting at the end of a text row's value, as the plan box's Note too. */

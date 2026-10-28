@@ -1,6 +1,7 @@
 /**
  * Eligibility guards before authentication or release work: a clean tree,
- * an unpublished version or a stopped publish to resume; publishing also
+ * a new version only once package.json's is published, an unpublished
+ * version or a stopped publish to resume; publishing also
  * requires main level with origin and no version tag. Registry reads and
  * the existing fetch may use the network, but these guards do not log in.
  */
@@ -43,7 +44,17 @@ export function preflight(
     die(`the tree is not clean:\n${dirty}`);
   }
 
-  // 2. The version, refused if the main package has it.
+  // 2. A new version, refused while package.json's never reached npm: a
+  // stopped release is finished, not bumped past.
+  const current = packageVersion(release);
+
+  if (version !== current && !published(release, 'chord', current)) {
+    die(
+      `@chorded/chord@${current} is not published yet; \`bun dev release\` without a version finishes it`,
+    );
+  }
+
+  // 3. The version, refused if the main package has it.
   if (published(release, 'chord', version)) {
     die(`@chorded/chord@${version} is on npm already`);
   }

@@ -7581,3 +7581,17 @@ This supersedes only the exact Codex 0.163.0 and Claude Code 2.1.311 part of
 the 2026-10-27 CHD-533 "Exact deployment and accepted risks" entry. The
 custom-command, platform, PATH, native-binary and npm-launcher checks, the
 approved public APIs, ownership and accepted risks are unchanged.
+
+## 2026-10-28 — CHD-547: a new version waits for the last one on npm (owner)
+
+A publishing run commits and pushes its version before any stage, so a
+release stopped before publish leaves origin at a version npm does not have.
+Rerunning with a bump bumped past it: one release became v0.61.0, v0.62.0 and
+v0.63.0, of which only 0.63.0 reached npm.
+
+The owner decided that a run naming a version or bump other than
+package.json's stops in preflight while `@chorded/chord` at package.json's
+version is not on npm, before authentication and any release work, dry runs
+included. It says that version is not published yet and that
+`bun dev release` without a version finishes it. A run without a version and
+the existing resume path are unchanged.

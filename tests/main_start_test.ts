@@ -117,6 +117,50 @@ for (const mode of [
     const tmux = (...args: string[]) =>
       spawnSync('tmux', ['-L', socket, ...args], { env, encoding: 'utf8' });
     const frame = () => tmux('capture-pane', '-t', 'picker', '-p').stdout;
+    const exited = async (expected: string) => {
+      const read = () =>
+        tmux(
+          'display-message',
+          '-p',
+          '-t',
+          'picker',
+          '#{pane_dead}|#{pane_dead_status}|#{pane_dead_signal}',
+        );
+      let snapshot = read();
+      const diagnostic = () =>
+        JSON.stringify({
+          status: snapshot.status,
+          stdout: snapshot.stdout,
+          stderr: snapshot.stderr,
+          signal: snapshot.signal,
+          frame: frame(),
+        });
+
+      // A closed pane fd can precede tmux receiving its child's exit status.
+      await until(`fake CLI ${mode} exit status`, () => {
+        snapshot = read();
+
+        const [dead, status, signal] = snapshot.stdout.trimEnd().split('|');
+
+        return (
+          snapshot.status === 0 &&
+          dead === '1' &&
+          (Boolean(status) || Boolean(signal))
+        );
+      }).catch((error: Error) => {
+        throw new Error(
+          `${error.message}; final tmux snapshot: ${diagnostic()}`,
+        );
+      });
+
+      const [dead, status, signal] = snapshot.stdout.trimEnd().split('|');
+
+      expect(snapshot.status, diagnostic()).toBe(0);
+      expect(dead, diagnostic()).toBe('1');
+      expect(status, diagnostic()).toBe(expected);
+      expect(signal, diagnostic()).toBe('');
+    };
+
     const starts = () =>
       existsSync(log)
         ? readFileSync(log, 'utf8')
@@ -167,26 +211,7 @@ for (const mode of [
 
         if (mode === 'cancel') {
           tmux('send-keys', '-t', 'picker', 'Escape');
-          await until(
-            'cancelled startup exits',
-            () =>
-              tmux(
-                'display-message',
-                '-p',
-                '-t',
-                'picker',
-                '#{pane_dead}',
-              ).stdout.trim() === '1',
-          );
-          expect(
-            tmux(
-              'display-message',
-              '-p',
-              '-t',
-              'picker',
-              '#{pane_dead_status}',
-            ).stdout.trim(),
-          ).toBe('0');
+          await exited('0');
           expect(starts()).toEqual([]);
         } else {
           expect(
@@ -199,26 +224,7 @@ for (const mode of [
       }
 
       if (stopped) {
-        await until(
-          'selected unavailable agent refuses',
-          () =>
-            tmux(
-              'display-message',
-              '-p',
-              '-t',
-              'picker',
-              '#{pane_dead}',
-            ).stdout.trim() === '1',
-        );
-        expect(
-          tmux(
-            'display-message',
-            '-p',
-            '-t',
-            'picker',
-            '#{pane_dead_status}',
-          ).stdout.trim(),
-        ).toBe('1');
+        await exited('1');
         expect(frame()).toContain(
           mode === 'missing' ? 'which is not on PATH' : 'expected a string',
         );

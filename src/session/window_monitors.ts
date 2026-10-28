@@ -32,14 +32,28 @@ export interface MonitorCaller {
 const CLOSED = { error: 'This session has closed' } as const;
 
 /**
- * The conversation whose monitors are the caller's own: main's, or a
- * long-lived child's; none for a task, or a caller whose session has closed.
+ * The conversation whose monitors are the caller's own: main's, a fork's,
+ * or a long-lived child's; none for a task, or a caller whose session has
+ * closed.
  */
 export function monitorsOwner<C>(
   agents: WindowAgents<C>,
   caller: MonitorCaller,
 ): C | undefined {
-  if (caller.task !== undefined || agents.main?.key !== caller.key) {
+  if (caller.task !== undefined) {
+    return undefined;
+  }
+
+  // A fork calls under its own key, beside main (CHD-101).
+  const fork = agents.children.find(
+    (child) => child.key === caller.key && child.forkedFrom !== undefined,
+  );
+
+  if (fork !== undefined) {
+    return fork.conversation;
+  }
+
+  if (agents.main?.key !== caller.key) {
     return undefined;
   }
 

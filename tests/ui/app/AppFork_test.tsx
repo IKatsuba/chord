@@ -157,6 +157,88 @@ describe('/fork opens a fork beside main (CHD-101)', () => {
     }
   });
 
+  test("main's close_agent cannot close a fork, which is not its child", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/fork parser');
+          await window.shows('╭─ parser ');
+          await pickMain(window);
+          await send(window, 'agentclose');
+          await window.shows('parser is closed, so I will run the tests');
+
+          expect(window.frame()).toContain('    parser  fork · fake');
+        },
+        { agentCommand: FORKS, server, columns: 120, rows: 40 },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test("a fork's monitors are its own, and list_sessions names it apart from main, as the caller", async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/fork');
+          await window.shows('╭─ fork ');
+          await send(window, 'monitor');
+          await window.shows('I will hear from the dev server when it errs.');
+
+          expect(window.frame()).not.toContain('This session has closed');
+          await send(window, 'chordtools');
+          await window.shows('list_sessions:');
+
+          const said = window.frame().replace(/\s+/g, ' ');
+
+          // Two sessions, the fork's marked as the caller's, main's with no
+          // fork among its agents.
+          expect(said.match(/"you": true/g)).toHaveLength(1);
+          expect(said).not.toContain('"name": "fork"');
+        },
+        { agentCommand: FORKS, server, columns: 120, rows: 60 },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a fork closed by x before it is up is not picked, and the command says so on its source', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/fork');
+        await window.shows('    fork  fork · fake');
+        await window.press(DOWN);
+        await until('the fork picked in the list', async () => {
+          if (window.frame().includes('  ❯ fork ')) {
+            return true;
+          }
+
+          await window.press(DOWN);
+
+          return false;
+        });
+
+        await window.press('x');
+        await window.shows('Could not fork: it was closed before it started');
+
+        expect(window.frame()).not.toContain('fork · fake');
+        expect(window.frame()).not.toContain('╭─ fork');
+      },
+      {
+        agentCommand: ['env', 'CHORD_FAKE_HANG_FORK=1', ...FORKS],
+        columns: 120,
+        rows: 40,
+      },
+    ));
+
   test('x closes a fork, and the list goes with it', () =>
     withWindow(
       async (window) => {

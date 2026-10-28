@@ -62,7 +62,8 @@ export interface CommandsSessions {
     named: string,
   ): Promise<
     | { readonly name: string; readonly from: number }
-    | { readonly refused: string }
+    | { readonly refused: string; readonly from?: number }
+    | undefined
   >;
 }
 
@@ -123,29 +124,28 @@ export function useCommands(
 
         const turnId = `fork-${crypto.randomUUID()}`;
 
-        // Said under the command as typed: on the agent forked, which the
-        // fork is in front of by then, or where it was refused (CHD-101).
-        return void sessions.forkTyped(args).then((forked) =>
-          'refused' in forked
-            ? dispatch({
-                type: 'noted',
-                turnId,
-                command: typed,
-                text: forked.refused,
-                failed: true,
-              })
-            : dispatch({
-                type: 'in_session',
-                key: forked.from,
-                action: {
-                  type: 'noted',
-                  turnId,
-                  command: typed,
-                  text: `Forked into ${forked.name}`,
-                  failed: false,
-                },
-              }),
-        );
+        // Said under the command as typed, on the agent it was typed on,
+        // whatever is in front by then (CHD-101).
+        return void sessions.forkTyped(args).then((forked) => {
+          if (forked === undefined) {
+            return;
+          }
+
+          const noted = {
+            type: 'noted',
+            turnId,
+            command: typed,
+            ...('refused' in forked
+              ? { text: forked.refused, failed: true }
+              : { text: `Forked into ${forked.name}`, failed: false }),
+          } as const;
+
+          dispatch(
+            forked.from === undefined
+              ? noted
+              : { type: 'in_session', key: forked.from, action: noted },
+          );
+        });
       }
       case 'clear': {
         const refused = sessions.clearFront(() => {

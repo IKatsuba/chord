@@ -1,11 +1,7 @@
 /** Per-run choices change configuration, never a saved team's instructions. */
 import { z } from '@zod/zod';
-import {
-  AGENT_CLEANUP_UNVERIFIED,
-  boundedWarnings,
-} from './resource_warnings.ts';
 import { MAX_MEMBERS, type Team, type TeamLead } from '../teams.ts';
-import { TeamSelection, type BudgetSnapshot } from './budgets.ts';
+import { TeamSelection } from './budgets.ts';
 
 const id = z.string().min(1).max(128);
 const reason = z
@@ -397,91 +393,24 @@ export function confirmSelectionRole(
   return { ...role, state: 'confirmed', actual: { ...actual }, note };
 }
 
-/** Cleanup uncertainty cannot disappear behind a full source warning list. */
+export const AGENT_CLEANUP_UNVERIFIED =
+  'An attempted agent cleanup could not be verified; process exit is uncertain.';
+
+/** A receipt says when an agent it started may not have gone. */
 export function withSelectionCleanupWarning(
   receipt: SelectionReceipt,
 ): SelectionReceipt {
-  return {
-    ...receipt,
-    warnings: boundedWarnings(receipt.warnings, [AGENT_CLEANUP_UNVERIFIED]),
-  };
+  return receipt.warnings.includes(AGENT_CLEANUP_UNVERIFIED)
+    ? receipt
+    : { ...receipt, warnings: [...receipt.warnings, AGENT_CLEANUP_UNVERIFIED] };
 }
 
-/** Only a response actually served to this caller can be decision provenance. */
+/** run_team records no resource read: an agent calls get_budgets itself. */
 export function selectionReceipt(
   runId: string,
   saved: SelectionReceipt['saved'],
   frozen: FrozenSelection,
-  decisionRead?: BudgetSnapshot,
 ): SelectionReceipt {
-  const refs =
-    decisionRead === undefined
-      ? []
-      : [
-          ...new Set([
-            ...decisionRead.pools.map((pool) => pool.poolRef),
-            ...decisionRead.unbound.map(
-              (observation) => observation.observationRef,
-            ),
-          ]),
-        ];
-  const warnings =
-    decisionRead === undefined
-      ? ['No resource decision read was recorded; capacity is unknown.']
-      : [...decisionRead.warnings];
-
-  if (refs.length > 256) {
-    warnings.push('Decision observation references are incomplete.');
-  }
-
-  if (decisionRead?.unavailable.length) {
-    warnings.push(
-      'Some referenced resource sources are unavailable; capacity is unknown.',
-    );
-  }
-
-  if (decisionRead?.unbound.length) {
-    warnings.push(
-      'Resource identity is unverified; observations remain separate.',
-    );
-  }
-
-  const sources = [
-    ...(decisionRead?.pools ?? []),
-    ...(decisionRead?.unbound ?? []),
-  ];
-
-  if (
-    sources.some(
-      (source) =>
-        source.coverage !== 'account' || source.externalActivity === 'unknown',
-    )
-  ) {
-    warnings.push(
-      'Resource coverage is incomplete; external work may be missing.',
-    );
-  }
-
-  const windows = sources.flatMap((source) => source.windows);
-
-  if (windows.some((window) => window.state === 'stale')) {
-    warnings.push(
-      'Some resource windows are stale; current capacity is unknown.',
-    );
-  }
-
-  if (windows.some((window) => window.state === 'unknown')) {
-    warnings.push('Provider freshness is unknown for some resource windows.');
-  }
-
-  if (windows.some((window) => window.state === 'unsupported')) {
-    warnings.push(
-      'Some resource windows are unsupported; capacity is unknown.',
-    );
-  }
-
-  const uniqueWarnings = boundedWarnings(warnings);
-
   const receipt = SelectionReceipt.parse({
     schemaVersion: 1,
     runId,
@@ -508,14 +437,8 @@ export function selectionReceipt(
       actual: null,
       note: null,
     })),
-    decisionRead:
-      decisionRead === undefined
-        ? null
-        : {
-            readAt: decisionRead.observedAt,
-            observationRefs: refs.slice(0, 256),
-          },
-    warnings: uniqueWarnings,
+    decisionRead: null,
+    warnings: [],
   });
 
   freezeValues(receipt);

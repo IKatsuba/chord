@@ -1,15 +1,11 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import {
   normalizeClaude,
   normalizeCodex,
 } from '../../src/session/resource_normalization.ts';
-import { UnboundObservation } from '../../src/session/budgets.ts';
+import { ProviderLimits } from '../../src/session/budgets.ts';
 
-const source = {
-  sourceRef: 'fixture-source',
-  sessionRef: 'fixture-session',
-  receivedAt: '2026-10-27T13:00:00.000Z',
-};
 const account = {
   account: { type: 'chatgpt', email: 'excluded@example.test' },
 };
@@ -23,366 +19,202 @@ const bucket = {
 };
 
 describe('official resource normalization', () => {
-  test('all-null, empty and wholly malformed source windows are unavailable', () => {
-    for (const windows of [
-      {},
-      { primary: null, secondary: null },
-      {
-        primary: {
-          usedPercent: null,
-          windowDurationMins: null,
-          resetsAt: null,
-        },
-        secondary: null,
-      },
-      {
-        primary: { usedPercent: null, windowDurationMins: 60, resetsAt: null },
-        secondary: null,
-      },
-      { primary: { usedPercent: 101 }, secondary: 'malformed' },
-    ]) {
-      expect(
-        normalizeCodex(
-          account,
-          { rateLimits: windows, rateLimitsByLimitId: null },
-          source,
-        ),
-      ).toHaveProperty('unavailable');
-    }
-
-    for (const rateLimits of [
-      {},
-      { five_hour: null, seven_day: null },
-      { five_hour: { utilization: null, resets_at: null } },
-      {
-        five_hour: { utilization: -1, resets_at: 'malformed' },
-        model_scoped: 'invalid',
-      },
-    ]) {
-      expect(
-        normalizeClaude(
-          { rate_limits_available: true, rate_limits: rateLimits },
-          source,
-        ),
-      ).toHaveProperty('unavailable');
-    }
-  });
-
-  test('valid reset alone remains partial timing evidence without a capacity claim', () => {
-    const codex = normalizeCodex(
-      account,
-      {
-        rateLimits: {
-          primary: {
-            usedPercent: null,
-            windowDurationMins: null,
-            resetsAt: 1_800_000_000,
-          },
-          secondary: null,
-        },
-        rateLimitsByLimitId: null,
-      },
-      source,
-    );
-    const claude = normalizeClaude(
-      {
-        rate_limits_available: true,
-        rate_limits: {
-          five_hour: { utilization: null, resets_at: '2026-10-28T13:00:00Z' },
-        },
-      },
-      source,
-    );
-
-    for (const result of [codex, claude]) {
-      if ('observation' in result) {
-        expect(result.observation.windows[0]).toMatchObject({
-          usedPercent: null,
-          observedAt: null,
-          state: 'unknown',
-        });
-        expect(result.observation.windows[0]!.resetsAt).not.toBeNull();
-      } else {
-        throw new Error('Expected explicit partial timing facts.');
-      }
-    }
-  });
-
-  test('Codex reports the executable version it was read from as its source version', () => {
-    const limits = { rateLimits: bucket, rateLimitsByLimitId: null };
-    const read = normalizeCodex(account, limits, {
-      ...source,
-      version: '0.164.0',
+  test('Codex windows keep the provider bucket names, map over legacy, and no account fields', () => {
+    const result = normalizeCodex(account, {
+      rateLimits: bucket,
+      rateLimitsByLimitId: { codex: bucket, codex_other: bucket },
     });
-    const unread = normalizeCodex(account, limits, source);
 
-    expect(read).toHaveProperty('observation.sourceVersion', '0.164.0');
-    expect(unread).toHaveProperty('observation.sourceVersion', 'unknown');
-  });
-
-  test('Codex prefers all map buckets, without adding the legacy duplicate or exporting account IDs', () => {
-    const result = normalizeCodex(
-      account,
-      {
-        rateLimits: bucket,
-        rateLimitsByLimitId: {
-          'private-bucket-a': bucket,
-          'private-bucket-b': bucket,
-        },
-      },
-      source,
-    );
-
-    expect('observation' in result).toBe(true);
-
-    if ('observation' in result) {
-      expect(UnboundObservation.safeParse(result.observation).success).toBe(
-        true,
-      );
-      expect(result.observation.windows).toHaveLength(4);
-      expect(result.observation.windows[0]).toMatchObject({
+    expect(ProviderLimits.safeParse(result).success).toBe(true);
+    expect(result).toEqual({
+      agent: 'codex',
+      windows: ['codex.primary', 'codex_other.primary'].map((name) => ({
+        name,
         usedPercent: 12.345,
         windowSeconds: 3600,
-        observedAt: null,
-        state: 'unknown',
+        resetsAt: new Date(1_800_000_000_000).toISOString(),
         models: null,
-      });
-      expect(result.observation.windows[1]!.usedPercent).toBeNull();
-      expect(JSON.stringify(result)).not.toContain('private-bucket');
-      expect(JSON.stringify(result)).not.toContain('excluded@example.test');
-      expect(
-        new Set(result.observation.windows.map((window) => window.windowRef))
-          .size,
-      ).toBe(4);
-    }
+      })),
+    });
+    expect(JSON.stringify(result)).not.toContain('excluded@example.test');
   });
 
-  test('legacy/null/empty maps stay distinct and unsupported auth never becomes zero capacity', () => {
-    const legacy = normalizeCodex(
-      account,
-      { rateLimits: bucket, rateLimitsByLimitId: null },
-      source,
-    );
-
-    expect('observation' in legacy && legacy.observation.windows.length).toBe(
-      2,
-    );
+  test('Codex legacy, empty map, malformed windows or buckets and unsupported auth', () => {
     expect(
-      normalizeCodex(
-        account,
-        { rateLimits: bucket, rateLimitsByLimitId: {} },
-        source,
-      ),
-    ).toHaveProperty('unavailable');
+      normalizeCodex(account, {
+        rateLimits: bucket,
+        rateLimitsByLimitId: null,
+      }),
+    ).toMatchObject({ agent: 'codex', windows: [{ name: 'primary' }] });
     expect(
-      normalizeCodex({ account: { type: 'apiKey' } }, {}, source),
-    ).toHaveProperty('unavailable');
+      normalizeCodex(account, { rateLimits: bucket, rateLimitsByLimitId: {} }),
+    ).toEqual({ agent: 'codex', windows: [] });
     expect(
-      normalizeCodex(account, { rateLimitsByLimitId: 'bad' }, source),
-    ).toHaveProperty('unavailable');
-  });
-
-  test('malformed windows do not invent utilization or erase valid independent windows', () => {
-    const result = normalizeCodex(
-      account,
-      {
+      normalizeCodex(account, {
         rateLimits: {
           primary: { ...bucket.primary, usedPercent: 101 },
           secondary: bucket.primary,
         },
         rateLimitsByLimitId: null,
-      },
-      source,
-    );
-
-    if ('observation' in result) {
-      expect(result.observation.windows[0]!.usedPercent).toBeNull();
-      expect(result.observation.windows[0]!.reason).toContain('Malformed');
-      expect(result.observation.windows[1]!.usedPercent).toBe(12.345);
-    } else {
-      throw new Error('Expected independent window observations.');
-    }
-  });
-
-  test('Claude preserves incomplete windows and model scope uncertainty without storing session costs', () => {
-    const result = normalizeClaude(
-      {
-        rate_limits_available: true,
-        session: { total_cost_usd: 1000 },
-        rate_limits: {
-          five_hour: { utilization: 0, resets_at: null },
-          seven_day: { utilization: 100, resets_at: '2026-10-28T13:00:00Z' },
-          model_scoped: [
-            {
-              display_name: 'private-model-label',
-              utilization: 25.125,
-              resets_at: null,
-            },
-          ],
+      }),
+    ).toEqual({
+      agent: 'codex',
+      windows: [
+        {
+          name: 'primary',
+          usedPercent: null,
+          windowSeconds: null,
+          resetsAt: null,
+          models: null,
         },
-      },
-      source,
+        expect.objectContaining({ name: 'secondary', usedPercent: 12.345 }),
+      ],
+    });
+    expect(
+      normalizeCodex(account, {
+        rateLimits: bucket,
+        rateLimitsByLimitId: { codex: 'bad' },
+      }),
+    ).toEqual({
+      agent: 'codex',
+      unavailable: 'Malformed rate-limit snapshot.',
+    });
+    expect(normalizeCodex({ account: { type: 'apiKey' } }, {})).toHaveProperty(
+      'unavailable',
     );
-
-    if ('observation' in result) {
-      expect(UnboundObservation.safeParse(result.observation).success).toBe(
-        true,
-      );
-      expect(result.observation.windows).toHaveLength(6);
-      expect(result.observation.windows[0]).toMatchObject({
-        usedPercent: 0,
-        resetsAt: null,
-        state: 'unknown',
-        observedAt: null,
-      });
-      expect(result.observation.windows[1]!.usedPercent).toBe(100);
-      expect(result.observation.windows[5]).toMatchObject({
-        usedPercent: 25.125,
-        models: null,
-      });
-      expect(JSON.stringify(result)).not.toContain('private-model-label');
-      expect(JSON.stringify(result)).not.toContain('total_cost');
-    } else {
-      throw new Error('Expected unbound subscription observations.');
-    }
+    expect(
+      normalizeCodex(account, { rateLimitsByLimitId: 'bad' }),
+    ).toHaveProperty('unavailable');
   });
 
-  test('Claude unavailable/partial/malformed sources retain specific advisory reasons', () => {
-    expect(
-      normalizeClaude(
-        { rate_limits_available: false, rate_limits: null },
-        source,
-      ),
-    ).toHaveProperty('unavailable');
-    expect(normalizeClaude({}, source)).toHaveProperty('unavailable');
+  test('Claude names its windows, skips absent ones and keeps model scope, without session costs', () => {
+    const result = normalizeClaude({
+      rate_limits_available: true,
+      session: { total_cost_usd: 1000 },
+      rate_limits: {
+        five_hour: { utilization: 0, resets_at: null },
+        seven_day: { utilization: 100, resets_at: '2026-10-28T13:00:00Z' },
+        seven_day_opus: null,
+        model_scoped: [
+          { display_name: 'Opus', utilization: 25.125, resets_at: null },
+        ],
+      },
+    });
 
-    const partial = normalizeClaude(
-      {
+    expect(ProviderLimits.safeParse(result).success).toBe(true);
+    expect(result).toEqual({
+      agent: 'claude',
+      windows: [
+        {
+          name: 'five_hour',
+          usedPercent: 0,
+          windowSeconds: 18000,
+          resetsAt: null,
+          models: null,
+        },
+        {
+          name: 'seven_day',
+          usedPercent: 100,
+          windowSeconds: 604800,
+          resetsAt: '2026-10-28T13:00:00Z',
+          models: null,
+        },
+        {
+          name: 'model_scoped',
+          usedPercent: 25.125,
+          windowSeconds: 604800,
+          resetsAt: null,
+          models: ['Opus'],
+        },
+      ],
+    });
+    expect(JSON.stringify(result)).not.toContain('total_cost');
+  });
+
+  test('Claude unavailable, malformed and empty sources', () => {
+    expect(
+      normalizeClaude({ rate_limits_available: false, rate_limits: null }),
+    ).toHaveProperty('unavailable');
+    expect(normalizeClaude({})).toHaveProperty('unavailable');
+    expect(
+      normalizeClaude({ rate_limits_available: true, rate_limits: {} }),
+    ).toEqual({ agent: 'claude', windows: [] });
+    expect(
+      normalizeClaude({
         rate_limits_available: true,
         rate_limits: {
-          five_hour: { utilization: 0, resets_at: null },
+          five_hour: { utilization: -1, resets_at: 'malformed' },
           model_scoped: 'invalid',
         },
-      },
-      source,
-    );
-
-    if ('observation' in partial) {
-      expect(partial.observation.windows[0]!.usedPercent).toBe(0);
-      expect(partial.observation.windows.at(-1)!.reason).toContain(
-        'incomplete',
-      );
-    } else {
-      throw new Error('Expected partial unknown windows.');
-    }
+      }),
+    ).toEqual({
+      agent: 'claude',
+      windows: ['five_hour', 'model_scoped'].map((name) => ({
+        name,
+        usedPercent: null,
+        windowSeconds: null,
+        resetsAt: null,
+        models: null,
+      })),
+    });
   });
 });
 
-describe('tester: partial and bounded provider facts', () => {
-  test('Codex zero utilization alone is usable evidence with unknown time and reset', () => {
-    const result = normalizeCodex(
-      account,
-      {
+describe('tester: bounded provider limits without inference', () => {
+  test('Codex keeps genuine zero while unknown duration and reset stay null', () => {
+    expect(
+      normalizeCodex(account, {
         rateLimits: {
           primary: { usedPercent: 0, windowDurationMins: null, resetsAt: null },
           secondary: null,
         },
         rateLimitsByLimitId: null,
-      },
-      source,
-    );
-
-    expect(result).toHaveProperty('observation');
-
-    if ('observation' in result) {
-      expect(result.observation.windows[0]).toMatchObject({
-        usedPercent: 0,
-        resetsAt: null,
-        windowSeconds: null,
-        observedAt: null,
-        receivedAt: source.receivedAt,
-        state: 'unknown',
-      });
-    }
+      }),
+    ).toEqual({
+      agent: 'codex',
+      windows: [
+        {
+          name: 'primary',
+          usedPercent: 0,
+          windowSeconds: null,
+          resetsAt: null,
+          models: null,
+        },
+      ],
+    });
   });
 
-  test('the quota map bound refuses excess buckets instead of silently truncating', () => {
-    const limits = (count: number) => ({
+  test('the quota map accepts 64 buckets and refuses 65 rather than silently clipping', () => {
+    const limits = (length: number) => ({
       rateLimits: bucket,
       rateLimitsByLimitId: Object.fromEntries(
-        Array.from({ length: count }, (_, index) => [
-          `bucket-${index}`,
-          bucket,
-        ]),
+        Array.from({ length }, (_, index) => [`bucket${index}`, bucket]),
       ),
     });
-    const bounded = normalizeCodex(account, limits(64), source);
+    const accepted = normalizeCodex(account, limits(64));
 
-    expect('observation' in bounded && bounded.observation.windows.length).toBe(
-      128,
-    );
-    expect(normalizeCodex(account, limits(65), source)).toEqual({
-      unavailable: {
-        agent: 'codex',
-        reason:
-          'The quota map exceeds the supported snapshot bound; coverage is incomplete.',
-      },
+    expect(ProviderLimits.safeParse(accepted).success).toBe(true);
+    assert('windows' in accepted);
+    expect(accepted.windows).toHaveLength(64);
+    expect(accepted.windows.at(-1)?.name).toBe('bucket63.primary');
+
+    expect(normalizeCodex(account, limits(65))).toEqual({
+      agent: 'codex',
+      unavailable: 'The quota map exceeds the supported bound.',
     });
   });
 
-  test('same bucket labels from distinct emitters cannot link observations', () => {
-    const limits = { rateLimits: bucket, rateLimitsByLimitId: null };
-    const first = normalizeCodex(account, limits, source);
-    const second = normalizeCodex(account, limits, {
-      ...source,
-      sourceRef: 'other-source',
-    });
-
-    expect(first).toHaveProperty('observation');
-    expect(second).toHaveProperty('observation');
-
-    if ('observation' in first && 'observation' in second) {
-      const refs = new Set(
-        first.observation.windows.map((entry) => entry.windowRef),
-      );
-
+  test('malformed Claude availability never permits otherwise valid usage to become a limit', () => {
+    for (const availability of [undefined, null, 'true', 1]) {
       expect(
-        second.observation.windows.every((entry) => !refs.has(entry.windowRef)),
-      ).toBe(true);
-    }
-  });
-
-  test('malformed availability never overrides otherwise plausible Claude usage', () => {
-    for (const available of [null, 'true', 1, {}, []]) {
-      expect(
-        normalizeClaude(
-          {
-            rate_limits_available: available,
-            rate_limits: { five_hour: { utilization: 10, resets_at: null } },
-          },
-          source,
-        ),
+        normalizeClaude({
+          rate_limits_available: availability,
+          rate_limits: { five_hour: { utilization: 0, resets_at: null } },
+        }),
       ).toEqual({
-        unavailable: {
-          agent: 'claude',
-          reason: 'Malformed experimental usage snapshot.',
-        },
+        agent: 'claude',
+        unavailable: 'Malformed experimental usage snapshot.',
       });
     }
-  });
-});
-
-describe('resource retry classification', () => {
-  test('unsupported auth/scope is configuration failure while malformed snapshots remain transient', () => {
-    expect(
-      normalizeCodex({ account: { type: 'apiKey' } }, {}, source),
-    ).toHaveProperty('retry', 'configuration');
-    expect(
-      normalizeClaude(
-        { rate_limits_available: false, rate_limits: null },
-        source,
-      ),
-    ).toHaveProperty('retry', 'configuration');
-    expect(normalizeClaude({}, source)).not.toHaveProperty('retry');
   });
 });

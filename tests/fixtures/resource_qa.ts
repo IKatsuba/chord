@@ -1,6 +1,6 @@
 /** Reproducible Resources captures: isolated settings/state and an explicit scripted ACP command. */
 import { spawnSync } from 'node:child_process';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -19,26 +19,6 @@ export async function resourceQa(
 
   qaPlace(directory);
   await mkdir(join(config, 'chord'), { recursive: true });
-  await writeFile(
-    join(config, 'chord', 'settings.json'),
-    JSON.stringify({
-      teamSelection:
-        scenario === 'long'
-          ? {
-              intent: 'prefer',
-              prefer: {
-                agent: 'codex',
-                model: 'fake-large-with-an-illustrative-long-preference-name',
-              },
-              constraints: {
-                agents: ['codex', 'claude'],
-                models: { codex: [] },
-                modes: { codex: ['default', 'plan'] },
-              },
-            }
-          : { intent: 'balanced' },
-    }),
-  );
 
   const env = {
     ...process.env,

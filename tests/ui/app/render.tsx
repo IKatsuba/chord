@@ -12,7 +12,7 @@ import type { EditorEnd } from '../../../src/editor.ts';
 import type { ClipboardReader, ImageFileReader } from '../../../src/images.ts';
 import type { LinkOpener } from '../../../src/links.ts';
 import type { DefinedServer, Ignored } from '../../../src/mcp.ts';
-import type { ResourceAccess } from '../../../src/session/resource_access.ts';
+import type { ReadLimits } from '../../../src/session/resource_access.ts';
 import type { TeamSelection } from '../../../src/session/budgets.ts';
 import type { ChordServer } from '../../../src/server/server.ts';
 import type { Notifications } from '../../../src/notify.ts';
@@ -184,7 +184,7 @@ export async function withWindow(
     mcpIgnored?: readonly Ignored[];
     /** chord's own MCP server, which the test closes; none by default. */
     server?: ChordServer;
-    resources?: ResourceAccess;
+    resources?: ReadLimits;
     teamSelection?: TeamSelection;
     selectionPolicy?: () => Promise<TeamSelectionPolicy>;
     /** The runtimes `list_agents` names; the fake and the registry's else. */

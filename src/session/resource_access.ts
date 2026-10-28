@@ -1,21 +1,16 @@
 /** Explicit window injection: test and capture windows never fall back to official readers. */
-import type { ActiveRun, BudgetSnapshot, TeamSelection } from './budgets.ts';
+import type { Budgets } from './budgets.ts';
 
-export interface ResourceInterest {
-  readonly agent: string;
+/** Where a window's agents start, which decides how their limits are read. */
+export interface LimitsPlace {
   readonly cwd: string;
-  readonly command?: string | readonly string[];
+  /** The custom ACP command a runtime starts with, if any. */
+  commandOf(agent: string): string | readonly string[] | undefined;
 }
 
-export interface ResourceAccess {
-  readonly processRef: string;
-  start(): Promise<void>;
-  retain(
-    interest: ResourceInterest,
-    signal: AbortSignal,
-    valid?: () => boolean,
-  ): () => void;
-  read(preferences?: TeamSelection): BudgetSnapshot;
-  active(runs: readonly ActiveRun[]): void;
-  close(): Promise<readonly string[]>;
-}
+/** Reads each named provider, or claude and codex when none are named. */
+export type ReadLimits = (
+  agents: readonly string[] | undefined,
+  place: LimitsPlace,
+  signal: AbortSignal,
+) => Promise<Budgets>;

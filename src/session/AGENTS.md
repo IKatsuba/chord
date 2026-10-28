@@ -13,13 +13,12 @@ These rules also cover `src/acp/`.
   `true` overrides a default of none. Keep the held-back names and reasons.
 - The window's sessions are recorded; `-p`'s are not.
 - This layer is below the interface and shared with `-p`: nothing here or in `src/acp/` imports from `src/ui/`.
-- Resource facts keep provider observation time separate from local receipt;
-  unknown identity stays unbound. Cancelled reads publish nothing; retain
-  sanitized cleanup uncertainty even after a later successful read.
-- Runtime-filtered facts require explicit active-work resource refs for pools;
-  never infer account binding from runtime/provider names. Preserve shared
-  pools once and warn on omitted unattributed coverage. Empty filters expose
-  no runtime facts; omitted filters preserve current facts without new readers.
+- `get_budgets` returns per-call provider windows or unavailable reasons;
+  missing values stay null. `readAt` is the call time, not provider freshness.
+  Omitted runtime filters read Claude and Codex; empty filters read none.
+  Never infer account identity or combine independent windows.
+- `run_team` records no budget read or budget warnings. Preserve reads and
+  warnings in historical receipts; never manufacture missing provenance.
 - Selection allowlists apply only to selected runs, across every effective
   role. Freeze composition; check current policy and observed startup before
   each first job. Confirm runtime and requested model/mode; omitted defaults

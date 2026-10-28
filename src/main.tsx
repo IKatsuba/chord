@@ -586,13 +586,9 @@ export const cli = chordCommand().action(async (options, named) => {
   // Once for the window, before its first session opens; `-p` has gone.
   const server = startServices.serveChord();
   const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
-  const fixtureResources = collectors === 'fixture';
   const resources = startServices.createResources({
-    stateDirectory: fixtureResources
-      ? join(chordStateDir(), 'fixture')
-      : chordStateDir(),
     collectors,
-    ...(fixtureResources
+    ...(collectors === 'fixture'
       ? {
           fixtureCase: resourceFixtureCase(
             process.env['CHORD_FAKE_RESOURCE_CASE'],
@@ -600,8 +596,6 @@ export const cli = chordCommand().action(async (options, named) => {
         }
       : {}),
   });
-
-  await resources.start();
 
   let closingResources: Promise<void> | undefined;
   const closeResources = () =>
@@ -618,7 +612,7 @@ export const cli = chordCommand().action(async (options, named) => {
   const window = (
     <App
       open={startServices.openSession}
-      resources={resources}
+      resources={resources.read}
       teamSelection={first.teamSelection}
       selectionPolicy={first.selectionPolicy}
       agent={agent}

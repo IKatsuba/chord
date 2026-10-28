@@ -11,7 +11,6 @@ import { until } from './conversation_fake.ts';
 const fixture = new URL('../fixtures/resource_provider.ts', import.meta.url)
   .pathname;
 const directories: string[] = [];
-const source = { sourceRef: 'fixture-source', sessionRef: 'fixture-session' };
 
 afterEach(async () => {
   await Promise.all(
@@ -52,13 +51,10 @@ describe('public-stream Codex resource collector', () => {
       {
         cwd: process.cwd(),
         signal: new AbortController().signal,
-        source,
       },
     );
 
-    expect('observation' in result && result.observation.windows.length).toBe(
-      4,
-    );
+    expect('windows' in result && result.windows.length).toBe(2);
     expect(JSON.stringify(result)).not.toContain('excluded@example.test');
 
     const requests = (await readFile(file, 'utf8'))
@@ -87,7 +83,6 @@ describe('public-stream Codex resource collector', () => {
         {
           cwd: process.cwd(),
           signal: new AbortController().signal,
-          source,
           bounds: {
             ...COLLECTOR_BOUNDS,
             totalMs: 1500,
@@ -117,7 +112,6 @@ describe('public-stream Codex resource collector', () => {
       {
         cwd: process.cwd(),
         signal: controller.signal,
-        source,
       },
     ).then((value) => {
       published = true;
@@ -148,7 +142,6 @@ describe('public-stream Codex resource collector', () => {
       collectCodexResources([process.execPath, fixture, 'normal', file], {
         cwd: process.cwd(),
         signal: cancelled,
-        source,
       }),
     ).rejects.toThrow('cancelled');
     await expect(readFile(file)).rejects.toThrow();
@@ -160,12 +153,12 @@ describe('Codex resource authentication relevance', () => {
     const file = await record();
     const result = await collectCodexResources(
       [process.execPath, fixture, 'api-account', file],
-      { cwd: process.cwd(), signal: new AbortController().signal, source },
+      { cwd: process.cwd(), signal: new AbortController().signal },
     );
 
     expect(result).toMatchObject({
-      unavailable: { agent: 'codex' },
-      retry: 'configuration',
+      agent: 'codex',
+      unavailable: expect.any(String),
     });
     expect(await readFile(file, 'utf8')).not.toContain(
       'account/rateLimits/read',

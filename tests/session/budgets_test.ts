@@ -1,216 +1,95 @@
 import { describe, expect, test } from 'bun:test';
 import {
-  activeAt,
-  ageWindow,
-  failedWindows,
-  mergeWindows,
-  WindowSnapshot,
-  type WindowSnapshot as Window,
+  Budgets,
+  ProviderLimits,
+  ResourceWindow,
 } from '../../src/session/budgets.ts';
 
-const wall = Date.parse('2026-10-27T13:00:00Z');
-const iso = (offset: number) => new Date(wall + offset).toISOString();
-const now = { wall, monotonic: 100_000 };
+const window = {
+  name: 'primary',
+  usedPercent: 0,
+  windowSeconds: null,
+  resetsAt: null,
+  models: null,
+};
 
-function window(overrides: Partial<Window> = {}): Window {
-  return {
-    windowRef: 'weekly',
-    models: null,
-    usedPercent: 12.345,
-    windowSeconds: 604800,
-    resetsAt: iso(100_000),
-    observedAt: iso(-10_000),
-    receivedAt: iso(-5000),
-    state: 'fresh',
-    reason: null,
-    ...overrides,
-  };
-}
-
-describe('resource windows', () => {
-  test('preserves precision and endpoints, rejecting malformed values and extra fields', () => {
-    for (const usedPercent of [0, 12.345, 100, null]) {
-      expect(WindowSnapshot.parse(window({ usedPercent })).usedPercent).toBe(
+describe('tester: plain provider-limit answer boundaries', () => {
+  test('real zero, full usage and unknown usage remain distinct without legacy fields', () => {
+    for (const usedPercent of [0, 100, null]) {
+      expect(ResourceWindow.parse({ ...window, usedPercent }).usedPercent).toBe(
         usedPercent,
       );
     }
 
-    for (const usedPercent of [-1, 101, NaN, Infinity, '12']) {
-      expect(
-        WindowSnapshot.safeParse({ ...window(), usedPercent }).success,
-      ).toBe(false);
+    const answer = {
+      readAt: '2026-10-28T12:00:00Z',
+      providers: [{ agent: 'codex', windows: [window] }],
+    };
+
+    expect(Budgets.parse(answer)).toEqual(answer);
+
+    for (const obsolete of [
+      'activeRuns',
+      'preferences',
+      'freshness',
+      'warnings',
+    ]) {
+      expect(Budgets.safeParse({ ...answer, [obsolete]: [] }).success).toBe(
+        false,
+      );
     }
 
     expect(
-      WindowSnapshot.safeParse({ ...window(), rawAccount: 'excluded' }).success,
+      ProviderLimits.safeParse({
+        agent: 'claude',
+        windows: [],
+        unavailable: 'Conflicting state.',
+      }).success,
     ).toBe(false);
-    expect(
-      WindowSnapshot.safeParse(window({ resetsAt: 'invalid' })).success,
-    ).toBe(false);
   });
 
-  test('new receipt without provider observation remains unknown, with original utilization', () => {
-    expect(
-      ageWindow(window({ observedAt: null, receivedAt: iso(0) }), now),
-    ).toMatchObject({
-      usedPercent: 12.345,
-      observedAt: null,
-      receivedAt: iso(0),
-      state: 'unknown',
-    });
-    expect(
-      ageWindow(window({ observedAt: null }), { ...now, wall: wall + 900_000 })
-        .state,
-    ).toBe('stale');
-  });
-
-  test('freshness has independent observation, reset and historical receipt boundaries', () => {
-    expect(ageWindow(window({ observedAt: iso(-59_999) }), now).state).toBe(
-      'fresh',
-    );
-    expect(ageWindow(window({ observedAt: iso(-60_000) }), now).state).toBe(
-      'stale',
-    );
-    expect(ageWindow(window({ resetsAt: iso(0) }), now).state).toBe('stale');
-    expect(ageWindow(window({ resetsAt: null }), now).state).toBe('fresh');
-    expect(ageWindow(window({ receivedAt: iso(-900_000) }), now).state).toBe(
-      'stale',
-    );
-    expect(ageWindow(window({ usedPercent: null }), now).state).toBe('unknown');
-  });
-
-  test('clock skew and rollback never extend freshness; monotonic elapsed time ages facts', () => {
-    expect(ageWindow(window({ observedAt: iso(5001) }), now).state).toBe(
-      'unknown',
-    );
-    expect(ageWindow(window({ observedAt: iso(5000) }), now).state).toBe(
-      'fresh',
-    );
-    expect(
-      ageWindow(window({ observedAt: iso(5000), receivedAt: iso(0) }), {
-        wall: wall + 60_000,
-        monotonic: 160_000,
-      }).state,
-    ).toBe('stale');
-    expect(
-      ageWindow(window(), { wall: wall - 1, monotonic: 100_001 }, now).state,
-    ).toBe('unknown');
-    expect(ageWindow(window(), { wall, monotonic: 160_000 }, now).state).toBe(
-      'stale',
-    );
-  });
-
-  test('slightly future observation and receipt expire 60 seconds after first evaluation', () => {
-    const future = window({ observedAt: iso(5000), receivedAt: iso(5000) });
-
-    expect(ageWindow(future, now, now).state).toBe('fresh');
-    expect(
-      ageWindow(future, { wall: wall + 59_999, monotonic: 159_999 }, now).state,
-    ).toBe('fresh');
-    expect(
-      ageWindow(future, { wall: wall + 60_000, monotonic: 160_000 }, now),
-    ).toMatchObject({
-      state: 'stale',
-      observedAt: iso(5000),
-      receivedAt: iso(5000),
-    });
-  });
-
-  test('partial updates do not refresh omitted or newer windows and failures retain original times', () => {
-    const weekly = window();
-    const short = window({
-      windowRef: 'short',
-      models: ['model-a'],
-      observedAt: iso(-20_000),
-    });
-    const newer = { ...short, usedPercent: 40, observedAt: iso(-1000) };
-
-    expect(
-      mergeWindows(
-        [weekly, short],
-        [newer, { ...weekly, observedAt: iso(-30_000) }],
-      ),
-    ).toEqual([weekly, newer]);
-
-    const [failed] = failedWindows([weekly], 'Refresh failed.');
-
-    expect(failed).toEqual({
-      ...weekly,
-      state: 'stale',
-      reason: 'Refresh failed.',
-    });
-    expect(ageWindow(failed!, now).state).toBe('stale');
-  });
-
-  test('heartbeat staleness means possibly active, without turning planned members into spending', () => {
-    const run = {
-      processRef: 'process',
-      runRef: 'run',
-      sessionRef: 'session',
-      team: 'team',
-      member: 'reviewer',
-      agent: 'fake',
-      model: null,
-      resourceRefs: [],
-      state: 'planned' as const,
-      lastSeenAt: iso(-44_999),
+  test('provider and window count caps accept their boundary and reject overflow', () => {
+    const provider = {
+      agent: 'codex',
+      windows: Array.from({ length: 256 }, () => window),
     };
 
-    expect(activeAt(run, wall).state).toBe('planned');
-    expect(activeAt({ ...run, lastSeenAt: iso(-45_000) }, wall).state).toBe(
-      'stale',
-    );
+    expect(ProviderLimits.safeParse(provider).success).toBe(true);
     expect(
-      activeAt({ ...run, state: 'ended', lastSeenAt: iso(-45_000) }, wall)
-        .state,
-    ).toBe('ended');
-  });
-});
+      ProviderLimits.safeParse({
+        ...provider,
+        windows: [...provider.windows, window],
+      }).success,
+    ).toBe(false);
 
-describe('tester: independent resource window aging', () => {
-  test('a partial update cannot revive an omitted window when its reset passes', () => {
-    const weekly = window({ resetsAt: iso(0) });
-    const short = window({
-      windowRef: 'short',
-      observedAt: iso(-1000),
-      resetsAt: iso(30_000),
-      models: ['model-a'],
-    });
-    const aged = mergeWindows([weekly], [short]).map((entry) =>
-      ageWindow(entry, now),
-    );
+    const answer = {
+      readAt: '2026-10-28T12:00:00Z',
+      providers: Array.from({ length: 128 }, () => ({
+        agent: 'codex',
+        windows: [],
+      })),
+    };
 
-    expect(aged).toEqual([
-      {
-        ...weekly,
-        state: 'stale',
-        reason: 'The recorded reset has passed; capacity is unknown.',
-      },
-      short,
-    ]);
-    expect(weekly.state).toBe('fresh');
-  });
-
-  test('failed untimestamped reads retain their reason and receipt without gaining freshness', () => {
-    const original = window({ observedAt: null, receivedAt: iso(0) });
-    const [failed] = failedWindows([original], 'Source unavailable.');
-
-    expect(ageWindow(failed!, now)).toEqual({
-      ...original,
-      state: 'unknown',
-      reason: 'Source unavailable.',
-    });
-    expect(original.reason).toBeNull();
-  });
-
-  test('monotonic rollback invalidates an otherwise recent observation', () => {
+    expect(Budgets.safeParse(answer).success).toBe(true);
     expect(
-      ageWindow(window(), { wall: wall + 1, monotonic: 99_999 }, now),
-    ).toMatchObject({
-      state: 'unknown',
-      usedPercent: 12.345,
-      observedAt: iso(-10_000),
-      receivedAt: iso(-5000),
-    });
+      Budgets.safeParse({
+        ...answer,
+        providers: [...answer.providers, { agent: 'claude', windows: [] }],
+      }).success,
+    ).toBe(false);
+  });
+
+  test('invalid percentages and durations cannot silently become known limits', () => {
+    for (const usedPercent of [-1, 101, Infinity, NaN]) {
+      expect(ResourceWindow.safeParse({ ...window, usedPercent }).success).toBe(
+        false,
+      );
+    }
+
+    for (const windowSeconds of [0, -1, Infinity, NaN]) {
+      expect(
+        ResourceWindow.safeParse({ ...window, windowSeconds }).success,
+      ).toBe(false);
+    }
   });
 });

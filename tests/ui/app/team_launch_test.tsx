@@ -286,7 +286,6 @@ describe('team launch generation boundary', () => {
       await ready(window);
       expect(old.launch?.valid()).toBe(false);
       expect(person(callers).launch?.valid()).toBe(true);
-      expect(person(callers).launch?.decisionRead).toBeUndefined();
       expect(
         await old.window.runTeam(old, {
           team: 'fixture',

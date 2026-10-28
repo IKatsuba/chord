@@ -1,13 +1,11 @@
 /** Fixed fake-only states for captures and tests; no authentication or provider fallback. */
-import type { ResourceRead } from '../session/resource_service.ts';
-import type { ResourceSource } from '../session/resource_normalization.ts';
+import type { ProviderLimits } from '../session/budgets.ts';
 
 export const RESOURCE_FIXTURE_CASES = [
   'normal',
   'partial',
-  'pending',
+  'timeout',
   'unavailable',
-  'long',
 ] as const;
 
 export type ResourceFixtureCase = (typeof RESOURCE_FIXTURE_CASES)[number];
@@ -25,13 +23,13 @@ export function resourceFixtureCase(
   return RESOURCE_FIXTURE_CASES.find((item) => item === value) ?? 'normal';
 }
 
-export function fixtureResourceRead(
+export function fixtureLimits(
   agent: string,
-  source: Omit<ResourceSource, 'receivedAt'>,
   scenario: ResourceFixtureCase,
   signal: AbortSignal,
-): Promise<ResourceRead> {
-  if (scenario === 'pending') {
+): Promise<ProviderLimits> {
+  if (scenario === 'timeout') {
+    // Never answers: the read's own deadline reports it.
     return new Promise((_, reject) => {
       if (signal.aborted) {
         reject(signal.reason);
@@ -47,63 +45,33 @@ export function fixtureResourceRead(
 
   if (scenario === 'unavailable') {
     return Promise.resolve({
-      facts: {
-        unavailable: {
-          agent,
-          reason:
-            'Scripted unsupported provider version; current capacity unknown.',
-        },
-      },
-      retry: 'configuration',
+      agent,
+      unavailable: 'Scripted unavailable provider.',
     });
   }
 
-  const receivedAt = new Date(Date.now() - 12000).toISOString();
   const window = {
-    windowRef: 'fixture-five-hour',
-    models: null,
+    name: 'five_hour',
     usedPercent: 12.345,
     windowSeconds: 18000,
     resetsAt: new Date(Date.now() + 3600000).toISOString(),
-    observedAt: null,
-    receivedAt,
-    state: 'unknown' as const,
-    reason: 'Provider observation time unavailable.',
+    models: null,
   };
 
   return Promise.resolve({
-    facts: {
-      observation: {
-        observationRef: source.sourceRef,
-        ...source,
-        agent,
-        source: 'fixture',
-        sourceVersion: '1',
-        coverage: 'unknown',
-        externalActivity: 'unknown',
-        billingKind: scenario === 'partial' ? 'unknown' : 'subscription',
-        observedAt: null,
-        reason:
-          scenario === 'long'
-            ? 'Scripted partial coverage warning: independent provider windows may omit external work, model applicability, provider observation times and current account association. Retained utilization is historical context and never proves available capacity or authorizes a different payment source. This deliberately long advisory verifies ordinary wrapping without hidden uncertainty.'
-            : 'Scripted fixture; account and resource identity are unverified.',
-        windows:
-          scenario === 'partial'
-            ? [
-                window,
-                {
-                  ...window,
-                  windowRef: 'fixture-weekly',
-                  usedPercent: null,
-                  windowSeconds: 604800,
-                  resetsAt: null,
-                  receivedAt: null,
-                  reason:
-                    'Partial observation; weekly utilization/reset unavailable.',
-                },
-              ]
-            : [window],
-      },
-    },
+    agent,
+    windows:
+      scenario === 'partial'
+        ? [
+            window,
+            {
+              name: 'seven_day',
+              usedPercent: null,
+              windowSeconds: 604800,
+              resetsAt: null,
+              models: null,
+            },
+          ]
+        : [window],
   });
 }

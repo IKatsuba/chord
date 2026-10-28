@@ -652,3 +652,88 @@ try {
     });
   }
 });
+
+describe('tester: CLI limits-reader shutdown ownership', () => {
+  for (const forced of [false, true]) {
+    test(`${forced ? 'forced' : 'normal'} exit waits for limits cleanup once and prints its late warning`, () => {
+      const place = mkdtempSync(join(tmpdir(), 'chord-limits-exit-'));
+      const project = join(place, 'project');
+      const script = join(place, 'shutdown.ts');
+
+      mkdirSync(join(project, '.chord'), { recursive: true });
+      writeFileSync(
+        join(project, '.chord/settings.json'),
+        JSON.stringify({
+          agents: { fixture: { command: fakeAgentCommand() } },
+        }),
+      );
+      writeFileSync(
+        script,
+        `
+import assert from 'node:assert/strict';
+import { spyOn } from 'bun:test';
+import { setImmediate } from 'node:timers/promises';
+const { cli, startServices } = await import(${JSON.stringify(new URL('../src/main.tsx', import.meta.url).pathname)});
+const { leave } = await import(${JSON.stringify(new URL('../src/ui/app/renderer.tsx', import.meta.url).pathname)});
+const rendered = Promise.withResolvers();
+const appExit = Promise.withResolvers();
+const entered = Promise.withResolvers();
+const cleaned = Promise.withResolvers();
+let closeCalls = 0;
+let parsed = false;
+spyOn(startServices, 'openTerminal').mockResolvedValue({ renderer: {}, dark: true });
+spyOn(startServices, 'copier').mockReturnValue(undefined);
+spyOn(startServices, 'createResources').mockReturnValue({
+  read: async () => ({ readAt: new Date().toISOString(), providers: [] }),
+  close: () => {
+    closeCalls++;
+    entered.resolve();
+    return cleaned.promise;
+  },
+});
+spyOn(startServices, 'render').mockImplementation(() => {
+  rendered.resolve();
+  return { rerender() {}, unmount: async () => {}, waitUntilExit: () => appExit.promise };
+});
+const run = cli.noExit().throwErrors().parse(['fixture', '-C', ${JSON.stringify(project)}]).then(() => { parsed = true; });
+await rendered.promise;
+let leaving;
+if (${forced}) {
+  leaving = leave(undefined);
+} else {
+  appExit.resolve();
+}
+await entered.promise;
+await setImmediate();
+assert.equal(parsed, false);
+assert.equal(closeCalls, 1);
+cleaned.resolve(['Fixture late cleanup warning.']);
+await leaving;
+appExit.resolve();
+await run;
+assert.equal(closeCalls, 1);
+console.log(JSON.stringify({ closeCalls, parsed }));
+`,
+      );
+
+      try {
+        const ran = spawnSync(process.execPath, [script], {
+          env: {
+            ...process.env,
+            XDG_CONFIG_HOME: join(place, 'config'),
+            XDG_STATE_HOME: join(place, 'state'),
+            CHORD_RESOURCE_FIXTURE: 'true',
+          },
+          encoding: 'utf8',
+          timeout: 15_000,
+        });
+
+        expect(ran.status, ran.stderr).toBe(0);
+        expect(ran.stdout).toContain('"closeCalls":1,"parsed":true');
+        expect(ran.stderr).toBe('Fixture late cleanup warning.\n');
+      } finally {
+        rmSync(place, { recursive: true, force: true });
+      }
+    });
+  }
+});

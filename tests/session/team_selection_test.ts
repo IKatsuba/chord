@@ -11,7 +11,6 @@ import {
   withSelectionCleanupWarning,
 } from '../../src/session/team_selection.ts';
 import type { Team } from '../../src/teams.ts';
-import type { BudgetSnapshot } from '../../src/session/budgets.ts';
 
 const saved: Team = {
   description: 'Selection fixture.',
@@ -381,7 +380,7 @@ describe('selection decision receipts', () => {
     return result.frozen;
   }
 
-  test('unopened roles are planned, with no actual/default claims or invented decision read', () => {
+  test('unopened roles are planned, with no actual/default claims, decision read or resource warnings', () => {
     const receipt = selectionReceipt(
       'run-1',
       { name: 'fixture', place: 'project' },
@@ -395,9 +394,7 @@ describe('selection decision receipts', () => {
       ['reviewer', 'planned', null],
     ]);
     expect(receipt.decisionRead).toBeNull();
-    expect(receipt.warnings).toEqual([
-      'No resource decision read was recorded; capacity is unknown.',
-    ]);
+    expect(receipt.warnings).toEqual([]);
     expect(receipt.reason).toBe(reason);
     expect(receipt.roles[0]?.planned).not.toHaveProperty('instructions');
     expect(SelectionReceipt.parse(JSON.parse(JSON.stringify(receipt)))).toEqual(
@@ -456,58 +453,6 @@ describe('selection decision receipts', () => {
       state: 'confirmed',
       actual: { model: null, mode: null, effort: null },
     });
-  });
-
-  test('decision provenance retains actual served read time and only normalized references', () => {
-    const read: BudgetSnapshot = {
-      schemaVersion: 1,
-      observedAt: '2026-10-27T13:00:00Z',
-      preferences: {},
-      pools: [],
-      unbound: [
-        {
-          observationRef: 'observed-one',
-          sourceRef: 'source-one',
-          sessionRef: 'session-one',
-          agent: 'codex',
-          observedAt: null,
-          billingKind: 'unknown',
-          reason: 'Identity unverified.',
-          source: 'official',
-          sourceVersion: 'fixture',
-          coverage: 'unknown',
-          externalActivity: 'unknown',
-          windows: [],
-        },
-      ],
-      activeRuns: [],
-      unavailable: [],
-      warnings: ['Coverage is unknown.'],
-    };
-    const receipt = selectionReceipt(
-      'run-1',
-      { name: 'fixture', place: 'user' },
-      frozen(),
-      read,
-    );
-
-    expect(receipt.decisionRead).toEqual({
-      readAt: read.observedAt,
-      observationRefs: ['observed-one'],
-    });
-    expect(receipt.warnings).toEqual([
-      ...read.warnings,
-      'Resource identity is unverified; observations remain separate.',
-      'Resource coverage is incomplete; external work may be missing.',
-    ]);
-    expect(JSON.stringify(receipt)).not.toContain('source-one');
-    expect(JSON.stringify(receipt)).not.toContain('session-one');
-    read.warnings.push('Later mutation.');
-    expect(receipt.warnings).toEqual([
-      'Coverage is unknown.',
-      'Resource identity is unverified; observations remain separate.',
-      'Resource coverage is incomplete; external work may be missing.',
-    ]);
   });
 });
 
@@ -575,57 +520,6 @@ describe('tester: selected receipt bounds and role isolation', () => {
     expect(saved).toEqual(before);
   });
 
-  test('receipt warning overflow is explicit and duplicate served observation refs count once', () => {
-    const selected = freezeSelection(saved, { reason }, {}, runtimes);
-
-    assert('frozen' in selected);
-
-    const observation: BudgetSnapshot['unbound'][number] = {
-      observationRef: 'same-observation',
-      sourceRef: 'source',
-      sessionRef: 'session',
-      agent: 'codex',
-      source: 'fixture',
-      sourceVersion: '1',
-      observedAt: null,
-      billingKind: 'unknown',
-      coverage: 'unknown',
-      externalActivity: 'unknown',
-      windows: [],
-      reason: 'Identity unverified.',
-    };
-    const read: BudgetSnapshot = {
-      schemaVersion: 1,
-      observedAt: '2026-10-27T13:00:00Z',
-      preferences: {},
-      pools: [],
-      unbound: [observation, { ...observation, sourceRef: 'other-source' }],
-      unavailable: [{ agent: 'claude', reason: 'Fixture unavailable.' }],
-      activeRuns: [],
-      warnings: Array.from(
-        { length: 256 },
-        (_, index) => `Fixture warning ${index}.`,
-      ),
-    };
-    const receipt = selectionReceipt(
-      'run',
-      { name: 'fixture', place: 'project' },
-      selected.frozen,
-      read,
-    );
-
-    expect(receipt.decisionRead).toEqual({
-      readAt: read.observedAt,
-      observationRefs: ['same-observation'],
-    });
-    expect(receipt.warnings).toHaveLength(256);
-    expect(receipt.warnings.at(-1)).toBe(
-      'Additional resource warnings are omitted.',
-    );
-    expect(read.warnings.at(-1)).toBe('Fixture warning 255.');
-    expect(SelectionReceipt.safeParse(receipt).success).toBe(true);
-  });
-
   test('actual confirmation copies runtime values without changing planned or unopened roles', () => {
     const selected = freezeSelection(saved, { reason }, {}, runtimes);
 
@@ -659,7 +553,7 @@ describe('tester: selected receipt bounds and role isolation', () => {
   });
 });
 
-test('cleanup warning preserves explicit omission and uncertainty within the receipt cap without mutating the plan', () => {
+test('cleanup warning is added once without mutating the plan', () => {
   const chosen = freezeSelection(
     saved,
     { reason: 'Preserve all instructions.' },
@@ -669,39 +563,18 @@ test('cleanup warning preserves explicit omission and uncertainty within the rec
 
   assert('frozen' in chosen);
 
-  const initial = selectionReceipt(
+  const receipt = selectionReceipt(
     'actual-run',
     { name: 'fixture', place: 'project' },
     chosen.frozen,
   );
-  const receipt = {
-    ...initial,
-    warnings: [
-      ...Array.from(
-        { length: 255 },
-        (_, index) => `Source uncertainty ${index}.`,
-      ),
-      'Additional resource warnings are omitted.',
-    ],
-  };
   const changed = withSelectionCleanupWarning(receipt);
 
-  expect(changed.warnings).toHaveLength(256);
-  expect(new Set(changed.warnings).size).toBe(256);
-  expect(changed.warnings).toContain(
-    'Additional resource warnings are omitted.',
-  );
-  expect(changed.warnings).toContain(
+  expect(changed.warnings).toEqual([
     'An attempted agent cleanup could not be verified; process exit is uncertain.',
-  );
-  expect(withSelectionCleanupWarning(changed).warnings).toEqual(
-    changed.warnings,
-  );
-  expect(receipt.warnings).toHaveLength(256);
-  expect(receipt.warnings).not.toContain(
-    'An attempted agent cleanup could not be verified; process exit is uncertain.',
-  );
+  ]);
+  expect(withSelectionCleanupWarning(changed)).toBe(changed);
+  expect(receipt.warnings).toEqual([]);
   expect(changed.roles).toBe(receipt.roles);
-  expect(changed.policy).toBe(receipt.policy);
   expect(SelectionReceipt.safeParse(changed).success).toBe(true);
 });

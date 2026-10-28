@@ -52,7 +52,7 @@ export async function selectedReceiptFixture(
                 job: `Actual admitted attempt ${index + 1}; its first job is never delivered.`,
                 selection: {
                   reason:
-                    'Preserve every role instruction and exact permission requirement. Provider freshness is unknown; external work and quota coverage may be incomplete. '
+                    'Preserve every role instruction and exact permission requirement. Capacity is unknown; external work may be missing. '
                       .repeat(3)
                       .trim(),
                 },

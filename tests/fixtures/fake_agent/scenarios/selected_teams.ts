@@ -47,7 +47,7 @@ async function discoveredTeam(turn: Parameters<Play>[0], select: boolean) {
         ? {
             selection: {
               reason:
-                'Preserve every saved role, instruction and permission; filtered capacity and freshness are advisory unknown.',
+                'Preserve every saved role, instruction and permission; capacity is unknown.',
               lead: { model: 'fake-small', mode: 'plan' },
             },
           }
@@ -85,10 +85,10 @@ export const SELECTED_TEAMS = {
         selection: {
           reason:
             scenario === 'long'
-              ? 'Preserve every role instruction and exact permission requirement. Capacity is advisory, provider observation age is unknown, and external activity may be missing. '
+              ? 'Preserve every role instruction and exact permission requirement. Capacity is unknown until get_budgets is read, and external activity may be missing. '
                   .repeat(3)
                   .trim()
-              : 'Preserve all instructions and exact permission requirements; provider freshness is unknown.',
+              : 'Preserve all instructions and exact permission requirements; capacity is unknown.',
           lead: {
             agent: ['refused', 'soft'].includes(scenario) ? 'claude' : 'codex',
             model: 'fake-small',
@@ -117,7 +117,7 @@ export const SELECTED_TEAMS = {
       job: 'selectedidle',
       selection: {
         reason:
-          'Preserve all instructions and exact permissions; provider freshness is unknown.',
+          'Preserve all instructions and exact permissions; capacity is unknown.',
         lead: { agent: 'codex', model: 'fake-small', mode: 'plan' },
       },
     };

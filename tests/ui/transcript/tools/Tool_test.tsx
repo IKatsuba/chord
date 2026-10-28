@@ -20,7 +20,10 @@ import {
   CodeBlockActions,
   type DrawnBlock,
 } from '../../../../src/ui/app/context.ts';
-import { MessageBody } from '../../../../src/ui/transcript/tools/Tool.tsx';
+import {
+  MessageBody,
+  Tool,
+} from '../../../../src/ui/transcript/tools/Tool.tsx';
 import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import {
   asked,
@@ -1355,4 +1358,99 @@ describe("a message's code blocks are told to the window, a quoted one too (CHD-
       await drawn.unmount();
     }
   });
+});
+
+describe('tester: Resources answers in narrow and expanded frames', () => {
+  for (const columns of [80, 120]) {
+    test(`${columns}-column mixed limits wrap the unavailable reason without a failed-tool claim`, async () => {
+      const reason = `Fixture unavailable ${'detail '.repeat(20)}end-marker`;
+      const call: ToolCall = {
+        id: 'mixed-resources',
+        status: 'completed',
+        chord: {
+          tool: 'get_budgets',
+          input: {},
+          answer: {
+            readAt: '2026-10-28T12:00:00Z',
+            providers: [
+              {
+                agent: 'claude',
+                windows: [
+                  {
+                    name: 'five_hour',
+                    usedPercent: 0,
+                    windowSeconds: 18000,
+                    resetsAt: null,
+                    models: null,
+                  },
+                ],
+              },
+              { agent: 'codex', unavailable: reason },
+            ],
+          },
+        },
+      };
+
+      for (const expanded of [false, true]) {
+        const rendered = await draw(
+          <Tool call={call} expanded={expanded} width={columns} />,
+          { columns, rows: 24 },
+        );
+
+        try {
+          const frame = stripAnsi(rendered.frame());
+
+          expect(frame).toContain('Resources');
+          expect(frame).toContain('claude · 5h: 0% used');
+          expect(frame).toContain('codex: unavailable · Fixture unavailable');
+          expect(frame).toContain('end-marker');
+          expect(frame).not.toContain('Error:');
+          expect(frame).not.toContain('Preferences:');
+          expect(frame).not.toContain('Active work:');
+
+          for (const line of frame.split('\n')) {
+            expect(stringWidth(line)).toBeLessThanOrEqual(columns);
+          }
+        } finally {
+          await rendered.unmount();
+        }
+      }
+    });
+
+    test(`${columns}-column empty and old answers keep their exact fallback when expanded`, async () => {
+      for (const [answer, expected] of [
+        [
+          { readAt: '2026-10-28T12:00:00Z', providers: [] },
+          'No providers read.',
+        ],
+        [
+          { schemaVersion: 1, warnings: ['Old record detail.'] },
+          'Recorded in an older format; not shown.',
+        ],
+      ] as const) {
+        for (const expanded of [false, true]) {
+          const rendered = await draw(
+            <Tool
+              call={{
+                id: 'recorded-resources',
+                status: 'completed',
+                chord: { tool: 'get_budgets', input: {}, answer },
+              }}
+              expanded={expanded}
+              width={columns}
+            />,
+            { columns, rows: 24 },
+          );
+
+          try {
+            expect(rendered.frame()).toContain(expected);
+            expect(rendered.frame()).not.toContain('Old record detail.');
+            expect(rendered.frame()).not.toContain('capacity unknown');
+          } finally {
+            await rendered.unmount();
+          }
+        }
+      }
+    });
+  }
 });

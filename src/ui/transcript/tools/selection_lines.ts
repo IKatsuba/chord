@@ -34,9 +34,12 @@ export function selectionLines(
         : `${recorded ? 'Actual at recording' : 'Actual'}: ${role.state} · session runtime ${role.actual?.agent ?? 'unknown'} · model ${role.actual?.model ?? 'unknown'} · effort ${role.actual?.effort ?? 'unknown'} · mode ${role.actual?.mode ?? 'unknown'}`,
       ...(role.note === null ? [] : [`${role.name}: ${role.note}`]),
     ]),
-    receipt.decisionRead === null
-      ? 'Read: none recorded · capacity unknown · advisory'
-      : `Read ${receipt.decisionRead.readAt.replace('T', ' ').replace('Z', ' UTC')} · advisory`,
+    // run_team no longer reads; only a receipt recorded with a read shows it.
+    ...(receipt.decisionRead === null
+      ? []
+      : [
+          `Read ${receipt.decisionRead.readAt.replace('T', ' ').replace('Z', ' UTC')} · advisory`,
+        ]),
     ...(expanded
       ? [
           `Run: ${receipt.runId} · saved definition: ${receipt.saved.name} (${receipt.saved.place})`,

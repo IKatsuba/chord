@@ -103,14 +103,16 @@ describe('official native collector resolution', () => {
 });
 
 describe('executable read lifecycle classification', () => {
-  test('transient version timeout remains retryable, but cleanup failure is not swallowed', async () => {
+  test('a version timeout is unavailable, but cleanup failure is not swallowed', async () => {
     const result = await resolveResourceExecutable('codex', options, {
       ...inspection,
       version: () =>
         Promise.reject(new ResourceReadError('timeout', 'Version timeout.')),
     });
 
-    expect(result).toHaveProperty('retry', 'transient');
+    expect(result).toEqual({
+      unavailable: 'Official provider executable could not be verified.',
+    });
 
     await expect(
       resolveResourceExecutable('codex', options, {
@@ -149,7 +151,6 @@ describe('tester: provider version read failures', () => {
         }),
       ).toEqual({
         unavailable: 'Official provider executable could not be verified.',
-        retry: 'configuration',
       });
     }
   });

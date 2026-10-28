@@ -4,6 +4,7 @@ import {
   confirmSelectionRole,
   freezeSelection,
   selectionReceipt,
+  SelectionReceipt,
 } from '../../../../src/session/team_selection.ts';
 import { selectionLines } from '../../../../src/ui/transcript/tools/selection_lines.ts';
 
@@ -23,7 +24,7 @@ function receipt() {
       body: 'Unchanged instructions.',
     },
     {
-      reason: 'Preserve permissions; quota freshness is unknown.',
+      reason: 'Preserve permissions; capacity is unknown.',
       lead: { model: 'chosen-model' },
     },
     {},
@@ -45,11 +46,10 @@ describe('frozen selection report lines', () => {
 
     expect(shown).toContain('Selection: agent-selected · this run');
     expect(shown).toContain(
-      'Reason: Preserve permissions; quota freshness is unknown.',
+      'Reason: Preserve permissions; capacity is unknown.',
     );
-    expect(shown).toContain(
-      'Warning: No resource decision read was recorded; capacity is unknown.',
-    );
+    expect(shown).not.toContain('Warning:');
+    expect(shown).not.toContain('Read');
     expect(shown).toContain('lead (lead): codex · model chosen-model');
     expect(shown).toContain('reviewer: claude');
     expect(shown).toContain('agent default (unconfirmed)');
@@ -109,4 +109,44 @@ describe('frozen selection report lines', () => {
     expect(selectionLines(undefined)).toEqual([]);
     expect(selectionLines({ schemaVersion: 8 })).toEqual([]);
   });
+});
+
+describe('tester: historical resource reads in selection receipts', () => {
+  for (const recorded of [false, true]) {
+    for (const expanded of [false, true]) {
+      test(`retains the original read and warnings when recorded=${recorded}, expanded=${expanded}`, () => {
+        const historical = {
+          ...receipt(),
+          decisionRead: {
+            readAt: '2026-10-27T13:40:00Z',
+            observationRefs: ['original-observation'],
+          },
+          warnings: ['Original unavailable provider.', 'Original stale read.'],
+        };
+        const parsed = SelectionReceipt.parse(
+          JSON.parse(JSON.stringify(historical)),
+        );
+        const shown = selectionLines(parsed, expanded, recorded);
+
+        expect(parsed).toEqual(historical);
+        expect(shown).toContain('Read 2026-10-27 13:40:00 UTC · advisory');
+        expect(shown.filter((line) => line.startsWith('Warning:'))).toEqual([
+          'Warning: Original unavailable provider.',
+          'Warning: Original stale read.',
+        ]);
+        expect(shown).toContain(
+          `${recorded ? 'Actual at recording' : 'Actual'}: not opened · configuration unconfirmed`,
+        );
+        expect(shown.includes('ctrl+o for saved definition and changes')).toBe(
+          !expanded,
+        );
+        expect(
+          shown.some((line) => line.includes('saved definition: fixture')),
+        ).toBe(expanded);
+        expect(historical.decisionRead.observationRefs).toEqual([
+          'original-observation',
+        ]);
+      });
+    }
+  }
 });

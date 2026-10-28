@@ -12,13 +12,7 @@
  * is worked out here from what the window reads of itself, so it is tested
  * without a server.
  */
-import { performance } from 'node:perf_hooks';
-import { foldBudgetCache } from '../platform/budget_cache.ts';
-import type { BudgetSnapshot } from '../session/budgets.ts';
-import {
-  filterResourceFacts,
-  ResourceAgents,
-} from '../session/resource_filter.ts';
+import type { Budgets } from '../session/budgets.ts';
 import {
   RunSelection,
   type SelectionReceipt,
@@ -68,7 +62,6 @@ export interface Caller {
   readonly launch?: {
     readonly valid: () => boolean;
     readonly signal: () => AbortSignal;
-    decisionRead?: BudgetSnapshot;
   };
   /** The SDK cancels this request on cancellation or transport close. */
   readonly signal?: AbortSignal;
@@ -239,12 +232,8 @@ export type RuntimeOffer =
 
 /** What the tools read of the window. */
 export interface WindowView {
-  /** Immediate advisory facts; omission disables collection for an injected window. */
-  budgets?(
-    caller: Caller,
-    agents?: readonly string[],
-    admittedAt?: number,
-  ): BudgetSnapshot;
+  /** The providers' limits, read now; omitted, an injected window reads none. */
+  budgets?(caller: Caller, agents?: readonly string[]): Promise<Budgets>;
   /** The sessions open in the window, in the strip's order. */
   sessions(): readonly OpenSessionView[];
   /** Every runtime chord can start, by the name a session is opened with. */
@@ -937,51 +926,37 @@ const getBudgets: Register = (server, caller) =>
     'get_budgets',
     {
       description:
-        'Read cached advisory resource facts immediately, without waiting for providers. ' +
-        'Omit agents for existing current facts with no additional readers; [] returns no runtime facts. ' +
-        'An explicit agents filter uses runtime IDs from list_agents and retains only those configured readers ' +
-        'for at most 30 seconds from admission. Pending or missing capacity is unknown: retry with the same ' +
-        'filter to read completed facts; repeats do not extend the window, restart readers or redate observations. ' +
-        'Read team/person instructions first and request facts when resources matter to the job. ' +
-        'Consider each independent window, reset, unknown freshness and active work; never combine subscription ' +
-        'percentages with API dollars. Preferences are advisory and selected-run hard allowlists remain binding. ' +
-        'No scheduling, quota guarantee, auth change or payment-source fallback.',
+        "Reads each provider's usage limits now: per window, the percent " +
+        'used and when it resets, or why the provider could not be read. ' +
+        'Providers are read in parallel, waiting up to 10 s each. Omit ' +
+        'agents to read claude and codex; [] reads none.',
       inputSchema: {
-        agents: ResourceAgents.optional().describe(
-          'Optional runtime IDs from list_agents: explicit filter scopes facts and bounded background relevance; omission preserves current facts, [] requests none.',
-        ),
+        agents: z
+          .array(z.string().min(1).max(128))
+          .max(128)
+          .optional()
+          .describe('Runtime IDs from list_agents to read only those'),
       },
     },
-    (input, extra) => {
-      const admittedAt = performance.now();
+    async (input, extra) => {
       const request = { ...caller, signal: extra.signal };
-      let facts: BudgetSnapshot;
+      let budgets: Budgets | undefined;
 
       try {
-        facts = filterResourceFacts(
-          caller.window.budgets?.(request, input.agents, admittedAt) ??
-            foldBudgetCache(
-              [],
-              {},
-              { wall: Date.now(), monotonic: admittedAt },
-            ),
-          input.agents,
-        );
+        budgets = await caller.window.budgets?.(request, input.agents);
       } catch {
+        budgets = undefined;
+      }
+
+      if (budgets === undefined) {
         return serve(request, 'get_budgets', input, {
-          error: 'Resource facts could not be read.',
+          error: 'The limits could not be read.',
         });
       }
 
-      const response = serve(request, 'get_budgets', input, facts, (value) =>
+      return serve(request, 'get_budgets', input, budgets, (value) =>
         JSON.stringify(value, null, 2),
       );
-
-      if (caller.launch?.valid()) {
-        caller.launch.decisionRead = structuredClone(facts);
-      }
-
-      return response;
     },
   );
 
@@ -1289,8 +1264,8 @@ const runTeam: Register = (server, caller) =>
         'with its members. Read list_teams instructions first. Omit selection ' +
         'to run saved composition. Optional selection changes this run only, ' +
         'preserving every saved role and instruction; provide a reason that ' +
-        'preserves their requirements and explains uncertainty. Read resource ' +
-        'facts when instructions or the job call for them. There is no ' +
+        'preserves their requirements and explains uncertainty. Call get_budgets ' +
+        'when instructions or the job make resources matter. There is no ' +
         'automatic retry, substitution or saved-team rewrite.',
       inputSchema: z
         .looseObject({

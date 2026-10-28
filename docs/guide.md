@@ -927,61 +927,43 @@ agent. A team's name is completed after `show`, `run` and `stop`.
 
 ### Resource facts and team selection
 
-`get_budgets {agents?: string[]}` reads cached advisory facts immediately:
-preferences, independent quota windows and resets, source/age/coverage warnings
-and reported
-active work. Main and long-lived agents can read it; task agents cannot. The
-`Resources` report preserves unknown values and each window's uncertainty.
-Neither a recent receipt nor a future reset proves provider freshness. Missing
-identity leaves observations unbound; Chord does not merge them into an account
-pool. Active work may be incomplete, includes non-team sessions with
-`team: null`, and treats unopened team members as planned, not spending.
+`get_budgets {agents?: string[]}` reads Claude Code and Codex usage limits
+when called, in parallel, waiting up to 10 seconds per provider. Main and
+long-lived agents can call it; task agents cannot. Omit `agents` to read both;
+an explicit list filters by runtime IDs from `list_agents` (at most 128 IDs,
+each 1–128 characters). `[]` reads none. A runtime with no reader returns an
+unavailable reason without probing or installing it.
 
-Omit `agents` for existing current facts without adding readers. An explicit
-list uses runtime IDs from `list_agents` (at most 128 IDs, each 1–128
-characters); `[]` returns no runtime-scoped facts and releases temporary
-interest. A filter returns matching observations, unavailable reasons and active
-work, keeping global preferences and coverage warnings. Verified pools appear
-once only through explicit matching active-work resource refs; unattributed
-pools are omitted with a coverage warning. Runtime names never prove provider
-or account identity. Current collectors return unbound observations. Unknown or
-unsupported IDs are advisory unavailable, without probing or installing them.
+The answer is `{readAt, providers}`. Each provider has `agent` and either
+`windows` or an `unavailable` reason. Each window has `name`, `usedPercent`,
+`windowSeconds`, `resetsAt` and `models`; missing values are null. `readAt` is
+the call's time, not proof of when the provider observed usage. Preferences,
+active work, account identity and freshness states are not part of the answer.
+Each call reads anew; there is no background collection or retained interest.
+Old cache files under `~/.local/state/chord/resources/` are left untouched and
+are no longer read or written.
 
-Explicit filters retain configured readers for at most 30 seconds from request
-admission. Repeating the same normalized filter reads eventual completed facts
-without extending the deadline, restarting readers or redating observations.
-Replacing the filter, expiry, cancellation, session replacement/close or the
-actual turn ending releases temporary interest; independent session/run readers
-remain. A read between turns can still refresh within that bound. The tool
-returns pending/cache facts without waiting for providers, starting a model
-turn or looking up a team name.
+The `Resources` block shows a `Read` line, then each provider's windows with
+percent used, reset and models, or its unavailable reason. Unknown values stay
+unknown; a provider with no windows says `no windows reported`. An empty answer
+says `No providers read.` An answer recorded in the old format shows only
+`Recorded in an older format; not shown.`, including with ctrl+o; its original
+JSON remains in the session record.
 
-Chord refreshes only relevant session/team configurations in the background,
-sharing identical configurations within a process and keeping different working
-directories separate. It reads at most once per 120 seconds while relevant,
-with bounded acquisition/cleanup and failure backoff. It does not start every
-installed runtime or wait for quota before launching. Cache files under
-`~/.local/state/chord/resources/` are bounded replaceable observations, not a
-shared balance or ledger. Cancelled reads publish no facts. Sanitized cleanup
-and exit-verification uncertainty can persist after a later successful read.
-
-Production collectors try any version on `darwin-arm64`: Codex
-through its installed, unmodified official PATH npm launcher or native binary,
-and native Claude Code through Agent SDK 0.3.311's experimental getter. Codex
-reports the executable's version; Claude reports the bundled SDK's. Failed or
-malformed reads are unavailable with a reason. The npm Codex launcher needs
-existing Node. Chord installs no provider and adds no login or credential
-reader; custom ACP commands have no verified association with the reader's
-auth and are advisory unavailable. Other targets or missing executables give
-source warnings; direct ACP remains supported on existing release targets.
+Production readers try any installed version on `darwin-arm64`: Codex through
+its unmodified official PATH npm launcher or native binary, and native Claude
+Code through Agent SDK 0.3.311's experimental getter in an isolated worker.
+The npm Codex launcher needs existing Node. Missing executables, unsupported
+targets, custom ACP commands and failed or malformed reads return unavailable
+reasons. Chord installs no provider and adds no login or credential reader.
+Direct ACP remains supported on existing release targets.
 
 The Claude getter may change or disappear. Readers send no inference prompt,
 but provider-managed startup/auth/cache/hooks/telemetry effects can occur. A
-read is not a zero-billing, freshness or capacity guarantee. Codex's client has
-uncapped incomplete-frame buffering: a deadline does not cap memory. Null,
-partial, stale and unavailable data remain explicit. Subscription percentages
-are never added to API dollars. There is no quota enforcement, payment-source
-switch, paid fallback, scheduler or migration of running work.
+read is not a zero-billing or capacity guarantee. Codex's client has uncapped
+incomplete-frame buffering: a deadline does not cap memory. Subscription
+percentages are never added to API dollars. There is no quota enforcement,
+payment-source switch, paid fallback, scheduler or migration of running work.
 
 Existing team instructions can request resource-aware selection. For example,
 put ordinary text in the team's shared body:
@@ -1018,7 +1000,8 @@ lower known monetary spend, without converting quota to dollars. `prefer` uses
 soft `prefer.agent` and nullable `prefer.model` fields. `constraints.agents`,
 `constraints.models.<agent>` and `constraints.modes.<agent>` are exact
 allowlists: omitted means no added restriction, empty means no allowed choice.
-These constrain every effective role of calls carrying `selection`; direct
+Preferences are not returned by `get_budgets`. Allowlists constrain every
+effective role of calls carrying `selection`; direct
 `/team run` and `run_team` without selection keep saved composition and existing
 startup checks. They are selection policy, not global security controls.
 
@@ -1049,8 +1032,10 @@ refusal leaves existing work alone and updates that run's receipt. Cancellation
 or caller replacement revokes pending launch authority; a timeout is not proof
 nothing started. Inspect `list_teams` or the known run ID before retrying.
 
-Receipts distinguish saved, planned and observed configuration, reason,
-resource warnings and per-role planned/confirmed/refused state. Missing actual
+Receipts distinguish saved, planned and observed configuration, reason and
+per-role planned/confirmed/refused state. `run_team` records no budget read or
+budget warnings. Earlier receipts keep their recorded read and warnings; a
+receipt without a read shows no `Read` line. Missing actual
 runtime stays unknown in older receipts; runtime identity proves no account or
 auth identity. Replay does not reopen work. An actual receipt without an ACP
 call appears as `Recorded Team receipt (<name>)`, with Chord provenance and

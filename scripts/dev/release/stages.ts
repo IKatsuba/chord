@@ -8,6 +8,7 @@
  * and the version is tagged.
  */
 import { join } from 'node:path';
+import { authenticate } from './authenticate.ts';
 import { check, compile, install, natives } from './build.ts';
 import { commitVersion, holdVersion, pushVersion } from './bump.ts';
 import { die, identity, type Package, type Release, run, said } from './lib.ts';
@@ -48,9 +49,8 @@ export async function runRelease(
     );
   }
 
-  // A clean tree, the version not yet published (or a run stopped between
-  // publishes to resume), and the owner's npm login; for a run that
-  // publishes, main level with origin's and no tag yet.
+  // Eligibility is checked before npm may hand over the terminal or save
+  // credentials; publishing also requires main level with origin and no tag.
   const current = packageVersion(release);
   const next = target(current, wanted);
 
@@ -68,15 +68,16 @@ export async function runRelease(
     version: next,
   });
 
-  // A run stopped between publishes is finished from the packages it built,
-  // without building again.
-  if (mode === 'resume') {
-    if (version !== current) {
-      die(
-        `a stopped publish resumes package.json's version ${current}, not ${version}; run it without a version`,
-      );
-    }
+  if (mode === 'resume' && version !== current) {
+    die(
+      `a stopped publish resumes package.json's version ${current}, not ${version}; run it without a version`,
+    );
+  }
 
+  authenticate(release);
+
+  // A stopped publish uses its existing packages without building again.
+  if (mode === 'resume') {
     release.out(
       `resuming ${version}: a platform package is published, @chorded/chord is not`,
     );

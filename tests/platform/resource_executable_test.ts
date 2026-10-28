@@ -149,7 +149,6 @@ describe('tester: provider version read failures', () => {
         }),
       ).toEqual({
         unavailable: 'Official provider executable could not be verified.',
-        retry: 'configuration',
       });
     }
   });

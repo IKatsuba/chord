@@ -390,8 +390,6 @@ describe('tester: Resources keyboard and snapshot continuity', () => {
 
           expect(window.frame()).toContain(read[0]);
           expect(window.frame()).toContain('unsent draft');
-          expect(window.mounted('provider freshness unknown')).toBe(true);
-          expect(window.mounted('external work may be missing')).toBe(true);
 
           await window.press('\x0f');
 

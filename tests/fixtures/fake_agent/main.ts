@@ -360,6 +360,7 @@ const SCENARIOS = [
   'text',
   'texttillsteered',
   'texttillsteeredheld',
+  'readsheld',
   'thought',
   'tools',
   'steps',

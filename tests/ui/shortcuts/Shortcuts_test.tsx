@@ -914,17 +914,7 @@ describe('CHD-528 tester: page boundaries at other terminal sizes', () => {
 
               const inspect = () => {
                 const frame = window.frame();
-                const captured = frame
-                  .split('\n')
-                  .map((line) => line.trimEnd());
-                const start =
-                  captured.findIndex((line) => line.startsWith('╰─')) + 1;
-                const rosterStart = captured.findIndex(
-                  (line, at) => at >= start && /^ +main +fake/.test(line),
-                );
-                const actual = captured
-                  .slice(start, rosterStart < 0 ? undefined : rosterStart)
-                  .filter((line) => line !== '');
+                const actual = shortcutPanel(frame, columns!);
                 const above = actual[0]?.match(/↑ (\d+) lines? above/);
                 const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
                 const offset = Number(above?.[1] ?? 0);

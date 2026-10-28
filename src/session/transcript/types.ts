@@ -571,6 +571,17 @@ export type Entry =
     }
   | {
       /**
+       * Where a fork parted from what it was forked from, by that agent's
+       * name, at `at`: what is above it is the source's conversation as it
+       * stood (CHD-101).
+       */
+      readonly kind: 'forked';
+      readonly turnId: string;
+      readonly from: string;
+      readonly at: number;
+    }
+  | {
+      /**
        * The close of a turn the agent started on its own with a message
        * steered after chord's turn had ended, which chord cancelled; the
        * message, from `from` or the person with none, goes as chord's next
@@ -1105,6 +1116,13 @@ export type TranscriptAction =
       readonly type: 'monitors_left';
       readonly turnId: string;
       readonly monitors: readonly PastMonitor[];
+    }
+  /** The session is a fork of the agent `from`'s, made at `at` (CHD-101). */
+  | {
+      readonly type: 'forked';
+      readonly turnId: string;
+      readonly from: string;
+      readonly at: number;
     }
   /**
    * chord cancelled turn `turnId`, which the agent started on its own with

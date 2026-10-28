@@ -298,6 +298,19 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
       };
     case 'cycle_started':
       return cycleStarted(state, action.turnId, action.at);
+    case 'forked':
+      return {
+        ...state,
+        entries: [
+          ...state.entries,
+          {
+            kind: 'forked',
+            turnId: action.turnId,
+            from: action.from,
+            at: action.at,
+          },
+        ],
+      };
     case 'self_started':
       return {
         ...state,

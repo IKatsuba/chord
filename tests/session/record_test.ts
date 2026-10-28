@@ -2583,3 +2583,19 @@ test('pre-CHD-521 records read metadata-free Guardian approved and denied verdic
       .every((entry) => entry.update._meta === undefined),
   ).toBe(true);
 });
+
+test("a fork's parting is a line of its own in the record, read back as the same line; nothing of its source is kept (CHD-101)", () => {
+  const event = {
+    type: 'forked',
+    turnId: 'forked',
+    from: 'main',
+    at: 5,
+  } as const;
+  const entry = entryOf(event, { type: 'state', options: {} });
+
+  expect(entry).toStrictEqual(event);
+  // A replayed turn's id is the record's own, as every replayed line's.
+  expect(recordActions([entry!])).toStrictEqual([
+    { ...event, turnId: 'history-forked' },
+  ]);
+});

@@ -2920,8 +2920,13 @@ export function useSessions(
 
     const forkKey = sessions.agents.nextKey;
 
-    // Its state is there before its first event, which may come at once.
-    dispatch({ type: 'agent_opened', key: forkKey });
+    // Its state is there before its first event, which may come at once,
+    // and its view is the conversation as it stood.
+    dispatch({
+      type: 'agent_opened',
+      key: forkKey,
+      ...(now === undefined ? {} : { transcript: now.transcript }),
+    });
 
     const key = sessions.openChild(
       { id, name, runtime, forkedFrom: sourceName, openedAt: Date.now() },
@@ -2939,6 +2944,8 @@ export function useSessions(
 
             if (event.type === 'connected') {
               up.resolve(undefined);
+              // Where it parted, under what it was copied from.
+              queueMicrotask(() => conversationAt(own)?.forked(sourceName));
             } else if (event.type === 'connect_failed') {
               up.resolve(event.message);
               queueMicrotask(() => dropChild(own));

@@ -171,6 +171,16 @@ export type RecordEntry =
       readonly turnId: string;
       readonly from?: MessageFrom;
     }
+  /**
+   * The session is a fork of the agent `from`'s, made at `at`; the source's
+   * conversation is not copied here, as the agent has it (CHD-101).
+   */
+  | {
+      readonly type: 'forked';
+      readonly turnId: string;
+      readonly from: string;
+      readonly at: number;
+    }
   /** The agent's process went, and the subagents still running with it. */
   | { readonly type: 'disconnected'; readonly at: number }
   | {
@@ -715,6 +725,15 @@ export function recordActions(
         });
 
         break;
+      case 'forked':
+        actions.push({
+          type: 'forked',
+          turnId: id(entry.turnId),
+          from: entry.from,
+          at: entry.at,
+        });
+
+        break;
       case 'self_started':
         actions.push({
           type: 'self_started',
@@ -977,6 +996,13 @@ export function entryOf(
         type: 'stopping',
         subagentId: event.subagentId,
         stopping: event.stopping,
+      };
+    case 'forked':
+      return {
+        type: 'forked',
+        turnId: event.turnId,
+        from: event.from,
+        at: event.at,
       };
     case 'self_started':
       return {

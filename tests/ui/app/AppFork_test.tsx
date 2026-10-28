@@ -3,6 +3,9 @@
  * starts from the conversation so far (CHD-101).
  */
 import { describe, expect, test } from 'bun:test';
+import { readdir, readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { parseRecord } from '../../../src/session/record.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
@@ -50,6 +53,30 @@ describe('/fork opens a fork beside main (CHD-101)', () => {
         await window.shows('╭─ fork ');
         await window.shows('forked from main');
         await window.shows('    fork  fork · fake');
+        // Its view: the conversation as it stood, then where it parted.
+        await window.shows('── forked from main · ');
+
+        expect(window.frame()).toContain('This reply came in chunks.');
+        await send(window, 'thought');
+        await window.shows('Here is the answer.');
+
+        // Its record keeps where it parted and its own turns, never the
+        // conversation copied above it, which the agent already has.
+        const dir = join(window.dir, 'state', 'records');
+        const records = await Promise.all(
+          (await readdir(dir)).map(async (file) =>
+            parseRecord(await readFile(join(dir, file), 'utf8')),
+          ),
+        );
+        const fork = records.find((entries) =>
+          entries.some((entry) => entry.type === 'forked'),
+        );
+
+        expect(
+          fork?.flatMap((entry) =>
+            entry.type === 'prompt' ? [entry.prompt] : [],
+          ),
+        ).toStrictEqual(['thought']);
         await pickMain(window);
         await window.shows('⎿  Forked into fork');
       },

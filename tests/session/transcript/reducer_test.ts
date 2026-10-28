@@ -884,3 +884,17 @@ describe('CHD-534 tester: failure boundaries', () => {
       '40',
     ));
 });
+
+test("a fork's parting is a line after what it was copied from (CHD-101)", () => {
+  const state = fold([
+    { type: 'prompt', turnId: 't1', text: 'Go', at: 0 },
+    { type: 'forked', turnId: 'forked', from: 'main', at: 5 },
+  ]);
+
+  expect(state.entries.at(-1)).toStrictEqual({
+    kind: 'forked',
+    turnId: 'forked',
+    from: 'main',
+    at: 5,
+  });
+});

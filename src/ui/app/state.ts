@@ -1262,9 +1262,14 @@ export type WindowedAction =
   | { readonly type: 'spend_closed'; readonly key: number }
   /**
    * A long-lived agent opened under `key`, as it starts; it stays behind
-   * until the person picks it.
+   * until the person picks it. A fork's view starts as the conversation it
+   * was forked from stood, chord's copy of it (CHD-101).
    */
-  | { readonly type: 'agent_opened'; readonly key: number }
+  | {
+      readonly type: 'agent_opened';
+      readonly key: number;
+      readonly transcript?: Transcript;
+    }
   /** The session `key` comes to the front, as it was left. */
   | { readonly type: 'session_shown'; readonly key: number }
   /** The session `key` closed, and `front` is the one in front now. */
@@ -1377,7 +1382,13 @@ export function reduceWindowed(
     case 'agent_opened':
       return {
         ...state,
-        sessions: { ...state.sessions, [action.key]: initialSession },
+        sessions: {
+          ...state.sessions,
+          [action.key]:
+            action.transcript === undefined
+              ? initialSession
+              : { ...initialSession, transcript: action.transcript },
+        },
       };
     case 'session_shown': {
       if (action.key === state.front || !(action.key in state.sessions)) {

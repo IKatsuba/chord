@@ -2,7 +2,7 @@ import { recordedReceipts } from '../teams/recorded_receipts.ts';
 import { RecordedReceipt } from '../teams/RecordedReceipt.tsx';
 import type { TeamSelectionPolicy } from '../../settings.ts';
 import type { BoxRenderable, Renderable } from '@opentui/core';
-import { useTerminalDimensions } from '@opentui/react';
+import { flushSync, useTerminalDimensions } from '@opentui/react';
 import process from 'node:process';
 import manifest from '../../../package.json' with { type: 'json' };
 import {
@@ -797,6 +797,32 @@ export function App({
   const menu = commandMenu(state, draft);
   const finder = fileFinder(state, draft, cursor);
   const menuRows = menuRowLimit(rows);
+  const transient = Boolean(state.search || finder || menu || state.help);
+  // A menu borrows transcript rows, never the actual permanent agents rows.
+  const keptAgents = Math.min(agentsFull, agentsRoom);
+  const completionRoom = (room: boolean) => {
+    if ((state.completionHidden === true) !== !room) {
+      flushSync(() => dispatch({ type: 'completion_room', room }));
+    }
+
+    // A match can finish before layout: apply its pending pick only after
+    // this viewport has measured whether the choice can be seen.
+    if (state.awaitedPick !== undefined) {
+      play(
+        awaitedSteps({
+          ...context(),
+          state: room ? state : { ...state, completionHidden: true },
+        }),
+      );
+    }
+  };
+
+  useEffect(() => {
+    if (!menu && !finder && state.completionHidden) {
+      dispatch({ type: 'completion_room', room: true });
+    }
+  }, [menu, finder, state.completionHidden]);
+
   // Esc does not end the mention, so it counts as closed while put away;
   // the edit that brings it back opens it again.
   const agentMention = agentMentionAt(draft, cursor);
@@ -1043,7 +1069,7 @@ export function App({
   // Enter or Tab that waits for a match acts once it is back, or lets go
   // once the mention it was pressed on has changed.
   useEffect(() => {
-    if (state.awaitedPick !== undefined) {
+    if (state.awaitedPick !== undefined && finder === undefined) {
       play(awaitedSteps(context()));
     }
   });
@@ -1443,6 +1469,7 @@ export function App({
                   // Rows the transcript has are rows the folded list may have.
                   renderAfter={() => {
                     if (
+                      !transient &&
                       folded &&
                       (transcriptArea.current?.getLayout().height ?? 0) > 0
                     ) {
@@ -1818,6 +1845,31 @@ export function App({
                 )}
                 {held && inputDialog}
                 {inputDialog !== undefined && !held && inputDialog}
+                {state.search ? (
+                  <SearchLine search={state.search} />
+                ) : finder ? (
+                  <FileList
+                    finder={finder}
+                    onRoom={completionRoom}
+                    rows={menuRows}
+                    agentColours={mentionColours}
+                  />
+                ) : menu ? (
+                  <CommandList
+                    menu={menu}
+                    rows={menuRows}
+                    width={columns}
+                    onRoom={completionRoom}
+                  />
+                ) : state.help ? (
+                  <Shortcuts
+                    width={columns}
+                    scroller={panelScroller}
+                    onOverflow={(overflows) =>
+                      dispatch({ type: 'panel_overflowed', overflows })
+                    }
+                  />
+                ) : null}
                 {inputDialog !== undefined && !held && !viewing ? null : (
                   <PromptInput
                     key={
@@ -1834,8 +1886,8 @@ export function App({
                     // history's: the textarea leaves them alone.
                     walking={
                       walking(history, typedText(state.bash, draft)) ||
-                      menu !== undefined ||
-                      finder !== undefined
+                      (!state.completionHidden &&
+                        (menu !== undefined || finder !== undefined))
                     }
                     bash={
                       found === undefined
@@ -1886,82 +1938,64 @@ export function App({
                     onNewer={() => play(newerSteps(context()))}
                   />
                 )}
-                {state.search ? (
-                  <SearchLine search={state.search} />
-                ) : finder ? (
-                  <FileList
-                    finder={finder}
-                    rows={menuRows}
-                    agentColours={mentionColours}
-                  />
-                ) : menu ? (
-                  <CommandList menu={menu} rows={menuRows} width={columns} />
-                ) : state.help ? (
-                  <Shortcuts
-                    width={columns}
-                    scroller={panelScroller}
-                    onOverflow={(overflows) =>
-                      dispatch({ type: 'panel_overflowed', overflows })
-                    }
-                  />
-                ) : (
-                  // Reserved even when blank, so a message never moves the transcript.
-                  // Column 2, where Claude Code's status lines and the panel start.
-                  <box
-                    flexDirection='row'
-                    paddingX={2}
-                    height={1}
-                    flexShrink={0}
-                  >
-                    {state.pendingKeys === undefined ? (
-                      <StatusLine
-                        state={state}
-                        agent={shownAgent}
-                        // The shown session's, main's or the picked child's, read
-                        // where the list's row reads it.
-                        effort={
-                          sessions.conversation()?.session?.efforts()?.current
-                        }
-                        // While the list has the keys, the line says what they
-                        // do; its rows show what waits.
-                        waits={listFocus ? undefined : waits}
-                        armed={armed}
-                        draft={draft}
-                        width={columns - 4}
-                        {...(listFocus
-                          ? {
-                              hint: summaryFocused
-                                ? summaryHint(columns - 4)
-                                : agentsHint(
-                                    columns - 4,
-                                    hintKey(state.keys, 'agents:close'),
-                                  ),
-                            }
-                          : state.codePick !== undefined
-                            ? {
-                                // A picked block's keys (CHD-394 §3).
-                                hint: pickHint(
-                                  state.keys,
-                                  pickedBlock()?.run !== undefined,
+                {/* Reserve the permanent status row even while a transient is open. */}
+                <box flexDirection='row' paddingX={2} height={1} flexShrink={0}>
+                  {state.pendingKeys === undefined ? (
+                    <StatusLine
+                      state={state}
+                      agent={shownAgent}
+                      // The shown session's, main's or the picked child's, read
+                      // where the list's row reads it.
+                      effort={
+                        sessions.conversation()?.session?.efforts()?.current
+                      }
+                      // While the list has the keys, the line says what they
+                      // do; its rows show what waits.
+                      waits={listFocus ? undefined : waits}
+                      armed={armed}
+                      draft={draft}
+                      width={columns - 4}
+                      {...(listFocus
+                        ? {
+                            hint: summaryFocused
+                              ? summaryHint(columns - 4)
+                              : agentsHint(
                                   columns - 4,
+                                  hintKey(state.keys, 'agents:close'),
                                 ),
-                              }
+                          }
+                        : state.codePick !== undefined
+                          ? {
+                              // A picked block's keys (CHD-394 §3).
+                              hint: pickHint(
+                                state.keys,
+                                pickedBlock()?.run !== undefined,
+                                columns - 4,
+                              ),
+                            }
+                          : state.completionHidden && (menu || finder)
+                            ? { hint: 'not enough space' }
                             : {})}
-                      />
-                    ) : (
-                      <LeaderLine
-                        held={state.pendingKeys}
-                        bindings={pendingBindings(state, draft, cursor)}
-                        width={columns - 4}
-                      />
-                    )}
-                  </box>
-                )}
+                    />
+                  ) : (
+                    <LeaderLine
+                      held={state.pendingKeys}
+                      bindings={pendingBindings(state, draft, cursor)}
+                      width={columns - 4}
+                    />
+                  )}
+                </box>
                 <box
                   ref={agentsBox}
-                  flexBasis={canFold && folded ? agentsFloor : agentsFull}
-                  minHeight={agentsFloor}
-                  flexShrink={canFold && folded ? 0 : 1}
+                  flexBasis={
+                    transient
+                      ? keptAgents
+                      : canFold && folded
+                        ? agentsFloor
+                        : agentsFull
+                  }
+                  minHeight={transient ? keptAgents : agentsFloor}
+                  flexShrink={transient || (canFold && folded) ? 0 : 1}
                   overflow='hidden'
                   onSizeChange={() => {
                     const height =
@@ -1970,7 +2004,7 @@ export function App({
 
                     setAgentsRoom(height);
 
-                    if (canFold && height <= agentsFloor) {
+                    if (!transient && canFold && height <= agentsFloor) {
                       setFolded(true);
                     }
                   }}

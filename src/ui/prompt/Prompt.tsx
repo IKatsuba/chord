@@ -1,9 +1,10 @@
-import { RGBA, TextAttributes } from '@opentui/core';
+import { RGBA, TextAttributes, type ScrollBoxRenderable } from '@opentui/core';
 import { useContext, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import stringWidth from 'string-width';
 import { bound, type Sequence, sequenceHint } from '../shortcuts/bindings.ts';
 import { PANEL_PADDING } from '../shortcuts/keys.ts';
 import type { CommandMenu, FileFinder } from './state.ts';
+import { Clip } from '../app/Clip.tsx';
 import { Keys, paint, useColours } from '../app/context.ts';
 import { usePasted, usePress } from '../app/input.ts';
 import { Ansi } from '../theme/Ansi.tsx';
@@ -535,8 +536,8 @@ function NamedTop({
 }
 
 /**
- * ctrl+r's line, in the status line's row: what is searched for, with a
- * cursor after it, since the box above is not taking typing.
+ * ctrl+r's line above the prompt: what is searched for, with a cursor
+ * after it, since the draft below is not taking typing.
  */
 export function SearchLine({ search }: { search: Search }) {
   return (
@@ -598,7 +599,7 @@ export function Queue({
 }
 
 /**
- * The slash command list under the prompt, in place of the status line, as
+ * The slash command list above the prompt, as
  * Claude Code draws it: each command's name, then what it does, dim; the
  * highlighted one in the permission colour. A list longer than `rows` shows
  * the part around the highlight.
@@ -607,12 +608,15 @@ export function CommandList({
   menu,
   rows,
   width,
+  onRoom,
 }: {
   menu: CommandMenu;
   rows: number;
   width: number;
+  onRoom?: (room: boolean) => void;
 }) {
   const { items, highlighted } = menu;
+  const view = useRef<ScrollBoxRenderable | null>(null);
   const { permission } = useColours();
   const { start, end } = visibleRange(
     items.length,
@@ -628,42 +632,66 @@ export function CommandList({
   );
 
   return (
-    <box paddingX={PANEL_PADDING} flexShrink={0}>
-      {items.slice(start, end).map((item, index) => {
-        const lit = start + index === highlighted;
-        const tone = lit ? fg(permission) : { attributes: DIM };
+    <Clip
+      flexBasis={end - start}
+      flexShrink={1}
+      minHeight={0}
+      renderAfter={function () {
+        onRoom?.(this.getLayout().height > 0);
+      }}
+    >
+      <scrollbox
+        ref={view}
+        flexGrow={1}
+        flexShrink={1}
+        minHeight={0}
+        focusable={false}
+        scrollX={false}
+        scrollY
+        contentOptions={{ paddingX: PANEL_PADDING }}
+        verticalScrollbarOptions={{ visible: false, width: 0 }}
+        horizontalScrollbarOptions={{ visible: false, height: 0 }}
+        renderAfter={() => view.current?.scrollTo(highlighted - start)}
+      >
+        {items.slice(start, end).map((item, index) => {
+          const lit = start + index === highlighted;
+          const tone = lit ? fg(permission) : { attributes: DIM };
 
-        return (
-          <box key={item.name} flexDirection='row'>
-            <box width={nameWidth} flexShrink={0}>
+          return (
+            <box key={item.name} flexDirection='row' flexShrink={0}>
+              <box width={nameWidth} flexShrink={0}>
+                <text {...CUT} {...tone}>
+                  <Ansi text={itemLabel(item)} />
+                </text>
+              </box>
               <text {...CUT} {...tone}>
-                <Ansi text={itemLabel(item)} />
+                <Ansi text={item.description ?? ''} />
               </text>
             </box>
-            <text {...CUT} {...tone}>
-              <Ansi text={item.description ?? ''} />
-            </text>
-          </box>
-        );
-      })}
-    </box>
+          );
+        })}
+      </scrollbox>
+    </Clip>
   );
 }
 
 /**
- * The `@` file finder under the prompt, where the status line was, drawn as
+ * The `@` file finder above the prompt, drawn as
  * the slash command list is: one path a row, the highlighted one in colour.
  */
 export function FileList({
   finder,
   rows,
   agentColours = {},
+  onRoom,
 }: {
   finder: FileFinder;
   rows: number;
+  onRoom?: (room: boolean) => void;
   agentColours?: Readonly<Record<string, string>>;
 }) {
   const { files, highlighted, searching } = finder;
+  const view = useRef<ScrollBoxRenderable | null>(null);
   const { permission } = useColours();
   // A match running long says so in the list's last row, not one more, and
   // the list scrolls a row so the highlighted file stays above it.
@@ -676,30 +704,54 @@ export function FileList({
   const shown = files.slice(start, end);
 
   return (
-    <box paddingX={PANEL_PADDING} flexShrink={0}>
-      {shown.map((path, index) => (
-        <text
-          key={path}
-          {...CUT}
-          {...(start + index === highlighted
-            ? fg(permission)
-            : finder.agent && path !== 'main'
-              ? fg(agentColours[path])
-              : { attributes: DIM })}
-        >
-          {path}
-        </text>
-      ))}
-      {finder.empty !== undefined && (
-        <text {...CUT} attributes={DIM}>
-          {finder.empty}
-        </text>
-      )}
-      {searching && (
-        <text {...CUT} attributes={DIM}>
-          searching…
-        </text>
-      )}
-    </box>
+    <Clip
+      flexBasis={
+        shown.length + Number(finder.empty !== undefined) + Number(searching)
+      }
+      flexShrink={1}
+      minHeight={0}
+      renderAfter={function () {
+        onRoom?.(this.getLayout().height > 0);
+      }}
+    >
+      <scrollbox
+        ref={view}
+        flexGrow={1}
+        flexShrink={1}
+        minHeight={0}
+        focusable={false}
+        scrollX={false}
+        scrollY
+        contentOptions={{ paddingX: PANEL_PADDING }}
+        verticalScrollbarOptions={{ visible: false, width: 0 }}
+        horizontalScrollbarOptions={{ visible: false, height: 0 }}
+        renderAfter={() => view.current?.scrollTo(highlighted - start)}
+      >
+        {shown.map((path, index) => (
+          <text
+            key={path}
+            flexShrink={0}
+            {...CUT}
+            {...(start + index === highlighted
+              ? fg(permission)
+              : finder.agent && path !== 'main'
+                ? fg(agentColours[path])
+                : { attributes: DIM })}
+          >
+            {path}
+          </text>
+        ))}
+        {finder.empty !== undefined && (
+          <text {...CUT} attributes={DIM}>
+            {finder.empty}
+          </text>
+        )}
+        {searching && (
+          <text {...CUT} attributes={DIM}>
+            searching…
+          </text>
+        )}
+      </scrollbox>
+    </Clip>
   );
 }

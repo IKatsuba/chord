@@ -735,6 +735,38 @@ describe('Tab sends the oldest queued message into the running turn (CHD-535)', 
       },
     ));
 
+  test('Esc at once after Tab leaves it with the agent: not back in the box, and refused late it goes as the next turn, once', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'texttillsteeredheld');
+        await window.shows('This reply came in chunks.');
+        await send(window, 'Use the second parser instead');
+        await window.press(TAB);
+        // Before the row says it is going into the turn.
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+
+        expect(promptRow(window)).not.toContain('Use the second parser');
+        await until(
+          'the refused message to go as the next turn',
+          () => saidCount(window, '› Use the second parser instead') === 1,
+        );
+        await window.press('\r');
+
+        expect(promptRow(window)).not.toContain('Use the second parser');
+        expect(saidCount(window, '› Use the second parser instead')).toBe(1);
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--steering',
+          'claude',
+          '--steer-late',
+        ),
+      },
+    ));
+
   test("queued with an image file read and a file's link, it goes in with both (the owner's Q215, Q216)", () =>
     withWindow(
       async (window) => {

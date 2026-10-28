@@ -367,6 +367,7 @@ export function reducePrompt(
               afterAnswer: _,
               afterCalls: __,
               steering: ___,
+              taken: ____,
               ...rest
             } = item;
 
@@ -375,6 +376,7 @@ export function reducePrompt(
               ...(action.afterAnswer ? { afterAnswer: true as const } : {}),
               ...(action.afterCalls ? { afterCalls: true as const } : {}),
               ...(action.steering ? { steering: true as const } : {}),
+              ...(action.taken ? { taken: true as const } : {}),
             };
           }),
         };

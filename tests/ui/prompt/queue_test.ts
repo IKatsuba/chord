@@ -27,8 +27,21 @@ test("Tab has a message to send only while one of the person's waits plainly (CH
       { turnId: 'a', text: 'held', afterAnswer: true },
       { turnId: 'c', text: 'held', afterCalls: true },
       { turnId: 's', text: 'out', steering: true },
+      { turnId: 't', text: 'taken', taken: true },
     ]),
   ).toBe(false);
+});
+
+test('a message Tab took is no longer one Esc puts back in the box (CHD-535)', () => {
+  expect(
+    restoredDraft(
+      [
+        { turnId: 't', text: 'taken', taken: true },
+        { turnId: 'w', text: 'waiting' },
+      ],
+      'draft',
+    ),
+  ).toStrictEqual('waiting\ndraft');
 });
 
 test('an interrupt puts the queue back ahead of the draft', () => {

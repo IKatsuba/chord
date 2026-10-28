@@ -1685,7 +1685,7 @@ test("Esc takes the person's steer held behind Claude's open calls back with the
     expect(conversation.steerQueued()).toStrictEqual('sent');
     conversation.tell(MAIN, 'Then the docs.');
     await until(
-      () => events.filter((event) => event.type === 'queued').length === 3,
+      () => events.filter((event) => event.type === 'queued').length === 4,
     );
     expect(events.at(-2)).toMatchObject({
       type: 'queued',
@@ -1712,11 +1712,13 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
         ? [
             event.steering
               ? 'steering'
-              : event.afterCalls
-                ? 'calls'
-                : event.afterAnswer
-                  ? 'answer'
-                  : 'plain',
+              : event.taken
+                ? 'taken'
+                : event.afterCalls
+                  ? 'calls'
+                  : event.afterAnswer
+                    ? 'answer'
+                    : 'plain',
           ]
         : [],
     );
@@ -1731,7 +1733,7 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
         conversation.send('Then the docs.');
 
         expect(conversation.steerQueued()).toStrictEqual('sent');
-        await until(() => told(events, 'Then the docs.').length === 2);
+        await until(() => told(events, 'Then the docs.').length === 3);
         conversation.interrupt();
         await ended(events, 2);
 
@@ -1739,6 +1741,7 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
         // row's id.
         expect(told(events, 'Then the docs.')).toStrictEqual([
           'plain',
+          'taken',
           'steering',
           'plain',
         ]);
@@ -1766,6 +1769,7 @@ describe("the person's steer the agent has not answered yet (CHD-378)", () => {
 
       expect(told(events, 'Skip the slow tests')).toStrictEqual([
         'plain',
+        'taken',
         'calls',
         'steering',
       ]);
@@ -1844,11 +1848,13 @@ describe('a steer held for the running calls while a question opens and is answe
         ? [
             event.steering
               ? 'steering'
-              : event.afterAnswer
-                ? 'answer'
-                : event.afterCalls
-                  ? 'calls'
-                  : 'plain',
+              : event.taken
+                ? 'taken'
+                : event.afterAnswer
+                  ? 'answer'
+                  : event.afterCalls
+                    ? 'calls'
+                    : 'plain',
           ]
         : [],
     );
@@ -1891,7 +1897,7 @@ describe('a steer held for the running calls while a question opens and is answe
         );
 
         expect(reasons(events, text)).toStrictEqual([
-          ...(whose === 'the person' ? ['plain'] : []),
+          ...(whose === 'the person' ? ['plain', 'taken'] : []),
           'calls',
           'answer',
           'calls',
@@ -2069,7 +2075,7 @@ describe("the person's oldest queued message sent into the running turn (CHD-535
     expect(conversation.steerQueued()).toStrictEqual('sent');
     await until(() => steers.length === 1);
     steers[0]!.answer('refused');
-    await until(() => rows(events, 'Second.').length === 2);
+    await until(() => rows(events, 'Second.').length === 3);
 
     // The turn refused one: the second is not sent into it either.
     expect(steers).toHaveLength(1);
@@ -2131,7 +2137,7 @@ describe("the person's oldest queued message sent into the running turn (CHD-535
     conversation.steerQueued();
     await until(() => steers.length === 1);
     steers[0]!.answer('refused');
-    await until(() => rows(events, 'C.').length === 2);
+    await until(() => rows(events, 'C.').length === 3);
     stub.end();
     await until(() => prompts.length === 2);
     await until(() => promptsIn(events).length === 2);
@@ -2142,7 +2148,7 @@ describe("the person's oldest queued message sent into the running turn (CHD-535
 
     expect(steers[1]!.text).toStrictEqual('B.');
     steers[1]!.answer('refused');
-    await until(() => rows(events, 'B.').length === 3);
+    await until(() => rows(events, 'B.').length === 5);
     stub.end();
     await until(() => prompts.length === 3);
     stub.end();

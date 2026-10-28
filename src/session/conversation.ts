@@ -177,6 +177,11 @@ export type ConversationEvent =
        */
       readonly steering?: true;
       /**
+       * The person's queued message Tab sent into the running turn, no longer
+       * theirs to take back, before its row says so (CHD-535).
+       */
+      readonly taken?: true;
+      /**
        * The person's queued message, sent into the running turn, which the
        * agent refused while the turn still runs: back at the top (CHD-535).
        */
@@ -1137,6 +1142,14 @@ export class Conversation {
     }
 
     const [next] = this.#queued.splice(index, 1);
+
+    // Out of the queue now: Esc no longer takes it back into the box.
+    this.#emit({
+      type: 'queued',
+      turnId: next!.turnId,
+      text: next!.text,
+      taken: true,
+    });
 
     void this.#steer(session, into, next!, undefined, true);
 

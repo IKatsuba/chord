@@ -68,7 +68,6 @@ export interface Caller {
   readonly launch?: {
     readonly valid: () => boolean;
     readonly signal: () => AbortSignal;
-    decisionRead?: BudgetSnapshot;
   };
   /** The SDK cancels this request on cancellation or transport close. */
   readonly signal?: AbortSignal;
@@ -973,15 +972,9 @@ const getBudgets: Register = (server, caller) =>
         });
       }
 
-      const response = serve(request, 'get_budgets', input, facts, (value) =>
+      return serve(request, 'get_budgets', input, facts, (value) =>
         JSON.stringify(value, null, 2),
       );
-
-      if (caller.launch?.valid()) {
-        caller.launch.decisionRead = structuredClone(facts);
-      }
-
-      return response;
     },
   );
 
@@ -1289,8 +1282,8 @@ const runTeam: Register = (server, caller) =>
         'with its members. Read list_teams instructions first. Omit selection ' +
         'to run saved composition. Optional selection changes this run only, ' +
         'preserving every saved role and instruction; provide a reason that ' +
-        'preserves their requirements and explains uncertainty. Read resource ' +
-        'facts when instructions or the job call for them. There is no ' +
+        'preserves their requirements and explains uncertainty. Call get_budgets ' +
+        'when instructions or the job make resources matter. There is no ' +
         'automatic retry, substitution or saved-team rewrite.',
       inputSchema: z
         .looseObject({

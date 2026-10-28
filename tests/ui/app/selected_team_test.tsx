@@ -1,6 +1,5 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import { foldBudgetCache } from '../../../src/platform/budget_cache.ts';
 import type { ResourceAccess } from '../../../src/session/resource_access.ts';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
@@ -149,6 +148,7 @@ describe('selected frozen team startup', () => {
         actual: null,
       });
       expect(answer.receipt!.decisionRead).toBeNull();
+      expect(answer.receipt!.warnings).toEqual([]);
       expect((await main.window.teams(main)).runs).toContainEqual({
         team: 'fixture',
         name: 'fixture',
@@ -195,65 +195,6 @@ describe('selected frozen team startup', () => {
           Promise.resolve({ policy: { constraints: { agents: [] } } }),
       },
     ));
-
-  test('receipt uses the actually served decision read rather than newer launch-time cache facts', () => {
-    const oldTime = Date.parse('2026-10-27T13:00:00Z');
-    let facts = foldBudgetCache([], {}, { wall: oldTime, monotonic: 0 });
-    const resources: ResourceAccess = {
-      processRef: 'fixture-process',
-      start: () => Promise.resolve(),
-      retain: () => () => {},
-      read: () => facts,
-      active: () => {},
-      close: () => Promise.resolve([]),
-    };
-
-    return selectedWindow(
-      async (_window, main, _callers, _prompts, server) => {
-        const client = new Client({
-          name: 'fixture-decision-reader',
-          version: '0.0.0',
-        });
-        const admitted = server.admit(main);
-        const transport = new StreamableHTTPClientTransport(
-          new URL(server.url),
-          {
-            requestInit: {
-              headers: { Authorization: `Bearer ${admitted.token}` },
-            },
-          },
-        );
-
-        await client.connect(transport as Parameters<Client['connect']>[0]);
-
-        try {
-          await client.callTool({ name: 'get_budgets', arguments: {} });
-        } finally {
-          await client.close();
-        }
-
-        facts = foldBudgetCache(
-          [],
-          {},
-          { wall: oldTime + 10_000, monotonic: 10_000 },
-        );
-
-        const answer = success(
-          await main.window.runTeam(main, {
-            team: 'fixture',
-            job: 'Use served facts.',
-            selection,
-          }),
-        );
-
-        expect(answer.receipt!.decisionRead).toEqual({
-          readAt: new Date(oldTime).toISOString(),
-          observationRefs: [],
-        });
-      },
-      { resources },
-    );
-  });
 
   test('fresh policy loader failure is sanitized and selected-only', () =>
     selectedWindow(

@@ -380,7 +380,7 @@ describe('selection decision receipts', () => {
     return result.frozen;
   }
 
-  test('unopened roles are planned, with no actual/default claims or invented decision read', () => {
+  test('unopened roles are planned, with no actual/default claims, decision read or resource warnings', () => {
     const receipt = selectionReceipt(
       'run-1',
       { name: 'fixture', place: 'project' },
@@ -394,9 +394,7 @@ describe('selection decision receipts', () => {
       ['reviewer', 'planned', null],
     ]);
     expect(receipt.decisionRead).toBeNull();
-    expect(receipt.warnings).toEqual([
-      'No resource decision read was recorded; capacity is unknown.',
-    ]);
+    expect(receipt.warnings).toEqual([]);
     expect(receipt.reason).toBe(reason);
     expect(receipt.roles[0]?.planned).not.toHaveProperty('instructions');
     expect(SelectionReceipt.parse(JSON.parse(JSON.stringify(receipt)))).toEqual(
@@ -455,58 +453,6 @@ describe('selection decision receipts', () => {
       state: 'confirmed',
       actual: { model: null, mode: null, effort: null },
     });
-  });
-
-  test('decision provenance retains actual served read time and only normalized references', () => {
-    const read: BudgetSnapshot = {
-      schemaVersion: 1,
-      observedAt: '2026-10-27T13:00:00Z',
-      preferences: {},
-      pools: [],
-      unbound: [
-        {
-          observationRef: 'observed-one',
-          sourceRef: 'source-one',
-          sessionRef: 'session-one',
-          agent: 'codex',
-          observedAt: null,
-          billingKind: 'unknown',
-          reason: 'Identity unverified.',
-          source: 'official',
-          sourceVersion: 'fixture',
-          coverage: 'unknown',
-          externalActivity: 'unknown',
-          windows: [],
-        },
-      ],
-      activeRuns: [],
-      unavailable: [],
-      warnings: ['Coverage is unknown.'],
-    };
-    const receipt = selectionReceipt(
-      'run-1',
-      { name: 'fixture', place: 'user' },
-      frozen(),
-      read,
-    );
-
-    expect(receipt.decisionRead).toEqual({
-      readAt: read.observedAt,
-      observationRefs: ['observed-one'],
-    });
-    expect(receipt.warnings).toEqual([
-      ...read.warnings,
-      'Resource identity is unverified; observations remain separate.',
-      'Resource coverage is incomplete; external work may be missing.',
-    ]);
-    expect(JSON.stringify(receipt)).not.toContain('source-one');
-    expect(JSON.stringify(receipt)).not.toContain('session-one');
-    read.warnings.push('Later mutation.');
-    expect(receipt.warnings).toEqual([
-      'Coverage is unknown.',
-      'Resource identity is unverified; observations remain separate.',
-      'Resource coverage is incomplete; external work may be missing.',
-    ]);
   });
 });
 

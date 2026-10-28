@@ -3,7 +3,6 @@ import {
   selectionReceipt,
 } from '../../src/session/team_selection.ts';
 import { foldBudgetCache } from '../../src/platform/budget_cache.ts';
-import { BudgetSnapshot } from '../../src/session/budgets.ts';
 import { describe, expect, test } from 'bun:test';
 import { until } from '../session/conversation_fake.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
@@ -824,59 +823,6 @@ describe('selected launch request context', () => {
         await pending;
       }
     }));
-
-  test('only a successful actual response updates that live generation decision read', () =>
-    withServer(async (server) => {
-      const facts = foldBudgetCache(
-        [],
-        {},
-        { wall: Date.parse('2026-10-27T13:00:00Z'), monotonic: 0 },
-      );
-      let live = true;
-      let failed = false;
-      const launch: NonNullable<Caller['launch']> = {
-        valid: () => live,
-        signal: () => new AbortController().signal,
-      };
-      const client = await connect(
-        server.url,
-        server.admit({
-          ...PERSON,
-          launch,
-          window: {
-            ...WINDOW,
-            budgets: () => {
-              if (failed) {
-                throw new Error('fixture failure');
-              }
-
-              return facts;
-            },
-          },
-        }).token,
-      );
-
-      try {
-        expect(launch.decisionRead).toBeUndefined();
-        await client.callTool({ name: 'get_budgets', arguments: {} });
-        expect(launch.decisionRead).toEqual(facts);
-        facts.warnings.push('Later cache mutation.');
-        expect(launch.decisionRead?.warnings).toEqual([]);
-
-        failed = true;
-
-        await client.callTool({ name: 'get_budgets', arguments: {} });
-        expect(launch.decisionRead?.warnings).toEqual([]);
-
-        failed = false;
-        live = false;
-
-        await client.callTool({ name: 'get_budgets', arguments: {} });
-        expect(launch.decisionRead?.warnings).toEqual([]);
-      } finally {
-        await client.close();
-      }
-    }));
 });
 
 test('unexpected budget read failures use a fixed safe MCP error', () =>
@@ -1301,9 +1247,6 @@ test('runtime-filtered budgets use the public bounded schema, record actual scop
         activeRuns: [],
         preferences: { intent: 'balanced' },
       });
-      expect(launch.decisionRead).toEqual(
-        BudgetSnapshot.parse(filtered.structuredContent),
-      );
       expect(scopes.map((scope) => scope.agents)).toEqual([
         undefined,
         [],

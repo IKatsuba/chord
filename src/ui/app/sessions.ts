@@ -11,7 +11,7 @@ import {
   activeResourceRuns,
   type ResourceTask,
 } from '../../session/resource_work.ts';
-import type { TeamSelection, BudgetSnapshot } from '../../session/budgets.ts';
+import type { TeamSelection } from '../../session/budgets.ts';
 import {
   confirmSelectionRole,
   recordedSelection,
@@ -965,7 +965,6 @@ export function useSessions(
     readonly signal: AbortSignal;
     readonly valid: () => boolean;
     committed: boolean;
-    readonly decisionRead?: BudgetSnapshot;
   }
 
   const captureLaunch = (key: number, caller?: Caller): LaunchGuard => {
@@ -980,9 +979,6 @@ export function useSessions(
     return {
       signal,
       committed: false,
-      ...(caller?.launch?.decisionRead === undefined
-        ? {}
-        : { decisionRead: structuredClone(caller.launch.decisionRead) }),
       valid: () =>
         !signal.aborted &&
         session !== undefined &&
@@ -1549,7 +1545,6 @@ export function useSessions(
         id,
         { name: found.name, place: found.place },
         frozen,
-        launch.decisionRead,
       ),
       publish: () => {
         const failed = selected.receipt.roles.find(

@@ -47,9 +47,8 @@ describe('frozen selection report lines', () => {
     expect(shown).toContain(
       'Reason: Preserve permissions; quota freshness is unknown.',
     );
-    expect(shown).toContain(
-      'Warning: No resource decision read was recorded; capacity is unknown.',
-    );
+    expect(shown).not.toContain('Warning:');
+    expect(shown).not.toContain('Read');
     expect(shown).toContain('lead (lead): codex · model chosen-model');
     expect(shown).toContain('reviewer: claude');
     expect(shown).toContain('agent default (unconfirmed)');

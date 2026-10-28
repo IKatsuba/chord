@@ -46,10 +46,10 @@ bun dev compile --install   # compiles into ~/.local/bin/chord
 ## Use
 
 ```sh
-chord                 # Claude Code, or your settings' agent, here
+chord                 # choose an agent here
 chord codex           # any agent `chord agents` lists
 chord gemini -C ~/src/app
-chord --continue      # Claude Code's latest session in this directory, again
+chord --continue      # the default agent's latest session here, again
 chord --resume <id>   # a recorded session, on its own agent
 chord --resume        # pick an earlier session first
 chord agents          # the agents chord can start: name, what starts each, and whether PATH has its CLI
@@ -59,6 +59,21 @@ git diff | chord -p "Review this" --output-format json
 
 Each chord process runs one main session with its children. For sessions
 side by side, run chord in separate terminal panes.
+
+A new interactive start with no agent named opens `Select agent` before any
+agent or session starts. It uses the current `chord agents` listing,
+including settings-defined names. Your configured agent is highlighted
+initially, or Claude Code by default; if absent from the list, the first row
+is highlighted. ↑/↓ or j/k moves, Enter or 1–9 selects. Esc or ctrl+c quits
+without starting a session. The choice is for this run only and is not saved;
+the next unnamed interactive start asks again.
+
+The list marks missing own CLIs `not found` but keeps them selectable.
+Other entries are not checked for installation, login or readiness; choosing
+an entry still uses the usual startup checks. Naming an agent, supplying
+`--agent-command`, using `-p`, `--continue` or any `--resume` form skips the
+agent picker. It also stays out when stdin or stdout is not a terminal;
+those routes keep their usual default-agent and resume behavior.
 
 Inside chord, `/resume` lists this agent's earlier sessions in this
 directory, newest first, with when each was last used and its title, or
@@ -476,7 +491,7 @@ both.
 
 | Key                            | Sets                                                 | Flag                |
 | ------------------------------ | ---------------------------------------------------- | ------------------- |
-| `agent`                        | the agent `chord` starts when none is named          | `[agent]`           |
+| `agent`                        | the default agent and startup picker's initial highlight | `[agent]`           |
 | `agents.<name>.command`        | the command that starts that agent instead of chord's own   | `--agent-command` |
 | `agents.<name>.model`          | the model each of its sessions starts on             | `-m, --model`       |
 | `agents.<name>.effort`         | the effort each of its sessions starts on            | `--effort`          |
@@ -1180,7 +1195,7 @@ Some agents ship their own CLI, which speaks ACP itself: `cursor`, `devin`,
 and `zeroclaw`. chord starts each by the command its docs give (Cursor's
 `agent acp`, goose's `goose acp`, …), which you install yourself; when it is
 not on your `PATH`, chord says which command it looked for and where the
-agent says to install it, and exits before the window. chord downloads
+agent says to install it, and exits before a session starts. chord downloads
 nothing for them: the registry also offers most of these as archives to
 unpack, but a CLI you installed and keep up to date is the one you already
 signed in to. Any other ACP agent starts with `agents.<name>.command` or

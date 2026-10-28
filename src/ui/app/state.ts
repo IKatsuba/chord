@@ -91,7 +91,7 @@ import {
   runningShell,
 } from '../prompt/state.ts';
 import { type Cursor, endOf, textareaDoes } from '../prompt/prompt.ts';
-import { mine, started } from '../prompt/queue.ts';
+import { mine, sendable, started } from '../prompt/queue.ts';
 import type { Search } from '../prompt/search.ts';
 import { vimKeyNames, vimTakes, vimTakesCharacter } from '../prompt/vim.ts';
 import { backfilled, firstMounted, heldMount } from '../transcript/mount.ts';
@@ -255,10 +255,11 @@ export interface WindowState
   /** What the status line says of the last copy, for a while. */
   readonly copied?: Copied;
   /**
-   * The note of the last Tab on an agent that takes no steering, by its
-   * number among the notes, said for a while (CHD-378).
+   * The note of the last Tab on an agent that takes no steering, or of the
+   * last queued message the turn refused, by its number among the notes,
+   * said for a while (CHD-535).
    */
-  readonly steerRefused?: number;
+  readonly steerRefused?: { readonly id: number; readonly refused: boolean };
   /**
    * The note of the last code block put into the prompt over a draft, which
    * stayed, by its number among the notes, said for a while (CHD-394).
@@ -377,7 +378,7 @@ export type AppAction =
   /** The draft note `id` has been said long enough. */
   | { readonly type: 'draft_held_gone'; readonly id: number }
   /** Tab on an agent that takes no steering: nothing went (CHD-378). */
-  | { readonly type: 'steer_refused' }
+  | { readonly type: 'steer_refused'; readonly refused: boolean }
   /** The steering note `id` has been said long enough. */
   | { readonly type: 'steer_note_gone'; readonly id: number };
 
@@ -521,7 +522,14 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'images_sent':
     case 'vim_toggled':
     case 'vim_changed':
-      return reducePrompt(state, action) as AppState;
+      // A queued message the running turn refused is back in the queue,
+      // which the status line says for a while (CHD-535).
+      return action.type === 'queued' && action.refused
+        ? reduceStep(reducePrompt(state, action) as AppState, {
+            type: 'steer_refused',
+            refused: true,
+          })
+        : (reducePrompt(state, action) as AppState);
     case 'paste_failed':
       // Started, or failed to, before it came: not so any longer (CHD-490).
       return action.untilStarted === true &&
@@ -1026,10 +1034,14 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // A press again says it afresh, its time from this one.
       const id = (state.notes ?? 0) + 1;
 
-      return { ...state, steerRefused: id, notes: id };
+      return {
+        ...state,
+        steerRefused: { id, refused: action.refused },
+        notes: id,
+      };
     }
     case 'steer_note_gone': {
-      if (state.steerRefused !== action.id) {
+      if (state.steerRefused?.id !== action.id) {
         return state;
       }
 
@@ -2027,14 +2039,15 @@ function boundCommand(
     return 'newline';
   }
 
-  // A shell command is no message, and with no turn running Tab does nothing,
-  // as before (CHD-378); the lists above keep it while open.
+  // Tab sends the oldest queued message into the running turn, the draft
+  // left as it is (CHD-535); with nothing of the person's waiting it does
+  // nothing, and the lists above keep it while open.
   if (
     typing &&
     on('chat:steer') &&
     isBusy(state) &&
     !state.bash &&
-    canSend(state, draft)
+    sendable(state.queue)
   ) {
     return 'steer';
   }

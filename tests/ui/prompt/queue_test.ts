@@ -3,6 +3,7 @@ import {
   queueRowLimit,
   queueRows,
   restoredDraft,
+  sendable,
   started,
 } from '../../../src/ui/prompt/queue.ts';
 
@@ -15,6 +16,19 @@ test('a queued prompt leaves the queue when its turn starts', () => {
   expect(started(queue, 't2')).toStrictEqual([{ turnId: 't3', text: 'third' }]);
   // The turn that was not queued leaves it as it was.
   expect(started(queue, 't1')).toStrictEqual(queue);
+});
+
+test("Tab has a message to send only while one of the person's waits plainly (CHD-535)", () => {
+  expect(sendable(queue)).toBe(true);
+  expect(sendable([])).toBe(false);
+  expect(
+    sendable([
+      { turnId: 'm', text: 'told', from: { name: 'main', reachable: true } },
+      { turnId: 'a', text: 'held', afterAnswer: true },
+      { turnId: 'c', text: 'held', afterCalls: true },
+      { turnId: 's', text: 'out', steering: true },
+    ]),
+  ).toBe(false);
 });
 
 test('an interrupt puts the queue back ahead of the draft', () => {

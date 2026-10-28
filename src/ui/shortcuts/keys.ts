@@ -91,7 +91,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   },
   {
     key: 'tab',
-    does: 'to send into the running turn',
+    does: 'to send the oldest queued now',
     commands: ['steer'],
     actions: ['chat:steer'],
   },

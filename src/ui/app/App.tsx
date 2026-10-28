@@ -1024,21 +1024,7 @@ export function App({
       case 'send':
         return sessions.send(step.text);
       case 'steer':
-        // The draft leaves its session now, as Enter's does before its files
-        // are read: nothing plays later, when another may be in front.
-        if (step.paths) {
-          if (sessions.steers(all.front)) {
-            play(step.kept);
-          }
-
-          return void images.sendWithPaths(step.text, true);
-        }
-
-        if (sessions.steer(step.text)) {
-          play(step.kept);
-        }
-
-        return;
+        return sessions.steerQueued();
       case 'send_with_paths':
         return void images.sendWithPaths(step.text);
       case 'take_pasted_paths':

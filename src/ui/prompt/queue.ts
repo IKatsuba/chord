@@ -87,6 +87,21 @@ export function mine(queue: readonly Queued[]): readonly Queued[] {
   );
 }
 
+/**
+ * Whether the person has a message waiting in the queue that Tab can send
+ * into the running turn: theirs, not held for an answer or calls, not on its
+ * way already (CHD-535).
+ */
+export function sendable(queue: readonly Queued[]): boolean {
+  return queue.some(
+    (queued) =>
+      queued.from === undefined &&
+      !queued.afterAnswer &&
+      !queued.afterCalls &&
+      !queued.steering,
+  );
+}
+
 /** The queue's share of a window `rows` tall, never under two rows. */
 export function queueRowLimit(rows: number): number {
   return Math.max(2, Math.floor(rows / 6));

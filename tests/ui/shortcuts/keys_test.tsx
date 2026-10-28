@@ -94,6 +94,11 @@ const STATES: Record<string, AppState> = {
   ready: after({ type: 'connected', sessionId: 'session-1' }),
   failed: after({ type: 'connect_failed', message: 'no' }),
   busy: after({ type: 'connected', sessionId: 'session-1' }, prompt),
+  'busy, queued': after({ type: 'connected', sessionId: 'session-1' }, prompt, {
+    type: 'queued',
+    turnId: 'waiting',
+    text: 'Then the docs',
+  }),
   asked: after({ type: 'connected', sessionId: 'session-1' }, prompt, {
     type: 'permission_requested',
     turnId: 't1',
@@ -689,25 +694,71 @@ test('the scroll keys move the open panel while it overflows, and the transcript
   ).toStrictEqual('scroll_page_down');
 });
 
-test('tab sends the draft into a running turn, and only there (CHD-378)', () => {
+test("tab sends the oldest queued message into a running turn, whatever the draft, and only with one of the person's waiting (CHD-535)", () => {
   const tab = { ctrl: false, escape: false, tab: true };
   const { ready, busy, asked } = STATES;
+  const queued = reduceApp(busy!, {
+    type: 'queued',
+    turnId: 'waiting',
+    text: 'Then the docs',
+  });
 
-  expect(keyCommand('', tab, busy!, 'Then the docs')).toStrictEqual('steer');
-  // No turn, an empty box or a shell command: nothing, as before.
-  expect(keyCommand('', tab, ready!, 'Then the docs')).toStrictEqual(undefined);
-  expect(keyCommand('', tab, busy!, '  ')).toStrictEqual(undefined);
+  expect(keyCommand('', tab, queued, '')).toStrictEqual('steer');
+  expect(keyCommand('', tab, queued, 'A draft')).toStrictEqual('steer');
+  // Nothing of the person's waiting, no turn, or a shell command: nothing.
+  expect(keyCommand('', tab, busy!, 'Then the docs')).toStrictEqual(undefined);
   expect(
     keyCommand(
       '',
       tab,
-      reduceApp(busy!, { type: 'bash_mode', on: true }),
+      reduceApp(busy!, {
+        type: 'queued',
+        turnId: 'told',
+        text: 'From main',
+        from: { name: 'main', reachable: true },
+      }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(queued, {
+        type: 'queued',
+        turnId: 'waiting',
+        text: 'Then the docs',
+        steering: true,
+      }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(ready!, { type: 'queued', turnId: 'q', text: 'Later' }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(queued, { type: 'bash_mode', on: true }),
       'ls',
     ),
   ).toStrictEqual(undefined);
   // The lists keep their Tab, and a permission has the keys.
-  expect(keyCommand('', tab, busy!, '/')).toStrictEqual('complete_command');
-  expect(keyCommand('', tab, asked!, 'Then the docs')).toStrictEqual(undefined);
+  expect(keyCommand('', tab, queued, '/')).toStrictEqual('complete_command');
+  expect(
+    keyCommand(
+      '',
+      tab,
+      reduceApp(asked!, { type: 'queued', turnId: 'q', text: 'Later' }),
+      '',
+    ),
+  ).toStrictEqual(undefined);
 });
 
 test('? on an empty prompt opens the panel, and text anywhere else', () => {

@@ -40,6 +40,7 @@ import {
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { PIXEL_BYTES, PIXEL_PNG } from '../../fixtures/images.ts';
 import { RECEIVED } from '../prompt/prompt_window.tsx';
+import { STEER_REFUSED, UNSTEERED } from '../../../src/ui/status/Status.tsx';
 import manifest from '../../../package.json' with { type: 'json' };
 
 import { OSC9, writes } from './app_window.tsx';
@@ -578,10 +579,7 @@ test('ctrl+c quits mid-turn and stops the agent', () =>
     );
   }));
 
-describe('Tab sends the draft into the running turn (CHD-378)', () => {
-  const UNSTEERED_NOTE =
-    'This agent does not take messages into a running turn · enter queues it';
-
+describe('Tab sends the oldest queued message into the running turn (CHD-535)', () => {
   /** `text` typed into the box, there before the next key. */
   const draft = async (window: Window, text: string) => {
     await window.type(text);
@@ -591,50 +589,106 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
     );
   };
 
-  test("on an agent that steers, the box empties and the person's row is drawn in the turn, which goes on", () =>
+  /** How many times `text` is on the screen. */
+  const saidCount = (window: Window, text: string) =>
+    window.frame().split(text).length - 1;
+
+  /** The rows under the working line that read `› text`. */
+  const queuedRows = (window: Window, text: string) =>
+    window
+      .frame()
+      .split('\n')
+      .filter((row) => row.trimEnd().endsWith(`› ${text}`));
+
+  test('on an agent that steers, the oldest goes in, then the next, the draft left as it is', () =>
     withWindow(
       async (window) => {
-        await send(window, 'texttillsteered');
+        await send(window, 'slow');
         await window.shows('esc to interrupt');
-        await draft(window, 'Use the second parser instead');
+        await send(window, 'Use the second parser instead');
+        await send(window, 'Then update the changelog');
+        await draft(window, 'and keep the old one');
         await window.press(TAB);
-        await window.shows('Read the message from nobody.');
+        await until(
+          'the first read in the turn',
+          () => saidCount(window, 'Read the message from nobody.') === 1,
+        );
 
-        expect(promptRow(window)).not.toContain('Use the second parser');
+        expect(queuedRows(window, 'Then update the changelog')).toHaveLength(1);
+        expect(promptRow(window)).toContain('and keep the old one');
+        await window.press(TAB);
+        await until(
+          'the second read in the turn',
+          () => saidCount(window, 'Read the message from nobody.') === 2,
+        );
+
         expect(window.frame()).toContain('› Use the second parser instead');
+        expect(window.frame()).toContain('› Then update the changelog');
+        expect(window.frame()).toContain('esc to interrupt');
+        expect(promptRow(window)).toContain('and keep the old one');
+        await window.press(ESC);
       },
       {
         agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        rows: 60,
       },
     ));
 
-  test('on an agent that does not, nothing goes, the draft stays, and the status line says why', () =>
+  test('on an agent that does not, it stays queued, the draft stays, and the status line says why', () =>
     withWindow(async (window) => {
       await send(window, 'slow');
       await window.shows('esc to interrupt');
-      await draft(window, 'Use the second parser instead');
+      await send(window, 'Use the second parser instead');
+      await draft(window, 'and keep the old one');
       await window.press(TAB);
-      await until('the note', () => statusRow(window).includes(UNSTEERED_NOTE));
+      await until('the note', () => statusRow(window).includes(UNSTEERED));
 
-      expect(promptRow(window)).toContain('Use the second parser instead');
+      expect(queuedRows(window, 'Use the second parser instead')).toHaveLength(
+        1,
+      );
+      expect(promptRow(window)).toContain('and keep the old one');
       await until(
         'the note to go',
-        () => !statusRow(window).includes(UNSTEERED_NOTE),
+        () => !statusRow(window).includes(UNSTEERED),
       );
-      expect(promptRow(window)).toContain('Use the second parser instead');
       await window.press(ESC);
     }));
+
+  test('refused while the turn runs, it is back in its row and the status line says so', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await send(window, 'Use the second parser instead');
+        await window.press(TAB);
+        await until('the note', () =>
+          statusRow(window).includes(STEER_REFUSED),
+        );
+
+        expect(
+          queuedRows(window, 'Use the second parser instead'),
+        ).toHaveLength(1);
+        expect(window.frame()).not.toContain('› into the running turn:');
+        await window.press(ESC);
+      },
+      {
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--steering',
+          'claude',
+          '--steer-refuse',
+        ),
+      },
+    ));
 
   test("one held behind Claude's open calls waits in the queue saying so, and Esc takes it back to the box", () =>
     withWindow(
       async (window) => {
         await send(window, 'bashcut');
         await window.shows('Running…');
-        await draft(window, 'Skip the slow tests');
+        await send(window, 'Skip the slow tests');
         await window.press(TAB);
         await window.shows('› after the running calls: Skip the slow tests');
-
-        expect(promptRow(window)).not.toContain('Skip the slow tests');
         await window.press(ESC);
         await window.shows('Interrupted by user');
         await until(
@@ -648,13 +702,13 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
       },
     ));
 
-  test('one the agent leaves unanswered shows in the queue as going into the turn, Esc leaves it, and refused it goes as the next turn', () =>
+  test('one the agent leaves unanswered shows as going into the turn, Esc leaves it, and refused late it goes as the next turn', () =>
     withWindow(
       async (window) => {
         // Held until the cancel, however slow the machine (CHD-526).
         await send(window, 'texttillsteeredheld');
         await window.shows('This reply came in chunks.');
-        await draft(window, 'Use the second parser instead');
+        await send(window, 'Use the second parser instead');
         await window.press(TAB);
         await window.shows(
           '› into the running turn: Use the second parser instead',
@@ -668,6 +722,7 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
           () => !window.frame().includes('into the running turn'),
         );
         await window.shows('› Use the second parser instead');
+        expect(statusRow(window)).not.toContain(STEER_REFUSED);
         await window.press(ESC);
       },
       {
@@ -680,23 +735,23 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
       },
     ));
 
-  test("a draft naming an image file by its path goes in with the image read, as Enter would send it (the owner's Q215)", () =>
+  test("queued with an image file read and a file's link, it goes in with both (the owner's Q215, Q216)", () =>
     withWindow(
       async (window) => {
+        await writeFile(join(window.dir, 'a.ts'), '');
         await send(window, 'slow');
         await window.shows('esc to interrupt');
 
         // Typed key by key: pasted, the path would be read at once.
-        for (const key of 'see /shots/a.png') {
+        for (const key of 'see /shots/a.png @a.ts ') {
           await window.press(key);
         }
 
-        await window.shows('› see /shots/a.png');
+        await window.press('\r');
+        await window.shows('› see [Image #1] @a.ts');
         await window.press(TAB);
-        await window.shows('› see [Image #1]');
         await window.shows(RECEIVED);
-
-        expect(promptRow(window)).not.toContain('see');
+        await window.shows('Received a link: a.ts');
         await window.press(ESC);
       },
       {
@@ -707,177 +762,6 @@ describe('Tab sends the draft into the running turn (CHD-378)', () => {
             data: PIXEL_PNG,
             bytes: PIXEL_BYTES.length,
           }),
-      },
-    ));
-
-  test('on an agent without steering a draft naming an image file stays as typed, nothing read', () => {
-    const read: string[] = [];
-
-    return withWindow(
-      async (window) => {
-        await send(window, 'slow');
-        await window.shows('esc to interrupt');
-
-        // Typed key by key: pasted, the path would be read at once.
-        for (const key of 'see /shots/a.png') {
-          await window.press(key);
-        }
-
-        await window.shows('› see /shots/a.png');
-        await window.press(TAB);
-        await window.shows('does not take messages into a running turn');
-
-        expect(promptRow(window)).toContain('see /shots/a.png');
-        expect(read).toStrictEqual([]);
-        await window.press(ESC);
-      },
-      {
-        readImage: (path) => {
-          read.push(path);
-
-          return Promise.resolve({
-            mediaType: 'image/png',
-            data: PIXEL_PNG,
-            bytes: PIXEL_BYTES.length,
-          });
-        },
-      },
-    );
-  });
-
-  /** An image file reader that holds each read until the test lets it go. */
-  const heldReader = () => {
-    const waiting: (() => void)[] = [];
-
-    return {
-      waiting,
-      readImage: () =>
-        new Promise<{ mediaType: string; data: string; bytes: number }>(
-          (resolve) =>
-            waiting.push(() =>
-              resolve({
-                mediaType: 'image/png',
-                data: PIXEL_PNG,
-                bytes: PIXEL_BYTES.length,
-              }),
-            ),
-        ),
-    };
-  };
-
-  for (const first of ['tab', 'enter'] as const) {
-    test(`a second Tab while the image paths ${first} sent are read sends nothing more`, () => {
-      const reader = heldReader();
-
-      return withWindow(
-        async (window) => {
-          await send(window, 'slow');
-          await window.shows('esc to interrupt');
-
-          for (const key of 'see /shots/a.png') {
-            await window.press(key);
-          }
-
-          await window.shows('› see /shots/a.png');
-          await window.press(first === 'tab' ? TAB : '\r');
-          await until('the read', () => reader.waiting.length === 1);
-          await window.press(TAB);
-          reader.waiting[0]?.();
-          await window.shows('› see [Image #1]');
-          await window.shows(RECEIVED);
-
-          // A second read, had one started, would still be waiting.
-          expect(reader.waiting).toHaveLength(1);
-          expect(
-            window
-              .frame()
-              .split('\n')
-              .filter((row) => row.includes('› see [Image #1]')),
-          ).toHaveLength(1);
-          await window.press(ESC);
-        },
-        {
-          agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
-          readImage: reader.readImage,
-        },
-      );
-    });
-  }
-
-  test("a kept draft naming an image file leaves its own session's stack, not the one in front once its file is read", () => {
-    const reader = heldReader();
-    const steering = fakeAgentCommand(
-      undefined,
-      '--child-runtime',
-      'fake',
-      '--steering',
-      'claude',
-    );
-    const aside = (window: Window) =>
-      until('the draft set aside', () =>
-        /^│ ›\s*│$/.test(promptRow(window) ?? ''),
-      );
-
-    return withChild(
-      async (window) => {
-        await openOther(window);
-        await pickAgent(window, 'other');
-        await window.type('other draft');
-        await window.press(DOWN);
-        await aside(window);
-        await pickAgent(window, 'main');
-        // Its turn ends once the steer is in, which the list shows.
-        await send(window, 'texttillsteered');
-        await window.shows('esc to interrupt');
-
-        for (const key of 'see /shots/a.png') {
-          await window.press(key);
-        }
-
-        await window.press(DOWN);
-        await aside(window);
-        await window.press(UP);
-        await window.shows('› see /shots/a.png');
-        await window.press(TAB);
-        await until('the read', () => reader.waiting.length === 1);
-        await pickAgent(window, 'other');
-        reader.waiting[0]?.();
-        // The steer has gone and its turn ended, with other still in front.
-        await until('main to have replied', () =>
-          window
-            .frame()
-            .split('\n')
-            .some((row) => /^\s*main\s.*✓ new reply/.test(row)),
-        );
-        await window.press(UP);
-        await window.shows('› other draft');
-        await pickAgent(window, 'main');
-        await window.shows('› see [Image #1]');
-        await window.shows(RECEIVED);
-      },
-      {
-        agentCommand: steering,
-        startupOf: () => ({ agentCommand: steering }),
-        readImage: reader.readImage,
-      },
-    );
-  });
-
-  test("a draft mentioning a file goes in with the file's link, as Enter would send it (the owner's Q216)", () =>
-    withWindow(
-      async (window) => {
-        await writeFile(join(window.dir, 'a.ts'), '');
-        await send(window, 'slow');
-        await window.shows('esc to interrupt');
-        await draft(window, 'See @a.ts ');
-        await window.press(TAB);
-        await window.shows('Received a link: a.ts');
-
-        expect(window.frame()).toContain('› See @a.ts');
-        await window.press(ESC);
-      },
-      {
-        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
       },
     ));
 });

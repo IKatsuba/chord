@@ -916,20 +916,44 @@ test('the notice holds the keys, Esc closes it, and it waits behind a picker or 
   expect(noticeShown(reduceApp(ready, { type: 'notice_closed' }))).toBe(false);
 });
 
-test("Tab's note on an agent without steering is said afresh on each press, and only the last one's time ends it (CHD-378)", () => {
-  const first = reduceApp(ready, { type: 'steer_refused' });
-  const again = reduceApp(first, { type: 'steer_refused' });
+test("Tab's note on an agent without steering is said afresh on each press, and only the last one's time ends it (CHD-535)", () => {
+  const first = reduceApp(ready, { type: 'steer_refused', refused: false });
+  const again = reduceApp(first, { type: 'steer_refused', refused: false });
 
-  expect(first.steerRefused).toBeDefined();
+  expect(first.steerRefused).toMatchObject({ refused: false });
   expect(again.steerRefused).not.toStrictEqual(first.steerRefused);
   expect(
-    reduceApp(again, { type: 'steer_note_gone', id: first.steerRefused! })
+    reduceApp(again, { type: 'steer_note_gone', id: first.steerRefused!.id })
       .steerRefused,
   ).toStrictEqual(again.steerRefused);
   expect(
-    reduceApp(again, { type: 'steer_note_gone', id: again.steerRefused! })
+    reduceApp(again, { type: 'steer_note_gone', id: again.steerRefused!.id })
       .steerRefused,
   ).toBeUndefined();
+});
+
+test('a queued message the running turn refused is back in its row, and the status line says so (CHD-535)', () => {
+  const queued = reduceApp(ready, {
+    type: 'queued',
+    turnId: 'waiting',
+    text: 'Then the docs',
+  });
+  const steering = reduceApp(queued, {
+    type: 'queued',
+    turnId: 'waiting',
+    text: 'Then the docs',
+    steering: true,
+  });
+  const refused = reduceApp(steering, {
+    type: 'queued',
+    turnId: 'waiting',
+    text: 'Then the docs',
+    refused: true,
+  });
+
+  expect(queued.steerRefused).toBeUndefined();
+  expect(refused.queue).toStrictEqual(queued.queue);
+  expect(refused.steerRefused).toMatchObject({ refused: true });
 });
 
 describe("a code block's copy and the draft note (CHD-394)", () => {

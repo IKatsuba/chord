@@ -126,18 +126,8 @@ export type Step =
   | { readonly type: 'set_mode'; readonly mode: string }
   | { readonly type: 'read_commands' }
   | { readonly type: 'send'; readonly text: string }
-  /**
-   * Tab during a turn: `text` into it; `kept` plays once it went, as a
-   * kept draft leaves the stack only then, or, for one naming image files,
-   * before they are read, as Enter's, on an agent that steers.
-   */
-  | {
-      readonly type: 'steer';
-      readonly text: string;
-      readonly kept: readonly Step[];
-      /** It names image files, read before it goes, as Enter reads them. */
-      readonly paths: boolean;
-    }
+  /** Tab during a turn: the oldest queued message into it (CHD-535). */
+  | { readonly type: 'steer' }
   /** Enter on a draft naming image files: they are read before it goes. */
   | { readonly type: 'send_with_paths'; readonly text: string }
   | {
@@ -910,19 +900,7 @@ function commandSteps(
     case 'end_code_pick':
       return [{ type: 'chord_key' }, dispatch({ type: 'code_pick_ended' })];
     case 'steer':
-      // One send at a time while its image paths are read, as Enter's.
-      if (context.submitting) {
-        return [];
-      }
-
-      return [
-        {
-          type: 'steer',
-          text: draft,
-          kept: keptLeft(context),
-          paths: state.takesImages === true && namesImage(draft, context.home),
-        },
-      ];
+      return [{ type: 'steer' }];
     case 'newline': {
       const next = broken(draft, cursor);
 

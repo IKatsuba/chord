@@ -738,7 +738,7 @@ test('a message steered into a turn is recorded where it went, and a reopened se
     ]);
   }));
 
-test("the person's prompt steered into a turn is recorded where it went, as theirs, and a reopened session draws it there (CHD-378)", () =>
+test("the person's queued message steered into a turn is recorded where it went, as theirs, and a reopened session draws it there (CHD-378)", () =>
   withPlace(async (place) => {
     const steering = fakeAgentCommand(undefined, '--steering', 'claude');
     const events: ConversationEvent[] = [];
@@ -759,7 +759,8 @@ test("the person's prompt steered into a turn is recorded where it went, as thei
       await until(() =>
         events.some((event) => event.type === 'permission_requested'),
       );
-      conversation.steerIn('Then the docs.');
+      conversation.send('Then the docs.');
+      conversation.steerQueued();
 
       const asked = events.find(
         (event) => event.type === 'permission_requested',

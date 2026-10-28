@@ -46,8 +46,8 @@ export function useTimers(
       copied !== undefined && dispatch({ type: 'copied_gone', id: copied.id }),
   );
 
-  // As long as a copy's note, from the last Tab (CHD-378).
-  const steerRefused = state.steerRefused;
+  // As long as a copy's note, from the last Tab or refusal (CHD-535).
+  const steerRefused = state.steerRefused?.id;
 
   useLapse(
     steerRefused,

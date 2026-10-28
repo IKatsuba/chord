@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ › askcodex
+
+ ››› Waiting for your input… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                             answers itself in 4:59 │
+│                                                                              │
+│ ← * ◉ Next step   * ○ Token   ○ Submit →                                     │
+│                                                                              │
+│ What would you like to focus on next?                                        │
+│                                                                              │
+│   1. Plan a change (Recommended)                                             │
+│   2. Review existing work ✔                                                  │
+│      Read what is there first                                                │
+│   3. None of the above                                                       │
+│      Provide a different answer in the note field.                           │
+│                                                                              │
+│ ❯ Note  A B C Dalpha beta Xgamma                                             │
+│                                                                              │
+│ Enter for the next · ↑ options · ←→ questions · Esc to cancel                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

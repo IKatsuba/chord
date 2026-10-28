@@ -1,0 +1,40 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd524-designer-wide
+ ▀▀     ? for shortcuts · /help
+
+ › askcodex
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (0s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                                     answers itself in 4:59 │
+│                                                                                                                      │
+│ ← * ◉ Next step   * ○ Token   ○ Submit →                                                                             │
+│                                                                                                                      │
+│ What would you like to focus on next?                                                                                │
+│                                                                                                                      │
+│   1. Plan a change (Recommended)                                                                                     │
+│   2. Review existing work ✔                                                                                          │
+│      Read what is there first                                                                                        │
+│   3. None of the above                                                                                               │
+│      Provide a different answer in the note field.                                                                   │
+│                                                                                                                      │
+│ ❯ Note  Please use the parser                                                                                        │
+│                                                                                                                      │
+│ Enter for the next · ↑ to the options · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

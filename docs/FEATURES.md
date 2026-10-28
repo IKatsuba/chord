@@ -142,7 +142,7 @@ back. Starting agents, messages and the agent list are M4's, reused.
 | The team in the agent list                | —                                   | client: the lead and its members nested under it in M4's list, each team folded to its lead's row where the list does not fit |
 | The lead reports to main                  | —                                   | client: M4's messages, drawn `← @lead …` |
 | Teams on resume                           | —                                   | client, chord's own session records: the past drawn, each run named with its agents and not reopened, `/team run` the way back |
-| Resource facts and per-run selection (CHD-533, done) | — | client: instruction-driven MCP discovery, runtime-filtered advisory `get_budgets`, optional `run_team` overrides, frozen selected runs and historical receipts; direct runs keep saved choices; initial production collectors: darwin-arm64, Codex 0.163.0/Claude Code 2.1.311, unknown freshness and experimental limits |
+| Resource facts and per-run selection (CHD-533, done) | — | client: instruction-driven MCP discovery, runtime-filtered advisory `get_budgets`, optional `run_team` overrides, frozen selected runs and historical receipts; direct runs keep saved choices; initial production collectors: darwin-arm64, any installed official Codex/native Claude Code version, unknown freshness and experimental limits |
 
 Every member works in the session's directory; who edits which files when is
 the team's own instructions' business, agreed among the agents, not chord's

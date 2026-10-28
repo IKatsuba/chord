@@ -4,6 +4,7 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
+import { setImmediate } from 'node:timers/promises';
 import { collectCodexResources } from '../../src/session/codex_resources.ts';
 import {
   createResources,
@@ -223,7 +224,8 @@ describe('limits read', () => {
       return failures;
     });
 
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    // Every microtask has run: a close that did not wait has resolved.
+    await setImmediate();
 
     expect(closed).toBe(false);
 

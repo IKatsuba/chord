@@ -60,10 +60,36 @@ describe('official native collector resolution', () => {
     ).toHaveProperty('unavailable');
   });
 
-  test('missing, unverified-version and unsupported targets are advisory', async () => {
+  test('another provider version resolves with the version it reports', async () => {
+    expect(
+      await resolveResourceExecutable('codex', options, {
+        ...inspection,
+        version: () => Promise.resolve('codex-cli 0.164.0'),
+      }),
+    ).toEqual({ path: '/fixture/codex', version: '0.164.0' });
+    expect(
+      await resolveResourceExecutable('claude', options, {
+        ...inspection,
+        lookup: () => Promise.resolve('/fixture/claude'),
+        version: () => Promise.resolve('2.1.312 (Claude Code)'),
+      }),
+    ).toEqual({ path: '/fixture/claude', version: '2.1.312' });
+  });
+
+  test('an unrecognised or empty version output is unavailable', async () => {
+    for (const output of ['', 'codex 0.164.0', '2.1.312 (Claude Code)']) {
+      expect(
+        await resolveResourceExecutable('codex', options, {
+          ...inspection,
+          version: () => Promise.resolve(output),
+        }),
+      ).toEqual({ unavailable: 'Native provider version could not be read.' });
+    }
+  });
+
+  test('missing and unsupported targets are advisory', async () => {
     for (const override of [
       { lookup: () => Promise.resolve(undefined) },
-      { version: () => Promise.resolve('codex-cli 0.164.0') },
       { platform: 'linux' },
     ]) {
       expect(

@@ -7,6 +7,8 @@ export interface ResourceSource {
   readonly sourceRef: string;
   readonly sessionRef: string;
   readonly receivedAt: string;
+  /** The version the provider executable reported, when it was read. */
+  readonly version?: string;
 }
 
 export type NormalizedResources =
@@ -97,7 +99,8 @@ function observation(
       sessionRef: source.sessionRef,
       agent,
       source: agent === 'codex' ? 'codex-app-server' : 'claude-agent-sdk',
-      sourceVersion: agent === 'codex' ? '0.163.0' : '0.3.311',
+      sourceVersion:
+        agent === 'codex' ? (source.version ?? 'unknown') : '0.3.311',
       observedAt: null,
       billingKind: 'subscription',
       coverage: 'account',

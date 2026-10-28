@@ -145,7 +145,7 @@ export function createResources(options: {
               executable.path,
               interest.cwd,
               readSignal,
-              source,
+              { ...source, version: executable.version },
             );
 
             return 'unavailable' in facts && facts.retry !== undefined

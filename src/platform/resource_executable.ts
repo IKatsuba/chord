@@ -19,10 +19,9 @@ export type ResourceExecutable =
       readonly retry?: 'configuration' | 'transient';
     };
 
-const VERSIONS = { codex: '0.163.0', claude: '2.1.311' } as const;
 const VERSION_OUTPUT = {
-  codex: 'codex-cli 0.163.0',
-  claude: '2.1.311 (Claude Code)',
+  codex: /^codex-cli (\S+)$/,
+  claude: /^(\S+) \(Claude Code\)$/,
 } as const;
 
 /** Factored for fake resolver tests; ordinary collectors use the public defaults. */
@@ -143,16 +142,15 @@ export async function resolveResourceExecutable(
       }
     }
 
-    if (
-      (await inspect.version(path, options.cwd, options.signal)) !==
-      VERSION_OUTPUT[provider]
-    ) {
-      return {
-        unavailable: `Native provider version is unverified; this collector supports ${VERSIONS[provider]}.`,
-      };
+    const version = VERSION_OUTPUT[provider].exec(
+      await inspect.version(path, options.cwd, options.signal),
+    )?.[1];
+
+    if (version === undefined) {
+      return { unavailable: 'Native provider version could not be read.' };
     }
 
-    return { path, version: VERSIONS[provider] };
+    return { path, version };
   } catch (error) {
     if (
       options.signal.aborted ||

@@ -82,9 +82,9 @@ export interface OpenSessionOptions {
    */
   fork?: string;
   /**
-   * MCP servers for the agent, sent with `session/new`, `session/load` and
-   * `session/resume`, those whose transport it does not advertise held back
-   * (`serversFor`); none by default.
+   * MCP servers for the agent, sent with `session/new`, `session/fork`,
+   * `session/load` and `session/resume`, those whose transport it does not
+   * advertise held back (`serversFor`); none by default.
    */
   mcpServers?: readonly McpServer[];
   /**
@@ -823,8 +823,8 @@ function promptBlocks(
  * default and shows them only to JetBrains AIR, so chord would pay for
  * suggestions it never shows (CHD-439); `false` goes on to its SDK, whose
  * contract is that the agent then predicts none. Nothing for any other
- * agent. The adapter reads its options on new, load and resume alike, and
- * the same value each time lets it reuse a session it still has live.
+ * agent. The adapter reads its options on new, fork, load and resume alike,
+ * and the same value each time lets it reuse a session it still has live.
  */
 function openingMeta(connection: Agent): { _meta?: Record<string, unknown> } {
   return connection.init.agentInfo?.name === CLAUDE_ADAPTER

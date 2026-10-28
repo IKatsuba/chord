@@ -57,6 +57,13 @@ export interface CommandsSessions {
    * gone to, its call to draw; or why not, if it was refused.
    */
   newTyped(named: string): Promise<TeamShown>;
+  /** `/fork`; see `useSessions`. */
+  forkTyped(
+    named: string,
+  ): Promise<
+    | { readonly name: string; readonly from: number }
+    | { readonly refused: string }
+  >;
 }
 
 export function useCommands(
@@ -110,6 +117,35 @@ export function useCommands(
             });
           }
         });
+      }
+      case 'fork': {
+        const typed = ['fork', args].filter(Boolean).join(' ');
+
+        const turnId = `fork-${crypto.randomUUID()}`;
+
+        // Said under the command as typed: on the agent forked, which the
+        // fork is in front of by then, or where it was refused (CHD-101).
+        return void sessions.forkTyped(args).then((forked) =>
+          'refused' in forked
+            ? dispatch({
+                type: 'noted',
+                turnId,
+                command: typed,
+                text: forked.refused,
+                failed: true,
+              })
+            : dispatch({
+                type: 'in_session',
+                key: forked.from,
+                action: {
+                  type: 'noted',
+                  turnId,
+                  command: typed,
+                  text: `Forked into ${forked.name}`,
+                  failed: false,
+                },
+              }),
+        );
       }
       case 'clear': {
         const refused = sessions.clearFront(() => {

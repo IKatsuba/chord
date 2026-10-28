@@ -825,6 +825,62 @@ describe('selected launch request context', () => {
     }));
 });
 
+test("a fork has the person's tools, but those that open, run or close agents refuse it, the window never asked (CHD-101)", () =>
+  withServer(async (server) => {
+    const asked: string[] = [];
+    const window: WindowView = {
+      ...WINDOW,
+      open: () => {
+        asked.push('open');
+
+        return Promise.resolve({ error: 'asked' });
+      },
+      close: () => {
+        asked.push('close');
+
+        return { error: 'asked' };
+      },
+    };
+    const client = await connect(
+      server.url,
+      server.admit({ ...PERSON, fork: true, window }).token,
+    );
+
+    try {
+      const names = (await client.listTools()).tools.map((tool) => tool.name);
+
+      expect(names).toContain('open_agent');
+      expect(names).toContain('spawn_task');
+
+      for (const [name, args] of [
+        ['open_agent', { agent: 'fake', prompt: 'Go.' }],
+        ['close_agent', { to: 'parser' }],
+        ['run_team', { team: 'bugfix', job: 'Fix it.' }],
+        [
+          'propose_team',
+          {
+            name: 'bugfix',
+            description: 'Fixes bugs',
+            lead: { agent: 'fake' },
+            members: [],
+            body: 'Fix it.',
+          },
+        ],
+      ] as const) {
+        const result = await client.callTool({ name, arguments: args });
+
+        expect(result.isError).toBe(true);
+        expect(JSON.stringify(result.content)).toContain(
+          'This tool works only from main and its agents, not from a fork.',
+        );
+      }
+
+      expect(asked).toStrictEqual([]);
+    } finally {
+      await client.close();
+    }
+  }));
+
 test('unexpected budget read failures use a fixed safe MCP error', () =>
   withServer(async (server) => {
     const client = await connect(

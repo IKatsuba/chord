@@ -1262,12 +1262,17 @@ const connection = acp
     };
   })
   // A new session from any session id given, which replays nothing: the
-  // `opened` scenario says which it was forked from (CHD-101).
+  // `opened` scenario says which it was forked from (CHD-101). With
+  // `CHORD_FAKE_REFUSE_FORK=1` it offers the fork and refuses it.
   .onRequest('session/fork', async ({ params, client, requestId }) => {
     refuseSession('session/fork');
     await refuseUnsigned(client, requestId);
 
-    if (!FORKS || !UUID.test(params.sessionId)) {
+    if (
+      !FORKS ||
+      process.env.CHORD_FAKE_REFUSE_FORK === '1' ||
+      !UUID.test(params.sessionId)
+    ) {
       throw acp.RequestError.resourceNotFound(params.sessionId);
     }
 

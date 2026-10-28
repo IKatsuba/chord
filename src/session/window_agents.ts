@@ -33,6 +33,11 @@ export interface ChildInfo {
   /** A member's lead, by chord's id for it; none for any other agent. */
   readonly lead?: string | undefined;
   /**
+   * A fork's source, by the name it went by: `main` or another fork. A fork
+   * is no one's child; it stands beside main (CHD-101).
+   */
+  readonly forkedFrom?: string | undefined;
+  /**
    * Its place among the theme's agent colours: the session's children take
    * them in the order they opened, so closing one recolours none.
    */
@@ -215,7 +220,8 @@ export function messageRecipients<C>(
 
   const self = agents.children.find((child) => child.key === sourceKey);
 
-  if (self === undefined) {
+  // A fork has no parent, and main does not reach it (CHD-101).
+  if (self === undefined || self.forkedFrom !== undefined) {
     return [];
   }
 
@@ -381,7 +387,9 @@ export function openChild<C>(
 ): { readonly agents: WindowAgents<C>; readonly key: number } | undefined {
   if (
     agents.main === undefined ||
-    (info.lead === undefined && ownChildren(agents).length >= MAX_CHILDREN)
+    (info.lead === undefined &&
+      info.forkedFrom === undefined &&
+      ownChildren(agents).length >= MAX_CHILDREN)
   ) {
     return undefined;
   }
@@ -394,16 +402,20 @@ export function openChild<C>(
     conversation,
     wait: idle,
   };
+  // A member after its run; main's own before the forks, which come after
+  // main's whole tree (CHD-101).
+  const firstFork = agents.children.findIndex(
+    (each) => each.forkedFrom !== undefined,
+  );
   const after =
-    info.lead === undefined
-      ? -1
-      : agents.children.findLastIndex(
+    info.lead !== undefined
+      ? agents.children.findLastIndex(
           (each) => each.id === info.lead || each.lead === info.lead,
-        );
-  const children =
-    after === -1
-      ? [...agents.children, child]
-      : agents.children.toSpliced(after + 1, 0, child);
+        )
+      : info.forkedFrom === undefined && firstFork !== -1
+        ? firstFork - 1
+        : agents.children.length - 1;
+  const children = agents.children.toSpliced(after + 1, 0, child);
 
   return {
     key,
@@ -416,9 +428,14 @@ export function openChild<C>(
   };
 }
 
-/** The session's own children: those it opened, a team's lead among them. */
+/**
+ * The session's own children: those it opened, a team's lead among them,
+ * never a fork, which is no one's.
+ */
 export function ownChildren<C>(agents: WindowAgents<C>): Child<C>[] {
-  return agents.children.filter((child) => child.lead === undefined);
+  return agents.children.filter(
+    (child) => child.lead === undefined && child.forkedFrom === undefined,
+  );
 }
 
 /**

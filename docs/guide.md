@@ -356,6 +356,13 @@ in the accent colour. A long-lived child uses its name, bold in its colour;
 a team member adds its team, dim: `tester · bugfix asks…`. Between turns,
 main uses `main` and the heading ends ` · between turns`.
 
+In a question's non-secret Note beside choices, option+←/→ (alt+←/→)
+moves by word; cmd+←/→ moves to the displayed line's start or end, where
+the terminal passes those keys. Typing, backspace and paste edit at the
+cursor; pasted line breaks become spaces. Bare ←/→ and Tab still move
+between questions; ↑/↓ moves between rows. Returning to a question or agent
+keeps its note and cursor.
+
 A permission, form, question or link arriving with no turn running leaves
 the keys and draft in the prompt. Its asker row ends ` · between turns`, and
 `ctrl+x a to answer` moves the keys into the box. The front status line

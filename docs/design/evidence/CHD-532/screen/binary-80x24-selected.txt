@@ -1,0 +1,24 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fixture · Fake Small
+ ▄▀▀▀   /tmp/chord-qa.chd532-designer-binary-80x24/project
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ .chord/settings.json: "mouse" is read only from /tmp/chord-qa.chd532-
+   designer-binary-80x24/config/chord/settings.json, ignored
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                 Fake Small · medium effort · 1% context used

@@ -1,0 +1,24 @@
+ chord                       /tmp/chord-qa.chd532-designer-binary-80x24/project
+
+
+
+
+
+
+
+
+
+
+
+
+ Select agent
+
+   ↑ 32. kiro · Kiro · not found
+     33. openclaw · OpenClaw · not found
+     34. opencode · OpenCode · not found
+     35. poolside · Poolside · not found
+     36. zeroclaw · ZeroClaw · not found
+ ❯   37. fixture
+     … +31 more
+
+ ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel

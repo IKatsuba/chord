@@ -1,0 +1,24 @@
+ chord               /tmp/chord-qa.chd532-designer-source-80x24-missing/project
+
+
+
+
+
+
+
+
+
+
+
+
+ Select agent
+
+   ↑ 23. qoder · Qoder CLI
+     24. qwen-code · Qwen Code
+     25. sigit · siGit Code
+     26. cursor · Cursor · not found
+     27. devin · Devin · not found
+ ❯ ↓ 28. fx · not found
+     … +31 more
+
+ ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel

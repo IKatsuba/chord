@@ -1,0 +1,24 @@
+ chord               /tmp/chord-qa.chd532-designer-source-80x24-default/project
+
+
+
+
+
+
+
+
+
+
+
+
+ Select agent
+
+     1.  agoragentic-acp · Agoragentic
+     2.  auggie · Auggie CLI
+     3.  autohand · Autohand Code
+     4.  bob · Bob
+ ❯   5.  claude · Claude Agent
+   ↓ 6.  cline · Cline
+     … +31 more
+
+ ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel

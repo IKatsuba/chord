@@ -158,6 +158,20 @@ chord has no record of; the agent's refusal shows. Legacy files under
 another chord process. Both processes then use it, and their turns
 interleave in its record; close it in the other pane before resuming here.
 
+Command and skill completions, `/new` and `/team` completions, `@` and `@@`,
+history search and `?` appear above the prompt. Status, leader-key hints,
+agents and the background summary stay below. Opening or closing a list
+normally keeps the same draft's prompt borders and permanent rows fixed.
+In the [recorded cramped resize case](design/CHD-525.md), with a running
+plan, four queued prompts and an eight-line draft, resizing from 80×24 to
+80×25, selecting the sixth file and closing completion moves the prompt up
+one row as agents grow from three rows to four.
+
+Completion lists shrink to the available space and scroll to the selection.
+With no visible row, completion navigation and acceptance are disabled,
+including a pick waiting for file matching. Enter still submits the draft
+normally. Completion resumes when a row is available again.
+
 `@` opens the file finder; fuzzy matching starts at the first character
 after it. ↑/↓ moves the highlight, Enter or Tab adds the file, and Esc
 closes the list. While matching, typing continues and the previous list
@@ -649,7 +663,7 @@ of the file still applies.
 The panel combines the newline keys as `shift or \ + enter`; after a
 backslash, use the key bound to send. It also lists `any key` to quit the
 crash screen; that key cannot be rebound. When the panel does not fit
-below the box, a dim rule counts the lines above or below the view and
+above the prompt, a dim rule counts the lines above or below the view and
 names the scroll key. pgup/pgdn page it, shift+↑/↓ move a row, home/end go
 to either end, and the wheel over it scrolls it. Otherwise those keys
 scroll the transcript. The panel opens at the top and keeps its place

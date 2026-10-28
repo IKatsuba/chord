@@ -12,6 +12,14 @@
   single log of the caught error and passes every other console error on.
 - A string an agent sent goes through `theme/Ansi.tsx` unless something cleaned it: OpenTUI's text draws escape bytes as text.
 - Choose colours by role from `theme/theme.ts`.
+- Keep transient completions (including `@@`), history search and help above
+  the prompt; status/leader hints, agents and background summary stay below.
+  Ordinary same-draft open/close comparisons keep prompt borders and
+  permanent rows fixed. Only the demonstrated cramped 80×24→80×25
+  resize/menu-close shift is accepted (see `docs/design/CHD-525.md`);
+  it permits no arbitrary shifts. At zero visible completion rows, suppress
+  paint, navigation and acceptance, including pending picks; preserve normal
+  draft submission and restore completion when room returns.
 - Transcript blocks use `transcript/gap.ts`'s `useGap`: margins in the
   transcript, spacer rows in background logs. OpenTUI #1739 omits margins
   from a one-row scrollbox's height; `tests/ui/transcript/gap_test.tsx`

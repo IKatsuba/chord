@@ -141,7 +141,8 @@ chord -p "Explain src/main.tsx"          # one reply on stdout, for scripts
 git diff | chord -p "Review this" --output-format json
 ```
 
-Inside the window:
+Inside the window, completion lists, history search and `?` appear above
+the prompt; status and agents stay below:
 
 | Key               | Does                                         |
 | ----------------- | -------------------------------------------- |

@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
+import assert from 'node:assert/strict';
 import {
   existsSync,
   mkdirSync,
@@ -78,6 +79,8 @@ for (const mode of [
     const socket = `chd532-${process.pid}-${mode}`;
     const project = join(place, 'project');
     const log = join(place, 'starts');
+    const receipt = join(place, 'exit.json');
+    const ownership = join(place, 'owned.json');
     const settings = join(project, '.chord', 'settings.json');
     const command = [
       process.execPath,
@@ -117,48 +120,58 @@ for (const mode of [
     const tmux = (...args: string[]) =>
       spawnSync('tmux', ['-L', socket, ...args], { env, encoding: 'utf8' });
     const frame = () => tmux('capture-pane', '-t', 'picker', '-p').stdout;
-    const exited = async (expected: string) => {
-      const read = () =>
-        tmux(
+    const owned = () =>
+      existsSync(ownership)
+        ? (JSON.parse(readFileSync(ownership, 'utf8')) as {
+            targetPid?: number;
+            controllerPid: number;
+          })
+        : undefined;
+    const diagnostic = () =>
+      JSON.stringify({
+        version: tmux('-V'),
+        pane: tmux(
           'display-message',
           '-p',
           '-t',
           'picker',
-          '#{pane_dead}|#{pane_dead_status}|#{pane_dead_signal}',
-        );
-      let snapshot = read();
-      const diagnostic = () =>
-        JSON.stringify({
-          status: snapshot.status,
-          stdout: snapshot.stdout,
-          stderr: snapshot.stderr,
-          signal: snapshot.signal,
-          frame: frame(),
-        });
+          '#{pane_pid}|#{pane_current_command}|#{pane_dead}|#{pane_dead_status}|#{pane_dead_signal}',
+        ),
+        ownership: owned(),
+        controllerError: existsSync(`${receipt}.error`)
+          ? readFileSync(`${receipt}.error`, 'utf8')
+          : undefined,
+        frame: frame(),
+      });
+    const exited = async (expected: number) => {
+      await until(`fake CLI ${mode} target exit receipt`, () => {
+        if (existsSync(`${receipt}.error`)) {
+          throw new Error(diagnostic());
+        }
 
-      // A closed pane fd can precede tmux receiving its child's exit status.
-      await until(`fake CLI ${mode} exit status`, () => {
-        snapshot = read();
-
-        const [dead, status, signal] = snapshot.stdout.trimEnd().split('|');
-
-        return (
-          snapshot.status === 0 &&
-          dead === '1' &&
-          (Boolean(status) || Boolean(signal))
-        );
-      }).catch((error: Error) => {
-        throw new Error(
-          `${error.message}; final tmux snapshot: ${diagnostic()}`,
-        );
+        return existsSync(receipt);
+      }).catch((failure: Error) => {
+        throw new Error(`${failure.message}; ${diagnostic()}`);
       });
 
-      const [dead, status, signal] = snapshot.stdout.trimEnd().split('|');
+      const result = JSON.parse(readFileSync(receipt, 'utf8')) as {
+        targetPid: number;
+        controllerPid: number;
+        code: number | null;
+        signal: string | null;
+        error: string | null;
+      };
+      const detail = diagnostic();
+      const owner = owned();
 
-      expect(snapshot.status, diagnostic()).toBe(0);
-      expect(dead, diagnostic()).toBe('1');
-      expect(status, diagnostic()).toBe(expected);
-      expect(signal, diagnostic()).toBe('');
+      assert(owner?.targetPid !== undefined, detail);
+      expect(result.targetPid, detail).toBe(owner.targetPid);
+      expect(result.targetPid, detail).toBeGreaterThan(0);
+      expect(result.controllerPid, detail).toBe(owner.controllerPid);
+      expect(result.targetPid, detail).not.toBe(result.controllerPid);
+      expect(result.code, detail).toBe(expected);
+      expect(result.signal, detail).toBeNull();
+      expect(result.error, detail).toBeNull();
     };
 
     const starts = () =>
@@ -180,10 +193,16 @@ for (const mode of [
         '80',
         '-y',
         '24',
-        quote([
+        `exec ${quote([
           ...(mode === 'missing'
             ? ['/usr/bin/env', `PATH=${join(place, 'empty')}`]
             : []),
+          process.execPath,
+          fileURLToPath(
+            new URL('./fixtures/startup_controller.ts', import.meta.url),
+          ),
+          receipt,
+          ownership,
           ...(process.env['CHORD_START_BINARY']
             ? [process.env['CHORD_START_BINARY']!]
             : [
@@ -194,7 +213,7 @@ for (const mode of [
           ...(mode === 'model' ? ['--model', 'fake-large'] : []),
           '-C',
           project,
-        ]),
+        ])}`,
       );
 
       expect(opened.status, opened.stderr).toBe(0);
@@ -211,7 +230,7 @@ for (const mode of [
 
         if (mode === 'cancel') {
           tmux('send-keys', '-t', 'picker', 'Escape');
-          await exited('0');
+          await exited(0);
           expect(starts()).toEqual([]);
         } else {
           expect(
@@ -224,7 +243,7 @@ for (const mode of [
       }
 
       if (stopped) {
-        await exited('1');
+        await exited(1);
         expect(frame()).toContain(
           mode === 'missing' ? 'which is not on PATH' : 'expected a string',
         );
@@ -243,36 +262,94 @@ for (const mode of [
           frame().includes('Hello, world.'),
         );
         tmux('send-keys', '-t', 'picker', 'C-c', 'C-c');
-        await until(
-          'fake CLI quits',
-          () =>
-            tmux(
-              'display-message',
-              '-p',
-              '-t',
-              'picker',
-              '#{pane_dead}',
-            ).stdout.trim() === '1',
-        );
+        await exited(0);
       }
 
       expect(readFileSync(settings, 'utf8')).toBe(content);
     } finally {
-      tmux('kill-server');
+      const alive = (pid: number) => {
+        try {
+          process.kill(pid, 0);
 
-      for (const pid of starts()) {
-        await until(`fake process ${pid} exited`, () => {
-          try {
-            process.kill(pid, 0);
+          return true;
+        } catch {
+          return false;
+        }
+      };
 
-            return false;
-          } catch {
-            return true;
+      const stop = (pid: number | undefined, signal: NodeJS.Signals) => {
+        if (pid === undefined || pid <= 0) {
+          return;
+        }
+
+        try {
+          process.kill(pid, signal);
+        } catch (failure) {
+          if ((failure as NodeJS.ErrnoException).code !== 'ESRCH') {
+            throw failure;
           }
-        });
-      }
+        }
+      };
 
-      rmSync(place, { recursive: true, force: true });
+      // The controller reaps its direct child before tmux tears down its pane.
+      const child = owned();
+      const controller =
+        child?.controllerPid ??
+        Number(
+          tmux(
+            'display-message',
+            '-p',
+            '-t',
+            'picker',
+            '#{pane_pid}',
+          ).stdout.trim(),
+        );
+
+      try {
+        if (controller > 0) {
+          stop(controller, 'SIGTERM');
+        }
+
+        try {
+          await until(
+            'owned CLI and controller cleanup',
+            () =>
+              (!child?.targetPid || !alive(child.targetPid)) &&
+              (!controller || !alive(controller)),
+            3_000,
+          );
+        } catch {
+          stop(child?.targetPid, 'SIGKILL');
+          stop(controller, 'SIGKILL');
+          await until(
+            'owned CLI and controller killed',
+            () =>
+              (!child?.targetPid || !alive(child.targetPid)) &&
+              (!controller || !alive(controller)),
+          );
+        }
+      } finally {
+        tmux('kill-server');
+
+        try {
+          for (const pid of starts()) {
+            stop(pid, 'SIGTERM');
+
+            try {
+              await until(
+                `fake process ${pid} exited`,
+                () => !alive(pid),
+                3_000,
+              );
+            } catch {
+              stop(pid, 'SIGKILL');
+              await until(`fake process ${pid} killed`, () => !alive(pid));
+            }
+          }
+        } finally {
+          rmSync(place, { recursive: true, force: true });
+        }
+      }
     }
   });
 }

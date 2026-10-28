@@ -1335,3 +1335,44 @@ describe('CHD-524 Note cursor editing', () => {
     }
   });
 });
+
+describe('CHD-524 tester: Note request ownership', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`cancelled cursor state cannot enter the next request at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'askcodex');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.paste('abandoned note');
+          await window.press('\x1b[1;3D');
+          await window.press(ESC);
+          await window.shows('Elicitation answer: cancel');
+          await send(window, 'askcodex');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press('2');
+          await window.press('\x1b[Z');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          expect(window.frame()).not.toContain('abandoned note');
+          await window.press('\x1b[1;3D');
+          await window.press('\x7f');
+          await window.paste('hello 世界');
+          await window.press('\x1b[1;9D');
+          await window.type('é ');
+          await window.shows('Note  é hello 世界');
+          await window.press(TAB);
+          await window.paste('fixture-token');
+          await window.press('\r');
+          await window.press('\r');
+          await window.shows('"next_note":"é hello 世界"');
+          await window.shows('"next":"Review existing work"');
+        },
+        { columns, rows },
+      ));
+  }
+});

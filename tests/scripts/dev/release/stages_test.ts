@@ -276,6 +276,37 @@ test('--package publishes the one package, and prints no version while others ar
   expect(at.err.at(-1)).toStartWith('not tagged: ');
 });
 
+describe('tester: CHD-547 explicit version eligibility', () => {
+  test.each([false, true])(
+    'an explicit new version with only compile cannot skip the publication guard (dry run: %s)',
+    async (dryRun) => {
+      const options: ReleaseOptions = { dryRun, only: ['compile'] };
+      const before = readFileSync(join(at.root, 'package.json'), 'utf8');
+
+      expect(
+        await died(
+          runRelease(
+            context({ AUTH_FAIL: 'yes' }),
+            selectStages(options),
+            options,
+            MAC,
+            '9.9.10',
+          ),
+        ),
+      ).toBe(
+        '@chorded/chord@9.9.9 is not published yet; `bun dev release` without a version finishes it',
+      );
+      expect(ran()).toEqual(['npm view @chorded/chord@9.9.9 version']);
+      expect(readFileSync(join(at.root, 'package.json'), 'utf8')).toBe(before);
+      expect(
+        String(
+          spawnSync('git', ['status', '--porcelain'], { cwd: at.root }).stdout,
+        ).trim(),
+      ).toBe('');
+    },
+  );
+});
+
 describe('tester: CHD-412 release transaction boundaries', () => {
   function output(cwd: string, ...args: string[]): string {
     const child = spawnSync('git', args, { cwd, encoding: 'utf8' });

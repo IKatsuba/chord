@@ -6,7 +6,12 @@ import {
   type EarlierSession,
 } from '../../../src/session/sessions.ts';
 import { Start } from '../../../src/ui/app/Start.tsx';
-import { DEFAULT_KEYMAP } from '../../../src/ui/shortcuts/bindings.ts';
+import type { ListedAgent } from '../../../src/agents.ts';
+import { SHORTCUTS } from '../../../src/ui/shortcuts/keys.ts';
+import {
+  DEFAULT_KEYMAP,
+  readKeybindings,
+} from '../../../src/ui/shortcuts/bindings.ts';
 import { paletteOf } from '../../../src/ui/theme/theme.ts';
 import { ESC, until } from './render.tsx';
 
@@ -200,4 +205,174 @@ describe('CHD-445 U2 tester: titled start picker navigation and resets', () => {
       });
     }
   }
+});
+
+describe('CHD-532 startup agent picker', () => {
+  const agents: ListedAgent[] = [
+    {
+      name: 'one',
+      title: 'First agent',
+      from: 'settings',
+      start: 'fixture-one',
+    },
+    {
+      name: 'two',
+      title: 'two',
+      from: 'cli',
+      start: 'fixture-two',
+      found: false,
+    },
+    {
+      name: 'three',
+      title: undefined,
+      from: 'settings',
+      start: 'fixture-three',
+    },
+  ];
+
+  async function choosing(
+    list = agents,
+    preferred = 'two',
+    columns = 80,
+    rows = 24,
+    keymap = DEFAULT_KEYMAP,
+  ) {
+    const picks: (string | undefined)[] = [];
+    const app = await draw(
+      <Start
+        kind='agents'
+        agents={list}
+        preferred={preferred}
+        directory='/tmp/chord-qa'
+        colours={paletteOf('dark', false)}
+        keymap={keymap}
+        onPick={(choice) => picks.push(choice)}
+      />,
+      { columns, rows },
+    );
+
+    return { ...app, picks };
+  }
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`short catalog at ${columns}x${rows} highlights the default without an active-session mark`, async () => {
+      const app = await choosing(agents, 'two', columns, rows);
+
+      try {
+        expect(app.frame()).toContain('Select agent');
+        expect(app.frame()).toContain('1. one · First agent');
+        expect(app.frame()).toContain('❯ 2. two · not found');
+        expect(app.frame()).toContain('3. three');
+        expect(app.frame()).toContain('Esc to cancel');
+        expect(app.frame()).not.toContain('✔');
+        expect(app.frame()).not.toContain('two · /tmp');
+        expect(app.frame()).not.toContain('›');
+        await app.write('\x01');
+        expect(app.frame()).not.toContain('Resume a session');
+        await app.write('\r');
+        expect(app.picks).toEqual(['two']);
+        await app.write('1');
+        expect(app.picks).toEqual(['two']);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
+
+  test('missing default opens on first; j/k and absolute digits use existing choices', async () => {
+    const app = await choosing(agents, 'unknown');
+
+    try {
+      expect(app.frame()).toContain('❯ 1. one');
+      await app.write('j');
+      expect(app.frame()).toContain('❯ 2. two');
+      await app.write('k');
+      expect(app.frame()).toContain('❯ 1. one');
+      await app.write('3');
+      expect(app.picks).toEqual(['three']);
+
+      for (const name of ['j', 'k', '1', '3', 'enter']) {
+        expect(SHORTCUTS.some((entry) => entry.choices?.includes(name))).toBe(
+          true,
+        );
+      }
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('long catalog scrolls without reordering and resizes while keeping the highlight', async () => {
+    const list = Array.from({ length: 20 }, (_, i) => ({
+      name: `fixture-${i + 1}`,
+      title: 'Long title '.repeat(30),
+      from: 'settings' as const,
+      start: 'fixture',
+    }));
+    const app = await choosing(list, 'fixture-18');
+
+    try {
+      expect(app.frame()).toContain('18. fixture-18');
+      expect(app.frame()).toContain('more');
+      expect(app.frame().split('\n').length).toBeLessThanOrEqual(24);
+      await app.resize({ columns: 120, rows: 40 });
+      expect(app.frame()).toContain('18. fixture-18');
+      await app.write('2');
+      expect(app.picks).toEqual(['fixture-2']);
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('empty catalog cannot select and only offers cancellation', async () => {
+    const app = await choosing([]);
+
+    try {
+      expect(app.frame()).toContain('No agents available');
+      expect(app.frame()).not.toContain('Enter or');
+      await app.write('1\r');
+      expect(app.picks).toEqual([]);
+      await app.write(ESC);
+      await until('cancelled empty picker', () => app.picks.length === 1);
+      expect(app.picks).toEqual([undefined]);
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('cancel follows its existing binding and Ctrl+C cancels independently', async () => {
+    const { keymap } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          {
+            context: 'Select',
+            bindings: { escape: null, 'ctrl+q': 'select:cancel' },
+          },
+        ],
+      }),
+    );
+    const app = await choosing(agents, 'one', 80, 24, keymap);
+
+    try {
+      expect(app.frame()).toContain('Ctrl+q to cancel');
+      expect(
+        SHORTCUTS.some((entry) => entry.actions?.includes('select:cancel')),
+      ).toBe(true);
+      await app.write('\x11');
+      expect(app.picks).toEqual([undefined]);
+    } finally {
+      await app.unmount();
+    }
+
+    const control = await choosing();
+
+    try {
+      await control.write('\x03');
+      expect(control.picks).toEqual([undefined]);
+    } finally {
+      await control.unmount();
+    }
+  });
 });

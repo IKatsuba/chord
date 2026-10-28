@@ -1,8 +1,9 @@
 import { useTerminalDimensions } from '@opentui/react';
 import { useState } from 'react';
+import type { ListedAgent } from '../../agents.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import { bound, type Keymap, keystrokeOf } from '../shortcuts/bindings.ts';
-import { ResumePicker } from '../pickers/Pickers.tsx';
+import { AgentPicker, ResumePicker } from '../pickers/Pickers.tsx';
 import { menuRowLimit } from '../prompt/commands.ts';
 import type { Palette } from '../theme/theme.ts';
 import { Colours, drawnColours, Keys } from './context.ts';
@@ -11,33 +12,33 @@ import { usePress } from './input.ts';
 import { useApp } from './renderer.tsx';
 
 /**
- * `chord --resume` with no id: the resume picker before any agent starts, as
- * `claude --resume` opens on its own. Nothing is open, so there is no prompt
- * box and no status line to report on; the pick decides the agent and the
- * directory, and `onPick` hears it. Esc quits, as nothing
- * the person asked for has started; `onPick` hears none then.
+ * The startup agent or resume choice before anything opens: no conversation,
+ * status or prompt. The chosen value goes to the existing startup path;
+ * cancellation restores the terminal without starting a session.
  */
-export function Start({
-  agent,
-  directory,
-  home,
-  cwd,
-  sessions,
-  colours,
-  keymap,
-  onPick,
-}: {
-  agent: string;
-  /** The working directory as the header shows it. */
-  directory: string;
-  home: string | undefined;
-  /** The working directory, resolved, which the narrow scope keeps to. */
-  cwd: string;
-  sessions: readonly EarlierSession[];
-  colours: Palette;
-  keymap: Keymap;
-  onPick: (chosen: EarlierSession | undefined) => void;
-}) {
+export function Start(
+  props: {
+    directory: string;
+    colours: Palette;
+    keymap: Keymap;
+  } & (
+    | {
+        kind: 'agents';
+        agents: readonly ListedAgent[];
+        preferred: string;
+        onPick: (chosen: string | undefined) => void;
+      }
+    | {
+        kind?: 'resume';
+        agent: string;
+        home: string | undefined;
+        cwd: string;
+        sessions: readonly EarlierSession[];
+        onPick: (chosen: EarlierSession | undefined) => void;
+      }
+  ),
+) {
+  const { directory, colours, keymap } = props;
   const { exit } = useApp();
   const { width: columns, height: rows } = useTerminalDimensions();
 
@@ -45,13 +46,10 @@ export function Start({
 
   const [everywhere, setEverywhere] = useState(false);
   const [picked, setPicked] = useState(false);
-  const pick = (chosen: EarlierSession | undefined) => {
+  const cancel = () => {
     setPicked(true);
-    onPick(chosen);
-
-    if (chosen === undefined) {
-      exit();
-    }
+    props.onPick(undefined);
+    exit();
   };
 
   usePress(
@@ -63,8 +61,11 @@ export function Start({
         bound(keymap, 'select:cancel', sequence) ||
         (key.ctrl && input === 'c')
       ) {
-        pick(undefined);
-      } else if (bound(keymap, 'select:toggleScope', sequence)) {
+        cancel();
+      } else if (
+        props.kind !== 'agents' &&
+        bound(keymap, 'select:toggleScope', sequence)
+      ) {
         setEverywhere((was) => !was);
       }
     },
@@ -86,23 +87,40 @@ export function Start({
             </text>
             <box flexShrink={0} marginLeft={2}>
               <text {...TEXT} attributes={DIM}>
-                {`${agent} · ${directory}`}
+                {props.kind === 'agents'
+                  ? directory
+                  : `${props.agent} · ${directory}`}
               </text>
             </box>
           </box>
           <box flexGrow={1} />
-          <ResumePicker
-            // A fresh list for each scope, its highlight on the first row.
-            key={String(everywhere)}
-            picker={{ sessions, cwd, everywhere }}
-            open={new Set()}
-            rows={menuRowLimit(rows)}
-            agent={agent}
-            home={home}
-            active={!picked}
-            starting
-            onPick={pick}
-          />
+          {props.kind === 'agents' ? (
+            <AgentPicker
+              agents={props.agents}
+              preferred={props.preferred}
+              rows={menuRowLimit(rows)}
+              active={!picked}
+              onPick={(chosen) => {
+                setPicked(true);
+                props.onPick(chosen);
+              }}
+            />
+          ) : (
+            <ResumePicker
+              key={String(everywhere)}
+              picker={{ sessions: props.sessions, cwd: props.cwd, everywhere }}
+              open={new Set()}
+              rows={menuRowLimit(rows)}
+              agent={props.agent}
+              home={props.home}
+              active={!picked}
+              starting
+              onPick={(chosen) => {
+                setPicked(true);
+                props.onPick(chosen);
+              }}
+            />
+          )}
         </box>
       </Keys.Provider>
     </Colours.Provider>

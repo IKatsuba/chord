@@ -6,6 +6,7 @@
  * is: ink-select-input scrolls by rotating, so it can neither keep a long
  * list in order nor say where it has scrolled to.
  */
+import type { ListedAgent } from '../../agents.ts';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { type AgentOption, valueName } from '../../session/config.ts';
@@ -119,6 +120,26 @@ export function pickerLayout(
     unscrolled.reduce((sum, each) => sum + each.length, 0) > rows
     ? laid(4)
     : unscrolled;
+}
+
+/** Catalog order is retained; the preferred name only sets the opening highlight. */
+export function agentChoices(
+  agents: readonly ListedAgent[],
+  preferred: string,
+): PickerChoice[] {
+  return agents.map(({ name, title, found }) => {
+    const detail = title === undefined || title === name ? '' : ` · ${title}`;
+    const missing = found === false ? ' · not found' : '';
+
+    return {
+      key: name,
+      value: name,
+      label:
+        name +
+        (detail + missing === '' ? '' : `\x1b[2m${detail}${missing}\x1b[22m`),
+      current: name === preferred,
+    };
+  });
 }
 
 /** One model on the list; `current` is the one the agent says it uses. */

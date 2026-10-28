@@ -7452,3 +7452,54 @@ Harness checks cover modified moves, wrapped-line edges, in-place repairs,
 choice retention, paste controls, Unicode, navigation and cursor restoration.
 The isolated trial and harness checks alone establish no physical macOS key
 delivery, native clipboard behavior or compiled-binary result.
+
+
+## 2026-10-28 — CHD-532: fixture CLI exit receipts
+
+The startup picker keeps tmux for terminal input and frames. Its first CI
+run showed the expected refused/missing diagnostics but an empty public
+`pane_dead_status` after `pane_dead` became one. A bounded atomic
+`pane_dead|pane_dead_status|pane_dead_signal` readiness check still observed
+`1||` for ten seconds in the next CI run. These observations do not establish
+the target CLI's eventual exit, the runner's tmux version or the cause.
+Local source checks did not reproduce the CI failure.
+
+Main approved a bounded fixture-only alternative under delegated authority:
+a tiny Bun-run controller uses standard `node:child_process.spawn` to own the
+exact CLI executable and arguments with inherited stdio, cwd and environment.
+Only that target child's public `exit` event writes an atomic receipt with
+its PID, exit code, signal and any recorded spawn error. The test requires a
+complete receipt, verifies the distinct target/controller ownership and
+asserts exact cancel zero or refusal one, with no signal or error. Missing
+receipts fail. tmux formats, version and pane text remain separate diagnostics.
+The controller reaps its owned child; bounded cleanup also stops owned
+controller and fake-agent processes. No production behavior, timeout increase,
+status fallback, global harness or dependency change is involved.
+
+The public child-process API fits this fixture boundary under Bun. Source and
+the existing compiled binary exercise the same target argv; the controller
+itself is test infrastructure and is not embedded in the application. Local
+passes do not establish a green remote CI run or identify a tmux defect.
+
+A subsequent CI run passed the direct-target refusal receipts but timed out
+checking controller disappearance on cancel and explicit starts. That check
+used PID existence before releasing tmux, although tmux, not the test, owns
+and reaps the pane controller. The CI process state was not captured, so a
+zombie, running process or cause is not established by those failures.
+
+A bounded disposable Linux arm64 trial used official Bun 1.4.4, tmux 3.4,
+the unchanged controller fixture and minimal targets exiting zero and one.
+Public PID/PPID/STAT observations confirmed server → controller → target
+parentage, exact target receipts and all owned PIDs absent after teardown.
+It did not reproduce the CI hang: both controllers were already reaped
+before teardown. The trial used no application dependencies or actual CLI
+routes and establishes neither the CI cause nor remote acceptance.
+
+The approved fixture correction separates parents: a controller spawned by
+the test is awaited through its public ChildProcess exit promise; a tmux
+controller first reaps its target, then the test releases the owned tmux
+parent before bounded verification that target, controller and server PIDs
+are absent. PID/PPID/STAT, receipt and pane snapshots diagnose failures;
+a zombie is not accepted as cleanup success. Primary assertion failures and
+cleanup failures are retained separately in an AggregateError when both
+occur. No application behavior or timeout increase is involved.

@@ -107,7 +107,7 @@ export const TEXT = {
   async readsheld(turn) {
     await turn.say('Working');
 
-    for (const end = Date.now() + 60_000; Date.now() < end;) {
+    for (const end = performance.now() + 60_000; performance.now() < end;) {
       await pause(turn.signal);
       await turn.read();
     }

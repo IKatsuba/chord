@@ -137,35 +137,34 @@ export function QuestionBox({
     return () => clearInterval(timer);
   }, [questions.expiresInMs, now]);
 
-  usePasted(
-    (text) => {
-      const next = askPaste(questions, latest.current, text);
+  const paste = (text: string) => {
+    const next = askPaste(questions, latest.current, text);
 
-      const question = questions.questions[latest.current.step];
+    const question = questions.questions[latest.current.step];
 
-      if (
-        question &&
-        editableNote(question) &&
-        rowsOf(question)[latest.current.row]?.kind === 'own'
-      ) {
-        // Keep the existing paste value policy; only its insertion point changes.
-        const before = answerTo(latest.current, question).own;
-        const pasted = answerTo(next, question).own.slice(before.length);
+    if (
+      question &&
+      editableNote(question) &&
+      rowsOf(question)[latest.current.row]?.kind === 'own'
+    ) {
+      // Keep the existing paste value policy; only its insertion point changes.
+      const before = answerTo(latest.current, question).own;
+      const pasted = answerTo(next, question).own.slice(before.length);
 
-        note.current?.insertText(pasted);
-
-        return true;
-      }
-
-      latest.current = next;
-
-      setState(next);
-      onFill?.(next);
+      note.current?.insertText(pasted);
 
       return true;
-    },
-    { isActive: active },
-  );
+    }
+
+    latest.current = next;
+
+    setState(next);
+    onFill?.(next);
+
+    return true;
+  };
+
+  usePasted(paste, { isActive: active });
 
   usePress(
     (input, key) => {
@@ -173,6 +172,11 @@ export function QuestionBox({
       const row = question && rowsOf(question)[latest.current.row];
 
       if (question && editableNote(question) && row?.kind === 'own') {
+        // OpenTUI's linefeed key must keep the Note's single-line value policy.
+        if (input === '\n') {
+          return paste(input);
+        }
+
         if (noteEdits(input, key)) {
           return false;
         }

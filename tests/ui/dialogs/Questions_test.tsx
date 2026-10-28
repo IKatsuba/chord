@@ -1103,6 +1103,42 @@ describe('CHD-493 U10 tester: question note away and back', () => {
 });
 
 describe('CHD-524 Note cursor editing', () => {
+  for (const [name, value, pasted] of [
+    ['raw LF', '\n', false],
+    ['bracketed LF', '\n', true],
+    ['bracketed CRLF', '\r\n', true],
+  ] as const) {
+    test(`${name} inserts a space at the Note cursor and submits the single-line value`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'askcodex');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press('2');
+          await window.press('\x1b[Z');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.paste('alpha beta');
+          await window.press('\x1b[1;3D');
+
+          if (pasted) {
+            await window.paste(value);
+          } else {
+            await window.press(value);
+          }
+
+          await window.type('X');
+          await window.shows('Note  alpha  Xbeta');
+          await window.press(TAB);
+          await window.paste('fixture-token');
+          await window.press('\r');
+          await window.press('\r');
+          await window.shows('"next_note":"alpha  Xbeta"');
+          await window.shows('"next":"Review existing work"');
+        },
+        { columns: 120, rows: 40 },
+      ));
+  }
+
   test('agent focus round trips keep cursor, choice and corrected submitted content', () =>
     withChild(
       async (window) => {

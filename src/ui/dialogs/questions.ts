@@ -215,6 +215,7 @@ export function noteEdits(input: string, key: AskKey): boolean {
     key.backspace ||
     (key.ctrl && input === 'w') ||
     (input !== '' &&
+      input !== '\n' &&
       !key.ctrl &&
       !key.meta &&
       !key.super &&

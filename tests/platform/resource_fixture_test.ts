@@ -5,7 +5,7 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
 import {
-  fixtureResourceRead,
+  fixtureLimits,
   resourceFixtureCase,
   resourceSourceMode,
 } from '../../src/platform/resource_fixture.ts';
@@ -19,40 +19,23 @@ describe('explicit fake resource states', () => {
     expect(resourceFixtureCase('unknown')).toBe('normal');
   });
 
-  test('all capture cases are normalized advisory facts or an explicitly cancelled pending read', async () => {
-    const source = { sourceRef: 'fixture', sessionRef: 'session' };
-
-    for (const scenario of ['normal', 'partial', 'long'] as const) {
+  test('every capture case is windows, unavailable, or a read that waits until cancelled', async () => {
+    for (const scenario of ['normal', 'partial'] as const) {
       expect(
-        await fixtureResourceRead(
-          'codex',
-          source,
-          scenario,
-          new AbortController().signal,
-        ),
-      ).toHaveProperty('facts.observation');
+        await fixtureLimits('codex', scenario, new AbortController().signal),
+      ).toHaveProperty('windows');
     }
 
     expect(
-      await fixtureResourceRead(
-        'codex',
-        source,
-        'unavailable',
-        new AbortController().signal,
-      ),
-    ).toHaveProperty('facts.unavailable');
+      await fixtureLimits('codex', 'unavailable', new AbortController().signal),
+    ).toHaveProperty('unavailable');
 
     const controller = new AbortController();
-    const pending = fixtureResourceRead(
-      'codex',
-      source,
-      'pending',
-      controller.signal,
-    );
+    const waiting = fixtureLimits('codex', 'timeout', controller.signal);
 
     controller.abort(new Error('Fixture cancelled.'));
 
-    await expect(pending).rejects.toThrow('Fixture cancelled.');
+    await expect(waiting).rejects.toThrow('Fixture cancelled.');
   });
 
   test('source and compiled dispatch use only fixtures for provider labels with an empty PATH', async () => {
@@ -81,26 +64,25 @@ describe('explicit fake resource states', () => {
         ],
         [binary],
       ] as const) {
-        const result = spawnSync(
-          command[0],
-          [
-            ...command.slice(1),
-            join(directory, command.length === 1 ? 'compiled' : 'source'),
-          ],
-          {
-            env: { ...process.env, PATH: '', CHORD_RESOURCE_FIXTURE: 'true' },
-            encoding: 'utf8',
-            timeout: 10000,
-          },
-        );
+        const result = spawnSync(command[0], command.slice(1), {
+          env: { ...process.env, PATH: '', CHORD_RESOURCE_FIXTURE: 'true' },
+          encoding: 'utf8',
+          timeout: 10000,
+        });
 
         expect(result.status, result.stderr).toBe(0);
         expect(result.stderr).toBe('');
         expect(
-          JSON.parse(result.stdout).unbound.map(
-            (source: { source: string }) => source.source,
+          JSON.parse(result.stdout).providers.map(
+            (provider: {
+              agent: string;
+              windows: { usedPercent: number }[];
+            }) => [provider.agent, provider.windows[0]?.usedPercent],
           ),
-        ).toEqual(['fixture', 'fixture']);
+        ).toEqual([
+          ['claude', 12.345],
+          ['codex', 12.345],
+        ]);
       }
     } finally {
       await rm(directory, { recursive: true, force: true });

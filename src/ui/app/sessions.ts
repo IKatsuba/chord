@@ -1,16 +1,10 @@
-import { ResourceRequests } from '../../session/resource_requests.ts';
 /**
  * The window's agents, driven through `OpenAgents`: main and each child
  * opened with a conversation of its own whose events go into the reducer
  * under its key, picked, closed, resumed and quit, and the prompts sent to
  * them.
  */
-import { performance } from 'node:perf_hooks';
-import type { ResourceAccess } from '../../session/resource_access.ts';
-import {
-  activeResourceRuns,
-  type ResourceTask,
-} from '../../session/resource_work.ts';
+import type { ReadLimits } from '../../session/resource_access.ts';
 import type { TeamSelection } from '../../session/budgets.ts';
 import {
   confirmSelectionRole,
@@ -24,7 +18,6 @@ import {
   type SelectionReceipt,
 } from '../../session/team_selection.ts';
 import type { TeamSelectionPolicy } from '../../settings.ts';
-import { foldBudgetCache } from '../../platform/budget_cache.ts';
 import { agentNameProblem } from '../../agent_name.ts';
 import { type Dispatch, useEffect, useRef, useState } from 'react';
 import { closeOnForcedExit, useApp } from './renderer.tsx';
@@ -241,7 +234,7 @@ export interface Place {
 }
 
 export interface SessionsOptions {
-  resources?: ResourceAccess | undefined;
+  resources?: ReadLimits | undefined;
   agent: string;
   /** The `--agent-command` the person typed, which a resume line repeats. */
   typedCommand?: string | undefined;
@@ -304,72 +297,6 @@ export function useSessions(
 ) {
   const { all, state, dispatch, redraw, showDraft, stopCommand } = host;
   const { exit } = useApp();
-  const resourceTasks = useRef(new Map<string, ResourceTask>());
-  const retainResources = (
-    agents: readonly string[],
-    signal: AbortSignal,
-    valid?: () => boolean,
-  ) => {
-    if (resources === undefined) {
-      return () => {};
-    }
-
-    const releases = [...new Set(agents)].map((agent) => {
-      const startup = place.startupOf(agent);
-
-      if (startup === undefined || startup.refused !== undefined) {
-        return undefined;
-      }
-
-      const command = startup.agentCommand;
-
-      return resources?.retain(
-        {
-          agent,
-          cwd: place.cwd,
-          ...(command === undefined ? {} : { command }),
-        },
-        signal,
-        valid,
-      );
-    });
-
-    return () => {
-      for (const release of releases) {
-        release?.();
-      }
-    };
-  };
-
-  const retainRequestResources = useRef(retainResources);
-
-  retainRequestResources.current = retainResources;
-
-  const [resourceRequests] = useState(
-    () =>
-      new ResourceRequests((agents, signal, valid) =>
-        retainRequestResources.current(
-          agents.filter((agent) => runtimeNames.includes(agent)),
-          signal,
-          valid,
-        ),
-      ),
-  );
-  const resourceHeard = (
-    conversation: Conversation,
-    event: ConversationEvent,
-  ) => {
-    if (event.type === 'result' || event.type === 'failed') {
-      resourceRequests.ended(conversation, event.turnId);
-    } else if (
-      event.type === 'cleared' ||
-      event.type === 'closing' ||
-      event.type === 'disconnected'
-    ) {
-      resourceRequests.release(conversation);
-    }
-  };
-
   // The session main opens next resumes: the one `--resume` asks for, and
   // each `/resume` picks; the one `/clear` opens is new.
   const resuming = useRef<Resume | undefined>(resume);
@@ -482,8 +409,6 @@ export function useSessions(
       refused,
       mcpServers: takes,
     } = startupOf(agent) ?? {};
-    let releaseCurrentResources = () => {};
-
     let releaseCurrentCaller = () => {};
 
     const conversation = new Conversation(
@@ -528,16 +453,8 @@ export function useSessions(
 
         resuming.current = undefined;
 
-        releaseCurrentResources();
-
-        const releaseResources = retainResources([agent], signal);
-
-        releaseCurrentResources = releaseResources;
-
         const revoke = () => {
           live = false;
-
-          releaseResources();
 
           if (admitted !== undefined) {
             server?.revoke(admitted.token);
@@ -558,11 +475,8 @@ export function useSessions(
         );
       },
       (event) => {
-        resourceHeard(conversation, event);
-
         if (event.type === 'cleared' || event.type === 'closing') {
           releaseCurrentCaller();
-          releaseCurrentResources();
         }
 
         watchNotice(`main:${key}`, agent, event);
@@ -667,12 +581,9 @@ export function useSessions(
     asked: string,
     emit: (event: ConversationEvent) => void,
     team?: string,
-    resourceAgents: readonly string[] = [],
   ) => {
     const { cwd, mcpServers, startupOf } = place;
     const startup = startupOf(args.agent) ?? {};
-    let releaseCurrentResources = () => {};
-
     let releaseCurrentCaller = () => {};
 
     const conversation = new Conversation(
@@ -708,23 +619,8 @@ export function useSessions(
           ...(startup.mcpServers === false ? { noMcpServers: true } : {}),
         };
 
-        releaseCurrentResources();
-
-        const releaseResources = retainResources(
-          [args.agent, ...resourceAgents],
-          signal,
-        );
-
-        releaseCurrentResources = releaseResources;
-
         const revoke = () => {
           live = false;
-
-          releaseResources();
-
-          if (caller.task !== undefined) {
-            resourceTasks.current.delete(caller.task);
-          }
 
           if (admitted !== undefined) {
             server?.revoke(admitted.token);
@@ -745,11 +641,8 @@ export function useSessions(
         );
       },
       (event) => {
-        resourceHeard(conversation, event);
-
         if (event.type === 'cleared' || event.type === 'closing') {
           releaseCurrentCaller();
-          releaseCurrentResources();
         }
 
         watchNotice(
@@ -891,25 +784,12 @@ export function useSessions(
 
         if (!task.running) {
           children.current.delete(id);
-          resourceTasks.current.delete(id);
         }
       },
     );
 
     children.current.set(id, child);
 
-    const parentRole =
-      from.agent === undefined ? undefined : childOf(key, from.agent);
-
-    resourceTasks.current.set(id, {
-      id,
-      name,
-      agent: args.agent,
-      model: args.model ?? null,
-      team: parentRole?.team ?? null,
-      runRef: parentRole?.lead ?? parentRole?.id ?? `main-${key}`,
-      conversation: child,
-    });
     parent.adopt(task, child);
 
     const started = await effort.started();
@@ -1005,8 +885,6 @@ export function useSessions(
     readonly part?: TeamPart;
     /** Where its model and mode were asked for, as a refusal says it. */
     readonly asked: string;
-    /** Only the roles of the resolved team, never every saved team/runtime. */
-    readonly resourceAgents?: readonly string[];
     /**
      * Opened by the person's `/new`: no first prompt, the person's own in
      * its view being its first (Q187).
@@ -1198,7 +1076,6 @@ export function useSessions(
             }
           },
           team?.lead === undefined ? team?.name : undefined,
-          opening.resourceAgents,
         ),
     );
 
@@ -1599,7 +1476,6 @@ export function useSessions(
         place.cwd,
       ),
       asked: `selected for team ${args.team}`,
-      resourceAgents: frozen.team.members.map((member) => member.agent),
       launch,
       checkStarted: (conversation) => {
         leadWrite = conversation.captureServed();
@@ -1717,7 +1593,6 @@ export function useSessions(
       team: { name: team },
       part: teamPart(team, found.team, { lead: name, others }, place.cwd),
       asked: `set by team ${team}`,
-      resourceAgents: found.team.members.map((member) => member.agent),
       launch,
     });
 
@@ -2347,44 +2222,19 @@ export function useSessions(
 
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
-    budgets: (caller, agents, admittedAt = performance.now()) => {
-      if (agents !== undefined) {
-        const actor = callerConversation(caller.key, caller.agent);
-        const session = actor?.session;
-        const turnId = actor?.activeTurnId;
-
-        if (actor !== undefined && session !== undefined) {
-          const signal = AbortSignal.any([
-            actor.launchSignal,
-            ...(caller.signal === undefined ? [] : [caller.signal]),
-            ...(caller.launch === undefined ? [] : [caller.launch.signal()]),
-          ]);
-
-          resourceRequests.retain({
-            caller: actor,
-            generation: caller.launch ?? session,
-            agents,
-            signal,
-            admittedAt,
-            ...(turnId === undefined ? {} : { turnId }),
-            valid: () =>
-              !signal.aborted &&
-              caller.launch?.valid() !== false &&
-              callerConversation(caller.key, caller.agent) === actor &&
-              actor.session === session &&
-              (turnId === undefined || actor.activeTurnId === turnId),
-          });
-        }
-      }
-
-      return (
-        resources?.read(place.teamSelection) ??
-        foldBudgetCache([], place.teamSelection ?? {}, {
-          wall: Date.now(),
-          monotonic: performance.now(),
-        })
-      );
-    },
+    ...(resources === undefined
+      ? {}
+      : {
+          budgets: (caller: Caller, agents?: readonly string[]) =>
+            resources(
+              agents,
+              {
+                cwd: place.cwd,
+                commandOf: (runtime) => place.startupOf(runtime)?.agentCommand,
+              },
+              caller.signal ?? new AbortController().signal,
+            ),
+        }),
     sessions: () => {
       const agents = front();
       const session = agents?.main.conversation.session;
@@ -2528,39 +2378,22 @@ export function useSessions(
   };
 
   useEffect(() => {
-    if (resources !== undefined) {
-      resources.active(
-        activeResourceRuns(
-          sessions.agents,
-          runs.current,
-          [...resourceTasks.current.values()],
-          resources.processRef,
-          Date.now(),
-        ),
-      );
-    }
-  }, [all, resources, sessions]);
-
-  useEffect(() => {
     // The window's one session, its state the window's from its first
     // frame; it resumes `resume`, which `resuming` holds from the start.
     sessions.start(agent);
 
     // A crash or a signal closes and reaps them too before chord exits.
     const forget = closeOnForcedExit(() => {
-      resourceRequests.close();
-
       return sessions.closeAll();
     });
 
     return () => {
       forget();
-      resourceRequests.close();
       runtimesMade.current?.close();
 
       void sessions.closeAll().catch(() => {});
     };
-  }, [sessions, resourceRequests]);
+  }, [sessions]);
 
   /**
    * The session in front, read when a key or a pick acts rather than when

@@ -1,9 +1,5 @@
 /** Per-run choices change configuration, never a saved team's instructions. */
 import { z } from '@zod/zod';
-import {
-  AGENT_CLEANUP_UNVERIFIED,
-  boundedWarnings,
-} from './resource_warnings.ts';
 import { MAX_MEMBERS, type Team, type TeamLead } from '../teams.ts';
 import { TeamSelection } from './budgets.ts';
 
@@ -397,14 +393,16 @@ export function confirmSelectionRole(
   return { ...role, state: 'confirmed', actual: { ...actual }, note };
 }
 
-/** Cleanup uncertainty cannot disappear behind a full source warning list. */
+export const AGENT_CLEANUP_UNVERIFIED =
+  'An attempted agent cleanup could not be verified; process exit is uncertain.';
+
+/** A receipt says when an agent it started may not have gone. */
 export function withSelectionCleanupWarning(
   receipt: SelectionReceipt,
 ): SelectionReceipt {
-  return {
-    ...receipt,
-    warnings: boundedWarnings(receipt.warnings, [AGENT_CLEANUP_UNVERIFIED]),
-  };
+  return receipt.warnings.includes(AGENT_CLEANUP_UNVERIFIED)
+    ? receipt
+    : { ...receipt, warnings: [...receipt.warnings, AGENT_CLEANUP_UNVERIFIED] };
 }
 
 /** run_team records no resource read: an agent calls get_budgets itself. */

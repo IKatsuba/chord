@@ -1,22 +1,6 @@
-/** Maps documented provider fields into source-scoped facts, never account identity. */
+/** Maps documented provider fields into plain windows, never account identity. */
 import { z } from '@zod/zod';
-import { createHash } from 'node:crypto';
-import type { UnboundObservation, WindowSnapshot } from './budgets.ts';
-
-export interface ResourceSource {
-  readonly sourceRef: string;
-  readonly sessionRef: string;
-  readonly receivedAt: string;
-  /** The version the provider executable reported, when it was read. */
-  readonly version?: string;
-}
-
-export type NormalizedResources =
-  | { readonly observation: UnboundObservation }
-  | {
-      readonly unavailable: { readonly agent: string; readonly reason: string };
-      readonly retry?: 'configuration' | 'transient' | undefined;
-    };
+import type { ProviderLimits, ResourceWindow } from './budgets.ts';
 
 const Percent = z.number().min(0).max(100).nullable();
 const CodexWindow = z.object({
@@ -45,218 +29,138 @@ const ClaudeLimits = z.object({
   rate_limits: z.record(z.string(), z.unknown()).nullable(),
 });
 
-const UNKNOWN_TIME = 'Provider observation time unavailable.';
-
-/** A salted reference cannot link provider bucket IDs across source instances. */
-function windowRef(source: ResourceSource, name: string): string {
-  return createHash('sha256')
-    .update(source.sourceRef)
-    .update('\0')
-    .update(name)
-    .digest('hex');
-}
-
-function emptyWindow(
-  source: ResourceSource,
-  name: string,
-  reason: string,
-): WindowSnapshot {
+/** A window the provider sent but did not fill as documented reads as unknown. */
+function unknownWindow(name: string): ResourceWindow {
   return {
-    windowRef: windowRef(source, name),
-    models: null,
+    name,
     usedPercent: null,
     windowSeconds: null,
     resetsAt: null,
-    observedAt: null,
-    receivedAt: source.receivedAt,
-    state: 'unknown',
-    reason,
-  };
-}
-
-function observation(
-  source: ResourceSource,
-  agent: 'claude' | 'codex',
-  windows: WindowSnapshot[],
-): NormalizedResources {
-  if (
-    !windows.some(
-      (window) => window.usedPercent !== null || window.resetsAt !== null,
-    )
-  ) {
-    return {
-      unavailable: {
-        agent,
-        reason: 'The source supplied no subscription windows.',
-      },
-    };
-  }
-
-  return {
-    observation: {
-      observationRef: source.sourceRef,
-      sourceRef: source.sourceRef,
-      sessionRef: source.sessionRef,
-      agent,
-      source: agent === 'codex' ? 'codex-app-server' : 'claude-agent-sdk',
-      sourceVersion:
-        agent === 'codex' ? (source.version ?? 'unknown') : '0.3.311',
-      observedAt: null,
-      billingKind: 'subscription',
-      coverage: 'account',
-      externalActivity: 'unknown',
-      windows,
-      reason:
-        'Account and resource pool identity are unverified; sources are not merged.',
-    },
+    models: null,
   };
 }
 
 export function normalizeCodex(
   account: unknown,
   limits: unknown,
-  source: ResourceSource,
-): NormalizedResources {
+): ProviderLimits {
   const auth = z
     .object({ account: z.object({ type: z.literal('chatgpt') }) })
     .safeParse(account);
 
   if (!auth.success) {
     return {
-      unavailable: {
-        agent: 'codex',
-        reason: 'Subscription account metadata is unavailable or unsupported.',
-      },
-      retry: 'configuration',
+      agent: 'codex',
+      unavailable:
+        'Subscription account metadata is unavailable or unsupported.',
     };
   }
 
   const parsed = CodexLimits.safeParse(limits);
 
   if (!parsed.success) {
-    return {
-      unavailable: { agent: 'codex', reason: 'Malformed rate-limit snapshot.' },
-    };
+    return { agent: 'codex', unavailable: 'Malformed rate-limit snapshot.' };
   }
 
   // The map supersedes the legacy duplicate, including when the map is empty.
   const buckets =
     parsed.data.rateLimitsByLimitId === null
-      ? [['legacy', parsed.data.rateLimits] as const]
+      ? [[undefined, parsed.data.rateLimits] as const]
       : Object.entries(parsed.data.rateLimitsByLimitId);
-  const windows: WindowSnapshot[] = [];
 
   if (buckets.length > 64) {
     return {
-      unavailable: {
-        agent: 'codex',
-        reason:
-          'The quota map exceeds the supported snapshot bound; coverage is incomplete.',
-      },
+      agent: 'codex',
+      unavailable: 'The quota map exceeds the supported bound.',
     };
   }
+
+  const windows: ResourceWindow[] = [];
 
   for (const [id, value] of buckets) {
     const bucket = CodexBucket.safeParse(value);
 
-    for (const name of ['primary', 'secondary'] as const) {
-      const raw = bucket.success ? bucket.data[name] : undefined;
-      const parsedWindow = CodexWindow.safeParse(raw);
-      const base = emptyWindow(
-        source,
-        `${id}.${name}`,
-        raw === null || raw === undefined
-          ? 'Window unavailable.'
-          : 'Malformed subscription window.',
-      );
+    for (const kind of ['primary', 'secondary'] as const) {
+      const raw = bucket.success ? bucket.data[kind] : undefined;
+      const name = id === undefined ? kind : `${id}.${kind}`;
 
-      if (!parsedWindow.success) {
-        windows.push(base);
+      if (raw === null || raw === undefined) {
+        continue;
+      }
+
+      const window = CodexWindow.safeParse(raw);
+
+      if (!window.success) {
+        windows.push(unknownWindow(name));
 
         continue;
       }
 
       const reset =
-        parsedWindow.data.resetsAt === null
+        window.data.resetsAt === null
           ? null
-          : new Date(parsedWindow.data.resetsAt * 1000);
+          : new Date(window.data.resetsAt * 1000);
 
       windows.push({
-        ...base,
-        usedPercent: parsedWindow.data.usedPercent,
+        name,
+        usedPercent: window.data.usedPercent,
         windowSeconds:
-          parsedWindow.data.windowDurationMins === null
+          window.data.windowDurationMins === null
             ? null
-            : parsedWindow.data.windowDurationMins * 60,
+            : window.data.windowDurationMins * 60,
         resetsAt:
           reset !== null && Number.isFinite(reset.getTime())
             ? reset.toISOString()
             : null,
-        reason:
-          reset !== null && !Number.isFinite(reset.getTime())
-            ? 'Malformed reset time; provider observation time unavailable.'
-            : UNKNOWN_TIME,
+        models: null,
       });
     }
   }
 
-  return observation(source, 'codex', windows);
+  return { agent: 'codex', windows };
 }
 
-export function normalizeClaude(
-  usage: unknown,
-  source: ResourceSource,
-): NormalizedResources {
+export function normalizeClaude(usage: unknown): ProviderLimits {
   const parsed = ClaudeLimits.safeParse(usage);
 
   if (!parsed.success) {
     return {
-      unavailable: {
-        agent: 'claude',
-        reason: 'Malformed experimental usage snapshot.',
-      },
+      agent: 'claude',
+      unavailable: 'Malformed experimental usage snapshot.',
     };
   }
 
   if (!parsed.data.rate_limits_available || parsed.data.rate_limits === null) {
     return {
-      unavailable: {
-        agent: 'claude',
-        reason:
-          'Subscription limits unavailable: unsupported authentication source or missing profile scope.',
-      },
-      retry: 'configuration',
+      agent: 'claude',
+      unavailable:
+        'Subscription limits unavailable: unsupported authentication source or missing profile scope.',
     };
   }
 
-  const windows: WindowSnapshot[] = [];
+  const windows: ResourceWindow[] = [];
   const append = (
     name: string,
     raw: unknown,
     seconds: number,
-    modelScoped: boolean,
+    models: string[] | null,
   ) => {
-    const parsedWindow = ClaudeWindow.safeParse(raw);
-    const base = emptyWindow(
-      source,
-      name,
-      raw === null || raw === undefined
-        ? 'Window unavailable.'
-        : 'Malformed subscription window.',
-    );
+    if (raw === null || raw === undefined) {
+      return;
+    }
+
+    const window = ClaudeWindow.safeParse(raw);
 
     windows.push(
-      parsedWindow.success
+      window.success
         ? {
-            ...base,
-            usedPercent: parsedWindow.data.utilization,
-            resetsAt: parsedWindow.data.resets_at,
+            name,
+            usedPercent: window.data.utilization,
             windowSeconds: seconds,
-            reason: modelScoped
-              ? 'Model applicability and provider observation time are unknown.'
-              : UNKNOWN_TIME,
+            resetsAt: window.data.resets_at,
+            models,
           }
-        : base,
+        : unknownWindow(name),
     );
   };
 
@@ -271,34 +175,29 @@ export function normalizeClaude(
       name,
       parsed.data.rate_limits[name],
       name === 'five_hour' ? 18_000 : 604_800,
-      name !== 'five_hour' && name !== 'seven_day',
+      null,
     );
   }
 
+  const scoped = parsed.data.rate_limits['model_scoped'];
   const models = z
     .array(
       z.object({
-        display_name: z.string().min(1),
+        display_name: z.string().min(1).max(128),
         utilization: Percent,
         resets_at: z.iso.datetime().nullable(),
       }),
     )
     .max(123)
-    .safeParse(parsed.data.rate_limits.model_scoped);
+    .safeParse(scoped);
 
   if (models.success) {
     for (const model of models.data) {
-      append(`model.${model.display_name}`, model, 604_800, true);
+      append('model_scoped', model, 604_800, [model.display_name]);
     }
-  } else if (parsed.data.rate_limits.model_scoped !== undefined) {
-    windows.push(
-      emptyWindow(
-        source,
-        'model_scoped',
-        'Model-scoped windows are malformed or exceed the supported bound; coverage is incomplete.',
-      ),
-    );
+  } else if (scoped !== undefined && scoped !== null) {
+    windows.push(unknownWindow('model_scoped'));
   }
 
-  return observation(source, 'claude', windows);
+  return { agent: 'claude', windows };
 }

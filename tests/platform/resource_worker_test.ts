@@ -18,7 +18,6 @@ import { until } from '../session/conversation_fake.ts';
 let directory: string;
 let provider: string;
 let chord: string;
-const source = { sourceRef: 'fixture-source', sessionRef: 'fixture-session' };
 
 beforeAll(async () => {
   directory = await mkdtemp(join(tmpdir(), 'chord-claude-worker-'));
@@ -135,13 +134,8 @@ async function privateEntry(
     expect(await errors).toBe('');
 
     return JSON.parse(await output) as {
-      observation?: {
-        windows: {
-          usedPercent: number | null;
-          observedAt: string | null;
-          state: string;
-        }[];
-      };
+      agent: string;
+      windows?: { name: string; usedPercent: number | null }[];
       unavailable?: unknown;
     };
   } finally {
@@ -158,18 +152,13 @@ async function privateEntry(
 for (const compiled of [false, true]) {
   test(`${compiled ? 'compiled' : 'source'} private entry reads a fake native SDK without CLI/TTY/stderr leakage or inference input`, async () => {
     const record = join(directory, `normal-${compiled}.jsonl`);
-    const result = await privateEntry(
-      compiled,
-      [provider, source.sourceRef, source.sessionRef],
-      record,
-    );
+    const result = await privateEntry(compiled, [provider], record);
 
-    expect(result.observation?.windows[0]).toMatchObject({
+    expect(result.windows?.[0]).toMatchObject({
+      name: 'five_hour',
       usedPercent: 0,
-      observedAt: null,
-      state: 'unknown',
     });
-    expect(result.observation?.windows[1]!.usedPercent).toBe(25.125);
+    expect(result.windows?.[1]!.usedPercent).toBe(25.125);
 
     const events = (await readFile(record, 'utf8'))
       .trim()
@@ -195,33 +184,33 @@ for (const compiled of [false, true]) {
     const record = join(directory, `invalid-${compiled}.jsonl`);
 
     expect(
-      await privateEntry(
-        compiled,
-        [provider, 'x'.repeat(129), source.sessionRef],
-        record,
-      ),
+      await privateEntry(compiled, [provider, 'extra'], record),
     ).toHaveProperty('unavailable');
     expect(existsSync(record)).toBe(false);
   });
 
-  for (const scenario of ['unavailable', 'null-windows']) {
-    test(`${compiled ? 'compiled' : 'source'} ${scenario} yields advisory unavailable without zero capacity`, async () => {
-      const record = join(directory, `${scenario}-${compiled}.jsonl`);
-
-      expect(
-        await privateEntry(
-          compiled,
-          [provider, source.sourceRef, source.sessionRef],
-          record,
-          scenario,
-        ),
-      ).toHaveProperty('unavailable');
-    }, 30_000);
-  }
+  test(`${compiled ? 'compiled' : 'source'} unavailable limits say so, and null windows are none, never zero`, async () => {
+    expect(
+      await privateEntry(
+        compiled,
+        [provider],
+        join(directory, `unavailable-${compiled}.jsonl`),
+        'unavailable',
+      ),
+    ).toHaveProperty('unavailable');
+    expect(
+      await privateEntry(
+        compiled,
+        [provider],
+        join(directory, `null-windows-${compiled}.jsonl`),
+        'null-windows',
+      ),
+    ).toEqual({ agent: 'claude', windows: [] });
+  }, 30_000);
 }
 
 test('source worker launch names the source entry instead of treating Bun as compiled Chord', () => {
-  const command = resourceWorkerCommand(provider, source);
+  const command = resourceWorkerCommand(provider);
 
   expect(command[0]).toBe(process.execPath);
   expect(command[1]).toBe(
@@ -240,13 +229,10 @@ test('source worker launch names the source entry instead of treating Bun as com
 test('source parent collects normalized SDK facts and drains its whole owned worker group', async () => {
   const result = await collectClaudeResources(provider, {
     cwd: directory,
-    source,
     signal: new AbortController().signal,
   });
 
-  expect(
-    'observation' in result && result.observation.windows[0]!.usedPercent,
-  ).toBe(0);
+  expect('windows' in result && result.windows[0]!.usedPercent).toBe(0);
 });
 
 for (const scenario of [
@@ -270,7 +256,6 @@ for (const scenario of [
       let published = false;
       const result = collectClaudeResources(provider, {
         cwd: directory,
-        source,
         signal: controller.signal,
         bounds: {
           ...COLLECTOR_BOUNDS,

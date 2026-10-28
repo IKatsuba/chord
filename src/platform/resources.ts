@@ -1,34 +1,26 @@
 /** An explicit source choice keeps fake windows isolated from installed provider authentication. */
-import { createHash, randomUUID } from 'node:crypto';
-import type {
-  ResourceAccess,
-  ResourceInterest,
-} from '../session/resource_access.ts';
-import type {
-  ResourceSource,
-  NormalizedResources,
-} from '../session/resource_normalization.ts';
-import {
-  ResourceService,
-  type ResourceTarget,
-} from '../session/resource_service.ts';
+import type { Budgets, ProviderLimits } from '../session/budgets.ts';
+import type { ReadLimits } from '../session/resource_access.ts';
 import { collectCodexResources } from '../session/codex_resources.ts';
-import { BudgetCache, readBudgetCache } from './budget_cache.ts';
 import {
   resolveResourceExecutable,
   type ResourceExecutable,
   type ResourceProvider,
 } from './resource_executable.ts';
+import { ResourceReadError, resourceWait } from './resource_process.ts';
 import { collectClaudeResources } from './resource_worker.ts';
-import {
-  fixtureResourceRead,
-  type ResourceFixtureCase,
-} from './resource_fixture.ts';
+import { fixtureLimits, type ResourceFixtureCase } from './resource_fixture.ts';
+
+/** How long one provider may take before it is reported as not read. */
+export const READ_TIMEOUT_MS = 10_000;
+
+const PROVIDERS: readonly ResourceProvider[] = ['claude', 'codex'];
 
 export interface ResourceCollectors {
   resolve(
     provider: ResourceProvider,
-    interest: ResourceInterest,
+    cwd: string,
+    customCommand: boolean,
     signal: AbortSignal,
   ): Promise<ResourceExecutable>;
   read(
@@ -36,130 +28,81 @@ export interface ResourceCollectors {
     path: string,
     cwd: string,
     signal: AbortSignal,
-    source: Omit<ResourceSource, 'receivedAt'>,
-  ): Promise<NormalizedResources>;
+  ): Promise<ProviderLimits>;
 }
 
 const official: ResourceCollectors = {
-  resolve: (provider, interest, signal) =>
-    resolveResourceExecutable(provider, {
-      cwd: interest.cwd,
-      signal,
-      customCommand: interest.command !== undefined,
-    }),
-  read: (provider, path, cwd, signal, source) =>
+  resolve: (provider, cwd, customCommand, signal) =>
+    resolveResourceExecutable(provider, { cwd, signal, customCommand }),
+  read: (provider, path, cwd, signal) =>
     provider === 'codex'
-      ? collectCodexResources([path, 'app-server'], { cwd, signal, source })
-      : collectClaudeResources(path, { cwd, signal, source }),
+      ? collectCodexResources([path, 'app-server'], { cwd, signal })
+      : collectClaudeResources(path, { cwd, signal }),
 };
 
 export function createResources(options: {
-  readonly stateDirectory: string;
   readonly collectors: 'official' | 'fixture' | ResourceCollectors;
   readonly fixtureCase?: ResourceFixtureCase;
-}): ResourceAccess {
-  const cache = new BudgetCache(options.stateDirectory);
-  const service = new ResourceService({
-    processRef: cache.processRef,
-    storage: {
-      read: (startup) =>
-        readBudgetCache(cache.directory, Date.now(), {
-          cleanupExpired: startup,
-        }),
-      write: (file) => cache.write(file),
-      close: (now) => cache.close(now),
-    },
-  });
-  const targets = new Map<string, ResourceTarget>();
+  readonly timeoutMs?: number;
+}): ReadLimits {
   const collectors =
     options.collectors === 'official' ? official : options.collectors;
+  const timeoutMs = options.timeoutMs ?? READ_TIMEOUT_MS;
 
-  return {
-    processRef: service.processRef,
-    start: () => service.start(),
-    read: (preferences) => service.read(preferences),
-    active: (runs) => service.active(runs),
-    close: () => service.close(),
-    retain: (interest, signal, valid) => {
-      const key = createHash('sha256')
-        .update(
-          JSON.stringify([
-            interest.agent,
-            interest.cwd,
-            interest.command ?? null,
-          ]),
-        )
-        .digest('hex');
-      let target = targets.get(key);
+  const readOne = async (
+    agent: string,
+    place: Parameters<ReadLimits>[1],
+    signal: AbortSignal,
+  ): Promise<ProviderLimits> => {
+    if (agent !== 'claude' && agent !== 'codex') {
+      return { agent, unavailable: 'No limits reader for this runtime.' };
+    }
 
-      if (target === undefined) {
-        const source = { sourceRef: randomUUID(), sessionRef: randomUUID() };
+    if (collectors === 'fixture') {
+      return fixtureLimits(agent, options.fixtureCase ?? 'normal', signal);
+    }
 
-        target = {
-          key,
-          agent: interest.agent,
-          read: async (readSignal) => {
-            if (collectors === 'fixture') {
-              return fixtureResourceRead(
-                interest.agent,
-                source,
-                options.fixtureCase ?? 'normal',
-                readSignal,
-              );
-            }
+    const executable = await collectors.resolve(
+      agent,
+      place.cwd,
+      place.commandOf(agent) !== undefined,
+      signal,
+    );
 
-            if (interest.agent !== 'codex' && interest.agent !== 'claude') {
-              return {
-                facts: {
-                  unavailable: {
-                    agent: interest.agent,
-                    reason: 'No supported resource collector for this runtime.',
-                  },
-                },
-                retry: 'configuration',
-              };
-            }
+    if ('unavailable' in executable) {
+      return { agent, unavailable: executable.unavailable };
+    }
 
-            const executable = await collectors.resolve(
-              interest.agent,
-              interest,
-              readSignal,
-            );
+    return collectors.read(agent, executable.path, place.cwd, signal);
+  };
 
-            readSignal.throwIfAborted();
+  return async (agents, place, caller) => {
+    const readAt = new Date().toISOString();
+    const providers = await Promise.all(
+      [...new Set(agents ?? PROVIDERS)].map(async (agent) => {
+        const timeout = AbortSignal.timeout(timeoutMs);
+        const signal = AbortSignal.any([caller, timeout]);
 
-            if ('unavailable' in executable) {
-              return {
-                facts: {
-                  unavailable: {
-                    agent: interest.agent,
-                    reason: executable.unavailable,
-                  },
-                },
-                retry: executable.retry ?? 'configuration',
-              };
-            }
+        try {
+          // The wait ends at the deadline; the reader cleans up after it.
+          return await resourceWait(readOne(agent, place, signal), signal);
+        } catch (error) {
+          if (caller.aborted) {
+            throw error;
+          }
 
-            const facts = await collectors.read(
-              interest.agent,
-              executable.path,
-              interest.cwd,
-              readSignal,
-              { ...source, version: executable.version },
-            );
-
-            return 'unavailable' in facts && facts.retry !== undefined
-              ? { facts, retry: facts.retry }
-              : { facts };
-          },
-        };
-
-        if (targets.size < 128) {
-          targets.set(key, target);
+          return {
+            agent,
+            unavailable: timeout.aborted
+              ? `Timed out after ${timeoutMs / 1000} s.`
+              : error instanceof ResourceReadError
+                ? error.message
+                : 'The limits could not be read.',
+          };
         }
-      }
+      }),
+    );
 
-      return service.retain(target, signal, valid);
-    },
+    return { readAt, providers } satisfies Budgets;
   };
 }

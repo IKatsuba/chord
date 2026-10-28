@@ -17,7 +17,6 @@ import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import {
   type Instance,
-  closeOnForcedExit,
   openTerminal,
   render,
   type Terminal,
@@ -586,13 +585,9 @@ export const cli = chordCommand().action(async (options, named) => {
   // Once for the window, before its first session opens; `-p` has gone.
   const server = startServices.serveChord();
   const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
-  const fixtureResources = collectors === 'fixture';
   const resources = startServices.createResources({
-    stateDirectory: fixtureResources
-      ? join(chordStateDir(), 'fixture')
-      : chordStateDir(),
     collectors,
-    ...(fixtureResources
+    ...(collectors === 'fixture'
       ? {
           fixtureCase: resourceFixtureCase(
             process.env['CHORD_FAKE_RESOURCE_CASE'],
@@ -600,18 +595,6 @@ export const cli = chordCommand().action(async (options, named) => {
         }
       : {}),
   });
-
-  await resources.start();
-
-  let closingResources: Promise<void> | undefined;
-  const closeResources = () =>
-    (closingResources ??= resources.close().then((warnings) => {
-      for (const warning of warnings) {
-        process.stderr.write(`${warning}\n`);
-      }
-    }));
-
-  const forgetResources = closeOnForcedExit(closeResources);
 
   listed ??= await listedAgents(agentCommands(loaded.layers));
 
@@ -678,12 +661,7 @@ export const cli = chordCommand().action(async (options, named) => {
 
   start = undefined;
 
-  try {
-    await app.waitUntilExit();
-  } finally {
-    await closeResources();
-    forgetResources();
-  }
+  await app.waitUntilExit();
 
   await server.close();
   await clipboard?.disposed();

@@ -157,7 +157,7 @@ import {
   type Step,
   submitSteps,
 } from './keys.ts';
-import type { ResourceAccess } from '../../session/resource_access.ts';
+import type { ReadLimits } from '../../session/resource_access.ts';
 import type { TeamSelection } from '../../session/budgets.ts';
 import { type SessionStart, useSessions } from './sessions.ts';
 import {
@@ -229,7 +229,7 @@ import { Splash } from '../splash/Splash.tsx';
 import { splashShown } from '../splash/splash.ts';
 
 export interface AppProps {
-  resources?: ResourceAccess | undefined;
+  resources?: ReadLimits | undefined;
   teamSelection?: TeamSelection | undefined;
   selectionPolicy?: (() => Promise<TeamSelectionPolicy>) | undefined;
   agent: string;

@@ -6,21 +6,17 @@ import {
   resourceSignal,
   withResourceProcess,
 } from '../platform/resource_process.ts';
-import {
-  normalizeCodex,
-  type NormalizedResources,
-  type ResourceSource,
-} from './resource_normalization.ts';
+import type { ProviderLimits } from './budgets.ts';
+import { normalizeCodex } from './resource_normalization.ts';
 
 export function collectCodexResources(
   command: readonly [string, ...string[]],
   options: {
     readonly cwd: string;
     readonly signal: AbortSignal;
-    readonly source: Omit<ResourceSource, 'receivedAt'>;
     readonly bounds?: CollectorBounds;
   },
-): Promise<NormalizedResources> {
+): Promise<ProviderLimits> {
   const bounds = options.bounds ?? COLLECTOR_BOUNDS;
 
   return withResourceProcess(
@@ -66,10 +62,7 @@ export function collectCodexResources(
       );
 
       if (account.account?.type !== 'chatgpt') {
-        return normalizeCodex(account, undefined, {
-          ...options.source,
-          receivedAt: new Date().toISOString(),
-        });
+        return normalizeCodex(account, undefined);
       }
 
       const limits = await client.account.rateLimitsRead({
@@ -79,10 +72,7 @@ export function collectCodexResources(
 
       signal.throwIfAborted();
 
-      return normalizeCodex(account, limits, {
-        ...options.source,
-        receivedAt: new Date().toISOString(),
-      });
+      return normalizeCodex(account, limits);
     },
   );
 }

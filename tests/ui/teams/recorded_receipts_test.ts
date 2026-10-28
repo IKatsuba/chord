@@ -19,7 +19,7 @@ function call(id = 'actual-id'): ChordCall {
       members: [],
       body: 'Preserve permissions.',
     },
-    { reason: 'Keep permissions; provider freshness is unknown.' },
+    { reason: 'Keep permissions; capacity is unknown.' },
     {},
     ['fake'],
   );

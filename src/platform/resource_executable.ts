@@ -14,10 +14,7 @@ import {
 export type ResourceProvider = 'codex' | 'claude';
 export type ResourceExecutable =
   | { readonly path: string; readonly version: string }
-  | {
-      readonly unavailable: string;
-      readonly retry?: 'configuration' | 'transient';
-    };
+  | { readonly unavailable: string };
 
 const VERSION_OUTPUT = {
   codex: /^codex-cli (\S+)$/,
@@ -161,13 +158,6 @@ export async function resolveResourceExecutable(
 
     return {
       unavailable: 'Official provider executable could not be verified.',
-      retry:
-        error instanceof ResourceReadError &&
-        (error.kind === 'timeout' ||
-          error.kind === 'protocol' ||
-          error.kind === 'rate-limit')
-          ? 'transient'
-          : 'configuration',
     };
   }
 }

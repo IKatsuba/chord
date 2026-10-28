@@ -92,7 +92,6 @@ Keep all instructions and project handoffs unchanged.
     XDG_CONFIG_HOME: config,
     XDG_STATE_HOME: join(directory, '.state'),
     CHORD_RESOURCE_FIXTURE: 'true',
-    CHORD_FAKE_RESOURCE_CASE: scenario === 'long' ? 'long' : 'partial',
     CHORD_FAKE_SELECTION_CASE: scenario,
   };
 

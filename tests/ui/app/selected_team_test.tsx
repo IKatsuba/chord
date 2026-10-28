@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
-import type { ResourceAccess } from '../../../src/session/resource_access.ts';
+import type { ReadLimits } from '../../../src/session/resource_access.ts';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readFile, writeFile } from 'node:fs/promises';
@@ -42,7 +42,7 @@ async function selectedWindow(
   ) => Promise<void>,
   options: {
     policy?: () => Promise<TeamSelectionPolicy>;
-    resources?: ResourceAccess;
+    resources?: ReadLimits;
     definition?: string;
     open?: typeof openSession;
     refusedAgent?: string;

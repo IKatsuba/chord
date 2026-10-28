@@ -553,7 +553,7 @@ describe('tester: selected receipt bounds and role isolation', () => {
   });
 });
 
-test('cleanup warning preserves explicit omission and uncertainty within the receipt cap without mutating the plan', () => {
+test('cleanup warning is added once without mutating the plan', () => {
   const chosen = freezeSelection(
     saved,
     { reason: 'Preserve all instructions.' },
@@ -563,39 +563,18 @@ test('cleanup warning preserves explicit omission and uncertainty within the rec
 
   assert('frozen' in chosen);
 
-  const initial = selectionReceipt(
+  const receipt = selectionReceipt(
     'actual-run',
     { name: 'fixture', place: 'project' },
     chosen.frozen,
   );
-  const receipt = {
-    ...initial,
-    warnings: [
-      ...Array.from(
-        { length: 255 },
-        (_, index) => `Source uncertainty ${index}.`,
-      ),
-      'Additional resource warnings are omitted.',
-    ],
-  };
   const changed = withSelectionCleanupWarning(receipt);
 
-  expect(changed.warnings).toHaveLength(256);
-  expect(new Set(changed.warnings).size).toBe(256);
-  expect(changed.warnings).toContain(
-    'Additional resource warnings are omitted.',
-  );
-  expect(changed.warnings).toContain(
+  expect(changed.warnings).toEqual([
     'An attempted agent cleanup could not be verified; process exit is uncertain.',
-  );
-  expect(withSelectionCleanupWarning(changed).warnings).toEqual(
-    changed.warnings,
-  );
-  expect(receipt.warnings).toHaveLength(256);
-  expect(receipt.warnings).not.toContain(
-    'An attempted agent cleanup could not be verified; process exit is uncertain.',
-  );
+  ]);
+  expect(withSelectionCleanupWarning(changed)).toBe(changed);
+  expect(receipt.warnings).toEqual([]);
   expect(changed.roles).toBe(receipt.roles);
-  expect(changed.policy).toBe(receipt.policy);
   expect(SelectionReceipt.safeParse(changed).success).toBe(true);
 });

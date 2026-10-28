@@ -24,7 +24,6 @@ if (scenario === 'resolve') {
         scenario === 'abort'
           ? AbortSignal.timeout(1500)
           : new AbortController().signal,
-      source: { sourceRef: 'compiled-fixture', sessionRef: 'fixture-session' },
       bounds: {
         ...COLLECTOR_BOUNDS,
         totalMs: 5000,

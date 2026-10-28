@@ -5,11 +5,8 @@ import { Transform } from 'node:stream';
 import { json } from 'node:stream/consumers';
 import { fileURLToPath } from 'node:url';
 import process from 'node:process';
-import { UnboundObservation } from '../session/budgets.ts';
-import {
-  normalizeClaude,
-  type NormalizedResources,
-} from '../session/resource_normalization.ts';
+import { ProviderLimits } from '../session/budgets.ts';
+import { normalizeClaude } from '../session/resource_normalization.ts';
 import { execPath } from './process.ts';
 import {
   COLLECTOR_BOUNDS,
@@ -24,26 +21,11 @@ declare const CHORD_RESOURCE_COMPILED: boolean;
 
 export const RESOURCE_WORKER_FLAG = '--chord-resource-worker';
 
-const WorkerArguments = z.tuple([
-  z.string().min(1).max(4096),
-  z.string().min(1).max(128),
-  z.string().min(1).max(128),
-]);
-const WorkerResult = z.union([
-  z.strictObject({ observation: UnboundObservation }),
-  z.strictObject({
-    unavailable: z.strictObject({
-      agent: z.literal('claude'),
-      reason: z.string().min(1).max(500),
-    }),
-    retry: z.enum(['configuration', 'transient']).optional(),
-  }),
-]);
+const WorkerArguments = z.tuple([z.string().min(1).max(4096)]);
 
 /** A bundle is not necessarily compiled; only the actual compile sets this define. */
 export function resourceWorkerCommand(
   path: string,
-  source: { readonly sourceRef: string; readonly sessionRef: string },
 ): readonly [string, ...string[]] {
   const compiled =
     typeof CHORD_RESOURCE_COMPILED !== 'undefined' && CHORD_RESOURCE_COMPILED;
@@ -55,8 +37,6 @@ export function resourceWorkerCommand(
       : [fileURLToPath(new URL('../main.tsx', import.meta.url))]),
     RESOURCE_WORKER_FLAG,
     path,
-    source.sourceRef,
-    source.sessionRef,
   ];
 }
 
@@ -65,15 +45,11 @@ export function collectClaudeResources(
   options: {
     readonly cwd: string;
     readonly signal: AbortSignal;
-    readonly source: {
-      readonly sourceRef: string;
-      readonly sessionRef: string;
-    };
     readonly bounds?: CollectorBounds;
   },
-): Promise<NormalizedResources> {
+): Promise<ProviderLimits> {
   return withResourceProcess(
-    resourceWorkerCommand(path, options.source),
+    resourceWorkerCommand(path),
     options,
     async (group, signal) => {
       let bytes = 0;
@@ -108,7 +84,7 @@ export function collectClaudeResources(
           );
         }
 
-        return WorkerResult.parse(result);
+        return ProviderLimits.parse(result);
       } finally {
         group.child.stdout!.unpipe(bounded);
         bounded.destroy();
@@ -135,15 +111,13 @@ export async function runResourceWorker(
   args: readonly string[],
 ): Promise<void> {
   const parsed = WorkerArguments.safeParse(args);
-  let result: NormalizedResources = {
-    unavailable: {
-      agent: 'claude',
-      reason: 'Invalid isolated collector arguments.',
-    },
+  let result: ProviderLimits = {
+    agent: 'claude',
+    unavailable: 'Invalid isolated collector arguments.',
   };
 
   if (parsed.success) {
-    const [path, sourceRef, sessionRef] = parsed.data;
+    const [path] = parsed.data;
     const input = Promise.withResolvers<void>();
     const controller = new AbortController();
     const deadline = resourceSignal(
@@ -183,21 +157,15 @@ export async function runResourceWorker(
         resourceSignal(deadline, COLLECTOR_BOUNDS.requestMs),
       );
 
-      result = normalizeClaude(usage, {
-        sourceRef,
-        sessionRef,
-        receivedAt: new Date().toISOString(),
-      });
+      result = normalizeClaude(usage);
     } catch (error) {
       result = {
-        unavailable: {
-          agent: 'claude',
-          reason:
-            deadline.aborted ||
-            (error instanceof DOMException && error.name === 'TimeoutError')
-              ? 'The isolated usage read exceeded its deadline.'
-              : 'The experimental usage getter is unavailable or unsupported.',
-        },
+        agent: 'claude',
+        unavailable:
+          deadline.aborted ||
+          (error instanceof DOMException && error.name === 'TimeoutError')
+            ? 'The isolated usage read exceeded its deadline.'
+            : 'The experimental usage getter is unavailable or unsupported.',
       };
     } finally {
       input.resolve();
@@ -207,16 +175,14 @@ export async function runResourceWorker(
         reading?.close();
       } catch {
         result = {
-          unavailable: {
-            agent: 'claude',
-            reason: 'The experimental usage query could not close cleanly.',
-          },
+          agent: 'claude',
+          unavailable: 'The experimental usage query could not close cleanly.',
         };
       }
     }
   }
 
-  const serialized = JSON.stringify(WorkerResult.parse(result));
+  const serialized = JSON.stringify(ProviderLimits.parse(result));
 
   await new Promise<void>((resolve) =>
     process.stdout.write(serialized, () => resolve()),

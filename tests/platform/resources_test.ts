@@ -1,181 +1,181 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-import process from 'node:process';
 import {
   createResources,
   type ResourceCollectors,
 } from '../../src/platform/resources.ts';
-import { normalizeCodex } from '../../src/session/resource_normalization.ts';
 import { ResourceReadError } from '../../src/platform/resource_process.ts';
-import type { ResourceAccess } from '../../src/session/resource_access.ts';
-import { until } from '../session/conversation_fake.ts';
 
-async function withResources(
-  collectors: ResourceCollectors | 'fixture',
-  body: (resources: ResourceAccess) => void | Promise<void>,
-) {
-  const directory = await mkdtemp(join(tmpdir(), 'chord-resource-factory-'));
-  const resources = createResources({ stateDirectory: directory, collectors });
+const place = { cwd: '/fixture/project', commandOf: () => undefined };
 
-  try {
-    await resources.start();
-    await body(resources);
-  } finally {
-    await resources.close();
-    await rm(directory, { recursive: true, force: true });
-  }
-}
-
-function readers(calls: string[]): ResourceCollectors {
+function readers(
+  calls: string[],
+  read: ResourceCollectors['read'] = (provider) =>
+    Promise.resolve({
+      agent: provider,
+      windows: [
+        {
+          name: 'primary',
+          usedPercent: 0,
+          windowSeconds: 18000,
+          resetsAt: null,
+          models: null,
+        },
+      ],
+    }),
+): ResourceCollectors {
   return {
-    resolve: (provider, interest) => {
-      calls.push(`resolve:${provider}:${interest.cwd}`);
+    resolve: (provider, cwd, customCommand) => {
+      calls.push(`resolve:${provider}:${cwd}`);
 
       return Promise.resolve(
-        interest.command === undefined
-          ? { path: '/fixture/provider', version: '1' }
-          : { unavailable: 'Custom command association is unverified.' },
+        customCommand
+          ? { unavailable: 'Custom command association is unverified.' }
+          : { path: '/fixture/provider', version: '1' },
       );
     },
-    read: (provider, _path, cwd, _signal, source) => {
+    read: (provider, path, cwd, signal) => {
       calls.push(`read:${provider}:${cwd}`);
 
-      return Promise.resolve(
-        normalizeCodex(
-          { account: { type: 'chatgpt' } },
-          {
-            rateLimits: {
-              primary: {
-                usedPercent: 0,
-                windowDurationMins: 300,
-                resetsAt: null,
-              },
-              secondary: null,
-            },
-            rateLimitsByLimitId: null,
-          },
-          { ...source, receivedAt: new Date().toISOString() },
-        ),
-      );
+      return read(provider, path, cwd, signal);
     },
   };
 }
 
-describe('explicit resource factory', () => {
-  test('startup and cached facts never fan out or start a reader', async () => {
+describe('limits read', () => {
+  test('omitted agents read claude and codex in parallel, each in the place', async () => {
     const calls: string[] = [];
+    const read = createResources({ collectors: readers(calls) });
+    const answer = await read(undefined, place, new AbortController().signal);
 
-    await withResources(readers(calls), (resources) => {
-      expect(resources.read().unbound).toEqual([]);
-      expect(resources.read({ intent: 'economy' }).preferences.intent).toBe(
-        'economy',
-      );
-      expect(calls).toEqual([]);
+    expect(Date.parse(answer.readAt)).not.toBeNaN();
+    expect(answer.providers.map((provider) => provider.agent)).toEqual([
+      'claude',
+      'codex',
+    ]);
+    expect(answer.providers[1]).toEqual({
+      agent: 'codex',
+      windows: [
+        {
+          name: 'primary',
+          usedPercent: 0,
+          windowSeconds: 18000,
+          resetsAt: null,
+          models: null,
+        },
+      ],
     });
+    expect(calls.sort()).toEqual([
+      'read:claude:/fixture/project',
+      'read:codex:/fixture/project',
+      'resolve:claude:/fixture/project',
+      'resolve:codex:/fixture/project',
+    ]);
   });
 
-  test('same configured provider shares; another cwd remains a separate unbound source', async () => {
+  test('a filter reads only its agents once each; [] reads none; others have no reader', async () => {
     const calls: string[] = [];
+    const read = createResources({ collectors: readers(calls) });
+    const signal = new AbortController().signal;
 
-    await withResources(readers(calls), async (resources) => {
-      const first = new AbortController();
-      const second = new AbortController();
-      const interest = { agent: 'codex', cwd: '/fixture/project-a' };
-
-      resources.retain(interest, first.signal);
-      resources.retain(interest, second.signal);
-      resources.retain(
-        { ...interest, cwd: '/fixture/project-b' },
-        new AbortController().signal,
-      );
-      await until(() => resources.read().unbound.length === 2);
-
-      expect(calls).toEqual([
-        'resolve:codex:/fixture/project-a',
-        'resolve:codex:/fixture/project-b',
-        'read:codex:/fixture/project-a',
-        'read:codex:/fixture/project-b',
-      ]);
-      expect(
-        new Set(resources.read().unbound.map((value) => value.sourceRef)).size,
-      ).toBe(2);
-      expect(resources.read().pools).toEqual([]);
-      expect(JSON.stringify(resources.read())).not.toContain('/fixture/');
-
-      first.abort();
-
-      expect(resources.read().unbound).toHaveLength(2);
-    });
+    expect((await read([], place, signal)).providers).toEqual([]);
+    expect(
+      (await read(['other', 'codex', 'codex'], place, signal)).providers.map(
+        (provider) =>
+          'unavailable' in provider
+            ? [provider.agent, provider.unavailable]
+            : [provider.agent],
+      ),
+    ).toEqual([['other', 'No limits reader for this runtime.'], ['codex']]);
+    expect(calls).toEqual([
+      'resolve:codex:/fixture/project',
+      'read:codex:/fixture/project',
+    ]);
   });
 
-  test('custom commands and unknown runtimes are advisory without provider reads', async () => {
+  test('a custom ACP command is unavailable without a provider read', async () => {
     const calls: string[] = [];
+    const read = createResources({ collectors: readers(calls) });
+    const answer = await read(
+      ['codex'],
+      { cwd: '/fixture/project', commandOf: () => ['custom-acp'] },
+      new AbortController().signal,
+    );
 
-    await withResources(readers(calls), async (resources) => {
-      resources.retain(
-        { agent: 'codex', cwd: '/fixture/project', command: ['custom-acp'] },
-        new AbortController().signal,
-      );
-      resources.retain(
-        { agent: 'other', cwd: '/fixture/project' },
-        new AbortController().signal,
-      );
-      await until(
-        () =>
-          resources.read().unavailable.length === 2 &&
-          resources
-            .read()
-            .unavailable.every((value) => !value.reason.includes('pending')),
-      );
-
-      expect(calls).toEqual(['resolve:codex:/fixture/project']);
-      expect(resources.read().unbound).toEqual([]);
-      expect(JSON.stringify(resources.read())).not.toContain('retry');
-    });
+    expect(answer.providers).toEqual([
+      {
+        agent: 'codex',
+        unavailable: 'Custom command association is unverified.',
+      },
+    ]);
+    expect(calls).toEqual(['resolve:codex:/fixture/project']);
   });
 
-  test('explicit fixture mode cannot resolve installed sources even for Codex/Claude labels', async () => {
-    const previous = process.env['PATH'];
+  test('a provider past the timeout is reported and the others still answer', async () => {
+    const read = createResources({
+      collectors: readers([], (provider, _path, _cwd, signal) =>
+        provider === 'claude'
+          ? new Promise((_, reject) =>
+              signal.addEventListener('abort', () => reject(signal.reason)),
+            )
+          : Promise.resolve({ agent: 'codex', windows: [] }),
+      ),
+      timeoutMs: 50,
+    });
+    const answer = await read(undefined, place, new AbortController().signal);
 
-    process.env['PATH'] = '';
+    expect(answer.providers).toEqual([
+      { agent: 'claude', unavailable: 'Timed out after 0.05 s.' },
+      { agent: 'codex', windows: [] },
+    ]);
+  });
 
-    try {
-      await withResources('fixture', async (resources) => {
-        for (const agent of ['codex', 'claude']) {
-          resources.retain(
-            {
-              agent,
-              cwd: '/fixture/project',
-              command: 'never-launch-this-wrapper',
-            },
-            new AbortController().signal,
-          );
-        }
+  test('a reader failure says its fixed reason; anything else a plain one', async () => {
+    const read = createResources({
+      collectors: readers([], (provider) =>
+        Promise.reject(
+          provider === 'claude'
+            ? new ResourceReadError('protocol', 'The worker failed.')
+            : new Error('private detail'),
+        ),
+      ),
+    });
+    const answer = await read(undefined, place, new AbortController().signal);
 
-        await until(() => resources.read().unbound.length === 2);
+    expect(answer.providers).toEqual([
+      { agent: 'claude', unavailable: 'The worker failed.' },
+      { agent: 'codex', unavailable: 'The limits could not be read.' },
+    ]);
+  });
 
-        expect(resources.read().unbound.map((value) => value.source)).toEqual([
-          'fixture',
-          'fixture',
-        ]);
-        expect(
-          resources
-            .read()
-            .unbound.every(
-              (value) =>
-                value.windows[0]?.observedAt === null &&
-                value.windows[0]?.state === 'unknown',
-            ),
-        ).toBe(true);
-      });
-    } finally {
-      if (previous === undefined) {
-        delete process.env['PATH'];
-      } else {
-        process.env['PATH'] = previous;
-      }
-    }
+  test("the caller's cancellation rejects the read", async () => {
+    const controller = new AbortController();
+    const read = createResources({
+      collectors: readers([], (_provider, _path, _cwd, signal) => {
+        controller.abort(new Error('Caller cancelled.'));
+
+        return new Promise((_, reject) =>
+          signal.addEventListener('abort', () => reject(signal.reason)),
+        );
+      }),
+    });
+
+    await expect(read(['codex'], place, controller.signal)).rejects.toThrow(
+      'Caller cancelled.',
+    );
+  });
+
+  test('fixture mode never resolves installed providers, even for claude and codex', async () => {
+    const read = createResources({ collectors: 'fixture' });
+    const answer = await read(
+      undefined,
+      { cwd: '/fixture/project', commandOf: () => 'never-launch-this-wrapper' },
+      new AbortController().signal,
+    );
+
+    expect(
+      answer.providers.map(
+        (provider) => 'windows' in provider && provider.windows[0]?.usedPercent,
+      ),
+    ).toEqual([12.345, 12.345]);
   });
 });

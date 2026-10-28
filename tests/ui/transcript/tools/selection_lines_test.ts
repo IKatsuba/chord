@@ -24,7 +24,7 @@ function receipt() {
       body: 'Unchanged instructions.',
     },
     {
-      reason: 'Preserve permissions; quota freshness is unknown.',
+      reason: 'Preserve permissions; capacity is unknown.',
       lead: { model: 'chosen-model' },
     },
     {},
@@ -46,7 +46,7 @@ describe('frozen selection report lines', () => {
 
     expect(shown).toContain('Selection: agent-selected · this run');
     expect(shown).toContain(
-      'Reason: Preserve permissions; quota freshness is unknown.',
+      'Reason: Preserve permissions; capacity is unknown.',
     );
     expect(shown).not.toContain('Warning:');
     expect(shown).not.toContain('Read');

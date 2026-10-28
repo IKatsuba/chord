@@ -6,6 +6,8 @@
 import { execFile } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
+import { until } from './conversation_fake.ts';
 import {
   chmod,
   mkdir,
@@ -1843,4 +1845,276 @@ describe('CHD-534 tester: failure boundaries', () => {
         ).rejects.toMatchObject({ code: 'ENOENT' });
       }),
     ));
+});
+
+describe('CHD-101 U1 tester: fork lifecycle and isolation', () => {
+  const jsonReply = async (
+    session: Session,
+    prompt: string,
+  ): Promise<unknown> =>
+    JSON.parse(
+      said((await run(session, prompt)).updates)
+        .join('')
+        .replace(/^```json\n|\n```$/g, ''),
+    );
+
+  test('separate source, fork and fork-of-fork processes route their own options and updates without replaying or closing each other', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-fork-isolation-'));
+    const sessions: Session[] = [];
+    const pids: number[] = [];
+    const agentCommand = fakeAgentCommand(undefined, '--fork');
+    const open = async (fork?: string) => {
+      const session = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand,
+        ...(fork === undefined ? {} : { fork }),
+      });
+
+      sessions.push(session);
+      pids.push(...session.agentPids);
+
+      return session;
+    };
+
+    try {
+      const source = await open();
+
+      await run(source, 'text');
+
+      const fork = await open(source.id);
+      const next = await open(fork.id);
+
+      expect(new Set(pids).size).toBe(3);
+      expect(new Set(sessions.map((session) => session.id)).size).toBe(3);
+      expect(fork.history()).toEqual([]);
+      expect(next.history()).toEqual([]);
+      expect(await jsonReply(fork, 'opened')).toEqual({
+        method: 'session/fork',
+        from: source.id,
+      });
+      expect(await jsonReply(next, 'opened')).toEqual({
+        method: 'session/fork',
+        from: fork.id,
+      });
+      await Promise.all([
+        source.setMode('plan'),
+        fork.setModel('fake-small'),
+        next.setMode('acceptEdits'),
+      ]);
+      expect((await source.modes())?.current).toBe('plan');
+      expect((await fork.modes())?.current).toBe('default');
+      expect((await next.modes())?.current).toBe('acceptEdits');
+      expect((await source.models())?.current).toBe('fake-large');
+      expect((await fork.models())?.current).toBe('fake-small');
+      expect((await next.models())?.current).toBe('fake-large');
+
+      let working = false;
+      const unsubscribe = fork.subscribe((update) => {
+        if (
+          update.sessionUpdate === 'agent_message_chunk' &&
+          update.content.type === 'text' &&
+          update.content.text.includes('Working')
+        ) {
+          working = true;
+        }
+      });
+
+      const active = fork.prompt('costwait');
+
+      await until(() => working);
+      await active.cancel();
+      expect((await active.result).status).toBe('cancelled');
+      unsubscribe();
+      await fork.close();
+      expect((await run(source, 'text')).result.status).toBe('completed');
+      expect((await run(next, 'text')).result.status).toBe('completed');
+    } finally {
+      await Promise.all(sessions.map((session) => session.close()));
+
+      for (const pid of pids) {
+        expect(await isAlive(pid)).toBe(false);
+      }
+
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  for (const noMcpServers of [false, true]) {
+    test(`fork keeps Claude opening metadata and configured transport filtering, MCP disabled=${noMcpServers}`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-fork-servers-'));
+      const session = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        fork: crypto.randomUUID(),
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--fork',
+          '--adapter',
+          'claude',
+          '--mcp-transports',
+          'http',
+        ),
+        noMcpServers,
+        mcpServers: [DOCS, SEARCH, LOGS],
+        chordServer: CHORD_SERVER,
+      });
+      const pids = [...session.agentPids];
+
+      try {
+        expect(session.history()).toEqual([]);
+        expect(await jsonReply(session, 'mcp')).toEqual(
+          noMcpServers ? [] : [DOCS, SEARCH, CHORD_SERVER],
+        );
+        expect(await jsonReply(session, 'opened')).toMatchObject({
+          method: 'session/fork',
+          meta: { claudeCode: { options: { promptSuggestions: false } } },
+        });
+        expect(session.chordServer).toEqual(
+          noMcpServers ? undefined : CHORD_SERVER,
+        );
+        expect(session.heldBack.map((item) => item.server)).toEqual(
+          noMcpServers ? ['docs', 'search', 'logs', 'chord'] : ['logs'],
+        );
+      } finally {
+        await session.close();
+
+        for (const pid of pids) {
+          expect(await isAlive(pid)).toBe(false);
+        }
+
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+
+  for (const flags of [
+    [],
+    ['--fork', '--start-fails', 'notacp'],
+    ['--fork', '--auth-required', 'bare'],
+  ]) {
+    test(`a fork startup refusal ${flags.join(' ') || 'without capability'} reports its actual step and drains the failed process`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-fork-refusal-'));
+      const tag = `fork-refused-${crypto.randomUUID()}`;
+      let unexpected: Session | undefined;
+
+      try {
+        const error = await openSession({
+          agent: 'fake',
+          cwd: dir,
+          fork: crypto.randomUUID(),
+          agentCommand: fakeAgentCommand(undefined, ...flags, tag),
+        }).then(
+          (session) => {
+            unexpected = session;
+
+            return undefined;
+          },
+          (error: unknown) => error,
+        );
+
+        expect(error).toBeInstanceOf(Error);
+        expect(startFailureOf(error)?.step).toBe('session/fork');
+        expect(await tagged(tag)).toEqual([]);
+      } finally {
+        await unexpected?.close();
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+
+  test('an aborted fork startup on a fake hanging at initialize leaves no process', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-fork-abort-'));
+    const tag = `fork-aborted-${crypto.randomUUID()}`;
+    const stop = new AbortController();
+    let unexpected: Session | undefined;
+    const opening = openSession({
+      agent: 'fake',
+      cwd: dir,
+      fork: crypto.randomUUID(),
+      agentCommand: fakeAgentCommand(
+        undefined,
+        '--fork',
+        '--hang',
+        'start',
+        tag,
+      ),
+      signal: stop.signal,
+    }).then(
+      (session) => {
+        unexpected = session;
+
+        return undefined;
+      },
+      (error: unknown) => error,
+    );
+
+    try {
+      const end = performance.now() + 10_000;
+      let pids = await tagged(tag);
+
+      while (pids.length === 0) {
+        assert(performance.now() < end, 'the fake process never started');
+
+        pids = await tagged(tag);
+      }
+
+      stop.abort(new Error('fork startup cancelled'));
+
+      const result = await opening;
+
+      expect(result).toBeInstanceOf(Error);
+      expect(String(result)).toContain('fork startup cancelled');
+      expect(await tagged(tag)).toEqual([]);
+
+      for (const pid of pids) {
+        expect(await isAlive(pid)).toBe(false);
+      }
+    } finally {
+      stop.abort();
+      await opening;
+      await unexpected?.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('closing a fork whose turn ignores cancel drains its own process while the source still answers', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-fork-wedged-'));
+    const source = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, '--fork'),
+    });
+    let fork: Session | undefined;
+
+    try {
+      fork = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        fork: source.id,
+        agentCommand: fakeAgentCommand(undefined, '--fork', '--hang', 'turn'),
+      });
+
+      await mkdir(join(dir, '.fake-gate'));
+      await writeFile(join(dir, '.fake-gate', 'capture-prompt'), '');
+
+      const turn = fork.prompt('text');
+      const pids = [...fork.agentPids];
+
+      await until(() => existsSync(join(dir, '.fake-gate', 'prompt.json')));
+      await turn.cancel();
+      await fork.close();
+      expect((await turn.result).status).toBe('failed');
+
+      for (const pid of pids) {
+        expect(await isAlive(pid)).toBe(false);
+      }
+
+      expect((await run(source, 'text')).result.status).toBe('completed');
+    } finally {
+      await fork?.close();
+      await source.close();
+      await rm(dir, { recursive: true });
+    }
+  });
 });

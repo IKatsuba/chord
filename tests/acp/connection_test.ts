@@ -1,6 +1,7 @@
 import { execFile, spawn } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { until as forkUntil } from '../session/conversation_fake.ts';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1686,4 +1687,129 @@ describe('CHD-454 tester: startup fixture wire boundaries', () => {
       }
     });
   }
+});
+
+describe('CHD-101 U1 tester: fork request boundaries', () => {
+  const requests = (seen: Seen, method: string) =>
+    seen.all.flatMap((traffic) =>
+      traffic.from === 'chord' &&
+      'method' in traffic.message &&
+      traffic.message.method === method
+        ? [traffic.message]
+        : [],
+    );
+
+  test('the exact source, cwd, servers and meta go once; subsequent requests use the returned id without another opening path', () =>
+    withAgent(['--fork'], async (agent, seen, cwd) => {
+      const source = crypto.randomUUID();
+      const request = {
+        sessionId: source,
+        cwd,
+        mcpServers: [
+          { name: 'docs', command: 'docs-server', args: [], env: [] },
+        ],
+        _meta: { fixture: 'fork request' },
+      };
+      const fork = await agent.forkSession(request);
+
+      expect(requests(seen, 'session/fork')).toMatchObject([
+        { params: request },
+      ]);
+      expect(fork.sessionId).not.toBe(source);
+      await agent.setMode({ sessionId: fork.sessionId, modeId: 'plan' });
+      await agent.prompt({
+        sessionId: fork.sessionId,
+        prompt: [text('opened')],
+      });
+      expect(requests(seen, 'session/set_mode')).toMatchObject([
+        { params: { sessionId: fork.sessionId, modeId: 'plan' } },
+      ]);
+      expect(requests(seen, 'session/prompt')).toMatchObject([
+        { params: { sessionId: fork.sessionId } },
+      ]);
+      expect(
+        seen
+          .sent()
+          .filter((method) =>
+            ['session/new', 'session/load', 'session/resume'].includes(method),
+          ),
+      ).toEqual([]);
+      expect(seen.said()).toContain(source);
+      expect(requests(seen, 'session/fork')).toHaveLength(1);
+    }));
+
+  test('an invalid source is refused without a new/load/resume fallback and leaves another fork request usable', () =>
+    withAgent(['--fork'], async (agent, seen, cwd) => {
+      await expect(
+        agent.forkSession({ sessionId: 'missing-source', cwd }),
+      ).rejects.toThrow();
+      expect(
+        seen.sent().filter((method) => method.startsWith('session/')),
+      ).toEqual(['session/fork']);
+
+      const fork = await agent.forkSession({
+        sessionId: crypto.randomUUID(),
+        cwd,
+      });
+
+      expect(fork.sessionId).toBeString();
+      expect(requests(seen, 'session/fork')).toHaveLength(2);
+    }));
+
+  test('an already aborted fork sends nothing and a waiting fork aborts with the caller reason', async () => {
+    let waiting = false;
+    const answer = Promise.withResolvers<acp.CreateElicitationResponse>();
+
+    await withAgent(
+      ['--fork', '--auth-required', 'link'],
+      async (agent, seen, cwd) => {
+        const before = seen.sent();
+        const reason = new Error('fork cancelled by the person');
+
+        await expect(
+          agent.forkSession(
+            { sessionId: crypto.randomUUID(), cwd },
+            AbortSignal.abort(reason),
+          ),
+        ).rejects.toBe(reason);
+        expect(seen.sent()).toEqual(before);
+
+        const stop = new AbortController();
+        const result = agent
+          .forkSession({ sessionId: crypto.randomUUID(), cwd }, stop.signal)
+          .then(
+            () => undefined,
+            (error: unknown) => error,
+          );
+
+        try {
+          await forkUntil(() => waiting);
+          stop.abort(reason);
+          expect(await result).toBe(reason);
+          expect(requests(seen, 'session/fork')).toHaveLength(1);
+          expect(
+            seen
+              .sent()
+              .filter((method) =>
+                ['session/new', 'session/load', 'session/resume'].includes(
+                  method,
+                ),
+              ),
+          ).toEqual([]);
+        } finally {
+          stop.abort(reason);
+          answer.resolve({ action: 'decline' });
+          await result;
+        }
+      },
+      {
+        ...REFUSE,
+        onElicitation: () => {
+          waiting = true;
+
+          return answer.promise;
+        },
+      },
+    );
+  });
 });

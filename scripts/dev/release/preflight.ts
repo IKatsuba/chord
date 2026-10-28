@@ -1,22 +1,12 @@
 /**
- * The checks every release runs first, which only read: the tree clean,
- * untracked files included (a published build that no commit describes
- * cannot be rebuilt); the version from package.json not on npm for
- * @chorded/chord, or a run stopped between publishes to resume; and the
- * owner's npm login. A run that publishes also needs main, level with
- * origin's, and the version not yet a tag.
+ * Eligibility guards before authentication or release work: a clean tree,
+ * an unpublished version or a stopped publish to resume; publishing also
+ * requires main level with origin and no version tag. Registry reads and
+ * the existing fetch may use the network, but these guards do not log in.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import {
-  die,
-  npm,
-  PLATFORMS,
-  published,
-  type Release,
-  run,
-  said,
-} from './lib.ts';
+import { die, PLATFORMS, published, type Release, run, said } from './lib.ts';
 
 /** What preflight found: a fresh version, or a stopped publish to finish. */
 export interface Preflight {
@@ -78,13 +68,6 @@ export function preflight(
 
       break;
     }
-  }
-
-  // 3. The owner's own npm login, before anything is built or published.
-  const who = npm(release, ['whoami']);
-
-  if (who.status !== 0) {
-    die(`npm whoami failed: ${said(who.stdout + who.stderr)}`);
   }
 
   if (publish) {

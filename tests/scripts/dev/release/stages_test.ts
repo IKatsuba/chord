@@ -62,7 +62,15 @@ beforeEach(() => {
     'npm',
     `echo "npm $*" >>"$STATE/ran.log"
 case "$1" in
-whoami) echo owner ;;
+whoami)
+  if [ -n "$AUTH_FAIL" ] && [ ! -f "$STATE/authenticated" ]; then exit 1; fi
+  echo owner
+  ;;
+login)
+  if [ "$LOGIN_RESULT" = signal ]; then kill -TERM $$; fi
+  if [ -n "$LOGIN_RESULT" ]; then exit "$LOGIN_RESULT"; fi
+  if [ -z "$RECHECK_FAIL" ]; then touch "$STATE/authenticated"; fi
+  ;;
 view)
 	spec=\${2#@chorded/}
 	if [ -f "$STATE/published/\${spec%@*}" ]; then echo "\${spec##*@}"; exit 0; fi
@@ -709,5 +717,209 @@ await dying(() =>
     expect(
       out(join(at.place, 'origin.git'), 'log', '-1', '--format=%s', 'main'),
     ).toBe('chore: chord v9.9.10');
+  });
+});
+
+describe('CHD-531 mandatory authentication preparation', () => {
+  const auth: ('npm whoami' | 'npm login')[] = [
+    'npm whoami',
+    'npm login',
+    'npm whoami',
+  ];
+
+  test.each([
+    { only: ['install'] },
+    { from: 'install', to: 'install' },
+    { skip: ['check'], to: 'install' },
+    { dryRun: true, skip: ['notarise'], to: 'install' },
+  ] satisfies ReleaseOptions[])(
+    'stage selection %j retains auth for fresh nonpublishing runs',
+    async (options) => {
+      await released(options, { AUTH_FAIL: 'yes' });
+
+      expect(
+        ran().filter((line) => line === 'npm whoami' || line === 'npm login'),
+      ).toEqual(auth);
+      expect(ran().at(-1)).toBe('bun install --frozen-lockfile');
+      expect(at.out.slice(0, 2)).toEqual([
+        'npm whoami failed; npm login will use this terminal and may open a browser.',
+        'npm may save credentials and registry settings, including during a dry run.',
+      ]);
+    },
+  );
+
+  test('a resumed publish authenticates before publishing without rebuilding', async () => {
+    packed();
+    writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
+    await released({}, { AUTH_FAIL: 'yes' });
+
+    const log = ran();
+    const login = log.indexOf('npm login');
+
+    expect(log.slice(login - 1, login + 2)).toEqual(auth);
+    expect(
+      log.findIndex((line) => line.startsWith('npm publish')),
+    ).toBeGreaterThan(login + 1);
+    expect(log.some((line) => /^(bun|security|xcrun) /.test(line))).toBe(false);
+    expect(at.out.at(-1)).toBe(VERSION);
+  });
+
+  test.each([
+    { LOGIN_RESULT: '2' },
+    { LOGIN_RESULT: '130' },
+    { LOGIN_RESULT: 'signal' },
+    { RECHECK_FAIL: 'yes' },
+  ])(
+    'authentication failure %j precedes Apple checks, version mutation and all stages',
+    async (failure) => {
+      const before = readFileSync(join(at.root, 'package.json'), 'utf8');
+      const head = String(
+        spawnSync('git', ['rev-parse', 'HEAD'], { cwd: at.root }).stdout,
+      );
+      const options = {
+        only: ['install', 'compile', 'sign', 'notarise', 'publish'],
+      } satisfies ReleaseOptions;
+      const error = await died(
+        runRelease(
+          context({ AUTH_FAIL: 'yes', ...failure }),
+          selectStages(options),
+          options,
+          MAC,
+          'patch',
+        ),
+      );
+
+      expect(error).toBe(
+        failure.RECHECK_FAIL
+          ? 'npm whoami still failed after login; release stopped'
+          : 'npm login did not complete; release stopped',
+      );
+      expect(ran().filter((line) => line === 'npm login')).toHaveLength(1);
+      expect(
+        ran().some((line) => /^(bun|security|xcrun|npm publish) /.test(line)),
+      ).toBe(false);
+      expect(readFileSync(join(at.root, 'package.json'), 'utf8')).toBe(before);
+      expect(
+        String(
+          spawnSync('git', ['rev-parse', 'HEAD'], { cwd: at.root }).stdout,
+        ),
+      ).toBe(head);
+      expect(
+        String(
+          spawnSync('git', ['rev-parse', 'origin/main'], { cwd: at.root })
+            .stdout,
+        ),
+      ).toBe(head);
+    },
+  );
+
+  test('failed identity without a terminal stops before any stage', async () => {
+    const options = { only: ['install'] } satisfies ReleaseOptions;
+
+    expect(
+      await died(
+        runRelease(
+          { ...context({ AUTH_FAIL: 'yes' }), tty: false },
+          selectStages(options),
+          options,
+          MAC,
+        ),
+      ),
+    ).toBe(
+      'npm login needs stdin and stdout on a terminal; rerun this release in a terminal.',
+    );
+    expect(ran().includes('npm login')).toBe(false);
+    expect(ran().some((line) => line.startsWith('bun '))).toBe(false);
+  });
+
+  test.each([
+    [
+      'platform',
+      { only: ['sign'] },
+      undefined,
+      { platform: 'linux', arch: 'x64' },
+    ],
+    ['new version', { only: ['install'] }, 'patch', MAC],
+    ['dry resume', { dryRun: true, only: ['compile'] }, undefined, MAC],
+    ['nonpublishing resume', { only: ['compile'] }, undefined, MAC],
+  ] satisfies [string, ReleaseOptions, string | undefined, typeof MAC][])(
+    '%s eligibility rejects before authentication',
+    async (guard, options, wanted, machine) => {
+      if (guard.endsWith('resume')) {
+        writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
+      }
+
+      const message = await died(
+        runRelease(
+          context({ AUTH_FAIL: 'yes' }),
+          selectStages(options),
+          options,
+          machine,
+          wanted,
+        ),
+      );
+
+      expect(message).toMatch(
+        /^(natives, sign|a new version needs|--dry-run does not resume|a run without publish does not resume)/,
+      );
+      expect(
+        ran().some((line) => line === 'npm whoami' || line === 'npm login'),
+      ).toBe(false);
+    },
+  );
+
+  test.each([
+    'dirty',
+    'published',
+    'registry',
+    'branch',
+    'ahead',
+    'local tag',
+    'remote tag',
+    'resume version',
+  ])('%s eligibility failure never starts authentication', async (guard) => {
+    let wanted: string | undefined;
+    const options = { only: ['compile', 'publish'] } satisfies ReleaseOptions;
+
+    if (guard === 'dirty') {
+      writeFileSync(join(at.root, 'stray'), '');
+    } else if (guard === 'published') {
+      writeFileSync(join(at.place, 'published', 'chord'), '');
+    } else if (guard === 'registry') {
+      at.fake(
+        'npm',
+        'echo "npm $*" >>"$STATE/ran.log"; echo "npm error code E500" >&2; exit 1',
+      );
+    } else if (guard === 'branch') {
+      git(at.root, 'checkout', '-q', '-b', 'topic');
+    } else if (guard === 'ahead') {
+      git(at.root, 'commit', '-q', '--allow-empty', '-m', 'ahead');
+    } else if (guard === 'local tag' || guard === 'remote tag') {
+      git(at.root, 'tag', `v${VERSION}`);
+
+      if (guard === 'remote tag') {
+        git(at.root, 'push', '-q', 'origin', `v${VERSION}`);
+        git(at.root, 'tag', '-d', `v${VERSION}`);
+      }
+    } else {
+      writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
+
+      wanted = 'patch';
+    }
+
+    expect(
+      await died(
+        runRelease(
+          context({ AUTH_FAIL: 'yes' }),
+          selectStages(options),
+          options,
+          MAC,
+          wanted,
+        ),
+      ),
+    ).not.toBe('npm login did not complete; release stopped');
+    expect(
+      ran().some((line) => line === 'npm whoami' || line === 'npm login'),
+    ).toBe(false);
   });
 });

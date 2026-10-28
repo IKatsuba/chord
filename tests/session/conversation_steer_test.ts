@@ -2393,6 +2393,69 @@ describe("the person's oldest queued message sent into the running turn (CHD-535
     await conversation.close();
   });
 
+  test("refused, it goes back where its row is: behind another agent's message queued before it, ahead of the rest", async () => {
+    const stub = await steeringStub();
+    const { conversation, events, steers, prompts } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+    conversation.deliver(MAIN, 'From main.');
+    conversation.send('Mine.');
+    conversation.send('After.');
+    conversation.steerQueued();
+    await until(() => steers.length === 1);
+    steers[0]!.answer('refused');
+    await until(() => rows(events, 'Mine.').length === 2);
+    stub.end();
+    await until(() => prompts.length === 4);
+
+    expect(promptsIn(events).map(([text]) => text)).toStrictEqual([
+      'go',
+      'From main.',
+      'Mine.',
+      'After.',
+    ]);
+    await conversation.close();
+  });
+
+  test('put back in one turn and refused again in the next, they keep the order they were queued in', async () => {
+    const stub = await steeringStub(true);
+    const { conversation, events, steers, prompts } = stub;
+
+    conversation.send('go');
+    stub.go();
+    await stub.settled();
+    conversation.send('A.');
+    conversation.send('B.');
+    conversation.send('C.');
+    conversation.steerQueued();
+    conversation.steerQueued();
+    conversation.steerQueued();
+    await until(() => steers.length === 1);
+    steers[0]!.answer('refused');
+    await until(() => rows(events, 'C.').length === 2);
+    stub.end();
+    await until(() => prompts.length === 2);
+    await until(() => promptsIn(events).length === 2);
+
+    // A runs as its own turn; B is sent into it, refused, and goes back.
+    expect(conversation.steerQueued()).toStrictEqual('sent');
+    await until(() => steers.length === 2);
+
+    expect(steers[1]!.text).toStrictEqual('B.');
+    steers[1]!.answer('refused');
+    await until(() => rows(events, 'B.').length === 3);
+    stub.end();
+    await until(() => prompts.length === 3);
+    stub.end();
+    await until(() => prompts.length === 4);
+    stub.end();
+
+    expect(prompts).toStrictEqual(['go', 'A.', 'B.', 'C.']);
+    await conversation.close();
+  });
+
   for (const outcome of ['injected', 'refused'] as const) {
     test(`out when the turn ends, the end does not send it; ${outcome} late, it is ${outcome === 'injected' ? 'drawn in that turn' : 'the next turn, ahead of the rest'}, once`, async () => {
       const stub = await steeringStub();

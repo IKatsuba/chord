@@ -290,6 +290,11 @@ interface Prompt {
    * if the turn ends first, it goes as the next one.
    */
   readonly afterAnswer?: true;
+  /**
+   * Its place in the queue's order, so a steer of it refused puts it back
+   * where its row still is (CHD-535).
+   */
+  readonly place?: number;
 }
 
 /** How a message to the session went: straight into a turn, or queued. */
@@ -487,12 +492,8 @@ export class Conversation {
    * back to the box with the prompts queued (CHD-378).
    */
   #heldSteers = new Set<string>();
-  /**
-   * The person's queued messages a refused steer put back at the top of the
-   * queue: the next one put back goes behind them, so they keep the order
-   * they were queued in (CHD-535).
-   */
-  #returned = new Set<string>();
+  /** The place the next message held in the queue takes there. */
+  #places = 0;
   /** The person's held steers Esc took back, which go nowhere now. */
   #takenBack = new Set<string>();
   /**
@@ -876,7 +877,6 @@ export class Conversation {
     this.#steering = Promise.resolve();
     this.#heldSteers = new Set();
     this.#takenBack = new Set();
-    this.#returned = new Set();
     this.#openCalls = new Set();
     this.#calls = emptyTranscript;
     this.#madeAt = new Map();
@@ -1204,21 +1204,20 @@ export class Conversation {
 
     const [next] = this.#queued.splice(index, 1);
 
-    this.#returned.delete(next!.turnId);
-
     void this.#steer(session, into, next!, undefined, true);
 
     return 'sent';
   }
 
   /**
-   * The person's queued message a steer did not put into the turn, back at the top
-   * of the queue, behind those put back before it, which it was queued after
-   * (CHD-535); `refused` while the turn it was sent into still runs.
+   * The person's queued message a steer did not put into the turn, back in
+   * the queue where its row still is, ahead of all queued after it: the top,
+   * as Tab takes the oldest (CHD-535); `refused` while the turn it was sent
+   * into still runs.
    */
   #putBack(next: Prompt, refused: boolean): void {
     const at = this.#queued.findIndex(
-      (queued) => !this.#returned.has(queued.turnId),
+      (queued) => (queued.place ?? Infinity) > (next.place ?? Infinity),
     );
 
     // Behind a request between turns it waits for the answer, as #hold's do.
@@ -1227,7 +1226,6 @@ export class Conversation {
         ? { ...next, afterAnswer: true as const }
         : next;
 
-    this.#returned.add(next.turnId);
     this.#queued.splice(at === -1 ? this.#queued.length : at, 0, held);
     this.#emit({
       type: 'queued',
@@ -2041,10 +2039,11 @@ export class Conversation {
    * answer, as no turn starts while one waits (CHD-158).
    */
   #hold(next: Prompt): void {
+    const place = (this.#places += 1);
     const held =
       !this.#turn && this.#waitsBetween()
-        ? { ...next, afterAnswer: true as const }
-        : next;
+        ? { ...next, afterAnswer: true as const, place }
+        : { ...next, place };
 
     this.#queued.push(held);
     this.#emit({

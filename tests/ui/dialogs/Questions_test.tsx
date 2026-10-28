@@ -27,6 +27,11 @@ import { enricherRelay } from '../../../src/session/enrich.ts';
 import { ENRICHERS } from '../../../src/session/enrichers.ts';
 import { type Questions, questionsOf } from '../../../src/session/questions.ts';
 import { QuestionBox } from '../../../src/ui/dialogs/Questions.tsx';
+import {
+  answerTo,
+  openAsk,
+  type AskState,
+} from '../../../src/ui/dialogs/questions.ts';
 import { CODEX_QUESTIONS, DROID_QUESTIONS } from '../../fixtures/questions.ts';
 import { draw } from '../harness.tsx';
 import {
@@ -1091,6 +1096,281 @@ describe('CHD-493 U10 tester: question note away and back', () => {
           ).toBe(row);
           await window.press(ESC);
           await window.shows('Elicitation answer: cancel');
+        },
+        { columns, rows },
+      ));
+  }
+});
+
+describe('CHD-524 Note cursor editing', () => {
+  for (const [name, value, pasted] of [
+    ['raw LF', '\n', false],
+    ['bracketed LF', '\n', true],
+    ['bracketed CRLF', '\r\n', true],
+  ] as const) {
+    test(`${name} inserts a space at the Note cursor and submits the single-line value`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'askcodex');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press('2');
+          await window.press('\x1b[Z');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.paste('alpha beta');
+          await window.press('\x1b[1;3D');
+
+          if (pasted) {
+            await window.paste(value);
+          } else {
+            await window.press(value);
+          }
+
+          await window.type('X');
+          await window.shows('Note  alpha  Xbeta');
+          await window.press(TAB);
+          await window.paste('fixture-token');
+          await window.press('\r');
+          await window.press('\r');
+          await window.shows('"next_note":"alpha  Xbeta"');
+          await window.shows('"next":"Review existing work"');
+        },
+        { columns: 120, rows: 40 },
+      ));
+  }
+
+  test('agent focus round trips keep cursor, choice and corrected submitted content', () =>
+    withChild(
+      async (window) => {
+        await openOther(window);
+        await send(window, 'askcodex');
+        await inputAsked(window, 'fake asks you 2 questions');
+        await window.press('2');
+        await window.press('\x1b[Z');
+        await window.press(DOWN);
+        await window.press(DOWN);
+        await window.paste('alpha beta gamma');
+        await window.press('\x1b[1;3D');
+        await pickAgent(window, 'other');
+        await send(window, 'text');
+        await window.shows('Hello, world.');
+        await pickAgent(window, 'main');
+        await inputAsked(window, 'fake asks you 2 questions');
+        await window.type('X');
+        await window.shows('Note  alpha beta Xgamma');
+        await window.press(TAB);
+        await window.paste('fixture-token');
+        await window.press('\r');
+        await window.shows('Review existing work · alpha beta Xgamma');
+        await window.press('\r');
+        await window.shows('"next_note":"alpha beta Xgamma"');
+        await window.shows('"next":"Review existing work"');
+      },
+      { columns: 120, rows: 40 },
+    ));
+
+  async function note(text = '', columns = 80, kept?: AskState) {
+    const { questions } = askedCodex();
+    const question = questions.questions[0]!;
+    let state: AskState = kept ?? {
+      ...openAsk(questions),
+      row: question.options.length,
+      answers: {
+        [question.id]: {
+          picks: [question.options[0]!.value],
+          text: '',
+          own: text,
+          ownChosen: false,
+        },
+      },
+    };
+    const drawn = await draw(
+      <QuestionBox
+        wait={{
+          id: 'note',
+          mode: 'form',
+          message: CODEX_QUESTIONS.message,
+          schema: CODEX_QUESTIONS.requestedSchema,
+        }}
+        filled={state}
+        questions={questions}
+        agent='fake'
+        width={columns}
+        windowRows={24}
+        active
+        onFill={(next) => {
+          state = next;
+        }}
+        onAnswer={() => {}}
+      />,
+      { columns, rows: 24 },
+    );
+
+    return {
+      ...drawn,
+      state: () => state,
+      text: () => answerTo(state, question).own,
+      cursor: () => state.noteCursors?.[question.id],
+      picks: () => answerTo(state, question).picks,
+      question,
+    };
+  }
+
+  test('word moves repair a typo at the cursor, retaining the selected answer', async () => {
+    const view = await note('Please use teh parser');
+
+    try {
+      await view.write('\x1b[1;3D');
+      expect(view.cursor()).toBe(15);
+      await view.write('\x1b[1;3D');
+      expect(view.cursor()).toBe(11);
+      await view.write('\x1b[1;3C');
+      await view.write('\x7f');
+      await view.write('\x7f');
+      await view.write('\x7f');
+      await view.write('\x7f');
+      await view.write('the ');
+      expect(view.text()).toBe('Please use the parser');
+      expect(view.picks()).toEqual([view.question.options[0]!.value]);
+      expect(view.state().step).toBe(0);
+    } finally {
+      await view.unmount();
+    }
+  });
+
+  test('cmd arrows use displayed wrapped lines and the editor stays bounded', async () => {
+    const view = await note('x'.repeat(160));
+
+    try {
+      await view.write('\x1b[1;9D');
+      expect(view.cursor()).toBe(136);
+      await view.write('Q');
+      expect(view.text()).toBe('x'.repeat(136) + 'Q' + 'x'.repeat(24));
+      await view.write('\x1b[1;9C');
+      expect(view.cursor()).toBe(161);
+      expect(view.frame()).toContain('Esc to cancel');
+      expect(view.frame().split('\n').length).toBeLessThanOrEqual(24);
+    } finally {
+      await view.unmount();
+    }
+  });
+
+  test('bare arrows and Tab navigate, and row and request remounts retain the cursor', async () => {
+    let view = await note('alpha beta gamma');
+
+    try {
+      await view.write('\x1b[1;3D');
+
+      const cursor = view.cursor();
+
+      await view.write('\x1b[A');
+      await view.write('\x1b[B');
+      expect(view.cursor()).toBe(cursor);
+      await view.write('\x1b[C');
+      expect(view.state().step).toBe(1);
+      await view.write('\x1b[D');
+      expect(view.state().step).toBe(0);
+
+      for (const _ of view.question.options) {
+        await view.write('\x1b[B');
+      }
+
+      expect(view.cursor()).toBe(cursor);
+      await view.write('\t');
+      expect(view.state().step).toBe(1);
+      await view.write('\x1b[Z');
+
+      for (const _ of view.question.options) {
+        await view.write('\x1b[B');
+      }
+
+      const kept = view.state();
+
+      await view.unmount();
+
+      view = await note('', 80, kept);
+
+      await view.write('X');
+      expect(view.text()).toBe('alpha beta Xgamma');
+    } finally {
+      await view.unmount();
+    }
+  });
+
+  test('paste retains existing newline and control meanings at the cursor', async () => {
+    const view = await note('alpha beta');
+
+    try {
+      await view.write('\x1b[1;3D');
+      await view.paste('A\rB\nC\r\nD\tE\x01F');
+      expect(view.text()).toBe('alpha A B C D\tE\x01Fbeta');
+      await view.write('!');
+      expect(view.text()).toBe('alpha A B C D\tE\x01F!beta');
+      await view.write('\x7f');
+      expect(view.text()).toBe('alpha A B C D\tE\x01Fbeta');
+    } finally {
+      await view.unmount();
+    }
+  });
+
+  test('empty and Unicode notes edit without altering another request', async () => {
+    let view = await note();
+
+    try {
+      await view.paste('hello 世界 👋');
+      await view.write('\x1b[1;9D');
+      await view.write('é ');
+      expect(view.text()).toBe('é hello 世界 👋');
+      await view.write('\x15');
+      expect(view.text()).toBe('');
+      await view.unmount();
+
+      view = await note();
+
+      expect(view.text()).toBe('');
+      await view.write('new');
+      expect(view.text()).toBe('new');
+    } finally {
+      await view.unmount();
+    }
+  });
+});
+
+describe('CHD-524 tester: Note request ownership', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`cancelled cursor state cannot enter the next request at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'askcodex');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          await window.paste('abandoned note');
+          await window.press('\x1b[1;3D');
+          await window.press(ESC);
+          await window.shows('Elicitation answer: cancel');
+          await send(window, 'askcodex');
+          await inputAsked(window, 'fake asks you 2 questions');
+          await window.press('2');
+          await window.press('\x1b[Z');
+          await window.press(DOWN);
+          await window.press(DOWN);
+          expect(window.frame()).not.toContain('abandoned note');
+          await window.press('\x1b[1;3D');
+          await window.press('\x7f');
+          await window.paste('hello 世界');
+          await window.press('\x1b[1;9D');
+          await window.type('é ');
+          await window.shows('Note  é hello 世界');
+          await window.press(TAB);
+          await window.paste('fixture-token');
+          await window.press('\r');
+          await window.press('\r');
+          await window.shows('"next_note":"é hello 世界"');
+          await window.shows('"next":"Review existing work"');
         },
         { columns, rows },
       ));

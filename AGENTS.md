@@ -82,11 +82,17 @@ bun dev memory            # long-run memory check; options in docs/memory.md
 ```
 
 `bun dev release --help` lists its stages and selection flags. Give it the
-version or bump instead of editing package.json's version by hand. A new
-version needs `compile`; a publishing run commits and pushes it to main
-before any stage. A dry run or run without publish drops its local commit
-at the end. A dry run still submits to Apple; add `--skip notarise` to
-leave that stage out. See `docs/guide.md` for failure and signal cleanup.
+version or bump instead of editing package.json's version by hand. After all
+eligibility guards, every run requires npm authentication, including dry runs
+and runs without publish. A failed `npm whoami` requires stdin and stdout
+terminals for one plain `npm login`, then a successful `npm whoami` recheck;
+otherwise it stops before release work. Failed, cancelled or interrupted login
+stops too. npm may open a browser and save credentials or registry settings
+even in a dry run. Stage selection cannot skip authentication. A new version
+needs `compile`; a publishing run commits and pushes it to main before any
+stage. A dry run or run without publish drops its local commit at the end.
+A dry run still submits to Apple; add `--skip notarise` to leave that stage
+out. See `docs/guide.md` for failure and signal cleanup.
 
 ## How code is written
 

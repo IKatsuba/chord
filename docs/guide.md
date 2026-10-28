@@ -356,6 +356,13 @@ in the accent colour. A long-lived child uses its name, bold in its colour;
 a team member adds its team, dim: `tester · bugfix asks…`. Between turns,
 main uses `main` and the heading ends ` · between turns`.
 
+In a question's non-secret Note beside choices, option+←/→ (alt+←/→)
+moves by word; cmd+←/→ moves to the displayed line's start or end, where
+the terminal passes those keys. Typing, backspace and paste edit at the
+cursor; pasted line breaks become spaces. Bare ←/→ and Tab still move
+between questions; ↑/↓ moves between rows. Returning to a question or agent
+keeps its note and cursor.
+
 A permission, form, question or link arriving with no turn running leaves
 the keys and draft in the prompt. Its asker row ends ` · between turns`, and
 `ctrl+x a to answer` moves the keys into the box. The front status line
@@ -1284,9 +1291,18 @@ the selected stages. `--package` selects one package to publish.
 `--dry-run` stops before publishing but still submits to Apple;
 `--dry-run --skip notarise` leaves out that submission.
 
-Preflight checks a clean tree, the version and npm login. Publishing also
-needs `main` equal to `origin/main` and no `v<version>` tag. A new version
-is then written into package.json and committed alone as
+Preflight checks a clean tree and the version. Publishing also needs `main`
+equal to `origin/main` and no `v<version>` tag. After all eligibility guards,
+every run requires successful `npm whoami`, including dry runs and runs
+without `publish`; stage selection cannot skip authentication. Success
+needs no terminal. On failure, stdin and stdout must both be terminals:
+the release runs plain `npm login` once in that terminal, then requires a
+successful `npm whoami` recheck. Without those terminals, or if login fails,
+is cancelled or interrupted, or the recheck fails, the release stops before
+release work. npm may open a browser and save credentials or registry
+settings, even during a dry run.
+
+A new version is then written into package.json and committed alone as
 `chore: chord v<version>` before any stage. A publishing run pushes main
 first. If the push fails, it drops the local commit and stops; a later
 failure leaves the pushed commit on origin. Rerun with no version, or the

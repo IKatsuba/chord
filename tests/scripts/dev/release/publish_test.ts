@@ -17,6 +17,7 @@ import {
   type Release,
   ReleaseError,
 } from '../../../../scripts/dev/release/lib.ts';
+import { authenticate } from '../../../../scripts/dev/release/authenticate.ts';
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
 import { publish } from '../../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
@@ -185,6 +186,8 @@ function context(): Release {
 /** A release that publishes, as preflight then publish run it. */
 async function release(only?: Package): Promise<boolean> {
   const found = preflight(context(), { dryRun: false, publish: true });
+
+  authenticate(context());
 
   return await publish(context(), { version: found.version, only });
 }
@@ -485,12 +488,11 @@ describe('preflight', () => {
     );
   });
 
-  test('refuses without an npm login', async () => {
+  test('eligibility does not attempt authentication', () => {
     writeFileSync(join(state, 'logged-out'), '');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
-      'npm whoami failed: npm error code ENEEDAUTH',
-    );
+    expect(preflight(context(), fresh).mode).toBe('resume');
+    expect(lines('npm.log').includes('whoami')).toBe(false);
   });
 
   test('a run without publish asks nothing of main or the tags', () => {

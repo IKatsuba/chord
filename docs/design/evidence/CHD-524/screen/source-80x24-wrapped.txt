@@ -1,0 +1,24 @@
+ ▄▀▀▀   /tmp/chord-qa.chd524-designer-narrow
+ ▀▀     ? for shortcuts · /help
+
+ › askcodex
+
+ ››› Waiting for your input… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                             answers itself in 4:57 │
+│                                                                              │
+│ ← * ◉ Next step   * ○ Token   ○ Submit →                                     │
+│                                                                              │
+│   ↑ 2 more                                                                   │
+│   3. None of the above                                                       │
+│      Provide a different answer in the note field.                           │
+│                                                                              │
+│ ❯ Note  alpha beta gamma alpha beta gamma alpha beta gamma alpha beta gamma  │
+│         alpha beta gamma alpha beta gamma alpha beta gamma alpha beta gamma  │
+│         alpha beta gamma alpha beta gamma alpha beta gamma alpha beta gamma  │
+│         HOMEalpha beta gamma alpha beta gamma END                            │
+│                                                                              │
+│ Enter for the next · ↑ options · ←→ questions · Esc to cancel                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

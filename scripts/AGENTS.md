@@ -16,7 +16,14 @@
   SIGTERM or SIGHUP too. SIGKILL may leave it: `git reset --keep HEAD~1`.
   Rerun with no version, or the same one, to release package.json's version.
 - Release stages live in `dev/release/`. Select them with `--skip`, `--only`,
-  `--from` and `--to`; preflight always runs. `--package` selects a publish.
+  `--from` and `--to`; preflight always runs. After all eligibility guards,
+  mandatory npm authentication precedes release work, including dry runs and
+  runs without publish; no stage selection skips it. Successful `npm whoami`
+  needs no terminal. On failure, stdin and stdout must be terminals for one
+  plain `npm login` with inherited stdio and a required `npm whoami` recheck.
+  Missing terminals, failed or cancelled login, signals or a failed recheck
+  stop the release. npm may open a browser and save credentials or registry
+  settings even in a dry run. `--package` selects a publish.
 - `dev/compile.ts` uses `Bun.build` with a plugin resolving OpenTUI's
   `react/jsx-dev-runtime` imports to `dev/jsx_dev_runtime.ts` on React's
   production runtime. Its `buildOptions` also builds the boundary test.

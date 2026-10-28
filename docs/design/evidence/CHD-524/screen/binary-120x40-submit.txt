@@ -1,0 +1,40 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd524-binary/project
+ ▀▀     ? for shortcuts · /help
+
+ › askcodex
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                                     answers itself in 4:58 │
+│                                                                                                                      │
+│ ← * ✔ Next step   * ✔ Token   ◉ Submit →                                                                             │
+│                                                                                                                      │
+│ Next step  Review existing work · A B C Dalpha beta Xgamma                                                           │
+│ Token      •••••••                                                                                                   │
+│                                                                                                                      │
+│ ❯ 1. Send the answers                                                                                                │
+│   2. Skip these questions                                                                                            │
+│                                                                                                                      │
+│ Enter to choose · ←→ or Tab for the questions · Esc to cancel                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

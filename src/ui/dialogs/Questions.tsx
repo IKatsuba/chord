@@ -1,6 +1,12 @@
 import { TextAttributes } from '@opentui/core';
 import cliTruncate from 'cli-truncate';
-import { type ReactNode, useEffect, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import type { ElicitationReply } from '../../session/elicitations.ts';
@@ -10,6 +16,7 @@ import { paint, useColours } from '../app/context.ts';
 import { usePasted, usePress } from '../app/input.ts';
 import { borderOf } from '../pickers/Pickers.tsx';
 import { BLOCK } from '../prompt/Prompt.tsx';
+import { TextArea, type TextareaRenderable } from '../prompt/TextArea.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { Gutter } from '../transcript/tools/Tool.tsx';
@@ -30,10 +37,13 @@ import {
   blockers,
   capLines,
   clock,
+  changedNote,
   expiresIn,
+  editableNote,
   headerOf,
   openAsk,
   ownIsOption,
+  noteEdits,
   rowsOf,
   windowOf,
 } from './questions.ts';
@@ -109,6 +119,7 @@ export function QuestionBox({
   const [state, setState] = useState(() => filled ?? openAsk(questions));
   // Keys that land in one tick each see the one before.
   const latest = useRef(state);
+  const note = useRef<TextareaRenderable | null>(null);
   const colours = useColours();
   const inner = Math.max(width - 4, 10);
   const [time, setTime] = useState(now);
@@ -126,22 +137,57 @@ export function QuestionBox({
     return () => clearInterval(timer);
   }, [questions.expiresInMs, now]);
 
-  usePasted(
-    (text) => {
-      const next = askPaste(questions, latest.current, text);
+  const paste = (text: string) => {
+    const next = askPaste(questions, latest.current, text);
 
-      latest.current = next;
+    const question = questions.questions[latest.current.step];
 
-      setState(next);
-      onFill?.(next);
+    if (
+      question &&
+      editableNote(question) &&
+      rowsOf(question)[latest.current.row]?.kind === 'own'
+    ) {
+      // Keep the existing paste value policy; only its insertion point changes.
+      const before = answerTo(latest.current, question).own;
+      const pasted = answerTo(next, question).own.slice(before.length);
+
+      note.current?.insertText(pasted);
 
       return true;
-    },
-    { isActive: active },
-  );
+    }
+
+    latest.current = next;
+
+    setState(next);
+    onFill?.(next);
+
+    return true;
+  };
+
+  usePasted(paste, { isActive: active });
 
   usePress(
     (input, key) => {
+      const question = questions.questions[latest.current.step];
+      const row = question && rowsOf(question)[latest.current.row];
+
+      if (question && editableNote(question) && row?.kind === 'own') {
+        // OpenTUI's linefeed key must keep the Note's single-line value policy.
+        if (input === '\n') {
+          return paste(input);
+        }
+
+        if (noteEdits(input, key)) {
+          return false;
+        }
+
+        if (key.ctrl && input === 'u') {
+          note.current?.setText('');
+
+          return true;
+        }
+      }
+
       const step = askKey(questions, wait.schema, latest.current, input, key);
 
       latest.current = step.state;
@@ -156,6 +202,8 @@ export function QuestionBox({
       if (step.leave) {
         onLeave?.();
       }
+
+      return true;
     },
     { isActive: active },
   );
@@ -170,7 +218,20 @@ export function QuestionBox({
   const body =
     state.step < questions.questions.length ? (
       <QuestionStep
+        key={questions.questions[state.step]!.id}
         question={questions.questions[state.step]!}
+        note={note}
+        active={active && !hidden && !held && !away}
+        onNote={(own, cursor) => {
+          const current = latest.current;
+          const question = questions.questions[current.step]!;
+          const next = changedNote(current, question, own, cursor);
+
+          latest.current = next;
+
+          setState(next);
+          onFill?.(next);
+        }}
         state={shown}
         width={inner}
         limit={formRowLimit(windowRows) - BOX_CHROME}
@@ -312,7 +373,13 @@ function QuestionStep({
   state,
   width,
   limit,
+  note,
+  active,
+  onNote,
 }: {
+  note: { current: TextareaRenderable | null };
+  active: boolean;
+  onNote: (text: string, cursor: number) => void;
   question: Question;
   state: AskState;
   width: number;
@@ -322,6 +389,7 @@ function QuestionStep({
   const answer = answerTo(state, question);
   const rows = rowsOf(question);
   const lines: { node: ReactNode; row?: number }[] = [];
+  let editorRows = 1;
   const marker = (index: number) => (
     <Gutter {...paint(colours.permission)}>
       {index === state.row ? '❯' : ' '}
@@ -443,6 +511,53 @@ function QuestionStep({
       return;
     }
 
+    const placeholder = cliTruncate(
+      own.placeholder ?? 'your own answer (optional)',
+      Math.max(width - 9, 1),
+    );
+
+    if (editableNote(question)) {
+      const editorWidth = Math.max(width - 8, 1);
+
+      editorRows = Math.min(
+        wrapAnsi(answer.own + ' ', editorWidth, {
+          hard: true,
+          trim: false,
+        }).split('\n').length,
+        Math.max(Math.max(limit, 6) - 3, 1),
+      );
+
+      lines.push({ node: <text {...TEXT}> </text> });
+      lines.push({
+        row: index,
+        node: (
+          <box flexDirection='row'>
+            {marker(index)}
+            <text
+              {...TEXT}
+              {...tone}
+              attributes={focused ? BOLD : 0}
+              flexShrink={0}
+            >
+              Note{'  '}
+            </text>
+            <NoteEditor
+              editor={note}
+              text={answer.own}
+              cursor={state.noteCursors?.[question.id]}
+              focused={focused && active}
+              placeholder={placeholder}
+              width={editorWidth}
+              height={editorRows}
+              onChange={onNote}
+            />
+          </box>
+        ),
+      });
+
+      return;
+    }
+
     lines.push({ node: <text {...TEXT}> </text> });
     lines.push({
       row: index,
@@ -474,7 +589,7 @@ function QuestionStep({
   const shown = windowed(
     lines.map((line, index) => ({ ...line, key: `${question.id}:${index}` })),
     state.row,
-    Math.max(limit, 6),
+    Math.max(limit, 6) - (editorRows - 1),
   );
 
   return (
@@ -485,6 +600,59 @@ function QuestionStep({
         </box>
       ))}
     </box>
+  );
+}
+
+/** The public edit buffer owns text, word boundaries and wrapped-line moves. */
+function NoteEditor({
+  editor,
+  text,
+  cursor,
+  focused,
+  placeholder,
+  width,
+  height,
+  onChange,
+}: {
+  editor: { current: TextareaRenderable | null };
+  text: string;
+  cursor: number | undefined;
+  focused: boolean;
+  placeholder: string;
+  width: number;
+  height: number;
+  onChange: (text: string, cursor: number) => void;
+}) {
+  useLayoutEffect(() => {
+    if (editor.current) {
+      if (cursor === undefined) {
+        editor.current.gotoBufferEnd();
+      } else {
+        editor.current.cursorOffset = cursor;
+      }
+    }
+  }, []);
+
+  const changed = () => {
+    const area = editor.current;
+
+    if (area) {
+      onChange(area.plainText, area.cursorOffset);
+    }
+  };
+
+  return (
+    <TextArea
+      ref={editor}
+      initialValue={text}
+      focused={focused}
+      placeholder={placeholder}
+      width={width}
+      height={height}
+      wrapMode='char'
+      onContentChange={changed}
+      onCursorChange={changed}
+    />
   );
 }
 

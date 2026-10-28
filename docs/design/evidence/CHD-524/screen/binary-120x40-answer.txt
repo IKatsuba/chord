@@ -1,0 +1,40 @@
+ ▀▄     chord v0.60.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd524-binary/project
+ ▀▀     ? for shortcuts · /help
+
+ › askcodex
+   ⎿  fake asked · Next step  Review existing work · A B C Dalpha beta Xgamma
+                   Token      (hidden)
+
+ ⏺ Elicitation answer: accept
+   {"next":"Review existing work","next_note":"A B C Dalpha beta Xgamma","token":"fixture"}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

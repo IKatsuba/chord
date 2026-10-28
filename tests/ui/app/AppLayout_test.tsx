@@ -122,7 +122,12 @@ for (const [columns, rows] of [
   });
 }
 
-for (const mode of ['one-row', 'zero-submit', 'zero-resize'] as const) {
+for (const mode of [
+  'one-row',
+  'zero-submit',
+  'zero-resize',
+  'resize-close',
+] as const) {
   test(`reachable pressure ${mode} preserves draft and visible selection (CHD-525)`, async () => {
     let latest: WindowedState | undefined;
     const crowded = mode !== 'one-row';
@@ -132,7 +137,7 @@ for (const mode of ['one-row', 'zero-submit', 'zero-resize'] as const) {
       stripAnsi(window.frame())
         .split('\n')
         .map((line, at) => ({ line: line.replace(/\d+s/g, 'Ns'), at }))
-        .filter(({ line }) => /^ {4}(main|other|parser|…)/.test(line));
+        .filter(({ line }) => /^ {4}(main|other|parser|docs|…)/.test(line));
 
     await withChild(
       async (window) => {
@@ -197,27 +202,29 @@ for (const mode of ['one-row', 'zero-submit', 'zero-resize'] as const) {
           expect(latest?.window.finder.highlighted).toBe(5);
         }
 
-        await window.press(ESC);
-        await until(
-          'finder dismissed',
-          () => latest?.window.finder.dismissed === true,
-        );
-        expect(current().draft).toBe(draft);
-        expect(current().cursor).toEqual(cursor);
-        expect(borders(window)).toEqual(opened);
-        expect(permanent(window)).toEqual(pinned);
-        await window.press(BACKSPACE);
-        await window.type('@');
-        await until(
-          'finder reopened',
-          () =>
-            !latest?.window.finder.dismissed &&
-            Boolean(latest?.window.completionHidden) === crowded,
-        );
-        expect(current().draft).toBe(draft);
-        expect(current().cursor).toEqual(cursor);
-        expect(borders(window)).toEqual(opened);
-        expect(permanent(window)).toEqual(pinned);
+        if (mode !== 'resize-close') {
+          await window.press(ESC);
+          await until(
+            'finder dismissed',
+            () => latest?.window.finder.dismissed === true,
+          );
+          expect(current().draft).toBe(draft);
+          expect(current().cursor).toEqual(cursor);
+          expect(borders(window)).toEqual(opened);
+          expect(permanent(window)).toEqual(pinned);
+          await window.press(BACKSPACE);
+          await window.type('@');
+          await until(
+            'finder reopened',
+            () =>
+              !latest?.window.finder.dismissed &&
+              Boolean(latest?.window.completionHidden) === crowded,
+          );
+          expect(current().draft).toBe(draft);
+          expect(current().cursor).toEqual(cursor);
+          expect(borders(window)).toEqual(opened);
+          expect(permanent(window)).toEqual(pinned);
+        }
 
         if (mode === 'zero-submit') {
           await window.press('\r');
@@ -227,7 +234,7 @@ for (const mode of ['one-row', 'zero-submit', 'zero-resize'] as const) {
           );
           expect(current().draft).toBe('');
           expect(current().queue.at(-1)?.text).not.toContain('pressure-file');
-        } else if (mode === 'zero-resize') {
+        } else if (mode === 'zero-resize' || mode === 'resize-close') {
           await window.resize({ rows: 25 });
           await until(
             'one row restores completion',
@@ -240,6 +247,33 @@ for (const mode of ['one-row', 'zero-submit', 'zero-resize'] as const) {
           }
 
           await window.shows('pressure-file5.ts');
+
+          if (mode === 'resize-close') {
+            // The owner accepted this exact tight-window fold transition.
+            expect(borders(window)).toEqual({ top: 11, bottom: 20 });
+            expect(permanent(window)).toHaveLength(3);
+            expect(latest?.window.finder.highlighted).toBe(5);
+            await window.press(ESC);
+            await until(
+              'accepted resize-close agents growth',
+              () =>
+                latest?.window.finder.dismissed === true &&
+                permanent(window).length === 4,
+            );
+            expect(borders(window)).toEqual({ top: 10, bottom: 19 });
+            expect(current().draft).toBe(draft);
+            expect(current().cursor).toEqual(cursor);
+            expect(current().queue.map(({ text }) => text)).toEqual(
+              Array.from({ length: 4 }, (_, i) => `queued ${i}`),
+            );
+            expect(window.pids).toHaveLength(9);
+            expect(row(window, 'Read the code')).toBeGreaterThanOrEqual(0);
+            expect(row(window, 'Working')).toBeGreaterThanOrEqual(0);
+            expect(window.frame()).not.toContain('pressure-file');
+
+            return;
+          }
+
           await window.resize({ rows: 24 });
           await until(
             'zero room suppresses completion',

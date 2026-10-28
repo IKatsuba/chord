@@ -7534,3 +7534,34 @@ Positive room restores the list and public scrolling normally. The existing
 status hint may say `not enough space`; its row and higher-priority status
 semantics stay unchanged. No new panel, minimum-height displacement, queue
 or plan budget, key binding, renderer, parser or dependency was introduced.
+
+### Subsequent owner disposition: a bounded pressure exception
+
+The actual owner was shown the saved 80-by-25 open/closed real-terminal
+pair from `66290d2a` and accepted leaving that demonstrated behavior for
+now. Starting at 80-by-24, the fixture runs nine fake processes, a running
+plan, four queued prompts and the same eight-line draft ending in `@`.
+After resizing to 80-by-25 and selecting file 5, Escape moves prompt borders
+from rows 12/21 to 11/20 (one-based), while permanent agents grow from three
+physical rows to four. Draft and cursor remain unchanged. The owner accepts
+this specific tight-window resize/close transition; this is not permission
+for arbitrary prompt movement or a blanket pressure-folding policy.
+
+The original implementation is retained. Ordinary same-draft comparisons at
+120-by-40 and 80-by-24 still require fixed prompt borders, with existing
+help paging, key priority and the delegated zero-visible-item safety rule
+unchanged. The exact resize/close regression records the accepted movement
+and agents growth rather than asserting fixed geometry for that exception.
+The [design](design/CHD-525.md) records the superseding contract; its
+[investigation](design/evidence/CHD-525/investigation/README.md) preserves
+the original captures and historical failure against the earlier contract.
+
+A subsequent uncommitted native closed-baseline measurement trial failed
+three of nine reached checks: resize/permanent-content equality and two
+existing help-paging cases. It was stopped and saved separately, not
+integrated. A later native-column proposal was rejected by source inspection
+before any runtime trial. Neither finding proves public API exhaustion.
+The limited owner acceptance supersedes the need to resolve this particular
+demonstrated shift; it does not approve either investigation's code, a
+custom baseline measurement path, sticky height policy or layout engine.
+No new library or production layout change accompanies this disposition.

@@ -606,7 +606,7 @@ describe('Tab sends the oldest queued message into the running turn (CHD-535)', 
   test('on an agent that steers, the oldest goes in, then the next, the draft left as it is', () =>
     withWindow(
       async (window) => {
-        await send(window, 'slow');
+        await send(window, 'readsheld');
         await window.shows('esc to interrupt');
         await send(window, 'Use the second parser instead');
         await send(window, 'Then update the changelog');
@@ -639,7 +639,7 @@ describe('Tab sends the oldest queued message into the running turn (CHD-535)', 
 
   test('on an agent that does not, it stays queued, the draft stays, and the status line says why', () =>
     withWindow(async (window) => {
-      await send(window, 'slow');
+      await send(window, 'readsheld');
       await window.shows('esc to interrupt');
       await send(window, 'Use the second parser instead');
       await draft(window, 'and keep the old one');
@@ -660,7 +660,7 @@ describe('Tab sends the oldest queued message into the running turn (CHD-535)', 
   test('refused while the turn runs, it is back in its row and the status line says so', () =>
     withWindow(
       async (window) => {
-        await send(window, 'slow');
+        await send(window, 'readsheld');
         await window.shows('esc to interrupt');
         await send(window, 'Use the second parser instead');
         await window.press(TAB);
@@ -774,7 +774,7 @@ describe('Tab sends the oldest queued message into the running turn (CHD-535)', 
     withWindow(
       async (window) => {
         await writeFile(join(window.dir, 'a.ts'), '');
-        await send(window, 'slow');
+        await send(window, 'readsheld');
         await window.shows('esc to interrupt');
 
         // Typed key by key: pasted, the path would be read at once.
@@ -1420,7 +1420,7 @@ describe('CHD-535 U2 tester: queued ownership through the window', () => {
 
     return withWindow(
       async (window) => {
-        await send(window, 'slow');
+        await send(window, 'readsheld');
         await window.shows('esc to interrupt');
         await window.type('keep this draft');
         await window.press('\x19');
@@ -1449,7 +1449,7 @@ describe('CHD-535 U2 tester: queued ownership through the window', () => {
         await window.press(ESC);
         await window.press('\x15');
 
-        for (const previous of ['second queued', 'first queued', 'slow']) {
+        for (const previous of ['second queued', 'first queued', 'readsheld']) {
           await window.press(UP);
           await until(
             'unchanged submission history',
@@ -1573,7 +1573,7 @@ describe('CHD-535 U2 tester: queued ownership through the window', () => {
     await withWindow(
       async (window) => {
         try {
-          await send(window, 'slow');
+          await send(window, 'readsheld');
           await window.shows('esc to interrupt');
           await send(window, 'old queued');
 

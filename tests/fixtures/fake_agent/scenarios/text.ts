@@ -100,6 +100,21 @@ export const TEXT = {
     return 'end_turn';
   },
 
+  // Says `Working`, then reads each message steered in as it comes and says
+  // nothing else, until it is cancelled, at most a test's own minute: a test
+  // can queue and type first however slow the machine, and what the turn
+  // read stays on screen (CHD-552).
+  async readsheld(turn) {
+    await turn.say('Working');
+
+    for (const end = performance.now() + 60_000; performance.now() < end;) {
+      await pause(turn.signal);
+      await turn.read();
+    }
+
+    return 'end_turn';
+  },
+
   async thought(turn) {
     await turn.think('Considering', ' the question.');
     await turn.say('Here is', ' the answer.');

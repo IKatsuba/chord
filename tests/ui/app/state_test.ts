@@ -1031,3 +1031,49 @@ test("a code block's failed note outlives a selection's going, which takes a fai
     reduceApp(selection, { type: 'selection_gone' }).copied,
   ).toBeUndefined();
 });
+
+describe('CHD-535 U2 tester: steering note routing', () => {
+  test('a background refusal preserves its queued row without overwriting the foreground note or draft', () => {
+    const first = reduceWindowed(windowed(ready, 1), {
+      type: 'agent_opened',
+      key: 2,
+    });
+    const foreground = reduceWindowed(
+      reduceWindowed(first, { type: 'draft_set', text: 'front draft' }),
+      { type: 'steer_refused', refused: false },
+    );
+    const note = foreground.window.steerRefused;
+    const background = reduceWindowed(foreground, {
+      type: 'in_session',
+      key: 2,
+      action: {
+        type: 'queued',
+        turnId: 'other-queue',
+        text: 'other payload',
+        refused: true,
+      },
+    });
+
+    expect(background.window.steerRefused).toEqual(note);
+    expect(frontState(background).draft).toBe('front draft');
+    expect(background.sessions[2]?.queue).toMatchObject([
+      { turnId: 'other-queue', text: 'other payload' },
+    ]);
+
+    const switched = reduceWindowed(background, {
+      type: 'session_shown',
+      key: 2,
+    });
+    const restarted = reduceWindowed(switched, {
+      type: 'steer_refused',
+      refused: true,
+    });
+
+    expect(restarted.window.steerRefused?.id).not.toBe(note?.id);
+    expect(
+      reduceWindowed(restarted, { type: 'steer_note_gone', id: note!.id })
+        .window.steerRefused,
+    ).toEqual(restarted.window.steerRefused);
+    expect(restarted.sessions[1]?.draft).toBe('front draft');
+  });
+});

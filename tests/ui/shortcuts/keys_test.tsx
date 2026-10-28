@@ -1978,3 +1978,64 @@ test('CHD-524 focused Note word and visual-line presses share the existing panel
     await view.unmount();
   }
 });
+
+describe('CHD-535 U2 tester: rebound queued action', () => {
+  test('the bound key and panel act on an eligible row and stop when it is taken', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          {
+            context: 'Chat',
+            bindings: { tab: null, 'super+enter': 'chat:steer' },
+          },
+        ],
+      }),
+    );
+    const enter: KeyPress = {
+      ctrl: false,
+      escape: false,
+      return: true,
+      super: true,
+    };
+    const queued = {
+      ...reduceApp(STATES.busy!, {
+        type: 'queued',
+        turnId: 'q',
+        text: 'queued',
+      }),
+      keys: keymap,
+    };
+    const lines = shortcuts(keymap).map(shortcutLine);
+
+    expect(problems).toEqual([]);
+    expect(keyCommand('', enter, queued, '')).toBe('steer');
+    expect(keyCommand('', enter, queued, 'draft stays')).toBe('steer');
+    expect(lines[lines.indexOf('enter to send') + 1]).toBe(
+      'cmd + enter to send the oldest queued now',
+    );
+    expect(
+      keyCommand('', enter, { ...STATES.busy!, keys: keymap }, 'draft stays'),
+    ).toBeUndefined();
+    expect(
+      keyCommand(
+        '',
+        enter,
+        reduceApp(queued, {
+          type: 'queued',
+          turnId: 'q',
+          text: 'queued',
+          taken: true,
+        }),
+        'draft stays',
+      ),
+    ).toBeUndefined();
+    expect(
+      keyCommand(
+        '',
+        { ctrl: false, escape: false, tab: true },
+        queued,
+        'draft stays',
+      ),
+    ).toBeUndefined();
+  });
+});

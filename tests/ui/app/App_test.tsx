@@ -3,6 +3,9 @@
  * the keys that quit, clear and edit.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import assert from 'node:assert/strict';
+import { openSession, type Session } from '../../../src/session/session.ts';
+import { frontState, type AppState } from '../../../src/ui/app/state.ts';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { writeFile } from 'node:fs/promises';
@@ -39,7 +42,7 @@ import {
 } from './render.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { PIXEL_BYTES, PIXEL_PNG } from '../../fixtures/images.ts';
-import { RECEIVED } from '../prompt/prompt_window.tsx';
+import { pixelClipboard, RECEIVED } from '../prompt/prompt_window.tsx';
 import { STEER_REFUSED, UNSTEERED } from '../../../src/ui/status/Status.tsx';
 import manifest from '../../../package.json' with { type: 'json' };
 
@@ -1246,4 +1249,402 @@ describe('CHD-394 U4 tester: unbound pick fallback', () => {
         },
       ));
   }
+});
+
+describe('CHD-535 U2 tester: queued ownership through the window', () => {
+  for (const outcome of ['injected', 'refused'] as const) {
+    for (const columns of [80, 120]) {
+      test(`early Esc keeps an image and link owned until late ${outcome} at ${columns} columns`, async () => {
+        const release = Promise.withResolvers<void>();
+        const outcomes: string[] = [];
+        const steers: Parameters<Session['steer']>[] = [];
+        const prompts: Parameters<Session['prompt']>[] = [];
+        let state: AppState | undefined;
+        const text = 'see [Image #1] @a.ts done';
+        const users = () =>
+          state?.transcript.entries.filter(
+            (entry) => entry.kind === 'user' && entry.text === text,
+          ) ?? [];
+
+        await withWindow(
+          async (window) => {
+            try {
+              await writeFile(join(window.dir, 'a.ts'), '');
+              await send(window, 'texttillsteeredheld');
+              await window.shows('This reply came in chunks.');
+
+              for (const key of 'see /shots/a.png @a.ts done') {
+                await window.press(key);
+              }
+
+              await window.press('\r');
+              await window.shows(`› ${text}`);
+              await until(
+                'image prompt leaves the box',
+                () => state?.draft === '',
+              );
+
+              const original = state?.queue.find((row) => row.text === text);
+
+              assert(original !== undefined);
+
+              const running = state?.transcript.turn;
+
+              assert(running !== undefined && running.status !== 'idle');
+
+              const runningTurnId = running.turnId;
+
+              await window.type('untouched draft');
+              await until(
+                'draft ready',
+                () => state?.draft === 'untouched draft',
+              );
+              await window.press(TAB);
+              await until(
+                'the adapter answered behind the gate',
+                () => outcomes.length === 1,
+              );
+              expect(outcomes).toEqual([outcome]);
+
+              const taken = state?.queue.find(
+                (row) => row.turnId === original.turnId,
+              );
+
+              expect(taken?.taken).toBe(true);
+              expect(taken?.steering).toBeUndefined();
+              await window.press(ESC);
+              await window.shows('Interrupted by user');
+              expect(state?.draft).toBe('untouched draft');
+              expect(state?.images).toEqual([]);
+              expect(users()).toHaveLength(0);
+              release.resolve();
+              await until(
+                'the one owned message delivered',
+                () =>
+                  users().length === 1 &&
+                  !state?.queue.some((row) => row.turnId === original.turnId),
+              );
+              expect(users()[0]?.turnId).toBe(
+                outcome === 'injected' ? runningTurnId : original.turnId,
+              );
+              expect(steers).toHaveLength(1);
+              expect(steers[0]?.slice(0, 3)).toEqual([
+                text,
+                [{ mediaType: 'image/png', data: PIXEL_PNG }],
+                ['a.ts'],
+              ]);
+              expect(
+                prompts.filter(([prompt]) => prompt.includes(text)),
+              ).toHaveLength(outcome === 'refused' ? 1 : 0);
+
+              if (outcome === 'refused') {
+                const fallback = prompts.find(([prompt]) =>
+                  prompt.includes(text),
+                );
+
+                expect([fallback?.[1], fallback?.[2]]).toEqual([
+                  steers[0]?.[1],
+                  steers[0]?.[2],
+                ]);
+                await window.shows(RECEIVED);
+                await window.shows('Received a link: a.ts');
+              }
+
+              expect(statusRow(window)).not.toContain(STEER_REFUSED);
+              expect(state?.draft).toBe('untouched draft');
+              await window.press('\r');
+              await until('only the untouched draft sent', () =>
+                prompts.some(([prompt]) => prompt.includes('untouched draft')),
+              );
+              expect(users()).toHaveLength(1);
+              expect(
+                prompts.find(([prompt]) =>
+                  prompt.includes('untouched draft'),
+                )?.[1] ?? [],
+              ).toEqual([]);
+            } finally {
+              release.resolve();
+            }
+          },
+          {
+            columns,
+            rows: columns === 80 ? 24 : 40,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--steering',
+              'claude',
+              ...(outcome === 'refused' ? ['--steer-refuse'] : []),
+            ),
+            onState: (all) => {
+              state = frontState(all);
+            },
+            readImage: () =>
+              Promise.resolve({
+                mediaType: 'image/png',
+                data: PIXEL_PNG,
+                bytes: PIXEL_BYTES.length,
+              }),
+            openWith: async (options) => {
+              const session = await openSession(options);
+              const steer = session.steer.bind(session);
+              const prompt = session.prompt.bind(session);
+
+              session.prompt = (...args) => {
+                prompts.push(args);
+
+                return prompt(...args);
+              };
+
+              session.steer = async (...args) => {
+                steers.push(args);
+
+                const result = await steer(...args);
+
+                outcomes.push(result);
+                await release.promise;
+
+                return result;
+              };
+
+              return session;
+            },
+          },
+        );
+      });
+    }
+  }
+
+  test('a rebound key sends queued FIFO at 80 columns, leaves draft and history alone, and ignores an empty queue', () => {
+    const steers: string[] = [];
+    let state: AppState | undefined;
+
+    return withWindow(
+      async (window) => {
+        await send(window, 'slow');
+        await window.shows('esc to interrupt');
+        await window.type('keep this draft');
+        await window.press('\x19');
+        expect(steers).toEqual([]);
+        expect(state?.steerRefused).toBeUndefined();
+        await window.press('\x15');
+        await send(window, 'first queued');
+        await send(window, 'second queued');
+        await window.type('keep this draft');
+        await window.press(TAB);
+        expect(steers).toEqual([]);
+        await window.press('\x19');
+        await until(
+          'first queued accepted',
+          () => steers.length === 1 && state?.queue.length === 1,
+        );
+        await window.press('\x19');
+        await until(
+          'second queued accepted',
+          () => steers.length === 2 && state?.queue.length === 0,
+        );
+        await window.press('\x19');
+        expect(steers).toEqual(['first queued', 'second queued']);
+        expect(state?.draft).toBe('keep this draft');
+        expect(state?.steerRefused).toBeUndefined();
+        await window.press(ESC);
+        await window.press('\x15');
+
+        for (const previous of ['second queued', 'first queued', 'slow']) {
+          await window.press(UP);
+          await until(
+            'unchanged submission history',
+            () => state?.draft === previous,
+          );
+        }
+      },
+      {
+        columns: 80,
+        rows: 24,
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        keybindings: JSON.stringify({
+          bindings: [
+            {
+              context: 'Chat',
+              bindings: { tab: null, 'ctrl+y': 'chat:steer' },
+            },
+          ],
+        }),
+        onState: (all) => {
+          state = frontState(all);
+        },
+        openWith: async (options) => {
+          const session = await openSession(options);
+          const steer = session.steer.bind(session);
+
+          session.steer = (...args) => {
+            steers.push(args[0]);
+
+            return steer(...args);
+          };
+
+          return session;
+        },
+      },
+    );
+  });
+
+  test('a clipboard image held behind calls returns on Esc and is submitted once with its link', async () => {
+    const image = pixelClipboard();
+    const prompts: Parameters<Session['prompt']>[] = [];
+    const steers: Parameters<Session['steer']>[] = [];
+    let state: AppState | undefined;
+
+    await withWindow(
+      async (window) => {
+        await writeFile(join(window.dir, 'a.ts'), '');
+        await send(window, 'bashcut');
+        await window.shows('Running…');
+        await window.type('see @a.ts done');
+        await window.press('\x16');
+        await until(
+          'clipboard image in draft',
+          () => state?.images.length === 1,
+        );
+        await window.press('\r');
+        await until('image queued', () => state?.queue.length === 1);
+
+        const text = state?.queue[0]?.text;
+
+        assert(text !== undefined);
+        await window.press(TAB);
+        await window.shows(`› after the running calls: ${text}`);
+        await window.press(ESC);
+        await window.shows('Interrupted by user');
+        await until(
+          'held image restored',
+          () => state?.draft === text && state.images.length === 1,
+        );
+        expect(state?.images[0]?.data).toBe(PIXEL_PNG);
+        expect(steers).toEqual([]);
+        await window.press('\r');
+        await window.shows(RECEIVED);
+        await window.shows('Received a link: a.ts');
+        expect(
+          prompts.filter(([prompt]) => prompt.includes(text)),
+        ).toHaveLength(1);
+        expect(
+          prompts.find(([prompt]) => prompt.includes(text))?.slice(1, 3),
+        ).toEqual([[{ mediaType: 'image/png', data: PIXEL_PNG }], ['a.ts']]);
+        expect(image.reads).toBe(1);
+        expect(state?.images).toEqual([]);
+      },
+      {
+        columns: 80,
+        rows: 24,
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        clipboard: image,
+        onState: (all) => {
+          state = frontState(all);
+        },
+        openWith: async (options) => {
+          const session = await openSession(options);
+          const prompt = session.prompt.bind(session);
+          const steer = session.steer.bind(session);
+
+          session.prompt = (...args) => {
+            prompts.push(args);
+
+            return prompt(...args);
+          };
+
+          session.steer = (...args) => {
+            steers.push(args);
+
+            return steer(...args);
+          };
+
+          return session;
+        },
+      },
+    );
+  });
+
+  test('Tab during an Enter image-file read sends only the older queue row and leaves the reading draft alone', async () => {
+    const release = Promise.withResolvers<void>();
+    const steers: Parameters<Session['steer']>[] = [];
+    let reading = false;
+    let state: AppState | undefined;
+
+    await withWindow(
+      async (window) => {
+        try {
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+          await send(window, 'old queued');
+
+          for (const key of 'new /shots/a.png done') {
+            await window.press(key);
+          }
+
+          await window.press('\r');
+          await until('Enter reading the image', () => reading);
+
+          const draft = state?.draft;
+
+          await window.press(TAB);
+          await until(
+            'only the older row taken',
+            () => steers.length === 1 && state?.queue.length === 0,
+          );
+          expect(steers[0]?.slice(0, 3)).toEqual(['old queued', [], []]);
+          expect(state?.draft).toBe(draft);
+          release.resolve();
+          await until(
+            'new image prompt queued',
+            () => state?.queue.length === 1,
+          );
+          await window.press(TAB);
+          await until(
+            'new image delivered',
+            () => steers.length === 2 && state?.queue.length === 0,
+          );
+          expect(steers[1]?.slice(0, 3)).toEqual([
+            'new [Image #1] done',
+            [{ mediaType: 'image/png', data: PIXEL_PNG }],
+            [],
+          ]);
+          await window.shows(RECEIVED);
+          await window.press(ESC);
+        } finally {
+          release.resolve();
+        }
+      },
+      {
+        columns: 80,
+        rows: 24,
+        agentCommand: fakeAgentCommand(undefined, '--steering', 'claude'),
+        onState: (all) => {
+          state = frontState(all);
+        },
+        readImage: async () => {
+          reading = true;
+
+          await release.promise;
+
+          return {
+            mediaType: 'image/png',
+            data: PIXEL_PNG,
+            bytes: PIXEL_BYTES.length,
+          };
+        },
+        openWith: async (options) => {
+          const session = await openSession(options);
+          const steer = session.steer.bind(session);
+
+          session.steer = (...args) => {
+            steers.push(args);
+
+            return steer(...args);
+          };
+
+          return session;
+        },
+      },
+    );
+  });
 });

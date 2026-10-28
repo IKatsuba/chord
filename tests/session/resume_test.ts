@@ -2120,3 +2120,151 @@ describe('CHD-472 Q133 tester: the resumed fake counter resets and grows again',
       }));
   }
 });
+
+describe('CHD-535 U2 tester: queued attachment records', () => {
+  for (const [adapter, late] of [
+    ['claude', false],
+    ['claude', true],
+    ['codex', true],
+  ] as const) {
+    test(`${adapter} ${late ? 'late fallback' : 'injection'} records and replays the queued image and link once`, () =>
+      withPlace(async (place) => {
+        await writeFile(join(place.dir, 'a.ts'), '');
+
+        const events: ConversationEvent[] = [];
+        const failures: string[] = [];
+        const text = 'Queued [Image #1] @a.ts';
+        const conversation = new Conversation(
+          () =>
+            openSession({
+              agent: 'fake',
+              cwd: place.dir,
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--steering',
+                adapter,
+                ...(late ? ['--steer-late'] : []),
+              ),
+            }),
+          (event) => events.push(event),
+          Date.now,
+          {},
+          new FileRecording(place.stateDir, (message) =>
+            failures.push(message),
+          ),
+        );
+
+        try {
+          conversation.start();
+          await until(() => events.some((event) => event.type === 'connected'));
+          conversation.send(late ? 'texttillsteered' : 'texttillsteeredheld');
+          await until(() =>
+            events.some(
+              (event) =>
+                event.type === 'update' &&
+                event.update.sessionUpdate === 'agent_message_chunk',
+            ),
+          );
+          conversation.send(
+            text,
+            undefined,
+            [{ mediaType: 'image/png', data: 'aGVsbG8=' }],
+            ['a.ts'],
+          );
+          expect(conversation.steerQueued()).toBe('sent');
+
+          if (!late) {
+            await until(() =>
+              events
+                .flatMap((event) =>
+                  event.type === 'update' &&
+                  event.update.sessionUpdate === 'agent_message_chunk' &&
+                  event.update.content.type === 'text'
+                    ? [event.update.content.text]
+                    : [],
+                )
+                .join('')
+                .includes('Received a link: a.ts'),
+            );
+            conversation.interrupt();
+          }
+
+          await until(() => {
+            const delivered = events.flatMap((event) =>
+              event.type === 'prompt' && event.text === text ? [event] : [],
+            )[0];
+
+            return (
+              delivered !== undefined &&
+              events.some(
+                (event) =>
+                  event.type === 'result' &&
+                  event.turnId === (delivered.into ?? delivered.turnId),
+              )
+            );
+          });
+        } finally {
+          await conversation.close();
+        }
+
+        expect(failures).toEqual([]);
+
+        const [record] = await readRecords(place.stateDir);
+
+        assert(record !== undefined);
+
+        const past = await readPast(record.path);
+        const stored = past.flatMap((entry) =>
+          entry.type === 'prompt' && entry.prompt === text ? [entry] : [],
+        );
+
+        expect(stored).toHaveLength(1);
+        expect(stored[0]).toMatchObject({
+          images: 1,
+          links: [
+            {
+              type: 'resource_link',
+              name: 'a.ts',
+              uri: pathToFileURL(join(place.dir, 'a.ts')).href,
+            },
+          ],
+        });
+        expect(stored[0]).not.toHaveProperty('from');
+        expect(stored[0]?.into !== undefined).toBe(!late);
+
+        const live = drawn(
+          events
+            .filter((event): event is TranscriptAction =>
+              ['prompt', 'update', 'result', 'self_started'].includes(
+                event.type,
+              ),
+            )
+            .reduce(reduceTranscript, emptyTranscript).entries,
+        );
+        const connected = events.find((event) => event.type === 'connected');
+
+        assert(connected?.type === 'connected');
+
+        const session = await open(place, place.resuming, {
+          sessionId: connected.sessionId,
+          cwd: place.dir,
+          record: record.path,
+        });
+
+        try {
+          const replay = replayed(session.history());
+
+          expect(replay).toEqual(live);
+          expect(replay.filter((row) => row === `user: ${text}`)).toHaveLength(
+            1,
+          );
+          expect(replay.join('\n')).toContain(
+            'Received an image: image/png, 5 bytes',
+          );
+          expect(replay.join('\n')).toContain('Received a link: a.ts');
+        } finally {
+          await session.close();
+        }
+      }));
+  }
+});

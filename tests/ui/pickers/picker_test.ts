@@ -1,5 +1,15 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import {
+  agentStart,
+  listedAgents,
+  missingCommand,
+} from '../../../src/agents.ts';
+import { openSession } from '../../../src/session/session.ts';
+import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   agentChoices,
   choiceKey,
@@ -690,4 +700,68 @@ test('CHD-544 agent choices leave out an own CLI PATH lacks, and keep what chord
   // The preferred agent left out: the highlight opens on the first row.
   expect(choices.some(({ current }) => current)).toBe(false);
   expect(openView(choices, 6).highlighted).toBe(0);
+});
+
+describe('CHD-544 tester: every offered fixture command starts', () => {
+  test('the filtered real catalog starts through fixture npx, uvx, own CLI and settings commands', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-picker-starts-'));
+    const oldPath = process.env['PATH'];
+    const fake = fakeAgentCommand();
+    const commands = { 'settings-fixture': fake };
+    const shim = `#!/bin/sh\nexec '${process.execPath}' '${fake[1]}'\n`;
+
+    try {
+      await Promise.all(
+        ['npx', 'uvx', 'agent'].map((name) =>
+          writeFile(join(dir, name), shim, { mode: 0o755 }),
+        ),
+      );
+
+      process.env['PATH'] = dir;
+
+      const listed = await listedAgents(commands);
+      const choices = agentChoices(listed, 'zeroclaw');
+      const offered = listed.filter(({ name }) =>
+        choices.some(({ value }) => value === name),
+      );
+
+      expect(new Set(offered.map(({ from }) => from))).toStrictEqual(
+        new Set(['npx', 'uvx', 'cli', 'settings']),
+      );
+      expect(
+        offered.filter(({ from }) => from === 'cli').map(({ name }) => name),
+      ).toStrictEqual(['cursor']);
+      expect(choices.some(({ current }) => current)).toBe(false);
+
+      for (const { name } of offered) {
+        const override = name === 'settings-fixture' ? fake : undefined;
+
+        expect(await missingCommand(name, override), name).toBeUndefined();
+
+        const start = agentStart(name, override);
+        const session = await openSession({
+          agent: name,
+          cwd: dir,
+          agentCommand:
+            typeof start.command === 'string'
+              ? start.command
+              : [...start.command],
+        });
+
+        try {
+          expect(session.id, name).toBeTruthy();
+        } finally {
+          await session.close();
+        }
+      }
+    } finally {
+      if (oldPath === undefined) {
+        delete process.env['PATH'];
+      } else {
+        process.env['PATH'] = oldPath;
+      }
+
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

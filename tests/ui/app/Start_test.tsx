@@ -220,7 +220,7 @@ describe('CHD-532 startup agent picker', () => {
       title: 'two',
       from: 'cli',
       start: 'fixture-two',
-      found: false,
+      found: true,
     },
     {
       name: 'three',
@@ -264,7 +264,7 @@ describe('CHD-532 startup agent picker', () => {
       try {
         expect(app.frame()).toContain('Select agent');
         expect(app.frame()).toContain('1. one · First agent');
-        expect(app.frame()).toContain('❯ 2. two · not found');
+        expect(app.frame()).toContain('❯ 2. two');
         expect(app.frame()).toContain('3. three');
         expect(app.frame()).toContain('Esc to cancel');
         expect(app.frame()).not.toContain('✔');
@@ -341,6 +341,38 @@ describe('CHD-532 startup agent picker', () => {
       await app.unmount();
     }
   });
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`CHD-544 at ${columns}x${rows}, an own CLI PATH lacks is not offered, the highlight opening on the first row when it was the default`, async () => {
+      const list: ListedAgent[] = [
+        agents[0]!,
+        {
+          name: 'missing',
+          title: 'Missing agent',
+          from: 'cli',
+          start: 'fixture-missing',
+          found: false,
+        },
+        agents[2]!,
+      ];
+      const app = await choosing(list, 'missing', columns, rows);
+
+      try {
+        expect(app.frame()).not.toContain('missing');
+        expect(app.frame()).not.toContain('not found');
+        expect(app.frame()).toContain('❯ 1. one · First agent');
+        expect(app.frame()).toContain('2. three');
+        expect(app.frame()).not.toContain('3.');
+        await app.write('2');
+        expect(app.picks).toEqual(['three']);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
 
   test('cancel follows its existing binding and Ctrl+C cancels independently', async () => {
     const { keymap } = readKeybindings(

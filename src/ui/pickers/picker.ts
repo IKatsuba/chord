@@ -122,24 +122,28 @@ export function pickerLayout(
     : unscrolled;
 }
 
-/** Catalog order is retained; the preferred name only sets the opening highlight. */
+/**
+ * The agents chord can start, in catalog order: an own CLI PATH lacks is
+ * left out, as picking it could only fail (CHD-544); npx, uvx and the
+ * settings files' commands stay, as `chord agents` counts them. The
+ * preferred name only sets the opening highlight, on the first row when
+ * it is left out.
+ */
 export function agentChoices(
   agents: readonly ListedAgent[],
   preferred: string,
 ): PickerChoice[] {
-  return agents.map(({ name, title, found }) => {
-    const detail = title === undefined || title === name ? '' : ` · ${title}`;
-    const missing = found === false ? ' · not found' : '';
-
-    return {
+  return agents
+    .filter(({ found }) => found !== false)
+    .map(({ name, title }) => ({
       key: name,
       value: name,
       label:
-        name +
-        (detail + missing === '' ? '' : `\x1b[2m${detail}${missing}\x1b[22m`),
+        title === undefined || title === name
+          ? name
+          : `${name}\x1b[2m · ${title}\x1b[22m`,
       current: name === preferred,
-    };
-  });
+    }));
 }
 
 /** One model on the list; `current` is the one the agent says it uses. */

@@ -643,7 +643,7 @@ test('CHD-532 agent adaptation retains catalog order and only marks the preferre
         title: 'first',
         start: 'fixture',
         from: 'cli',
-        found: false,
+        found: true,
       },
     ],
     'first',
@@ -651,7 +651,43 @@ test('CHD-532 agent adaptation retains catalog order and only marks the preferre
 
   expect(choices.map(({ value }) => value)).toEqual(['second', 'first']);
   expect(choices[0]?.label).toBe('second\x1b[2m · Second title\x1b[22m');
-  expect(choices[1]?.label).toBe('first\x1b[2m · not found\x1b[22m');
+  expect(choices[1]?.label).toBe('first');
   expect(openView(choices, 6).highlighted).toBe(1);
   expect(openView(agentChoices([], 'absent'), 6).highlighted).toBe(0);
+});
+
+test('CHD-544 agent choices leave out an own CLI PATH lacks, and keep what chord agents counts', () => {
+  const choices = agentChoices(
+    [
+      { name: 'claude', title: 'Claude', start: 'npx c', from: 'npx' },
+      {
+        name: 'cursor',
+        title: 'Cursor',
+        start: 'agent acp',
+        from: 'cli',
+        found: false,
+      },
+      { name: 'fast', title: 'Fast', start: 'uvx f', from: 'uvx' },
+      {
+        name: 'goose',
+        title: 'goose',
+        start: 'goose acp',
+        from: 'cli',
+        found: true,
+      },
+      { name: 'mine', title: undefined, start: 'mine', from: 'settings' },
+    ],
+    'cursor',
+  );
+
+  expect(choices.map(({ value }) => value)).toEqual([
+    'claude',
+    'fast',
+    'goose',
+    'mine',
+  ]);
+  expect(choices.some(({ label }) => label.includes('not found'))).toBe(false);
+  // The preferred agent left out: the highlight opens on the first row.
+  expect(choices.some(({ current }) => current)).toBe(false);
+  expect(openView(choices, 6).highlighted).toBe(0);
 });

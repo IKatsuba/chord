@@ -622,16 +622,28 @@ describe('CHD-476 U1 tester: clearing owned work without closing peers', () => {
             await readFile(join(window.dir, 'clear-monitor.pid'), 'utf8'),
           );
 
+          const sourcePids = [...sourceSession.agentPids];
+          const taskPids = [...taskSession.agentPids];
+          const survivorPids = survivors
+            .filter((session) => session !== sourceSession)
+            .map((session) => [...session.agentPids]);
+
+          expect(sourcePids.length).toBeGreaterThan(0);
+          expect(taskPids.length).toBeGreaterThan(0);
+          expect(survivorPids).toHaveLength(2);
+
+          for (const pids of survivorPids) {
+            expect(pids.length).toBeGreaterThan(0);
+          }
+
           expect(await main.window.clear(main, owner.id)).toMatchObject({
             cleared: 'owner',
             id: owner.id,
           });
 
           for (const [kind, pid] of [
-            ...[...sourceSession.agentPids].map(
-              (pid) => ['source', pid] as const,
-            ),
-            ...[...taskSession.agentPids].map((pid) => ['task', pid] as const),
+            ...sourcePids.map((pid) => ['source', pid] as const),
+            ...taskPids.map((pid) => ['task', pid] as const),
             ['monitor', monitorPid] as const,
           ]) {
             await until(
@@ -640,10 +652,8 @@ describe('CHD-476 U1 tester: clearing owned work without closing peers', () => {
             );
           }
 
-          for (const session of survivors.filter(
-            (session) => session !== sourceSession,
-          )) {
-            for (const pid of session.agentPids) {
+          for (const pids of survivorPids) {
+            for (const pid of pids) {
               expect(await isAlive(pid)).toBe(true);
             }
           }
@@ -747,6 +757,9 @@ describe('CHD-476 U1 tester: team ownership across fresh sessions', () => {
             .sessions()[0]!
             .children.map((child) => ({ ...child }));
           const memberSession = opened[2]!;
+          const memberPids = [...memberSession.agentPids];
+
+          expect(memberPids.length).toBeGreaterThan(0);
 
           expect(await main.window.clear(main, member.id)).toHaveProperty(
             'error',
@@ -769,7 +782,7 @@ describe('CHD-476 U1 tester: team ownership across fresh sessions', () => {
           ).toStrictEqual([]);
           expect(main.window.sessions()[0]!.children).toMatchObject(before);
 
-          for (const pid of memberSession.agentPids) {
+          for (const pid of memberPids) {
             expect(await isAlive(pid)).toBe(true);
           }
 

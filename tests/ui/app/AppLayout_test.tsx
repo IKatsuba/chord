@@ -207,6 +207,109 @@ for (const [columns, rows] of [
   });
 }
 
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  describe(`a framed picker floats over the transcript at ${columns}x${rows} (CHD-545)`, () => {
+    for (const [command, title] of [
+      ['/model', 'Select model'],
+      ['/config', 'Settings'],
+      ['/resume', 'Resume a session'],
+      ['/theme', 'Theme'],
+      ['/team', 'Teams'],
+      ['/mcp', 'MCP servers'],
+    ] as const) {
+      test(`${command}: in its frame alone, the transcript keeps its rows and scroll, the prompt its row`, async () => {
+        let latest: WindowedState | undefined;
+        const current = () => latest!.sessions[latest!.front]!;
+        const lines = (window: Window) => stripAnsi(window.frame()).split('\n');
+        // The prompt's frame, the last on screen: a picker's is above it.
+        const prompt = (window: Window) => {
+          const all = lines(window);
+
+          return {
+            top: all.findLastIndex((line) => line.startsWith('╭')),
+            bottom: all.findLastIndex((line) => line.startsWith('╰')),
+          };
+        };
+
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'markdown');
+            await until(
+              'the reply ended',
+              () => current().transcript.turn.status === 'idle',
+            );
+            await window.shows('built $bin');
+            await until('Working gone', () => row(window, 'Working') < 0);
+
+            const closed = lines(window);
+            // A command's own line may add to the transcript; its view, its
+            // offset and whether it follows stay.
+            const view = () => {
+              const { view, top, following } = current().scroll;
+
+              return { view, top, following };
+            };
+
+            const scroll = view();
+            const at = prompt(window);
+
+            await window.type(command);
+            await window.press('\r');
+            await window.shows(title);
+
+            const opened = lines(window);
+            const frame = row(window, title) - 1;
+
+            expect(opened[frame]).toStartWith('╭');
+            expect(frame).toBeGreaterThanOrEqual(0);
+            // No rule: the frame is the layer's edge.
+            expect(opened.some((line) => line.startsWith(' ──'))).toBe(false);
+            expect(prompt(window)).toEqual(at);
+            // The frame's bottom touches the prompt's gap row.
+            expect(opened[at.top - 2]).toStartWith('╰');
+            expect(view()).toEqual(scroll);
+
+            // What is above the frame is the transcript as it was; /team's
+            // own line pushes it up a row.
+            if (command !== '/team') {
+              expect(opened.slice(0, frame)).toEqual(closed.slice(0, frame));
+            }
+
+            await window.press(ESC);
+            await until('picker closed', () => row(window, title) < 0);
+            expect(prompt(window)).toEqual(at);
+            expect(view()).toEqual(scroll);
+          },
+          {
+            columns,
+            rows,
+            teams: { bugfix: BUGFIX },
+            // An earlier session elsewhere, so /resume opens its list.
+            readRecords: () =>
+              Promise.resolve([
+                {
+                  path: '/records/earlier.jsonl',
+                  sessionId: 'earlier',
+                  agent: 'fake',
+                  cwd: '/elsewhere',
+                  lastUsedAt: 1,
+                  prompt: 'earlier work',
+                },
+              ]),
+            onState: (next) => {
+              latest = next;
+            },
+          },
+        );
+      });
+    }
+  });
+}
+
 for (const mode of ['one-row', 'crowded', 'resize'] as const) {
   test(`reachable pressure ${mode}: the list floats with its highlight in sight, the prompt and permanent rows still (CHD-545)`, async () => {
     let latest: WindowedState | undefined;

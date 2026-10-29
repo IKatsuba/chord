@@ -166,12 +166,7 @@ export function ModelPicker({
   const closeHint = useCloseHint();
 
   return (
-    <box
-      {...borderOf(useColours().permission)}
-      paddingX={1}
-      marginTop={1}
-      flexShrink={0}
-    >
+    <box {...borderOf(useColours().permission)} paddingX={1} flexShrink={0}>
       <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
         Select model
       </text>
@@ -216,6 +211,7 @@ export function ResumePicker({
   home,
   active,
   starting = false,
+  gap = true,
   onPick,
 }: {
   picker: ResumePickerState;
@@ -228,6 +224,8 @@ export function ResumePicker({
   home: string | undefined;
   active: boolean;
   starting?: boolean;
+  /** The row above its frame; none where it floats over the transcript. */
+  gap?: boolean;
   onPick: (chosen: EarlierSession) => void;
 }) {
   const { everywhere } = picker;
@@ -255,7 +253,7 @@ export function ResumePicker({
     <box
       {...borderOf(useColours().permission)}
       paddingX={1}
-      marginTop={1}
+      marginTop={gap ? 1 : 0}
       flexShrink={0}
     >
       <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
@@ -331,12 +329,7 @@ export function TeamsPicker({
   const closeHint = useCloseHint();
 
   return (
-    <box
-      {...borderOf(useColours().permission)}
-      paddingX={1}
-      marginTop={1}
-      flexShrink={0}
-    >
+    <box {...borderOf(useColours().permission)} paddingX={1} flexShrink={0}>
       <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
         Teams
       </text>
@@ -413,12 +406,7 @@ export function ConfigPicker({
     : hintOf(choices.length === 0 ? undefined : 'Enter to choose', close);
 
   return (
-    <box
-      {...borderOf(useColours().permission)}
-      paddingX={1}
-      marginTop={1}
-      flexShrink={0}
-    >
+    <box {...borderOf(useColours().permission)} paddingX={1} flexShrink={0}>
       <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
         {option ? (
           <>
@@ -502,12 +490,7 @@ export function ThemePicker({
   }, [code]);
 
   return (
-    <box
-      {...borderOf(permission)}
-      paddingX={1}
-      marginTop={layout.gap ? 1 : 0}
-      flexShrink={0}
-    >
+    <box {...borderOf(permission)} paddingX={1} flexShrink={0}>
       <text {...TEXT} {...fg(permission)} attributes={BOLD}>
         Theme
       </text>
@@ -638,7 +621,7 @@ export function McpPanel({
 
   if (starting) {
     return (
-      <box {...borderOf(permission)} paddingX={1} marginTop={1} flexShrink={0}>
+      <box {...borderOf(permission)} paddingX={1} flexShrink={0}>
         <text {...TEXT} {...fg(permission)} attributes={BOLD}>
           MCP servers
         </text>
@@ -657,7 +640,7 @@ export function McpPanel({
   }
 
   return (
-    <box {...borderOf(permission)} paddingX={1} marginTop={1} flexShrink={0}>
+    <box {...borderOf(permission)} paddingX={1} flexShrink={0}>
       <text {...TEXT} {...fg(permission)} attributes={BOLD}>
         MCP servers
       </text>

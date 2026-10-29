@@ -62,6 +62,7 @@ import {
 import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { Overlay } from '../prompt/Overlay.tsx';
+import { layoutRows, pickerRows } from '../prompt/overlay.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import {
@@ -616,6 +617,15 @@ export function App({
   const listingTeams = teamsPickerShown(state);
   const noticing = noticeShown(state);
   const { notice } = state;
+  // A framed picker floats over the transcript, its frame the edge, no rule.
+  const pickerShown =
+    picking ||
+    configuring ||
+    (resumingShown && state.resumePicker !== undefined) ||
+    theming ||
+    (noticing && notice !== undefined) ||
+    (listingTeams && state.teamsPicker !== undefined) ||
+    listingMcp;
   const viewing = backgroundShown(state);
   // The list under the prompt has the keys, not the view opened from it.
   const listFocus = agentsHaveKeys(state);
@@ -1723,116 +1733,13 @@ export function App({
                     scroller={backgroundScroller}
                   />
                 )}
-                {picking && (
-                  <ModelPicker
-                    models={state.models}
-                    rows={menuRows}
-                    agent={shownAgent}
-                    active={listening}
-                    onPick={sessions.pickModel}
-                  />
-                )}
-                {configuring && (
-                  <ConfigPicker
-                    options={state.options}
-                    option={configOption(state)}
-                    from={state.configPicker?.from}
-                    rows={menuRows}
-                    agent={shownAgent}
-                    active={listening}
-                    onOpen={(id) =>
-                      dispatch({ type: 'config_option_opened', id })
-                    }
-                    onPick={sessions.pickOption}
-                  />
-                )}
-                {resumingShown && state.resumePicker && (
-                  <ResumePicker
-                    // A fresh list for each scope, its highlight on the first row.
-                    key={String(state.resumePicker.everywhere)}
-                    picker={state.resumePicker}
-                    open={sessions.openChildren()}
-                    rows={menuRows}
-                    agent={frontAgent}
-                    home={home}
-                    active={listening}
-                    onPick={(chosen) => sessions.pickResume(chosen)}
-                  />
-                )}
-                {theming && (
-                  <ThemePicker
-                    current={state.theme}
-                    background={background}
-                    windowRows={rows}
-                    active={listening}
-                    onMove={(theme) =>
-                      dispatch({ type: 'theme_previewed', theme })
-                    }
-                    onPick={commands.keepTheme}
-                  />
-                )}
-                {noticing && notice !== undefined && (
-                  <NoticeBox
-                    columns={columns}
-                    active={listening}
-                    onAnswer={(dismissed) => {
-                      if (dismissed) {
-                        sessions.dismissNotice(notice);
-                      }
-
-                      dispatch({ type: 'notice_closed' });
-                    }}
-                  />
-                )}
-                {listingTeams && state.teamsPicker && (
-                  <TeamsPicker
-                    listing={state.teamsPicker}
-                    rows={menuRows}
-                    columns={columns - 4}
-                    active={listening}
-                    onPick={(found) => {
-                      const text = pickedDraft(found);
-
-                      if (text === undefined) {
-                        return;
-                      }
-
-                      dispatch({ type: 'teams_picker_closed' });
-                      showDraft(text, endOf(text));
-                    }}
-                  />
-                )}
-                {listingMcp && (
-                  <McpPanel
-                    servers={here.mcpServers}
-                    ignored={here.mcpIgnored}
-                    heldBack={conversation()?.session?.heldBack ?? []}
-                    agent={shownAgent}
-                    windowRows={rows}
-                    starting={
-                      conversation()?.session === undefined &&
-                      state.connection.status === 'starting'
-                    }
-                    {...(server === undefined
-                      ? {}
-                      : {
-                          chord: chordRow(
-                            conversation()?.session?.chordServer,
-                            child !== undefined,
-                            conversation()?.session?.heldBack.some(
-                              (each) => each.own && each.takes.length === 0,
-                            ) === true,
-                          ),
-                        })}
-                  />
-                )}
                 {held && inputDialog}
                 {inputDialog !== undefined && !held && inputDialog}
                 {/* Over the transcript's bottom rows, not in their place
         (CHD-545). */}
-                <Overlay columns={columns} ruled>
-                  {(room) =>
-                    state.search ? (
+                <Overlay columns={columns} ruled={!pickerShown}>
+                  {(room) => {
+                    const list = state.search ? (
                       <SearchLine search={state.search} />
                     ) : finder ? (
                       <FileList
@@ -1857,8 +1764,121 @@ export function App({
                           dispatch({ type: 'panel_overflowed', overflows })
                         }
                       />
-                    ) : null
-                  }
+                    ) : null;
+
+                    // A picker above, its frame the layer's edge; the list
+                    // next to the prompt, as when they took rows (CHD-545).
+                    return pickerShown || list !== null ? (
+                      <>
+                        {picking && (
+                          <ModelPicker
+                            models={state.models}
+                            rows={pickerRows(menuRows, room)}
+                            agent={shownAgent}
+                            active={listening}
+                            onPick={sessions.pickModel}
+                          />
+                        )}
+                        {configuring && (
+                          <ConfigPicker
+                            options={state.options}
+                            option={configOption(state)}
+                            from={state.configPicker?.from}
+                            rows={pickerRows(menuRows, room)}
+                            agent={shownAgent}
+                            active={listening}
+                            onOpen={(id) =>
+                              dispatch({ type: 'config_option_opened', id })
+                            }
+                            onPick={sessions.pickOption}
+                          />
+                        )}
+                        {resumingShown && state.resumePicker && (
+                          <ResumePicker
+                            // A fresh list for each scope, its highlight on the first row.
+                            key={String(state.resumePicker.everywhere)}
+                            picker={state.resumePicker}
+                            open={sessions.openChildren()}
+                            rows={pickerRows(menuRows, room)}
+                            agent={frontAgent}
+                            home={home}
+                            active={listening}
+                            gap={false}
+                            onPick={(chosen) => sessions.pickResume(chosen)}
+                          />
+                        )}
+                        {theming && (
+                          <ThemePicker
+                            current={state.theme}
+                            background={background}
+                            windowRows={layoutRows(room, rows)}
+                            active={listening}
+                            onMove={(theme) =>
+                              dispatch({ type: 'theme_previewed', theme })
+                            }
+                            onPick={commands.keepTheme}
+                          />
+                        )}
+                        {noticing && notice !== undefined && (
+                          <NoticeBox
+                            columns={columns}
+                            active={listening}
+                            onAnswer={(dismissed) => {
+                              if (dismissed) {
+                                sessions.dismissNotice(notice);
+                              }
+
+                              dispatch({ type: 'notice_closed' });
+                            }}
+                          />
+                        )}
+                        {listingTeams && state.teamsPicker && (
+                          <TeamsPicker
+                            listing={state.teamsPicker}
+                            rows={pickerRows(menuRows, room)}
+                            columns={columns - 4}
+                            active={listening}
+                            onPick={(found) => {
+                              const text = pickedDraft(found);
+
+                              if (text === undefined) {
+                                return;
+                              }
+
+                              dispatch({ type: 'teams_picker_closed' });
+                              showDraft(text, endOf(text));
+                            }}
+                          />
+                        )}
+                        {listingMcp && (
+                          <McpPanel
+                            servers={here.mcpServers}
+                            ignored={here.mcpIgnored}
+                            heldBack={conversation()?.session?.heldBack ?? []}
+                            agent={shownAgent}
+                            windowRows={layoutRows(room, rows)}
+                            starting={
+                              conversation()?.session === undefined &&
+                              state.connection.status === 'starting'
+                            }
+                            {...(server === undefined
+                              ? {}
+                              : {
+                                  chord: chordRow(
+                                    conversation()?.session?.chordServer,
+                                    child !== undefined,
+                                    conversation()?.session?.heldBack.some(
+                                      (each) =>
+                                        each.own && each.takes.length === 0,
+                                    ) === true,
+                                  ),
+                                })}
+                          />
+                        )}
+                        {list}
+                      </>
+                    ) : null;
+                  }}
                 </Overlay>
                 {inputDialog !== undefined && !held && !viewing ? null : (
                   <PromptInput

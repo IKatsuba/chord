@@ -230,3 +230,28 @@ test('a child closed while it restarts says the message sent meanwhile was not d
         'Could not clear parser: it was closed. 1 queued message from main was not delivered.',
     });
   }));
+
+test("the person's /clear on a working child: its turn goes, their queued prompt comes back into the box, and its view starts over", () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agentcost');
+    await window.shows('Open(parser)');
+    await until('parser at work', () =>
+      /^ {4}parser .*✻/m.test(window.frame()),
+    );
+    await pick(window, 'parser');
+    await window.shows('Working until stopped.');
+    await send(window, 'Later.');
+    await window.shows('› Later.');
+    await send(window, '/clear');
+    await until(
+      "parser's view empty",
+      () => !window.frame().includes('Working until stopped.'),
+    );
+    await until('the queued prompt back in the box', () =>
+      window.frame().includes('│ › Later.'),
+    );
+
+    expect(window.frame()).toContain('╭─ parser ');
+    expect(window.frame()).toMatch(/^ {4}parser .*◦ idle/m);
+  }));

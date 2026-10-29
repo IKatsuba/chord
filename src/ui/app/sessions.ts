@@ -3492,25 +3492,38 @@ export function useSessions(
   };
 
   /**
-   * `/clear` on the session in front: refused while a child is picked, as
-   * clearing it would leave the parent talking to an agent that no longer
-   * knows what it was asked; on `main`, its children close with the session
-   * it lets go, as its task agents do. The refusal, if any.
+   * `/clear` on the session in front: a child or fork picked gets a fresh
+   * session of its own, its parent told (CHD-476); on `main`, its children
+   * close with the session it lets go, as its task agents do.
    */
-  const clearFront = (before: () => void): string | undefined => {
+  const clearFront = (before: () => void): void => {
     const agents = front();
 
     const picked = agents === undefined ? undefined : pickedChild(agents);
 
-    if (picked?.forkedFrom !== undefined) {
-      return 'A fork cannot be cleared yet · close it with x and /fork again';
-    }
-
-    if (picked !== undefined) {
-      return '/clear clears main; pick main first';
-    }
-
     before();
+
+    // A child or a fork picked is the one cleared, main and the rest left as
+    // they are (CHD-476); why not, under the command in its view.
+    if (picked !== undefined) {
+      void clearByPerson(picked).then(
+        (failed) =>
+          failed !== undefined &&
+          dispatch({
+            type: 'in_session',
+            key: picked.key,
+            action: {
+              type: 'noted',
+              turnId: `clear-${crypto.randomUUID()}`,
+              command: 'clear',
+              text: failed,
+              failed: true,
+            },
+          }),
+      );
+
+      return;
+    }
 
     // Main's children go with its session; the forks stand beside it.
     for (const child of agents?.children ?? []) {
@@ -3533,8 +3546,6 @@ export function useSessions(
     } else {
       void conversation()?.clear();
     }
-
-    return undefined;
   };
 
   /**
@@ -4098,7 +4109,6 @@ export function useSessions(
     runTyped,
     newTyped,
     forkTyped,
-    clearByPerson,
     stopTyped,
     showTyped,
     sendToMain,

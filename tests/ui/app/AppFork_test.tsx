@@ -118,7 +118,7 @@ describe('/fork opens a fork beside main (CHD-101)', () => {
       { agentCommand: FORKS, columns: 120, rows: 40 },
     ));
 
-  test("main's /clear leaves the forks open, and /clear on a fork is refused", () =>
+  test("main's /clear leaves the forks open, and /clear on a fork clears it alone, no one told (CHD-476)", () =>
     withWindow(
       async (window) => {
         await send(window, 'text');
@@ -129,11 +129,17 @@ describe('/fork opens a fork beside main (CHD-101)', () => {
         );
         await send(window, '/fork');
         await window.shows('╭─ fork ');
+        await window.shows('── forked from main · ');
         await send(window, '/clear');
-        await window.shows(
-          'A fork cannot be cleared yet · close it with x and /fork again',
+        await until(
+          "the fork's view empty",
+          () => !window.frame().includes('── forked from main · '),
         );
+
+        expect(window.frame()).toContain('╭─ fork ');
         await pickMain(window);
+
+        expect(window.frame()).not.toContain('The person cleared');
         await send(window, '/clear');
         await until(
           "main's transcript cleared",

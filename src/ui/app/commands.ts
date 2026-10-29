@@ -38,11 +38,8 @@ export interface CommandsSessions {
   quit(): void;
   /** What the whole window has spent, closed agents and sessions too. */
   spend(): readonly SpendPart[];
-  /**
-   * `/clear` on the session in front, `before` done first; why it was
-   * refused, if it was, and then nothing is done.
-   */
-  clearFront(before: () => void): string | undefined;
+  /** `/clear` on the session in front, `before` done first. */
+  clearFront(before: () => void): void;
   /** Main's key, which `/team` talks to. */
   frontKey(): number | undefined;
   /** A child, not `main`, is picked. */
@@ -147,24 +144,13 @@ export function useCommands(
           );
         });
       }
-      case 'clear': {
-        const refused = sessions.clearFront(() => {
+      case 'clear':
+        return sessions.clearFront(() => {
           // The session they were queued in goes; what they said stays.
           sessions.takeBackQueue('');
           // Its output would have gone to the session that goes with it.
           sessions.stopCommand();
         });
-
-        return refused === undefined
-          ? undefined
-          : dispatch({
-              type: 'noted',
-              turnId: `clear-${crypto.randomUUID()}`,
-              command: 'clear',
-              text: refused,
-              failed: true,
-            });
-      }
       case 'help':
         return dispatch({ type: 'help_opened' });
       case 'model':

@@ -62,7 +62,7 @@ import {
 import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { Overlay } from '../prompt/Overlay.tsx';
-import { layoutRows, pickerRows } from '../prompt/overlay.ts';
+import { layoutRows } from '../prompt/overlay.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import {
@@ -1737,9 +1737,10 @@ export function App({
                 {inputDialog !== undefined && !held && inputDialog}
                 {/* Over the transcript's bottom rows, not in their place
         (CHD-545). */}
-                <Overlay columns={columns} ruled={!pickerShown}>
-                  {(room) => {
-                    const list = state.search ? (
+                <Overlay
+                  columns={columns}
+                  list={(room) =>
+                    state.search ? (
                       <SearchLine search={state.search} />
                     ) : finder ? (
                       <FileList
@@ -1766,16 +1767,16 @@ export function App({
                           dispatch({ type: 'panel_overflowed', overflows })
                         }
                       />
-                    ) : null;
-
-                    // A picker above, its frame the layer's edge; the list
-                    // next to the prompt, as when they took rows (CHD-545).
-                    return pickerShown || list !== null ? (
+                    ) : null
+                  }
+                  picker={(room) =>
+                    pickerShown ? (
                       <>
                         {picking && (
                           <ModelPicker
                             models={state.models}
-                            rows={pickerRows(menuRows, room)}
+                            rows={menuRows}
+                            room={room}
                             agent={shownAgent}
                             active={listening}
                             onPick={sessions.pickModel}
@@ -1786,7 +1787,8 @@ export function App({
                             options={state.options}
                             option={configOption(state)}
                             from={state.configPicker?.from}
-                            rows={pickerRows(menuRows, room)}
+                            rows={menuRows}
+                            room={room}
                             agent={shownAgent}
                             active={listening}
                             onOpen={(id) =>
@@ -1801,7 +1803,8 @@ export function App({
                             key={String(state.resumePicker.everywhere)}
                             picker={state.resumePicker}
                             open={sessions.openChildren()}
-                            rows={pickerRows(menuRows, room)}
+                            rows={menuRows}
+                            room={room}
                             agent={frontAgent}
                             home={home}
                             active={listening}
@@ -1837,7 +1840,8 @@ export function App({
                         {listingTeams && state.teamsPicker && (
                           <TeamsPicker
                             listing={state.teamsPicker}
-                            rows={pickerRows(menuRows, room)}
+                            rows={menuRows}
+                            room={room}
                             columns={columns - 4}
                             active={listening}
                             onPick={(found) => {
@@ -1877,11 +1881,10 @@ export function App({
                                 })}
                           />
                         )}
-                        {list}
                       </>
-                    ) : null;
-                  }}
-                </Overlay>
+                    ) : null
+                  }
+                />
                 {inputDialog !== undefined && !held && !viewing ? null : (
                   <PromptInput
                     key={

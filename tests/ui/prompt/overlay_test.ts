@@ -3,7 +3,7 @@ import {
   layoutRows,
   overlayRoom,
   overlayRule,
-  pickerRows,
+  framedRows,
 } from '../../../src/ui/prompt/overlay.ts';
 
 test('the layer over the transcript may take every row above its edge, and none above the window (CHD-545)', () => {
@@ -20,10 +20,21 @@ test("a frameless list's rule runs the width it is given (CHD-545)", () => {
 });
 
 test("a framed picker's list keeps its own limit until its frame and hint would leave the room, and one row at least (CHD-545)", () => {
-  expect(pickerRows(6, 19)).toBe(6);
-  expect(pickerRows(6, 12)).toBe(6);
-  expect(pickerRows(6, 10)).toBe(4);
-  expect(pickerRows(6, 3)).toBe(1);
+  // Seven rows around the list: frame, title, description, two gaps, hint.
+  expect(framedRows(6, 19, 2)).toBe(6);
+  expect(framedRows(6, 13, 2)).toBe(6);
+  expect(framedRows(6, 12, 2)).toBe(5);
+  expect(framedRows(6, 3, 2)).toBe(1);
+});
+
+test('hidden choices take the row that counts them, and a wrapped description its rows (CHD-545)', () => {
+  // Ten choices in six rows: the count row is the eighth around them.
+  expect(framedRows(6, 19, 10)).toBe(6);
+  expect(framedRows(6, 12, 10)).toBe(4);
+  // As many choices as rows: none hidden, no count row.
+  expect(framedRows(6, 12, 5)).toBe(5);
+  expect(framedRows(6, 12, 2, 2)).toBe(3);
+  expect(framedRows(3, 9, 10)).toBe(1);
 });
 
 test('a picker laid out by the window is told its height until the layer has less (CHD-545)', () => {

@@ -3,31 +3,43 @@ import { type ReactNode, useState } from 'react';
 import { CUT, DIM } from '../theme/text.ts';
 import { overlayRoom, overlayRule } from './overlay.ts';
 
+/** Whether a render gave anything to draw. */
+const drawn = (node: ReactNode) =>
+  node !== undefined && node !== null && node !== false;
+
 /**
- * Where the lists that open while the prompt is edited are drawn: a layer
- * over the transcript's bottom rows, its bottom edge where this anchor sits,
- * right above the prompt, so the transcript keeps its rows and scroll and
- * the prompt and the rows under it stay put (CHD-545). The anchor takes no
- * row; it stays mounted with nothing open so its place is known before a
- * list opens. A frameless list has a dim rule on top. The list is handed
- * the rows it may take: a box laid out over the transcript sizes a child to
- * what it draws, not to its flex basis, so a list cannot measure its room
- * (CHD-545, Q315).
+ * Where the lists that open while the prompt is edited, and the command
+ * pickers, are drawn: a layer over the transcript's bottom rows, its bottom
+ * edge where this anchor sits, right above the prompt, so the transcript
+ * keeps its rows and scroll and the prompt and the rows under it stay put
+ * (CHD-545). The anchor takes no row; it stays mounted with nothing open so
+ * its place is known before anything opens.
+ *
+ * A picker goes on top, its frame the layer's edge; a list without one has
+ * a dim rule there. Each is handed the rows it may take, as a box laid out
+ * over the transcript sizes a child to what it draws, not to its flex basis,
+ * so neither can measure its room (Q315): the picker the whole room, the
+ * list what the picker leaves, as when they took the transcript's rows.
  */
 export function Overlay({
   columns,
-  ruled,
-  children,
+  picker,
+  list,
 }: {
   columns: number;
-  ruled: boolean;
-  /** The list, or none while nothing is open, given the rows it may take. */
-  children: (room: number) => ReactNode;
+  /** The picker open, or none, given the rows it may take. */
+  picker: (room: number) => ReactNode;
+  /** The list open next to the prompt, or none, given the rows it may take. */
+  list: (room: number) => ReactNode;
 }) {
   const [edge, setEdge] = useState(0);
+  // The rows the picker draws, which the list may not take.
+  const [taken, setTaken] = useState(0);
   const room = overlayRoom(edge);
-  const list = children(Math.max(0, room - Number(ruled)));
-  const open = list !== undefined && list !== null && list !== false;
+  const top = picker(room);
+  const framed = drawn(top);
+  const below = list(Math.max(0, room - (framed ? taken : 1)));
+  const open = framed || drawn(below);
 
   return (
     <box
@@ -55,14 +67,25 @@ export function Overlay({
           backgroundColor={RGBA.defaultBackground()}
           flexDirection='column'
         >
-          {ruled && (
+          {framed ? (
+            <box
+              flexShrink={0}
+              renderAfter={function () {
+                if (this.height !== taken) {
+                  setTaken(this.height);
+                }
+              }}
+            >
+              {top}
+            </box>
+          ) : (
             <box paddingX={1} height={1} flexShrink={0}>
               <text {...CUT} attributes={DIM}>
                 {overlayRule(columns - 2)}
               </text>
             </box>
           )}
-          {list}
+          {below}
         </box>
       )}
     </box>

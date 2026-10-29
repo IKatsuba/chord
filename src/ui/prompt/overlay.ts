@@ -12,19 +12,31 @@ export function overlayRule(width: number): string {
 }
 
 /**
- * The rows a framed picker's frame, title, description, gap and hint take,
- * around its list.
+ * The rows a framed picker takes around its list: its frame's two, the
+ * title, a one-line description, the gap above the list, the gap above the
+ * hint and the hint.
  */
-const PICKER_CHROME = 6;
+const PICKER_CHROME = 7;
 
 /**
- * How many rows a framed picker's list may show in a layer of `room` rows:
- * `limit`, the picker's own, while its frame, title and hint fit around it,
- * and fewer once they would not, so they stay in sight (CHD-545). One at
+ * How many rows the list of a framed picker with `count` choices may show
+ * in a layer of `room` rows: `limit`, the picker's own, while all of it
+ * fits, and fewer once its title and hint would leave the layer, so they
+ * stay in sight (CHD-545). Hidden choices take a row of their own that says
+ * how many; `extra` is the rows its description wraps to past one. One at
  * least: its list scrolls.
  */
-export function pickerRows(limit: number, room: number): number {
-  return Math.max(1, Math.min(limit, room - PICKER_CHROME));
+export function framedRows(
+  limit: number,
+  room: number,
+  count: number,
+  extra = 0,
+): number {
+  const fit = (around: number) =>
+    Math.max(1, Math.min(limit, room - PICKER_CHROME - extra - around));
+  const rows = fit(0);
+
+  return count > rows ? fit(1) : rows;
 }
 
 /**

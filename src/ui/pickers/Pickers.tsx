@@ -42,6 +42,7 @@ import {
 import { diffView } from '../transcript/tools/diff.ts';
 import { DiffRows, Gutter } from '../transcript/tools/Tool.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
+import { framedRows } from '../prompt/overlay.ts';
 import {
   BOLD,
   colour as paletteColour,
@@ -151,6 +152,7 @@ export function AgentPicker({
 export function ModelPicker({
   models,
   rows,
+  room = Number.POSITIVE_INFINITY,
   agent,
   active,
   onPick,
@@ -158,6 +160,8 @@ export function ModelPicker({
   models: AgentModels | undefined;
   /** The most models shown at once; a longer list scrolls. */
   rows: number;
+  /** The rows the layer it floats in has; none outside one. */
+  room?: number;
   agent: string;
   active: boolean;
   onPick: (id: string) => void;
@@ -178,7 +182,7 @@ export function ModelPicker({
       {choices.length > 0 && (
         <PickerList
           choices={choices}
-          rows={rows}
+          rows={framedRows(rows, room, choices.length)}
           active={active}
           onPick={onPick}
         />
@@ -207,6 +211,7 @@ export function ResumePicker({
   picker,
   open,
   rows,
+  room = Number.POSITIVE_INFINITY,
   agent,
   home,
   active,
@@ -219,6 +224,8 @@ export function ResumePicker({
   open: ReadonlySet<string>;
   /** The most sessions shown at once; a longer list scrolls. */
   rows: number;
+  /** The rows the layer it floats in has; none outside one. */
+  room?: number;
   agent: string;
   /** The home directory the rows' directories are shown from. */
   home: string | undefined;
@@ -273,7 +280,7 @@ export function ResumePicker({
       ) : (
         <PickerList
           choices={choices}
-          rows={rows}
+          rows={framedRows(rows, room, choices.length)}
           active={active}
           onPick={(value) => {
             const chosen = sessions[Number(value)];
@@ -307,6 +314,7 @@ export function ResumePicker({
 export function TeamsPicker({
   listing,
   rows,
+  room = Number.POSITIVE_INFINITY,
   columns,
   active,
   onPick,
@@ -314,6 +322,8 @@ export function TeamsPicker({
   listing: TeamListing;
   /** The most teams shown at once; a longer list scrolls. */
   rows: number;
+  /** The rows the layer it floats in has; none outside one. */
+  room?: number;
   columns: number;
   active: boolean;
   onPick: (found: ListedTeam) => void;
@@ -327,6 +337,12 @@ export function TeamsPicker({
     () => choices[initialChoice(choices)]?.value,
   );
   const closeHint = useCloseHint();
+  const where = teamsWhere(listing.dirs, columns);
+  // Its description wraps where its directories are long.
+  const wrapped =
+    wrapAnsi(where, Math.max(columns, 1), { hard: true, trim: true }).split(
+      '\n',
+    ).length - 1;
 
   return (
     <box {...borderOf(useColours().permission)} paddingX={1} flexShrink={0}>
@@ -334,7 +350,7 @@ export function TeamsPicker({
         Teams
       </text>
       <text {...TEXT} attributes={DIM}>
-        {teamsWhere(listing.dirs, columns)}
+        {where}
       </text>
       {choices.length === 0 ? (
         <box marginTop={1}>
@@ -343,7 +359,7 @@ export function TeamsPicker({
       ) : (
         <PickerList
           choices={choices}
-          rows={rows}
+          rows={framedRows(rows, room, choices.length, wrapped)}
           active={active}
           onMove={setHighlighted}
           onPick={(name) => {
@@ -381,6 +397,7 @@ export function ConfigPicker({
   option,
   from,
   rows,
+  room = Number.POSITIVE_INFINITY,
   agent,
   active,
   onOpen,
@@ -393,6 +410,8 @@ export function ConfigPicker({
   from: string | undefined;
   /** The most rows shown at once; a longer list scrolls. */
   rows: number;
+  /** The rows the layer it floats in has; none outside one. */
+  room?: number;
   agent: string;
   active: boolean;
   onOpen: (id: string) => void;
@@ -435,7 +454,7 @@ export function ConfigPicker({
           // A fresh list, and highlight, for each level.
           key={option?.id ?? ''}
           choices={choices}
-          rows={rows}
+          rows={framedRows(rows, room, choices.length)}
           active={active}
           onPick={(value) => (option ? onPick(option, value) : onOpen(value))}
         />

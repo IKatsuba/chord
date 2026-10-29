@@ -349,6 +349,51 @@ for (const [columns, rows] of [
   });
 }
 
+test('short of room, a framed picker gives up list rows and keeps its whole frame, title and hint above the prompt (CHD-545)', async () => {
+  let here = '';
+
+  await withWindow(
+    async (window) => {
+      here = window.dir;
+
+      await ready(window);
+      await window.type('/resume');
+      await window.press('\r');
+      await window.shows('Resume a session');
+
+      const all = stripAnsi(window.frame()).split('\n');
+      const prompt = all.findLastIndex((line) => line.startsWith('╭'));
+      const title = all.findIndex((line) => line.includes('Resume a session'));
+      const hint = all.findIndex((line) => line.includes('Enter to resume'));
+
+      // Nine rows above the prompt's gap: the frame's seven around one
+      // session, and a row kept for the count of those hidden, which a
+      // session's lines show as a ↓ instead.
+      expect(title - 1).toBeGreaterThanOrEqual(0);
+      expect(all[title - 1]).toStartWith('╭');
+      expect(all.some((line) => line.includes('earlier work 9'))).toBe(true);
+      expect(hint).toBeGreaterThan(title);
+      expect(all[hint + 1]).toStartWith('╰');
+      expect(hint + 1).toBe(prompt - 2);
+    },
+    {
+      columns: 80,
+      rows: 14,
+      readRecords: () =>
+        Promise.resolve(
+          Array.from({ length: 10 }, (_, i) => ({
+            path: `/records/${i}.jsonl`,
+            sessionId: `earlier-${i}`,
+            agent: 'fake',
+            cwd: here,
+            lastUsedAt: i + 1,
+            prompt: `earlier work ${i}`,
+          })),
+        ),
+    },
+  );
+});
+
 for (const mode of ['one-row', 'crowded', 'resize'] as const) {
   test(`reachable pressure ${mode}: the list floats with its highlight in sight, the prompt and permanent rows still (CHD-545)`, async () => {
     let latest: WindowedState | undefined;

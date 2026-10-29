@@ -15,12 +15,15 @@ import {
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
 import {
+  childPasts,
   entryOf,
   FileRecording,
   lastTotal,
   readPast,
   recordActions,
   type RecordEntry,
+  runPasts,
+  taskPasts,
 } from '../../src/session/record.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
@@ -2598,4 +2601,107 @@ test("a fork's parting is a line of its own in the record, read back as the same
   expect(recordActions([entry!])).toStrictEqual([
     { ...event, turnId: 'history-forked' },
   ]);
+});
+
+describe("a resumed session's children are found by their records' first lines (CHD-557)", () => {
+  const header = (
+    sessionId: string,
+    more: Partial<Extract<RecordEntry, { type: 'session' }>> = {},
+  ): RecordEntry => ({
+    type: 'session',
+    version: 1,
+    sessionId,
+    agent: 'fake',
+    cwd: '/w',
+    at: 0,
+    ...more,
+  });
+  const prompt: RecordEntry = {
+    type: 'prompt',
+    turnId: 't1',
+    at: 1,
+    prompt: 'go',
+    images: 0,
+  };
+  const lines = (entries: readonly RecordEntry[]) =>
+    entries.map((entry) => JSON.stringify(entry) + '\n').join('');
+
+  test("one scan gives both the tasks and the team runs, and no other session's", async () => {
+    await withDir(async (dir) => {
+      const task = [header('s-t', { parent: 'p', task: 'task-1' }), prompt];
+      const lead = [
+        header('s-l', { parent: 'p', id: 'l1', team: 'ship' }),
+        prompt,
+      ];
+
+      await writeFile(join(dir, 'task.jsonl'), lines(task));
+      await writeFile(join(dir, 'lead.jsonl'), lines(lead));
+      await writeFile(
+        join(dir, 'other.jsonl'),
+        lines([header('s-o', { parent: 'q', task: 'task-2' }), prompt]),
+      );
+      await writeFile(join(dir, 'parent.jsonl'), lines([header('p'), prompt]));
+      await writeFile(join(dir, 'notes.txt'), lines(task));
+
+      const children = await childPasts(dir, 'p');
+
+      expect(taskPasts(children)).toStrictEqual(new Map([['task-1', task]]));
+      expect(runPasts(children)).toStrictEqual(new Map([['l1', lead]]));
+    });
+  });
+
+  test('a child is read whole, a line cut short by a crash passed over', async () => {
+    await withDir(async (dir) => {
+      const task = [header('s-t', { parent: 'p', task: 'task-1' }), prompt];
+
+      await writeFile(
+        join(dir, 'task.jsonl'),
+        lines(task) + '{"type":"update","turnId":"t1","upd',
+      );
+
+      expect(await childPasts(dir, 'p')).toStrictEqual([task]);
+    });
+  });
+
+  test('a record that is its header alone, with no newline after it, is a child', async () => {
+    await withDir(async (dir) => {
+      const only = header('s-t', { parent: 'p', task: 'task-1' });
+
+      await writeFile(join(dir, 'task.jsonl'), JSON.stringify(only));
+
+      expect(await childPasts(dir, 'p')).toStrictEqual([[only]]);
+    });
+  });
+
+  test('a first line that is no session header, cut short, or longer than the cap names no child', async () => {
+    await withDir(async (dir) => {
+      const named = header('s-t', { parent: 'p', task: 'task-1' });
+
+      await writeFile(join(dir, 'prompt.jsonl'), lines([prompt, named]));
+      await writeFile(
+        join(dir, 'cut.jsonl'),
+        JSON.stringify(named).slice(0, -2) + '\n' + lines([prompt]),
+      );
+      await writeFile(
+        join(dir, 'long.jsonl'),
+        lines([
+          header('s-l', {
+            parent: 'p',
+            task: 'task-2',
+            name: 'x'.repeat(64 * 1024),
+          }),
+          prompt,
+        ]),
+      );
+      await writeFile(join(dir, 'empty.jsonl'), '');
+
+      expect(await childPasts(dir, 'p')).toStrictEqual([]);
+    });
+  });
+
+  test('a records directory that is not there has no children', async () => {
+    await withDir(async (dir) => {
+      expect(await childPasts(join(dir, 'gone'), 'p')).toStrictEqual([]);
+    });
+  });
 });

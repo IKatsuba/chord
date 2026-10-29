@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { shellContext, withContext } from '../../src/session/context.ts';
 import {
+  childPasts,
   entryOf,
   FileRecording,
   historyEntries,
@@ -1114,11 +1115,13 @@ test("a parent's team runs are read from their leads' records beside its own, by
     await write('member', member);
     await write('other', other);
 
-    expect(await runPasts(dir, 'main-id')).toStrictEqual(
+    expect(runPasts(await childPasts(dir, 'main-id'))).toStrictEqual(
       new Map([['l1', lead]]),
     );
     // The member's record names its lead, not main.
-    expect([...(await runPasts(dir, 'session-l1')).keys()]).toStrictEqual([]);
+    expect([
+      ...runPasts(await childPasts(dir, 'session-l1')).keys(),
+    ]).toStrictEqual([]);
   } finally {
     await rm(dir, { recursive: true });
   }

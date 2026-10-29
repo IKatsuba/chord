@@ -6,7 +6,7 @@
  */
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { join } from 'node:path';
-import { appendFile, mkdir, readdir, readFile } from 'node:fs/promises';
+import { appendFile, mkdir, open, readdir, readFile } from 'node:fs/promises';
 import { notFound } from '../not_found.ts';
 import type { ResourceLink } from '../files.ts';
 import { shellContext, splitContext, withContext } from './context.ts';
@@ -251,17 +251,15 @@ export async function readPast(path: string): Promise<RecordEntry[]> {
 }
 
 /**
- * The pasts of the task agents session `parentId` started, from their own
- * records in `dir`, by chord's id for each task. A record that has gone is
- * not among them.
+ * The pasts of the task agents among a session's `children`, as
+ * `childPasts` read them, by chord's id for each task.
  */
-export async function taskPasts(
-  dir: string,
-  parentId: string,
-): Promise<Map<string, RecordEntry[]>> {
-  const pasts = new Map<string, RecordEntry[]>();
+export function taskPasts(
+  children: readonly (readonly RecordEntry[])[],
+): Map<string, readonly RecordEntry[]> {
+  const pasts = new Map<string, readonly RecordEntry[]>();
 
-  for (const entries of await childPasts(dir, parentId)) {
+  for (const entries of children) {
     const [header] = entries;
 
     if (header?.type === 'session' && header.task !== undefined) {
@@ -273,17 +271,15 @@ export async function taskPasts(
 }
 
 /**
- * The pasts of the team runs session `parentId` started, from their leads'
- * own records in `dir`, by chord's id for each lead. A record that has gone
- * is not among them.
+ * The pasts of the team runs among a session's `children`, as `childPasts`
+ * read them: their leads' records, by chord's id for each lead.
  */
-export async function runPasts(
-  dir: string,
-  parentId: string,
-): Promise<Map<string, RecordEntry[]>> {
-  const pasts = new Map<string, RecordEntry[]>();
+export function runPasts(
+  children: readonly (readonly RecordEntry[])[],
+): Map<string, readonly RecordEntry[]> {
+  const pasts = new Map<string, readonly RecordEntry[]>();
 
-  for (const entries of await childPasts(dir, parentId)) {
+  for (const entries of children) {
     const [header] = entries;
 
     if (
@@ -298,8 +294,19 @@ export async function runPasts(
   return pasts;
 }
 
-/** The records in `dir` of the agents session `parentId` started. */
-async function childPasts(
+/**
+ * How much of a record's start is read for its header: a header longer than
+ * this names no parent chord could have written.
+ */
+const HEADER_CAP = 64 * 1024;
+
+/**
+ * The records in `dir` of the agents session `parentId` started. Only each
+ * record's first line is read to know whose it is, and only a child's is
+ * read whole, as the directory holds every session's records, some of them
+ * hundreds of megabytes (CHD-557). A record that has gone is not among them.
+ */
+export async function childPasts(
   dir: string,
   parentId: string,
 ): Promise<RecordEntry[][]> {
@@ -311,10 +318,16 @@ async function childPasts(
         continue;
       }
 
-      const entries = await readPast(join(dir, file.name));
-      const [header] = entries;
+      const path = join(dir, file.name);
+      const header = await readHeader(path);
 
-      if (header?.type === 'session' && header.parent === parentId) {
+      if (header?.type !== 'session' || header.parent !== parentId) {
+        continue;
+      }
+
+      const entries = await readPast(path);
+
+      if (entries.length > 0) {
         pasts.push(entries);
       }
     }
@@ -325,6 +338,41 @@ async function childPasts(
   }
 
   return pasts;
+}
+
+/**
+ * A record's first line, read alone; none when the file has gone, or its
+ * first line is cut short or longer than `HEADER_CAP`.
+ */
+async function readHeader(path: string): Promise<RecordEntry | undefined> {
+  let handle;
+
+  try {
+    handle = await open(path, 'r');
+  } catch (error) {
+    if (notFound(error)) {
+      return undefined;
+    }
+
+    throw error;
+  }
+
+  try {
+    const buffer = Buffer.alloc(HEADER_CAP);
+    const { bytesRead } = await handle.read(buffer, 0, HEADER_CAP, 0);
+    const newline = buffer.subarray(0, bytesRead).indexOf(0x0a);
+
+    // A file shorter than the cap with no newline is its first line whole.
+    if (newline === -1 && bytesRead === HEADER_CAP) {
+      return undefined;
+    }
+
+    return parseRecord(
+      buffer.toString('utf8', 0, newline === -1 ? bytesRead : newline),
+    ).at(0);
+  } finally {
+    await handle.close();
+  }
 }
 
 /**

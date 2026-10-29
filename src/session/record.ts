@@ -7,6 +7,7 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { join } from 'node:path';
 import { appendFile, mkdir, open, readdir, readFile } from 'node:fs/promises';
+import pLimit from 'p-limit';
 import { notFound } from '../not_found.ts';
 import type { ResourceLink } from '../files.ts';
 import { shellContext, splitContext, withContext } from './context.ts';
@@ -301,6 +302,13 @@ export function runPasts(
 const HEADER_CAP = 64 * 1024;
 
 /**
+ * How many records are open at once while their headers are read: enough
+ * that thousands take tens of milliseconds, not hundreds, and few enough to
+ * stay far from the open-file limit.
+ */
+const HEADER_READS = 32;
+
+/**
  * The records in `dir` of the agents session `parentId` started. Only each
  * record's first line is read to know whose it is, and only a child's is
  * read whole, as the directory holds every session's records, some of them
@@ -310,34 +318,37 @@ export async function childPasts(
   dir: string,
   parentId: string,
 ): Promise<RecordEntry[][]> {
-  const pasts: RecordEntry[][] = [];
+  let files;
 
   try {
-    for (const file of await readdir(dir, { withFileTypes: true })) {
-      if (!file.isFile() || !file.name.endsWith('.jsonl')) {
-        continue;
-      }
-
-      const path = join(dir, file.name);
-      const header = await readHeader(path);
-
-      if (header?.type !== 'session' || header.parent !== parentId) {
-        continue;
-      }
-
-      const entries = await readPast(path);
-
-      if (entries.length > 0) {
-        pasts.push(entries);
-      }
-    }
+    files = await readdir(dir, { withFileTypes: true });
   } catch (error) {
-    if (!notFound(error)) {
-      throw error;
+    if (notFound(error)) {
+      return [];
     }
+
+    throw error;
   }
 
-  return pasts;
+  const limit = pLimit(HEADER_READS);
+  const read = await Promise.all(
+    files.map((file) =>
+      limit(async () => {
+        if (!file.isFile() || !file.name.endsWith('.jsonl')) {
+          return [];
+        }
+
+        const path = join(dir, file.name);
+        const header = await readHeader(path);
+
+        return header?.type === 'session' && header.parent === parentId
+          ? readPast(path)
+          : [];
+      }),
+    ),
+  );
+
+  return read.filter((entries) => entries.length > 0);
 }
 
 /**
@@ -358,7 +369,7 @@ async function readHeader(path: string): Promise<RecordEntry | undefined> {
   }
 
   try {
-    const buffer = Buffer.alloc(HEADER_CAP);
+    const buffer = Buffer.allocUnsafe(HEADER_CAP);
     const { bytesRead } = await handle.read(buffer, 0, HEADER_CAP, 0);
     const newline = buffer.subarray(0, bytesRead).indexOf(0x0a);
 

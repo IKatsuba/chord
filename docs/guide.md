@@ -94,7 +94,8 @@ directory's session where it works. For another agent's sessions, run
 as `claude --resume` does; Enter opens what it picks, from any directory,
 as its own `--resume` would, and Esc quits with nothing started.
 
-`/clear` starts a new main session with an empty transcript. `/new` opens
+`/clear` starts a fresh session for the picked agent with an empty transcript;
+your queued prompts return to its draft with their images. `/new` opens
 an idle child of main on main's runtime and goes to it; `/new <agent>`
 uses the named runtime. It starts as `open_agent` would with no model,
 effort or mode named: the runtime's own model and effort, the settings'
@@ -102,7 +103,7 @@ mode. Its first turn is your first prompt to it. Main hears of the child
 ahead of its next prompt; its running turn continues. `/new` followed by
 a space lists the agents chord can start; Tab completes one. The child
 belongs to main even when opened from another child's view, and closes
-with `x`, main's `close_agent` or `/clear`. `/fork [name]` instead continues
+with `x`, main's `close_agent` or main's `/clear`. `/fork [name]` continues
 main or a picked fork in a new top-level agent and picks it; see
 [forking a conversation](#forking-a-conversation).
 
@@ -504,13 +505,13 @@ for other runtimes and evidence limits. A source with work, an open request or
 queued prompts refuses until its turn ends. On an ordinary child, the command
 says `/fork forks main or a fork`. A fork can itself be forked.
 
-A fork has main's tools except `open_agent`, `run_team`, `propose_team` and
-`close_agent`, which answer
+A fork has main's tools except `open_agent`, `run_team`, `propose_team`,
+`close_agent` and `clear_agent`, which answer
 `This tool works only from main and its agents, not from a fork.`
 It can use task agents and monitors. Main and forks cannot message one another.
 Pick a fork in the agents list and press `x` to close it with its tasks and
-monitors. Main's `/clear` leaves forks open; `/clear` on a fork is refused:
-`A fork cannot be cleared yet · close it with x and /fork again`.
+monitors. Main's `/clear` leaves forks open; `/clear` on a picked fork gives
+it a fresh session and empties its view, with no parent notice.
 
 Forks close on quit and are not reopened automatically. `/resume` or
 `chord -r <id>` opens a fork later as a session of its own. Its record starts
@@ -884,12 +885,34 @@ parent too: a `← from chord` message, a turn of the parent's, says
 `parser's agent exited: <the end of its stderr>. open_agent opens it
 again.`, or that its turn failed and why, so a parent waiting on a report
 does not wait for ever. A session holds eight children at most, a team's
-lead counting as one and its members as none. `/clear` with a child
-picked is refused; on `main` it closes the children with the session.
-`/clear` and a `/resume` pick forget which children were closed, so a
-message to a resumed session's former child is refused as closed when the
-session was left. Team run numbers stay taken for this process, including
+lead counting as one and its members as none. Main's `/clear` closes its
+children with the session. Main's `/clear` and a `/resume` pick forget which
+children were closed, so a message to a resumed session's former child is
+refused as closed when the session was left. Team run numbers stay taken for this process, including
 across `/clear` and `/resume`.
+
+`/clear` on a picked child or fork clears only that agent: its view empties,
+but its name, child ID, role, team, parent and list position stay. Main and
+siblings are untouched, and a cleared lead keeps its members. Its running turn
+is let go, open requests are withdrawn, task agents close and monitors stop.
+Nothing from the old session reaches anyone afterwards. Its old turns remain
+in the old session record. Nothing runs in the fresh session until its next
+message; a team agent's first message carries the team and role instructions.
+
+The parent can call `clear_agent {to}` with its child's name or ID. It answers
+once the fresh session is up:
+`reviewer (id a3) has a fresh session; it knows nothing of earlier turns.`
+A caller cannot clear main, siblings, grandchildren or forks; a fork cannot
+call the tool. A failed start says `Could not clear <name>: <reason>`.
+Only a clear by the person sends the parent a message from chord saying the
+child knows nothing of earlier turns and the next message is its first.
+
+Whoever clears it, your queued prompts return to that agent's draft with
+their images. Other senders' queued messages are dropped, with a count and
+names in the tool answer or parent notice, for example:
+`2 queued messages from main and parser were not delivered.`
+The sender's own `send_message` row still says `queued`; the answer or notice
+is what reports the drop.
 
 A team saved in `.chord/teams/<name>.md`, or in `teams/` beside your
 settings file for every project, takes a job from the session you talk to:

@@ -29,8 +29,13 @@
   pins it so the spacer can go once the pinned library counts them.
 - Forks are top level, after main's tree; main's clear leaves them open.
   Closing a fork closes its tasks and monitors without notifying a parent.
-  Forks cannot use open_agent, run_team, propose_team or close_agent, or
-  message main; main cannot message them.
+  Forks cannot use open_agent, run_team, propose_team, close_agent or
+  clear_agent, or message main; main cannot message them.
+- Clearing a picked child or fork preserves its identity and long-lived
+  children. Withdraw old requests, close tasks, stop monitors and block late
+  delivery. Restore personal queued prompts with images; report other dropped
+  messages. Only a person's clear notifies the parent. The fresh session waits
+  for a message, which carries its team and role instructions once.
 - Direct team runs and picker Enter keep saved composition with no extra main
   turn. Existing team instructions and MCP tools drive optional selection;
   never inject a selection prompt or add an enabling team field.

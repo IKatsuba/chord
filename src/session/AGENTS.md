@@ -14,6 +14,9 @@ These rules also cover `src/acp/`.
 - Forks use ACP `session/fork` in their own agent process, as resume does.
   Route the answer to the new session ID, not the source. Record the divider
   and subsequent work; the copied source transcript stays out of the record.
+- Clear replaces the agent session, not the child's identity. Old calls and
+  task reports lose delivery authority immediately. The next surviving prompt
+  carries any team part exactly once; a withdrawn prompt does not spend it.
 - The window's sessions are recorded; `-p`'s are not.
 - This layer is below the interface and shared with `-p`: nothing here or in `src/acp/` imports from `src/ui/`.
 - `get_budgets` returns per-call provider windows or unavailable reasons;

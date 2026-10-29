@@ -69,13 +69,14 @@
   `permissionsteer`,
   `callchildtwo`, `agentnames`, `agentmentions`, `agenttitled`, `agentother`,
   `agentstitled`, `agentsquiet`,
-  `agentsheldgated`, `plan`,
+  `agentsheldgated`, `agentclear`, `agentlate`, `agentclearonly`, `latesay`,
+  `plan`,
   `planshrinkgated`,
   `proposal`, `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`,
   `mainbetween`, `leftask`, `mainbetweentwice`, `claudebetween`,
   `taskbetween`, `taskstays`, `tasktitled`, `tasktillsteered`,
-  `teamtask`,
+  `teamtask`, `leadclear`, `teampartof`, `leadclearrace`, `leadclearonly`,
   `shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`, `bashask`,
   `compact`,
   `codexcompact`,
@@ -233,6 +234,10 @@
   permission; `agentsheldgated` holds the message until the test opens the
   gate after seeing docs asking; `agentclose` closes `parser` and then
   messages it, which chord refuses;
+  `agentclear` queues a message to `parser`, clears it, sends a fresh message
+  and attempts an unknown clear; `agentclearonly` just clears `parser`.
+  `agentlate` opens `parser` on `latesay`, which waits for cancellation and
+  then tries to message its parent from the old session;
   `agenttask`, `agentexit` and `agentfail` open `parser` on `task`, on
   `crash`, whose agent writes its last words to stderr and exits mid-turn,
   and on `error`; `agentcost` opens it on `costwait`, to close it busy
@@ -250,7 +255,12 @@
   leads which files they hold and reports to main, `teamtester` writes a
   test, reports to its lead, messages `coder` directly and asks the person
   to run the suite, `teamcoder` messages `tester`, and `teamreviewer` waits
-  for the diff; `propose`, or the
+  for the diff. `leadclear` opens and clears `tester`, then asks it
+  `teampartof`, which reports whose team part its session received;
+  `leadclearrace` races two clears with that message, and `leadclearonly`
+  opens and clears `tester` without messaging it again. A cleared team agent accepts the person's
+  first message after its team part as well as an agent's wrapped message.
+  `propose`, or the
   prompt `/team new` sends, behind any notes chord held for
   main's next prompt, proposes `bugfix` on claude and codex, or the team
   file `--propose-team <file>` (`CHORD_FAKE_PROPOSE_TEAM`) names, through

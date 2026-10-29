@@ -7658,3 +7658,21 @@ fork point or Esc Esc rewind is part of this slice. Keep the existing ACP SDK
 and its unstable fork method. Fake transport and window tests do not prove
 live provider context inheritance across processes; capability declarations
 are documented separately in `docs/agent-capabilities.md`.
+
+## 2026-10-29 — CHD-476: clear the picked agent or an owned child (owner, Q294–Q297)
+
+`/clear` clears the picked child or fork in place, preserving its name, ID,
+role, team, parent and long-lived children. The fresh agent session knows
+nothing of earlier turns and runs nothing until its next message, which
+carries the team and role instructions when applicable. Withdraw old requests,
+close task agents, stop monitors and revoke old delivery authority immediately.
+The person's queued prompts return to its draft with images, on main too;
+other senders' queued messages are dropped and counted by sender.
+
+`clear_agent {to}` lets a parent clear only a child it opened, answering when
+the fresh session is up or with a refusal. Only a person clearing a child
+sends its parent a chord notice; a fork has no parent. This supersedes the
+CHD-101 refusal of `/clear` on a fork. Forks cannot call `clear_agent`.
+A cleared lead keeps its members. The sender's original message row still
+says queued after a drop; CHD-555 tracks that follow-up. Compaction is outside
+this slice.

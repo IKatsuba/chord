@@ -650,3 +650,168 @@ describe('CHD-545 U1 tester: zero room and output under an open list', () => {
     }
   }
 });
+
+describe('CHD-545 U2 tester: fixture resume, notice and combined layers', () => {
+  const screen = (window: Window) => stripAnsi(window.frame()).split('\n');
+  const promptAt = (window: Window) => ({
+    top: screen(window).findLastIndex((line) => line.startsWith('╭')),
+    bottom: screen(window).findLastIndex((line) => line.startsWith('╰')),
+  });
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a populated resume picker keeps the scrolled transcript and prompt fixed at ${columns}x${rows}`, async () => {
+      let latest: WindowedState | undefined;
+      let cwd = '';
+      const current = () => latest!.sessions[latest!.front]!;
+
+      await withWindow(
+        async (window) => {
+          cwd = window.dir;
+
+          await ready(window);
+          await send(window, 'markdown');
+          await until(
+            'reply complete',
+            () => current().transcript.turn.status === 'idle',
+          );
+          await until('Working area removed', () => row(window, 'Working') < 0);
+          await window.press(PAGE_UP);
+          await until(
+            'transcript scrolled back',
+            () => !current().scroll.following,
+          );
+
+          const before = current().scroll;
+          const prompt = promptAt(window);
+
+          await send(window, '/resume');
+          await window.shows('saved work 19');
+          expect(promptAt(window)).toEqual(prompt);
+          expect(current().scroll).toEqual(before);
+          expect(screen(window).some((line) => line.startsWith(' ──'))).toBe(
+            false,
+          );
+          await window.press(DOWN);
+          await until('next saved session highlighted', () =>
+            screen(window).some(
+              (line) => line.includes('❯') && line.includes('saved work 18'),
+            ),
+          );
+          expect(current().scroll).toEqual(before);
+          await window.press(ESC);
+          await until(
+            'resume picker closed',
+            () => row(window, 'Resume a session') < 0,
+          );
+          expect(promptAt(window)).toEqual(prompt);
+          expect(current().scroll).toEqual(before);
+        },
+        {
+          columns,
+          rows,
+          readRecords: () =>
+            Promise.resolve(
+              Array.from({ length: 20 }, (_, i) => ({
+                path: `/records/saved-${i}.jsonl`,
+                sessionId: `saved-${i}`,
+                agent: 'fake',
+                cwd,
+                lastUsedAt: i + 1,
+                prompt: `saved work ${i}`,
+              })),
+            ),
+          onState: (next) => {
+            latest = next;
+          },
+        },
+      );
+    });
+
+    for (const help of [false, true]) {
+      test(`notice ${help ? 'with shortcuts' : 'alone'} preserves the transcript budget and prompt at ${columns}x${rows}`, async () => {
+        let latest: WindowedState | undefined;
+        const current = () => latest!.sessions[latest!.front]!;
+
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'markdown');
+            await until(
+              'reply complete',
+              () => current().transcript.turn.status === 'idle',
+            );
+            await until(
+              'Working area removed',
+              () => row(window, 'Working') < 0,
+            );
+
+            const before = current().scroll;
+            const prompt = promptAt(window);
+
+            if (help) {
+              await window.type('?');
+              await window.shows('enter to send');
+              expect(
+                screen(window).some((line) => line.startsWith(' ──')),
+              ).toBe(true);
+            }
+
+            await window.session()!.prompt('fullaccess').result;
+            await window.shows('dimcode can start other agents');
+            expect(promptAt(window)).toEqual(prompt);
+            expect(current().scroll.view).toBe(before.view);
+            expect(current().scroll.following).toBe(before.following);
+            expect(current().scroll.top).toBe(before.top);
+            expect(screen(window).some((line) => line.startsWith(' ──'))).toBe(
+              false,
+            );
+
+            const title = row(window, 'dimcode can start other agents');
+
+            expect(screen(window)[title - 1]).toStartWith('╭');
+
+            if (help) {
+              await window.press(ESC);
+              await until(
+                'shortcuts take Escape first as before',
+                () => latest?.window.help === false,
+              );
+              expect(window.frame()).toContain(
+                'dimcode can start other agents',
+              );
+              expect(promptAt(window)).toEqual(prompt);
+            }
+
+            await window.press(ESC);
+            await until(
+              'notice closed',
+              () => row(window, 'dimcode can start other agents') < 0,
+            );
+            expect(promptAt(window)).toEqual(prompt);
+            expect(current().scroll.view).toBe(before.view);
+
+            expect(promptAt(window)).toEqual(prompt);
+            expect(current().scroll.view).toBe(before.view);
+          },
+          {
+            agent: 'dimcode',
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--dimcode-permission',
+              'read-only',
+            ),
+            configHome: (dir) => join(dir, 'config'),
+            columns,
+            rows,
+            onState: (next) => {
+              latest = next;
+            },
+          },
+        );
+      });
+    }
+  }
+});

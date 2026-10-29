@@ -1,4 +1,7 @@
-/** Transient prompt chrome borrows rows above a steady input and status. */
+/**
+ * Transient prompt lists float over the transcript, above a steady input
+ * and status (CHD-525, CHD-545).
+ */
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { describe, expect, test } from 'bun:test';
 import type { WindowedState } from '../../../src/ui/app/state.ts';
@@ -11,6 +14,7 @@ import {
   CTRL_R,
   DOWN,
   ESC,
+  PAGE_UP,
   ready,
   until,
   withWindow,
@@ -122,13 +126,89 @@ for (const [columns, rows] of [
   });
 }
 
-for (const mode of [
-  'one-row',
-  'zero-submit',
-  'zero-resize',
-  'resize-close',
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
 ] as const) {
-  test(`reachable pressure ${mode} preserves draft and visible selection (CHD-525)`, async () => {
+  describe(`a list floats over the transcript at ${columns}x${rows} (CHD-545)`, () => {
+    for (const scrolled of [false, true]) {
+      for (const [open, label] of [
+        ['/', '/clear'],
+        ['@', 'layout-file.ts'],
+        ['?', 'enter to send'],
+        [CTRL_R, 'search prompts:'],
+      ] as const) {
+        test(`${JSON.stringify(open)}, ${scrolled ? 'scrolled back' : 'following'}: the transcript keeps its rows and scroll, the prompt its row`, async () => {
+          let latest: WindowedState | undefined;
+          const current = () => latest!.sessions[latest!.front]!;
+          const lines = (window: Window) =>
+            stripAnsi(window.frame()).split('\n');
+
+          await withWindow(
+            async (window) => {
+              await ready(window);
+              await files(window, 'layout-file.ts');
+              await send(window, 'markdown');
+              await until(
+                'the reply ended',
+                () => current().transcript.turn.status === 'idle',
+              );
+              await window.shows('built $bin');
+              await until('Working gone', () => row(window, 'Working') < 0);
+
+              if (scrolled) {
+                await window.press(PAGE_UP);
+                await until('scrolled back', () => !current().scroll.following);
+              }
+
+              const closed = lines(window);
+              const scroll = current().scroll;
+              const prompt = borders(window);
+
+              if (open === CTRL_R) {
+                await window.press(CTRL_R);
+              } else {
+                await window.type(open);
+              }
+
+              await window.shows(label);
+
+              const opened = lines(window);
+              // The list's rule, on the row above its first, the window's
+              // first where the list takes every row above the prompt.
+              const rule = opened.findIndex((line) => line.startsWith(' ──'));
+
+              expect(rule).toBeGreaterThanOrEqual(0);
+              expect(row(window, label)).toBeGreaterThan(rule);
+              expect(row(window, label)).toBeLessThan(prompt.top);
+              expect(borders(window)).toEqual(prompt);
+              expect(current().scroll).toEqual(scroll);
+              // What is above the list is what was there before it opened.
+              expect(opened.slice(0, rule)).toEqual(closed.slice(0, rule));
+              await window.press(ESC);
+              await until('list closed', () => row(window, label) < 0);
+              expect(borders(window)).toEqual(prompt);
+              expect(current().scroll).toEqual(scroll);
+              expect(lines(window).slice(0, prompt.top)).toEqual(
+                closed.slice(0, prompt.top),
+              );
+            },
+            {
+              columns,
+              rows,
+              onState: (next) => {
+                latest = next;
+              },
+            },
+          );
+        });
+      }
+    }
+  });
+}
+
+for (const mode of ['one-row', 'crowded', 'resize'] as const) {
+  test(`reachable pressure ${mode}: the list floats with its highlight in sight, the prompt and permanent rows still (CHD-545)`, async () => {
     let latest: WindowedState | undefined;
     const crowded = mode !== 'one-row';
     const draft = `${Array.from({ length: 7 }, (_, i) => `draft ${i}`).join('\n')}\n@`;
@@ -170,130 +250,60 @@ for (const mode of [
           ...Array.from({ length: 6 }, (_, i) => `pressure-file${i}.ts`),
         );
         await window.paste(draft);
-        await until(
-          'draft and completion room measured',
-          () =>
-            current().draft === draft &&
-            Boolean(latest?.window.completionHidden) === crowded,
-        );
+        await until('draft pasted', () => current().draft === draft);
         await until(
           'permanent fixture rows painted',
           () => permanent(window).length === (crowded ? 3 : 2),
         );
+        await window.shows('pressure-file0.ts');
+        expect(latest?.window.completionHidden).not.toBe(true);
 
         const opened = borders(window);
         const pinned = permanent(window);
         const cursor = current().cursor;
 
-        if (crowded) {
-          await window.shows('not enough space');
-          expect(window.frame()).not.toContain('pressure-file');
-          await window.press('\t');
-          expect(current().draft).toBe(draft);
-          expect(current().cursor).toEqual(cursor);
-        } else {
-          await window.shows('pressure-file0.ts');
-
-          for (let i = 0; i < 5; i++) {
-            await window.press(DOWN);
-          }
-
-          await window.shows('pressure-file5.ts');
-          expect(latest?.window.finder.highlighted).toBe(5);
+        for (let i = 0; i < 5; i++) {
+          await window.press(DOWN);
         }
 
-        if (mode !== 'resize-close') {
-          await window.press(ESC);
-          await until(
-            'finder dismissed',
-            () => latest?.window.finder.dismissed === true,
-          );
-          expect(current().draft).toBe(draft);
-          expect(current().cursor).toEqual(cursor);
-          expect(borders(window)).toEqual(opened);
-          expect(permanent(window)).toEqual(pinned);
-          await window.press(BACKSPACE);
-          await window.type('@');
-          await until(
-            'finder reopened',
-            () =>
-              !latest?.window.finder.dismissed &&
-              Boolean(latest?.window.completionHidden) === crowded,
-          );
-          expect(current().draft).toBe(draft);
-          expect(current().cursor).toEqual(cursor);
-          expect(borders(window)).toEqual(opened);
-          expect(permanent(window)).toEqual(pinned);
-        }
+        await window.shows('pressure-file5.ts');
+        expect(latest?.window.finder.highlighted).toBe(5);
+        expect(row(window, 'pressure-file5.ts')).toBeLessThan(opened.top);
 
-        if (mode === 'zero-submit') {
-          await window.press('\r');
-          await until(
-            'literal draft queued',
-            () => current().queue.at(-1)?.text === draft,
-          );
-          expect(current().draft).toBe('');
-          expect(current().queue.at(-1)?.text).not.toContain('pressure-file');
-        } else if (mode === 'zero-resize' || mode === 'resize-close') {
+        if (mode === 'resize') {
           await window.resize({ rows: 25 });
-          await until(
-            'one row restores completion',
-            () => !latest?.window.completionHidden,
-          );
-          await window.shows('pressure-file0.ts');
-
-          for (let i = 0; i < 5; i++) {
-            await window.press(DOWN);
-          }
-
           await window.shows('pressure-file5.ts');
-
-          if (mode === 'resize-close') {
-            // The owner accepted this exact tight-window fold transition.
-            expect(borders(window)).toEqual({ top: 11, bottom: 20 });
-            expect(permanent(window)).toHaveLength(3);
-            expect(latest?.window.finder.highlighted).toBe(5);
-            await window.press(ESC);
-            await until(
-              'accepted resize-close agents growth',
-              () =>
-                latest?.window.finder.dismissed === true &&
-                permanent(window).length === 4,
-            );
-            expect(borders(window)).toEqual({ top: 10, bottom: 19 });
-            expect(current().draft).toBe(draft);
-            expect(current().cursor).toEqual(cursor);
-            expect(current().queue.map(({ text }) => text)).toEqual(
-              Array.from({ length: 4 }, (_, i) => `queued ${i}`),
-            );
-            expect(window.pids).toHaveLength(9);
-            expect(row(window, 'Read the code')).toBeGreaterThanOrEqual(0);
-            expect(row(window, 'Working')).toBeGreaterThanOrEqual(0);
-            expect(window.frame()).not.toContain('pressure-file');
-
-            return;
-          }
-
           await window.resize({ rows: 24 });
-          await until(
-            'zero room suppresses completion',
-            () => latest?.window.completionHidden === true,
-          );
-          expect(window.frame()).not.toContain('pressure-file');
-          await window.press('\t');
-          expect(current().draft).toBe(draft);
-          expect(current().cursor).toEqual(cursor);
+          await window.shows('pressure-file5.ts');
           expect(latest?.window.finder.highlighted).toBe(5);
           expect(borders(window)).toEqual(opened);
           expect(permanent(window)).toEqual(pinned);
-          await window.resize({ rows: 25 });
-          await window.shows('pressure-file5.ts');
-          await window.press('\t');
-          await until(
-            'visible highlight accepted',
-            () => current().draft === `${draft}pressure-file5.ts `,
-          );
         }
+
+        await window.press(ESC);
+        await until(
+          'finder dismissed',
+          () => latest?.window.finder.dismissed === true,
+        );
+        expect(current().draft).toBe(draft);
+        expect(current().cursor).toEqual(cursor);
+        await until(
+          'the list gone from the screen',
+          () => !window.frame().includes('pressure-file'),
+        );
+        expect(borders(window)).toEqual(opened);
+        expect(permanent(window)).toEqual(pinned);
+        await window.press(BACKSPACE);
+        await window.type('@');
+        await window.shows('pressure-file0.ts');
+        expect(current().draft).toBe(draft);
+        expect(borders(window)).toEqual(opened);
+        expect(permanent(window)).toEqual(pinned);
+        await window.press('\t');
+        await until(
+          'visible highlight accepted',
+          () => current().draft === `${draft}pressure-file0.ts `,
+        );
       },
       {
         columns: 80,

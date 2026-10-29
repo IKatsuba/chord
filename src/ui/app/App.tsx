@@ -61,6 +61,7 @@ import {
 } from '../transcript/code_pick.ts';
 import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
+import { Overlay } from '../prompt/Overlay.tsx';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import {
@@ -797,9 +798,6 @@ export function App({
   const menu = commandMenu(state, draft);
   const finder = fileFinder(state, draft, cursor);
   const menuRows = menuRowLimit(rows);
-  const transient = Boolean(state.search || finder || menu || state.help);
-  // A menu borrows transcript rows, never the actual permanent agents rows.
-  const keptAgents = Math.min(agentsFull, agentsRoom);
   const completionRoom = (room: boolean) => {
     if ((state.completionHidden === true) !== !room) {
       flushSync(() => dispatch({ type: 'completion_room', room }));
@@ -1455,7 +1453,6 @@ export function App({
                   // Rows the transcript has are rows the folded list may have.
                   renderAfter={() => {
                     if (
-                      !transient &&
                       folded &&
                       (transcriptArea.current?.getLayout().height ?? 0) > 0
                     ) {
@@ -1831,31 +1828,38 @@ export function App({
                 )}
                 {held && inputDialog}
                 {inputDialog !== undefined && !held && inputDialog}
-                {state.search ? (
-                  <SearchLine search={state.search} />
-                ) : finder ? (
-                  <FileList
-                    finder={finder}
-                    onRoom={completionRoom}
-                    rows={menuRows}
-                    agentColours={mentionColours}
-                  />
-                ) : menu ? (
-                  <CommandList
-                    menu={menu}
-                    rows={menuRows}
-                    width={columns}
-                    onRoom={completionRoom}
-                  />
-                ) : state.help ? (
-                  <Shortcuts
-                    width={columns}
-                    scroller={panelScroller}
-                    onOverflow={(overflows) =>
-                      dispatch({ type: 'panel_overflowed', overflows })
-                    }
-                  />
-                ) : null}
+                {/* Over the transcript's bottom rows, not in their place
+        (CHD-545). */}
+                <Overlay columns={columns} ruled>
+                  {(room) =>
+                    state.search ? (
+                      <SearchLine search={state.search} />
+                    ) : finder ? (
+                      <FileList
+                        finder={finder}
+                        onRoom={completionRoom}
+                        rows={menuRows}
+                        agentColours={mentionColours}
+                      />
+                    ) : menu ? (
+                      <CommandList
+                        menu={menu}
+                        rows={menuRows}
+                        width={columns}
+                        onRoom={completionRoom}
+                      />
+                    ) : state.help ? (
+                      <Shortcuts
+                        width={columns}
+                        room={room}
+                        scroller={panelScroller}
+                        onOverflow={(overflows) =>
+                          dispatch({ type: 'panel_overflowed', overflows })
+                        }
+                      />
+                    ) : null
+                  }
+                </Overlay>
                 {inputDialog !== undefined && !held && !viewing ? null : (
                   <PromptInput
                     key={
@@ -1924,7 +1928,6 @@ export function App({
                     onNewer={() => play(newerSteps(context()))}
                   />
                 )}
-                {/* Reserve the permanent status row even while a transient is open. */}
                 <box flexDirection='row' paddingX={2} height={1} flexShrink={0}>
                   {state.pendingKeys === undefined ? (
                     <StatusLine
@@ -1973,15 +1976,9 @@ export function App({
                 </box>
                 <box
                   ref={agentsBox}
-                  flexBasis={
-                    transient
-                      ? keptAgents
-                      : canFold && folded
-                        ? agentsFloor
-                        : agentsFull
-                  }
-                  minHeight={transient ? keptAgents : agentsFloor}
-                  flexShrink={transient || (canFold && folded) ? 0 : 1}
+                  flexBasis={canFold && folded ? agentsFloor : agentsFull}
+                  minHeight={agentsFloor}
+                  flexShrink={canFold && folded ? 0 : 1}
                   overflow='hidden'
                   onSizeChange={() => {
                     const height =
@@ -1990,7 +1987,7 @@ export function App({
 
                     setAgentsRoom(height);
 
-                    if (!transient && canFold && height <= agentsFloor) {
+                    if (canFold && height <= agentsFloor) {
                       setFolded(true);
                     }
                   }}

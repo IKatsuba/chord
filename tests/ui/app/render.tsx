@@ -46,6 +46,7 @@ export const END = '\x1b[F';
 export const TAB = '\t';
 export const CTRL_R = '\x12';
 export const CTRL_G = '\x07';
+export const PAGE_UP = '\x1b[5~';
 
 export function isAlive(pid: number): Promise<boolean> {
   return new Promise((resolve) => {

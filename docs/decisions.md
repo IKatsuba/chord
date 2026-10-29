@@ -7676,3 +7676,24 @@ CHD-101 refusal of `/clear` on a fork. Forks cannot call `clear_agent`.
 A cleared lead keeps its members. The sender's original message row still
 says queued after a drop; CHD-555 tracks that follow-up. Compaction is outside
 this slice.
+
+## 2026-10-29 — CHD-545: a floating list is handed its room (owner, Q315)
+
+The lists that open while editing the prompt float over the transcript in an
+OpenTUI box with `position='absolute'`, `bottom`, a `zIndex` and the
+terminal's default background, its height capped by `maxHeight` at the rows
+above the prompt. Yoga sizes a child of such an auto-height absolute box to
+its content and ignores its `flexBasis`; in normal flow the same tree honours
+the basis. A throwaway trial at 40×24 with an absolute box capped at 19 rows
+and a child with basis 23 and content 13 laid the child out at 13 rows; without
+`position='absolute'` it took 18. The `?` panel learned its room from its own
+size, so floating it kept the room it last had: at 80×24, after 120×40, it
+stayed at 15 rows of the 18 it could take.
+
+Weighed: the overlay handing its room to the list; an absolute box of definite
+height from the window's top to the prompt with the list at its bottom, which
+honours the basis but takes the wheel over the transcript rows it covers, as
+OpenTUI passes no mouse event through; and keeping the panel in flow, against
+the design. The owner chose the first: the overlay gives the list the rows it
+may take, and the panel uses them instead of measuring itself. OpenTUI is not
+patched.

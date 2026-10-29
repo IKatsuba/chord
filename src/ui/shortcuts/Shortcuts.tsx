@@ -1,10 +1,8 @@
 import {
-  type BoxRenderable,
   LinearScrollAccel,
   type MouseEvent,
   type ScrollBoxRenderable,
 } from '@opentui/core';
-import { flushSync } from '@opentui/react';
 import {
   type RefObject,
   useCallback,
@@ -38,22 +36,25 @@ import {
  * left it, it scrolls as an overflowing permission request does: in
  * OpenTUI's scrollbox, by the wheel over it and the scroll keys the window
  * hands it, a dim rule saying how many rows are out of view above and below
- * (CHD-378, the owner's Q217).
+ * (CHD-378, the owner's Q217). Its `room` is the layer it floats in's: a
+ * box laid out over the transcript sizes it to what it draws, not to the
+ * rows it could take, so it cannot measure them itself (CHD-545, Q315).
  */
 export function Shortcuts({
   width,
+  room,
   scroller,
   onOverflow,
 }: {
   width: number;
+  /** The rows it may take. */
+  room: number;
   scroller?: RefObject<RequestScroller | undefined>;
   onOverflow?: (overflows: boolean) => void;
 }) {
   const lines = shortcuts(useContext(Keys)).map(shortcutLine);
   const rows = panelRows(lines, columnCount(lines, width));
   const view = useRef<ScrollBoxRenderable | null>(null);
-  const area = useRef<BoxRenderable | null>(null);
-  const [room, setRoom] = useState(Number.POSITIVE_INFINITY);
   const [top, setTop] = useState(0);
   const total = rows.length;
   const overflows = total > room;
@@ -121,11 +122,6 @@ export function Shortcuts({
       minHeight={0}
       flexShrink={1}
       overflow='hidden'
-      ref={area}
-      onSizeChange={() => {
-        // Reserve the rules before this frame paints the smaller panel.
-        flushSync(() => setRoom(area.current?.getLayout().height ?? total));
-      }}
     >
       {/* Keep both texts mounted: one added in the size hook is painted
       only on the next frame, even when React commits synchronously. */}

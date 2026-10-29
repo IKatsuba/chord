@@ -2594,6 +2594,60 @@ describe('CHD-535 U1 tester: queued steering boundaries', () => {
   });
 });
 
+test("a let-go session's prompt that goes late does not spend the fresh session's team part (CHD-476)", async () => {
+  const opened: { go: () => void; prompts: string[] }[] = [];
+  const open = () => {
+    const { session } = heldSession();
+    const { promise: sent, resolve: go } =
+      Promise.withResolvers<readonly never[]>();
+    const prompts: string[] = [];
+
+    opened.push({ go: () => go([]), prompts });
+
+    return Promise.resolve(
+      Object.assign(session, {
+        prompt: (text: string) => {
+          prompts.push(text);
+
+          return {
+            id: text,
+            sent,
+            result: new Promise<never>(() => {}),
+            cancel: () => Promise.resolve(),
+          };
+        },
+      }),
+    );
+  };
+
+  const events: ConversationEvent[] = [];
+  const conversation = new Conversation(open, (event) => events.push(event));
+  const connected = (count: number) =>
+    until(
+      () =>
+        events.filter((event) => event.type === 'connected').length === count,
+    );
+
+  conversation.start();
+  await connected(1);
+  // The old session's prompt, held on its way out across the clear.
+  conversation.send('Old work.');
+  await until(() => opened[0]!.prompts.length === 1);
+  void conversation.clear({ team: 'bugfix', member: 'tester', text: 'Test.' });
+  await connected(2);
+  opened[0]!.go();
+  // Every microtask the late `sent` starts has run.
+  await settleQueued();
+  opened[1]!.go();
+  conversation.send('First in the fresh session.');
+  await until(() => opened[1]!.prompts.length === 1);
+
+  expect(opened[1]!.prompts[0]).toStartWith(
+    '<team name="bugfix" role="member" member="tester">\nTest.\n</team>\n',
+  );
+  await conversation.close();
+});
+
 describe('a clear drops the messages waiting in the session (CHD-476)', () => {
   test("another's message held behind Claude's open calls is among those it drops, and none are after", () =>
     onFake(['--steering', 'claude'], async (conversation, events) => {

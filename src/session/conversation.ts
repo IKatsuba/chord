@@ -3484,8 +3484,8 @@ export class Conversation {
       went = links !== undefined;
 
       // Gone to the agent, it has had its part; kept back, the next goes
-      // with it.
-      if (went) {
+      // with it. Only this session's: a clear meanwhile set its own.
+      if (went && this.#session === session && this.#firstPart === part) {
         this.#firstPart = undefined;
       }
 

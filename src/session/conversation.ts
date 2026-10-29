@@ -651,6 +651,16 @@ export class Conversation {
     this.#recording = recording;
   }
 
+  /**
+   * Who sent the messages queued here, the person's own left out: those a
+   * clear drops (CHD-476).
+   */
+  get queuedFrom(): readonly MessageFrom[] {
+    return this.#queued.flatMap((queued) =>
+      queued.from === undefined ? [] : [queued.from],
+    );
+  }
+
   /** The session the agent has opened; none while it still starts. */
   /**
    * The session's first prompt as its record keeps it, the shell output

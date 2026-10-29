@@ -43,6 +43,7 @@ import { Runtimes, sessionProbe } from '../../server/runtimes.ts';
 import type { ChordServer } from '../../server/server.ts';
 import type {
   Caller,
+  ClearAnswer,
   CloseAnswer,
   EffortStarted,
   MemberArgs,
@@ -818,6 +819,18 @@ export function useSessions(
     new Map<number, [MessageFrom, string, (TeamPart | undefined)?][]>(),
   );
 
+  /** Each team agent's part, by its key, that its first message carries. */
+  const parts = useRef(new Map<number, TeamPart>());
+
+  /**
+   * The cleared children whose next message is their first again, with the
+   * team part it carries, if any (CHD-476).
+   */
+  const fresh = useRef(new Map<number, TeamPart | undefined>());
+
+  /** Each child being cleared, by its key: told once its fresh session is up or failed. */
+  const clearing = useRef(new Map<number, (failed?: string) => void>());
+
   /**
    * A `send_message` to child `key`: into its running turn, a turn there,
    * queued, or held until it is up; `queued` is called if a message sent
@@ -835,6 +848,15 @@ export function useSessions(
       held.push([from, text]);
 
       return 'queued';
+    }
+
+    // Cleared, its next message is its first, a team agent's part ahead.
+    if (fresh.current.has(child.key)) {
+      const part = fresh.current.get(child.key);
+
+      fresh.current.delete(child.key);
+
+      return child.conversation.deliver(from, text, part) ?? 'queued';
     }
 
     return child.conversation.tell(from, text, queued) ?? 'queued';
@@ -930,6 +952,10 @@ export function useSessions(
     // Its state is there before its first event, which may come at once.
     dispatch({ type: 'agent_opened', key: childKey });
 
+    if (opening.part !== undefined) {
+      parts.current.set(childKey, opening.part);
+    }
+
     const effort = effortStart(args, () => conversationAt(childKey));
     const validation = Promise.withResolvers<string | undefined>();
     let primaryRefusal: string | undefined;
@@ -988,6 +1014,28 @@ export function useSessions(
               }
 
               opening.launch?.signal.removeEventListener('abort', cancelLaunch);
+            }
+
+            const cleared = clearing.current.get(own);
+
+            // A fresh session after a clear is no first start (CHD-476).
+            if (cleared !== undefined) {
+              if (
+                event.type === 'connected' ||
+                event.type === 'connect_failed' ||
+                event.type === 'closing'
+              ) {
+                clearing.current.delete(own);
+                cleared(
+                  event.type === 'connected'
+                    ? undefined
+                    : event.type === 'closing'
+                      ? 'it was closed'
+                      : event.message,
+                );
+              }
+
+              return;
             }
 
             if (event.type === 'connected' || event.type === 'connect_failed') {
@@ -2053,20 +2101,30 @@ export function useSessions(
   const retiredKeys = useRef(0);
   const retiredKey = () => --retiredKeys.current;
 
-  /** Holds what a child spent, by its team, as it closes. */
-  const keepChild = (child: ChildInfo & { readonly key: number }) =>
-    keepSpend(child.key, {
-      // A run's lead is `lead` under its team's row, as when it is open.
-      name: isLead(child) ? 'lead' : child.name,
-      kind: child.team === undefined ? 'agent' : 'member',
-      runtime: child.runtime,
-      ...(child.team === undefined ? {} : { team: child.team }),
-      ...(isLead(child)
-        ? { lead: child.id }
-        : child.lead === undefined
-          ? {}
-          : { lead: child.lead }),
-    });
+  /**
+   * Holds what a child spent, by its team, as it closes, or as a clear lets
+   * its session go, under a key of its own (CHD-476).
+   */
+  const keepChild = (
+    child: ChildInfo & { readonly key: number },
+    retiring = false,
+  ) =>
+    keepSpend(
+      retiring ? retiredKey() : child.key,
+      {
+        // A run's lead is `lead` under its team's row, as when it is open.
+        name: isLead(child) ? 'lead' : child.name,
+        kind: child.team === undefined ? 'agent' : 'member',
+        runtime: child.runtime,
+        ...(child.team === undefined ? {} : { team: child.team }),
+        ...(isLead(child)
+          ? { lead: child.id }
+          : child.lead === undefined
+            ? {}
+            : { lead: child.lead }),
+      },
+      retiring ? child.key : undefined,
+    );
 
   const dropChild = (key: number) => {
     const found = agentOf(sessions.agents, key);
@@ -2151,6 +2209,118 @@ export function useSessions(
     redraw();
 
     return { closed: child.name };
+  };
+
+  /**
+   * Clears `child`'s context (CHD-476): its session let go as main's /clear
+   * lets main's, a fresh one in its place under the same id and name, which
+   * runs nothing until its next message, its first again. Settles once that
+   * session is up, with why not if it is not, and the messages queued to it
+   * from others that were dropped, said so.
+   */
+  const clearChild = async (
+    child: Child<Conversation>,
+  ): Promise<{ readonly failed?: string; readonly dropped?: string }> => {
+    // Queued in its session, or held while it still starts.
+    const others = [
+      ...(early.current.get(child.key) ?? []).map(([from]) => from),
+      ...child.conversation.queuedFrom,
+    ].map((from) => from.name);
+    const names = [...new Set(others)];
+    const dropped =
+      others.length === 0
+        ? undefined
+        : `${others.length} queued message${others.length === 1 ? '' : 's'} ` +
+          `from ${andList(names)} ${others.length === 1 ? 'was' : 'were'} ` +
+          'not delivered.';
+    const up = Promise.withResolvers<string | undefined>();
+
+    clearing.current.set(child.key, up.resolve);
+    early.current.delete(child.key);
+
+    if (parts.current.has(child.key)) {
+      fresh.current.set(child.key, parts.current.get(child.key));
+    }
+
+    stopCommand(child.key);
+    keepChild(child, true)(child.conversation.clear());
+
+    const failed = await up.promise;
+
+    return {
+      ...(failed === undefined ? {} : { failed }),
+      ...(dropped === undefined ? {} : { dropped }),
+    };
+  };
+
+  /**
+   * The person's clear of `child`: as `clearChild`, and its parent told
+   * once it is up, as it did not ask; a fork has none. Why not, if not.
+   */
+  const clearByPerson = async (
+    child: Child<Conversation>,
+  ): Promise<string | undefined> => {
+    const { failed, dropped } = await clearChild(child);
+
+    if (failed !== undefined) {
+      return `Could not clear ${child.name}: ${failed}`;
+    }
+
+    const model =
+      conversationAt(child.key)?.session?.models()?.current ?? child.model;
+    const described = `${[child.runtime, model]
+      .filter((part) => part !== undefined)
+      .join(' · ')}, id ${child.id}`;
+
+    parentOf(child)?.deliver(
+      { name: 'chord' },
+      `The person cleared ${child.name}'s context (${described}). It is ` +
+        'open with a fresh session and knows nothing of earlier turns; ' +
+        `your next message is its first.${dropped === undefined ? '' : ` ${dropped}`}`,
+    );
+
+    return undefined;
+  };
+
+  /**
+   * `clear_agent`: the caller clears a child of its own, found as
+   * `close_agent` finds it, and hears once its fresh session is up.
+   */
+  const clearAgent = async (
+    caller: Caller,
+    to: string,
+  ): Promise<ClearAnswer> => {
+    const lead =
+      caller.team === 'lead' && caller.agent !== undefined
+        ? childOf(caller.key, caller.agent)
+        : undefined;
+    const agents = ownedBy(sessions.agents, caller.key);
+    const child =
+      lead === undefined
+        ? ownChild(caller.key, to)
+        : agents &&
+          membersOf(agents, lead.id).find(
+            (each) => each.id === to || each.name === to,
+          );
+
+    if (child === undefined) {
+      return {
+        error:
+          lead === undefined
+            ? noChild(caller.key, to)
+            : `No member ${to} of yours is open`,
+      };
+    }
+
+    const { failed, dropped } = await clearChild(child);
+
+    return failed === undefined
+      ? {
+          cleared: child.name,
+          id: child.id,
+          ...(dropped === undefined ? {} : { dropped }),
+        }
+      : { error: `Could not clear ${child.name}: ${failed}` };
   };
 
   /**
@@ -2360,6 +2530,7 @@ export function useSessions(
     message: (caller, text, queued) => message(caller, text, queued),
     tell: (caller, to, text, queued) => tell(caller, to, text, queued),
     close: (caller, to) => closeAgent(caller, to),
+    clear: (caller, to) => clearAgent(caller, to),
     monitor: (caller, args) =>
       startMonitorIn(sessions.agents, caller, args, place.cwd),
     stopMonitor: (caller, id) => stopMonitorIn(sessions.agents, caller, id),
@@ -3815,6 +3986,7 @@ export function useSessions(
     runTyped,
     newTyped,
     forkTyped,
+    clearByPerson,
     stopTyped,
     showTyped,
     sendToMain,

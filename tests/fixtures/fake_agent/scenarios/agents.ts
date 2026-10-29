@@ -713,6 +713,37 @@ export const AGENTS = {
     process.exit(1);
   },
 
+  // Messages `parser`, working, which queues it; clears it, so that message
+  // is not delivered; messages it again, its first in the fresh session;
+  // and asks to clear one it never opened (CHD-476).
+  async agentclear(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'send_message', {
+        to: 'parser',
+        text: 'Queued before the clear.',
+      });
+      await callChord(turn, client, 'clear_agent', { to: 'parser' });
+      await callChord(turn, client, 'send_message', {
+        to: 'parser',
+        text: 'text',
+      });
+      await callChord(turn, client, 'clear_agent', { to: 'nobody' });
+      await turn.say('parser was cleared.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // Closes `parser`, then messages it, which chord refuses.
   async agentclose(turn) {
     const client = await chordClient(turn);

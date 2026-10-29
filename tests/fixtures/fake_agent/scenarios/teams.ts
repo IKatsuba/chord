@@ -535,6 +535,48 @@ export const TEAMS = {
     return 'end_turn';
   },
 
+  // A lead's job: open `tester`, clear it, then message it `teampartof`,
+  // its first message in the fresh session (CHD-476).
+  async leadclear(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'open_agent', {
+        member: 'tester',
+        prompt: 'text',
+      });
+      await callChord(turn, client, 'clear_agent', { to: 'tester' });
+      await callChord(turn, client, 'send_message', {
+        to: 'tester',
+        text: 'teampartof',
+      });
+      await turn.say('tester was cleared.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // Says whose team part the session's messages have carried, if any.
+  async teampartof(turn) {
+    const part = teamParts.get(turn.sessionId);
+
+    await turn.say(
+      part === undefined
+        ? 'No team part reached this session.'
+        : `The team part from ${part.from} reached this session.`,
+    );
+
+    return 'end_turn';
+  },
+
   // `tester`'s first turn: the test written, a report to its lead, a word
   // to `coder` directly, then the suite, which asks the person.
   async teamtester(turn) {

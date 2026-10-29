@@ -49,6 +49,7 @@ const WINDOW: WindowView = {
   open: () => Promise.resolve({ error: 'no agents here' }),
   tell: () => ({ error: 'no children here' }),
   close: () => ({ error: 'no children here' }),
+  clear: () => Promise.resolve({ error: 'no children here' }),
   monitor: () => ({ error: 'no monitors here' }),
   stopMonitor: () => ({ error: 'no monitors here' }),
   monitors: () => [],
@@ -125,6 +126,7 @@ test('a session the person opened lists the agents and the sessions', () =>
         'propose_team',
         'send_message',
         'close_agent',
+        'clear_agent',
         'monitor',
         'stop_monitor',
         'list_monitors',
@@ -636,6 +638,7 @@ test("a team's lead opens, messages and closes members; a member only messages, 
         'open_agent',
         'send_message',
         'close_agent',
+        'clear_agent',
         'monitor',
         'stop_monitor',
         'list_monitors',
@@ -840,6 +843,11 @@ test("a fork has the person's tools, but those that open, run or close agents re
 
         return { error: 'asked' };
       },
+      clear: () => {
+        asked.push('clear');
+
+        return Promise.resolve({ error: 'asked' });
+      },
     };
     const client = await connect(
       server.url,
@@ -855,6 +863,7 @@ test("a fork has the person's tools, but those that open, run or close agents re
       for (const [name, args] of [
         ['open_agent', { agent: 'fake', prompt: 'Go.' }],
         ['close_agent', { to: 'parser' }],
+        ['clear_agent', { to: 'parser' }],
         ['run_team', { team: 'bugfix', job: 'Fix it.' }],
         [
           'propose_team',

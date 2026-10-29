@@ -764,7 +764,13 @@ export function useSessions(
   const spawn = async (from: Caller, args: SpawnArgs): Promise<SpawnAnswer> => {
     const { key } = from;
     const parent = callerConversation(key, from.agent);
+    const session = parent?.session;
     const refused = await startRefusal(key, parent, args, 'task');
+
+    // Its session let go while it waited: no task starts in the next one.
+    if (stale(from) || parent?.session !== session) {
+      return STALE;
+    }
 
     if (parent === undefined || refused !== undefined) {
       return { error: refused ?? 'This session has closed' };
@@ -840,7 +846,12 @@ export function useSessions(
   const parts = useRef(new Map<number, TeamPart>());
 
   /** Each child being cleared, by its key: told once its fresh session is up or failed. */
-  const clearing = useRef(new Map<number, (failed?: string) => void>());
+  const clearing = useRef(
+    new Map<
+      number,
+      (failed?: string, dropped?: readonly MessageFrom[]) => void
+    >(),
+  );
 
   /**
    * An event of child `key` while it is being cleared, which is no first
@@ -877,12 +888,14 @@ export function useSessions(
         });
       }
 
+      // Up, they go; failed or closed, they are dropped, and said so.
       cleared(
         event.type === 'connected'
           ? undefined
           : event.type === 'closing'
             ? 'it was closed'
             : event.message,
+        event.type === 'connected' ? [] : waited.map(([from]) => from),
       );
     }
 
@@ -1218,10 +1231,21 @@ export function useSessions(
   const openAgent = async (
     key: number,
     args: OpenArgs,
+    caller?: Caller,
   ): Promise<OpenAnswer> => {
+    const session = conversationAt(key)?.session;
     const refused =
       (await startRefusal(key, conversationAt(key), args, 'agent')) ??
       fullRefusal(key);
+
+    // Its session let go while it waited: what it asked goes nowhere.
+    if (
+      (caller !== undefined && stale(caller)) ||
+      conversationAt(key)?.session !== session
+    ) {
+      return STALE;
+    }
+
     const agents = ownedBy(sessions.agents, key);
 
     if (agents === undefined || refused !== undefined) {
@@ -2178,6 +2202,15 @@ export function useSessions(
 
     runs.current.delete(child.id);
 
+    // Closed while it restarts: the clear settles, what waited for the
+    // fresh session counted as not delivered (CHD-476).
+    const clearingIt = clearing.current.get(key);
+
+    clearing.current.delete(key);
+    clearingIt?.(
+      'it was closed',
+      (early.current.get(key) ?? []).map(([from]) => from),
+    );
     early.current.delete(key);
 
     if (stateOf(key) && busyOf(stateOf(key)!) !== undefined) {
@@ -2263,20 +2296,18 @@ export function useSessions(
     }
 
     // Queued or held in its session, or held while it still starts.
-    const others = [
+    const before = [
       ...(early.current.get(child.key) ?? []).map(([from]) => from),
       ...child.conversation.queuedFrom,
-    ].map((from) => from.name);
-    const names = [...new Set(others)];
-    const dropped =
-      others.length === 0
-        ? undefined
-        : `${others.length} queued message${others.length === 1 ? '' : 's'} ` +
-          `from ${andList(names)} ${others.length === 1 ? 'was' : 'were'} ` +
-          'not delivered.';
-    const up = Promise.withResolvers<string | undefined>();
+    ];
+    const up = Promise.withResolvers<{
+      readonly failed?: string;
+      readonly later: readonly MessageFrom[];
+    }>();
 
-    clearing.current.set(child.key, up.resolve);
+    clearing.current.set(child.key, (failed, later = []) =>
+      up.resolve({ ...(failed === undefined ? {} : { failed }), later }),
+    );
     // What comes while it restarts waits for the fresh session.
     early.current.set(child.key, []);
     stopCommand(child.key);
@@ -2285,13 +2316,29 @@ export function useSessions(
       true,
     )(child.conversation.clear(parts.current.get(child.key)));
 
-    const failed = await up.promise;
+    const { failed, later } = await up.promise;
+    // Those sent while it restarted count too when it did not come up.
+    const others = [...before, ...later].map((from) => from.name);
+    const dropped =
+      others.length === 0
+        ? undefined
+        : `${others.length} queued message${others.length === 1 ? '' : 's'} ` +
+          `from ${andList([...new Set(others)])} ` +
+          `${others.length === 1 ? 'was' : 'were'} not delivered.`;
 
     return {
       ...(failed === undefined ? {} : { failed }),
       ...(dropped === undefined ? {} : { dropped }),
     };
   };
+
+  /** Why `name` was not cleared, and the messages to it that went nowhere. */
+  const notCleared = (
+    name: string,
+    failed: string,
+    dropped: string | undefined,
+  ) =>
+    `Could not clear ${name}: ${failed}${dropped === undefined ? '' : `. ${dropped}`}`;
 
   /**
    * The person's clear of `child`: as `clearChild`, and its parent told
@@ -2303,7 +2350,7 @@ export function useSessions(
     const { failed, dropped } = await clearChild(child);
 
     if (failed !== undefined) {
-      return `Could not clear ${child.name}: ${failed}`;
+      return notCleared(child.name, failed, dropped);
     }
 
     const model =
@@ -2360,7 +2407,7 @@ export function useSessions(
           id: child.id,
           ...(dropped === undefined ? {} : { dropped }),
         }
-      : { error: `Could not clear ${child.name}: ${failed}` };
+      : { error: notCleared(child.name, failed, dropped) };
   };
 
   /**
@@ -2525,7 +2572,10 @@ export function useSessions(
     },
     spawn: (caller, args) =>
       stale(caller) ? Promise.resolve(STALE) : spawn(caller, args),
-    open: (key, args) => openAgent(key, args),
+    open: (key, args, caller) =>
+      caller !== undefined && stale(caller)
+        ? Promise.resolve(STALE)
+        : openAgent(key, args, caller),
     teams: async (caller) => {
       const agents = ownedBy(sessions.agents, caller.key);
 

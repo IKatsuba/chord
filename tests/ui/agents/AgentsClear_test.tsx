@@ -3,7 +3,18 @@
  * name in a fresh session that knows nothing of earlier turns (CHD-476).
  */
 import { expect, test } from 'bun:test';
-import { DOWN, ready, send, until, UP, type Window } from '../app/render.tsx';
+import assert from 'node:assert/strict';
+import { serveChord } from '../../../src/server/server.ts';
+import type { Caller } from '../../../src/server/tools.ts';
+import {
+  DOWN,
+  ready,
+  send,
+  until,
+  UP,
+  type Window,
+  withWindow,
+} from '../app/render.tsx';
 import { count, withAgents } from './agents_window.tsx';
 import { withTeams } from './teams_window.tsx';
 
@@ -114,4 +125,108 @@ test("the person's first message to a member its lead cleared carries the team's
     await pick(window, 'tester');
     await send(window, 'teampartof');
     await window.shows('The team part from the person reached this session.');
+  }));
+
+/** A window on the fake, and main's caller as chord's server admitted it. */
+async function withMain(body: (window: Window, main: Caller) => Promise<void>) {
+  const server = serveChord();
+  const admit = server.admit.bind(server);
+  let main: Caller | undefined;
+
+  server.admit = (caller) => {
+    if (caller.role === 'person') {
+      main = caller;
+    }
+
+    return admit(caller);
+  };
+
+  try {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        assert(main?.launch);
+        await body(window, main);
+      },
+      { server, runtimes: ['fake'], columns: 120, rows: 40 },
+    );
+  } finally {
+    await server.close();
+  }
+}
+
+/** `main` as it would speak once its session has been let go meanwhile. */
+function lettingGo(main: Caller): { caller: Caller; letGo: () => void } {
+  let live = true;
+
+  assert(main.launch);
+
+  const { signal } = main.launch;
+
+  return {
+    caller: { ...main, launch: { valid: () => live, signal } },
+    letGo: () => {
+      live = false;
+    },
+  };
+}
+
+test('a spawn_task or open_agent whose session is let go while it waits starts nothing', () =>
+  withMain(async (window, main) => {
+    const spawning = lettingGo(main);
+    const spawned = main.window.spawn(spawning.caller, {
+      agent: 'fake',
+      prompt: 'text',
+    });
+
+    spawning.letGo();
+
+    expect(await spawned).toStrictEqual({
+      error: 'Your session was cleared or closed; nothing more goes from it',
+    });
+
+    const opening = lettingGo(main);
+    const opened = main.window.open(
+      main.key,
+      { agent: 'fake', prompt: 'text', name: 'late' },
+      opening.caller,
+    );
+
+    opening.letGo();
+
+    expect(await opened).toStrictEqual({
+      error: 'Your session was cleared or closed; nothing more goes from it',
+    });
+    expect(window.frame()).not.toContain('late');
+  }));
+
+test('a child closed while it restarts says the message sent meanwhile was not delivered', () =>
+  withMain(async (window, main) => {
+    const opened = await main.window.open(main.key, {
+      agent: 'fake',
+      prompt: 'text',
+      name: 'parser',
+    });
+
+    expect(opened).toHaveProperty('id');
+    // Up and done with its first prompt, so nothing of that is waiting.
+    await until('parser replied', () =>
+      /^ {4}parser .*✓ new reply/m.test(window.frame()),
+    );
+
+    const clearing = main.window.clear(main, 'parser');
+    const told = main.window.tell(
+      main,
+      'parser',
+      'During the restart.',
+      () => {},
+    );
+
+    main.window.close(main, 'parser');
+
+    expect(told).toMatchObject({ delivered: 'queued' });
+    expect(await clearing).toStrictEqual({
+      error:
+        'Could not clear parser: it was closed. 1 queued message from main was not delivered.',
+    });
   }));

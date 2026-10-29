@@ -269,8 +269,11 @@ export interface WindowView {
   ): Promise<RuntimeOffer | undefined>;
   /** Starts a task agent for the caller: the main session or its child. */
   spawn(caller: Caller, args: SpawnArgs): Promise<SpawnAnswer>;
-  /** Opens a long-lived agent for the main session, `key`. */
-  open(key: number, args: OpenArgs): Promise<OpenAnswer>;
+  /**
+   * Opens a long-lived agent for the main session, `key`; `caller`, when
+   * given, is refused once its session has been let go (CHD-476).
+   */
+  open(key: number, args: OpenArgs, caller?: Caller): Promise<OpenAnswer>;
   /**
    * The teams saved for the caller's directory, and the leads of the runs
    * open in its session, by team.
@@ -1086,7 +1089,7 @@ const openAgent: Register = (server, caller) =>
         input,
         caller.fork
           ? { error: FORK_REFUSED }
-          : await caller.window.open(caller.key, input),
+          : await caller.window.open(caller.key, input, caller),
       ),
   );
 

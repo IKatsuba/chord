@@ -220,7 +220,7 @@ describe('CHD-532 startup agent picker', () => {
       title: 'two',
       from: 'cli',
       start: 'fixture-two',
-      found: false,
+      found: true,
     },
     {
       name: 'three',
@@ -264,7 +264,7 @@ describe('CHD-532 startup agent picker', () => {
       try {
         expect(app.frame()).toContain('Select agent');
         expect(app.frame()).toContain('1. one · First agent');
-        expect(app.frame()).toContain('❯ 2. two · not found');
+        expect(app.frame()).toContain('❯ 2. two');
         expect(app.frame()).toContain('3. three');
         expect(app.frame()).toContain('Esc to cancel');
         expect(app.frame()).not.toContain('✔');
@@ -342,6 +342,38 @@ describe('CHD-532 startup agent picker', () => {
     }
   });
 
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`CHD-544 at ${columns}x${rows}, an own CLI PATH lacks is not offered, the highlight opening on the first row when it was the default`, async () => {
+      const list: ListedAgent[] = [
+        agents[0]!,
+        {
+          name: 'missing',
+          title: 'Missing agent',
+          from: 'cli',
+          start: 'fixture-missing',
+          found: false,
+        },
+        agents[2]!,
+      ];
+      const app = await choosing(list, 'missing', columns, rows);
+
+      try {
+        expect(app.frame()).not.toContain('missing');
+        expect(app.frame()).not.toContain('not found');
+        expect(app.frame()).toContain('❯ 1. one · First agent');
+        expect(app.frame()).toContain('2. three');
+        expect(app.frame()).not.toContain('3.');
+        await app.write('2');
+        expect(app.picks).toEqual(['three']);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
+
   test('cancel follows its existing binding and Ctrl+C cancels independently', async () => {
     const { keymap } = readKeybindings(
       JSON.stringify({
@@ -375,4 +407,90 @@ describe('CHD-532 startup agent picker', () => {
       await control.unmount();
     }
   });
+});
+
+describe('CHD-544 tester: filtered picker keys and empty catalogs', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`an all-hidden catalog cannot be picked and cancels once at ${columns}x${rows}`, async () => {
+      const picks: (string | undefined)[] = [];
+      const app = await draw(
+        <Start
+          kind='agents'
+          agents={[
+            {
+              name: 'missing',
+              title: 'Missing',
+              start: 'missing',
+              from: 'cli',
+              found: false,
+            },
+          ]}
+          preferred='missing'
+          directory='/tmp/chord-qa'
+          colours={paletteOf('dark', false)}
+          keymap={DEFAULT_KEYMAP}
+          onPick={(choice) => picks.push(choice)}
+        />,
+        { columns, rows },
+      );
+
+      try {
+        expect(app.frame()).toContain('No agents available');
+        expect(app.frame()).not.toContain('not found');
+        await app.write('1');
+        await app.write('\r');
+        await app.write('j');
+        expect(picks).toStrictEqual([]);
+        await app.write(ESC);
+        await until('empty catalog cancellation', () => picks.length === 1);
+        await app.write('\r');
+        expect(picks).toStrictEqual([undefined]);
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`digit selection follows the filtered numbering past hidden rows at ${columns}x${rows}`, async () => {
+      const picks: (string | undefined)[] = [];
+      const agents: ListedAgent[] = Array.from({ length: 12 }, (_, i) => [
+        {
+          name: `hidden-${i}`,
+          title: undefined,
+          start: 'missing',
+          from: 'cli' as const,
+          found: false,
+        },
+        {
+          name: `kept-${i}`,
+          title: undefined,
+          start: 'fixture',
+          from: 'settings' as const,
+        },
+      ]).flat();
+      const app = await draw(
+        <Start
+          kind='agents'
+          agents={agents}
+          preferred='hidden-11'
+          directory='/tmp/chord-qa'
+          colours={paletteOf('dark', false)}
+          keymap={DEFAULT_KEYMAP}
+          onPick={(choice) => picks.push(choice)}
+        />,
+        { columns, rows },
+      );
+
+      try {
+        expect(app.frame()).toMatch(/❯\s+1\.\s+kept-0/);
+        expect(app.frame()).not.toContain('hidden-');
+        await app.write('9');
+        expect(picks).toStrictEqual(['kept-8']);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
 });

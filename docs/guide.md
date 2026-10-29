@@ -61,19 +61,20 @@ Each chord process runs one main session with its children. For sessions
 side by side, run chord in separate terminal panes.
 
 A new interactive start with no agent named opens `Select agent` before any
-agent or session starts. It uses the current `chord agents` listing,
+agent or session starts. It uses the `chord agents` catalog,
 including settings-defined names. Your configured agent is highlighted
 initially, or Claude Code by default; if absent from the list, the first row
 is highlighted. ↑/↓ or j/k moves, Enter or 1–9 selects. Esc or ctrl+c quits
 without starting a session. The choice is for this run only and is not saved;
 the next unnamed interactive start asks again.
 
-The list marks missing own CLIs `not found` but keeps them selectable.
-Other entries are not checked for installation, login or readiness; choosing
-an entry still uses the usual startup checks. Naming an agent, supplying
-`--agent-command`, using `-p`, `--continue` or any `--resume` form skips the
-agent picker. It also stays out when stdin or stdout is not a terminal;
-those routes keep their usual default-agent and resume behavior.
+Agents whose own CLI is not on PATH are hidden; npx/uvx entries and
+settings-defined names stay. These are not checked for installation, login
+or readiness; choosing one still uses the usual startup checks. Naming an
+agent, supplying `--agent-command`, or using `-p`, `--continue` or any
+`--resume` form skips the agent picker. It also stays out when stdin or
+stdout is not a terminal; those routes keep their usual default-agent and
+resume behavior.
 
 Inside chord, `/resume` lists this agent's earlier sessions in this
 directory, newest first, with when each was last used and its title, or

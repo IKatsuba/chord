@@ -1,0 +1,40 @@
+ chord                                                                                       /tmp/chord-qa.designer-544
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ Select agent
+
+   ↑ 27. devin · Devin · not found
+     28. fx
+     29. goose · not found
+     30. junie · Junie · not found
+     31. kimi · Kimi Code · not found
+     32. kiro · Kiro · not found
+     33. openclaw · OpenClaw · not found
+     34. opencode · OpenCode · not found
+     35. poolside · Poolside · not found
+ ❯   36. zeroclaw · ZeroClaw · not found
+     … +26 more
+
+ ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel

@@ -161,7 +161,7 @@ for (const mode of [
         : mode === 'missing'
           ? 'fx'
           : 'fixture';
-    const stopped = mode === 'refused' || mode === 'missing';
+    const stopped = mode === 'refused';
     const content = JSON.stringify({
       agent: mode === 'cancel' ? 'unknown-unselected-default' : preferred,
       mouse: false,
@@ -334,7 +334,18 @@ for (const mode of [
         expect(starts()).toEqual([]);
         expect(frame()).not.toContain('Fake Small');
 
-        if (mode === 'cancel') {
+        if (mode === 'missing') {
+          // A default whose own CLI PATH lacks is not offered: the
+          // highlight opens on the first row (CHD-544).
+          expect(frame()).not.toMatch(/\d\. +fx\b/);
+          expect(
+            frame()
+              .split('\n')
+              .find((line) => line.includes('❯')),
+          ).toContain(' 1. ');
+        }
+
+        if (mode === 'cancel' || mode === 'missing') {
           tmux('send-keys', '-t', 'picker', 'Escape');
           await exited(0);
           expect(starts()).toEqual([]);
@@ -350,13 +361,11 @@ for (const mode of [
 
       if (stopped) {
         await exited(1);
-        expect(frame()).toContain(
-          mode === 'missing' ? 'which is not on PATH' : 'expected a string',
-        );
+        expect(frame()).toContain('expected a string');
         expect(starts()).toEqual([]);
       }
 
-      if (mode !== 'cancel' && !stopped) {
+      if (mode !== 'cancel' && mode !== 'missing' && !stopped) {
         await until('selected fake agent is ready', () =>
           frame().includes(mode === 'model' ? 'Fake Large' : 'Fake Small'),
         );

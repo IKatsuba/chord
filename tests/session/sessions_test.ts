@@ -1312,3 +1312,53 @@ describe('a start reads the records once (CHD-557)', () => {
     expect(reads).toBe(1);
   });
 });
+
+describe('CHD-557 tester: startup snapshots settle once and stay local', () => {
+  test('simultaneous startup lookups share an unfinished read', async () => {
+    const pending = Promise.withResolvers<SessionRecord[]>();
+    let reads = 0;
+    const once = recordsOnce(() => {
+      reads++;
+
+      return pending.promise;
+    });
+
+    const first = once();
+    const second = once();
+
+    expect(first).toBe(second);
+    expect(reads).toBe(1);
+
+    pending.resolve([record('a')]);
+
+    expect(await first).toStrictEqual([record('a')]);
+    expect(await second).toStrictEqual([record('a')]);
+  });
+
+  test('a failed read reaches every lookup without a second filesystem attempt', async () => {
+    const failure = new Error('fixture records unavailable');
+    let reads = 0;
+    const once = recordsOnce(() => {
+      reads++;
+
+      return Promise.reject(failure);
+    });
+
+    await expect(once()).rejects.toBe(failure);
+    await expect(once()).rejects.toBe(failure);
+    expect(reads).toBe(1);
+  });
+
+  test('a new startup reads fresh records rather than inheriting another startup', async () => {
+    let current = [record('a')];
+    const read = () => Promise.resolve(current);
+    const firstStart = recordsOnce(read);
+
+    expect(await firstStart()).toStrictEqual([record('a')]);
+
+    current = [record('b')];
+
+    expect(await firstStart()).toStrictEqual([record('a')]);
+    expect(await recordsOnce(read)()).toStrictEqual([record('b')]);
+  });
+});

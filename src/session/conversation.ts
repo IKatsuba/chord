@@ -301,11 +301,6 @@ interface Prompt {
    * where its row still is (CHD-535).
    */
   readonly place?: number;
-  /**
-   * The team part a cleared team agent's first prompt took, which it hands
-   * back if it is withdrawn unsent (CHD-476).
-   */
-  readonly firstPart?: TeamPart;
 }
 
 /** How a message to the session went: straight into a turn, or queued. */
@@ -1059,20 +1054,10 @@ export class Conversation {
     }
 
     const ahead = this.#ahead.splice(0);
-    const part = this.#firstPart;
-
-    this.#firstPart = undefined;
-
     const next = {
       turnId: crypto.randomUUID(),
       text,
-      // A cleared team agent's first prompt opens with its team part.
-      ...(part === undefined ? {} : { firstPart: part }),
-      prompt: [
-        ...(part === undefined ? [] : [teamBlock(part)]),
-        ...ahead,
-        prompt,
-      ].join('\n\n'),
+      prompt: [...ahead, prompt].join('\n\n'),
       attachments,
       mentions,
     };
@@ -1679,7 +1664,7 @@ export class Conversation {
   #message(
     from: MessageFrom,
     text: string,
-    given?: TeamPart,
+    team?: TeamPart,
   ): { readonly delivery: Delivery; readonly turnId: string } | undefined {
     const session = this.#session;
 
@@ -1688,10 +1673,6 @@ export class Conversation {
     }
 
     const turnId = crypto.randomUUID();
-    // A cleared team agent's first message carries its part again.
-    const team = given ?? this.#firstPart;
-
-    this.#firstPart = undefined;
 
     return {
       delivery: this.#enqueue(session, {
@@ -2367,10 +2348,6 @@ export class Conversation {
     const withdrawn = this.#queued.filter((queued) => !queued.from);
 
     this.#queued = this.#queued.filter((queued) => queued.from);
-    // Unsent, the first prompt's team part goes with the next one.
-    this.#firstPart ??= withdrawn.find(
-      (queued) => queued.firstPart !== undefined,
-    )?.firstPart;
 
     // The person's steers held in the queue go back with the prompts.
     const steers = [...this.#heldSteers];
@@ -3477,13 +3454,14 @@ export class Conversation {
       ...this.#notes.splice(0),
       ...(cut.length === 0 ? [] : [cutNote(cut.map((each) => each.call))]),
     ];
-    const prompt =
-      notes.length === 0
-        ? next.prompt
-        : [
-            ...notes.map((note) => wrapMessage({ name: 'chord' }, note)),
-            next.prompt,
-          ].join('\n\n');
+    // A cleared team agent's first prompt, whatever sent it, opens with
+    // its team part, as its first did (CHD-476); one that brings its own
+    // keeps that.
+    const part = next.team === undefined ? this.#firstPart : undefined;
+    const prompt = `${part === undefined ? '' : `${teamBlock(part)}\n`}${[
+      ...notes.map((note) => wrapMessage({ name: 'chord' }, note)),
+      next.prompt,
+    ].join('\n\n')}`;
 
     try {
       const turn = session.prompt(prompt, next.attachments, next.mentions);
@@ -3504,6 +3482,12 @@ export class Conversation {
       const links = await turn.sent;
 
       went = links !== undefined;
+
+      // Gone to the agent, it has had its part; kept back, the next goes
+      // with it.
+      if (went) {
+        this.#firstPart = undefined;
+      }
 
       if (went && this.#turn?.id === turnId) {
         this.#wentId = turnId;

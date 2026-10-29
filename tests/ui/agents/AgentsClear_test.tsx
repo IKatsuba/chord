@@ -328,6 +328,7 @@ for (const columns of [80, 120]) {
 
             return false;
           });
+
           await window.shows(RECEIVED);
         },
         {

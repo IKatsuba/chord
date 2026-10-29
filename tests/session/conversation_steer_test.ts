@@ -2774,3 +2774,55 @@ describe('CHD-476 U1 tester: a retained sender takes the first role', () => {
     );
   });
 });
+
+describe('CHD-476 U1 tester: role consumption follows actual delivery', () => {
+  test('the first actual prompt carries one role block and the next sender does not receive it again', async () => {
+    let owner: Session | undefined;
+    const prompts: string[] = [];
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        const original = owner?.id;
+
+        await conversation.clear({
+          team: 'bugfix',
+          member: 'tester',
+          text: 'Instructions for the fresh context once.',
+        });
+        await until(
+          () => owner?.id !== original && conversation.session !== undefined,
+        );
+        expect(conversation.send('teampartof')).toBe(true);
+        await until(
+          () => events.filter((event) => event.type === 'result').length === 1,
+        );
+        expect(prompts).toHaveLength(1);
+        expect(prompts[0]).toContain(
+          '<team name="bugfix" role="member" member="tester">',
+        );
+        expect(conversation.deliver(MAIN, 'teampartof')).toBeDefined();
+        await until(
+          () => events.filter((event) => event.type === 'result').length === 2,
+        );
+        expect(prompts).toHaveLength(2);
+        expect(prompts[1]).toBe(
+          '<message from="main">\nteampartof\n</message>',
+        );
+      },
+      (session) => {
+        owner = session;
+
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          prompts.push(args[0]);
+
+          return prompt(...args);
+        };
+
+        return session;
+      },
+    );
+  });
+});

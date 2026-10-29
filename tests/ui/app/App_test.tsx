@@ -1688,3 +1688,85 @@ describe('CHD-535 U2 tester: queued ownership through the window', () => {
     );
   });
 });
+
+describe('CHD-476 U2 tester: main clear image ownership', () => {
+  for (const columns of [80, 120]) {
+    test(`main clear restores the queued bitmap and link for exactly one resend at ${columns} columns`, async () => {
+      let state: AppState | undefined;
+      const prompts: Parameters<Session['prompt']>[] = [];
+      const text = 'main [Image #1] @a.ts done';
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await writeFile(join(window.dir, 'a.ts'), '');
+          await send(window, 'costwait');
+          await window.shows('Working until stopped.');
+
+          const old = window.session()!.id;
+
+          for (const key of 'main /shots/a.png @a.ts done') {
+            await window.press(key);
+          }
+
+          await window.press('\r');
+          await until(
+            'main bitmap prompt queued',
+            () => state?.queue.length === 1,
+          );
+          expect(prompts.some((args) => args[0].includes(text))).toBe(false);
+
+          await send(window, '/clear');
+          await until(
+            'fresh main restores bitmap draft',
+            () =>
+              state?.draft === text &&
+              state.connection.status === 'ready' &&
+              window.session()?.id !== old,
+          );
+          expect(state!.images.map((image) => image.data)).toStrictEqual([
+            PIXEL_PNG,
+          ]);
+          expect(state!.queue).toStrictEqual([]);
+          await window.press('\r');
+          await window.shows(RECEIVED);
+          await window.shows('Received a link: a.ts');
+
+          const delivered = prompts.filter((args) => args[0].includes(text));
+
+          expect(delivered).toHaveLength(1);
+          expect(delivered[0]!.slice(1, 3)).toStrictEqual([
+            [{ mediaType: 'image/png', data: PIXEL_PNG }],
+            ['a.ts'],
+          ]);
+          expect(state!.images).toStrictEqual([]);
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          onState: (all) => {
+            state = frontState(all);
+          },
+          readImage: () =>
+            Promise.resolve({
+              mediaType: 'image/png',
+              data: PIXEL_PNG,
+              bytes: PIXEL_BYTES.length,
+            }),
+          openWith: async (options) => {
+            const session = await openSession(options);
+            const prompt = session.prompt.bind(session);
+
+            session.prompt = (...args) => {
+              prompts.push(args);
+
+              return prompt(...args);
+            };
+
+            return session;
+          },
+        },
+      );
+    });
+  }
+});

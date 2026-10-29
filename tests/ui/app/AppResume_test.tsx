@@ -3,6 +3,9 @@
  * a session works, and what a click gives the keys.
  */
 import { describe, expect, spyOn, test } from 'bun:test';
+import { frontState, type AppState } from '../../../src/ui/app/state.ts';
+import { PIXEL_BYTES, PIXEL_PNG } from '../../fixtures/images.ts';
+import { RECEIVED } from '../prompt/prompt_window.tsx';
 import {
   withChild,
   openOther,
@@ -959,5 +962,95 @@ describe('CHD-445 Q200 tester: task and child titles on resume', () => {
         }
       });
     }
+  }
+});
+
+describe('CHD-476 U2 tester: resume refusal image ownership', () => {
+  for (const columns of [80, 120]) {
+    test(`a busy resume refusal preserves the queued bytes and link for clear and one resend at ${columns} columns`, async () => {
+      let state: AppState | undefined;
+      const prompts: Parameters<Session['prompt']>[] = [];
+      const text = 'main [Image #1] @a.ts done';
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await writeFile(join(window.dir, 'a.ts'), '');
+          await send(window, 'costwait');
+          await window.shows('Working until stopped.');
+
+          const old = window.session()!.id;
+
+          for (const key of 'main /shots/a.png @a.ts done') {
+            await window.press(key);
+          }
+
+          await window.press('\r');
+          await until(
+            'main bitmap prompt queued',
+            () => state?.queue.length === 1,
+          );
+          expect(prompts.some((args) => args[0].includes(text))).toBe(false);
+
+          const queued = state!.queue[0]!;
+
+          await send(window, '/resume');
+          await window.shows('A turn is running. Wait for it to end');
+          expect(window.frame()).not.toContain('Resume a session');
+          expect(state!.queue).toStrictEqual([queued]);
+          expect(prompts.some((args) => args[0].includes(text))).toBe(false);
+
+          await send(window, '/clear');
+          await until(
+            'fresh main restores bitmap draft',
+            () =>
+              state?.draft === text &&
+              state.connection.status === 'ready' &&
+              window.session()?.id !== old,
+          );
+          expect(state!.images.map((image) => image.data)).toStrictEqual([
+            PIXEL_PNG,
+          ]);
+          expect(state!.queue).toStrictEqual([]);
+          await window.press('\r');
+          await window.shows(RECEIVED);
+          await window.shows('Received a link: a.ts');
+
+          const delivered = prompts.filter((args) => args[0].includes(text));
+
+          expect(delivered).toHaveLength(1);
+          expect(delivered[0]!.slice(1, 3)).toStrictEqual([
+            [{ mediaType: 'image/png', data: PIXEL_PNG }],
+            ['a.ts'],
+          ]);
+          expect(state!.images).toStrictEqual([]);
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          onState: (all) => {
+            state = frontState(all);
+          },
+          readImage: () =>
+            Promise.resolve({
+              mediaType: 'image/png',
+              data: PIXEL_PNG,
+              bytes: PIXEL_BYTES.length,
+            }),
+          openWith: async (options) => {
+            const session = await openSession(options);
+            const prompt = session.prompt.bind(session);
+
+            session.prompt = (...args) => {
+              prompts.push(args);
+
+              return prompt(...args);
+            };
+
+            return session;
+          },
+        },
+      );
+    });
   }
 });

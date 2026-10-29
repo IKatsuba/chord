@@ -2673,7 +2673,7 @@ describe("a resumed session's children are found by their records' first lines (
     });
   });
 
-  test('a first line that is no session header, cut short, or longer than the cap names no child', async () => {
+  test('a first line that is no session header, or cut short, names no child', async () => {
     await withDir(async (dir) => {
       const named = header('s-t', { parent: 'p', task: 'task-1' });
 
@@ -2682,20 +2682,28 @@ describe("a resumed session's children are found by their records' first lines (
         join(dir, 'cut.jsonl'),
         JSON.stringify(named).slice(0, -2) + '\n' + lines([prompt]),
       );
-      await writeFile(
-        join(dir, 'long.jsonl'),
-        lines([
-          header('s-l', {
-            parent: 'p',
-            task: 'task-2',
-            name: 'x'.repeat(64 * 1024),
-          }),
-          prompt,
-        ]),
-      );
       await writeFile(join(dir, 'empty.jsonl'), '');
 
       expect(await childPasts(dir, 'p')).toStrictEqual([]);
+    });
+  });
+
+  test("a header longer than a read's chunk, as a task's long description makes it, is read to its end", async () => {
+    await withDir(async (dir) => {
+      const task = [
+        header('s-t', {
+          parent: 'p',
+          task: 'task-1',
+          name: 'é'.repeat(64 * 1024),
+        }),
+        prompt,
+      ];
+
+      await writeFile(join(dir, 'task.jsonl'), lines(task));
+
+      expect(taskPasts(await childPasts(dir, 'p'))).toStrictEqual(
+        new Map([['task-1', task]]),
+      );
     });
   });
 

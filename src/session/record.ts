@@ -296,10 +296,11 @@ export function runPasts(
 }
 
 /**
- * How much of a record's start is read for its header: a header longer than
- * this names no parent chord could have written.
+ * How much of a record is read at a time for its header: most headers fit
+ * in one, and a longer one, a task's long description in its name, is read
+ * on to its end.
  */
-const HEADER_CAP = 64 * 1024;
+const HEADER_CHUNK = 4 * 1024;
 
 /**
  * How many records are open at once while their headers are read: enough
@@ -352,8 +353,8 @@ export async function childPasts(
 }
 
 /**
- * A record's first line, read alone; none when the file has gone, or its
- * first line is cut short or longer than `HEADER_CAP`.
+ * A record's first line, read alone, however long; none when the file has
+ * gone or its first line is cut short.
  */
 async function readHeader(path: string): Promise<RecordEntry | undefined> {
   let handle;
@@ -369,18 +370,25 @@ async function readHeader(path: string): Promise<RecordEntry | undefined> {
   }
 
   try {
-    const buffer = Buffer.allocUnsafe(HEADER_CAP);
-    const { bytesRead } = await handle.read(buffer, 0, HEADER_CAP, 0);
-    const newline = buffer.subarray(0, bytesRead).indexOf(0x0a);
+    const chunks: Buffer[] = [];
+    let position = 0;
 
-    // A file shorter than the cap with no newline is its first line whole.
-    if (newline === -1 && bytesRead === HEADER_CAP) {
-      return undefined;
+    for (;;) {
+      const chunk = Buffer.allocUnsafe(HEADER_CHUNK);
+      const { bytesRead } = await handle.read(chunk, 0, HEADER_CHUNK, position);
+      const newline = chunk.subarray(0, bytesRead).indexOf(0x0a);
+
+      position += bytesRead;
+
+      chunks.push(chunk.subarray(0, newline === -1 ? bytesRead : newline));
+
+      // A file that ends with no newline is its first line whole.
+      if (newline !== -1 || bytesRead === 0) {
+        break;
+      }
     }
 
-    return parseRecord(
-      buffer.toString('utf8', 0, newline === -1 ? bytesRead : newline),
-    ).at(0);
+    return parseRecord(Buffer.concat(chunks).toString('utf8')).at(0);
   } finally {
     await handle.close();
   }

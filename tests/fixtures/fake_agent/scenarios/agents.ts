@@ -8,6 +8,7 @@
  * first turn starts a task agent, or whose agent exits or turn fails in it.
  */
 import { createHash } from 'node:crypto';
+import { once } from 'node:events';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -20,7 +21,7 @@ import {
   STEP_MS,
 } from '../options.ts';
 import { cwds } from '../sessions.ts';
-import { pause, type Play, steeredIn, type Turn } from '../turn.ts';
+import { lifetime, pause, type Play, steeredIn, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
 /**
@@ -739,6 +740,53 @@ export const AGENTS = {
       await turn.say('parser was cleared.');
     } finally {
       await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // Opens `parser` on `latesay`, which tries to message main after its
+  // turn is stopped (CHD-476).
+  agentlate: (turn) => openParserOn(turn, 'latesay'),
+
+  // Clears `parser` and says so.
+  async agentclearonly(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'clear_agent', { to: 'parser' });
+      await turn.say('parser was cleared.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
+  // A child's turn that works until it is stopped, then tries to message
+  // its parent from the session that was let go.
+  async latesay(turn) {
+    const client = await chordClient(turn);
+
+    try {
+      await turn.say('Working until stopped.');
+      await once(turn.signal, 'abort', { signal: lifetime.signal }).catch(
+        () => {},
+      );
+      await client
+        ?.callTool({
+          name: 'send_message',
+          arguments: { text: 'Late from the old session.' },
+        })
+        .catch(() => {});
+    } finally {
+      await client?.close().catch(() => {});
     }
 
     return 'end_turn';

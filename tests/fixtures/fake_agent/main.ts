@@ -502,6 +502,9 @@ const SCENARIOS = [
   'agentchild',
   'agentclose',
   'agentclear',
+  'agentlate',
+  'agentclearonly',
+  'latesay',
   'agentcall',
   'agentcalltwice',
   'agentcallgated',
@@ -542,6 +545,8 @@ const SCENARIOS = [
   'teamtester',
   'leadclear',
   'teampartof',
+  'leadclearrace',
+  'leadclearonly',
   'teamcoder',
   'teamreviewer',
   'propose',
@@ -954,7 +959,19 @@ async function playPrompt(
   const cutNote = CUT_NOTE.exec(whole.trimStart());
   const text =
     cutNote === null ? whole : whole.trimStart().slice(cutNote[0].length);
-  const asked = text.trim();
+  const opened = text.trim();
+  // A cleared team agent's first prompt from the person opens with its team
+  // part, then the person's own words (CHD-476).
+  const ownPart =
+    /^<team name="[^"]*" role="(?:lead|member)"(?: member="[^"]*")?>\n([\s\S]*?)\n<\/team>\n+(?!<message )/.exec(
+      opened,
+    );
+  const asked = ownPart === null ? opened : opened.slice(ownPart[0].length);
+
+  if (ownPart !== null) {
+    teamParts.set(params.sessionId, { from: 'the person', text: ownPart[1]! });
+  }
+
   const named = unsaid(asked);
   const scenario = isScenario(named) ? named : fallback;
 

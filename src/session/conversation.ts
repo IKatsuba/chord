@@ -47,6 +47,7 @@ import {
   type TaskParent,
   type TaskSession,
   wrapMessage,
+  teamBlock,
   wrapTeamMessage,
 } from './tasks.ts';
 import type {
@@ -491,6 +492,16 @@ export class Conversation {
    * back to the box with the prompts queued (CHD-378).
    */
   #heldSteers = new Set<string>();
+  /**
+   * The messages of others a steer holds back, by their turn, not sent to
+   * the agent yet: a clear drops them as it drops the queue (CHD-476).
+   */
+  #incoming = new Map<string, MessageFrom>();
+  /**
+   * The team part a cleared team agent's next message carries, whatever
+   * sends it, as its first did (CHD-476).
+   */
+  #firstPart: TeamPart | undefined;
   /** The place the next message held in the queue takes there. */
   #places = 0;
   /** The person's held steers Esc took back, which go nowhere now. */
@@ -656,9 +667,13 @@ export class Conversation {
    * clear drops (CHD-476).
    */
   get queuedFrom(): readonly MessageFrom[] {
-    return this.#queued.flatMap((queued) =>
-      queued.from === undefined ? [] : [queued.from],
-    );
+    return [
+      ...this.#queued.flatMap((queued) =>
+        queued.from === undefined ? [] : [queued.from],
+      ),
+      // Held behind the turn's calls or the person's answer, not sent yet.
+      ...this.#incoming.values(),
+    ];
   }
 
   /** The session the agent has opened; none while it still starts. */
@@ -799,7 +814,7 @@ export class Conversation {
    * or after `SETTLE_LIMIT_MS`, so what it cost to the end is said
    * (`retired_usage`) and kept in its record; settles when it has closed.
    */
-  clear(): Promise<void> {
+  clear(firstPart?: TeamPart): Promise<void> {
     const opening = this.#opening;
 
     if (!opening || this.#closing) {
@@ -885,6 +900,8 @@ export class Conversation {
     this.#steers = new Set();
     this.#steering = Promise.resolve();
     this.#heldSteers = new Set();
+    this.#incoming = new Map();
+    this.#firstPart = firstPart;
     this.#takenBack = new Set();
     this.#openCalls = new Set();
     this.#calls = emptyTranscript;
@@ -1037,10 +1054,19 @@ export class Conversation {
     }
 
     const ahead = this.#ahead.splice(0);
+    const part = this.#firstPart;
+
+    this.#firstPart = undefined;
+
     const next = {
       turnId: crypto.randomUUID(),
       text,
-      prompt: [...ahead, prompt].join('\n\n'),
+      // A cleared team agent's first prompt opens with its team part.
+      prompt: [
+        ...(part === undefined ? [] : [teamBlock(part)]),
+        ...ahead,
+        prompt,
+      ].join('\n\n'),
       attachments,
       mentions,
     };
@@ -1354,6 +1380,11 @@ export class Conversation {
 
     this.#steers.add(steer);
 
+    // Another's message, held until it goes out: a clear would drop it.
+    if (next.from !== undefined) {
+      this.#incoming.set(next.turnId, next.from);
+    }
+
     this.#steering = answered;
 
     // Held for the calls open as it came, it waits in the queue at once, in
@@ -1388,6 +1419,8 @@ export class Conversation {
       }
 
       if (this.#steerable(session) === into) {
+        this.#incoming.delete(next.turnId);
+
         const out = session.steer(
           next.prompt,
           next.attachments,
@@ -1426,6 +1459,7 @@ export class Conversation {
       outcome = 'refused';
     } finally {
       this.#steers.delete(steer);
+      this.#incoming.delete(next.turnId);
       answer();
     }
 
@@ -1639,7 +1673,7 @@ export class Conversation {
   #message(
     from: MessageFrom,
     text: string,
-    team?: TeamPart,
+    given?: TeamPart,
   ): { readonly delivery: Delivery; readonly turnId: string } | undefined {
     const session = this.#session;
 
@@ -1648,6 +1682,10 @@ export class Conversation {
     }
 
     const turnId = crypto.randomUUID();
+    // A cleared team agent's first message carries its part again.
+    const team = given ?? this.#firstPart;
+
+    this.#firstPart = undefined;
 
     return {
       delivery: this.#enqueue(session, {

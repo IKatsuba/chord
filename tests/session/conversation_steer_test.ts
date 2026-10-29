@@ -2593,3 +2593,27 @@ describe('CHD-535 U1 tester: queued steering boundaries', () => {
     }
   });
 });
+
+describe('a clear drops the messages waiting in the session (CHD-476)', () => {
+  test("another's message held behind Claude's open calls is among those it drops, and none are after", () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('bashcut');
+      await callOpen(events);
+      conversation.tell(MAIN, 'Held behind the calls.');
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'queued' &&
+            event.text === 'Held behind the calls.' &&
+            event.afterCalls === true,
+        ),
+      );
+
+      expect(conversation.queuedFrom.map((from) => from.name)).toStrictEqual([
+        'main',
+      ]);
+      void conversation.clear();
+
+      expect(conversation.queuedFrom).toStrictEqual([]);
+    }));
+});

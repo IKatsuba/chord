@@ -66,3 +66,52 @@ test("a lead clears its member: the member's next message carries the team's par
     await pick(window, 'tester');
     await window.shows('The team part from bugfix reached this session.');
   }));
+
+test('the old session of a cleared child reaches no one once it is let go, even as it still runs', () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agentlate');
+    await window.shows('Open(parser)');
+    await until('parser at work', () =>
+      /^ {4}parser .*✻/m.test(window.frame()),
+    );
+    await send(window, 'agentclearonly');
+    await window.shows('parser was cleared.');
+    // Another round trip of main's, by which the old turn has tried.
+    await send(window, 'text');
+    await window.shows('This reply came in chunks.');
+
+    expect(window.frame()).not.toContain('Late from the old session.');
+  }));
+
+test('two clears at once: one is refused, and a message sent meanwhile goes once to the fresh session, as its first', () =>
+  withTeams(async (window) => {
+    await ready(window);
+    await send(window, '/team run bugfix leadclearrace');
+    await window.shows('└─ tester ');
+    await pick(window, 'bugfix');
+    await window.shows('tester was cleared once.');
+
+    expect(window.frame()).toContain(
+      'Could not clear tester: it is being cleared already',
+    );
+    expect(window.frame()).toMatch(/Fresh session · id \w+/);
+    await pick(window, 'tester');
+    await window.shows('The team part from bugfix reached this session.');
+
+    expect(
+      count(window, 'The team part from bugfix reached this session.'),
+    ).toBe(1);
+  }));
+
+test("the person's first message to a member its lead cleared carries the team's part, as a first one does", () =>
+  withTeams(async (window) => {
+    await ready(window);
+    await send(window, '/team run bugfix leadclearonly');
+    await window.shows('└─ tester ');
+    await pick(window, 'bugfix');
+    await window.shows('tester was cleared.');
+    await pick(window, 'tester');
+    await send(window, 'teampartof');
+    await window.shows('The team part from the person reached this session.');
+  }));

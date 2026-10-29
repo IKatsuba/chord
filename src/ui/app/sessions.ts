@@ -435,8 +435,14 @@ export function useSessions(
 
         releaseCurrentCaller();
 
+        // A cleared or closing session's calls stop now, not once its
+        // process has gone (CHD-476).
         releaseCurrentCaller = () => {
           live = false;
+
+          if (admitted !== undefined) {
+            server?.revoke(admitted.token);
+          }
         };
 
         const options = {
@@ -588,6 +594,9 @@ export function useSessions(
     const startup = startupOf(args.agent) ?? {};
     let releaseCurrentCaller = () => {};
 
+    // A fork forks once; a clear opens it afresh, from nothing (CHD-476).
+    let forking = fork;
+
     const conversation = new Conversation(
       (signal) => {
         if (startup.refused !== undefined) {
@@ -603,8 +612,14 @@ export function useSessions(
 
         releaseCurrentCaller();
 
+        // A cleared or closing session's calls stop now, not once its
+        // process has gone (CHD-476).
         releaseCurrentCaller = () => {
           live = false;
+
+          if (admitted !== undefined) {
+            server?.revoke(admitted.token);
+          }
         };
 
         const options = {
@@ -619,8 +634,10 @@ export function useSessions(
             : { mcpServers: mcpServers.map(({ server }) => server) }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
           ...(startup.mcpServers === false ? { noMcpServers: true } : {}),
-          ...(fork === undefined ? {} : { fork }),
+          ...(forking === undefined ? {} : { fork: forking }),
         };
+
+        forking = undefined;
 
         const revoke = () => {
           live = false;
@@ -822,14 +839,55 @@ export function useSessions(
   /** Each team agent's part, by its key, that its first message carries. */
   const parts = useRef(new Map<number, TeamPart>());
 
-  /**
-   * The cleared children whose next message is their first again, with the
-   * team part it carries, if any (CHD-476).
-   */
-  const fresh = useRef(new Map<number, TeamPart | undefined>());
-
   /** Each child being cleared, by its key: told once its fresh session is up or failed. */
   const clearing = useRef(new Map<number, (failed?: string) => void>());
+
+  /**
+   * An event of child `key` while it is being cleared, which is no first
+   * start: its fresh session up, failed or closing settles the clear, and
+   * what waited for it goes then. Whether it was being cleared (CHD-476).
+   */
+  const clearedHeard = (key: number, event: ConversationEvent): boolean => {
+    const cleared = clearing.current.get(key);
+
+    if (cleared === undefined) {
+      return false;
+    }
+
+    if (
+      event.type === 'connected' ||
+      event.type === 'connect_failed' ||
+      event.type === 'closing'
+    ) {
+      const waited = early.current.get(key) ?? [];
+
+      early.current.delete(key);
+      clearing.current.delete(key);
+
+      // After the event is drawn, as a first start's messages go.
+      if (event.type === 'connected') {
+        queueMicrotask(() => {
+          const child = agentOf(sessions.agents, key)?.child;
+
+          for (const [from, text] of waited) {
+            if (child !== undefined) {
+              deliverTo(child, from, text);
+            }
+          }
+        });
+      }
+
+      cleared(
+        event.type === 'connected'
+          ? undefined
+          : event.type === 'closing'
+            ? 'it was closed'
+            : event.message,
+      );
+    }
+
+    return true;
+  };
 
   /**
    * A `send_message` to child `key`: into its running turn, a turn there,
@@ -841,7 +899,7 @@ export function useSessions(
     from: MessageFrom,
     text: string,
     queued?: () => void,
-  ): 'sent' | 'queued' => {
+  ): 'sent' | 'queued' | undefined => {
     const held = early.current.get(child.key);
 
     if (held !== undefined) {
@@ -850,16 +908,21 @@ export function useSessions(
       return 'queued';
     }
 
-    // Cleared, its next message is its first, a team agent's part ahead.
-    if (fresh.current.has(child.key)) {
-      const part = fresh.current.get(child.key);
+    return child.conversation.tell(from, text, queued);
+  };
 
-      fresh.current.delete(child.key);
+  /** `deliverTo`'s answer to the sender: a refusal when nothing went. */
+  const sentTo = (
+    child: Child<Conversation>,
+    from: MessageFrom,
+    text: string,
+    queued?: () => void,
+  ): MessageAnswer => {
+    const delivered = deliverTo(child, from, text, queued);
 
-      return child.conversation.deliver(from, text, part) ?? 'queued';
-    }
-
-    return child.conversation.tell(from, text, queued) ?? 'queued';
+    return delivered === undefined
+      ? { error: `${child.name} is closing; nothing reaches it` }
+      : { delivered, to: child.name };
   };
 
   /** How the parent's messages read to a child: from `main`. */
@@ -1016,25 +1079,7 @@ export function useSessions(
               opening.launch?.signal.removeEventListener('abort', cancelLaunch);
             }
 
-            const cleared = clearing.current.get(own);
-
-            // A fresh session after a clear is no first start (CHD-476).
-            if (cleared !== undefined) {
-              if (
-                event.type === 'connected' ||
-                event.type === 'connect_failed' ||
-                event.type === 'closing'
-              ) {
-                clearing.current.delete(own);
-                cleared(
-                  event.type === 'connected'
-                    ? undefined
-                    : event.type === 'closing'
-                      ? 'it was closed'
-                      : event.message,
-                );
-              }
-
+            if (clearedHeard(own, event)) {
               return;
             }
 
@@ -1925,10 +1970,7 @@ export function useSessions(
       return { error: noChild(caller.key, to) };
     }
 
-    return {
-      delivered: deliverTo(child, MAIN, text, queued),
-      to: child.name,
-    };
+    return sentTo(child, MAIN, text, queued);
   };
 
   /**
@@ -1989,25 +2031,19 @@ export function useSessions(
       );
 
     if (member !== undefined) {
-      return {
-        delivered: deliverTo(
-          member,
-          self === lead ? { name: lead.name, reachable: true } : from,
-          text,
-          queued,
-        ),
-        to: member.name,
-      };
+      return sentTo(
+        member,
+        self === lead ? { name: lead.name, reachable: true } : from,
+        text,
+        queued,
+      );
     }
 
     const other =
       target && agents.children.find((each) => each.key === target.key);
 
     if (other !== undefined) {
-      return {
-        delivered: deliverTo(other, from, text, queued),
-        to: other.name,
-      };
+      return sentTo(other, from, text, queued);
     }
 
     const closed = agents.closed.findLast(
@@ -2222,6 +2258,11 @@ export function useSessions(
     child: Child<Conversation>,
   ): Promise<{ readonly failed?: string; readonly dropped?: string }> => {
     // Queued in its session, or held while it still starts.
+    if (clearing.current.has(child.key)) {
+      return { failed: 'it is being cleared already' };
+    }
+
+    // Queued or held in its session, or held while it still starts.
     const others = [
       ...(early.current.get(child.key) ?? []).map(([from]) => from),
       ...child.conversation.queuedFrom,
@@ -2236,14 +2277,13 @@ export function useSessions(
     const up = Promise.withResolvers<string | undefined>();
 
     clearing.current.set(child.key, up.resolve);
-    early.current.delete(child.key);
-
-    if (parts.current.has(child.key)) {
-      fresh.current.set(child.key, parts.current.get(child.key));
-    }
-
+    // What comes while it restarts waits for the fresh session.
+    early.current.set(child.key, []);
     stopCommand(child.key);
-    keepChild(child, true)(child.conversation.clear());
+    keepChild(
+      child,
+      true,
+    )(child.conversation.clear(parts.current.get(child.key)));
 
     const failed = await up.promise;
 
@@ -2399,6 +2439,15 @@ export function useSessions(
       probe: sessionProbe(place.cwd, (runtime) => place.startupOf(runtime)),
     }));
 
+  /**
+   * Whether `caller` speaks for a session already let go, cleared or
+   * closing: what it asks reaches no one (CHD-476).
+   */
+  const stale = (caller: Caller) => caller.launch?.valid() === false;
+  const STALE = {
+    error: 'Your session was cleared or closed; nothing more goes from it',
+  } as const;
+
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
     ...(resources === undefined
@@ -2474,7 +2523,8 @@ export function useSessions(
 
       return runtimes().read(runtime, probe);
     },
-    spawn: (caller, args) => spawn(caller, args),
+    spawn: (caller, args) =>
+      stale(caller) ? Promise.resolve(STALE) : spawn(caller, args),
     open: (key, args) => openAgent(key, args),
     teams: async (caller) => {
       const agents = ownedBy(sessions.agents, caller.key);
@@ -2526,14 +2576,21 @@ export function useSessions(
     askPerson: (caller, wait, signal) =>
       conversationAt(caller.key)?.ask(wait, signal) ??
       Promise.resolve(undefined),
-    openMember: (caller, args) => openMember(caller, args),
-    message: (caller, text, queued) => message(caller, text, queued),
-    tell: (caller, to, text, queued) => tell(caller, to, text, queued),
-    close: (caller, to) => closeAgent(caller, to),
-    clear: (caller, to) => clearAgent(caller, to),
+    openMember: (caller, args) =>
+      stale(caller) ? Promise.resolve(STALE) : openMember(caller, args),
+    message: (caller, text, queued) =>
+      stale(caller) ? STALE : message(caller, text, queued),
+    tell: (caller, to, text, queued) =>
+      stale(caller) ? STALE : tell(caller, to, text, queued),
+    close: (caller, to) => (stale(caller) ? STALE : closeAgent(caller, to)),
+    clear: (caller, to) =>
+      stale(caller) ? Promise.resolve(STALE) : clearAgent(caller, to),
     monitor: (caller, args) =>
-      startMonitorIn(sessions.agents, caller, args, place.cwd),
-    stopMonitor: (caller, id) => stopMonitorIn(sessions.agents, caller, id),
+      stale(caller)
+        ? STALE
+        : startMonitorIn(sessions.agents, caller, args, place.cwd),
+    stopMonitor: (caller, id) =>
+      stale(caller) ? STALE : stopMonitorIn(sessions.agents, caller, id),
     monitors: (caller) => monitorsIn(sessions.agents, caller),
     served: (caller, call) => {
       if (caller.launch?.valid() === false || caller.signal?.aborted) {
@@ -3134,6 +3191,11 @@ export function useSessions(
           'asked by /fork',
           (event) => {
             emit(event);
+
+            // Cleared later, its fresh session is no fork (CHD-476).
+            if (clearedHeard(own, event)) {
+              return;
+            }
 
             if (event.type === 'connected') {
               up.resolve(undefined);

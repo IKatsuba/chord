@@ -2,7 +2,7 @@ import {
   freezeSelection,
   selectionReceipt,
 } from '../../src/session/team_selection.ts';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -26,6 +26,7 @@ import {
   elsewhereRefusal,
   latestSession,
   recordedAgent,
+  recordsOnce,
   resumeCommand,
   ResumeError,
   sessionById,
@@ -1286,4 +1287,28 @@ test('admitted receipt-only records are discoverable without inventing prompts o
       }),
     ),
   ).toMatchObject({ prompt: 'Actual prompted work', lastUsedAt: 21 });
+});
+
+describe('a start reads the records once (CHD-557)', () => {
+  test('every step that asks for the records gets the one read', async () => {
+    const record: SessionRecord = {
+      path: '/r/a.jsonl',
+      sessionId: 'a',
+      agent: 'fake',
+      cwd: '/w',
+      lastUsedAt: 1,
+      prompt: 'go',
+    };
+    let reads = 0;
+    const records = recordsOnce(() => {
+      reads++;
+
+      return Promise.resolve([record]);
+    });
+
+    expect(reads).toBe(0);
+    expect(await records()).toStrictEqual([record]);
+    expect(await records()).toStrictEqual([record]);
+    expect(reads).toBe(1);
+  });
 });

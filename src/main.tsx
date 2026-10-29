@@ -47,6 +47,7 @@ import {
   earlierSessions,
   latestSession,
   readRecords,
+  recordsOnce,
   recordedAgent,
   type Resumable,
   type Resume,
@@ -229,11 +230,12 @@ export const cli = chordCommand().action(async (options, named) => {
   // the default agent alone (Q56), so it leaves the id to be refused there.
   // `-r` with no id is Cliffy's `true`: the picker, in place of an id.
   const given = typeof options.resume === 'string' ? options.resume : undefined;
+  const records = recordsOnce(() => readRecords(chordStateDir()));
   const recorded =
     named === undefined &&
     options.agentCommand === undefined &&
     given !== undefined
-      ? recordedAgent(await readRecords(chordStateDir()), given)
+      ? recordedAgent(await records(), given)
       : undefined;
   const flags = {
     agent: selected ?? recorded,
@@ -367,9 +369,7 @@ export const cli = chordCommand().action(async (options, named) => {
       throw new ValidationError('--resume needs an id when not in a terminal');
     }
 
-    const stateDir = chordStateDir();
-    const records = await readRecords(stateDir);
-    const sessions = earlierSessions(records, { agent });
+    const sessions = earlierSessions(await records(), { agent });
 
     if (sessions.length === 0) {
       throw new ValidationError(`No earlier ${agent} session to resume.`);
@@ -414,16 +414,15 @@ export const cli = chordCommand().action(async (options, named) => {
   }
 
   if (options.continue || id !== undefined) {
-    const stateDir = chordStateDir();
-    const records = await readRecords(stateDir);
+    const found = await records();
 
     try {
       // A w-… id of an old window is an id like any other, for the agent to
       // answer (Q179).
       resume =
         id === undefined
-          ? latestSession(records, find)
-          : sessionById(records, id, find);
+          ? latestSession(found, find)
+          : sessionById(found, id, find);
     } catch (error) {
       await leaveStart();
 

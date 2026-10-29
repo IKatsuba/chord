@@ -454,11 +454,6 @@ export function withTaskWork(
   });
 }
 
-/**
- * The updates a record kept, by the session that sent each: `rootId` for the
- * session's own, a subagent's ID for its. The enrichers keep each session
- * apart live, and so must hear a resumed past apart.
- */
 /** The tokens of the last turn `entries` kept that had any. */
 export function lastTotal(
   entries: readonly RecordEntry[],
@@ -469,6 +464,11 @@ export function lastTotal(
   )?.usage;
 }
 
+/**
+ * The updates a record kept, by the session that sent each: `rootId` for the
+ * session's own, a subagent's ID for its. The enrichers keep each session
+ * apart live, and so must hear a resumed past apart.
+ */
 export function pastBySession(
   rootId: string,
   entries: readonly RecordEntry[],
@@ -482,7 +482,15 @@ export function pastBySession(
 
     const id = entry.subagentId ?? rootId;
 
-    bySession.set(id, [...(bySession.get(id) ?? []), entry.update]);
+    // Added to in place: a copy for each update made a long record's
+    // resume quadratic (CHD-557).
+    const updates = bySession.get(id);
+
+    if (updates === undefined) {
+      bySession.set(id, [entry.update]);
+    } else {
+      updates.push(entry.update);
+    }
   }
 
   return bySession;

@@ -34,6 +34,7 @@ import {
   inArrow,
   messageHeader,
   monitorMessage,
+  forkedLine,
   selfStartedLine,
   teamPartLine,
   wrapLine,
@@ -152,6 +153,17 @@ export const TranscriptEntry = memo(function TranscriptEntry({
     case 'self_started':
       return (
         <SelfStarted from={entry.from} alone={entry.alone} width={width} />
+      );
+    case 'forked':
+      return (
+        <>
+          {gap.spacer}
+          <box flexDirection='row' {...gap.props} flexShrink={0}>
+            <text {...CUT} attributes={DIM}>
+              {forkedLine(entry.from, entry.at, width)}
+            </text>
+          </box>
+        </>
       );
     case 'left_open':
       return (

@@ -22,11 +22,11 @@ export const mcpServers = new Map<string, acp.McpServer[]>();
 
 /**
  * How each session was last opened: the request, and its `_meta` as it
- * arrived, none when it had none.
+ * arrived, none when it had none; a fork, the session it was forked from.
  */
 export const openedWith = new Map<
   string,
-  { readonly method: string; readonly meta?: unknown }
+  { readonly method: string; readonly meta?: unknown; readonly from?: string }
 >();
 
 /** Claude Code's first three modes, in its order. */

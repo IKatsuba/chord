@@ -27,6 +27,10 @@
   transcript, spacer rows in background logs. OpenTUI #1739 omits margins
   from a one-row scrollbox's height; `tests/ui/transcript/gap_test.tsx`
   pins it so the spacer can go once the pinned library counts them.
+- Forks are top level, after main's tree; main's clear leaves them open.
+  Closing a fork closes its tasks and monitors without notifying a parent.
+  Forks cannot use open_agent, run_team, propose_team or close_agent, or
+  message main; main cannot message them.
 - Direct team runs and picker Enter keep saved composition with no extra main
   turn. Existing team instructions and MCP tools drive optional selection;
   never inject a selection prompt or add an enabling team field.

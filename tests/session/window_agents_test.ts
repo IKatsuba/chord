@@ -19,6 +19,7 @@ import {
   namedChild,
   notifiedName,
   openChild,
+  ownChildren,
   pick,
   runName,
   forgetClosed,
@@ -348,6 +349,33 @@ test("a team's members open after their lead, and only main's own children count
   expect(
     openChild(tabs, { id: 'x', name: 'x', runtime: 'codex', openedAt: 0 }, ''),
   ).toStrictEqual(undefined);
+});
+
+test("a fork stands after main's whole tree, counts against none of its eight, and is no one's to message (CHD-101)", () => {
+  const fork = { id: 'f', name: 'fork', runtime: 'claude', openedAt: 0 };
+  let tabs = withChildren(opened('claude'), 'parser');
+
+  tabs = openChild(tabs, { ...fork, forkedFrom: 'main' }, '')!.agents;
+  tabs = withChildren(
+    tabs,
+    ...Array.from({ length: MAX_CHILDREN - 1 }, (_, i) => `c${i}`),
+  );
+
+  const forkKey = tabs.children.find((child) => child.name === 'fork')!.key;
+
+  expect(tabs.children.at(-1)?.name).toBe('fork');
+  expect(ownChildren(tabs)).toHaveLength(MAX_CHILDREN);
+  expect(
+    openChild(
+      tabs,
+      { ...fork, id: 'g', name: 'fork 2', forkedFrom: 'fork' },
+      '',
+    ),
+  ).toBeDefined();
+  expect(
+    messageRecipients(tabs, tabs.main!.key).map((each) => each.name),
+  ).not.toContain('fork');
+  expect(messageRecipients(tabs, forkKey)).toStrictEqual([]);
 });
 
 test("a team's second run is numbered, and a closed run's number is not given again", () => {

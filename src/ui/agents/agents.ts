@@ -1021,7 +1021,8 @@ export function summaryHint(width: number): string {
  * would: `parser · codex · gpt-5.3-codex · opened by main 4m ago`; a team's
  * lead's says `team` and a member's names its run, each opened by an agent
  * that `send_message` reaches by that name: `tester · claude · Sonnet ·
- * bugfix's member · opened by @bugfix 6m ago`.
+ * bugfix's member · opened by @bugfix 6m ago`; a fork's, what it was forked
+ * from: `fork · claude · Opus · forked from main 2m ago` (CHD-101).
  */
 export function childLine(
   child: {
@@ -1031,6 +1032,8 @@ export function childLine(
     readonly team?: string | undefined;
     /** A member's lead, by its name. */
     readonly leadName?: string | undefined;
+    /** A fork's source, by its name. */
+    readonly forkedFrom?: string | undefined;
   },
   model: string | undefined,
   now: number,
@@ -1046,9 +1049,11 @@ export function childLine(
       child.runtime,
       ...(model === undefined ? [] : [model]),
       ...(child.leadName === undefined ? [] : [`${child.leadName}'s member`]),
-      team
-        ? `opened by @${child.leadName ?? 'main'} ${ago} ago`
-        : `opened by main ${ago} ago`,
+      child.forkedFrom !== undefined
+        ? `forked from ${child.forkedFrom} ${ago} ago`
+        : team
+          ? `opened by @${child.leadName ?? 'main'} ${ago} ago`
+          : `opened by main ${ago} ago`,
     ].join(' · '),
   };
 }

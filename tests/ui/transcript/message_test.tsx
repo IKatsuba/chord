@@ -15,6 +15,7 @@ import { paletteOf, type ThemeName } from '../../../src/ui/theme/theme.ts';
 import {
   inArrow,
   monitorMessage,
+  forkedLine,
   queuedMessage,
   selfStartedLine,
   wrapLine,
@@ -776,6 +777,18 @@ describe('CHD-396 U4 tester: message gaps preserve their source blocks', () => {
       }
     });
   }
+});
+
+test('a fork says where it parted, by its source and the local time, dim and alone (CHD-101)', async () => {
+  const at = new Date(2026, 9, 28, 22, 10).getTime();
+
+  expect(forkedLine('main', at, 80)).toStrictEqual(
+    '── forked from main · 22:10 ──',
+  );
+  expect(forkedLine('a long fork name', at, 20)).toHaveLength(20);
+  expect(
+    await frame({ kind: 'forked', turnId: 'forked', from: 'fork', at }),
+  ).toContain('── forked from fork · 22:10 ──');
 });
 
 test("the line closing a turn the agent started on its own with the person's steered prompt says it is theirs (CHD-378)", () => {

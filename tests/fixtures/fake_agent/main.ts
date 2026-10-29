@@ -276,6 +276,7 @@ import {
   REFUSE_CONFIG,
   RESUME_ONLY,
   NO_LOAD,
+  FORKS,
   SILENT_SET_MODE,
   START_FAILS,
   TRACEBACK_ERROR,
@@ -1184,6 +1185,7 @@ const connection = acp
             sessionCapabilities: {
               list: {},
               ...(RESUME_ONLY ? { resume: {} } : {}),
+              ...(FORKS ? { fork: {} } : {}),
             },
           },
           // Steering as Claude's adapter, it names itself as that adapter does,
@@ -1255,6 +1257,45 @@ const connection = acp
     titleAtStart(client, sessionId);
 
     return {
+      ...sessionModes(),
+      configOptions: configOptions(sessionId),
+    };
+  })
+  // A new session from any session id given, which replays nothing: the
+  // `opened` scenario says which it was forked from (CHD-101). With
+  // `CHORD_FAKE_REFUSE_FORK=1` it offers the fork and refuses it; with
+  // `CHORD_FAKE_HANG_FORK=1` it never answers.
+  .onRequest('session/fork', async ({ params, client, requestId }) => {
+    refuseSession('session/fork');
+    await refuseUnsigned(client, requestId);
+
+    if (process.env.CHORD_FAKE_HANG_FORK === '1') {
+      await never();
+    }
+
+    if (
+      !FORKS ||
+      process.env.CHORD_FAKE_REFUSE_FORK === '1' ||
+      !UUID.test(params.sessionId)
+    ) {
+      throw acp.RequestError.resourceNotFound(params.sessionId);
+    }
+
+    const sessionId = crypto.randomUUID();
+
+    modes.set(sessionId, 'default');
+    mcpServers.set(sessionId, params.mcpServers ?? []);
+    openedWith.set(sessionId, {
+      ...opened('session/fork', params._meta),
+      from: params.sessionId,
+    });
+    cwds.set(sessionId, params.cwd);
+    created.push({ sessionId, cwd: params.cwd });
+    advertiseCommands(client, sessionId);
+    titleAtStart(client, sessionId);
+
+    return {
+      sessionId,
       ...sessionModes(),
       configOptions: configOptions(sessionId),
     };

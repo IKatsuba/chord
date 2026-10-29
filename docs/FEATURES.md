@@ -54,7 +54,7 @@ Done when chord is the interface its authors open by default.
 | Permission modes, cycled                  | shift+tab: default → accept edits → plan | ACP `session/set_config_option` on the agent's `mode` config option, else `session/set_mode` |
 | Model picker                              | `/model`                            | ACP `model` config option, else `session/set_model` |
 | Agent slash commands with completion      | `/` opens the list                  | ACP `available_commands_update`              |
-| Client slash commands                     | `/clear` `/new` `/resume` `/help` `/exit` `/status` `/cost` | client               |
+| Client slash commands                     | `/clear` `/new` `/fork` `/resume` `/help` `/exit` `/status` `/cost` | client               |
 | `@` file mentions with fuzzy finder       | `@` opens files                     | client (the path in the prompt text), ACP `resource_link` beside it |
 | Name an agent in the prompt with completion | `@@` opens agent names            | client: offers whom `send_message` reaches; sent as plain text |
 | Bash mode                                 | `!` prefix runs a command           | client, output sent as context               |
@@ -85,13 +85,10 @@ Done when chord is the interface its authors open by default.
 | Subagents shown nested                    | indented task blocks                | ACP `subagent_update` (unstable), each subagent's work under its own session id; enricher: the adapters' `subagent_spawned` and `subagent_state_update` read as it |
 | Elicitation forms                         | MCP elicitation                     | ACP `elicitation/create`                     |
 | Compaction shown                          | `/compact`, auto-compact notice     | ACP `compaction_update`, `compaction_summary_chunk` (unstable); `/compact` is the agent's own command |
-| Rewind to an earlier prompt               | Esc Esc                             | ACP `session/fork` where the agent has it — open |
-| MCP servers for the session               | `/mcp`, `.mcp.json`                 | ACP `mcpServers` in `session/new`            |
+| Fork the whole conversation (CHD-101, done) | `/fork [name]`                     | ACP `session/fork` where advertised, in a separate agent process; top-level fork beside main, copied source transcript and divider; resumed alone from the divider |
+| MCP servers for the session               | `/mcp`, `.mcp.json`                 | ACP `mcpServers` in new, fork, load and resume |
 | Custom keybindings                        | `~/.claude/keybindings.json`        | client                                       |
 | Session list across directories           | `/resume` picker, ctrl+a            | client, chord's own session records          |
-
-"open" marks a row acpx's runtime kept out of reach, since it handed chord no
-raw messages and had no fork; on chord's own transport each is open to build.
 
 ## M4 — agents that start agents
 

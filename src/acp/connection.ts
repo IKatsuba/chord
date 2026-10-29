@@ -145,6 +145,15 @@ export interface Agent {
     request: acp.ResumeSessionRequest,
     signal?: AbortSignal,
   ): Promise<acp.ResumeSessionResponse>;
+  /**
+   * A new session that starts from the whole of `sessionId`'s conversation
+   * (ACP's unstable `session/fork`); throws without asking when the agent
+   * does not offer it.
+   */
+  forkSession(
+    request: acp.ForkSessionRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.ForkSessionResponse>;
   /** Throws without asking when the agent does not offer `session/list`. */
   listSessions(
     request: acp.ListSessionsRequest,
@@ -500,6 +509,14 @@ export async function connectAgent(
 
       return await ask(
         () => connection.agent.request('session/resume', request),
+        signal,
+      );
+    },
+    forkSession: async (request, signal) => {
+      offered('session/fork', offers.sessionCapabilities?.fork);
+
+      return await ask(
+        () => connection.agent.request('session/fork', request),
         signal,
       );
     },

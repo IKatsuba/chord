@@ -581,6 +581,7 @@ export function useSessions(
     asked: string,
     emit: (event: ConversationEvent) => void,
     team?: string,
+    fork?: string,
   ) => {
     const { cwd, mcpServers, startupOf } = place;
     const startup = startupOf(args.agent) ?? {};
@@ -617,6 +618,7 @@ export function useSessions(
             : { mcpServers: mcpServers.map(({ server }) => server) }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
           ...(startup.mcpServers === false ? { noMcpServers: true } : {}),
+          ...(fork === undefined ? {} : { fork }),
         };
 
         const revoke = () => {
@@ -1797,7 +1799,9 @@ export function useSessions(
   const ownChild = (key: number, to: string) =>
     ownedBy(sessions.agents, key)?.children.find(
       (child) =>
-        child.lead === undefined && (child.id === to || child.name === to),
+        child.lead === undefined &&
+        child.forkedFrom === undefined &&
+        (child.id === to || child.name === to),
     );
 
   /**
@@ -1806,6 +1810,11 @@ export function useSessions(
    */
   const parentOf = (child: Child<Conversation>): Conversation | undefined => {
     const agents = front();
+
+    // A fork is no one's child: no one is told of it (CHD-101).
+    if (child.forkedFrom !== undefined) {
+      return undefined;
+    }
 
     return child.lead === undefined
       ? agents && conversationAt(agents.main.key)
@@ -2247,14 +2256,28 @@ export function useSessions(
               runtime: agents.main.agent,
               id: session?.id,
               model: session?.models()?.current,
-              children: agents.children.map((child) => ({
-                id: child.id,
-                name: child.name,
-                runtime: child.runtime,
-                model:
-                  child.conversation.session?.models()?.current ?? child.model,
-              })),
+              children: agents.children
+                .filter((child) => child.forkedFrom === undefined)
+                .map((child) => ({
+                  id: child.id,
+                  name: child.name,
+                  runtime: child.runtime,
+                  model:
+                    child.conversation.session?.models()?.current ??
+                    child.model,
+                })),
             },
+            // A fork is a session of its own, beside main's (CHD-101).
+            ...agents.children
+              .filter((child) => child.forkedFrom !== undefined)
+              .map((fork) => ({
+                key: fork.key,
+                runtime: fork.runtime,
+                id: fork.conversation.session?.id,
+                model:
+                  fork.conversation.session?.models()?.current ?? fork.model,
+                children: [],
+              })),
           ];
     },
     runtimes: () => runtimeNames,
@@ -2859,6 +2882,137 @@ export function useSessions(
   };
 
   /**
+   * `/fork`: the agent on screen, main or a fork, forked into a new agent of
+   * its runtime beside main, of no one, in a process of its own, picked once
+   * it is up (CHD-101). Its name and the key of the agent it was forked
+   * from, or why it was not forked, with that key once it was asked of the
+   * agent; none at all once the source's session has gone meanwhile, as a
+   * line in its next session would be about another conversation.
+   */
+  const forkTyped = async (
+    named: string,
+  ): Promise<
+    | { readonly name: string; readonly from: number }
+    | { readonly refused: string; readonly from?: number }
+    | undefined
+  > => {
+    const agents = front();
+    const refused = (text: string, from?: number) => ({
+      refused: text,
+      ...(from === undefined ? {} : { from }),
+    });
+
+    if (agents === undefined) {
+      return refused('This session has closed');
+    }
+
+    const picked = pickedChild(agents);
+
+    if (picked !== undefined && picked.forkedFrom === undefined) {
+      return refused('/fork forks main or a fork');
+    }
+
+    const sourceKey = picked?.key ?? agents.main.key;
+    const sourceName = picked?.name ?? 'main';
+    const runtime = picked?.runtime ?? agents.main.agent;
+    const session = conversationAt(sourceKey)?.session;
+    const now = stateOf(sourceKey);
+
+    if (session === undefined) {
+      return refused('This session is closing; nothing can fork from it');
+    }
+
+    if (!session.forks()) {
+      return refused('This agent does not fork sessions');
+    }
+
+    if (now !== undefined && busyOf(now) !== undefined) {
+      return refused(`${sourceName} is working · /fork once its turn ends`);
+    }
+
+    const problem = agentNameProblem(named);
+
+    if (problem !== undefined) {
+      return refused(`An agent name ${problem}`);
+    }
+
+    const id = crypto.randomUUID().slice(0, 8);
+    const name = childName(agents, named || 'fork', 'fork');
+    const up = Promise.withResolvers<string | undefined>();
+
+    const forkKey = sessions.agents.nextKey;
+
+    // Its state is there before its first event, which may come at once,
+    // and its view is the conversation as it stood.
+    dispatch({
+      type: 'agent_opened',
+      key: forkKey,
+      ...(now === undefined ? {} : { transcript: now.transcript }),
+    });
+
+    const key = sessions.openChild(
+      { id, name, runtime, forkedFrom: sourceName, openedAt: Date.now() },
+      (emit, own) =>
+        childConversation(
+          agents.main.key,
+          undefined,
+          { agent: runtime, prompt: '' },
+          name,
+          // The person's, in the fork's own session (CHD-101).
+          { role: 'person', key: forkKey, fork: true, window: view },
+          'asked by /fork',
+          (event) => {
+            emit(event);
+
+            if (event.type === 'connected') {
+              up.resolve(undefined);
+              // Where it parted, under what it was copied from.
+              queueMicrotask(() => conversationAt(own)?.forked(sourceName));
+            } else if (event.type === 'connect_failed') {
+              up.resolve(event.message);
+              queueMicrotask(() => dropChild(own));
+            } else if (
+              event.type === 'closing' ||
+              event.type === 'disconnected'
+            ) {
+              // Closed by x or a quit before it was up: nothing to pick.
+              up.resolve('it was closed before it started');
+            }
+          },
+          undefined,
+          session.id,
+        ),
+    );
+
+    if (key === undefined) {
+      return refused('This session is closing; nothing can fork from it');
+    }
+
+    const failed = await up.promise;
+
+    if (conversationAt(sourceKey)?.session !== session) {
+      return undefined;
+    }
+
+    if (failed !== undefined) {
+      return refused(`Could not fork: ${failed}`, sourceKey);
+    }
+
+    // Closed as it came up: nothing to pick or announce.
+    if (agentOf(sessions.agents, key) === undefined) {
+      return refused(
+        'Could not fork: it was closed before it started',
+        sourceKey,
+      );
+    }
+
+    sessions.pick(key);
+    showFront();
+
+    return { name, from: sourceKey };
+  };
+
+  /**
    * `/team stop`: the run `name` closed with its members, at
    * once, as the person typed it on purpose; `show` hears what it did
    * before main is told, as for `x`, so the command's line comes first.
@@ -3063,14 +3217,23 @@ export function useSessions(
   const clearFront = (before: () => void): string | undefined => {
     const agents = front();
 
-    if (agents !== undefined && pickedChild(agents) !== undefined) {
+    const picked = agents === undefined ? undefined : pickedChild(agents);
+
+    if (picked?.forkedFrom !== undefined) {
+      return 'A fork cannot be cleared yet · close it with x and /fork again';
+    }
+
+    if (picked !== undefined) {
       return '/clear clears main; pick main first';
     }
 
     before();
 
+    // Main's children go with its session; the forks stand beside it.
     for (const child of agents?.children ?? []) {
-      dropChild(child.key);
+      if (child.forkedFrom === undefined) {
+        dropChild(child.key);
+      }
     }
 
     // The new session's record says what it closed, from none (Q184).
@@ -3131,8 +3294,12 @@ export function useSessions(
         return {
           key: child.key,
           name: child.name,
-          // A lead reads as a team before any member is open.
-          runtime: isLead(child) ? `team · ${child.runtime}` : child.runtime,
+          // A lead reads as a team before any member is open; a fork says so.
+          runtime: isLead(child)
+            ? `team · ${child.runtime}`
+            : child.forkedFrom === undefined
+              ? child.runtime
+              : `fork · ${child.runtime}`,
           colour: child.colour,
           ...(team === undefined ? {} : { team }),
           wait: child.wait,
@@ -3647,6 +3814,7 @@ export function useSessions(
     listTeams,
     runTyped,
     newTyped,
+    forkTyped,
     stopTyped,
     showTyped,
     sendToMain,

@@ -172,3 +172,26 @@ test('a caller lists and stops only its own monitors; a task has none', () => {
   ).toStrictEqual(closed);
   expect(startMonitorIn(agents, { key: 99 }, ARGS, '/w')).toStrictEqual(closed);
 });
+
+test('a fork, under its own key, keeps its own monitors, and a task of it none (CHD-101)', () => {
+  const parent = new Keeper('parent');
+  const fork = new Keeper('fork');
+  const opened = openChild<Keeper>(
+    openMain(noAgents<Keeper>(), 'fake', parent),
+    { id: 'f', name: 'fork', runtime: 'fake', openedAt: 0, forkedFrom: 'main' },
+    fork,
+  )!;
+
+  expect(
+    startMonitorIn(opened.agents, { key: opened.key }, ARGS, '/project'),
+  ).toMatchObject({ id: 'm1' });
+  expect(fork.monitors).toHaveLength(1);
+  expect(parent.monitors).toHaveLength(0);
+  expect(monitorsIn(opened.agents, { key: opened.key })).toHaveLength(1);
+  expect(
+    monitorsIn(opened.agents, { key: opened.key, task: 't' }),
+  ).toStrictEqual([]);
+  expect(stopMonitorIn(opened.agents, { key: opened.key }, 'm1')).toMatchObject(
+    { id: 'm1' },
+  );
+});

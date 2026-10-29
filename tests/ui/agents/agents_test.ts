@@ -270,6 +270,23 @@ test("a child's transcript opens with its name, runtime, model and who opened it
   );
 });
 
+test("a fork's transcript opens with what it was forked from, not who opened it (CHD-101)", () => {
+  const line = childLine(
+    {
+      name: 'fork',
+      runtime: 'claude',
+      forkedFrom: 'main',
+      openedAt: NOW - 120_000,
+    },
+    'Opus',
+    NOW,
+  );
+
+  expect(line.name + line.rest).toStrictEqual(
+    'fork · claude · Opus · forked from main 2m ago',
+  );
+});
+
 test("a team's lead and member transcripts say so in their first line, and who opened them", () => {
   const lead = childLine(
     {

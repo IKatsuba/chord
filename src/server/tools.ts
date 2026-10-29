@@ -79,6 +79,11 @@ export interface Caller {
   readonly by?: string;
   /** A long-lived child that is a team's lead or one of its members. */
   readonly team?: 'lead' | 'member';
+  /**
+   * A fork's session, the person's but of no one: main's tools, but none that
+   * opens, runs or closes agents of its own yet (CHD-101).
+   */
+  readonly fork?: true;
   readonly window: WindowView;
 }
 
@@ -1018,6 +1023,10 @@ const spawnTask: Register = (server, caller) =>
       ),
   );
 
+/** What a tool that opens, runs or closes agents answers a fork (CHD-101). */
+const FORK_REFUSED =
+  'This tool works only from main and its agents, not from a fork.';
+
 const openAgent: Register = (server, caller) =>
   server.registerTool(
     'open_agent',
@@ -1063,7 +1072,9 @@ const openAgent: Register = (server, caller) =>
         caller,
         'open_agent',
         input,
-        await caller.window.open(caller.key, input),
+        caller.fork
+          ? { error: FORK_REFUSED }
+          : await caller.window.open(caller.key, input),
       ),
   );
 
@@ -1109,7 +1120,9 @@ const closeAgent: Register = (server, caller) =>
         caller,
         'close_agent',
         input,
-        caller.window.close(caller, input.to),
+        caller.fork
+          ? { error: FORK_REFUSED }
+          : caller.window.close(caller, input.to),
       ),
   );
 
@@ -1296,6 +1309,10 @@ const runTeam: Register = (server, caller) =>
         }),
     },
     async (input, extra) => {
+      if (caller.fork) {
+        return serve(caller, 'run_team', input, { error: FORK_REFUSED });
+      }
+
       const request = { ...caller, signal: extra.signal };
       // Records keep our declared domain fields; SDK input stays untouched.
       const recordedInput: RunTeamArgs = {
@@ -1344,6 +1361,10 @@ const proposeTeamTool: Register = (server, caller) =>
       inputSchema: proposalShape(),
     },
     async (input, extra) => {
+      if (caller.fork) {
+        return serve(caller, 'propose_team', input, { error: FORK_REFUSED });
+      }
+
       const asked = crypto.randomUUID();
       const answer = await proposeTeam(caller, input, extra.signal, (shown) =>
         caller.window.served(caller, {

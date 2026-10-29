@@ -7639,3 +7639,22 @@ order and lack of a note in §5, its empty-box rule in §6 and draft attachment
 handling in §7. Keep the transcript row, 500 ms sent label, held rows,
 `startedNewTurn` handling, scrolling and colours. The historical design stays
 as written; [CHD-535](design/CHD-535.md) gives the current interaction.
+
+## 2026-10-29 — CHD-101: fork the whole conversation into its own agent (owner, Q298–Q304)
+
+The owner chooses `/fork [name]` on main or a picked fork: ACP `session/fork`
+from the whole current conversation, in a new agent process as resume opens
+one. The fork is top level, with no parent, and is picked immediately. Refuse
+ordinary children, busy sources and runtimes that do not advertise fork.
+Its view copies the source transcript before a divider; its record keeps only
+the divider and subsequent work. Resume opens it as an independent session.
+Main's clear leaves forks open; closing one stops its tasks and monitors, and
+quit closes all forks without reopening them next time.
+
+A fork keeps main's tools except `open_agent`, `run_team`, `propose_team` and
+`close_agent`. Main and forks cannot message each other. Forks owning children
+is a backlog follow-up; clearing a picked fork waits for CHD-476. No earlier
+fork point or Esc Esc rewind is part of this slice. Keep the existing ACP SDK
+and its unstable fork method. Fake transport and window tests do not prove
+live provider context inheritance across processes; capability declarations
+are documented separately in `docs/agent-capabilities.md`.

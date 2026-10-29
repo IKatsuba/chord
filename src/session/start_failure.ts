@@ -10,7 +10,11 @@ import type { Exit } from '../platform/process.ts';
 
 /** What chord asked last when the agent's start failed. */
 export type StartStep =
-  'initialize' | 'session/new' | 'session/load' | 'session/resume';
+  | 'initialize'
+  | 'session/new'
+  | 'session/fork'
+  | 'session/load'
+  | 'session/resume';
 
 /** Why the agent did not start. */
 export interface StartFailure {

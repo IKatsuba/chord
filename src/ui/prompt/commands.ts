@@ -13,6 +13,7 @@ export type ChordCommand =
   | 'config'
   | 'context'
   | 'cost'
+  | 'fork'
   | 'help'
   | 'mcp'
   | 'model'
@@ -54,6 +55,11 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
   {
     name: 'cost',
     description: 'Show the tokens and cost this session has spent',
+    owner: 'chord',
+  },
+  {
+    name: 'fork',
+    description: 'Fork the conversation into a new agent',
     owner: 'chord',
   },
   { name: 'help', description: 'Show keyboard shortcuts', owner: 'chord' },

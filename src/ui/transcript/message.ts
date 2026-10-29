@@ -232,6 +232,19 @@ export function teamPartLine(
 }
 
 /**
+ * Where a fork parted from `from`, at `at` in local time, cut to `cells`
+ * (docs/design/CHD-101.md): `── forked from main · 22:10 ──`.
+ */
+export function forkedLine(from: string, at: number, cells: number): string {
+  const when = new Date(at);
+  const time = [when.getHours(), when.getMinutes()]
+    .map((part) => String(part).padStart(2, '0'))
+    .join(':');
+
+  return cliTruncate(`── forked from ${from} · ${time} ──`, cells);
+}
+
+/**
  * The line that closes a turn the agent started on its own with a message,
  * which chord cancelled: whose turn it was, and where the message went, cut
  * at its end to `cells`, as what matters comes first.

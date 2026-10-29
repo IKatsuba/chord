@@ -2097,6 +2097,21 @@ export class Conversation {
     }
   }
 
+  /**
+   * The session is a fork of the agent `from`'s, which its view and record
+   * say where it parted (CHD-101).
+   */
+  forked(from: string): void {
+    if (this.#session && !this.#closing) {
+      this.#emit({
+        type: 'forked',
+        turnId: `forked-${crypto.randomUUID()}`,
+        from,
+        at: this.#now(),
+      });
+    }
+  }
+
   /** A long-lived agent of the session's, `id`, was closed. */
   agentClosed(id: string): void {
     if (this.#session && !this.#closing) {

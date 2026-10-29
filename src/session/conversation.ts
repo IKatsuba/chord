@@ -301,6 +301,11 @@ interface Prompt {
    * where its row still is (CHD-535).
    */
   readonly place?: number;
+  /**
+   * The team part a cleared team agent's first prompt took, which it hands
+   * back if it is withdrawn unsent (CHD-476).
+   */
+  readonly firstPart?: TeamPart;
 }
 
 /** How a message to the session went: straight into a turn, or queued. */
@@ -1062,6 +1067,7 @@ export class Conversation {
       turnId: crypto.randomUUID(),
       text,
       // A cleared team agent's first prompt opens with its team part.
+      ...(part === undefined ? {} : { firstPart: part }),
       prompt: [
         ...(part === undefined ? [] : [teamBlock(part)]),
         ...ahead,
@@ -2361,6 +2367,10 @@ export class Conversation {
     const withdrawn = this.#queued.filter((queued) => !queued.from);
 
     this.#queued = this.#queued.filter((queued) => queued.from);
+    // Unsent, the first prompt's team part goes with the next one.
+    this.#firstPart ??= withdrawn.find(
+      (queued) => queued.firstPart !== undefined,
+    )?.firstPart;
 
     // The person's steers held in the queue go back with the prompts.
     const steers = [...this.#heldSteers];

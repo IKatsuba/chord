@@ -4,6 +4,8 @@
  */
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { describe, expect, test } from 'bun:test';
+import { writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
 import type { WindowedState } from '../../../src/ui/app/state.ts';
 import stripAnsi from 'strip-ansi';
 import { openOther, withChild } from './child_window.tsx';
@@ -423,3 +425,146 @@ for (const mode of ['one-row', 'crowded', 'resize'] as const) {
     );
   });
 }
+
+describe('CHD-545 U1 tester: zero room and output under an open list', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a pending file pick cannot land after resize to zero room at ${columns}x${rows}`, async () => {
+      let latest: WindowedState | undefined;
+      const current = () => latest!.sessions[latest!.front]!;
+      const pending = Promise.withResolvers<readonly string[]>();
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await files(window, 'needle.ts');
+          await window.type('@');
+          await window.shows('needle.ts');
+          await window.type('needle');
+          await window.press('\r');
+          await until(
+            'file pick pending',
+            () => latest?.window.awaitedPick !== undefined,
+          );
+          await window.resize({ rows: 4 });
+          await until(
+            'zero completion room',
+            () => latest?.window.completionHidden === true,
+          );
+
+          const draft = current().draft;
+          const highlight = latest!.window.finder.highlighted;
+
+          pending.resolve(['needle.ts']);
+          await until(
+            'match settled while hidden',
+            () => latest?.window.matched?.query === 'needle',
+          );
+          await until(
+            'pending pick settled',
+            () => latest?.window.awaitedPick === undefined,
+          );
+          await window.press('\t');
+          expect(current().draft).toBe(draft);
+          expect(latest!.window.finder.highlighted).toBe(highlight);
+          expect(window.frame()).not.toContain('needle.ts');
+          await window.resize({ rows });
+          await window.shows('needle.ts');
+          await until(
+            'completion room restored',
+            () => latest?.window.completionHidden !== true,
+          );
+          await window.press('\t');
+          await until(
+            'visible file accepted',
+            () => current().draft === '@needle.ts ',
+          );
+        },
+        {
+          columns,
+          rows,
+          match: (names, query) =>
+            query === 'needle' ? pending.promise : Promise.resolve(names),
+          onState: (next) => {
+            latest = next;
+          },
+        },
+      );
+    });
+
+    for (const scrolled of [false, true]) {
+      test(`new output stays ${scrolled ? 'scrolled back' : 'following'} under slash completion at ${columns}x${rows}`, async () => {
+        let latest: WindowedState | undefined;
+        const current = () => latest!.sessions[latest!.front]!;
+
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'markdown');
+            await until(
+              'markdown complete',
+              () => current().transcript.turn.status === 'idle',
+            );
+            await send(window, 'callchildgated');
+            await window.shows('deno task test');
+
+            if (scrolled) {
+              await window.press(PAGE_UP);
+              await until(
+                'view scrolled back',
+                () => !current().scroll.following,
+              );
+            }
+
+            const before = current().scroll;
+            const prompt = borders(window);
+
+            await window.type('/');
+            await window.shows('/clear');
+            expect(current().scroll).toEqual(before);
+            expect(borders(window)).toEqual(prompt);
+            await writeFile(join(window.dir, '.fake-gate', 'release'), '');
+            await until(
+              'gated output completed',
+              () => current().transcript.turn.status === 'idle',
+            );
+            await until(
+              'Working area released',
+              () => current().scroll.view > before.view,
+            );
+            expect(current().scroll.following).toBe(!scrolled);
+
+            if (scrolled) {
+              expect(current().scroll.top).toBe(before.top);
+            }
+
+            const afterOutput = current().scroll;
+
+            expect(window.frame()).toContain('/clear');
+            expect(borders(window)).toEqual(prompt);
+            await window.press(ESC);
+            await until(
+              'overlay closed',
+              () => !window.frame().includes('/clear'),
+            );
+            expect(current().scroll).toEqual(afterOutput);
+            expect(borders(window)).toEqual(prompt);
+
+            if (!scrolled) {
+              await window.shows('The tests pass.');
+            }
+          },
+          {
+            columns,
+            rows,
+            onState: (next) => {
+              latest = next;
+            },
+          },
+        );
+      });
+    }
+  }
+});

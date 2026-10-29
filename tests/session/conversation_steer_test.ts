@@ -2617,3 +2617,57 @@ describe('a clear drops the messages waiting in the session (CHD-476)', () => {
       expect(conversation.queuedFrom).toStrictEqual([]);
     }));
 });
+
+describe('CHD-476 U1 tester: first-message ownership after clear', () => {
+  test('withdrawing an unsent personal first message preserves the team part for its resend', async () => {
+    let owner: Session | undefined;
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        const original = owner?.id;
+
+        await conversation.clear({
+          team: 'bugfix',
+          member: 'tester',
+          text: 'Keep the role when a first message is taken back.',
+        });
+        await until(
+          () => owner?.id !== original && conversation.session !== undefined,
+        );
+        assert(owner);
+
+        const requested = new AbortController();
+        const permission = owner.permissions.handler(
+          {
+            sessionId: owner.id,
+            toolCall: { toolCallId: 'before-first', title: 'Review notes' },
+            options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }],
+          },
+          requested.signal,
+        );
+
+        expect(conversation.send('teampartof')).toBe(true);
+        expect(
+          events.some(
+            (event) => event.type === 'queued' && event.text === 'teampartof',
+          ),
+        ).toBe(true);
+        expect(events.some((event) => event.type === 'prompt')).toBe(false);
+        conversation.interrupt();
+        requested.abort();
+        await permission;
+        expect(events.some((event) => event.type === 'queue_withdrawn')).toBe(
+          true,
+        );
+        expect(conversation.send('teampartof')).toBe(true);
+        await until(() => events.some((event) => event.type === 'result'));
+        expect(saidIn(events)).toContain(
+          'The team part from the person reached this session.',
+        );
+        expect(promptsIn(events)).toStrictEqual([['teampartof', undefined]]);
+      },
+      (session) => (owner = session),
+    );
+  });
+});

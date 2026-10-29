@@ -17,6 +17,8 @@ import {
 } from '../app/render.tsx';
 import { count, withAgents } from './agents_window.tsx';
 import { withTeams } from './teams_window.tsx';
+import { PIXEL_BYTES, PIXEL_PNG } from '../../fixtures/images.ts';
+import { RECEIVED } from '../prompt/prompt_window.tsx';
 
 /** Picks `name` in the list under the prompt and shows it. */
 async function pick(window: Window, name: string) {
@@ -255,3 +257,94 @@ test("the person's /clear on a working child: its turn goes, their queued prompt
     expect(window.frame()).toContain('╭─ parser ');
     expect(window.frame()).toMatch(/^ {4}parser .*◦ idle/m);
   }));
+
+test("main's clear_agent puts the person's queued prompt for the child back into the child's box, whatever is in front", () =>
+  withAgents(async (window) => {
+    await ready(window);
+    await send(window, 'agentcost');
+    await window.shows('Open(parser)');
+    await until('parser at work', () =>
+      /^ {4}parser .*✻/m.test(window.frame()),
+    );
+    await pick(window, 'parser');
+    await window.shows('Working until stopped.');
+    await send(window, 'Later.');
+    await window.shows('› Later.');
+    await window.press(DOWN);
+    await until('main picked in the list', async () => {
+      if (window.frame().includes('  ❯ main ')) {
+        return true;
+      }
+
+      await window.press(UP);
+
+      return false;
+    });
+
+    await window.press('\r');
+    await until('main in view', () => !/╭─ \S/.test(window.frame()));
+    await send(window, 'agentclearonly');
+    await window.shows('parser was cleared.');
+    await pick(window, 'parser');
+    await until('the queued prompt back in its box', () =>
+      window.frame().includes('│ › Later.'),
+    );
+  }));
+
+for (const columns of [80, 120]) {
+  test(`a queued prompt's image comes back with it after /clear and goes when it is sent again, at ${columns} columns`, async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'agentcost');
+          await window.shows('Open(parser)');
+          await until('parser at work', () =>
+            /^ {4}parser .*✻/m.test(window.frame()),
+          );
+          await pick(window, 'parser');
+          await window.shows('Working until stopped.');
+
+          // Typed key by key: pasted, the path would be read at once.
+          for (const key of 'see /shots/a.png') {
+            await window.press(key);
+          }
+
+          await window.press('\r');
+          await window.shows('› see [Image #1]');
+          await send(window, '/clear');
+          await until('the queued prompt back in its box', () =>
+            window.frame().includes('│ › see [Image #1]'),
+          );
+          // Enter sends once the fresh session is up; before, it waits.
+          await until('sent to the fresh session', async () => {
+            if (!window.frame().includes('│ › see [Image #1]')) {
+              return true;
+            }
+
+            await window.press('\r');
+
+            return false;
+          });
+          await window.shows(RECEIVED);
+        },
+        {
+          server,
+          runtimes: ['fake'],
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          readImage: () =>
+            Promise.resolve({
+              mediaType: 'image/png',
+              data: PIXEL_PNG,
+              bytes: PIXEL_BYTES.length,
+            }),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+}

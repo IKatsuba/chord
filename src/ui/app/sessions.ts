@@ -2289,6 +2289,7 @@ export function useSessions(
    */
   const clearChild = async (
     child: Child<Conversation>,
+    typed?: string,
   ): Promise<{ readonly failed?: string; readonly dropped?: string }> => {
     // Queued in its session, or held while it still starts.
     if (clearing.current.has(child.key)) {
@@ -2304,6 +2305,27 @@ export function useSessions(
       readonly failed?: string;
       readonly later: readonly MessageFrom[];
     }>();
+
+    // The person's own prompts queued for it come back into its box, their
+    // images and held output with them, whoever clears it.
+    const now = stateOf(child.key);
+
+    if (now !== undefined && mine(now.queue).length > 0) {
+      // After what is typed there, but for the /clear typed to clear it.
+      const text = restoredDraft(now.queue, typed ?? now.draft);
+
+      dispatch({
+        type: 'in_session',
+        key: child.key,
+        action: { type: 'queue_withdrawn' },
+      });
+
+      if (child.key === shownKey(sessions.agents)) {
+        showDraft(text, endOf(text));
+      } else {
+        showDraftIn(child.key, text, endOf(text));
+      }
+    }
 
     clearing.current.set(child.key, (failed, later = []) =>
       up.resolve({ ...(failed === undefined ? {} : { failed }), later }),
@@ -2347,7 +2369,7 @@ export function useSessions(
   const clearByPerson = async (
     child: Child<Conversation>,
   ): Promise<string | undefined> => {
-    const { failed, dropped } = await clearChild(child);
+    const { failed, dropped } = await clearChild(child, '');
 
     if (failed !== undefined) {
       return notCleared(child.name, failed, dropped);
@@ -3501,10 +3523,9 @@ export function useSessions(
 
     const picked = agents === undefined ? undefined : pickedChild(agents);
 
-    before();
-
     // A child or a fork picked is the one cleared, main and the rest left as
-    // they are (CHD-476); why not, under the command in its view.
+    // they are (CHD-476), its queue back in its box as clearChild puts it;
+    // why not, under the command in its view.
     if (picked !== undefined) {
       void clearByPerson(picked).then(
         (failed) =>
@@ -3524,6 +3545,8 @@ export function useSessions(
 
       return;
     }
+
+    before();
 
     // Main's children go with its session; the forks stand beside it.
     for (const child of agents?.children ?? []) {

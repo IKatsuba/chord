@@ -38,7 +38,10 @@ export interface CommandsSessions {
   quit(): void;
   /** What the whole window has spent, closed agents and sessions too. */
   spend(): readonly SpendPart[];
-  /** `/clear` on the session in front, `before` done first. */
+  /**
+   * `/clear` on the session in front: on main, `before` done first; a
+   * child or fork picked puts its own queue back (CHD-476).
+   */
   clearFront(before: () => void): void;
   /** Main's key, which `/team` talks to. */
   frontKey(): number | undefined;

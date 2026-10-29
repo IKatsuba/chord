@@ -2671,3 +2671,52 @@ describe('CHD-476 U1 tester: first-message ownership after clear', () => {
     );
   });
 });
+
+describe('CHD-476 U1 tester: a retained sender takes the first role', () => {
+  test('withdrawing the personal first message leaves the queued sender with the restored role', async () => {
+    let owner: Session | undefined;
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        const original = owner?.id;
+
+        await conversation.clear({
+          team: 'bugfix',
+          member: 'tester',
+          text: 'Keep the role for the message that actually goes first.',
+        });
+        await until(
+          () => owner?.id !== original && conversation.session !== undefined,
+        );
+        assert(owner);
+
+        const requested = new AbortController();
+        const permission = owner.permissions.handler(
+          {
+            sessionId: owner.id,
+            toolCall: { toolCallId: 'before-first', title: 'Review notes' },
+            options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }],
+          },
+          requested.signal,
+        );
+
+        expect(conversation.send('Unsent personal first message.')).toBe(true);
+        expect(conversation.deliver(MAIN, 'teampartof')).toBe('queued');
+        expect(events.some((event) => event.type === 'prompt')).toBe(false);
+        conversation.interrupt();
+        expect(conversation.queuedFrom.map((from) => from.name)).toStrictEqual([
+          'main',
+        ]);
+        requested.abort();
+        await permission;
+        await until(() => events.some((event) => event.type === 'result'));
+        expect(saidIn(events)).toContain(
+          'The team part from main reached this session.',
+        );
+        expect(promptsIn(events)).toStrictEqual([['teampartof', undefined]]);
+      },
+      (session) => (owner = session),
+    );
+  });
+});

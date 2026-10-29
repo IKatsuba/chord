@@ -1,5 +1,6 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import * as recordFiles from 'node:fs/promises';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -15,12 +16,15 @@ import {
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
 import {
+  childPasts,
   entryOf,
   FileRecording,
   lastTotal,
   readPast,
   recordActions,
   type RecordEntry,
+  runPasts,
+  taskPasts,
 } from '../../src/session/record.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
@@ -2598,4 +2602,258 @@ test("a fork's parting is a line of its own in the record, read back as the same
   expect(recordActions([entry!])).toStrictEqual([
     { ...event, turnId: 'history-forked' },
   ]);
+});
+
+describe("a resumed session's children are found by their records' first lines (CHD-557)", () => {
+  const header = (
+    sessionId: string,
+    more: Partial<Extract<RecordEntry, { type: 'session' }>> = {},
+  ): RecordEntry => ({
+    type: 'session',
+    version: 1,
+    sessionId,
+    agent: 'fake',
+    cwd: '/w',
+    at: 0,
+    ...more,
+  });
+  const prompt: RecordEntry = {
+    type: 'prompt',
+    turnId: 't1',
+    at: 1,
+    prompt: 'go',
+    images: 0,
+  };
+  const lines = (entries: readonly RecordEntry[]) =>
+    entries.map((entry) => JSON.stringify(entry) + '\n').join('');
+
+  test("one scan gives both the tasks and the team runs, and no other session's", async () => {
+    await withDir(async (dir) => {
+      const task = [header('s-t', { parent: 'p', task: 'task-1' }), prompt];
+      const lead = [
+        header('s-l', { parent: 'p', id: 'l1', team: 'ship' }),
+        prompt,
+      ];
+
+      await writeFile(join(dir, 'task.jsonl'), lines(task));
+      await writeFile(join(dir, 'lead.jsonl'), lines(lead));
+      await writeFile(
+        join(dir, 'other.jsonl'),
+        lines([header('s-o', { parent: 'q', task: 'task-2' }), prompt]),
+      );
+      await writeFile(join(dir, 'parent.jsonl'), lines([header('p'), prompt]));
+      await writeFile(join(dir, 'notes.txt'), lines(task));
+
+      const children = await childPasts(dir, 'p');
+
+      expect(taskPasts(children)).toStrictEqual(new Map([['task-1', task]]));
+      expect(runPasts(children)).toStrictEqual(new Map([['l1', lead]]));
+    });
+  });
+
+  test('a child is read whole, a line cut short by a crash passed over', async () => {
+    await withDir(async (dir) => {
+      const task = [header('s-t', { parent: 'p', task: 'task-1' }), prompt];
+
+      await writeFile(
+        join(dir, 'task.jsonl'),
+        lines(task) + '{"type":"update","turnId":"t1","upd',
+      );
+
+      expect(await childPasts(dir, 'p')).toStrictEqual([task]);
+    });
+  });
+
+  test('a record that is its header alone, with no newline after it, is a child', async () => {
+    await withDir(async (dir) => {
+      const only = header('s-t', { parent: 'p', task: 'task-1' });
+
+      await writeFile(join(dir, 'task.jsonl'), JSON.stringify(only));
+
+      expect(await childPasts(dir, 'p')).toStrictEqual([[only]]);
+    });
+  });
+
+  test('a first line that is no session header, or cut short, names no child', async () => {
+    await withDir(async (dir) => {
+      const named = header('s-t', { parent: 'p', task: 'task-1' });
+
+      await writeFile(join(dir, 'prompt.jsonl'), lines([prompt, named]));
+      await writeFile(
+        join(dir, 'cut.jsonl'),
+        JSON.stringify(named).slice(0, -2) + '\n' + lines([prompt]),
+      );
+      await writeFile(join(dir, 'empty.jsonl'), '');
+
+      expect(await childPasts(dir, 'p')).toStrictEqual([]);
+    });
+  });
+
+  test("a header longer than a read's chunk, as a task's long description makes it, is read to its end", async () => {
+    await withDir(async (dir) => {
+      const task = [
+        header('s-t', {
+          parent: 'p',
+          task: 'task-1',
+          name: 'é'.repeat(64 * 1024),
+        }),
+        prompt,
+      ];
+
+      await writeFile(join(dir, 'task.jsonl'), lines(task));
+
+      expect(taskPasts(await childPasts(dir, 'p'))).toStrictEqual(
+        new Map([['task-1', task]]),
+      );
+    });
+  });
+
+  test('a records directory that is not there has no children', async () => {
+    await withDir(async (dir) => {
+      expect(await childPasts(join(dir, 'gone'), 'p')).toStrictEqual([]);
+    });
+  });
+});
+
+describe('CHD-557 tester: record discovery boundaries and disappearing files', () => {
+  const header = (sessionId: string, parent: string): RecordEntry => ({
+    type: 'session',
+    version: 1,
+    sessionId,
+    parent,
+    agent: 'fake',
+    cwd: '/w',
+    at: 0,
+    task: sessionId,
+  });
+
+  test('a multibyte header spanning chunks and ending at EOF stays whole', async () => {
+    await withDir(async (dir) => {
+      const child = { ...header('child', 'root'), name: '🙂é'.repeat(20000) };
+
+      await writeFile(join(dir, 'child.jsonl'), JSON.stringify(child));
+
+      expect(await childPasts(dir, 'root')).toStrictEqual([[child]]);
+    });
+  });
+
+  test('a blank first physical line never borrows the later session header', async () => {
+    await withDir(async (dir) => {
+      await writeFile(
+        join(dir, 'blank.jsonl'),
+        '\n' + JSON.stringify(header('child', 'root')),
+      );
+      await mkdir(join(dir, 'directory.jsonl'));
+
+      expect(await childPasts(dir, 'root')).toStrictEqual([]);
+    });
+  });
+
+  test('a non-child is never read whole and a child gone before its full read is skipped', async () => {
+    await withDir(async (dir) => {
+      const other = join(dir, 'other.jsonl');
+      const gone = join(dir, 'gone.jsonl');
+      const kept = join(dir, 'kept.jsonl');
+      const child = header('kept', 'root');
+
+      await writeFile(
+        other,
+        JSON.stringify(header('other', 'elsewhere')) +
+          '\n' +
+          'x'.repeat(100000),
+      );
+      await writeFile(gone, JSON.stringify(header('gone', 'root')));
+      await writeFile(kept, JSON.stringify(child));
+
+      const original = recordFiles.readFile;
+      const fullReads: string[] = [];
+      const read = spyOn(recordFiles, 'readFile').mockImplementation((async (
+        ...args: Parameters<typeof original>
+      ) => {
+        const path = String(args[0]);
+
+        fullReads.push(path);
+        expect(path).not.toBe(other);
+
+        if (path === gone) {
+          await rm(gone);
+        }
+
+        return original(...args);
+      }) as typeof original);
+
+      try {
+        expect(await childPasts(dir, 'root')).toStrictEqual([[child]]);
+        expect(fullReads.sort()).toStrictEqual([gone, kept].sort());
+      } finally {
+        read.mockRestore();
+      }
+    });
+  });
+
+  test('a file gone after listing does not hide surviving children', async () => {
+    await withDir(async (dir) => {
+      const gone = join(dir, 'gone.jsonl');
+      const child = header('kept', 'root');
+
+      await writeFile(gone, JSON.stringify(header('gone', 'root')));
+      await writeFile(join(dir, 'kept.jsonl'), JSON.stringify(child));
+
+      const original = recordFiles.open;
+      const opening = spyOn(recordFiles, 'open').mockImplementation(
+        async (...args) => {
+          if (String(args[0]) === gone) {
+            await rm(gone);
+          }
+
+          return original(...args);
+        },
+      );
+
+      try {
+        expect(await childPasts(dir, 'root')).toStrictEqual([[child]]);
+      } finally {
+        opening.mockRestore();
+      }
+    });
+  });
+
+  test('parallel scans keep parents apart beyond one concurrency batch', async () => {
+    await withDir(async (dir) => {
+      const entries = Array.from({ length: 70 }, (_, i) =>
+        header(String(i), i % 2 === 0 ? 'a' : 'b'),
+      );
+
+      await Promise.all(
+        entries.map((entry, i) =>
+          writeFile(
+            join(dir, `${i}.jsonl`),
+            JSON.stringify(entry) + '\n{"type":',
+          ),
+        ),
+      );
+
+      const [a, b] = await Promise.all([
+        childPasts(dir, 'a'),
+        childPasts(dir, 'b'),
+      ]);
+      const ids = (children: readonly (readonly RecordEntry[])[]) =>
+        [...taskPasts(children).keys()].sort();
+
+      expect(ids(a)).toStrictEqual(
+        entries
+          .flatMap((entry, i) =>
+            i % 2 === 0 && entry.type === 'session' ? [entry.sessionId] : [],
+          )
+          .sort(),
+      );
+      expect(ids(b)).toStrictEqual(
+        entries
+          .flatMap((entry, i) =>
+            i % 2 !== 0 && entry.type === 'session' ? [entry.sessionId] : [],
+          )
+          .sort(),
+      );
+    });
+  });
 });

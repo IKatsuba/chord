@@ -34,6 +34,7 @@ import { PlanBridge } from './plan_asks.ts';
 import { type HeldBack, serversFor } from './servers.ts';
 import { dirname } from 'node:path';
 import {
+  childPasts,
   lastTotal,
   pastBySession,
   readPast,
@@ -485,16 +486,18 @@ export async function openSession(
       tree = sessionTree(sessionId);
       answer = created;
     } else {
-      // A task's work is in its own record, beside its parent's.
+      // A task's work, and a team run's lead, are in their own records,
+      // beside their parent's.
       const own =
         resume.record === undefined ? [] : await readPast(resume.record);
+      const children =
+        resume.record === undefined
+          ? []
+          : await childPasts(dirname(resume.record), resume.sessionId);
       const recorded =
         resume.record === undefined
           ? []
-          : withTaskWork(
-              own,
-              await taskPasts(dirname(resume.record), resume.sessionId),
-            );
+          : withTaskWork(own, taskPasts(children));
       // On an agent whose answers give the session's running total, the last
       // the session's own record kept, which chord's estimate goes on from.
       const total = totals ? lastTotal(own) : undefined;
@@ -534,10 +537,7 @@ export async function openSession(
       answer = loaded.answer;
       past =
         recorded.length > 0
-          ? recordActions(
-              recorded,
-              await runPasts(dirname(resume.record!), resume.sessionId),
-            )
+          ? recordActions(recorded, runPasts(children))
           : pastActions(replayed, Date.now());
     }
   } catch (refused) {

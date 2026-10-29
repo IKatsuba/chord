@@ -104,6 +104,19 @@ export async function readRecords(stateDir: string): Promise<SessionRecord[]> {
   return read.filter((record) => record !== undefined);
 }
 
+/**
+ * The records a start reads, read once however many of its steps ask: the
+ * agent an id names, the picker and the session found each need them, and
+ * every read is of the whole directory (CHD-557).
+ */
+export function recordsOnce(
+  read: () => Promise<SessionRecord[]>,
+): () => Promise<SessionRecord[]> {
+  let records: Promise<SessionRecord[]> | undefined;
+
+  return () => (records ??= read());
+}
+
 /** A real recorded session with work; looked-only records stay hidden. */
 export function summaryOf(
   path: string,

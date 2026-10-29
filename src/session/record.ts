@@ -6,7 +6,8 @@
  */
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { join } from 'node:path';
-import { appendFile, mkdir, readdir, readFile } from 'node:fs/promises';
+import { appendFile, mkdir, open, readdir, readFile } from 'node:fs/promises';
+import pLimit from 'p-limit';
 import { notFound } from '../not_found.ts';
 import type { ResourceLink } from '../files.ts';
 import { shellContext, splitContext, withContext } from './context.ts';
@@ -251,17 +252,15 @@ export async function readPast(path: string): Promise<RecordEntry[]> {
 }
 
 /**
- * The pasts of the task agents session `parentId` started, from their own
- * records in `dir`, by chord's id for each task. A record that has gone is
- * not among them.
+ * The pasts of the task agents among a session's `children`, as
+ * `childPasts` read them, by chord's id for each task.
  */
-export async function taskPasts(
-  dir: string,
-  parentId: string,
-): Promise<Map<string, RecordEntry[]>> {
-  const pasts = new Map<string, RecordEntry[]>();
+export function taskPasts(
+  children: readonly (readonly RecordEntry[])[],
+): Map<string, readonly RecordEntry[]> {
+  const pasts = new Map<string, readonly RecordEntry[]>();
 
-  for (const entries of await childPasts(dir, parentId)) {
+  for (const entries of children) {
     const [header] = entries;
 
     if (header?.type === 'session' && header.task !== undefined) {
@@ -273,17 +272,15 @@ export async function taskPasts(
 }
 
 /**
- * The pasts of the team runs session `parentId` started, from their leads'
- * own records in `dir`, by chord's id for each lead. A record that has gone
- * is not among them.
+ * The pasts of the team runs among a session's `children`, as `childPasts`
+ * read them: their leads' records, by chord's id for each lead.
  */
-export async function runPasts(
-  dir: string,
-  parentId: string,
-): Promise<Map<string, RecordEntry[]>> {
-  const pasts = new Map<string, RecordEntry[]>();
+export function runPasts(
+  children: readonly (readonly RecordEntry[])[],
+): Map<string, readonly RecordEntry[]> {
+  const pasts = new Map<string, readonly RecordEntry[]>();
 
-  for (const entries of await childPasts(dir, parentId)) {
+  for (const entries of children) {
     const [header] = entries;
 
     if (
@@ -298,33 +295,103 @@ export async function runPasts(
   return pasts;
 }
 
-/** The records in `dir` of the agents session `parentId` started. */
-async function childPasts(
+/**
+ * How much of a record is read at a time for its header: most headers fit
+ * in one, and a longer one, a task's long description in its name, is read
+ * on to its end.
+ */
+const HEADER_CHUNK = 4 * 1024;
+
+/**
+ * How many records are open at once while their headers are read: enough
+ * that thousands take tens of milliseconds, not hundreds, and few enough to
+ * stay far from the open-file limit.
+ */
+const HEADER_READS = 32;
+
+/**
+ * The records in `dir` of the agents session `parentId` started. Only each
+ * record's first line is read to know whose it is, and only a child's is
+ * read whole, as the directory holds every session's records, some of them
+ * hundreds of megabytes (CHD-557). A record that has gone is not among them.
+ */
+export async function childPasts(
   dir: string,
   parentId: string,
 ): Promise<RecordEntry[][]> {
-  const pasts: RecordEntry[][] = [];
+  let files;
 
   try {
-    for (const file of await readdir(dir, { withFileTypes: true })) {
-      if (!file.isFile() || !file.name.endsWith('.jsonl')) {
-        continue;
-      }
-
-      const entries = await readPast(join(dir, file.name));
-      const [header] = entries;
-
-      if (header?.type === 'session' && header.parent === parentId) {
-        pasts.push(entries);
-      }
-    }
+    files = await readdir(dir, { withFileTypes: true });
   } catch (error) {
-    if (!notFound(error)) {
-      throw error;
+    if (notFound(error)) {
+      return [];
     }
+
+    throw error;
   }
 
-  return pasts;
+  const limit = pLimit(HEADER_READS);
+  const read = await Promise.all(
+    files.map((file) =>
+      limit(async () => {
+        if (!file.isFile() || !file.name.endsWith('.jsonl')) {
+          return [];
+        }
+
+        const path = join(dir, file.name);
+        const header = await readHeader(path);
+
+        return header?.type === 'session' && header.parent === parentId
+          ? readPast(path)
+          : [];
+      }),
+    ),
+  );
+
+  return read.filter((entries) => entries.length > 0);
+}
+
+/**
+ * A record's first line, read alone, however long; none when the file has
+ * gone or its first line is cut short.
+ */
+async function readHeader(path: string): Promise<RecordEntry | undefined> {
+  let handle;
+
+  try {
+    handle = await open(path, 'r');
+  } catch (error) {
+    if (notFound(error)) {
+      return undefined;
+    }
+
+    throw error;
+  }
+
+  try {
+    const chunks: Buffer[] = [];
+    let position = 0;
+
+    for (;;) {
+      const chunk = Buffer.allocUnsafe(HEADER_CHUNK);
+      const { bytesRead } = await handle.read(chunk, 0, HEADER_CHUNK, position);
+      const newline = chunk.subarray(0, bytesRead).indexOf(0x0a);
+
+      position += bytesRead;
+
+      chunks.push(chunk.subarray(0, newline === -1 ? bytesRead : newline));
+
+      // A file that ends with no newline is its first line whole.
+      if (newline !== -1 || bytesRead === 0) {
+        break;
+      }
+    }
+
+    return parseRecord(Buffer.concat(chunks).toString('utf8')).at(0);
+  } finally {
+    await handle.close();
+  }
 }
 
 /**
@@ -395,11 +462,6 @@ export function withTaskWork(
   });
 }
 
-/**
- * The updates a record kept, by the session that sent each: `rootId` for the
- * session's own, a subagent's ID for its. The enrichers keep each session
- * apart live, and so must hear a resumed past apart.
- */
 /** The tokens of the last turn `entries` kept that had any. */
 export function lastTotal(
   entries: readonly RecordEntry[],
@@ -410,6 +472,11 @@ export function lastTotal(
   )?.usage;
 }
 
+/**
+ * The updates a record kept, by the session that sent each: `rootId` for the
+ * session's own, a subagent's ID for its. The enrichers keep each session
+ * apart live, and so must hear a resumed past apart.
+ */
 export function pastBySession(
   rootId: string,
   entries: readonly RecordEntry[],
@@ -423,7 +490,15 @@ export function pastBySession(
 
     const id = entry.subagentId ?? rootId;
 
-    bySession.set(id, [...(bySession.get(id) ?? []), entry.update]);
+    // Added to in place: a copy for each update made a long record's
+    // resume quadratic (CHD-557).
+    const updates = bySession.get(id);
+
+    if (updates === undefined) {
+      bySession.set(id, [entry.update]);
+    } else {
+      updates.push(entry.update);
+    }
   }
 
   return bySession;

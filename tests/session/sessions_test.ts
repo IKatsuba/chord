@@ -2,13 +2,14 @@ import {
   freezeSelection,
   selectionReceipt,
 } from '../../src/session/team_selection.ts';
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { shellContext, withContext } from '../../src/session/context.ts';
 import {
+  childPasts,
   entryOf,
   FileRecording,
   historyEntries,
@@ -25,6 +26,7 @@ import {
   elsewhereRefusal,
   latestSession,
   recordedAgent,
+  recordsOnce,
   resumeCommand,
   ResumeError,
   sessionById,
@@ -1114,11 +1116,13 @@ test("a parent's team runs are read from their leads' records beside its own, by
     await write('member', member);
     await write('other', other);
 
-    expect(await runPasts(dir, 'main-id')).toStrictEqual(
+    expect(runPasts(await childPasts(dir, 'main-id'))).toStrictEqual(
       new Map([['l1', lead]]),
     );
     // The member's record names its lead, not main.
-    expect([...(await runPasts(dir, 'session-l1')).keys()]).toStrictEqual([]);
+    expect([
+      ...runPasts(await childPasts(dir, 'session-l1')).keys(),
+    ]).toStrictEqual([]);
   } finally {
     await rm(dir, { recursive: true });
   }
@@ -1283,4 +1287,78 @@ test('admitted receipt-only records are discoverable without inventing prompts o
       }),
     ),
   ).toMatchObject({ prompt: 'Actual prompted work', lastUsedAt: 21 });
+});
+
+describe('a start reads the records once (CHD-557)', () => {
+  test('every step that asks for the records gets the one read', async () => {
+    const record: SessionRecord = {
+      path: '/r/a.jsonl',
+      sessionId: 'a',
+      agent: 'fake',
+      cwd: '/w',
+      lastUsedAt: 1,
+      prompt: 'go',
+    };
+    let reads = 0;
+    const records = recordsOnce(() => {
+      reads++;
+
+      return Promise.resolve([record]);
+    });
+
+    expect(reads).toBe(0);
+    expect(await records()).toStrictEqual([record]);
+    expect(await records()).toStrictEqual([record]);
+    expect(reads).toBe(1);
+  });
+});
+
+describe('CHD-557 tester: startup snapshots settle once and stay local', () => {
+  test('simultaneous startup lookups share an unfinished read', async () => {
+    const pending = Promise.withResolvers<SessionRecord[]>();
+    let reads = 0;
+    const once = recordsOnce(() => {
+      reads++;
+
+      return pending.promise;
+    });
+
+    const first = once();
+    const second = once();
+
+    expect(first).toBe(second);
+    expect(reads).toBe(1);
+
+    pending.resolve([record('a')]);
+
+    expect(await first).toStrictEqual([record('a')]);
+    expect(await second).toStrictEqual([record('a')]);
+  });
+
+  test('a failed read reaches every lookup without a second filesystem attempt', async () => {
+    const failure = new Error('fixture records unavailable');
+    let reads = 0;
+    const once = recordsOnce(() => {
+      reads++;
+
+      return Promise.reject(failure);
+    });
+
+    await expect(once()).rejects.toBe(failure);
+    await expect(once()).rejects.toBe(failure);
+    expect(reads).toBe(1);
+  });
+
+  test('a new startup reads fresh records rather than inheriting another startup', async () => {
+    let current = [record('a')];
+    const read = () => Promise.resolve(current);
+    const firstStart = recordsOnce(read);
+
+    expect(await firstStart()).toStrictEqual([record('a')]);
+
+    current = [record('b')];
+
+    expect(await firstStart()).toStrictEqual([record('a')]);
+    expect(await recordsOnce(read)()).toStrictEqual([record('b')]);
+  });
 });

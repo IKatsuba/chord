@@ -2163,3 +2163,45 @@ test('a stop held by --stop-gate does not keep the fake alive once the session c
     await rm(dir, { recursive: true });
   }
 });
+
+describe('CHD-557 tester: ordered replay arrays belong to each grouping', () => {
+  test('interleaved long pasts preserve order without sharing result arrays', () => {
+    const entries: readonly RecordEntry[] = Object.freeze(
+      Array.from({ length: 12000 }, (_, i): RecordEntry =>
+        Object.freeze({
+          type: 'update',
+          turnId: 'past',
+          subagentId: i % 3 === 0 ? 'child' : 'root',
+          update: {
+            sessionUpdate: 'usage_update' as const,
+            used: i,
+            size: 20000,
+          },
+        }),
+      ),
+    );
+    const withCancel: readonly RecordEntry[] = Object.freeze([
+      ...entries,
+      { type: 'cancel', turnId: 'past', at: 1 },
+    ]);
+    const first = pastBySession('root', withCancel);
+    const second = pastBySession('root', withCancel);
+
+    for (const id of ['root', 'child']) {
+      expect(first.get(id)).toStrictEqual(
+        entries.flatMap((entry) =>
+          entry.type === 'update' && entry.subagentId === id
+            ? [entry.update]
+            : [],
+        ),
+      );
+      expect(first.get(id)).not.toBe(second.get(id));
+    }
+
+    first.get('root')?.pop();
+
+    expect(second.get('root')).toHaveLength(8000);
+    expect(first.get('child')).toHaveLength(4000);
+    expect(entries).toHaveLength(12000);
+  });
+});

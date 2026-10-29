@@ -582,6 +582,46 @@ test('ctrl+c quits mid-turn and stops the agent', () =>
     );
   }));
 
+test("main's /clear puts its queued prompt back with its image, which goes when it is sent again (CHD-476)", () =>
+  withWindow(
+    async (window) => {
+      await send(window, 'costwait');
+      await window.shows('Working until stopped.');
+
+      // Typed key by key: pasted, the path would be read at once.
+      for (const key of 'see /shots/a.png') {
+        await window.press(key);
+      }
+
+      await window.press('\r');
+      await window.shows('› see [Image #1]');
+      await send(window, '/clear');
+      await until('the queued prompt back in the box', () =>
+        window.frame().includes('│ › see [Image #1]'),
+      );
+      // Enter sends once the fresh session is up; before, it waits.
+      await until('sent to the fresh session', async () => {
+        if (!window.frame().includes('│ › see [Image #1]')) {
+          return true;
+        }
+
+        await window.press('\r');
+
+        return false;
+      });
+
+      await window.shows(RECEIVED);
+    },
+    {
+      readImage: () =>
+        Promise.resolve({
+          mediaType: 'image/png',
+          data: PIXEL_PNG,
+          bytes: PIXEL_BYTES.length,
+        }),
+    },
+  ));
+
 describe('Tab sends the oldest queued message into the running turn (CHD-535)', () => {
   /** `text` typed into the box, there before the next key. */
   const draft = async (window: Window, text: string) => {

@@ -3856,11 +3856,16 @@ export function useSessions(
       }),
     );
 
-  /** The queued prompts back into the box, ahead of what is typed there. */
+  /**
+   * The queued prompts back into the box, ahead of what is typed there,
+   * their images and held output with them, as a child's clear puts its
+   * own back (CHD-476).
+   */
   const takeBackQueue = (typed: string) => {
     if (mine(state.queue).length > 0) {
       const text = restoredDraft(state.queue, typed);
 
+      dispatch({ type: 'queue_withdrawn' });
       showDraft(text, endOf(text));
     }
   };

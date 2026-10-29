@@ -116,7 +116,7 @@ describe('official resource normalization', () => {
           name: 'seven_day',
           usedPercent: 100,
           windowSeconds: 604800,
-          resetsAt: '2026-10-28T13:00:00Z',
+          resetsAt: '2026-10-28T13:00:00.000Z',
           models: null,
         },
         {
@@ -129,6 +129,75 @@ describe('official resource normalization', () => {
       ],
     });
     expect(JSON.stringify(result)).not.toContain('total_cost');
+  });
+
+  test('Claude resets with an offset, with or without fractions, read in Z form', () => {
+    const result = normalizeClaude({
+      rate_limits_available: true,
+      rate_limits: {
+        five_hour: {
+          utilization: 42,
+          resets_at: '2026-10-29T14:40:00.454167+00:00',
+        },
+        seven_day: { utilization: 7, resets_at: '2026-11-04T01:00:00+00:00' },
+        model_scoped: [
+          {
+            display_name: 'Opus',
+            utilization: 3.5,
+            resets_at: '2026-11-04T03:00:00+02:00',
+          },
+        ],
+      },
+    });
+
+    expect(ProviderLimits.safeParse(result).success).toBe(true);
+    expect(result).toEqual({
+      agent: 'claude',
+      windows: [
+        {
+          name: 'five_hour',
+          usedPercent: 42,
+          windowSeconds: 18000,
+          resetsAt: '2026-10-29T14:40:00.454Z',
+          models: null,
+        },
+        {
+          name: 'seven_day',
+          usedPercent: 7,
+          windowSeconds: 604800,
+          resetsAt: '2026-11-04T01:00:00.000Z',
+          models: null,
+        },
+        {
+          name: 'model_scoped',
+          usedPercent: 3.5,
+          windowSeconds: 604800,
+          resetsAt: '2026-11-04T01:00:00.000Z',
+          models: ['Opus'],
+        },
+      ],
+    });
+  });
+
+  test('a malformed Claude reset still reads as an unknown window', () => {
+    expect(
+      normalizeClaude({
+        rate_limits_available: true,
+        rate_limits: {
+          five_hour: { utilization: 1, resets_at: '2026-10-29 14:40:00+00:00' },
+          seven_day: { utilization: 1, resets_at: '2026-10-29T14:40:00+0000' },
+        },
+      }),
+    ).toEqual({
+      agent: 'claude',
+      windows: ['five_hour', 'seven_day'].map((name) => ({
+        name,
+        usedPercent: null,
+        windowSeconds: null,
+        resetsAt: null,
+        models: null,
+      })),
+    });
   });
 
   test('Claude unavailable, malformed and empty sources', () => {
@@ -214,6 +283,104 @@ describe('tester: bounded provider limits without inference', () => {
       ).toEqual({
         agent: 'claude',
         unavailable: 'Malformed experimental usage snapshot.',
+      });
+    }
+  });
+});
+
+describe('tester: Claude reset offset boundaries', () => {
+  test.each([
+    ['2027-01-01T00:15:00.123456+05:30', '2026-12-31T18:45:00.123Z'],
+    ['2026-12-31T23:15:00-03:30', '2027-01-01T02:45:00.000Z'],
+  ])(
+    'normalizes %s across the year boundary in fixed and model windows',
+    (raw, reset) => {
+      const result = normalizeClaude({
+        rate_limits_available: true,
+        rate_limits: {
+          five_hour: { utilization: 0, resets_at: raw },
+          seven_day_sonnet: { utilization: 100, resets_at: raw },
+          model_scoped: [
+            { display_name: 'Sonnet', utilization: 12.5, resets_at: raw },
+          ],
+        },
+      });
+
+      expect(ProviderLimits.safeParse(result).success).toBe(true);
+      expect(result).toEqual({
+        agent: 'claude',
+        windows: [
+          {
+            name: 'five_hour',
+            usedPercent: 0,
+            windowSeconds: 18000,
+            resetsAt: reset,
+            models: null,
+          },
+          {
+            name: 'seven_day_sonnet',
+            usedPercent: 100,
+            windowSeconds: 604800,
+            resetsAt: reset,
+            models: null,
+          },
+          {
+            name: 'model_scoped',
+            usedPercent: 12.5,
+            windowSeconds: 604800,
+            resetsAt: reset,
+            models: ['Sonnet'],
+          },
+        ],
+      });
+    },
+  );
+
+  test('malformed resets leave fixed and model windows unknown without losing a valid sibling', () => {
+    for (const raw of [
+      '',
+      '2026-02-30T14:40:00+00:00',
+      '2026-10-29T14:40:00',
+      '2026-10-29T14:40:00+00:60',
+      1_800_000_000,
+      undefined,
+    ]) {
+      expect(
+        normalizeClaude({
+          rate_limits_available: true,
+          rate_limits: {
+            five_hour: { utilization: 16, resets_at: raw },
+            seven_day: { utilization: 25, resets_at: null },
+            model_scoped: [
+              { display_name: 'Sonnet', utilization: 16, resets_at: raw },
+            ],
+          },
+        }),
+      ).toEqual({
+        agent: 'claude',
+        windows: [
+          {
+            name: 'five_hour',
+            usedPercent: null,
+            windowSeconds: null,
+            resetsAt: null,
+            models: null,
+          },
+          {
+            name: 'seven_day',
+            usedPercent: 25,
+            windowSeconds: 604800,
+            resetsAt: null,
+            models: null,
+          },
+          {
+            name: 'model_scoped',
+            usedPercent: null,
+            windowSeconds: null,
+            resetsAt: null,
+            models: null,
+          },
+        ],
       });
     }
   });

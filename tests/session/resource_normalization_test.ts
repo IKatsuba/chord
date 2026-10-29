@@ -287,3 +287,101 @@ describe('tester: bounded provider limits without inference', () => {
     }
   });
 });
+
+describe('tester: Claude reset offset boundaries', () => {
+  test.each([
+    ['2027-01-01T00:15:00.123456+05:30', '2026-12-31T18:45:00.123Z'],
+    ['2026-12-31T23:15:00-03:30', '2027-01-01T02:45:00.000Z'],
+  ])(
+    'normalizes %s across the year boundary in fixed and model windows',
+    (raw, reset) => {
+      const result = normalizeClaude({
+        rate_limits_available: true,
+        rate_limits: {
+          five_hour: { utilization: 0, resets_at: raw },
+          seven_day_sonnet: { utilization: 100, resets_at: raw },
+          model_scoped: [
+            { display_name: 'Sonnet', utilization: 12.5, resets_at: raw },
+          ],
+        },
+      });
+
+      expect(ProviderLimits.safeParse(result).success).toBe(true);
+      expect(result).toEqual({
+        agent: 'claude',
+        windows: [
+          {
+            name: 'five_hour',
+            usedPercent: 0,
+            windowSeconds: 18000,
+            resetsAt: reset,
+            models: null,
+          },
+          {
+            name: 'seven_day_sonnet',
+            usedPercent: 100,
+            windowSeconds: 604800,
+            resetsAt: reset,
+            models: null,
+          },
+          {
+            name: 'model_scoped',
+            usedPercent: 12.5,
+            windowSeconds: 604800,
+            resetsAt: reset,
+            models: ['Sonnet'],
+          },
+        ],
+      });
+    },
+  );
+
+  test('malformed resets leave fixed and model windows unknown without losing a valid sibling', () => {
+    for (const raw of [
+      '',
+      '2026-02-30T14:40:00+00:00',
+      '2026-10-29T14:40:00',
+      '2026-10-29T14:40:00+00:60',
+      1_800_000_000,
+      undefined,
+    ]) {
+      expect(
+        normalizeClaude({
+          rate_limits_available: true,
+          rate_limits: {
+            five_hour: { utilization: 16, resets_at: raw },
+            seven_day: { utilization: 25, resets_at: null },
+            model_scoped: [
+              { display_name: 'Sonnet', utilization: 16, resets_at: raw },
+            ],
+          },
+        }),
+      ).toEqual({
+        agent: 'claude',
+        windows: [
+          {
+            name: 'five_hour',
+            usedPercent: null,
+            windowSeconds: null,
+            resetsAt: null,
+            models: null,
+          },
+          {
+            name: 'seven_day',
+            usedPercent: 25,
+            windowSeconds: 604800,
+            resetsAt: null,
+            models: null,
+          },
+          {
+            name: 'model_scoped',
+            usedPercent: null,
+            windowSeconds: null,
+            resetsAt: null,
+            models: null,
+          },
+        ],
+      });
+    }
+  });
+});

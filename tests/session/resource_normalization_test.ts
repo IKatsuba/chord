@@ -116,7 +116,7 @@ describe('official resource normalization', () => {
           name: 'seven_day',
           usedPercent: 100,
           windowSeconds: 604800,
-          resetsAt: '2026-10-28T13:00:00Z',
+          resetsAt: '2026-10-28T13:00:00.000Z',
           models: null,
         },
         {
@@ -129,6 +129,75 @@ describe('official resource normalization', () => {
       ],
     });
     expect(JSON.stringify(result)).not.toContain('total_cost');
+  });
+
+  test('Claude resets with an offset, with or without fractions, read in Z form', () => {
+    const result = normalizeClaude({
+      rate_limits_available: true,
+      rate_limits: {
+        five_hour: {
+          utilization: 42,
+          resets_at: '2026-10-29T14:40:00.454167+00:00',
+        },
+        seven_day: { utilization: 7, resets_at: '2026-11-04T01:00:00+00:00' },
+        model_scoped: [
+          {
+            display_name: 'Opus',
+            utilization: 3.5,
+            resets_at: '2026-11-04T03:00:00+02:00',
+          },
+        ],
+      },
+    });
+
+    expect(ProviderLimits.safeParse(result).success).toBe(true);
+    expect(result).toEqual({
+      agent: 'claude',
+      windows: [
+        {
+          name: 'five_hour',
+          usedPercent: 42,
+          windowSeconds: 18000,
+          resetsAt: '2026-10-29T14:40:00.454Z',
+          models: null,
+        },
+        {
+          name: 'seven_day',
+          usedPercent: 7,
+          windowSeconds: 604800,
+          resetsAt: '2026-11-04T01:00:00.000Z',
+          models: null,
+        },
+        {
+          name: 'model_scoped',
+          usedPercent: 3.5,
+          windowSeconds: 604800,
+          resetsAt: '2026-11-04T01:00:00.000Z',
+          models: ['Opus'],
+        },
+      ],
+    });
+  });
+
+  test('a malformed Claude reset still reads as an unknown window', () => {
+    expect(
+      normalizeClaude({
+        rate_limits_available: true,
+        rate_limits: {
+          five_hour: { utilization: 1, resets_at: '2026-10-29 14:40:00+00:00' },
+          seven_day: { utilization: 1, resets_at: '2026-10-29T14:40:00+0000' },
+        },
+      }),
+    ).toEqual({
+      agent: 'claude',
+      windows: ['five_hour', 'seven_day'].map((name) => ({
+        name,
+        usedPercent: null,
+        windowSeconds: null,
+        resetsAt: null,
+        models: null,
+      })),
+    });
   });
 
   test('Claude unavailable, malformed and empty sources', () => {

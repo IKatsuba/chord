@@ -20,9 +20,11 @@ const CodexLimits = z.object({
   rateLimits: z.unknown(),
   rateLimitsByLimitId: z.record(z.string(), z.unknown()).nullable(),
 });
+// Claude sends an offset (+00:00); windows carry the same Z form as Codex.
+const ResetsAt = z.iso.datetime({ offset: true }).nullable();
 const ClaudeWindow = z.object({
   utilization: Percent,
-  resets_at: z.iso.datetime().nullable(),
+  resets_at: ResetsAt,
 });
 const ClaudeLimits = z.object({
   rate_limits_available: z.boolean(),
@@ -154,6 +156,10 @@ export function normalizeClaude(usage: unknown): ProviderLimits {
     }
 
     const window = ClaudeWindow.safeParse(raw);
+    const reset =
+      window.success && window.data.resets_at !== null
+        ? new Date(window.data.resets_at)
+        : null;
 
     windows.push(
       window.success
@@ -161,7 +167,10 @@ export function normalizeClaude(usage: unknown): ProviderLimits {
             name,
             usedPercent: window.data.utilization,
             windowSeconds: seconds,
-            resetsAt: window.data.resets_at,
+            resetsAt:
+              reset !== null && Number.isFinite(reset.getTime())
+                ? reset.toISOString()
+                : null,
             models,
           }
         : unknownWindow(name),
@@ -189,7 +198,7 @@ export function normalizeClaude(usage: unknown): ProviderLimits {
       z.object({
         display_name: z.string().min(1).max(128),
         utilization: Percent,
-        resets_at: z.iso.datetime().nullable(),
+        resets_at: ResetsAt,
       }),
     )
     .max(123)

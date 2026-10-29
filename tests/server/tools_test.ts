@@ -71,6 +71,7 @@ function windowOf(probed: string[] = []): WindowView {
     open: () => Promise.resolve({ error: 'no agents here' }),
     tell: () => ({ error: 'no children here' }),
     close: () => ({ error: 'no children here' }),
+    clear: () => Promise.resolve({ error: 'no children here' }),
     monitor: () => ({ error: 'no monitors here' }),
     stopMonitor: () => ({ error: 'no monitors here' }),
     monitors: () => [],

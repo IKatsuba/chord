@@ -127,17 +127,29 @@ test("a message held behind the child's running call waits in its queue until it
   }
 });
 
-test('/clear with a child picked is refused, and on main it closes the children with the session', () =>
+test('/clear with a child picked clears it, main told, and on main it closes the children with the session (CHD-476)', () =>
   withAgents(async (window) => {
     await opened(window);
     await window.press(DOWN);
     await window.press(DOWN);
     await window.press('\r');
+    await window.shows('╭─ parser ');
+    await window.shows('I will run the parser tests on each change.');
     await send(window, '/clear');
-    await window.shows('/clear clears main; pick main first');
+    // Its view starts over under its header; it stays picked and listed.
+    await until(
+      "parser's view empty",
+      () =>
+        !window.frame().includes('I will run the parser tests on each change.'),
+    );
+
+    expect(window.frame()).toContain('╭─ parser ');
+    expect(window.frame()).toContain('opened by main');
     await window.press(DOWN);
     await window.press(UP);
     await window.press(UP);
+    // Main, its parent, was told.
+    await window.shows('The person cleared parser');
     // The transcript empties, the command with it.
     await window.type('/clear');
     await window.press('\r');

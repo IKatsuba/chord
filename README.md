@@ -71,7 +71,8 @@ ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
 `/new [agent]` opens an idle agent beside main and goes to it. The list
 under the prompt shows agents and teams, their state and unseen news.
 `/fork [name]` continues the current conversation in a separate agent where
-the runtime supports it. `ctrl+x a` takes you to what waits.
+the runtime supports it. `/clear` starts the picked agent afresh.
+`ctrl+x a` takes you to what waits.
 
 <img src="docs/images/agents.png" alt="The agents list, with docs waiting on a permission" width="900">
 

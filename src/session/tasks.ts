@@ -79,11 +79,16 @@ export function wrapTeamMessage(
   from: MessageFrom,
   text: string,
 ): string {
+  return `${teamBlock(part)}\n${wrapMessage(from, text)}`;
+}
+
+/** The team part alone, in `<team>`, as a first prompt opens with it. */
+export function teamBlock(part: TeamPart): string {
   const member = part.member === undefined ? '' : ` member="${part.member}"`;
 
   return `<team name="${part.team}" role="${
     part.member === undefined ? 'lead' : 'member'
-  }"${member}>\n${part.text}\n</team>\n${wrapMessage(from, text)}`;
+  }"${member}>\n${part.text}\n</team>`;
 }
 
 const TEAM =

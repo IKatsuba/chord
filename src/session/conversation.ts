@@ -47,6 +47,7 @@ import {
   type TaskParent,
   type TaskSession,
   wrapMessage,
+  teamBlock,
   wrapTeamMessage,
 } from './tasks.ts';
 import type {
@@ -491,6 +492,16 @@ export class Conversation {
    * back to the box with the prompts queued (CHD-378).
    */
   #heldSteers = new Set<string>();
+  /**
+   * The messages of others a steer holds back, by their turn, not sent to
+   * the agent yet: a clear drops them as it drops the queue (CHD-476).
+   */
+  #incoming = new Map<string, MessageFrom>();
+  /**
+   * The team part a cleared team agent's next message carries, whatever
+   * sends it, as its first did (CHD-476).
+   */
+  #firstPart: TeamPart | undefined;
   /** The place the next message held in the queue takes there. */
   #places = 0;
   /** The person's held steers Esc took back, which go nowhere now. */
@@ -651,6 +662,20 @@ export class Conversation {
     this.#recording = recording;
   }
 
+  /**
+   * Who sent the messages queued here, the person's own left out: those a
+   * clear drops (CHD-476).
+   */
+  get queuedFrom(): readonly MessageFrom[] {
+    return [
+      ...this.#queued.flatMap((queued) =>
+        queued.from === undefined ? [] : [queued.from],
+      ),
+      // Held behind the turn's calls or the person's answer, not sent yet.
+      ...this.#incoming.values(),
+    ];
+  }
+
   /** The session the agent has opened; none while it still starts. */
   /**
    * The session's first prompt as its record keeps it, the shell output
@@ -789,7 +814,7 @@ export class Conversation {
    * or after `SETTLE_LIMIT_MS`, so what it cost to the end is said
    * (`retired_usage`) and kept in its record; settles when it has closed.
    */
-  clear(): Promise<void> {
+  clear(firstPart?: TeamPart): Promise<void> {
     const opening = this.#opening;
 
     if (!opening || this.#closing) {
@@ -875,6 +900,8 @@ export class Conversation {
     this.#steers = new Set();
     this.#steering = Promise.resolve();
     this.#heldSteers = new Set();
+    this.#incoming = new Map();
+    this.#firstPart = firstPart;
     this.#takenBack = new Set();
     this.#openCalls = new Set();
     this.#calls = emptyTranscript;
@@ -1344,6 +1371,11 @@ export class Conversation {
 
     this.#steers.add(steer);
 
+    // Another's message, held until it goes out: a clear would drop it.
+    if (next.from !== undefined) {
+      this.#incoming.set(next.turnId, next.from);
+    }
+
     this.#steering = answered;
 
     // Held for the calls open as it came, it waits in the queue at once, in
@@ -1378,6 +1410,8 @@ export class Conversation {
       }
 
       if (this.#steerable(session) === into) {
+        this.#incoming.delete(next.turnId);
+
         const out = session.steer(
           next.prompt,
           next.attachments,
@@ -1416,6 +1450,7 @@ export class Conversation {
       outcome = 'refused';
     } finally {
       this.#steers.delete(steer);
+      this.#incoming.delete(next.turnId);
       answer();
     }
 
@@ -3419,13 +3454,14 @@ export class Conversation {
       ...this.#notes.splice(0),
       ...(cut.length === 0 ? [] : [cutNote(cut.map((each) => each.call))]),
     ];
-    const prompt =
-      notes.length === 0
-        ? next.prompt
-        : [
-            ...notes.map((note) => wrapMessage({ name: 'chord' }, note)),
-            next.prompt,
-          ].join('\n\n');
+    // A cleared team agent's first prompt, whatever sent it, opens with
+    // its team part, as its first did (CHD-476); one that brings its own
+    // keeps that.
+    const part = next.team === undefined ? this.#firstPart : undefined;
+    const prompt = `${part === undefined ? '' : `${teamBlock(part)}\n`}${[
+      ...notes.map((note) => wrapMessage({ name: 'chord' }, note)),
+      next.prompt,
+    ].join('\n\n')}`;
 
     try {
       const turn = session.prompt(prompt, next.attachments, next.mentions);
@@ -3446,6 +3482,12 @@ export class Conversation {
       const links = await turn.sent;
 
       went = links !== undefined;
+
+      // Gone to the agent, it has had its part; kept back, the next goes
+      // with it. Only this session's: a clear meanwhile set its own.
+      if (went && this.#session === session && this.#firstPart === part) {
+        this.#firstPart = undefined;
+      }
 
       if (went && this.#turn?.id === turnId) {
         this.#wentId = turnId;

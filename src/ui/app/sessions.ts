@@ -43,6 +43,7 @@ import { Runtimes, sessionProbe } from '../../server/runtimes.ts';
 import type { ChordServer } from '../../server/server.ts';
 import type {
   Caller,
+  ClearAnswer,
   CloseAnswer,
   EffortStarted,
   MemberArgs,
@@ -434,8 +435,14 @@ export function useSessions(
 
         releaseCurrentCaller();
 
+        // A cleared or closing session's calls stop now, not once its
+        // process has gone (CHD-476).
         releaseCurrentCaller = () => {
           live = false;
+
+          if (admitted !== undefined) {
+            server?.revoke(admitted.token);
+          }
         };
 
         const options = {
@@ -587,6 +594,9 @@ export function useSessions(
     const startup = startupOf(args.agent) ?? {};
     let releaseCurrentCaller = () => {};
 
+    // A fork forks once; a clear opens it afresh, from nothing (CHD-476).
+    let forking = fork;
+
     const conversation = new Conversation(
       (signal) => {
         if (startup.refused !== undefined) {
@@ -602,8 +612,14 @@ export function useSessions(
 
         releaseCurrentCaller();
 
+        // A cleared or closing session's calls stop now, not once its
+        // process has gone (CHD-476).
         releaseCurrentCaller = () => {
           live = false;
+
+          if (admitted !== undefined) {
+            server?.revoke(admitted.token);
+          }
         };
 
         const options = {
@@ -618,8 +634,10 @@ export function useSessions(
             : { mcpServers: mcpServers.map(({ server }) => server) }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
           ...(startup.mcpServers === false ? { noMcpServers: true } : {}),
-          ...(fork === undefined ? {} : { fork }),
+          ...(forking === undefined ? {} : { fork: forking }),
         };
+
+        forking = undefined;
 
         const revoke = () => {
           live = false;
@@ -746,7 +764,13 @@ export function useSessions(
   const spawn = async (from: Caller, args: SpawnArgs): Promise<SpawnAnswer> => {
     const { key } = from;
     const parent = callerConversation(key, from.agent);
+    const session = parent?.session;
     const refused = await startRefusal(key, parent, args, 'task');
+
+    // Its session let go while it waited: no task starts in the next one.
+    if (stale(from) || parent?.session !== session) {
+      return STALE;
+    }
 
     if (parent === undefined || refused !== undefined) {
       return { error: refused ?? 'This session has closed' };
@@ -818,6 +842,66 @@ export function useSessions(
     new Map<number, [MessageFrom, string, (TeamPart | undefined)?][]>(),
   );
 
+  /** Each team agent's part, by its key, that its first message carries. */
+  const parts = useRef(new Map<number, TeamPart>());
+
+  /** Each child being cleared, by its key: told once its fresh session is up or failed. */
+  const clearing = useRef(
+    new Map<
+      number,
+      (failed?: string, dropped?: readonly MessageFrom[]) => void
+    >(),
+  );
+
+  /**
+   * An event of child `key` while it is being cleared, which is no first
+   * start: its fresh session up, failed or closing settles the clear, and
+   * what waited for it goes then. Whether it was being cleared (CHD-476).
+   */
+  const clearedHeard = (key: number, event: ConversationEvent): boolean => {
+    const cleared = clearing.current.get(key);
+
+    if (cleared === undefined) {
+      return false;
+    }
+
+    if (
+      event.type === 'connected' ||
+      event.type === 'connect_failed' ||
+      event.type === 'closing'
+    ) {
+      const waited = early.current.get(key) ?? [];
+
+      early.current.delete(key);
+      clearing.current.delete(key);
+
+      // After the event is drawn, as a first start's messages go.
+      if (event.type === 'connected') {
+        queueMicrotask(() => {
+          const child = agentOf(sessions.agents, key)?.child;
+
+          for (const [from, text] of waited) {
+            if (child !== undefined) {
+              deliverTo(child, from, text);
+            }
+          }
+        });
+      }
+
+      // Up, they go; failed or closed, they are dropped, and said so.
+      cleared(
+        event.type === 'connected'
+          ? undefined
+          : event.type === 'closing'
+            ? 'it was closed'
+            : event.message,
+        event.type === 'connected' ? [] : waited.map(([from]) => from),
+      );
+    }
+
+    return true;
+  };
+
   /**
    * A `send_message` to child `key`: into its running turn, a turn there,
    * queued, or held until it is up; `queued` is called if a message sent
@@ -828,7 +912,7 @@ export function useSessions(
     from: MessageFrom,
     text: string,
     queued?: () => void,
-  ): 'sent' | 'queued' => {
+  ): 'sent' | 'queued' | undefined => {
     const held = early.current.get(child.key);
 
     if (held !== undefined) {
@@ -837,7 +921,21 @@ export function useSessions(
       return 'queued';
     }
 
-    return child.conversation.tell(from, text, queued) ?? 'queued';
+    return child.conversation.tell(from, text, queued);
+  };
+
+  /** `deliverTo`'s answer to the sender: a refusal when nothing went. */
+  const sentTo = (
+    child: Child<Conversation>,
+    from: MessageFrom,
+    text: string,
+    queued?: () => void,
+  ): MessageAnswer => {
+    const delivered = deliverTo(child, from, text, queued);
+
+    return delivered === undefined
+      ? { error: `${child.name} is closing; nothing reaches it` }
+      : { delivered, to: child.name };
   };
 
   /** How the parent's messages read to a child: from `main`. */
@@ -930,6 +1028,10 @@ export function useSessions(
     // Its state is there before its first event, which may come at once.
     dispatch({ type: 'agent_opened', key: childKey });
 
+    if (opening.part !== undefined) {
+      parts.current.set(childKey, opening.part);
+    }
+
     const effort = effortStart(args, () => conversationAt(childKey));
     const validation = Promise.withResolvers<string | undefined>();
     let primaryRefusal: string | undefined;
@@ -988,6 +1090,10 @@ export function useSessions(
               }
 
               opening.launch?.signal.removeEventListener('abort', cancelLaunch);
+            }
+
+            if (clearedHeard(own, event)) {
+              return;
             }
 
             if (event.type === 'connected' || event.type === 'connect_failed') {
@@ -1125,10 +1231,21 @@ export function useSessions(
   const openAgent = async (
     key: number,
     args: OpenArgs,
+    caller?: Caller,
   ): Promise<OpenAnswer> => {
+    const session = conversationAt(key)?.session;
     const refused =
       (await startRefusal(key, conversationAt(key), args, 'agent')) ??
       fullRefusal(key);
+
+    // Its session let go while it waited: what it asked goes nowhere.
+    if (
+      (caller !== undefined && stale(caller)) ||
+      conversationAt(key)?.session !== session
+    ) {
+      return STALE;
+    }
+
     const agents = ownedBy(sessions.agents, key);
 
     if (agents === undefined || refused !== undefined) {
@@ -1877,10 +1994,7 @@ export function useSessions(
       return { error: noChild(caller.key, to) };
     }
 
-    return {
-      delivered: deliverTo(child, MAIN, text, queued),
-      to: child.name,
-    };
+    return sentTo(child, MAIN, text, queued);
   };
 
   /**
@@ -1941,25 +2055,19 @@ export function useSessions(
       );
 
     if (member !== undefined) {
-      return {
-        delivered: deliverTo(
-          member,
-          self === lead ? { name: lead.name, reachable: true } : from,
-          text,
-          queued,
-        ),
-        to: member.name,
-      };
+      return sentTo(
+        member,
+        self === lead ? { name: lead.name, reachable: true } : from,
+        text,
+        queued,
+      );
     }
 
     const other =
       target && agents.children.find((each) => each.key === target.key);
 
     if (other !== undefined) {
-      return {
-        delivered: deliverTo(other, from, text, queued),
-        to: other.name,
-      };
+      return sentTo(other, from, text, queued);
     }
 
     const closed = agents.closed.findLast(
@@ -2053,20 +2161,30 @@ export function useSessions(
   const retiredKeys = useRef(0);
   const retiredKey = () => --retiredKeys.current;
 
-  /** Holds what a child spent, by its team, as it closes. */
-  const keepChild = (child: ChildInfo & { readonly key: number }) =>
-    keepSpend(child.key, {
-      // A run's lead is `lead` under its team's row, as when it is open.
-      name: isLead(child) ? 'lead' : child.name,
-      kind: child.team === undefined ? 'agent' : 'member',
-      runtime: child.runtime,
-      ...(child.team === undefined ? {} : { team: child.team }),
-      ...(isLead(child)
-        ? { lead: child.id }
-        : child.lead === undefined
-          ? {}
-          : { lead: child.lead }),
-    });
+  /**
+   * Holds what a child spent, by its team, as it closes, or as a clear lets
+   * its session go, under a key of its own (CHD-476).
+   */
+  const keepChild = (
+    child: ChildInfo & { readonly key: number },
+    retiring = false,
+  ) =>
+    keepSpend(
+      retiring ? retiredKey() : child.key,
+      {
+        // A run's lead is `lead` under its team's row, as when it is open.
+        name: isLead(child) ? 'lead' : child.name,
+        kind: child.team === undefined ? 'agent' : 'member',
+        runtime: child.runtime,
+        ...(child.team === undefined ? {} : { team: child.team }),
+        ...(isLead(child)
+          ? { lead: child.id }
+          : child.lead === undefined
+            ? {}
+            : { lead: child.lead }),
+      },
+      retiring ? child.key : undefined,
+    );
 
   const dropChild = (key: number) => {
     const found = agentOf(sessions.agents, key);
@@ -2084,6 +2202,15 @@ export function useSessions(
 
     runs.current.delete(child.id);
 
+    // Closed while it restarts: the clear settles, what waited for the
+    // fresh session counted as not delivered (CHD-476).
+    const clearingIt = clearing.current.get(key);
+
+    clearing.current.delete(key);
+    clearingIt?.(
+      'it was closed',
+      (early.current.get(key) ?? []).map(([from]) => from),
+    );
     early.current.delete(key);
 
     if (stateOf(key) && busyOf(stateOf(key)!) !== undefined) {
@@ -2151,6 +2278,158 @@ export function useSessions(
     redraw();
 
     return { closed: child.name };
+  };
+
+  /**
+   * Clears `child`'s context (CHD-476): its session let go as main's /clear
+   * lets main's, a fresh one in its place under the same id and name, which
+   * runs nothing until its next message, its first again. Settles once that
+   * session is up, with why not if it is not, and the messages queued to it
+   * from others that were dropped, said so.
+   */
+  const clearChild = async (
+    child: Child<Conversation>,
+    typed?: string,
+  ): Promise<{ readonly failed?: string; readonly dropped?: string }> => {
+    // Queued in its session, or held while it still starts.
+    if (clearing.current.has(child.key)) {
+      return { failed: 'it is being cleared already' };
+    }
+
+    // Queued or held in its session, or held while it still starts.
+    const before = [
+      ...(early.current.get(child.key) ?? []).map(([from]) => from),
+      ...child.conversation.queuedFrom,
+    ];
+    const up = Promise.withResolvers<{
+      readonly failed?: string;
+      readonly later: readonly MessageFrom[];
+    }>();
+
+    // The person's own prompts queued for it come back into its box, their
+    // images and held output with them, whoever clears it.
+    const now = stateOf(child.key);
+
+    if (now !== undefined && mine(now.queue).length > 0) {
+      // After what is typed there, but for the /clear typed to clear it.
+      const text = restoredDraft(now.queue, typed ?? now.draft);
+
+      dispatch({
+        type: 'in_session',
+        key: child.key,
+        action: { type: 'queue_withdrawn' },
+      });
+
+      if (child.key === shownKey(sessions.agents)) {
+        showDraft(text, endOf(text));
+      } else {
+        showDraftIn(child.key, text, endOf(text));
+      }
+    }
+
+    clearing.current.set(child.key, (failed, later = []) =>
+      up.resolve({ ...(failed === undefined ? {} : { failed }), later }),
+    );
+    // What comes while it restarts waits for the fresh session.
+    early.current.set(child.key, []);
+    stopCommand(child.key);
+    keepChild(
+      child,
+      true,
+    )(child.conversation.clear(parts.current.get(child.key)));
+
+    const { failed, later } = await up.promise;
+    // Those sent while it restarted count too when it did not come up.
+    const others = [...before, ...later].map((from) => from.name);
+    const dropped =
+      others.length === 0
+        ? undefined
+        : `${others.length} queued message${others.length === 1 ? '' : 's'} ` +
+          `from ${andList([...new Set(others)])} ` +
+          `${others.length === 1 ? 'was' : 'were'} not delivered.`;
+
+    return {
+      ...(failed === undefined ? {} : { failed }),
+      ...(dropped === undefined ? {} : { dropped }),
+    };
+  };
+
+  /** Why `name` was not cleared, and the messages to it that went nowhere. */
+  const notCleared = (
+    name: string,
+    failed: string,
+    dropped: string | undefined,
+  ) =>
+    `Could not clear ${name}: ${failed}${dropped === undefined ? '' : `. ${dropped}`}`;
+
+  /**
+   * The person's clear of `child`: as `clearChild`, and its parent told
+   * once it is up, as it did not ask; a fork has none. Why not, if not.
+   */
+  const clearByPerson = async (
+    child: Child<Conversation>,
+  ): Promise<string | undefined> => {
+    const { failed, dropped } = await clearChild(child, '');
+
+    if (failed !== undefined) {
+      return notCleared(child.name, failed, dropped);
+    }
+
+    const model =
+      conversationAt(child.key)?.session?.models()?.current ?? child.model;
+    const described = `${[child.runtime, model]
+      .filter((part) => part !== undefined)
+      .join(' · ')}, id ${child.id}`;
+
+    parentOf(child)?.deliver(
+      { name: 'chord' },
+      `The person cleared ${child.name}'s context (${described}). It is ` +
+        'open with a fresh session and knows nothing of earlier turns; ' +
+        `your next message is its first.${dropped === undefined ? '' : ` ${dropped}`}`,
+    );
+
+    return undefined;
+  };
+
+  /**
+   * `clear_agent`: the caller clears a child of its own, found as
+   * `close_agent` finds it, and hears once its fresh session is up.
+   */
+  const clearAgent = async (
+    caller: Caller,
+    to: string,
+  ): Promise<ClearAnswer> => {
+    const lead =
+      caller.team === 'lead' && caller.agent !== undefined
+        ? childOf(caller.key, caller.agent)
+        : undefined;
+    const agents = ownedBy(sessions.agents, caller.key);
+    const child =
+      lead === undefined
+        ? ownChild(caller.key, to)
+        : agents &&
+          membersOf(agents, lead.id).find(
+            (each) => each.id === to || each.name === to,
+          );
+
+    if (child === undefined) {
+      return {
+        error:
+          lead === undefined
+            ? noChild(caller.key, to)
+            : `No member ${to} of yours is open`,
+      };
+    }
+
+    const { failed, dropped } = await clearChild(child);
+
+    return failed === undefined
+      ? {
+          cleared: child.name,
+          id: child.id,
+          ...(dropped === undefined ? {} : { dropped }),
+        }
+      : { error: notCleared(child.name, failed, dropped) };
   };
 
   /**
@@ -2229,6 +2508,15 @@ export function useSessions(
       probe: sessionProbe(place.cwd, (runtime) => place.startupOf(runtime)),
     }));
 
+  /**
+   * Whether `caller` speaks for a session already let go, cleared or
+   * closing: what it asks reaches no one (CHD-476).
+   */
+  const stale = (caller: Caller) => caller.launch?.valid() === false;
+  const STALE = {
+    error: 'Your session was cleared or closed; nothing more goes from it',
+  } as const;
+
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
     ...(resources === undefined
@@ -2304,8 +2592,12 @@ export function useSessions(
 
       return runtimes().read(runtime, probe);
     },
-    spawn: (caller, args) => spawn(caller, args),
-    open: (key, args) => openAgent(key, args),
+    spawn: (caller, args) =>
+      stale(caller) ? Promise.resolve(STALE) : spawn(caller, args),
+    open: (key, args, caller) =>
+      caller !== undefined && stale(caller)
+        ? Promise.resolve(STALE)
+        : openAgent(key, args, caller),
     teams: async (caller) => {
       const agents = ownedBy(sessions.agents, caller.key);
 
@@ -2356,13 +2648,21 @@ export function useSessions(
     askPerson: (caller, wait, signal) =>
       conversationAt(caller.key)?.ask(wait, signal) ??
       Promise.resolve(undefined),
-    openMember: (caller, args) => openMember(caller, args),
-    message: (caller, text, queued) => message(caller, text, queued),
-    tell: (caller, to, text, queued) => tell(caller, to, text, queued),
-    close: (caller, to) => closeAgent(caller, to),
+    openMember: (caller, args) =>
+      stale(caller) ? Promise.resolve(STALE) : openMember(caller, args),
+    message: (caller, text, queued) =>
+      stale(caller) ? STALE : message(caller, text, queued),
+    tell: (caller, to, text, queued) =>
+      stale(caller) ? STALE : tell(caller, to, text, queued),
+    close: (caller, to) => (stale(caller) ? STALE : closeAgent(caller, to)),
+    clear: (caller, to) =>
+      stale(caller) ? Promise.resolve(STALE) : clearAgent(caller, to),
     monitor: (caller, args) =>
-      startMonitorIn(sessions.agents, caller, args, place.cwd),
-    stopMonitor: (caller, id) => stopMonitorIn(sessions.agents, caller, id),
+      stale(caller)
+        ? STALE
+        : startMonitorIn(sessions.agents, caller, args, place.cwd),
+    stopMonitor: (caller, id) =>
+      stale(caller) ? STALE : stopMonitorIn(sessions.agents, caller, id),
     monitors: (caller) => monitorsIn(sessions.agents, caller),
     served: (caller, call) => {
       if (caller.launch?.valid() === false || caller.signal?.aborted) {
@@ -2964,6 +3264,11 @@ export function useSessions(
           (event) => {
             emit(event);
 
+            // Cleared later, its fresh session is no fork (CHD-476).
+            if (clearedHeard(own, event)) {
+              return;
+            }
+
             if (event.type === 'connected') {
               up.resolve(undefined);
               // Where it parted, under what it was copied from.
@@ -3209,22 +3514,36 @@ export function useSessions(
   };
 
   /**
-   * `/clear` on the session in front: refused while a child is picked, as
-   * clearing it would leave the parent talking to an agent that no longer
-   * knows what it was asked; on `main`, its children close with the session
-   * it lets go, as its task agents do. The refusal, if any.
+   * `/clear` on the session in front: a child or fork picked gets a fresh
+   * session of its own, its parent told (CHD-476); on `main`, its children
+   * close with the session it lets go, as its task agents do.
    */
-  const clearFront = (before: () => void): string | undefined => {
+  const clearFront = (before: () => void): void => {
     const agents = front();
 
     const picked = agents === undefined ? undefined : pickedChild(agents);
 
-    if (picked?.forkedFrom !== undefined) {
-      return 'A fork cannot be cleared yet · close it with x and /fork again';
-    }
-
+    // A child or a fork picked is the one cleared, main and the rest left as
+    // they are (CHD-476), its queue back in its box as clearChild puts it;
+    // why not, under the command in its view.
     if (picked !== undefined) {
-      return '/clear clears main; pick main first';
+      void clearByPerson(picked).then(
+        (failed) =>
+          failed !== undefined &&
+          dispatch({
+            type: 'in_session',
+            key: picked.key,
+            action: {
+              type: 'noted',
+              turnId: `clear-${crypto.randomUUID()}`,
+              command: 'clear',
+              text: failed,
+              failed: true,
+            },
+          }),
+      );
+
+      return;
     }
 
     before();
@@ -3250,8 +3569,6 @@ export function useSessions(
     } else {
       void conversation()?.clear();
     }
-
-    return undefined;
   };
 
   /**
@@ -3539,11 +3856,16 @@ export function useSessions(
       }),
     );
 
-  /** The queued prompts back into the box, ahead of what is typed there. */
+  /**
+   * The queued prompts back into the box, ahead of what is typed there,
+   * their images and held output with them, as a child's clear puts its
+   * own back (CHD-476).
+   */
   const takeBackQueue = (typed: string) => {
     if (mine(state.queue).length > 0) {
       const text = restoredDraft(state.queue, typed);
 
+      dispatch({ type: 'queue_withdrawn' });
       showDraft(text, endOf(text));
     }
   };

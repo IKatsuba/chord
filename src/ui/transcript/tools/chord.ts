@@ -40,7 +40,8 @@ export function chordHeadline(call: ChordCall): Headline {
   const answered =
     text(record(call.answer).name) ??
     text(record(call.answer).to) ??
-    text(record(call.answer).closed);
+    text(record(call.answer).closed) ??
+    text(record(call.answer).cleared);
   const named = (name: string, arg: string | undefined, note?: string) => ({
     name,
     ...(arg === undefined ? {} : { arg }),
@@ -113,6 +114,8 @@ export function chordHeadline(call: ChordCall): Headline {
       };
     case 'close_agent':
       return named('Close', answered ?? text(input.to) ?? text(input.id));
+    case 'clear_agent':
+      return named('Clear', answered ?? text(input.to));
     case 'monitor':
       return named('Monitor', text(input.description));
     case 'stop_monitor':
@@ -267,6 +270,12 @@ export function chordLines(call: ChordCall, expanded = false): string[] {
       return [];
     case 'close_agent':
       return ['Closed'];
+    // The id it keeps, and the messages to it that were dropped (CHD-476).
+    case 'clear_agent':
+      return [
+        `Fresh session${text(answer.id) === undefined ? '' : ` · id ${text(answer.id)!}`}`,
+        ...(text(answer.dropped) === undefined ? [] : [text(answer.dropped)!]),
+      ];
     case 'monitor': {
       const timeout = answer.timeout_ms;
 

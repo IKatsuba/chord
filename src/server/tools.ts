@@ -180,6 +180,16 @@ export type MessageAnswer =
 export type CloseAnswer =
   { readonly closed: string } | { readonly error: string };
 
+/** What `clear_agent` answers: the child cleared, once its fresh session is up. */
+export type ClearAnswer =
+  | {
+      readonly cleared: string;
+      readonly id: string;
+      /** The messages queued to it that were not delivered, said so. */
+      readonly dropped?: string;
+    }
+  | { readonly error: string };
+
 /** A long-lived agent open in a session, as `list_sessions` gives it. */
 export interface ChildView {
   readonly id: string;
@@ -259,8 +269,11 @@ export interface WindowView {
   ): Promise<RuntimeOffer | undefined>;
   /** Starts a task agent for the caller: the main session or its child. */
   spawn(caller: Caller, args: SpawnArgs): Promise<SpawnAnswer>;
-  /** Opens a long-lived agent for the main session, `key`. */
-  open(key: number, args: OpenArgs): Promise<OpenAnswer>;
+  /**
+   * Opens a long-lived agent for the main session, `key`; `caller`, when
+   * given, is refused once its session has been let go (CHD-476).
+   */
+  open(key: number, args: OpenArgs, caller?: Caller): Promise<OpenAnswer>;
   /**
    * The teams saved for the caller's directory, and the leads of the runs
    * open in its session, by team.
@@ -303,6 +316,8 @@ export interface WindowView {
   ): MessageAnswer;
   /** Closes the caller's child `to`, by id or name: a lead's, a member. */
   close(caller: Caller, to: string): CloseAnswer;
+  /** `clear_agent`: a child of the caller's cleared; see `useSessions`. */
+  clear(caller: Caller, to: string): Promise<ClearAnswer>;
   /** Starts a monitor for the caller, as `monitor` asks. */
   monitor(caller: Caller, args: MonitorArgs): MonitorAnswer;
   /** Stops the caller's own monitor `id`. */
@@ -1074,7 +1089,7 @@ const openAgent: Register = (server, caller) =>
         input,
         caller.fork
           ? { error: FORK_REFUSED }
-          : await caller.window.open(caller.key, input),
+          : await caller.window.open(caller.key, input, caller),
       ),
   );
 
@@ -1125,6 +1140,43 @@ const closeAgent: Register = (server, caller) =>
           : caller.window.close(caller, input.to),
       ),
   );
+
+const clearAgent: Register = (server, caller) =>
+  server.registerTool(
+    'clear_agent',
+    {
+      description:
+        'Clears a long-lived agent you opened: its turn stops and it gets a ' +
+        'fresh session that knows nothing of earlier turns, with the same ' +
+        "id and name. Your next message is its first; a team member's " +
+        "carries its instructions, as open_agent's first message does. The " +
+        'answer comes once the fresh session is up.',
+      inputSchema: {
+        to: z
+          .string()
+          .describe('The agent, by the id open_agent answered or by its name'),
+      },
+    },
+    async (input) =>
+      serve(
+        caller,
+        'clear_agent',
+        input,
+        caller.fork
+          ? { error: FORK_REFUSED }
+          : await caller.window.clear(caller, input.to),
+        clearedText,
+      ),
+  );
+
+/** `clear_agent`'s answer for the model (CHD-476). */
+function clearedText(
+  answer: Exclude<ClearAnswer, { readonly error: string }>,
+): string {
+  return `${answer.cleared} (id ${answer.id}) has a fresh session; it knows nothing of earlier turns.${
+    answer.dropped === undefined ? '' : ` ${answer.dropped}`
+  }`;
+}
 
 const messageParent: Register = (server, caller) =>
   server.registerTool(
@@ -1463,6 +1515,7 @@ function toolsOf(caller: Caller): readonly Register[] {
         proposeTeamTool,
         tellAgent,
         closeAgent,
+        clearAgent,
         ...MONITORS,
       ];
     case 'child':
@@ -1478,6 +1531,7 @@ function toolsOf(caller: Caller): readonly Register[] {
               openMember,
               tellTeam,
               closeAgent,
+              clearAgent,
               ...MONITORS,
             ]
           : caller.team === 'member'
@@ -1510,6 +1564,7 @@ export function toolNames(role: Role): readonly ChordTool[] {
         'propose_team',
         'send_message',
         'close_agent',
+        'clear_agent',
         ...MONITOR_TOOLS,
       ]
     : [

@@ -88,6 +88,7 @@ export type ChordTool =
   | 'open_agent'
   | 'send_message'
   | 'close_agent'
+  | 'clear_agent'
   | 'monitor'
   | 'stop_monitor'
   | 'list_monitors'

@@ -163,8 +163,8 @@ the prompt; status and agents stay below:
 | `esc`             | interrupt the turn                           |
 
 Settings live in `~/.config/chord/settings.json` and the project's
-`.chord/settings.json`: the default agent (initially highlighted in the
-startup picker), each agent's model, effort and mode, MCP servers, theme
+`.chord/settings.json`: the default agent (highlighted in the startup picker
+when listed), each agent's model, effort and mode, MCP servers, theme
 and notifications. Each new unnamed interactive start asks again; the pick
 applies to that run and is not saved.
 

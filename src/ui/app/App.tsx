@@ -1746,12 +1746,14 @@ export function App({
                         finder={finder}
                         onRoom={completionRoom}
                         rows={menuRows}
+                        room={room}
                         agentColours={mentionColours}
                       />
                     ) : menu ? (
                       <CommandList
                         menu={menu}
                         rows={menuRows}
+                        room={room}
                         width={columns}
                         onRoom={completionRoom}
                       />

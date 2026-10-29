@@ -312,6 +312,43 @@ for (const [columns, rows] of [
   });
 }
 
+for (const [columns, rows] of [
+  [80, 24],
+  [120, 40],
+] as const) {
+  test(`at ${columns}x${rows}, a list shrunk to no rows comes back whole when the window grows (CHD-545)`, async () => {
+    let latest: WindowedState | undefined;
+
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await files(window, 'visible.ts');
+        await window.type('@');
+        await window.shows('visible.ts');
+        await window.resize({ columns, rows: 4 });
+        await until(
+          'no room for the list',
+          () => latest?.window.completionHidden === true,
+        );
+        await window.resize({ columns, rows });
+        await until(
+          'room again',
+          () => latest?.window.completionHidden !== true,
+        );
+        await window.shows('visible.ts');
+        expect(window.frame()).not.toContain('not enough space');
+      },
+      {
+        columns,
+        rows,
+        onState: (next) => {
+          latest = next;
+        },
+      },
+    );
+  });
+}
+
 for (const mode of ['one-row', 'crowded', 'resize'] as const) {
   test(`reachable pressure ${mode}: the list floats with its highlight in sight, the prompt and permanent rows still (CHD-545)`, async () => {
     let latest: WindowedState | undefined;

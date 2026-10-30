@@ -33,8 +33,8 @@
   pins it so the spacer can go once the pinned library counts them.
 - Forks are top level, after main's tree; main's clear leaves them open.
   Closing a fork closes its tasks and monitors without notifying a parent.
-  Forks cannot use open_agent, run_team, propose_team, close_agent or
-  clear_agent, or message main; main cannot message them.
+  Forks cannot use open_agent, run_team, propose_team, settings, close_agent
+  or clear_agent, or message main; main cannot message them.
 - Clearing a picked child or fork preserves its identity and long-lived
   children. Withdraw old requests, close tasks, stop monitors and block late
   delivery. Restore personal queued prompts with images; report other dropped

@@ -544,7 +544,7 @@ queued prompts refuses until its turn ends. On an ordinary child, the command
 says `/fork forks main or a fork`. A fork can itself be forked.
 
 A fork has main's tools except `open_agent`, `run_team`, `propose_team`,
-`close_agent` and `clear_agent`, which answer
+`settings`, `close_agent` and `clear_agent`, which answer
 `This tool works only from main and its agents, not from a fork.`
 It can use task agents and monitors. Main and forks cannot message one another.
 Pick a fork in the agents list and press `x` to close it with its tasks and
@@ -590,6 +590,31 @@ both.
 | `mouse`                        | `false` leaves the mouse to the terminal; user's file only |                     |
 | `copyOnSelect`                 | `false` leaves a drag's selection for ctrl+c to copy (on by default); user's file only |                     |
 | `mcpServers`                   | MCP servers configured for the agent, as `.mcp.json` writes them |             |
+
+The main session's agent can use chord's `settings` tool in the window;
+forks, children and `-p` cannot. `read` returns the user and project files
+as written, the merged, checked settings and any problems. It covers every
+key, or one named by a list such as `["agents", "codex", "model"]`.
+MCP server `env` and `headers` values are masked as `"***"`, including on
+a read of one key. `args`, `url` and `command` read as written: a secret
+written inline there reaches the model. A read of every key folds under
+`Settings`; ctrl+o expands it.
+
+`set` and `remove` change one key in the user's file only. chord shows the
+old and new values and asks in its box, under any permission mode. One
+change waits at a time; another is refused until you answer.
+An unchanged value or an absent key's removal asks and writes nothing.
+The tool may change `theme`, `editorMode`, `mouse`, `copyOnSelect`,
+`offeredAgents`, `preferredNotifChannel`, `agent`, `agents.<name>.model`,
+`agents.<name>.effort`, `teamSelection.intent`, `teamSelection.prefer.agent`
+and `teamSelection.prefer.model`. Everything else stays a hand edit,
+including commands, permission modes, MCP servers and team constraints.
+A project value that wins over the user's is named above the box.
+
+Saved `theme` and `editorMode` take effect at once, as does `offeredAgents`
+in `/new`'s list. Team selection preferences apply at the next selection;
+the rest at the next start. Other windows and hand edits take effect at
+the next start, except team selection preferences.
 
 When a turn ends, a permission is asked or the agent asks you to fill in a form
 or open a link, chord tells the terminal, so a window in the background can say

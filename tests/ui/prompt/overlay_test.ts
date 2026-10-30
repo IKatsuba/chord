@@ -1,6 +1,5 @@
 import { expect, test } from 'bun:test';
 import {
-  layoutRows,
   overlayRoom,
   overlayRule,
   framedRows,
@@ -19,12 +18,16 @@ test("a frameless list's rule runs the width it is given (CHD-545)", () => {
   expect(overlayRule(-1)).toBe('');
 });
 
-test("a framed picker's list keeps its own limit until its frame and hint would leave the room, and one row at least (CHD-545)", () => {
+test("a framed picker's list keeps its own limit until its frame and hint would leave the room, and goes where not one row fits (CHD-545)", () => {
   // Seven rows around the list: frame, title, description, two gaps, hint.
   expect(framedRows(6, 19, 2)).toBe(6);
   expect(framedRows(6, 13, 2)).toBe(6);
   expect(framedRows(6, 12, 2)).toBe(5);
-  expect(framedRows(6, 3, 2)).toBe(1);
+  expect(framedRows(6, 8, 1)).toBe(1);
+  // A row for one of two, and one to count the other: nine.
+  expect(framedRows(6, 8, 2)).toBe(0);
+  expect(framedRows(6, 7, 2)).toBe(0);
+  expect(framedRows(6, 3, 2)).toBe(0);
 });
 
 test('hidden choices take the row that counts them, and a wrapped description its rows (CHD-545)', () => {
@@ -35,10 +38,4 @@ test('hidden choices take the row that counts them, and a wrapped description it
   expect(framedRows(6, 12, 5)).toBe(5);
   expect(framedRows(6, 12, 2, 2)).toBe(3);
   expect(framedRows(3, 9, 10)).toBe(1);
-});
-
-test('a picker laid out by the window is told its height until the layer has less (CHD-545)', () => {
-  expect(layoutRows(19, 24)).toBe(24);
-  expect(layoutRows(35, 40)).toBe(40);
-  expect(layoutRows(12, 24)).toBe(17);
 });

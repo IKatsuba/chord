@@ -62,7 +62,6 @@ import {
 import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
 import { Overlay } from '../prompt/Overlay.tsx';
-import { layoutRows } from '../prompt/overlay.ts';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import {
@@ -1816,7 +1815,7 @@ export function App({
                           <ThemePicker
                             current={state.theme}
                             background={background}
-                            windowRows={layoutRows(room, rows)}
+                            room={room}
                             active={listening}
                             onMove={(theme) =>
                               dispatch({ type: 'theme_previewed', theme })
@@ -1827,6 +1826,7 @@ export function App({
                         {noticing && notice !== undefined && (
                           <NoticeBox
                             columns={columns}
+                            room={room}
                             active={listening}
                             onAnswer={(dismissed) => {
                               if (dismissed) {
@@ -1862,7 +1862,7 @@ export function App({
                             ignored={here.mcpIgnored}
                             heldBack={conversation()?.session?.heldBack ?? []}
                             agent={shownAgent}
-                            windowRows={layoutRows(room, rows)}
+                            windowRows={rows}
                             starting={
                               conversation()?.session === undefined &&
                               state.connection.status === 'starting'

@@ -1,7 +1,7 @@
 import process from 'node:process';
 import type { ListedAgent } from '../../agents.ts';
 import { useTerminalDimensions } from '@opentui/react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 import wrapAnsi from 'wrap-ansi';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
@@ -145,6 +145,22 @@ export function AgentPicker({
 }
 
 /**
+ * What a framed picker draws between its title and its hint or choices: it
+ * gives way first where the layer the picker floats in is short of room,
+ * cut from the bottom at its natural height, so the title and the hint stay
+ * and the prompt under the layer is never covered (CHD-545).
+ */
+function Body({ children }: { children: ReactNode }) {
+  return (
+    <box flexShrink={1} minHeight={0} overflow='hidden'>
+      <box flexShrink={0} flexDirection='column'>
+        {children}
+      </box>
+    </box>
+  );
+}
+
+/**
  * `/model`: the agent's models, inline above the prompt as the permission
  * prompt is, the one in use marked. The list takes 1–9, ↑/↓, j/k and Enter;
  * Esc is the window's.
@@ -168,26 +184,40 @@ export function ModelPicker({
 }) {
   const choices = modelChoices(models);
   const closeHint = useCloseHint();
+  // None where the room has no row for a choice: the list, and its keys, go.
+  const listed = framedRows(rows, room, choices.length);
 
   return (
-    <box {...borderOf(useColours().permission)} paddingX={1} flexShrink={0}>
-      <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
+    <box
+      {...borderOf(useColours().permission)}
+      paddingX={1}
+      flexShrink={1}
+      minHeight={0}
+    >
+      <text
+        {...TEXT}
+        {...fg(useColours().permission)}
+        attributes={BOLD}
+        flexShrink={0}
+      >
         Select model
       </text>
-      <text {...CUT} attributes={DIM}>
-        {choices.length === 0
-          ? `${agent} offers no models to choose from.`
-          : `Switch ${agent}'s model for this session.`}
-      </text>
-      {choices.length > 0 && (
-        <PickerList
-          choices={choices}
-          rows={framedRows(rows, room, choices.length)}
-          active={active}
-          onPick={onPick}
-        />
-      )}
-      <box marginTop={1}>
+      <Body>
+        <text {...CUT} attributes={DIM}>
+          {choices.length === 0
+            ? `${agent} offers no models to choose from.`
+            : `Switch ${agent}'s model for this session.`}
+        </text>
+        {listed > 0 && (
+          <PickerList
+            choices={choices}
+            rows={listed}
+            active={active}
+            onPick={onPick}
+          />
+        )}
+      </Body>
+      <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
           {hintOf(
             choices.length === 0 ? undefined : 'Enter to switch',
@@ -248,6 +278,8 @@ export function ResumePicker({
     ),
   );
   const closeHint = useCloseHint(starting ? 'to quit' : 'to close');
+  // None where the room has no row for a choice: the list, and its keys, go.
+  const listed = framedRows(rows, room, choices.length);
   const scopeKey = useHintKey('select:toggleScope');
   const scopeHint =
     scopeKey === undefined
@@ -261,37 +293,49 @@ export function ResumePicker({
       {...borderOf(useColours().permission)}
       paddingX={1}
       marginTop={gap ? 1 : 0}
-      flexShrink={0}
+      // Where it floats, it gives way to the layer's room; at start, in
+      // the window's flow, it keeps its rows.
+      flexShrink={gap ? 0 : 1}
+      minHeight={0}
     >
-      <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
+      <text
+        {...TEXT}
+        {...fg(useColours().permission)}
+        attributes={BOLD}
+        flexShrink={0}
+      >
         Resume a session
       </text>
-      <text {...CUT} attributes={DIM}>
-        {starting
-          ? `Pick one of ${agent}'s earlier sessions to open.`
-          : `${agent}'s earlier sessions in ${
-              everywhere ? 'every directory' : 'this directory'
-            }.`}
-      </text>
-      {choices.length === 0 ? (
-        <box marginTop={1}>
-          <text {...TEXT}>No earlier sessions in this directory.</text>
-        </box>
-      ) : (
-        <PickerList
-          choices={choices}
-          rows={framedRows(rows, room, choices.length)}
-          active={active}
-          onPick={(value) => {
-            const chosen = sessions[Number(value)];
+      <Body>
+        <text {...CUT} attributes={DIM}>
+          {starting
+            ? `Pick one of ${agent}'s earlier sessions to open.`
+            : `${agent}'s earlier sessions in ${
+                everywhere ? 'every directory' : 'this directory'
+              }.`}
+        </text>
+        {choices.length === 0 ? (
+          <box marginTop={1}>
+            <text {...TEXT}>No earlier sessions in this directory.</text>
+          </box>
+        ) : (
+          listed > 0 && (
+            <PickerList
+              choices={choices}
+              rows={listed}
+              active={active}
+              onPick={(value) => {
+                const chosen = sessions[Number(value)];
 
-            if (chosen) {
-              onPick(chosen);
-            }
-          }}
-        />
-      )}
-      <box marginTop={1}>
+                if (chosen) {
+                  onPick(chosen);
+                }
+              }}
+            />
+          )
+        )}
+      </Body>
+      <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
           {hintOf(
             choices.length === 0 ? undefined : 'Enter to resume',
@@ -343,35 +387,51 @@ export function TeamsPicker({
     wrapAnsi(where, Math.max(columns, 1), { hard: true, trim: true }).split(
       '\n',
     ).length - 1;
+  // None where the room has no row for a choice: the list, and its keys, go.
+  const listed = framedRows(rows, room, choices.length, wrapped);
 
   return (
-    <box {...borderOf(useColours().permission)} paddingX={1} flexShrink={0}>
-      <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
+    <box
+      {...borderOf(useColours().permission)}
+      paddingX={1}
+      flexShrink={1}
+      minHeight={0}
+    >
+      <text
+        {...TEXT}
+        {...fg(useColours().permission)}
+        attributes={BOLD}
+        flexShrink={0}
+      >
         Teams
       </text>
-      <text {...TEXT} attributes={DIM}>
-        {where}
-      </text>
-      {choices.length === 0 ? (
-        <box marginTop={1}>
-          <text {...TEXT}>{NO_TEAMS}</text>
-        </box>
-      ) : (
-        <PickerList
-          choices={choices}
-          rows={framedRows(rows, room, choices.length, wrapped)}
-          active={active}
-          onMove={setHighlighted}
-          onPick={(name) => {
-            const found = listing.teams.find((each) => each.name === name);
+      <Body>
+        <text {...TEXT} attributes={DIM}>
+          {where}
+        </text>
+        {choices.length === 0 ? (
+          <box marginTop={1}>
+            <text {...TEXT}>{NO_TEAMS}</text>
+          </box>
+        ) : (
+          listed > 0 && (
+            <PickerList
+              choices={choices}
+              rows={listed}
+              active={active}
+              onMove={setHighlighted}
+              onPick={(name) => {
+                const found = listing.teams.find((each) => each.name === name);
 
-            if (found) {
-              onPick(found);
-            }
-          }}
-        />
-      )}
-      <box marginTop={1}>
+                if (found) {
+                  onPick(found);
+                }
+              }}
+            />
+          )
+        )}
+      </Body>
+      <box marginTop={1} flexShrink={0}>
         <text {...CUT} attributes={DIM}>
           {hintOf(
             ...teamsHint(
@@ -419,14 +479,26 @@ export function ConfigPicker({
 }) {
   const choices = option ? valueChoices(option) : optionChoices(options, from);
   const back = useCloseHint('to go back');
+  // None where the room has no row for a choice: the list, and its keys, go.
+  const listed = framedRows(rows, room, choices.length);
   const close = useCloseHint();
   const hint = option
     ? hintOf('Enter to set', back)
     : hintOf(choices.length === 0 ? undefined : 'Enter to choose', close);
 
   return (
-    <box {...borderOf(useColours().permission)} paddingX={1} flexShrink={0}>
-      <text {...TEXT} {...fg(useColours().permission)} attributes={BOLD}>
+    <box
+      {...borderOf(useColours().permission)}
+      paddingX={1}
+      flexShrink={1}
+      minHeight={0}
+    >
+      <text
+        {...TEXT}
+        {...fg(useColours().permission)}
+        attributes={BOLD}
+        flexShrink={0}
+      >
         {option ? (
           <>
             {'Set '}
@@ -436,30 +508,32 @@ export function ConfigPicker({
           'Settings'
         )}
       </text>
-      <text {...CUT} attributes={DIM}>
-        {option ? (
-          <>
-            {`Choose ${agent}'s `}
-            <Ansi text={option.name} />
-            {' for this session.'}
-          </>
-        ) : choices.length === 0 ? (
-          `${agent} has no settings other than its model and mode.`
-        ) : (
-          `Change ${agent}'s settings for this session.`
+      <Body>
+        <text {...CUT} attributes={DIM}>
+          {option ? (
+            <>
+              {`Choose ${agent}'s `}
+              <Ansi text={option.name} />
+              {' for this session.'}
+            </>
+          ) : choices.length === 0 ? (
+            `${agent} has no settings other than its model and mode.`
+          ) : (
+            `Change ${agent}'s settings for this session.`
+          )}
+        </text>
+        {listed > 0 && (
+          <PickerList
+            // A fresh list, and highlight, for each level.
+            key={option?.id ?? ''}
+            choices={choices}
+            rows={listed}
+            active={active}
+            onPick={(value) => (option ? onPick(option, value) : onOpen(value))}
+          />
         )}
-      </text>
-      {choices.length > 0 && (
-        <PickerList
-          // A fresh list, and highlight, for each level.
-          key={option?.id ?? ''}
-          choices={choices}
-          rows={framedRows(rows, room, choices.length)}
-          active={active}
-          onPick={(value) => (option ? onPick(option, value) : onOpen(value))}
-        />
-      )}
-      <box marginTop={1}>
+      </Body>
+      <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
           {hint}
         </text>
@@ -477,21 +551,21 @@ export function ConfigPicker({
 export function ThemePicker({
   current,
   background,
-  windowRows,
+  room,
   active,
   onMove,
   onPick,
 }: {
   current: ThemeSetting;
   background: Background;
-  /** The window's height, which decides how much of the picker fits. */
-  windowRows: number;
+  /** The rows the layer it floats in has, which decide how much of it fits. */
+  room: number;
   active: boolean;
   onMove: (theme: ThemeSetting) => void;
   onPick: (theme: ThemeSetting) => void;
 }) {
   const choices = themeChoices(current, background);
-  const layout = themePickerLayout(windowRows);
+  const layout = themePickerLayout(room);
   const back = useCloseHint('to go back');
   const { permission } = useColours();
   // The sample's code is coloured in the theme previewed, as its rows are.
@@ -509,28 +583,32 @@ export function ThemePicker({
   }, [code]);
 
   return (
-    <box {...borderOf(permission)} paddingX={1} flexShrink={0}>
-      <text {...TEXT} {...fg(permission)} attributes={BOLD}>
+    <box {...borderOf(permission)} paddingX={1} flexShrink={1} minHeight={0}>
+      <text {...TEXT} {...fg(permission)} attributes={BOLD} flexShrink={0}>
         Theme
       </text>
-      <text {...CUT} attributes={DIM}>
-        {process.env['NO_COLOR']
-          ? 'NO_COLOR is set, so chord draws no colour.'
-          : 'Choose the colours that read best on this terminal.'}
-      </text>
-      <PickerList
-        choices={choices}
-        rows={layout.choices}
-        active={active}
-        onMove={(value) => onMove(value as ThemeSetting)}
-        onPick={(value) => onPick(value as ThemeSetting)}
-      />
-      {layout.sample && (
-        <box marginTop={1} paddingLeft={1} flexDirection='column'>
-          <DiffRows view={sample} />
-        </box>
-      )}
-      <box marginTop={1}>
+      <Body>
+        <text {...CUT} attributes={DIM}>
+          {process.env['NO_COLOR']
+            ? 'NO_COLOR is set, so chord draws no colour.'
+            : 'Choose the colours that read best on this terminal.'}
+        </text>
+        {layout.choices > 0 && (
+          <PickerList
+            choices={choices}
+            rows={layout.choices}
+            active={active}
+            onMove={(value) => onMove(value as ThemeSetting)}
+            onPick={(value) => onPick(value as ThemeSetting)}
+          />
+        )}
+        {layout.sample && (
+          <box marginTop={1} paddingLeft={1} flexDirection='column'>
+            <DiffRows view={sample} />
+          </box>
+        )}
+      </Body>
+      <box marginTop={1} flexShrink={0}>
         <text {...CUT} attributes={DIM}>
           {hintOf(
             '↑↓ to preview',
@@ -544,6 +622,12 @@ export function ThemePicker({
 }
 
 /**
+ * The rows the notice keeps with its body cut away: its frame's two, its
+ * title, its two choices with the gap above them, and its hint with its.
+ */
+const NOTICE_FIXED = 8;
+
+/**
  * dimcode's one-time notice, in the pickers' frame above the prompt
  * (docs/design/CHD-434.md): what it may start, how to turn that off, and
  * the two answers. It takes the keys while `active`; Esc is the window's,
@@ -551,47 +635,59 @@ export function ThemePicker({
  */
 export function NoticeBox({
   columns,
+  room = Number.POSITIVE_INFINITY,
   active,
   onAnswer,
 }: {
   /** The window's width; the box takes all of it. */
   columns: number;
+  /** The rows the layer it floats in has; none outside one. */
+  room?: number;
   active: boolean;
   /** Whether the person dismissed it for good, or asked to see it again. */
   onAnswer: (dismissed: boolean) => void;
 }) {
   const { permission } = useColours();
   const later = useCloseHint('to show it again next time');
+  // Short of room, after its body, the hint goes; its title and choices
+  // stay (CHD-545).
+  const hinted = room >= NOTICE_FIXED;
 
   return (
-    <box {...borderOf(permission)} paddingX={1} flexShrink={0}>
-      <text {...TEXT} {...fg(permission)} attributes={BOLD}>
+    <box {...borderOf(permission)} paddingX={1} flexShrink={1} minHeight={0}>
+      <text {...TEXT} {...fg(permission)} attributes={BOLD} flexShrink={0}>
         {DIMCODE_WORDS.title}
       </text>
-      {/* Wrapped at spaces, as the transcript is, so a path or a value a
+      <Body>
+        {/* Wrapped at spaces, as the transcript is, so a path or a value a
           person types stays whole on its line; only a word longer than the
           line is broken, where it is drawn. */}
-      {DIMCODE_WORDS.paragraphs.map((paragraph) => (
-        <box key={paragraph} marginTop={1} flexDirection='column'>
-          {wrapAnsi(paragraph, Math.max(columns - 4, 1), { trim: true })
-            .split('\n')
-            .map((line, index) => (
-              <text key={index} {...TEXT}>
-                {line}
-              </text>
-            ))}
-        </box>
-      ))}
-      <PickerList
-        choices={NOTICE_CHOICES}
-        rows={NOTICE_CHOICES.length}
-        active={active}
-        onPick={(value) => onAnswer(value === 'dismiss')}
-      />
-      <box marginTop={1}>
-        <text {...CUT} attributes={DIM}>
-          {hintOf('Enter to pick', '1–2', '↑↓ to move', later)}
-        </text>
+        {DIMCODE_WORDS.paragraphs.map((paragraph) => (
+          <box key={paragraph} marginTop={1} flexDirection='column'>
+            {wrapAnsi(paragraph, Math.max(columns - 4, 1), { trim: true })
+              .split('\n')
+              .map((line, index) => (
+                <text key={index} {...TEXT}>
+                  {line}
+                </text>
+              ))}
+          </box>
+        ))}
+      </Body>
+      <box flexShrink={0} flexDirection='column'>
+        <PickerList
+          choices={NOTICE_CHOICES}
+          rows={NOTICE_CHOICES.length}
+          active={active}
+          onPick={(value) => onAnswer(value === 'dismiss')}
+        />
+        {hinted && (
+          <box marginTop={1} flexShrink={0}>
+            <text {...CUT} attributes={DIM}>
+              {hintOf('Enter to pick', '1–2', '↑↓ to move', later)}
+            </text>
+          </box>
+        )}
       </box>
     </box>
   );
@@ -659,59 +755,61 @@ export function McpPanel({
   }
 
   return (
-    <box {...borderOf(permission)} paddingX={1} flexShrink={0}>
-      <text {...TEXT} {...fg(permission)} attributes={BOLD}>
+    <box {...borderOf(permission)} paddingX={1} flexShrink={1} minHeight={0}>
+      <text {...TEXT} {...fg(permission)} attributes={BOLD} flexShrink={0}>
         MCP servers
       </text>
-      {servers.length === 0 ? (
-        <text {...TEXT} attributes={DIM}>
-          {lost === undefined
-            ? `No MCP servers were passed to ${agent}: none are defined in .mcp.json or in chord's settings files.`
-            : `No MCP servers were passed to ${agent}.`}
-        </text>
-      ) : (
-        <>
+      <Body>
+        {servers.length === 0 ? (
           <text {...TEXT} attributes={DIM}>
-            {`chord's MCP servers for ${agent}. ACP does not say whether ${agent} connected to the ones it was passed.`}
+            {lost === undefined
+              ? `No MCP servers were passed to ${agent}: none are defined in .mcp.json or in chord's settings files.`
+              : `No MCP servers were passed to ${agent}.`}
           </text>
-          <box marginTop={1} flexDirection='column'>
-            <text {...CUT} attributes={DIM}>
-              {headings}
+        ) : (
+          <>
+            <text {...TEXT} attributes={DIM}>
+              {`chord's MCP servers for ${agent}. ACP does not say whether ${agent} connected to the ones it was passed.`}
             </text>
-            {shown.flat().map((line, index) => (
-              <text key={index} {...CUT}>
-                {line}
+            <box marginTop={1} flexDirection='column'>
+              <text {...CUT} attributes={DIM}>
+                {headings}
               </text>
-            ))}
-            {more > 0 && (
-              <text {...TEXT} attributes={DIM}>{`… +${more} more`}</text>
-            )}
+              {shown.flat().map((line, index) => (
+                <text key={index} {...CUT}>
+                  {line}
+                </text>
+              ))}
+              {more > 0 && (
+                <text {...TEXT} attributes={DIM}>{`… +${more} more`}</text>
+              )}
+            </box>
+          </>
+        )}
+        {chord !== undefined && (
+          <box marginTop={1}>
+            <text {...TEXT} attributes={DIM}>
+              {chordLine(chord, agent)}
+            </text>
           </box>
-        </>
-      )}
-      {chord !== undefined && (
-        <box marginTop={1}>
-          <text {...TEXT} attributes={DIM}>
-            {chordLine(chord, agent)}
-          </text>
-        </box>
-      )}
-      {held !== undefined && (
-        <box marginTop={1}>
-          <text {...TEXT} attributes={DIM}>
-            {held}
-          </text>
-        </box>
-      )}
-      {lost !== undefined && (
-        <box marginTop={servers.length === 0 ? 0 : 1}>
-          <text {...TEXT} attributes={DIM}>
-            {lost}
-          </text>
-        </box>
-      )}
+        )}
+        {held !== undefined && (
+          <box marginTop={1}>
+            <text {...TEXT} attributes={DIM}>
+              {held}
+            </text>
+          </box>
+        )}
+        {lost !== undefined && (
+          <box marginTop={servers.length === 0 ? 0 : 1}>
+            <text {...TEXT} attributes={DIM}>
+              {lost}
+            </text>
+          </box>
+        )}
+      </Body>
       {closeHint !== undefined && (
-        <box marginTop={1}>
+        <box marginTop={1} flexShrink={0}>
           <text {...TEXT} attributes={DIM}>
             {closeHint}
           </text>

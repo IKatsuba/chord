@@ -179,27 +179,18 @@ test('no colour leaves no role painted', () => {
   expect(paletteOf('light', true)).toStrictEqual(PALETTES.light);
 });
 
-test('/theme fits 24 rows with its sample; a shorter window drops it', () => {
-  expect(themePickerLayout(40)).toStrictEqual({
-    choices: 7,
-    sample: true,
-    gap: true,
-  });
-  expect(themePickerLayout(24)).toStrictEqual({
-    choices: 7,
-    sample: true,
-    gap: false,
-  });
-  expect(themePickerLayout(21)).toStrictEqual({
-    choices: 7,
-    sample: false,
-    gap: true,
-  });
-  expect(themePickerLayout(12)).toStrictEqual({
-    choices: 3,
-    sample: false,
-    gap: false,
-  });
+test("/theme fits a 24-row window's room with its sample; a shorter room drops it, then choices, keeping the title and hint (CHD-545)", () => {
+  // 40 rows and 24 rows, five of them under the layer.
+  expect(themePickerLayout(35)).toStrictEqual({ choices: 7, sample: true });
+  expect(themePickerLayout(19)).toStrictEqual({ choices: 7, sample: true });
+  expect(themePickerLayout(18)).toStrictEqual({ choices: 7, sample: true });
+  expect(themePickerLayout(17)).toStrictEqual({ choices: 7, sample: false });
+  expect(themePickerLayout(14)).toStrictEqual({ choices: 7, sample: false });
+  // Fewer: the row that counts the hidden ones takes one of theirs.
+  expect(themePickerLayout(13)).toStrictEqual({ choices: 5, sample: false });
+  expect(themePickerLayout(9)).toStrictEqual({ choices: 1, sample: false });
+  // Not one: the list goes.
+  expect(themePickerLayout(7)).toStrictEqual({ choices: 0, sample: false });
 });
 
 test("every theme gives a session's agents six colours, and no colour leaves them none", () => {

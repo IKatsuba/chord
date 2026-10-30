@@ -394,6 +394,42 @@ test('short of room, a framed picker gives up list rows and keeps its whole fram
   );
 });
 
+for (const rows of [12, 16]) {
+  for (const [command, title, hint] of [
+    ['/theme', 'Theme', 'Esc to go back'],
+    ['/mcp', 'MCP servers', 'Esc to close'],
+    ['/config', 'Settings', 'Esc to close'],
+  ] as const) {
+    test(`${command} at 80x${rows} never covers the prompt, its gap or the strip, and keeps its title and hint (CHD-545)`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+
+          const lines = () => stripAnsi(window.frame()).split('\n');
+          const before = lines();
+          const prompt = before.findLastIndex((line) => line.startsWith('╭'));
+
+          await window.type(command);
+          await window.press('\r');
+          await window.shows(title);
+
+          const after = lines();
+
+          // The prompt, its gap row above and the strip below, as they were.
+          expect(after.slice(prompt - 1)).toEqual(before.slice(prompt - 1));
+
+          const at = after.findIndex((line) => line.includes(title));
+
+          expect(at).toBeGreaterThanOrEqual(1);
+          expect(after[at - 1]).toStartWith('╭');
+          expect(after[prompt - 3]).toContain(hint);
+          expect(after[prompt - 2]).toStartWith('╰');
+        },
+        { columns: 80, rows },
+      ));
+  }
+}
+
 for (const mode of ['one-row', 'crowded', 'resize'] as const) {
   test(`reachable pressure ${mode}: the list floats with its highlight in sight, the prompt and permanent rows still (CHD-545)`, async () => {
     let latest: WindowedState | undefined;

@@ -4,6 +4,7 @@
  */
 import { expect, test } from 'bun:test';
 import type { ReactNode } from 'react';
+import { DIMCODE_WORDS } from '../../../src/notices.ts';
 import { NoticeBox } from '../../../src/ui/pickers/Pickers.tsx';
 import { Overlay } from '../../../src/ui/prompt/Overlay.tsx';
 import { until } from '../app/render.tsx';
@@ -94,29 +95,58 @@ test("a list under a picker gets the rows the picker leaves, as origin/main's fl
   expect(floating.join('\n')).not.toContain('list 4');
 });
 
-test("dimcode's notice short of room shows the rows origin/main's flow showed of it", async () => {
+test("dimcode's notice in a room it fits draws the rows origin/main's flow drew", async () => {
   const notice = (
     <NoticeBox columns={COLUMNS} active={false} onAnswer={() => {}} />
   );
+  const flow = await drawn(window(40, notice), 40, (frame) =>
+    frame.includes('╰'),
+  );
+  const floating = await drawn(
+    window(
+      40,
+      <Overlay columns={COLUMNS} picker={() => notice} list={() => null} />,
+    ),
+    40,
+    (frame) => frame.includes('╰'),
+  );
+  // In the flow it sits right above the prompt, the transcript over it.
+  const top = flow.findIndex((line) => line.startsWith('╭'));
 
+  expect(floating.slice(top, 35)).toEqual(flow.slice(top, 35));
+});
+
+test("dimcode's notice short of room cuts its body from the bottom, keeps its title and choices, and leaves the prompt where it was", async () => {
   for (const rows of [12, 16]) {
-    const flow = await drawn(window(rows, notice), rows, (frame) =>
-      frame.includes('╭'),
-    );
     const floating = await drawn(
       window(
         rows,
-        <Overlay columns={COLUMNS} picker={() => notice} list={() => null} />,
+        <Overlay
+          columns={COLUMNS}
+          picker={(room) => (
+            <NoticeBox
+              columns={COLUMNS}
+              room={room}
+              active={false}
+              onAnswer={() => {}}
+            />
+          )}
+          list={() => null}
+        />,
       ),
       rows,
-      (frame) => frame.includes('╭'),
+      (frame) => frame.includes('╰'),
     );
-    // The notice's rows: from its top border down to its bottom one, or to
-    // the window's edge that cut it.
-    const end = flow.findIndex((line) => line.startsWith('╰'));
-    const shown = flow.slice(0, end === -1 ? rows : end + 1);
+    // Five rows of prompt under the layer: its edge is the row above them.
+    const edge = rows - 5;
 
-    expect(shown[0]).toStartWith('╭');
-    expect(floating.slice(0, shown.length)).toEqual(shown);
+    expect(floating[0]).toStartWith('╭');
+    expect(floating[1]).toContain(DIMCODE_WORDS.title);
+    expect(floating[edge - 1]).toStartWith('╰');
+    expect(floating.join('\n')).toContain('1. ');
+    expect(floating.join('\n')).toContain('2. ');
+    // Its hint, where its frame, title and choices leave a row for it.
+    expect(floating[edge - 2]!.includes('Enter to pick')).toBe(edge >= 8);
+    expect(floating.slice(edge).every((line) => line === '')).toBe(true);
   }
 });

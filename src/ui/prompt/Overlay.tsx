@@ -61,6 +61,9 @@ export function Overlay({
           left={0}
           width={columns}
           maxHeight={room}
+          // Nothing it holds paints past its edge onto the prompt, the gap
+          // row above it or the rows under it, whatever the room.
+          overflow='hidden'
           // Above the transcript, and filled, so none of it shows through
           // the cells the list leaves blank.
           zIndex={1}
@@ -69,7 +72,11 @@ export function Overlay({
         >
           {framed ? (
             <box
+              // A picker taller than the room fits it as its frame says how:
+              // its body is cut, its title and hint stay. It keeps its rows
+              // before the list does, as in the window's flow.
               flexShrink={0}
+              maxHeight={room}
               renderAfter={function () {
                 if (this.height !== taken) {
                   setTaken(this.height);
@@ -85,7 +92,9 @@ export function Overlay({
               </text>
             </box>
           )}
-          {below}
+          <box flexShrink={1} minHeight={0} overflow='hidden'>
+            {below}
+          </box>
         </box>
       )}
     </box>

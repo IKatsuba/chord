@@ -7,6 +7,7 @@ import wrapAnsi from 'wrap-ansi';
 import stringWidth from 'string-width';
 import type { ChordCall } from '../../../session/transcript/types.ts';
 import { shownSettingPath, shownValue } from '../../../settings.ts';
+import { changeWord } from '../../../settings_tool.ts';
 import type { Headline } from './tools.ts';
 
 /** One row under the call: a label and what it says, in a role's colour. */
@@ -41,6 +42,17 @@ function readsEveryKey(call: ChordCall): boolean {
   );
 }
 
+/** What a served call did, as its headline names it. */
+function settingsNote(call: ChordCall): string {
+  const answer = record(call.answer);
+
+  return record(call.input).action === 'read'
+    ? 'read'
+    : answer.unchanged === true
+      ? 'unchanged'
+      : changeWord(answer);
+}
+
 /** `Settings(path)`, its note named once served; a refusal has none. */
 export function settingsHeadline(call: ChordCall): Headline {
   const path = pathOf(call);
@@ -48,7 +60,7 @@ export function settingsHeadline(call: ChordCall): Headline {
   return {
     name: 'Settings',
     ...(path.length === 0 ? {} : { arg: shownSettingPath(path) }),
-    ...(call.answer === undefined ? {} : { note: ' · read' }),
+    ...(call.answer === undefined ? {} : { note: ` · ${settingsNote(call)}` }),
   };
 }
 
@@ -90,6 +102,57 @@ function valueWords(value: unknown): string {
   return value === undefined ? 'not set' : shownValue(value);
 }
 
+/** A `set` or `remove`: what it changes, then what became of it. */
+function changeRows(
+  answer: Record<string, unknown>,
+  width: number,
+): readonly SettingsRow[] {
+  const shadow =
+    typeof answer.shadowedBy === 'string'
+      ? labelled(
+          '',
+          `${answer.shadowedBy} sets this too, and wins here`,
+          width,
+          'warning',
+        )
+      : [];
+
+  if (answer.unchanged === true) {
+    const held =
+      answer.before === undefined
+        ? 'Not set'
+        : `Already ${shownValue(answer.before)}`;
+
+    return [
+      ...labelled('', `${held}; nothing to change`, width, 'dim'),
+      ...shadow,
+    ];
+  }
+
+  return [
+    ...labelled('Now    ', valueWords(answer.before), width),
+    ...labelled('After  ', valueWords(answer.after), width),
+    ...shadow,
+    ...(answer.saved === true
+      ? labelled(
+          '',
+          `Saved to ${String(answer.file)} · takes effect ${
+            answer.takesEffect === 'now' ? 'now' : 'at the next start'
+          }`,
+          width,
+          'success',
+        )
+      : answer.saved === false
+        ? labelled(
+            '',
+            'Not saved · the person will say what to change',
+            width,
+            'dim',
+          )
+        : []),
+  ];
+}
+
 /**
  * The rows under a served `settings` call, none for one with no answer yet or
  * a refusal, which the transcript draws as any of chord's. `width` is the room
@@ -105,6 +168,10 @@ export function settingsRows(
   }
 
   const answer = record(call.answer);
+
+  if (record(call.input).action !== 'read') {
+    return changeRows(answer, width);
+  }
 
   if (!readsEveryKey(call)) {
     return [

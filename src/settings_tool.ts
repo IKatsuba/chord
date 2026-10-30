@@ -1,15 +1,19 @@
 import type { z } from '@zod/zod';
 import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
+import { isDeepStrictEqual } from 'node:util';
 import { notFound } from './not_found.ts';
 import { TeamSelection } from './session/budgets.ts';
 import {
   AGENT_SETTING_SCHEMAS,
   canBeSettingPath,
   loadSettings,
+  NO_SETTINGS_HOME,
+  readSettingsObject,
   SETTING_SCHEMAS,
   settingAt,
   type SettingChange,
+  settingParentProblem,
   type SettingsProblem,
   settingsFiles,
   shownPath,
@@ -237,7 +241,7 @@ function pathRefusal(
 
   switch (named.kind) {
     case 'unknown':
-      return `No setting ${shown}`;
+      return `No setting ${shown}`.trimEnd();
     case 'hand':
       return `chord does not write ${shown}; edit the settings file by hand`;
     case 'parent':
@@ -362,7 +366,7 @@ export function maskedSettings(settings: unknown): unknown {
  * the config directory was found under all the same, as the model is never
  * told it.
  */
-function shownHome(where: SettingsWhere): string {
+export function shownHome(where: SettingsWhere): string {
   return where.home ?? homedir();
 }
 
@@ -491,4 +495,126 @@ export async function readSettingsTool(
       project: `${shownPath(projectFile, shown)} · ${project.state}`,
     },
   };
+}
+
+/** What a `set` or `remove` answers, while the box is open and once answered. */
+export interface SettingsChanged {
+  readonly path: readonly string[];
+  /** The value in the file, absent where it holds none. */
+  readonly before?: unknown;
+  readonly after?: unknown;
+  /** The user's file, as the window shows it. */
+  readonly file: string;
+  /** Not there yet while the person is asked. */
+  readonly saved?: boolean;
+  /** Nothing to do: nothing was asked or written. */
+  readonly unchanged?: true;
+  readonly takesEffect: TakesEffect;
+  /** The project's file, as shown, where it holds this key and so wins. */
+  readonly shadowedBy?: string;
+}
+
+/**
+ * What a system error says, without the person's home: the model is told
+ * paths as the window shows them.
+ */
+function withoutHome(error: unknown, home: string): string {
+  const message = error instanceof Error ? error.message : String(error);
+
+  return message.replaceAll(home, '~');
+}
+
+/** A write that failed, as a refusal says it. */
+export function saveFailure(
+  shownFile: string,
+  error: unknown,
+  home: string,
+): string {
+  return notSavedLine(shownFile, withoutHome(error, home));
+}
+
+/**
+ * The checks a `set` or `remove` passes before the person is asked, in the
+ * design's order, and what it would do: the first refusal, or the change.
+ */
+export async function plannedSetting(
+  where: SettingsWhere,
+  path: readonly string[],
+  change: SettingChange,
+  knownAgents: readonly string[],
+): Promise<
+  | { readonly error: string }
+  | { readonly answer: SettingsChanged; readonly file: string }
+> {
+  const refused = settingRefusal(path, change, knownAgents);
+
+  if (refused !== undefined) {
+    return { error: refused };
+  }
+
+  const file = userSettingsFile(where.configHome);
+
+  if (file === undefined) {
+    return { error: NO_SETTINGS_HOME };
+  }
+
+  const named = classifySetting(path) as WritableSetting;
+  const home = shownHome(where);
+  const shown = { cwd: where.cwd, home };
+  const shownFile = shownPath(file, shown);
+  let settings: Record<string, unknown>;
+
+  try {
+    settings = await readSettingsObject(file);
+  } catch (error) {
+    return { error: saveFailure(shownFile, error, home) };
+  }
+
+  const parent = settingParentProblem(settings, path);
+
+  if (parent !== undefined) {
+    return { error: notSavedLine(shownFile, parent) };
+  }
+
+  const before = settingAt(settings, path);
+  const after = 'set' in change ? change.set : undefined;
+  const project = settingsFiles(where).at(-1)!;
+  const { layers } = await loadSettings({
+    configHome: where.configHome,
+    cwd: where.cwd,
+    home,
+  });
+  // What the project's file's check dropped does not win, so it does not count.
+  const shadowed =
+    !named.userOnly &&
+    settingAt(
+      layers.find((layer) => layer.file === project)?.settings,
+      path,
+    ) !== undefined;
+
+  return {
+    file,
+    answer: {
+      path,
+      ...(before === undefined ? {} : { before }),
+      ...(after === undefined ? {} : { after }),
+      file: shownFile,
+      ...(isDeepStrictEqual(before, after)
+        ? { saved: false, unchanged: true as const }
+        : {}),
+      takesEffect: named.takesEffect,
+      ...(shadowed ? { shadowedBy: shownPath(project, shown) } : {}),
+    },
+  };
+}
+
+/** The note a planned change goes by: on the row and, capitalised, the box. */
+export function changeWord(
+  answer: Pick<SettingsChanged, 'before' | 'after'>,
+): 'change' | 'set' | 'remove' {
+  return answer.after === undefined
+    ? 'remove'
+    : answer.before === undefined
+      ? 'set'
+      : 'change';
 }

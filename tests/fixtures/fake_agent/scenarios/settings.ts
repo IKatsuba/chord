@@ -18,7 +18,8 @@ const reads =
     }
 
     try {
-      await callChord(turn, client, 'settings', args);
+      // As long as the person takes to answer the box.
+      await callChord(turn, client, 'settings', args, 600_000);
     } finally {
       await client.close();
     }
@@ -36,4 +37,22 @@ export const SETTINGS = {
   }),
   // A name that can be no key, refused.
   settingsreadbad: reads({ action: 'read', path: ['__proto__'] }),
+  // A user-only key: `set` on an unset file, `unchanged` once it holds it.
+  settingstheme: reads({ action: 'set', path: ['theme'], value: 'light' }),
+  // An agent's model, next to whatever else that agent holds.
+  settingsmodel: reads({
+    action: 'set',
+    path: ['agents', 'fake', 'model'],
+    value: 'fake-small',
+  }),
+  // The theme again: `remove`, or `unchanged` where it is not set.
+  settingsremove: reads({ action: 'remove', path: ['theme'] }),
+  // A kind B key, which a project's file holding it shadows.
+  settingsagent: reads({ action: 'set', path: ['agent'], value: 'fake' }),
+  // A value far taller than the room left above the box at 80x24.
+  settingslong: reads({
+    action: 'set',
+    path: ['agents', 'fake', 'model'],
+    value: 'l'.repeat(1200),
+  }),
 } satisfies Record<string, Play>;

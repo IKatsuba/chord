@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { PermissionWait } from '../../src/session/transcript/types.ts';
+import type { SettingsChanged } from '../../src/settings_tool.ts';
 import { parseTeam, type Team } from '../../src/teams.ts';
 import {
   agentsAnswer,
@@ -13,6 +14,7 @@ import {
   monitorsText,
   monitorText,
   type ProposeAnswer,
+  changeSetting,
   proposeTeam,
   proposeText,
   type RuntimeOffer,
@@ -66,6 +68,7 @@ function windowOf(probed: string[] = []): WindowView {
     runTeam: () => Promise.resolve({ error: 'no teams here' }),
     teamPlaces: () => Promise.reject(new Error('no teams here')),
     settingsWhere: () => ({
+      agent: 'fake',
       configHome: undefined,
       cwd: tmpdir(),
       home: undefined,
@@ -671,5 +674,210 @@ describe('CHD-533 tester: stored instruction fidelity', () => {
 
     expect(listed.teams[0]).toEqual({ name: 'literal', ...team, runs: [] });
     expect(JSON.stringify(team)).toBe(before);
+  });
+});
+
+describe('the settings tool writes (CHD-568)', () => {
+  /**
+   * `set` or `remove` from a window whose user's file is under a temporary
+   * home, as `text` when given: the box asked, what was drawn as it waited, the
+   * answer and what the file holds after. `mid` runs as the box is up.
+   */
+  async function changed(
+    pick: string | undefined,
+    {
+      text,
+      path = ['theme'],
+      change = { set: 'light' },
+      mid,
+    }: {
+      text?: string;
+      path?: readonly string[];
+      change?: { readonly set: unknown } | { readonly remove: true };
+      mid?: (file: string) => Promise<void>;
+    } = {},
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-change-'));
+    const home = join(root, 'home');
+    const file = join(home, '.config', 'chord', 'settings.json');
+
+    try {
+      if (text !== undefined) {
+        await mkdir(join(home, '.config', 'chord'), { recursive: true });
+        await writeFile(file, text);
+      }
+
+      const asked: Omit<PermissionWait, 'id'>[] = [];
+      const shown: SettingsChanged[] = [];
+      const caller: Caller = {
+        role: 'person',
+        key: 0,
+        window: {
+          ...windowOf(),
+          settingsWhere: () => ({
+            agent: 'claude',
+            configHome: join(home, '.config'),
+            cwd: join(root, 'work'),
+            home,
+          }),
+          askPerson: async (_caller, wait) => {
+            asked.push(wait);
+            await mid?.(file);
+
+            return pick;
+          },
+        },
+      };
+      const answer = await changeSetting(
+        caller,
+        path,
+        change,
+        new AbortController().signal,
+        (one) => shown.push(one),
+      );
+      const held = await readFile(file, 'utf8').catch(() => undefined);
+
+      return { asked, shown, answer, held };
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  const shownFile = `~${join('/', '.config', 'chord', 'settings.json')}`;
+
+  test('a yes draws the change, asks the box, then chord writes it', async () => {
+    const { asked, shown, answer, held } = await changed('yes');
+
+    expect(shown).toStrictEqual([
+      {
+        path: ['theme'],
+        after: 'light',
+        file: shownFile,
+        takesEffect: 'now',
+      },
+    ]);
+    expect(asked).toStrictEqual([
+      {
+        title: 'Settings(theme)',
+        options: [
+          {
+            optionId: 'yes',
+            name: `Yes, in ${shownFile}`,
+            kind: 'allow_once',
+          },
+          {
+            optionId: 'no',
+            name: 'No, tell claude what to change',
+            kind: 'reject_once',
+          },
+        ],
+        save: {
+          question: 'Set theme?',
+          files: {},
+          escape: 'tell claude what to change',
+        },
+      },
+    ]);
+    expect(answer).toStrictEqual({ ...shown[0]!, saved: true });
+    expect(JSON.parse(held!)).toStrictEqual({ theme: 'light' });
+  });
+
+  test("the box names a change and a remove by the row's note", async () => {
+    const text = '{"theme":"dark"}';
+    const question = async (change: { set: unknown } | { remove: true }) =>
+      (await changed('no', { text, change })).asked[0]!.save!.question;
+
+    expect(await question({ set: 'light' })).toBe('Change theme?');
+    expect(await question({ remove: true })).toBe('Remove theme?');
+  });
+
+  test('a no writes nothing and says saved false', async () => {
+    const text = '{"theme":"dark"}';
+    const { answer, held, shown } = await changed('no', { text });
+
+    expect(answer).toStrictEqual({ ...shown[0]!, saved: false });
+    expect(held).toBe(text);
+  });
+
+  test('a withdrawn box writes nothing, as a refusal', async () => {
+    const { answer, held } = await changed(undefined);
+
+    expect(answer).toStrictEqual({
+      error: 'The person was not asked to the end; nothing was saved',
+    });
+    expect(held).toBeUndefined();
+  });
+
+  test('nothing to do asks nothing and writes nothing', async () => {
+    const text = '{ "theme":   "dark" }';
+    const same = await changed('yes', { text, change: { set: 'dark' } });
+
+    expect(same.asked).toStrictEqual([]);
+    expect(same.shown).toStrictEqual([]);
+    expect(same.answer).toMatchObject({ saved: false, unchanged: true });
+    expect(same.held).toBe(text);
+
+    const absent = await changed('yes', {
+      text,
+      path: ['mouse'],
+      change: { remove: true },
+    });
+
+    expect(absent.asked).toStrictEqual([]);
+    expect(absent.answer).toMatchObject({ saved: false, unchanged: true });
+    expect(absent.held).toBe(text);
+  });
+
+  test('a refusal asks nothing and writes nothing', async () => {
+    const text = '{"agents":{"claude":{"command":"x"}}}';
+
+    for (const [path, change, error] of [
+      [['nope'], { set: 1 }, 'No setting nope'],
+      [
+        ['agents', 'claude', 'command'],
+        { set: 'y' },
+        'chord does not write agents.claude.command; edit the settings file by hand',
+      ],
+    ] as const) {
+      const refused = await changed('yes', { text, path, change });
+
+      expect(refused.asked).toStrictEqual([]);
+      expect(refused.answer).toStrictEqual({ error });
+      expect(refused.held).toBe(text);
+    }
+  });
+
+  test('a file gone bad between the box and the yes is refused, not overwritten', async () => {
+    const broken = '{ broken';
+    const { answer, held } = await changed('yes', {
+      text: '{"theme":"dark"}',
+      mid: (file) => writeFile(file, broken),
+    });
+
+    expect(answer).toStrictEqual({
+      error: `${shownFile} was not saved: it is not valid JSON`,
+    });
+    expect(held).toBe(broken);
+  });
+
+  test("a yes keeps the agent's other keys and removes what it empties", async () => {
+    const text = '{"agents":{"fake":{"command":"c","model":"old"}}}';
+    const kept = await changed('yes', {
+      text,
+      path: ['agents', 'fake', 'model'],
+      change: { set: 'new' },
+    });
+
+    expect(JSON.parse(kept.held!)).toStrictEqual({
+      agents: { fake: { command: 'c', model: 'new' } },
+    });
+
+    const gone = await changed('yes', {
+      text: '{"agents":{"fake":{"model":"old"}},"theme":"dark"}',
+      path: ['agents', 'fake', 'model'],
+      change: { remove: true },
+    });
+
+    expect(JSON.parse(gone.held!)).toStrictEqual({ theme: 'dark' });
   });
 });

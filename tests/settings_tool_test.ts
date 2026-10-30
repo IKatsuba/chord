@@ -1,12 +1,16 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
+  changeWord,
   classifySetting,
   maskedSettings,
   notSavedLine,
+  plannedSetting,
   readSettingsTool,
+  saveFailure,
   type SettingsRead,
   settingRefusal,
   type SettingsWhere,
@@ -720,5 +724,241 @@ describe('reading settings (CHD-568)', () => {
     for (const value of [null, 3, ['x'], { theme: 'dark' }]) {
       expect(maskedSettings(value)).toStrictEqual(value);
     }
+  });
+});
+
+describe('planning a settings change (CHD-568)', () => {
+  /** A home and project under a temporary root, with the files given. */
+  async function placed(
+    files: { user?: string; project?: string },
+    run: (where: SettingsWhere, userFile: string) => Promise<void>,
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-plan-'));
+    const home = join(root, 'home');
+    const where = {
+      home,
+      configHome: join(home, '.config'),
+      cwd: join(root, 'work'),
+    };
+    const userFile = join(where.configHome, 'chord', 'settings.json');
+
+    try {
+      await mkdir(join(where.configHome, 'chord'), { recursive: true });
+      await mkdir(join(where.cwd, '.chord'), { recursive: true });
+
+      if (files.user !== undefined) {
+        await writeFile(userFile, files.user);
+      }
+
+      if (files.project !== undefined) {
+        await writeFile(
+          join(where.cwd, '.chord', 'settings.json'),
+          files.project,
+        );
+      }
+
+      await run(where, userFile);
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  const shownFile = `~${join('/', '.config', 'chord', 'settings.json')}`;
+
+  test('a set on an unset key, on a held key, and a remove', async () => {
+    await placed(
+      { user: '{"agents":{"fake":{"model":"old"}}}' },
+      async (where, file) => {
+        const unset = await plannedSetting(
+          where,
+          ['theme'],
+          set('dark'),
+          known,
+        );
+
+        expect(unset).toStrictEqual({
+          file,
+          answer: {
+            path: ['theme'],
+            after: 'dark',
+            file: shownFile,
+            takesEffect: 'now',
+          },
+        });
+
+        const path = ['agents', 'claude', 'model'];
+        const fresh = await plannedSetting(where, path, set('m'), known);
+
+        expect('answer' in fresh && fresh.answer.takesEffect).toBe(
+          'next start',
+        );
+
+        const held = await plannedSetting(
+          where,
+          ['agents', 'fake', 'model'],
+          set('new'),
+          ['fake'],
+        );
+
+        expect('answer' in held && held.answer).toMatchObject({
+          before: 'old',
+          after: 'new',
+        });
+        expect('answer' in held && changeWord(held.answer)).toBe('change');
+
+        const gone = await plannedSetting(
+          where,
+          ['agents', 'fake', 'model'],
+          remove,
+          [],
+        );
+
+        expect('answer' in gone && gone.answer).toMatchObject({
+          before: 'old',
+        });
+        expect('answer' in gone && 'after' in gone.answer).toBe(false);
+        expect('answer' in gone && changeWord(gone.answer)).toBe('remove');
+      },
+    );
+  });
+
+  test('the same value and a remove of an absent key do nothing', async () => {
+    await placed({ user: '{"theme":"dark"}' }, async (where) => {
+      expect(
+        await plannedSetting(where, ['theme'], set('dark'), known),
+      ).toMatchObject({ answer: { saved: false, unchanged: true } });
+      expect(
+        await plannedSetting(where, ['mouse'], remove, known),
+      ).toMatchObject({ answer: { saved: false, unchanged: true } });
+    });
+  });
+
+  test('null is a value, not an absent key', async () => {
+    const path = ['teamSelection', 'prefer', 'model'];
+
+    await placed(
+      { user: '{"teamSelection":{"prefer":{"model":null}}}' },
+      async (where) => {
+        expect(
+          await plannedSetting(where, path, set(null), known),
+        ).toMatchObject({ answer: { unchanged: true, before: null } });
+
+        const changed = await plannedSetting(where, path, set('m'), known);
+
+        expect('answer' in changed && changed.answer.unchanged).toBeUndefined();
+
+        const gone = await plannedSetting(where, path, remove, known);
+
+        expect('answer' in gone && gone.answer.unchanged).toBeUndefined();
+      },
+    );
+  });
+
+  test('a refusal comes first, then no home, then the file, then its parent', async () => {
+    await placed({ user: '{ broken' }, async (where) => {
+      expect(
+        await plannedSetting(where, ['nope'], set(1), known),
+      ).toStrictEqual({ error: 'No setting nope' });
+      expect(
+        await plannedSetting(
+          { ...where, configHome: undefined },
+          ['theme'],
+          set('dark'),
+          known,
+        ),
+      ).toStrictEqual({
+        error: 'No settings file without a home directory; nothing was saved',
+      });
+      expect(
+        await plannedSetting(where, ['theme'], set('dark'), known),
+      ).toStrictEqual({
+        error: `${shownFile} was not saved: it is not valid JSON`,
+      });
+    });
+
+    await placed({ user: '["a list"]' }, async (where) => {
+      expect(
+        await plannedSetting(where, ['theme'], remove, known),
+      ).toStrictEqual({
+        error: `${shownFile} was not saved: it is not a JSON object`,
+      });
+    });
+
+    await placed({ user: '{"agents":3}' }, async (where) => {
+      for (const change of [set('m'), remove]) {
+        expect(
+          await plannedSetting(
+            where,
+            ['agents', 'claude', 'model'],
+            change,
+            known,
+          ),
+        ).toStrictEqual({
+          error: `${shownFile} was not saved: its agents is not an object; edit it by hand`,
+        });
+      }
+    });
+  });
+
+  test('a file that cannot be read names no home', async () => {
+    await placed({}, async (where, file) => {
+      await mkdir(file);
+
+      const planned = await plannedSetting(
+        where,
+        ['theme'],
+        set('dark'),
+        known,
+      );
+
+      assert('error' in planned);
+      expect(planned.error).toStartWith(`${shownFile} was not saved: `);
+      expect(planned.error).not.toContain(where.home!);
+    });
+  });
+
+  test('a project holding a kind B key shadows it, changed or unchanged', async () => {
+    const shadowedBy = join('.chord', 'settings.json');
+
+    await placed(
+      {
+        user: '{"agent":"claude"}',
+        project: '{"agent":"codex","teamSelection":{"prefer":{"model":null}}}',
+      },
+      async (where) => {
+        expect(
+          await plannedSetting(where, ['agent'], set('codex'), known),
+        ).toMatchObject({ answer: { shadowedBy } });
+        expect(
+          await plannedSetting(where, ['agent'], set('claude'), known),
+        ).toMatchObject({ answer: { unchanged: true, shadowedBy } });
+        expect(
+          await plannedSetting(
+            where,
+            ['teamSelection', 'prefer', 'model'],
+            set('m'),
+            known,
+          ),
+        ).toMatchObject({ answer: { shadowedBy } });
+      },
+    );
+  });
+
+  test("nothing shadows a user-only key, or a value the project's check dropped", async () => {
+    await placed({ project: '{"theme":"dark","agent":3}' }, async (where) => {
+      const theme = await plannedSetting(where, ['theme'], set('light'), known);
+      const agent = await plannedSetting(where, ['agent'], set('codex'), known);
+
+      expect('answer' in theme && 'shadowedBy' in theme.answer).toBe(false);
+      expect('answer' in agent && 'shadowedBy' in agent.answer).toBe(false);
+    });
+  });
+
+  test('a save that fails says the file, without the home', () => {
+    const error = new Error("EACCES: permission denied, open '/h/o/me/x.json'");
+
+    expect(saveFailure('~/x.json', error, '/h/o/me')).toBe(
+      "~/x.json was not saved: EACCES: permission denied, open '~/x.json'",
+    );
   });
 });

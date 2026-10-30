@@ -42,7 +42,20 @@ import type {
   ChordTool,
   PermissionWait,
 } from '../session/transcript/types.ts';
-import { readSettingsTool, type SettingsWhere } from '../settings_tool.ts';
+import {
+  saveSettingAt,
+  type SettingChange,
+  shownSettingPath,
+} from '../settings.ts';
+import {
+  changeWord,
+  plannedSetting,
+  readSettingsTool,
+  saveFailure,
+  type SettingsChanged,
+  shownHome,
+  type SettingsWhere,
+} from '../settings_tool.ts';
 import {
   checkProposal,
   type FoundTeam,
@@ -294,8 +307,11 @@ export interface WindowView {
     wait: Omit<PermissionWait, 'id'>,
     signal: AbortSignal,
   ): Promise<string | undefined>;
-  /** Where the caller's settings files are, and how the window shows them. */
-  settingsWhere(caller: Caller): SettingsWhere;
+  /**
+   * Where the caller's settings files are and how the window shows them, and
+   * the runtime of the session that asks, which the box names.
+   */
+  settingsWhere(caller: Caller): SettingsWhere & { readonly agent: string };
   /** Hands a team a job: its lead opened as a child of the caller's. */
   runTeam(caller: Caller, args: RunTeamArgs): Promise<RunTeamAnswer>;
   /** A lead opens a member its team's file has. */
@@ -604,6 +620,78 @@ export function proposeText(
   return typeof answer.saved === 'string'
     ? `Saved to ${answer.saved}.`
     : 'The person did not save it; they will say what to change.';
+}
+
+/** The settings box's choices, by their ids. */
+const SETTING = { yes: 'yes', no: 'no' } as const;
+
+/**
+ * A `settings` `set` or `remove`: checked, drawn as it waits (`shown`), asked
+ * in chord's box whatever mode the runtime is in, and written on a yes by
+ * chord, the agent never writing it.
+ */
+export async function changeSetting(
+  caller: Caller,
+  path: readonly string[],
+  change: SettingChange,
+  signal: AbortSignal,
+  shown: (answer: SettingsChanged) => void,
+): Promise<SettingsChanged | { readonly error: string }> {
+  const where = caller.window.settingsWhere(caller);
+  const planned = await plannedSetting(
+    where,
+    path,
+    change,
+    caller.window.runtimes(),
+  );
+
+  if ('error' in planned || planned.answer.unchanged === true) {
+    return 'error' in planned ? planned : planned.answer;
+  }
+
+  const { answer, file } = planned;
+  const shownKey = shownSettingPath(path);
+  const word = changeWord(answer);
+  const escape = `tell ${where.agent} what to change`;
+
+  shown(answer);
+
+  const picked = await caller.window.askPerson(
+    caller,
+    {
+      title: `Settings(${shownKey})`,
+      options: [
+        {
+          optionId: SETTING.yes,
+          name: `Yes, in ${answer.file}`,
+          kind: 'allow_once',
+        },
+        { optionId: SETTING.no, name: `No, ${escape}`, kind: 'reject_once' },
+      ],
+      save: {
+        question: `${word[0]!.toUpperCase()}${word.slice(1)} ${shownKey}?`,
+        files: {},
+        escape,
+      },
+    },
+    signal,
+  );
+
+  if (picked === undefined) {
+    return { error: 'The person was not asked to the end; nothing was saved' };
+  }
+
+  if (picked === SETTING.no) {
+    return { ...answer, saved: false };
+  }
+
+  try {
+    await saveSettingAt(file, path, change);
+  } catch (error) {
+    return { error: saveFailure(answer.file, error, shownHome(where)) };
+  }
+
+  return { ...answer, saved: true };
 }
 
 /** A monitor started, by its id, or why it was not. */
@@ -1440,22 +1528,54 @@ const settingsTool: Register = (server, caller) =>
     'settings',
     {
       description:
-        "Reads chord's settings: the user's file and the project's as " +
-        'written, and the merged, checked settings that take effect, with ' +
-        "any problems. Values under an MCP server's env and headers read " +
-        '"***". A path reads one key, as a list of keys, since an agent\'s ' +
-        'name may hold a dot.',
+        "Reads and edits chord's settings. `read` gives the user's file and " +
+        "the project's as written, and the merged, checked settings that " +
+        "take effect, with any problems; values under an MCP server's env " +
+        'and headers read "***". `set` and `remove` change one key in the ' +
+        "user's file, after chord asks the person, whatever mode you run " +
+        'in; chord writes the file, not you. A path is a list of keys, as ' +
+        "an agent's name may hold a dot. The keys chord writes are theme, " +
+        'editorMode, mouse, copyOnSelect, offeredAgents, ' +
+        'preferredNotifChannel, agent, agents.<name>.model and .effort, ' +
+        'teamSelection.intent and teamSelection.prefer.agent and .model; ' +
+        'the person edits any other by hand. The answer says what changed ' +
+        'and when it takes effect. When `saved` is false and `unchanged` ' +
+        'is not set, the person will say what to change: end your turn and ' +
+        'wait for their words.',
       inputSchema: {
-        action: z.enum(['read']).describe('What to do'),
+        action: z.enum(['read', 'set', 'remove']).describe('What to do'),
         path: z
           .array(z.string())
           .optional()
-          .describe('The key, as a list of keys; every key if left out'),
+          .describe(
+            'The key, as a list of keys; for a read, every key if left out',
+          ),
+        value: z.unknown().optional().describe('What `set` sets it to'),
       },
     },
-    async (input) => {
+    async (input, extra) => {
       if (caller.fork) {
         return serve(caller, 'settings', input, { error: FORK_REFUSED });
+      }
+
+      if (input.action !== 'read') {
+        const asked = crypto.randomUUID();
+        const changed = await changeSetting(
+          caller,
+          input.path ?? [],
+          input.action === 'set' ? { set: input.value } : { remove: true },
+          extra.signal,
+          (shown) =>
+            caller.window.served(caller, {
+              tool: 'settings',
+              input,
+              answer: shown,
+              pending: true,
+              asked,
+            }),
+        );
+
+        return serve(caller, 'settings', input, changed, undefined, asked);
       }
 
       const read = await readSettingsTool(

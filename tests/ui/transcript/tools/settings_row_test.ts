@@ -146,3 +146,112 @@ describe('settingsRows', () => {
     ]);
   });
 });
+
+describe('a set or remove on the row', () => {
+  const changed = (input: unknown, answer: unknown): ChordCall => ({
+    tool: 'settings',
+    input,
+    answer,
+  });
+  const set = { action: 'set', path: ['agents', 'codex', 'model'], value: 'n' };
+  const remove = { action: 'remove', path: ['offeredAgents'] };
+  const said = (call: ChordCall, width = 80) =>
+    settingsRows(call, false, width)!.map(({ label, text }) => label + text);
+
+  test('its note says what it does', () => {
+    const note = (call: ChordCall) => settingsHeadline(call).note;
+
+    expect(note(changed(set, { before: 'o', after: 'n' }))).toBe(' · change');
+    expect(note(changed(set, { after: 'n' }))).toBe(' · set');
+    expect(note(changed(remove, { before: ['a'] }))).toBe(' · remove');
+    expect(note(changed(set, { unchanged: true, before: 'n' }))).toBe(
+      ' · unchanged',
+    );
+    expect(note({ tool: 'settings', input: set })).toBeUndefined();
+    expect(note({ tool: 'settings', input: set, error: 'x' })).toBeUndefined();
+  });
+
+  test('it draws now and after, an absent one in words', () => {
+    expect(said(changed(set, { before: 'o', after: 'n' }))).toStrictEqual([
+      'Now    "o"',
+      'After  "n"',
+    ]);
+    expect(said(changed(set, { after: 'n' }))).toStrictEqual([
+      'Now    not set',
+      'After  "n"',
+    ]);
+    expect(said(changed(remove, { before: ['a', 'b'] }))).toStrictEqual([
+      'Now    ["a","b"]',
+      'After  not set',
+    ]);
+  });
+
+  test('a project holding it warns, right under the change', () => {
+    const rows = settingsRows(
+      changed(set, {
+        before: 'o',
+        after: 'n',
+        shadowedBy: '.chord/settings.json',
+      }),
+      false,
+      80,
+    )!;
+
+    expect(rows.at(-1)).toStrictEqual({
+      label: '',
+      text: '.chord/settings.json sets this too, and wins here',
+      tone: 'warning',
+    });
+  });
+
+  test('the answer adds a line below the change', () => {
+    const base = { before: 'o', after: 'n', file: '~/s.json' };
+    const last = (answer: unknown) =>
+      settingsRows(changed(set, answer), false, 80)!.at(-1);
+
+    expect(last({ ...base, saved: true, takesEffect: 'now' })).toMatchObject({
+      text: 'Saved to ~/s.json · takes effect now',
+      tone: 'success',
+    });
+    expect(
+      last({ ...base, saved: true, takesEffect: 'next start' }),
+    ).toMatchObject({
+      text: 'Saved to ~/s.json · takes effect at the next start',
+      tone: 'success',
+    });
+    expect(last({ ...base, saved: false })).toMatchObject({
+      text: 'Not saved · the person will say what to change',
+      tone: 'dim',
+    });
+  });
+
+  test('nothing to do says so, shadowed or not', () => {
+    expect(
+      said(changed(set, { unchanged: true, before: 'dark' })),
+    ).toStrictEqual(['Already "dark"; nothing to change']);
+    expect(said(changed(remove, { unchanged: true }))).toStrictEqual([
+      'Not set; nothing to change',
+    ]);
+    expect(
+      said(
+        changed(set, { unchanged: true, before: 'd', shadowedBy: 'p.json' }),
+      ).at(-1),
+    ).toBe('p.json sets this too, and wins here');
+  });
+
+  test('a long value is whole, wrapped under its column', () => {
+    const value = 'f'.repeat(100);
+    const rows = settingsRows(changed(set, { after: value }), false, 27)!;
+    const after = rows.slice(1);
+
+    expect(after[0]!.label).toBe('After  ');
+    expect(after.slice(1).every(({ label }) => label === '       ')).toBe(true);
+    expect(after.map(({ text }) => text).join('')).toBe(`"${value}"`);
+  });
+
+  test('a value with a control reads escaped', () => {
+    expect(said(changed(set, { after: 'a\u202eb' }))[1]).toBe(
+      'After  "a\\u202eb"',
+    );
+  });
+});

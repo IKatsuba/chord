@@ -140,8 +140,11 @@ test("dimcode's notice short of room cuts its body from the bottom, keeps its ti
     // Five rows of prompt under the layer: its edge is the row above them.
     const edge = rows - 5;
 
-    expect(floating[0]).toStartWith('╭');
-    expect(floating[1]).toContain(DIMCODE_WORDS.title);
+    // Its frame ends on the edge; a body cut to nothing leaves it shorter.
+    const top = floating.findIndex((line) => line.startsWith('╭'));
+
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(floating[top + 1]).toContain(DIMCODE_WORDS.title);
     expect(floating[edge - 1]).toStartWith('╰');
     expect(floating.join('\n')).toContain('1. ');
     expect(floating.join('\n')).toContain('2. ');

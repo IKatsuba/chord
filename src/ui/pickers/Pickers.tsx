@@ -221,8 +221,10 @@ export function ModelPicker({
 }) {
   const choices = modelChoices(models);
   const closeHint = useCloseHint();
-  // None where the room has no row for a choice: the list, and its keys, go.
-  const listed = framedRows(rows, room, choices.length);
+  // None where it has no choice, or the room no row for one: the list, and
+  // its keys, go.
+  const listed =
+    choices.length === 0 ? 0 : framedRows(rows, room, choices.length);
 
   return (
     <box
@@ -312,8 +314,10 @@ export function ResumePicker({
     ),
   );
   const closeHint = useCloseHint(starting ? 'to quit' : 'to close');
-  // None where the room has no row for a choice: the list, and its keys, go.
-  const listed = framedRows(rows, room, choices.length);
+  // None where it has no choice, or the room no row for one: the list, and
+  // its keys, go.
+  const listed =
+    choices.length === 0 ? 0 : framedRows(rows, room, choices.length);
   const scopeKey = useHintKey('select:toggleScope');
   const scopeHint =
     scopeKey === undefined
@@ -423,8 +427,10 @@ export function TeamsPicker({
     wrapAnsi(where, Math.max(columns, 1), { hard: true, trim: true }).split(
       '\n',
     ).length - 1;
-  // None where the room has no row for a choice: the list, and its keys, go.
-  const listed = framedRows(rows, room, choices.length, wrapped);
+  // None where it has no choice, or the room no row for one: the list, and
+  // its keys, go.
+  const listed =
+    choices.length === 0 ? 0 : framedRows(rows, room, choices.length, wrapped);
 
   return (
     <box
@@ -517,8 +523,10 @@ export function ConfigPicker({
 }) {
   const choices = option ? valueChoices(option) : optionChoices(options, from);
   const back = useCloseHint('to go back');
-  // None where the room has no row for a choice: the list, and its keys, go.
-  const listed = framedRows(rows, room, choices.length);
+  // None where it has no choice, or the room no row for one: the list, and
+  // its keys, go.
+  const listed =
+    choices.length === 0 ? 0 : framedRows(rows, room, choices.length);
   const close = useCloseHint();
   // Only the keys that act: none of the list's where it has no row.
   const hint = option

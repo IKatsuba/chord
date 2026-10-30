@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
-import { ConfigPicker } from '../../../src/ui/pickers/Pickers.tsx';
+import { ConfigPicker, ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1474,5 +1474,60 @@ describe('CHD-434 U2 tester: notice ownership and recovery', () => {
           options(columns, rows),
         ));
     }
+  }
+});
+
+describe('a picker with nothing to pick names no key that picks (CHD-545)', () => {
+  for (const room of [Number.POSITIVE_INFINITY, 12]) {
+    test(`no models, in a room of ${room} rows`, async () => {
+      const drawn = await draw(
+        <ModelPicker
+          models={undefined}
+          rows={6}
+          room={room}
+          agent='fake'
+          active
+          onPick={() => {}}
+        />,
+      );
+
+      try {
+        await until('drawn', () =>
+          drawn.frame().includes('fake offers no models to choose from.'),
+        );
+        expect(drawn.frame()).toContain('Esc to close');
+        expect(drawn.frame()).not.toContain('Enter to switch');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+
+    test(`no settings, in a room of ${room} rows`, async () => {
+      const drawn = await draw(
+        <ConfigPicker
+          options={[]}
+          option={undefined}
+          from={undefined}
+          rows={6}
+          room={room}
+          agent='fake'
+          active
+          onOpen={() => {}}
+          onPick={() => {}}
+        />,
+      );
+
+      try {
+        await until('drawn', () =>
+          drawn
+            .frame()
+            .includes('fake has no settings other than its model and mode.'),
+        );
+        expect(drawn.frame()).toContain('Esc to close');
+        expect(drawn.frame()).not.toContain('Enter to choose');
+      } finally {
+        await drawn.unmount();
+      }
+    });
   }
 });

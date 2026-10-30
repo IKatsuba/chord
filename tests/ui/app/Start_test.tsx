@@ -832,3 +832,157 @@ describe('CHD-564 the title page around --resume', () => {
     }
   });
 });
+
+describe('CHD-564 tester: title page navigation and terminal depth', () => {
+  const agents: ListedAgent[] = Array.from({ length: 28 }, (_, at) => ({
+    name: `fixture-${at + 1}`,
+    title: undefined,
+    start: 'fixture',
+    from: 'settings',
+  }));
+
+  async function page(columns: number, rows: number, empty = false) {
+    const picks: (string | undefined)[] = [];
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        kind='agents'
+        agents={empty ? [] : agents}
+        preferred='fixture-5'
+        directory='~/src/app'
+        colours={paletteOf('dark', true)}
+        keymap={DEFAULT_KEYMAP}
+        onPick={(chosen) => picks.push(chosen)}
+      />,
+      { columns, rows },
+    );
+
+    return { ...app, picks, text: () => stripAnsi(app.frame()) };
+  }
+
+  test('scrolling to the catalog end keeps the art, words and hint on their rows', async () => {
+    const level = chalk.level;
+
+    chalk.level = 3;
+
+    const app = await page(120, 40);
+
+    try {
+      const before = app.text().split('\n');
+      const fixed = ['██████╗ ██╗', TAGLINE, 'v0.65.0', '↑↓ or j/k'].map(
+        (part) => before.findIndex((line) => line.includes(part)),
+      );
+
+      for (let at = 5; at < 28; at++) {
+        await app.write('j');
+      }
+
+      const after = app.text().split('\n');
+
+      expect(app.text()).toMatch(/❯\s+28\.\s+fixture-28/);
+      expect(app.text()).toContain('… +14 more');
+      expect(fixed.every((row) => row >= 0)).toBe(true);
+
+      for (const row of fixed) {
+        expect(after[row]).toBe(before[row]);
+      }
+
+      await app.write('\r');
+      await app.write('1');
+      expect(app.picks).toEqual(['fixture-28']);
+    } finally {
+      await app.unmount();
+
+      chalk.level = level;
+    }
+  });
+
+  test('the highlighted tail survives full, compact, line and none steps and back', async () => {
+    const app = await page(120, 40);
+
+    try {
+      for (let at = 5; at < 28; at++) {
+        await app.write('j');
+      }
+
+      for (const [columns, rows] of [
+        [80, 24],
+        [39, 24],
+        [30, 8],
+        [120, 40],
+      ] as const) {
+        await app.resize({ columns, rows });
+        expect(app.text()).toMatch(/❯\s+↑?\s*28\.\s+fixture-28/);
+      }
+
+      await app.write('k');
+      await app.write('\r');
+      expect(app.picks).toEqual(['fixture-27']);
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  for (const rows of [2, 5, 8]) {
+    test(`pick keys and Ctrl+C work when a ${rows}-row window clips the page`, async () => {
+      const picking = await page(30, rows);
+
+      try {
+        await picking.write('9');
+        expect(picking.picks).toEqual(['fixture-9']);
+      } finally {
+        await picking.unmount();
+      }
+
+      const leaving = await page(30, rows, true);
+
+      try {
+        await leaving.write('1');
+        await leaving.write('\r');
+        expect(leaving.picks).toEqual([]);
+        await leaving.write('\x03');
+        await leaving.write('\r');
+        expect(leaving.picks).toEqual([undefined]);
+      } finally {
+        await leaving.unmount();
+      }
+    });
+  }
+
+  for (const level of [0, 1, 2] as const) {
+    for (const [columns, rows] of [
+      [120, 40],
+      [80, 24],
+    ] as const) {
+      test(`terminal colour level ${level} draws and picks at ${columns}x${rows}`, async () => {
+        const previous = chalk.level;
+
+        chalk.level = level;
+
+        const app = await page(columns, rows);
+
+        try {
+          expect(app.text()).toContain('Select agent');
+          expect(app.text()).toContain('v0.65.0 · ~/src/app');
+
+          if (level === 0) {
+            expect(app.text()).toContain('chord');
+            expect(app.text()).not.toContain('██████╗');
+            expect(app.text()).not.toContain('█▀▀ █ █');
+          } else {
+            expect(app.text()).toContain(
+              columns === 120 ? '██████╗ ██╗' : '█▀▀ █ █ █▀█',
+            );
+          }
+
+          await app.write('\r');
+          expect(app.picks).toEqual(['fixture-5']);
+        } finally {
+          await app.unmount();
+
+          chalk.level = previous;
+        }
+      });
+    }
+  }
+});

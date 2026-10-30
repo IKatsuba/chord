@@ -1,7 +1,10 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { SHOTS } from '../../../scripts/dev/screenshots.ts';
+import { logoRows, SHOTS } from '../../../scripts/dev/screenshots.ts';
+import stringWidth from 'string-width';
+import stripAnsi from 'strip-ansi';
+import { TAGLINE } from '../../../src/ui/app/start_layout.ts';
 import { parseTeam } from '../../../src/teams.ts';
 
 describe('CHD-407 R1 tester: screenshot team', () => {
@@ -90,5 +93,59 @@ describe('CHD-564 the title page shots', () => {
         expect(first).toBeUndefined();
       }
     }
+  });
+});
+
+describe('CHD-564 the logo crop', () => {
+  const pad = ' '.repeat(32);
+  const green = '\x1b[38;2;71;231;165m';
+  const art = Array.from(
+    { length: 8 },
+    (_, at) =>
+      `${pad}${at % 2 === 0 ? '' : ' '}${green}${'▀'.repeat(at + 1)}\x1b[39m    ${green}${'█'.repeat(45)}\x1b[39m`,
+  );
+  const frame = [
+    '',
+    '',
+    ...art,
+    '',
+    `${' '.repeat(42)}${TAGLINE}`,
+    `${' '.repeat(48)}v0.65.0 · ~/src/app`,
+    '',
+    '    Select agent',
+  ].join('\n');
+
+  test("keeps the 8 rows above the tagline's gap, from the art's left edge", () => {
+    const rows = logoRows(frame);
+
+    expect(rows).toHaveLength(8);
+    expect(stripAnsi(rows[0] ?? '').startsWith('▀')).toBe(true);
+    expect(stripAnsi(rows[1] ?? '').startsWith(' ▀')).toBe(true);
+    expect(rows.join('')).not.toContain('v0.65.0');
+    expect(rows.join('')).not.toContain(TAGLINE);
+  });
+
+  test('keeps 57 columns and the colours', () => {
+    for (const row of logoRows(frame)) {
+      expect(stringWidth(stripAnsi(row))).toBeLessThanOrEqual(57);
+      expect(row).toContain('38;2;71;231;165');
+    }
+  });
+
+  test('a colour opened before the left edge is carried in', () => {
+    const open = [
+      ...art.map((row) => row.replace(pad, `${green}${pad}`)),
+      '',
+      TAGLINE,
+    ].join('\n');
+
+    for (const row of logoRows(open)) {
+      expect(row).toContain('38;2;71;231;165');
+    }
+  });
+
+  test('a frame with no art above its tagline is refused', () => {
+    expect(() => logoRows('Select agent')).toThrow('no title page art');
+    expect(() => logoRows(`\n\n${TAGLINE}`)).toThrow('no title page art');
   });
 });

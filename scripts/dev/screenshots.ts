@@ -22,6 +22,9 @@
  * plays comes from `CHORD_FAKE_SCENARIO`, so the prompt typed can be a
  * person's words.
  *
+ * `logo` takes the README's two logos the same way: the title page in each
+ * theme, kept to its art, with no window and a transparent background.
+ *
  * Chrome is the system's: `CHROME` names its binary where it is not at
  * macOS's usual place.
  */
@@ -32,6 +35,9 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { AnsiUp } from 'ansi_up';
 import puppeteer from 'puppeteer-core';
 import { quote } from 'shell-quote';
+import sliceAnsi from 'slice-ansi';
+import stripAnsi from 'strip-ansi';
+import { TAGLINE } from '../../src/ui/app/start_layout.ts';
 
 /** What a shot does to the window before it is taken. */
 type Step =
@@ -57,6 +63,10 @@ export interface Shot {
   readonly first?: string;
   /** More of chord's environment. */
   readonly env?: readonly string[];
+  /** The settings' theme; `dark` by default. */
+  readonly theme?: 'dark' | 'light';
+  /** Which group of shots a name on the command line also takes it by. */
+  readonly group?: 'logo';
   readonly steps: readonly Step[];
   /** Whether the project has the `bugfix` team saved; it has by default. */
   readonly team?: boolean;
@@ -184,6 +194,17 @@ export const SHOTS: readonly Shot[] = [
   },
 ];
 
+/** The title page's art, for the README: its own colours on no background. */
+const LOGOS: readonly Shot[] = (['dark', 'light'] as const).map((theme) => ({
+  name: `logo-${theme}`,
+  scenario: 'text',
+  args: [],
+  first: TAGLINE,
+  theme,
+  group: 'logo',
+  steps: [],
+}));
+
 const ROOT = new URL('../..', import.meta.url).pathname;
 const IMAGES = join(ROOT, 'docs', 'images');
 const CHROME =
@@ -193,6 +214,9 @@ const CHROME =
 const COLUMNS = 120;
 const ROWS = 37;
 const SOCKET = `chord-screenshots-${String(process.pid)}`;
+/** The art of the title page's `full` step. */
+const LOGO_COLUMNS = 57;
+const LOGO_ROWS = 8;
 
 /** The terminal's own colours behind and in front of chord. */
 const BACKGROUND = '#16171b';
@@ -280,7 +304,11 @@ async function aged(dir: string, hours: readonly number[]): Promise<void> {
 }
 
 /** A home of chord's own, where the settings and the project are the shot's. */
-async function world(dir: string, team: boolean): Promise<string> {
+async function world(
+  dir: string,
+  team: boolean,
+  theme: 'dark' | 'light',
+): Promise<string> {
   const home = join(dir, 'home');
   const project = join(home, 'src', 'app');
   const teamFile = join(ROOT, 'scripts', 'dev', 'screenshots_team.md');
@@ -301,7 +329,7 @@ async function world(dir: string, team: boolean): Promise<string> {
   await writeFile(
     join(home, '.config', 'chord', 'settings.json'),
     JSON.stringify({
-      theme: 'dark',
+      theme,
       agent: 'claude',
       agents: {
         claude: { command: fake, model: 'claude-opus-5-5' },
@@ -333,7 +361,7 @@ async function capture(shot: Shot): Promise<string> {
   await mkdir(dir, { recursive: true });
 
   try {
-    const home = await world(dir, shot.team ?? true);
+    const home = await world(dir, shot.team ?? true, shot.theme ?? 'dark');
     const env = [
       `HOME=${home}`,
       `XDG_CONFIG_HOME=${join(home, '.config')}`,
@@ -416,22 +444,67 @@ async function capture(shot: Shot): Promise<string> {
   }
 }
 
-function page(frame: string): string {
+/**
+ * The title page's art out of a captured frame: the rows above the tagline's
+ * gap, from the art's left edge, with their colours. So the logo cannot drift
+ * from what chord draws.
+ */
+export function logoRows(frame: string): string[] {
+  const rows = frame.split('\n');
+  const tagline = rows.findIndex((row) => stripAnsi(row).includes(TAGLINE));
+
+  if (tagline < LOGO_ROWS + 1) {
+    throw new Error('The frame has no title page art above its tagline.');
+  }
+
+  const art = rows.slice(tagline - 1 - LOGO_ROWS, tagline - 1);
+  const left = Math.min(
+    ...art.map((row) => stripAnsi(row).search(/\S/u)).filter((at) => at >= 0),
+  );
+
+  return art.map((row) => sliceAnsi(row, left, left + LOGO_COLUMNS));
+}
+
+/** Rows as HTML, the terminal's colours kept inline. */
+function rowsHtml(frame: readonly string[]): string {
   const ansi = new AnsiUp();
 
   ansi.use_classes = false;
 
-  const rows = frame
-    .replace(/\n$/u, '')
-    .split('\n')
+  return frame
     .map((line) => `<div class="row">${ansi.ansi_to_html(line) || ' '}</div>`)
     .join('');
+}
+
+const FONT = `
+  @font-face { font-family: Term; src: local('JetBrains Mono'), local('JetBrainsMono-Regular'); }
+  @font-face { font-family: Term; font-weight: bold; src: local('JetBrains Mono Bold'), local('JetBrainsMono-Bold'); }
+`;
+
+/** A logo alone, at the shots' font and metrics, nothing behind it. */
+function logoPage(frame: string): string {
+  return `<!doctype html>
+<meta charset="utf-8">
+<style>
+  ${FONT}
+  html, body { margin: 0; background: transparent; }
+  .page {
+    display: inline-block; width: ${String(LOGO_COLUMNS)}ch;
+    font: 13.5px/1.3 Term, Menlo, monospace; white-space: pre;
+    font-variant-ligatures: none;
+  }
+  .row { height: 1.3em; }
+</style>
+<div class="page">${rowsHtml(logoRows(frame))}</div>`;
+}
+
+function page(frame: string): string {
+  const rows = rowsHtml(frame.replace(/\n$/u, '').split('\n'));
 
   return `<!doctype html>
 <meta charset="utf-8">
 <style>
-  @font-face { font-family: Term; src: local('JetBrains Mono'), local('JetBrainsMono-Regular'); }
-  @font-face { font-family: Term; font-weight: bold; src: local('JetBrains Mono Bold'), local('JetBrainsMono-Bold'); }
+  ${FONT}
   html, body { margin: 0; background: transparent; }
   /* The window on a gradient, as Chorded's own pictures show it (CHD-407). */
   .page {
@@ -500,12 +573,23 @@ export async function screenshots(names: readonly string[]): Promise<void> {
 
     await tab.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 2 });
 
-    for (const shot of SHOTS) {
-      if (only.size > 0 && !only.has(shot.name)) {
+    for (const shot of [...SHOTS, ...LOGOS]) {
+      if (
+        only.size > 0 &&
+        !only.has(shot.name) &&
+        (shot.group === undefined || !only.has(shot.group))
+      ) {
         continue;
       }
 
-      await tab.setContent(page(await capture(shot)), { waitUntil: 'load' });
+      const frame = await capture(shot);
+
+      await tab.setContent(
+        shot.group === 'logo' ? logoPage(frame) : page(frame),
+        {
+          waitUntil: 'load',
+        },
+      );
       await tab.evaluate(() => document.fonts.ready);
 
       const element = await tab.$('.page');
@@ -514,8 +598,12 @@ export async function screenshots(names: readonly string[]): Promise<void> {
         throw new Error(`${shot.name}: nothing was drawn.`);
       }
 
-      // Square and opaque, the backdrop to the picture's edge.
-      await element.screenshot({ path: join(IMAGES, `${shot.name}.png`) });
+      // Square and opaque, the backdrop to the picture's edge; a logo has
+      // none, for the page it sits on.
+      await element.screenshot({
+        path: join(IMAGES, `${shot.name}.png`),
+        omitBackground: shot.group === 'logo',
+      });
       console.log(`docs/images/${shot.name}.png`);
     }
   } finally {

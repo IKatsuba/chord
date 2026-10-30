@@ -1,0 +1,6 @@
+$ bun scripts/dev.ts chord --qa "d565"
+chord: /tmp/CHD-565-u3/a/chord/settings.json: "offeredAgents": no agent named cdex, left out
+chord: /tmp/CHD-565-u3/a/chord/settings.json: "offeredAgents": no agent named codx, left out
+chord: cursor runs "agent", which is not on PATH; install it from https://cursor.com/docs/cli/installation
+error: script "dev" exited with code 1
+EXIT=1

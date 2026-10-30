@@ -1,0 +1,6 @@
+The u3-* and u4-* captures, with chord run from the source tree at f4c6e21e.
+
+Before the u4 run and before the u3 run: HEAD f4c6e21e, `git status --short` empty.
+After the u3 run: HEAD f4c6e21e, one change, tests/ui/app/Start_test.tsx (a test file
+of another member, which `bun dev chord` does not load). src/, tests/fixtures/ and
+package.json were unchanged throughout.

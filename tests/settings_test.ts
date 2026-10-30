@@ -22,12 +22,99 @@ import {
   setWhere,
   shownPath,
   startupOf,
+  unknownOffered,
   unseenProblems,
 } from '../src/settings.ts';
 import { parse } from 'shell-quote';
 import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
 import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
+
+describe('CHD-565 tester: offered settings isolation and fresh reads', () => {
+  test('many invalid elements cost one key without exhausting file recovery', () => {
+    for (const offeredAgents of [
+      Array.from({ length: 20 }, () => null),
+      ['known', { name: 'nested' }, ['another']],
+      false,
+      7,
+    ]) {
+      const parsed = parseSettings(
+        'fixture.json',
+        JSON.stringify({
+          offeredAgents,
+          agent: 'fixture',
+          theme: 'light',
+          agents: { fixture: { command: ['fixture', '--acp'] } },
+        }),
+      );
+
+      expect(parsed.settings).toEqual({
+        agent: 'fixture',
+        theme: 'light',
+        agents: { fixture: { command: ['fixture', '--acp'] } },
+      });
+      expect(parsed.problems).toHaveLength(1);
+      expect(parsed.problems[0]).toMatchObject({
+        file: 'fixture.json',
+        kind: 'validation',
+        key: ['offeredAgents'],
+      });
+    }
+  });
+
+  for (const userValid of [false, true]) {
+    test(`a ${userValid ? 'bad' : 'valid'} project list cannot replace the user's ${userValid ? 'valid' : 'bad'} list`, () =>
+      place(
+        {
+          user: JSON.stringify({
+            offeredAgents: userValid ? ['mine', 'other'] : ['mine', null],
+            theme: 'light',
+          }),
+          project: JSON.stringify({
+            offeredAgents: userValid ? [null] : ['project-only'],
+            agent: 'project-only',
+          }),
+        },
+        async (where) => {
+          const loaded = await loadSettings(where);
+
+          expect(loaded.settings.offeredAgents).toEqual(
+            userValid ? ['mine', 'other'] : undefined,
+          );
+          expect(loaded.settings.agent).toBe('project-only');
+          expect(loaded.settings.theme).toBe('light');
+          expect(loaded.problems).toHaveLength(userValid ? 1 : 2);
+          expect(loaded.layers[1]?.settings.offeredAgents).toBeUndefined();
+        },
+      ));
+  }
+
+  test('repair, replacement and removal are observed on the next file read', () =>
+    place(
+      { user: JSON.stringify({ offeredAgents: [], theme: 'dark' }) },
+      async (where) => {
+        const [user] = settingsFiles(where);
+
+        expect(user).toBeDefined();
+        expect((await loadSettings(where)).settings).toEqual({ theme: 'dark' });
+
+        for (const offeredAgents of [['b', 'a', 'b'], ['only']]) {
+          await writeFile(
+            user!,
+            JSON.stringify({ offeredAgents, theme: 'dark' }),
+          );
+
+          const loaded = await loadSettings(where);
+
+          expect(loaded.settings.offeredAgents).toEqual(offeredAgents);
+          expect(loaded.problems).toEqual([]);
+        }
+
+        await writeFile(user!, JSON.stringify({ theme: 'dark' }));
+        expect((await loadSettings(where)).settings).toEqual({ theme: 'dark' });
+      },
+    ));
+});
 
 describe('selected policy admission diagnostics', () => {
   test('invalid nested policy keeps structured paths and refuses selected admission only', async () => {
@@ -910,6 +997,110 @@ test("a project's copyOnSelect alone leaves it unset, so a copy on release", asy
     expect(settings.copyOnSelect).toStrictEqual(undefined);
     expect(problems.length).toStrictEqual(1);
   });
+});
+
+test("offeredAgents is read from the user's file, never the project's", async () => {
+  await place(
+    {
+      user: '{ "offeredAgents": ["codex", "claude"] }',
+      project: '{ "offeredAgents": ["goose"] }',
+    },
+    async (where) => {
+      const { settings, problems } = await loadSettings({
+        ...where,
+        home: join(where.configHome, '..'),
+      });
+      const [, project] = settingsFiles(where);
+
+      expect(settings.offeredAgents).toStrictEqual(['codex', 'claude']);
+      expect(problems).toStrictEqual([
+        {
+          file: project!,
+          kind: 'scope',
+          key: ['offeredAgents'],
+          message:
+            '"offeredAgents" is read only from ~/config/chord/settings.json, ignored',
+        },
+      ]);
+    },
+  );
+});
+
+test("a project's offeredAgents alone leaves it unset", async () => {
+  await place({ project: '{ "offeredAgents": ["goose"] }' }, async (where) => {
+    const { settings, problems } = await loadSettings(where);
+
+    expect(settings.offeredAgents).toStrictEqual(undefined);
+    expect(problems.length).toStrictEqual(1);
+  });
+});
+
+test('offeredAgents keeps its order and its repeats as written', () => {
+  expect(
+    parseSettings('f', '{ "offeredAgents": ["b", "a", "b"] }'),
+  ).toStrictEqual({
+    settings: { offeredAgents: ['b', 'a', 'b'] },
+    problems: [],
+  });
+});
+
+test('a bad offeredAgents counts as absent and costs the file nothing else', () => {
+  for (const offeredAgents of [
+    [],
+    [''],
+    ['claude', ''],
+    ['claude', 1],
+    [1, 2],
+    'claude',
+    'x',
+    null,
+    {},
+  ]) {
+    expect(
+      parseSettings(
+        'f',
+        JSON.stringify({ offeredAgents, agent: 'fake', theme: 'dark' }),
+      ),
+    ).toStrictEqual({
+      settings: { agent: 'fake', theme: 'dark' },
+      problems: [
+        {
+          file: 'f',
+          kind: 'validation',
+          key: ['offeredAgents'],
+          message:
+            '"offeredAgents": expected a list of one or more agent names, ignored',
+        },
+      ],
+    });
+  }
+});
+
+test('each unknown name in offeredAgents is a problem of the file that gave it', () => {
+  expect(unknownOffered('f', ['cdex', 'codx'])).toStrictEqual([
+    {
+      file: 'f',
+      kind: 'validation',
+      key: ['offeredAgents'],
+      message: '"offeredAgents": no agent named cdex, left out',
+    },
+    {
+      file: 'f',
+      kind: 'validation',
+      key: ['offeredAgents'],
+      message: '"offeredAgents": no agent named codx, left out',
+    },
+  ]);
+});
+
+test('the later offeredAgents replaces the earlier one whole', () => {
+  expect(
+    mergeSettings({ offeredAgents: ['a', 'b'] }, { offeredAgents: ['c'] })
+      .offeredAgents,
+  ).toStrictEqual(['c']);
+  expect(
+    mergeSettings({ offeredAgents: ['a'] }, {}).offeredAgents,
+  ).toStrictEqual(['a']);
 });
 
 test('a directory is shortened against the home directory alone, and the home path is never shown', () => {

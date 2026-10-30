@@ -141,6 +141,7 @@ export async function withWindow(
     selectionPolicy,
     runtimes,
     listed,
+    offered,
     keybindings,
     home,
     shell,
@@ -192,6 +193,8 @@ export async function withWindow(
     runtimes?: readonly string[];
     /** The agents as `chord agents` lists them, for `/new` to describe. */
     listed?: readonly ListedAgent[];
+    /** The `offeredAgents` setting. */
+    offered?: readonly string[];
     /** A keybindings file's text, read as chord reads one at the start. */
     keybindings?: string;
     /** The window's home directory, from the test's; the user's, by default. */
@@ -298,6 +301,7 @@ export async function withWindow(
       {...(server ? { server } : {})}
       {...(runtimes ? { runtimes } : {})}
       {...(listed ? { listed } : {})}
+      {...(offered ? { offered } : {})}
       keymap={keys?.keymap}
       {...(home === undefined ? {} : { home: home(dir) })}
       keysFailed={keys && keybindingsNotice('keybindings.json', keys.problems)}

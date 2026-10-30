@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -12,6 +12,7 @@ import {
   listAgents,
   listedAgents,
   missingCommand,
+  offeredAgents,
   startLine,
   takesMcpServers,
 } from '../src/agents.ts';
@@ -377,6 +378,76 @@ test('chord agents marks the own CLIs PATH has, and lists the names only the set
   expect(listed.length).toStrictEqual(listAgents().length + 1);
 });
 
+const CATALOG = [
+  { name: 'claude', title: 'Claude', start: 'npx claude', from: 'npx' },
+  { name: 'codex', title: 'Codex', start: 'npx codex', from: 'npx' },
+  {
+    name: 'goose',
+    title: 'goose',
+    start: 'goose acp',
+    from: 'cli',
+    found: true,
+  },
+  {
+    name: 'cursor',
+    title: 'Cursor',
+    start: 'cursor-agent acp',
+    from: 'cli',
+    found: false,
+  },
+  { name: 'mine', title: undefined, start: 'mine --acp', from: 'settings' },
+] as const;
+
+const names = (offered: ReturnType<typeof offeredAgents>) =>
+  offered.agents.map(({ name }) => name);
+
+test('with no list, chord offers the catalog but for an own CLI PATH lacks', () => {
+  const offered = offeredAgents(CATALOG, undefined);
+
+  expect(names(offered)).toStrictEqual(['claude', 'codex', 'goose', 'mine']);
+  expect(offered.unknown).toStrictEqual([]);
+});
+
+test("a list sets what is offered, in the list's order", () => {
+  const offered = offeredAgents(CATALOG, ['mine', 'codex', 'claude']);
+
+  expect(names(offered)).toStrictEqual(['mine', 'codex', 'claude']);
+  expect(offered.unknown).toStrictEqual([]);
+});
+
+test('a listed own CLI PATH lacks keeps its row, marked as the catalog has it', () => {
+  const offered = offeredAgents(CATALOG, ['cursor', 'goose']);
+
+  expect(offered.agents).toStrictEqual([CATALOG[3], CATALOG[2]]);
+});
+
+test('a name the catalog lacks is unknown, in the order of the list', () => {
+  const offered = offeredAgents(CATALOG, ['zed', 'codex', 'aider']);
+
+  expect(names(offered)).toStrictEqual(['codex']);
+  expect(offered.unknown).toStrictEqual(['zed', 'aider']);
+});
+
+test('a list of only unknown names offers nothing rather than the catalog', () => {
+  expect(offeredAgents(CATALOG, ['zed'])).toStrictEqual({
+    agents: [],
+    unknown: ['zed'],
+  });
+});
+
+test('a repeated name keeps its first place, known or unknown', () => {
+  const offered = offeredAgents(CATALOG, [
+    'codex',
+    'zed',
+    'claude',
+    'codex',
+    'zed',
+  ]);
+
+  expect(names(offered)).toStrictEqual(['codex', 'claude']);
+  expect(offered.unknown).toStrictEqual(['zed']);
+});
+
 test('chord agents writes name, title, mark and start in columns', () => {
   expect(
     agentTable([
@@ -448,4 +519,78 @@ test("openclaw takes no MCP servers by chord's own table, and a setting says oth
   expect(takesMcpServers('codex', false)).toBe(false);
   // An agent chord does not know takes them, as before.
   expect(takesMcpServers('somebody-else')).toBe(true);
+});
+
+describe('CHD-565 tester: offered catalog boundaries', () => {
+  test('names match exactly and object property names remain ordinary agents', () => {
+    const catalog = ['__proto__', 'constructor', 'toString'].map((name) => ({
+      name,
+      title: undefined,
+      start: 'fixture --acp',
+      from: 'settings' as const,
+    }));
+
+    expect(
+      offeredAgents(catalog, [
+        'toString',
+        'Constructor',
+        '__proto__',
+        'constructor ',
+        'constructor',
+        '__proto__',
+      ]),
+    ).toStrictEqual({
+      agents: [catalog[2]!, catalog[0]!, catalog[1]!],
+      unknown: ['Constructor', 'constructor '],
+    });
+  });
+
+  test('an unknown project name can become offered in its own directory', async () => {
+    const elsewhere = await listedAgents({}, () => Promise.resolve(undefined));
+    const project = await listedAgents(
+      { 'project-fixture': ['fixture-agent', '--acp'] },
+      () => Promise.resolve(undefined),
+    );
+
+    expect(offeredAgents(elsewhere, ['project-fixture'])).toStrictEqual({
+      agents: [],
+      unknown: ['project-fixture'],
+    });
+    expect(offeredAgents(project, ['project-fixture'])).toStrictEqual({
+      agents: [
+        {
+          name: 'project-fixture',
+          title: undefined,
+          start: 'fixture-agent --acp',
+          from: 'settings',
+        },
+      ],
+      unknown: [],
+    });
+  });
+
+  test('separate projections leave frozen inputs and the full catalog intact', () => {
+    const catalog = Object.freeze(
+      CATALOG.map((row) => Object.freeze({ ...row })),
+    );
+    const setting = Object.freeze(['cursor', 'missing', 'mine', 'cursor']);
+
+    expect(names(offeredAgents(catalog, setting))).toStrictEqual([
+      'cursor',
+      'mine',
+    ]);
+    expect(names(offeredAgents(catalog, ['codex']))).toStrictEqual(['codex']);
+    expect(names(offeredAgents(catalog, undefined))).toStrictEqual([
+      'claude',
+      'codex',
+      'goose',
+      'mine',
+    ]);
+    expect(catalog).toStrictEqual(CATALOG);
+    expect(setting).toStrictEqual(['cursor', 'missing', 'mine', 'cursor']);
+    expect(offeredAgents([], setting)).toStrictEqual({
+      agents: [],
+      unknown: ['cursor', 'missing', 'mine'],
+    });
+  });
 });

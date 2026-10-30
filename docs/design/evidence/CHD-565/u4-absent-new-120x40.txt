@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d565n
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  fake
+  my-agent            from settings
+  agoragentic-acp     Agoragentic
+  auggie              Auggie CLI
+  autohand            Autohand Code
+  bob                 Bob
+  claude              Claude Agent
+  cline               Cline
+  codebuddy-code      Codebuddy Code
+  codex               Codex
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort

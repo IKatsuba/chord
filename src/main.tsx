@@ -33,6 +33,7 @@ import {
   listAgents,
   listedAgents,
   missingCommand,
+  offeredAgents,
 } from './agents.ts';
 import { joinPiped, runHeadless } from './headless.ts';
 import { loadMcpServers } from './mcp.ts';
@@ -84,6 +85,7 @@ import {
   shownPath,
   type Sourced,
   startupOf,
+  unknownOffered,
   unseenProblems,
   userSettingsFile,
 } from './settings.ts';
@@ -132,6 +134,7 @@ export const cli = chordCommand().action(async (options, named) => {
     ...(home === undefined ? {} : { home }),
   });
   const problems = [...loaded.problems];
+  const settingsFile = userSettingsFile(xdgConfig);
   // The agent or resume picker before a session starts. App takes its
   // renderer over, so the alternate screen is never
   // left between the two.
@@ -180,6 +183,23 @@ export const cli = chordCommand().action(async (options, named) => {
 
   await report(problems);
 
+  // `-p` offers nothing, so only a window's start reads the list.
+  if (
+    settingsFile !== undefined &&
+    options.print === undefined &&
+    loaded.settings.offeredAgents !== undefined
+  ) {
+    listed = await listedAgents(agentCommands(loaded.layers));
+
+    const unknown = unknownOffered(
+      settingsFile,
+      offeredAgents(listed, loaded.settings.offeredAgents).unknown,
+    );
+
+    await report(unknown);
+    problems.push(...unknown);
+  }
+
   let selected = named;
 
   if (
@@ -190,7 +210,7 @@ export const cli = chordCommand().action(async (options, named) => {
       stdoutTTY: process.stdout.isTTY === true,
     })
   ) {
-    listed = await listedAgents(agentCommands(loaded.layers));
+    listed ??= await listedAgents(agentCommands(loaded.layers));
     keys = await loadKeybindings(keybindingsFile(xdgConfig));
     terminal = await terminalSetup();
 
@@ -203,6 +223,7 @@ export const cli = chordCommand().action(async (options, named) => {
         version={manifest.version}
         kind='agents'
         agents={listed}
+        offered={loaded.settings.offeredAgents}
         preferred={loaded.settings.agent ?? DEFAULT_AGENT}
         directory={shownPath(resolve(options.cwd), {
           cwd: resolve(options.cwd),
@@ -563,7 +584,6 @@ export const cli = chordCommand().action(async (options, named) => {
   ]);
 
   const shown = { cwd, home };
-  const settingsFile = userSettingsFile(xdgConfig);
 
   // Each in the transcript, as settings problems are, so all of them can be
   // read at any width; the status line counts them and names the first.
@@ -650,6 +670,7 @@ export const cli = chordCommand().action(async (options, named) => {
         listAgents().map(({ name }) => name),
       )}
       listed={listed}
+      offered={loaded.settings.offeredAgents}
       background={found}
       keymap={keys.keymap}
       keysFailed={keybindingsNotice(

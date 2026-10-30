@@ -24,6 +24,68 @@ import {
   type Window,
 } from './render.tsx';
 
+describe('CHD-565 tester: offered menus across turns and child sessions', () => {
+  const listed = ['codex', 'hidden'].map((name) => ({
+    name,
+    title: undefined,
+    start: 'fixture',
+    from: 'settings' as const,
+  }));
+  const start = {
+    runtimes: ['fake', 'codex', 'hidden'],
+    listed,
+    startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a cancelled turn and a bare /new preserve the offered menu at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'costwait');
+          await window.shows('Working until stopped.');
+          await window.type('/new ');
+          await until('the offered menu during a turn', () =>
+            /^ {2}codex\s/m.test(window.frame()),
+          );
+          expect(window.frame()).not.toMatch(/^ {2}(?:fake|hidden)\s/m);
+          await window.press(CTRL_C);
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await send(window, '/new');
+          await window.shows('╭─ fake ');
+          await window.type('/new ');
+          await until('the offered menu in the child', () =>
+            /^ {2}codex\s/m.test(window.frame()),
+          );
+          expect(window.frame()).not.toMatch(/^ {2}(?:fake|hidden)\s/m);
+          await window.press(CTRL_C);
+          await send(window, '/new hidden');
+          await window.shows('╭─ hidden ');
+        },
+        { columns, rows, ...start, offered: ['codex', 'typo', 'codex'] },
+      ));
+
+    test(`only unknown names offer no fallback while named and bare starts work at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await window.type('/new ');
+          expect(window.frame()).not.toMatch(/^ {2}(?:fake|codex|hidden)\s/m);
+          await window.press(CTRL_C);
+          await send(window, '/new');
+          await window.shows('╭─ fake ');
+          await send(window, '/new hidden');
+          await window.shows('╭─ hidden ');
+        },
+        { columns, rows, ...start, offered: ['unknown-only'] },
+      ));
+  }
+});
+
 test('/new and a space lists the agents chord can start, after /clear as before it (U6)', () =>
   withWindow(
     async (window) => {
@@ -102,6 +164,49 @@ test("/new codex opens a codex agent for main beside main's running turn, which 
       startupOf: () => ({ agentCommand: fakeAgentCommand() }),
     },
   ));
+
+describe('CHD-565 /new with a list of offered agents', () => {
+  const start = {
+    runtimes: ['fake', 'codex', 'zed'],
+    listed: ['zed', 'codex'].map((name) => ({
+      name,
+      title: undefined,
+      start: name,
+      from: 'settings' as const,
+    })),
+    offered: ['zed', 'codex'],
+    startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+  };
+
+  test("the completion lists the list, in its order, without the window's agent", () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('/new ');
+        await until('the agents listed', () =>
+          /^ {2}zed\s/m.test(window.frame()),
+        );
+
+        const frame = window.frame();
+
+        expect(frame.indexOf('  zed')).toBeLessThan(frame.indexOf('  codex'));
+        expect(frame).not.toMatch(/^ {2}fake\s/m);
+        await window.press(CTRL_C);
+      },
+      { columns: 80, rows: 24, ...start },
+    ));
+
+  test('/new with a name outside the list still opens it', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('/new fake');
+        await window.press('\r');
+        await window.shows('╭─ fake ');
+      },
+      { columns: 120, rows: 40, ...start },
+    ));
+});
 
 describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () => {
   const command = fakeAgentCommand();

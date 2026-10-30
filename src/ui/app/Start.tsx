@@ -1,7 +1,7 @@
 import chalk from 'chalk';
 import { useTerminalDimensions } from '@opentui/react';
 import { useMemo, useState } from 'react';
-import type { ListedAgent } from '../../agents.ts';
+import { type ListedAgent, offeredAgents } from '../../agents.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import { markColour } from '../header/header.ts';
 import { MARK, SPLASH_MARK } from '../header/mark.ts';
@@ -27,6 +27,7 @@ import {
   startLayout,
   type StartStep,
   TAGLINE,
+  unknownNote,
   versionLine,
   wordmarkColours,
 } from './start_layout.ts';
@@ -107,6 +108,7 @@ function AgentsPage({
   version,
   directory,
   agents,
+  offered,
   preferred,
   active,
   onPick,
@@ -114,21 +116,26 @@ function AgentsPage({
   version: string;
   directory: string;
   agents: readonly ListedAgent[];
+  offered: readonly string[] | undefined;
   preferred: string;
   active: boolean;
   onPick: (chosen: string) => void;
 }) {
   const { width: columns, height: rows } = useTerminalDimensions();
-  const listed = agentChoices(agents, preferred).length;
+  const { agents: shown, unknown } = offeredAgents(agents, offered);
+  const listed = agentChoices(shown, preferred).length;
+  const nothingKnown = listed === 0 && unknown.length > 0;
   const hint = useAgentHint(listed > 0);
   const column = startColumn(columns, false);
-  const { step, listRows, top } = startLayout({
+  const { step, listRows, top, note } = startLayout({
     columns,
     rows,
-    lines: Math.max(listed, 1),
+    // The sentence under `No agents available` is the list's second row.
+    lines: nothingKnown ? 2 : Math.max(listed, 1),
     framed: false,
     // Inside the column's 1-column padding.
     hintRows: hintRows(hint, column - 2),
+    noteRows: listed > 0 && unknown.length > 0 ? 2 : 0,
   });
 
   return (
@@ -147,11 +154,13 @@ function AgentsPage({
         flexShrink={0}
       >
         <AgentPicker
-          agents={agents}
+          agents={shown}
           preferred={preferred}
           rows={listRows}
           active={active}
           onPick={onPick}
+          nothingKnown={nothingKnown}
+          note={note ? unknownNote(unknown, column - 2) : undefined}
         />
       </box>
     </box>
@@ -247,6 +256,8 @@ export function Start(
     | {
         kind: 'agents';
         agents: readonly ListedAgent[];
+        /** The `offeredAgents` setting, which picks from `agents`. */
+        offered?: readonly string[] | undefined;
         preferred: string;
         onPick: (chosen: string | undefined) => void;
       }
@@ -301,6 +312,7 @@ export function Start(
             version={version}
             directory={directory}
             agents={props.agents}
+            offered={props.offered}
             preferred={props.preferred}
             active={!picked}
             onPick={(chosen) => {

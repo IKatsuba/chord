@@ -17,6 +17,109 @@ import {
 import { paletteOf } from '../../../src/ui/theme/theme.ts';
 import { ESC, until } from './render.tsx';
 
+describe('CHD-565 tester: explicit list navigation and clipping', () => {
+  const agents: ListedAgent[] = Array.from({ length: 15 }, (_, at) => ({
+    name: `offered-${at + 1}`,
+    title: undefined,
+    from: 'settings',
+    start: 'fixture',
+  }));
+
+  async function page(offered: readonly string[], columns = 80, rows = 24) {
+    const picks: (string | undefined)[] = [];
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        kind='agents'
+        agents={agents}
+        offered={offered}
+        preferred='outside-the-list'
+        directory='/tmp/chord-qa'
+        colours={paletteOf('dark', false)}
+        keymap={DEFAULT_KEYMAP}
+        onPick={(chosen) => picks.push(chosen)}
+      />,
+      { columns, rows },
+    );
+
+    return { ...app, picks };
+  }
+
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`one known row still waits for a choice at ${columns}x${rows}`, async () => {
+      const app = await page(
+        ['unknown-first', 'offered-7', 'offered-7', 'unknown-first'],
+        columns,
+        rows,
+      );
+
+      try {
+        expect(app.picks).toEqual([]);
+        expect(app.frame()).toContain('❯ 1. offered-7');
+        expect(app.frame()).not.toContain('2.');
+        expect(app.frame()).toContain(
+          'Unknown in offeredAgents: unknown-first',
+        );
+        await app.write('2');
+        expect(app.picks).toEqual([]);
+        await app.write('\r');
+        await app.write('1');
+        expect(app.picks).toEqual(['offered-7']);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
+
+  test('reordered tail stays selected across resizing with its note suppressed', async () => {
+    const offered = [...agents].reverse().map(({ name }) => name);
+    const app = await page([...offered, 'unknown-tail'], 120, 40);
+
+    try {
+      expect(app.frame()).not.toContain('Unknown in offeredAgents');
+
+      for (let at = 1; at < offered.length; at++) {
+        await app.write('j');
+      }
+
+      expect(app.frame()).toMatch(/❯\s+15\.\s+offered-1/);
+      await app.resize({ columns: 80, rows: 24 });
+      expect(app.frame()).toMatch(/❯\s+15\.\s+offered-1/);
+      expect(app.frame()).not.toContain('Unknown in offeredAgents');
+      await app.resize({ columns: 120, rows: 40 });
+      await app.write('k');
+      await app.write('\r');
+      expect(app.picks).toEqual(['offered-2']);
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('an unknown note gives way to rows and returns without changing selection', async () => {
+    const app = await page(['offered-9', 'offered-2', 'typo']);
+
+    try {
+      await app.write('j');
+      expect(app.frame()).toContain('❯ 2. offered-2');
+      expect(app.frame()).toContain('Unknown in offeredAgents: typo');
+      await app.resize({ columns: 30, rows: 8 });
+      expect(app.frame()).not.toContain('Unknown in offeredAgents');
+      await app.resize({ columns: 80, rows: 24 });
+      expect(app.frame()).toContain('❯ 2. offered-2');
+      expect(app.frame()).toContain('Unknown in offeredAgents: typo');
+      await app.write(ESC);
+      await until('cancel offered list', () => app.picks.length === 1);
+      await app.write('\r');
+      expect(app.picks).toEqual([undefined]);
+    } finally {
+      await app.unmount();
+    }
+  });
+});
+
 const NOW = Date.now();
 const ago = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString();
 
@@ -248,6 +351,7 @@ describe('CHD-532 startup agent picker', () => {
     columns = 80,
     rows = 24,
     keymap = DEFAULT_KEYMAP,
+    offered?: readonly string[],
   ) {
     const picks: (string | undefined)[] = [];
     const app = await draw(
@@ -255,6 +359,7 @@ describe('CHD-532 startup agent picker', () => {
         version='0.65.0'
         kind='agents'
         agents={list}
+        offered={offered}
         preferred={preferred}
         directory='/tmp/chord-qa'
         colours={paletteOf('dark', false)}
@@ -359,6 +464,107 @@ describe('CHD-532 startup agent picker', () => {
     [80, 24],
     [120, 40],
   ] as const) {
+    const offering = (offered: readonly string[], preferred = 'one') =>
+      choosing(
+        [
+          ...agents,
+          {
+            name: 'missing',
+            title: 'Missing agent',
+            from: 'cli',
+            start: 'fixture-missing',
+            found: false,
+          },
+        ],
+        preferred,
+        columns,
+        rows,
+        DEFAULT_KEYMAP,
+        offered,
+      );
+
+    test(`CHD-565 at ${columns}x${rows}, the list sets the rows and their order, and the numbers follow`, async () => {
+      const app = await offering(['three', 'one']);
+
+      try {
+        expect(app.frame()).toContain('1. three');
+        expect(app.frame()).toContain('❯ 2. one · First agent');
+        expect(app.frame()).not.toContain('two');
+        expect(app.frame()).not.toContain('3.');
+        expect(app.frame()).not.toContain('Unknown in offeredAgents');
+        await app.write('1');
+        await until('a pick from the list', () => app.picks.length === 1);
+        expect(app.picks).toStrictEqual(['three']);
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`CHD-565 at ${columns}x${rows}, a listed own CLI PATH lacks stays, says so and can be picked`, async () => {
+      const app = await offering(['one', 'missing']);
+
+      try {
+        expect(app.frame()).toContain(
+          '2. missing · Missing agent · not on PATH',
+        );
+        await app.write('2');
+        await until('a pick of the missing row', () => app.picks.length === 1);
+        expect(app.picks).toStrictEqual(['missing']);
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`CHD-565 at ${columns}x${rows}, a preferred agent outside the list opens on the first row`, async () => {
+      const app = await offering(['three', 'one'], 'two');
+
+      try {
+        expect(app.frame()).toContain('❯ 1. three');
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`CHD-565 at ${columns}x${rows}, unknown names are said once under the hint`, async () => {
+      const app = await offering(['one', 'cdex', 'codx']);
+
+      try {
+        const frame = app.frame();
+
+        expect(frame).toContain('Unknown in offeredAgents: cdex, codx');
+        expect(frame.indexOf('Esc to cancel')).toBeLessThan(
+          frame.indexOf('Unknown in offeredAgents'),
+        );
+        expect(frame).not.toContain('cdex ');
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`CHD-565 at ${columns}x${rows}, only unknown names offer nothing, say why and only cancel`, async () => {
+      const app = await offering(['cdex']);
+
+      try {
+        const frame = app.frame();
+
+        expect(frame).toContain('No agents available');
+        expect(frame).toContain(
+          'offeredAgents in settings.json names no agent chord knows.',
+        );
+        expect(frame).not.toContain('Unknown in offeredAgents');
+        expect(frame).not.toContain('cdex');
+        expect(frame).not.toContain('Enter or 1–9');
+        await app.write('1');
+        await app.write('\r');
+        expect(app.picks).toStrictEqual([]);
+        await app.write(ESC);
+        await until('cancelling', () => app.picks.length === 1);
+        expect(app.picks).toStrictEqual([undefined]);
+      } finally {
+        await app.unmount();
+      }
+    });
+
     test(`CHD-544 at ${columns}x${rows}, an own CLI PATH lacks is not offered, the highlight opening on the first row when it was the default`, async () => {
       const list: ListedAgent[] = [
         agents[0]!,

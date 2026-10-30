@@ -62,8 +62,8 @@ side by side, run chord in separate terminal panes.
 
 A new interactive start with no agent named opens a centred title page before
 any agent or session starts: the mark and `CHORD` wordmark, tagline, then
-`v… · directory` above `Select agent`. It uses the `chord agents` catalog,
-including settings-defined names. Your configured agent is highlighted
+`v… · directory` above `Select agent`. By default it uses the `chord agents`
+catalog, including settings-defined names. Your configured agent is highlighted
 initially, or Claude Code by default; if absent from the list, the first row
 is highlighted. ↑/↓ or j/k moves, Enter or 1–9 selects. Esc or ctrl+c quits
 without starting a session. The choice is for this run only and is not saved;
@@ -76,11 +76,27 @@ Smaller windows use compact art without the tagline, then a single
 as the art gives way; resizing keeps the highlight. With full art, at most
 14 list rows show; `… +N more` counts hidden rows above and below.
 
-Agents whose own CLI is not on PATH are hidden; npx/uvx entries and
-settings-defined names stay. These are not checked for installation, login
-or readiness; choosing one still uses the usual startup checks. Naming an
-agent, supplying `--agent-command`, or using `-p`, `--continue` or any
-`--resume` form skips the agent picker. It also stays out when stdin or
+By default, agents whose own CLI is not on PATH are hidden; npx/uvx entries
+and settings-defined names stay. Set `offeredAgents` in your user settings,
+for example `["claude", "codex", "my-agent"]`, to choose what `Select agent`
+and `/new` completion offer, in that order. Repeats keep their first place.
+A listed CLI missing from PATH stays as `not on PATH`; choosing it refuses
+the start with its install link. Other entries are not checked for
+installation, login or readiness; the usual startup checks still apply.
+
+Unknown names are left out and reported as settings problems. The page says
+`Unknown in offeredAgents: cdex, codx` where room permits, counting names
+that do not fit as `+N more`. If all names are unknown, it shows
+`No agents available` and
+`offeredAgents in settings.json names no agent chord knows.` without falling
+back to the catalog; `/new` completion has no rows. An empty array, empty
+name or non-string item is reported and the whole key counts as absent.
+A project's `offeredAgents` is reported and ignored.
+
+The list changes only those menus: directly named agents, `open_agent`,
+teams, `chord agents`, `list_agents` and `@@` keep their usual behavior.
+Naming an agent, supplying `--agent-command`, or using `-p`, `--continue` or
+any `--resume` form skips the agent picker. It also stays out when stdin or
 stdout is not a terminal; those routes keep their usual default-agent and
 resume behavior.
 
@@ -561,6 +577,7 @@ both.
 | Key                            | Sets                                                 | Flag                |
 | ------------------------------ | ---------------------------------------------------- | ------------------- |
 | `agent`                        | the default agent and startup picker's initial highlight | `[agent]`           |
+| `offeredAgents`                | nonempty array of agent names offered by `Select agent` and `/new` completion, in order; user's file only |                     |
 | `agents.<name>.command`        | the command that starts that agent instead of chord's own   | `--agent-command` |
 | `agents.<name>.model`          | the model each of its sessions starts on             | `-m, --model`       |
 | `agents.<name>.effort`         | the effort each of its sessions starts on            | `--effort`          |

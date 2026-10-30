@@ -39,14 +39,24 @@ type Step =
   | { readonly keys: readonly string[] }
   | { readonly until: string }
   | { readonly wait: number }
+  /** chord gone from its pane, as a `/exit` leaves it. */
+  | { readonly exited: true }
   /** The sessions recorded so far aged, the latest first, by these hours. */
-  | { readonly aged: readonly number[] };
+  | { readonly aged: readonly number[] }
+  /** chord started again in the same pane and home, with these arguments. */
+  | { readonly respawn: readonly string[] };
 
-interface Shot {
+export interface Shot {
   /** The file under docs/images, without `.png`. */
   readonly name: string;
   /** The fake agent's scenario for every prompt that names none. */
   readonly scenario: string;
+  /** chord's arguments; `claude` by default, as an unnamed start asks first. */
+  readonly args?: readonly string[];
+  /** What chord's first screen shows; the prompt's hint by default. */
+  readonly first?: string;
+  /** More of chord's environment. */
+  readonly env?: readonly string[];
   readonly steps: readonly Step[];
   /** Whether the project has the `bugfix` team saved; it has by default. */
   readonly team?: boolean;
@@ -57,7 +67,18 @@ function prompt(text: string): Step[] {
   return [{ type: text }, { keys: ['Enter'] }];
 }
 
-const SHOTS: readonly Shot[] = [
+export const SHOTS: readonly Shot[] = [
+  {
+    // Nothing picked, so no agent starts. The system's own PATH leaves out
+    // every own CLI on the machine that takes it, so the list is the same
+    // on any.
+    name: 'start',
+    scenario: 'text',
+    args: [],
+    first: 'Select agent',
+    env: ['PATH=/usr/bin:/bin'],
+    steps: [],
+  },
   {
     name: 'team',
     scenario: 'team',
@@ -131,9 +152,11 @@ const SHOTS: readonly Shot[] = [
         ...prompt('/clear'),
         { wait: 3000 },
       ]),
+      ...prompt('/exit'),
+      { exited: true },
       // Taken one after another, they would all say "just now".
       { aged: [2, 26, 75] },
-      ...prompt('/resume'),
+      { respawn: ['--resume'] },
       { until: 'Resume a session' },
     ],
   },
@@ -197,6 +220,18 @@ async function until(text: string, shot: string): Promise<void> {
   while (!screen().includes(text)) {
     if (Date.now() > end) {
       throw new Error(`${shot}: "${text}" never came.\n${screen()}`);
+    }
+
+    await sleep(100);
+  }
+}
+
+async function exited(shot: string): Promise<void> {
+  const end = Date.now() + 30_000;
+
+  while (tmux('display', '-p', '-t', 'shot', '#{pane_dead}').trim() !== '1') {
+    if (Date.now() > end) {
+      throw new Error(`${shot}: chord never left.\n${screen()}`);
     }
 
     await sleep(100);
@@ -321,16 +356,18 @@ async function capture(shot: Shot): Promise<string> {
         permission: 'Say in the README what changed',
       })}`,
     ];
-    const chord = [
-      process.execPath,
-      '--define',
-      'process.env.NODE_ENV:"production"',
-      join(ROOT, 'src', 'main.tsx'),
-      // Named, as an unnamed start opens the agent picker first (CHD-532).
-      'claude',
-      '-C',
-      join(home, 'src', 'app'),
-    ];
+    const chord = (args: readonly string[]) =>
+      `exec env ${quote([
+        ...env,
+        ...(shot.env ?? []),
+        process.execPath,
+        '--define',
+        'process.env.NODE_ENV:"production"',
+        join(ROOT, 'src', 'main.tsx'),
+        ...args,
+        '-C',
+        join(home, 'src', 'app'),
+      ])}`;
 
     tmux(
       'new-session',
@@ -341,11 +378,13 @@ async function capture(shot: Shot): Promise<string> {
       String(COLUMNS),
       '-y',
       String(ROWS),
-      `exec env ${quote([...env, ...chord])}`,
+      chord(shot.args ?? ['claude']),
     );
     tmux('set', '-g', 'default-terminal', 'tmux-256color');
     tmux('set', '-as', 'terminal-overrides', ',*:RGB');
-    await until('for shortcuts', shot.name);
+    // Its pane outlives a chord that leaves, for a `respawn` to start in.
+    tmux('set', '-w', '-t', 'shot', 'remain-on-exit', 'on');
+    await until(shot.first ?? 'for shortcuts', shot.name);
 
     for (const step of shot.steps) {
       if ('type' in step) {
@@ -356,8 +395,12 @@ async function capture(shot: Shot): Promise<string> {
         await sleep(300);
       } else if ('until' in step) {
         await until(step.until, shot.name);
+      } else if ('exited' in step) {
+        await exited(shot.name);
       } else if ('aged' in step) {
         await aged(join(dir, 'state', 'chord', 'records'), step.aged);
+      } else if ('respawn' in step) {
+        tmux('respawn-pane', '-k', '-t', 'shot', chord(step.respawn));
       } else {
         await sleep(step.wait);
       }
@@ -424,6 +467,9 @@ function page(frame: string): string {
   .title { font-size: 15px; font-weight: 500; color: #ececec; }
   .screen {
     padding: 2px 22px 22px; color: ${FOREGROUND};
+    /* The whole window: a capture ends each row at its last cell drawn, and a
+       centred page has no row that reaches the edge. */
+    width: ${String(COLUMNS)}ch;
     font: 13.5px/1.3 Term, Menlo, monospace; white-space: pre;
     font-variant-ligatures: none;
   }

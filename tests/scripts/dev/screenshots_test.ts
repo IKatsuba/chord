@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { SHOTS } from '../../../scripts/dev/screenshots.ts';
 import { parseTeam } from '../../../src/teams.ts';
 
 describe('CHD-407 R1 tester: screenshot team', () => {
@@ -48,4 +49,46 @@ describe('CHD-560 U2 tester: screenshot team modes', () => {
       ]);
     });
   }
+});
+
+describe('CHD-564 the title page shots', () => {
+  const shot = (name: string) => {
+    const found = SHOTS.find((each) => each.name === name);
+
+    assert(found !== undefined);
+
+    return found;
+  };
+
+  test('start passes no name, waits for the picker, picks nothing, and leaves out own CLIs', () => {
+    const { args, first, env, steps } = shot('start');
+
+    expect(args).toEqual([]);
+    expect(first).toBe('Select agent');
+    expect(env).toContain('PATH=/usr/bin:/bin');
+    expect(steps).toEqual([]);
+  });
+
+  test('resume leaves with /exit, ages the records, and starts chord --resume', () => {
+    const { steps } = shot('resume');
+    const typed = steps.flatMap((step) => ('type' in step ? [step.type] : []));
+
+    expect(typed).not.toContain('/resume');
+    expect(typed.at(-1)).toBe('/exit');
+    expect(steps.slice(-4)).toEqual([
+      { exited: true },
+      { aged: [2, 26, 75] },
+      { respawn: ['--resume'] },
+      { until: 'Resume a session' },
+    ]);
+  });
+
+  test('every other shot is named, on the prompt', () => {
+    for (const { name, args, first } of SHOTS) {
+      if (name !== 'start') {
+        expect(args).toBeUndefined();
+        expect(first).toBeUndefined();
+      }
+    }
+  });
 });

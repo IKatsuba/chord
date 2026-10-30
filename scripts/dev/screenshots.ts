@@ -26,7 +26,7 @@
  * macOS's usual place.
  */
 import { spawnSync } from 'node:child_process';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { AnsiUp } from 'ansi_up';
@@ -38,7 +38,9 @@ type Step =
   | { readonly type: string }
   | { readonly keys: readonly string[] }
   | { readonly until: string }
-  | { readonly wait: number };
+  | { readonly wait: number }
+  /** The sessions recorded so far aged, the latest first, by these hours. */
+  | { readonly aged: readonly number[] };
 
 interface Shot {
   /** The file under docs/images, without `.png`. */
@@ -129,8 +131,32 @@ const SHOTS: readonly Shot[] = [
         ...prompt('/clear'),
         { wait: 3000 },
       ]),
+      // Taken one after another, they would all say "just now".
+      { aged: [2, 26, 75] },
       ...prompt('/resume'),
       { until: 'Resume a session' },
+    ],
+  },
+  {
+    // A reply's code blocks, each with its [copy], and [run] on a command.
+    name: 'codeblocks',
+    scenario: 'markdown',
+    steps: [
+      ...prompt('Walk me through landing a change'),
+      { until: 'built $bin' },
+      { until: 'context used' },
+    ],
+  },
+  {
+    // The conversation so far goes on in a fork, picked at once, its row in
+    // the agents list beside main.
+    name: 'fork',
+    scenario: 'edit',
+    steps: [
+      ...prompt('Greet people by name with a template literal'),
+      { until: 'context used' },
+      ...prompt('/fork arrow-function'),
+      { until: 'forked from main' },
     ],
   },
 ];
@@ -175,6 +201,47 @@ async function until(text: string, shot: string): Promise<void> {
 
     await sleep(100);
   }
+}
+
+/**
+ * The records in `dir` that hold a prompt, the latest first, each aged by its
+ * of `hours`: every time it says goes back by as much.
+ */
+async function aged(dir: string, hours: readonly number[]): Promise<void> {
+  const records = await Promise.all(
+    (await readdir(dir)).map(async (file) => {
+      const lines = (await readFile(join(dir, file), 'utf8'))
+        .split('\n')
+        .filter((line) => line !== '')
+        .map((line) => JSON.parse(line) as { type: string; at?: number });
+
+      return { path: join(dir, file), lines };
+    }),
+  );
+  const sessions = records
+    .filter(({ lines }) => lines.some(({ type }) => type === 'prompt'))
+    .toSorted(
+      (a, b) =>
+        Math.max(...b.lines.map(({ at }) => at ?? 0)) -
+        Math.max(...a.lines.map(({ at }) => at ?? 0)),
+    );
+
+  await Promise.all(
+    sessions.map(({ path, lines }, index) => {
+      const back = (hours[index] ?? 0) * 3_600_000;
+
+      return writeFile(
+        path,
+        lines
+          .map((line) =>
+            JSON.stringify(
+              line.at === undefined ? line : { ...line, at: line.at - back },
+            ),
+          )
+          .join('\n') + '\n',
+      );
+    }),
+  );
 }
 
 /** A home of chord's own, where the settings and the project are the shot's. */
@@ -239,10 +306,16 @@ async function capture(shot: Shot): Promise<string> {
       'COLORTERM=truecolor',
       `CHORD_FAKE_SCENARIO=${shot.scenario}`,
       'CHORD_FAKE_STEP_MS=40',
+      // It offers `session/fork`, as the fork shot's `/fork` asks, and the
+      // `auto` mode the team's coder is on.
+      'CHORD_FAKE_FORK=1',
+      'CHORD_FAKE_AUTO_MODE=1',
       // The children a scenario opens run on codex, a name the settings give
       // the fake, on its model, opened on a person's words.
       'CHORD_FAKE_CHILD_RUNTIME=codex',
       'CHORD_FAKE_CHILD_MODEL=gpt-6.1-sol',
+      // A fork stays on its source's model, main's in the fork shot.
+      'CHORD_FAKE_FORK_MODEL=claude-opus-5-5',
       `CHORD_FAKE_SAID=${JSON.stringify({
         agentchild: 'Run the parser tests and fix what fails',
         permission: 'Say in the README what changed',
@@ -283,6 +356,8 @@ async function capture(shot: Shot): Promise<string> {
         await sleep(300);
       } else if ('until' in step) {
         await until(step.until, shot.name);
+      } else if ('aged' in step) {
+        await aged(join(dir, 'state', 'chord', 'records'), step.aged);
       } else {
         await sleep(step.wait);
       }

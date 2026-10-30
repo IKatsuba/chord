@@ -9,6 +9,7 @@ import * as acp from '@agentclientprotocol/sdk';
 import {
   DIMCODE_PERMISSION,
   NO_CONFIG,
+  AUTO_MODE,
   NO_MODES,
   TOKENS_ONLY,
   UNPRICED_MODEL,
@@ -34,6 +35,7 @@ export const AVAILABLE_MODES: acp.SessionMode[] = [
   { id: 'default', name: 'Default' },
   { id: 'acceptEdits', name: 'Accept edits' },
   { id: 'plan', name: 'Plan' },
+  ...(AUTO_MODE ? [{ id: 'auto', name: 'Auto' }] : []),
 ];
 
 /** Each session's mode. */

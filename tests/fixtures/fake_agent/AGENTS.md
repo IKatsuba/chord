@@ -453,6 +453,10 @@
   `--fork` (`CHORD_FAKE_FORK=1`) advertises `session/fork`: any valid UUID
   source, including one from another fake process, gets a new session ID
   without replay. The `opened` scenario includes `from`, the source ID.
+  `--fork-model <id>` (`CHORD_FAKE_FORK_MODEL`) puts the fork on that model,
+  standing in for its source's, which a process of its own cannot read.
+  `--auto-mode` (`CHORD_FAKE_AUTO_MODE=1`) adds an `auto` mode to the three
+  it offers, for the screenshots' Codex member; the default list leaves it out.
   `CHORD_FAKE_REFUSE_FORK=1` refuses the advertised method;
   `CHORD_FAKE_HANG_FORK=1` leaves it unanswered. These fixtures prove transport
   and lifecycle behavior, not live cross-process context inheritance.

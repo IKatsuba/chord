@@ -22,7 +22,7 @@ members:
     role: Writes the fix, in the files the lead names
     agent: codex
     model: gpt-6.1-sol
-    mode: plan
+    mode: auto
     instructions: |
       Make the failing test pass with the smallest change that fixes the
       cause. Do not touch tests.

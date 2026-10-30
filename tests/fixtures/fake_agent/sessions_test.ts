@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import process from 'node:process';
+import { tmpdir } from 'node:os';
+import { openSession } from '../../../src/session/session.ts';
+import { fakeAgentCommand } from '../fake.ts';
 import { steeredInto, steers } from './sessions.ts';
 
 test('a wait for a steered message settles on one, and stops listening (CHD-470)', async () => {
@@ -106,6 +109,55 @@ describe('CHD-470 tester: steering waiter isolation and cancellation', () => {
     } finally {
       old.stop();
       current.stop();
+    }
+  });
+});
+
+describe("what the screenshots ask of the fake's sessions (CHD-560)", () => {
+  const SOURCE = '11111111-1111-4111-8111-111111111111';
+  const opened = (flags: readonly string[], fork?: string) =>
+    openSession({
+      agent: 'fake',
+      cwd: tmpdir(),
+      agentCommand: fakeAgentCommand(undefined, ...flags),
+      ...(fork === undefined ? {} : { fork }),
+    });
+
+  test('its modes are the three, and --auto-mode adds auto after them', async () => {
+    const plain = await opened([]);
+    const auto = await opened(['--auto-mode']);
+
+    try {
+      expect(plain.modes()?.available.map(({ id }) => id)).toEqual([
+        'default',
+        'acceptEdits',
+        'plan',
+      ]);
+      expect(auto.modes()?.available.map(({ id }) => id)).toEqual([
+        'default',
+        'acceptEdits',
+        'plan',
+        'auto',
+      ]);
+    } finally {
+      await plain.close();
+      await auto.close();
+    }
+  });
+
+  test('a fork is on its first model, and on the one --fork-model names', async () => {
+    const plain = await opened(['--fork'], SOURCE);
+    const named = await opened(
+      ['--fork', '--fork-model', 'fake-small'],
+      SOURCE,
+    );
+
+    try {
+      expect(plain.models()?.current).toBe('fake-large');
+      expect(named.models()?.current).toBe('fake-small');
+    } finally {
+      await plain.close();
+      await named.close();
     }
   });
 });

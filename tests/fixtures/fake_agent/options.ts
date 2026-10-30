@@ -166,6 +166,20 @@ export const CHILD_RUNTIME = CHILD_RUNTIME_GIVEN ?? 'codex';
  * show their runtime's; none leaves each scenario's own.
  */
 export const CHILD_MODEL = valueOf('--child-model', 'CHORD_FAKE_CHILD_MODEL');
+/**
+ * The model a forked session is on, `--fork-model <id>` or
+ * `CHORD_FAKE_FORK_MODEL`: its source's, as a real agent's fork stays on it,
+ * which this process cannot read, as chord forks in a process of its own.
+ */
+export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
+
+/**
+ * Whether it also offers an `auto` mode, `--auto-mode` or
+ * `CHORD_FAKE_AUTO_MODE=1`, as an agent standing in for Codex in the
+ * screenshots does; the list every test reads leaves it out.
+ */
+export const AUTO_MODE =
+  ARGS.includes('--auto-mode') || process.env.CHORD_FAKE_AUTO_MODE === '1';
 
 /**
  * A person's words for scenarios' names, with `--said <json>` or

@@ -1089,3 +1089,170 @@ describe("CHD-434: dimcode's notice comes due from any session of the window", (
     );
   }
 });
+
+describe('CHD-559 U4 tester: replay delivery and persisted events', () => {
+  test('one window batch retains every notification and records replay and live events once', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-replay-delivery-'));
+    const stateDir = join(dir, 'state');
+    const actions: WindowedAction[] = [];
+    const notified: string[] = [];
+    const opened: Session[] = [];
+    const past: ReturnType<Session['history']> = [
+      { type: 'prompt', turnId: 'old', text: 'saved prompt', at: 1 },
+      {
+        type: 'update',
+        turnId: 'old',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: 'SAVED_REPLAY_MARKER' },
+        },
+      },
+      {
+        type: 'result',
+        turnId: 'old',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ];
+    let seen:
+      | {
+          all: WindowedState;
+          drive: ReturnType<typeof useSessions>;
+        }
+      | undefined;
+    const read = () => {
+      assert(seen);
+
+      return seen;
+    };
+
+    function Host() {
+      const [all, dispatch] = useReducer(
+        reduceWindowed,
+        windowed(initialAppState, 1),
+      );
+      const [, redraw] = useReducer((n: number) => n + 1, 0);
+      const drive = useSessions(
+        {
+          agent: 'fake',
+          place: {
+            cwd: dir,
+            startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+            mcpServers: [],
+            mcpIgnored: [],
+          },
+          stateDir,
+          readRecords,
+          open: async (options) => {
+            const session = await openSession(options);
+
+            session.history = () => past;
+
+            opened.push(session);
+
+            return session;
+          },
+          resume: undefined,
+          server: undefined,
+          runtimes: ['fake'],
+          home: undefined,
+          configHome: undefined,
+          onQuit: undefined,
+        },
+        {
+          all,
+          state: frontState(all),
+          dispatch: (action) => {
+            actions.push(action);
+            dispatch(action);
+          },
+          redraw,
+          showDraft: () => {},
+          notify: (_, name) => {
+            notified.push(name);
+          },
+          remember: () => {},
+          stopCommand: () => {},
+        },
+      );
+
+      seen = { all, drive };
+
+      return <text>Replay delivery fixture</text>;
+    }
+
+    const drawn = await draw(<Host />);
+
+    try {
+      await until(
+        'replay connected',
+        () => read().all.sessions[1]?.connection.status === 'ready',
+      );
+
+      const batches = actions.filter(
+        (action) => action.type === 'in_session_past',
+      );
+
+      expect(batches).toHaveLength(1);
+      expect(batches[0]).toMatchObject({ key: 1, actions: past });
+      expect(notified).toHaveLength(
+        actions.reduce(
+          (count, action) =>
+            count +
+            (action.type === 'in_session'
+              ? 1
+              : action.type === 'in_session_past'
+                ? action.actions.length
+                : 0),
+          0,
+        ),
+      );
+
+      const conversation = read().drive.sessions.conversationOf(1);
+
+      assert(conversation);
+      conversation.send('text');
+      await until('live reply completed', () =>
+        actions.some(
+          (action) =>
+            action.type === 'in_session' && action.action.type === 'result',
+        ),
+      );
+      expect(
+        actions.filter((action) => action.type === 'in_session_past'),
+      ).toHaveLength(1);
+      await read().drive.sessions.closeAll();
+
+      const records = await readRecords(stateDir);
+
+      expect(records).toHaveLength(1);
+
+      const entries = await readPast(records[0]!.path);
+
+      expect(
+        entries
+          .filter((entry) => entry.type === 'prompt')
+          .map((entry) => entry.prompt),
+      ).toStrictEqual(['saved prompt', 'text']);
+      expect(
+        entries.filter(
+          (entry) =>
+            entry.type === 'update' &&
+            entry.update.sessionUpdate === 'agent_message_chunk' &&
+            entry.update.content.type === 'text' &&
+            entry.update.content.text === 'SAVED_REPLAY_MARKER',
+        ),
+      ).toHaveLength(1);
+    } finally {
+      await read().drive.sessions.closeAll();
+      await drawn.unmount();
+
+      for (const session of opened) {
+        await session.close();
+        await session.exited;
+        expect(session.agentPids.size).toBe(0);
+      }
+
+      await rm(dir, { recursive: true });
+    }
+  });
+});

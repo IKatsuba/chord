@@ -118,3 +118,60 @@ describe("a transcript's entries, written live and in a batch (CHD-559)", () => 
     expect(after.entries).not.toBe(start.entries);
   });
 });
+
+describe('CHD-559 U4 tester: nested replay boundaries', () => {
+  test('an inner failed batch restores outer ownership without taking its held array', () => {
+    const result = inBatch(() => {
+      const outer = appended([], note('outer'));
+
+      expect(() =>
+        inBatch(() => {
+          const inner = appended(outer, note('inner'));
+
+          expect(inner).not.toBe(outer);
+          expect(outer).toStrictEqual([note('outer')]);
+
+          throw new Error('inner stop');
+        }),
+      ).toThrow('inner stop');
+      expect(appended(outer, note('after'))).toBe(outer);
+
+      return outer;
+    });
+
+    expect(result).toStrictEqual([note('outer'), note('after')]);
+    expect(appended(result, note('live'))).not.toBe(result);
+  });
+
+  test('late item ends retain their pre-update name and end only once across batches', () => {
+    const actions = pastOf(3);
+    const first = inBatch(() =>
+      actions.reduce(reduceTranscript, emptyTranscript),
+    );
+    const held = structuredClone(first);
+    const end = {
+      type: 'update',
+      turnId: 'later',
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'left-2',
+        state: { state: 'completed' },
+      },
+    } as const;
+    const live = reduceTranscript(first, end);
+    const replay = inBatch(() => reduceTranscript(first, end));
+
+    expect(replay).toStrictEqual(live);
+    expect(
+      replay.entries.filter((entry) => entry.kind === 'item_ended'),
+    ).toContainEqual(
+      expect.objectContaining({
+        kind: 'item_ended',
+        name: 'Left 2, in full.',
+        end: 'done',
+      }),
+    );
+    expect(first).toStrictEqual(held);
+    expect(inBatch(() => reduceTranscript(replay, end))).toStrictEqual(replay);
+  });
+});

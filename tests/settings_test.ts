@@ -22,6 +22,7 @@ import {
   setWhere,
   shownPath,
   startupOf,
+  unknownOffered,
   unseenProblems,
 } from '../src/settings.ts';
 import { parse } from 'shell-quote';
@@ -983,6 +984,23 @@ test('a bad offeredAgents counts as absent and costs the file nothing else', () 
       ],
     });
   }
+});
+
+test('each unknown name in offeredAgents is a problem of the file that gave it', () => {
+  expect(unknownOffered('f', ['cdex', 'codx'])).toStrictEqual([
+    {
+      file: 'f',
+      kind: 'validation',
+      key: ['offeredAgents'],
+      message: '"offeredAgents": no agent named cdex, left out',
+    },
+    {
+      file: 'f',
+      kind: 'validation',
+      key: ['offeredAgents'],
+      message: '"offeredAgents": no agent named codx, left out',
+    },
+  ]);
 });
 
 test('the later offeredAgents replaces the earlier one whole', () => {

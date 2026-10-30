@@ -746,3 +746,80 @@ console.log(JSON.stringify({ closeCalls, parsed }));
     });
   }
 });
+
+describe('CHD-565 what reads the list of offered agents', () => {
+  for (const mode of ['picker', 'named', 'headless'] as const) {
+    test(`${mode}: ${mode === 'headless' ? 'never reads it' : 'says each unknown name'}`, () => {
+      const place = mkdtempSync(join(tmpdir(), 'chord-start-offered-'));
+      const project = join(place, 'project');
+      const script = join(place, 'route.ts');
+      const args = [
+        '-C',
+        project,
+        ...(mode === 'named' ? ['fixture'] : []),
+        ...(mode === 'headless' ? ['-p', 'text', 'fixture'] : []),
+      ];
+
+      mkdirSync(join(place, 'config', 'chord'), { recursive: true });
+      mkdirSync(project);
+      writeFileSync(
+        join(place, 'config', 'chord', 'settings.json'),
+        JSON.stringify({
+          offeredAgents: ['fixture', 'cdex'],
+          agents: { fixture: { command: fakeAgentCommand() } },
+        }),
+      );
+      writeFileSync(
+        script,
+        `import { spyOn } from 'bun:test';
+Object.defineProperty(process.stdin, 'isTTY', { value: true, configurable: true });
+Object.defineProperty(process.stdout, 'isTTY', { value: true, configurable: true });
+const { cli, startServices } = await import(${JSON.stringify(new URL('../src/main.tsx', import.meta.url).pathname)});
+const stop = new Error('fixture boundary');
+spyOn(startServices, 'openTerminal').mockImplementation(async () => ({ renderer: {}, dark: true }));
+spyOn(startServices, 'render').mockImplementation((element) => {
+  console.log(JSON.stringify({ offered: element.props.offered }));
+  throw stop;
+});
+spyOn(startServices, 'copier').mockImplementation(() => { throw stop; });
+try {
+  await cli.noExit().throwErrors().parse(${JSON.stringify(args)});
+} catch (error) {
+  if (error !== stop) throw error;
+}
+`,
+      );
+
+      try {
+        const ran = spawnSync(process.execPath, [script], {
+          env: {
+            ...process.env,
+            XDG_CONFIG_HOME: join(place, 'config'),
+            XDG_STATE_HOME: join(place, 'state'),
+            CHORD_RESOURCE_FIXTURE: 'true',
+          },
+          encoding: 'utf8',
+          timeout: 15_000,
+        });
+
+        expect(ran.status, ran.stderr).toBe(0);
+        expect(ran.stderr.includes('no agent named')).toBe(mode !== 'headless');
+
+        if (mode !== 'headless') {
+          expect(ran.stderr).toContain(
+            '"offeredAgents": no agent named cdex, left out',
+          );
+          expect(ran.stderr).not.toContain('no agent named fixture');
+        }
+
+        if (mode === 'picker') {
+          expect(JSON.parse(ran.stdout.trim())).toEqual({
+            offered: ['fixture', 'cdex'],
+          });
+        }
+      } finally {
+        rmSync(place, { recursive: true, force: true });
+      }
+    });
+  }
+});

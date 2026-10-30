@@ -113,12 +113,18 @@ export function AgentPicker({
   rows,
   active,
   onPick,
+  nothingKnown,
+  note,
 }: {
   agents: readonly ListedAgent[];
   preferred: string;
   rows: number;
   active: boolean;
   onPick: (id: string) => void;
+  /** Says why there is no row where the person's list names no known agent. */
+  nothingKnown: boolean;
+  /** Under the hint: the names the person's list gives that chord lacks. */
+  note: string | undefined;
 }) {
   const choices = agentChoices(agents, preferred);
   const hint = useAgentHint(choices.length > 0);
@@ -131,6 +137,11 @@ export function AgentPicker({
           <text {...TEXT} attributes={DIM}>
             No agents available
           </text>
+          {nothingKnown && (
+            <text {...CUT} attributes={DIM}>
+              offeredAgents in settings.json names no agent chord knows.
+            </text>
+          )}
         </box>
       ) : (
         <PickerList
@@ -145,6 +156,13 @@ export function AgentPicker({
           {hint}
         </text>
       </box>
+      {note !== undefined && (
+        <box marginTop={1}>
+          <text {...CUT} attributes={DIM}>
+            {note}
+          </text>
+        </box>
+      )}
     </box>
   );
 }

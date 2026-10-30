@@ -6,7 +6,7 @@
  * is: ink-select-input scrolls by rotating, so it can neither keep a long
  * list in order nor say where it has scrolled to.
  */
-import type { ListedAgent } from '../../agents.ts';
+import { type ListedAgent, NOT_ON_PATH } from '../../agents.ts';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { type AgentOption, valueName } from '../../session/config.ts';
@@ -123,27 +123,28 @@ export function pickerLayout(
 }
 
 /**
- * The agents chord can start, in catalog order: an own CLI PATH lacks is
- * left out, as picking it could only fail (CHD-544); npx, uvx and the
- * settings files' commands stay, as `chord agents` counts them. The
- * preferred name only sets the opening highlight, on the first row when
- * it is left out.
+ * The rows for what `offeredAgents` gives, in its order: an own CLI PATH
+ * lacks is there only when the person's list named it, so it says so. The
+ * preferred name only sets the opening highlight, on the first row when it
+ * is not among them.
  */
 export function agentChoices(
   agents: readonly ListedAgent[],
   preferred: string,
 ): PickerChoice[] {
-  return agents
-    .filter(({ found }) => found !== false)
-    .map(({ name, title }) => ({
+  return agents.map(({ name, title, found }) => {
+    const note = [
+      ...(title === undefined || title === name ? [] : [title]),
+      ...(found === false ? [NOT_ON_PATH] : []),
+    ].join(' · ');
+
+    return {
       key: name,
       value: name,
-      label:
-        title === undefined || title === name
-          ? name
-          : `${name}\x1b[2m · ${title}\x1b[22m`,
+      label: note === '' ? name : `${name}\x1b[2m · ${note}\x1b[22m`,
       current: name === preferred,
-    }));
+    };
+  });
 }
 
 /** One model on the list; `current` is the one the agent says it uses. */

@@ -83,6 +83,27 @@ export function wordmarkColours(
   return [paint(MIDDLE), paint(1)];
 }
 
+/**
+ * The names the person's list gives that chord lacks, as one row of `width`:
+ * whole names in order and a count of the rest, at least one name shown. The
+ * row never grows with a typo, as the settings problems hold every name.
+ */
+export function unknownNote(names: readonly string[], width: number): string {
+  const note = (shown: number) =>
+    `Unknown in offeredAgents: ${[
+      ...names.slice(0, shown),
+      ...(shown < names.length ? [`+${names.length - shown} more`] : []),
+    ].join(', ')}`;
+
+  for (let shown = names.length; shown > 1; shown--) {
+    if (stringWidth(note(shown)) <= width) {
+      return note(shown);
+    }
+  }
+
+  return note(1);
+}
+
 /** The page for one window. */
 export function startLayout(page: {
   columns: number;
@@ -93,8 +114,17 @@ export function startLayout(page: {
   framed: boolean;
   /** The hint's rows, wrapped at the column's inner width. */
   hintRows: number;
-}): { step: StartStep; listRows: number; top: number; column: number } {
-  const { columns, rows, lines, framed, hintRows } = page;
+  /** The rows a note under the hint would take, its gap counted; none else. */
+  noteRows?: number;
+}): {
+  step: StartStep;
+  listRows: number;
+  top: number;
+  column: number;
+  /** Whether the note is drawn: never at the cost of a row of the list. */
+  note: boolean;
+} {
+  const { columns, rows, lines, framed, hintRows, noteRows = 0 } = page;
   // The picker around its list: the agents' title, gap, gap and hint; the
   // frame's two borders, title, sentence, gap and gap, and its hint.
   const around = (framed ? 6 : 3) + hintRows;
@@ -117,18 +147,22 @@ export function startLayout(page: {
   const listRows = whole
     ? Math.max(lines, 1)
     : Math.max(1, Math.min(cap, fits - 1));
+  const note =
+    noteRows > 0 && step !== 'none' && lines <= Math.min(fits - noteRows, cap);
   const pageRows =
     ART[step] +
     (step === 'none' && !framed ? 0 : 1) +
     around +
     listRows +
-    (whole ? 0 : 1);
+    (whole ? 0 : 1) +
+    (note ? noteRows : 0);
 
   return {
     step,
     listRows,
     top: Math.max(0, Math.floor((rows - pageRows) / 2)),
     column: startColumn(columns, framed),
+    note,
   };
 }
 

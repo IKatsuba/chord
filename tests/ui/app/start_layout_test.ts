@@ -4,12 +4,84 @@ import {
   hintRows,
   listLines,
   startLayout,
+  unknownNote,
   versionLine,
   wordmarkColours,
 } from '../../../src/ui/app/start_layout.ts';
 
 const agents = { framed: false, hintRows: 1 };
 const sessions = { framed: true, hintRows: 1 };
+
+describe('CHD-565 the note of unknown names', () => {
+  test.each([
+    [120, 40, 3, 1, 'full', 3, true, 9],
+    [120, 40, 14, 1, 'full', 14, true, 4],
+    [80, 24, 3, 1, 'compact', 3, true, 4],
+    [80, 24, 11, 1, 'compact', 11, true, 0],
+    [80, 24, 12, 1, 'compact', 12, false, 1],
+    [59, 40, 3, 1, 'compact', 3, true, 12],
+    [39, 24, 3, 2, 'line', 3, true, 6],
+    [39, 12, 3, 2, 'line', 3, false, 1],
+    [30, 12, 3, 3, 'line', 3, false, 0],
+    [30, 8, 3, 3, 'none', 1, false, 0],
+  ] as const)(
+    '%i×%i with %i lines, %i hint rows: %s, %i rows, note %p, top %i',
+    (columns, rows, lines, hintRows, step, listRows, note, top) => {
+      expect(
+        startLayout({
+          columns,
+          rows,
+          lines,
+          framed: false,
+          hintRows,
+          noteRows: 2,
+        }),
+      ).toMatchObject({ step, listRows, note, top });
+    },
+  );
+
+  test('a note never changes the step or costs a row of the list', () => {
+    for (const columns of [30, 39, 40, 59, 60, 80, 120]) {
+      for (const rows of [5, 8, 12, 17, 18, 24, 31, 32, 40]) {
+        for (const lines of [1, 3, 11, 12, 14, 15, 28]) {
+          const page = { columns, rows, lines, framed: false, hintRows: 1 };
+          const without = startLayout(page);
+          const withNote = startLayout({ ...page, noteRows: 2 });
+
+          expect(without.note).toBe(false);
+          expect(withNote.step).toBe(without.step);
+          expect(withNote.listRows).toBe(without.listRows);
+        }
+      }
+    }
+  });
+
+  test('every name that fits shows, whole and in order', () => {
+    expect(unknownNote(['cdex', 'codx'], 60)).toBe(
+      'Unknown in offeredAgents: cdex, codx',
+    );
+  });
+
+  test('the rest is counted, with room kept for the count', () => {
+    const names = ['aaaa', 'bbbb', 'cccc', 'dddd'];
+    const all = 'Unknown in offeredAgents: aaaa, bbbb, cccc, dddd';
+
+    expect(unknownNote(names, all.length)).toBe(all);
+    expect(unknownNote(names, all.length - 1)).toBe(
+      'Unknown in offeredAgents: aaaa, bbbb, +2 more',
+    );
+    expect(
+      unknownNote(names, 'Unknown in offeredAgents: aaaa, +3 more'.length),
+    ).toBe('Unknown in offeredAgents: aaaa, +3 more');
+  });
+
+  test('at least one name shows, however narrow, for the row to cut', () => {
+    expect(unknownNote(['aaaa', 'bbbb'], 5)).toBe(
+      'Unknown in offeredAgents: aaaa, +1 more',
+    );
+    expect(unknownNote(['aaaa'], 5)).toBe('Unknown in offeredAgents: aaaa');
+  });
+});
 
 describe('startLayout', () => {
   test.each([

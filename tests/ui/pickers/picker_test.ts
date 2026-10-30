@@ -7,6 +7,7 @@ import {
   agentStart,
   listedAgents,
   missingCommand,
+  offeredAgents,
 } from '../../../src/agents.ts';
 import { openSession } from '../../../src/session/session.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -666,27 +667,30 @@ test('CHD-532 agent adaptation retains catalog order and only marks the preferre
   expect(openView(agentChoices([], 'absent'), 6).highlighted).toBe(0);
 });
 
-test('CHD-544 agent choices leave out an own CLI PATH lacks, and keep what chord agents counts', () => {
+test('CHD-544 with no list, agent choices leave out an own CLI PATH lacks, and keep what chord agents counts', () => {
   const choices = agentChoices(
-    [
-      { name: 'claude', title: 'Claude', start: 'npx c', from: 'npx' },
-      {
-        name: 'cursor',
-        title: 'Cursor',
-        start: 'agent acp',
-        from: 'cli',
-        found: false,
-      },
-      { name: 'fast', title: 'Fast', start: 'uvx f', from: 'uvx' },
-      {
-        name: 'goose',
-        title: 'goose',
-        start: 'goose acp',
-        from: 'cli',
-        found: true,
-      },
-      { name: 'mine', title: undefined, start: 'mine', from: 'settings' },
-    ],
+    offeredAgents(
+      [
+        { name: 'claude', title: 'Claude', start: 'npx c', from: 'npx' },
+        {
+          name: 'cursor',
+          title: 'Cursor',
+          start: 'agent acp',
+          from: 'cli',
+          found: false,
+        },
+        { name: 'fast', title: 'Fast', start: 'uvx f', from: 'uvx' },
+        {
+          name: 'goose',
+          title: 'goose',
+          start: 'goose acp',
+          from: 'cli',
+          found: true,
+        },
+        { name: 'mine', title: undefined, start: 'mine', from: 'settings' },
+      ],
+      undefined,
+    ).agents,
     'cursor',
   );
 
@@ -700,6 +704,26 @@ test('CHD-544 agent choices leave out an own CLI PATH lacks, and keep what chord
   // The preferred agent left out: the highlight opens on the first row.
   expect(choices.some(({ current }) => current)).toBe(false);
   expect(openView(choices, 6).highlighted).toBe(0);
+});
+
+test('CHD-565 a listed own CLI PATH lacks keeps its row and says so, its title once', () => {
+  const missing = { start: 'x acp', from: 'cli', found: false } as const;
+  const choices = agentChoices(
+    offeredAgents(
+      [
+        { name: 'cursor', title: 'Cursor', ...missing },
+        { name: 'goose', title: 'goose', ...missing },
+      ],
+      ['goose', 'cursor'],
+    ).agents,
+    'cursor',
+  );
+
+  expect(choices.map(({ label }) => label)).toEqual([
+    'goose\x1b[2m · not on PATH\x1b[22m',
+    'cursor\x1b[2m · Cursor · not on PATH\x1b[22m',
+  ]);
+  expect(choices.map(({ current }) => current)).toEqual([false, true]);
 });
 
 describe('CHD-544 tester: every offered fixture command starts', () => {
@@ -720,7 +744,10 @@ describe('CHD-544 tester: every offered fixture command starts', () => {
       process.env['PATH'] = dir;
 
       const listed = await listedAgents(commands);
-      const choices = agentChoices(listed, 'zeroclaw');
+      const choices = agentChoices(
+        offeredAgents(listed, undefined).agents,
+        'zeroclaw',
+      );
       const offered = listed.filter(({ name }) =>
         choices.some(({ value }) => value === name),
       );

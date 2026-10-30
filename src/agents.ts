@@ -300,6 +300,9 @@ export function offeredAgents(
   return { agents, unknown };
 }
 
+/** What chord says of an own CLI whose command PATH lacks. */
+export const NOT_ON_PATH = 'not on PATH';
+
 /** What chord calls an agent with no title, as the settings files alone define it. */
 export const SETTINGS_ONLY = 'from settings';
 
@@ -310,14 +313,16 @@ export const SETTINGS_ONLY = 'from settings';
 export function agentNote({ title, from, found }: ListedAgent): string {
   const shown = title ?? SETTINGS_ONLY;
 
-  return from === 'cli' && found === false ? `${shown} · not on PATH` : shown;
+  return from === 'cli' && found === false
+    ? `${shown} · ${NOT_ON_PATH}`
+    : shown;
 }
 
 /** What `chord agents` says of where an agent's start comes from. */
 function mark({ from, found }: ListedAgent): string {
   switch (from) {
     case 'cli':
-      return found ? 'own CLI · found' : 'own CLI · not on PATH';
+      return found ? 'own CLI · found' : `own CLI · ${NOT_ON_PATH}`;
     case 'settings':
       return 'settings';
     default:

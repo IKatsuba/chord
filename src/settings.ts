@@ -827,6 +827,22 @@ export function problemNote(
   return `${shownPath(file, where)}: ${message}`;
 }
 
+/**
+ * The names `offeredAgents` gives that chord lacks, one problem each: the
+ * start screen's note may count some of them rather than name them.
+ */
+export function unknownOffered(
+  file: string,
+  unknown: readonly string[],
+): SettingsProblem[] {
+  return unknown.map((name) => ({
+    file,
+    kind: 'validation',
+    key: ['offeredAgents'],
+    message: `"offeredAgents": no agent named ${name}, left out`,
+  }));
+}
+
 /** A problem as stderr says it, naming the file. */
 export function problemLine({ file, message }: SettingsProblem): string {
   return `chord: ${file}: ${message}`;

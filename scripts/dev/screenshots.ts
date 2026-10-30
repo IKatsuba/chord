@@ -481,7 +481,10 @@ const FONT = `
   @font-face { font-family: Term; font-weight: bold; src: local('JetBrains Mono Bold'), local('JetBrainsMono-Bold'); }
 `;
 
-/** A logo alone, at the shots' font and metrics, nothing behind it. */
+/**
+ * A logo alone, nothing behind it, its cell a whole 12×24 pixels: the shots'
+ * fractional cell leaves seams between the block glyphs, which show on white.
+ */
 function logoPage(frame: string): string {
   return `<!doctype html>
 <meta charset="utf-8">
@@ -490,10 +493,10 @@ function logoPage(frame: string): string {
   html, body { margin: 0; background: transparent; }
   .page {
     display: inline-block; width: ${String(LOGO_COLUMNS)}ch;
-    font: 13.5px/1.3 Term, Menlo, monospace; white-space: pre;
+    font: 20px/24px Term, Menlo, monospace; white-space: pre;
     font-variant-ligatures: none;
   }
-  .row { height: 1.3em; }
+  .row { height: 24px; }
 </style>
 <div class="page">${rowsHtml(logoRows(frame))}</div>`;
 }

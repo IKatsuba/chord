@@ -44,6 +44,7 @@ const WINDOW: WindowView = {
   teams: () => Promise.resolve({ found: [], runs: [] }),
   runTeam: () => Promise.resolve({ error: 'no teams here' }),
   teamPlaces: () => Promise.reject(new Error('no teams here')),
+  settingSaved: () => {},
   settingsWhere: () => ({
     agent: 'fake',
     configHome: undefined,

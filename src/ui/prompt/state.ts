@@ -266,7 +266,12 @@ export type PromptAction =
   /** `/vim` turned vim mode on, in insert mode, or off. */
   | { readonly type: 'vim_toggled'; readonly on: boolean }
   /** A key in vim mode moved it on: its mode, a command half typed, `u`'s past. */
-  | { readonly type: 'vim_changed'; readonly vim: Vim };
+  | { readonly type: 'vim_changed'; readonly vim: Vim }
+  /** What `/new` lists changed, as the `settings` tool saved it. */
+  | {
+      readonly type: 'agents_offered';
+      readonly agents: readonly CommandItem[];
+    };
 
 export const initialPrompt: PromptState = {
   menu: initialMenu,
@@ -332,6 +337,8 @@ export function reducePrompt(
     }
     case 'vim_changed':
       return state.vim === undefined ? state : { ...state, vim: action.vim };
+    case 'agents_offered':
+      return { ...state, agents: action.agents };
     case 'queued': {
       // Not the person's: nothing of the box went with it. A monitor's
       // message is reported again in its place as batches join it.

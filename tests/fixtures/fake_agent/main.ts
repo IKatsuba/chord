@@ -482,6 +482,8 @@ const SCENARIOS = [
   'settingsremove',
   'settingsagent',
   'settingslong',
+  'settingsvim',
+  'settingsoffered',
   'cutcalls',
   'cutcallsback',
   'cutcallsunfinished',

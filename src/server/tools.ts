@@ -312,6 +312,8 @@ export interface WindowView {
    * the runtime of the session that asks, which the box names.
    */
   settingsWhere(caller: Caller): SettingsWhere & { readonly agent: string };
+  /** A `settings` write was saved: the window takes up what it can at once. */
+  settingSaved(path: readonly string[], change: SettingChange): void;
   /** Hands a team a job: its lead opened as a child of the caller's. */
   runTeam(caller: Caller, args: RunTeamArgs): Promise<RunTeamAnswer>;
   /** A lead opens a member its team's file has. */
@@ -692,6 +694,8 @@ export async function changeSetting(
   } catch (error) {
     return { error: saveFailure(answer.file, error, shownHome(where)) };
   }
+
+  caller.window.settingSaved(path, change);
 
   return { ...answer, saved: true };
 }

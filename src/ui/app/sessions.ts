@@ -109,7 +109,9 @@ import {
 } from '../../session/window_agents.ts';
 import { subagentPath } from '../../session/subagents.ts';
 import { askerParts } from '../dialogs/asker.ts';
+import type { ListedAgent } from '../../agents.ts';
 import { homePath } from '../../settings.ts';
+import { settingPickedUp } from './setting_picked_up.ts';
 import type { AgentOption } from '../../session/config.ts';
 import {
   DIMCODE_NOTICE,
@@ -252,6 +254,8 @@ export interface SessionsOptions {
   server: ChordServer | undefined;
   /** Every runtime chord can start, which `list_agents` names. */
   runtimes: readonly string[];
+  /** The agents the registry and PATH list, which `/new` is drawn from. */
+  listedAgents?: readonly ListedAgent[] | undefined;
   home: string | undefined;
   /**
    * The user's config directory, whose `chord/teams/` holds the teams for
@@ -290,6 +294,7 @@ export function useSessions(
     resume,
     server,
     runtimes: runtimeNames,
+    listedAgents = [],
     home,
     configHome,
     onQuit,
@@ -2676,6 +2681,14 @@ export function useSessions(
       return { ...answer.ran, ...started };
     },
     teamPlaces: (caller, name) => teamPlaces(caller.key, name),
+    settingSaved: (path, change) => {
+      for (const action of settingPickedUp(path, change, {
+        runtimes: runtimeNames,
+        listed: listedAgents,
+      })) {
+        dispatch(action);
+      }
+    },
     settingsWhere: (caller) => ({
       agent: ownedBy(sessions.agents, caller.key)?.main.agent ?? 'the agent',
       configHome,

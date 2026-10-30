@@ -67,6 +67,7 @@ function windowOf(probed: string[] = []): WindowView {
     teams: () => Promise.resolve({ found: [], runs: [] }),
     runTeam: () => Promise.resolve({ error: 'no teams here' }),
     teamPlaces: () => Promise.reject(new Error('no teams here')),
+    settingSaved: () => {},
     settingsWhere: () => ({
       agent: 'fake',
       configHome: undefined,
@@ -709,11 +710,14 @@ describe('the settings tool writes (CHD-568)', () => {
 
       const asked: Omit<PermissionWait, 'id'>[] = [];
       const shown: SettingsChanged[] = [];
+      const saved: unknown[] = [];
       const caller: Caller = {
         role: 'person',
         key: 0,
         window: {
           ...windowOf(),
+          settingSaved: (savedPath, savedChange) =>
+            saved.push([savedPath, savedChange]),
           settingsWhere: () => ({
             agent: 'claude',
             configHome: join(home, '.config'),
@@ -738,7 +742,7 @@ describe('the settings tool writes (CHD-568)', () => {
       );
       const held = await readFile(file, 'utf8').catch(() => undefined);
 
-      return { asked, shown, answer, held };
+      return { asked, shown, answer, held, saved };
     } finally {
       await rm(root, { recursive: true });
     }
@@ -795,10 +799,29 @@ describe('the settings tool writes (CHD-568)', () => {
 
   test('a no writes nothing and says saved false', async () => {
     const text = '{"theme":"dark"}';
-    const { answer, held, shown } = await changed('no', { text });
+    const { answer, held, shown, saved } = await changed('no', { text });
 
     expect(answer).toStrictEqual({ ...shown[0]!, saved: false });
     expect(held).toBe(text);
+    expect(saved).toStrictEqual([]);
+  });
+
+  test('the window hears of a write once it is saved, and only then', async () => {
+    expect((await changed('yes')).saved).toStrictEqual([
+      [['theme'], { set: 'light' }],
+    ]);
+    expect((await changed(undefined)).saved).toStrictEqual([]);
+    expect(
+      (
+        await changed('yes', {
+          text: '{"theme":"dark"}',
+          mid: (file) => writeFile(file, '{ broken'),
+        })
+      ).saved,
+    ).toStrictEqual([]);
+    expect(
+      (await changed('yes', { text: '{"theme":"light"}' })).saved,
+    ).toStrictEqual([]);
   });
 
   test('a withdrawn box writes nothing, as a refusal', async () => {

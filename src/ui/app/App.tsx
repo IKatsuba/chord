@@ -561,6 +561,7 @@ export function App({
       resume,
       server,
       runtimes,
+      listedAgents: listed,
       home,
       configHome,
       onQuit,

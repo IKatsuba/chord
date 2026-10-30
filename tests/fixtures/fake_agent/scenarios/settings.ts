@@ -49,6 +49,14 @@ export const SETTINGS = {
   settingsremove: reads({ action: 'remove', path: ['theme'] }),
   // A kind B key, which a project's file holding it shadows.
   settingsagent: reads({ action: 'set', path: ['agent'], value: 'fake' }),
+  // The prompt's editing, which the window takes up at once.
+  settingsvim: reads({ action: 'set', path: ['editorMode'], value: 'vim' }),
+  // What `/new` lists, which the window takes up at once.
+  settingsoffered: reads({
+    action: 'set',
+    path: ['offeredAgents'],
+    value: ['claude'],
+  }),
   // A value far taller than the room left above the box at 80x24.
   settingslong: reads({
     action: 'set',

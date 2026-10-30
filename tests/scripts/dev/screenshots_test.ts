@@ -149,3 +149,29 @@ describe('CHD-564 the logo crop', () => {
     expect(() => logoRows(`\n\n${TAGLINE}`)).toThrow('no title page art');
   });
 });
+
+describe('CHD-564 tester: resume screenshot session fixtures', () => {
+  test('the three documented prompts are submitted as separate sessions before exit', () => {
+    const resume = SHOTS.find((shot) => shot.name === 'resume');
+
+    assert(resume !== undefined);
+
+    const typed = resume.steps.flatMap((step, at) =>
+      'type' in step ? [{ text: step.type, next: resume.steps[at + 1] }] : [],
+    );
+
+    expect(typed.map(({ text }) => text)).toEqual([
+      'Explain src/ui/state.ts',
+      '/clear',
+      'Add a --json flag to the agents command',
+      '/clear',
+      "Tidy the README's install section",
+      '/clear',
+      '/exit',
+    ]);
+
+    for (const { next } of typed) {
+      expect(next).toEqual({ keys: ['Enter'] });
+    }
+  });
+});

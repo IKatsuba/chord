@@ -966,13 +966,17 @@ test('a bad offeredAgents counts as absent and costs the file nothing else', () 
     ['claude', 1],
     [1, 2],
     'claude',
+    'x',
     null,
     {},
   ]) {
     expect(
-      parseSettings('f', JSON.stringify({ offeredAgents, agent: 'fake' })),
+      parseSettings(
+        'f',
+        JSON.stringify({ offeredAgents, agent: 'fake', theme: 'dark' }),
+      ),
     ).toStrictEqual({
-      settings: { agent: 'fake' },
+      settings: { agent: 'fake', theme: 'dark' },
       problems: [
         {
           file: 'f',

@@ -59,6 +59,9 @@ const USER_ONLY = [
   'offeredAgents',
 ] as const;
 
+/** What `offeredAgents` holds: one or more agent names, in the order shown. */
+const OfferedAgents = z.array(z.string().min(1)).min(1);
+
 /** One settings file, as written. */
 const SettingsFile = z
   .strictObject({
@@ -104,13 +107,11 @@ const SettingsFile = z
      * The agents the start screen and `/new` offer, in the order they show;
      * read only from the user's file, as it is about what a person picks from,
      * not a project. Checked whole, so a bad name costs this key alone: an
-     * issue on an item is one the file's parse cannot drop from a list.
+     * issue on an item is one the file's parse cannot drop from a list
+     * (the owner's Q327).
      */
     offeredAgents: z.custom<string[]>(
-      (value) =>
-        Array.isArray(value) &&
-        value.length > 0 &&
-        value.every((name) => typeof name === 'string' && name.length > 0),
+      (value) => OfferedAgents.safeParse(value).success,
       'expected a list of one or more agent names',
     ),
   })

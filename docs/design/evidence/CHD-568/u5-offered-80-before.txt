@@ -1,0 +1,24 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u5
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  fake
+  cursor              Cursor
+  fx                  fx
+  opencode            OpenCode
+  agoragentic-acp     Agoragentic
+  auggie              Auggie CLI
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

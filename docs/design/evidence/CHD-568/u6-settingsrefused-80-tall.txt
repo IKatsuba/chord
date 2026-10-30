@@ -1,0 +1,80 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u6
+ ▀▀     ? for shortcuts · /help
+
+ › settingsrefused
+
+ ⏺ Settings(agents.claude.modle)
+   ⎿  No setting agents.claude.modle
+
+ ⏺ Settings(agents.claude.command)
+   ⎿  chord does not write agents.claude.command; edit the settings file by
+      hand
+
+ ⏺ Settings(mcpServers.linear)
+   ⎿  chord does not write mcpServers.linear; edit the settings file by hand
+
+ ⏺ Settings(agents.codex)
+   ⎿  agents.codex is not one setting; name agents.codex.model or
+      agents.codex.effort
+
+ ⏺ Settings(teamSelection)
+   ⎿  teamSelection is not one setting; name teamSelection.intent,
+      teamSelection.prefer.agent or teamSelection.prefer.model
+
+ ⏺ Settings(editorMode)
+   ⎿  editorMode cannot be "emacs": Invalid option: expected one of
+      "normal"|"vim"
+
+ ⏺ Settings(agents.nope.model)
+   ⎿  chord knows no agent named "nope"; list_agents names every one
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

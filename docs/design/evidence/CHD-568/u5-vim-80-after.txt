@@ -1,0 +1,24 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u5
+ ▀▀     ? for shortcuts · /help
+
+ › settingsvim
+
+ ⏺ Settings(editorMode) · set
+   ⎿  Now    not set
+      After  "vim"
+      Saved to ~/.config/chord/settings.json · takes effect now
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- INSERT -- ? for shortcuts   Fake Large with a 1M context window · 1% used

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u5
+ ▀▀     ? for shortcuts · /help
+
+ › settingsoffered
+
+ ⏺ Settings(offeredAgents) · set
+   ⎿  Now    not set
+      After  ["claude"]
+      Saved to ~/.config/chord/settings.json · takes effect now
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  claude  Claude Agent
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

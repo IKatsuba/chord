@@ -1,0 +1,24 @@
+
+ ⏺ Settings(theme) · change
+   ⎿  Now    "dark"
+      After  "light"
+
+ ⏺ Settings(agents.fake.model)
+   ⎿  Another settings change is waiting on the person; nothing was asked or
+      saved. Ask again once they have answered
+
+ ››› Waiting for you… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Change theme?                                                                │
+│                                                                              │
+│ ❯ 1. Yes, in ~/.config/chord/settings.json                                   │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

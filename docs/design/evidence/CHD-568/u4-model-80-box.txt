@@ -1,0 +1,24 @@
+
+ ⏺ ~/.config/chord/settings.json: unknown key "zzz", ignored
+
+ › settingsmodel
+
+ ⏺ Settings(agents.fake.model) · set
+   ⎿  Now    not set
+      After  "fake-small"
+
+ ››› Waiting for you… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Set agents.fake.model?                                                       │
+│                                                                              │
+│ ❯ 1. Yes, in ~/.config/chord/settings.json                                   │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

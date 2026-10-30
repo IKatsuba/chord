@@ -1655,7 +1655,10 @@ describe('the settings tool on the transcript (CHD-568)', () => {
     try {
       await withWindow(
         async (window) => {
+          mkdirSync(join(window.dir, '.fake-gate'));
           await send(window, 'settingsoverlap');
+          await window.shows('Set theme?');
+          writeFileSync(join(window.dir, '.fake-gate', 'release'), '');
           await window.shows('Another settings change is waiting');
 
           const read = window.frame().replace(/\s+/g, ' ');
@@ -1751,8 +1754,10 @@ describe('the settings tool on the transcript (CHD-568)', () => {
     try {
       await withWindow(
         async (window) => {
+          mkdirSync(join(window.dir, '.fake-gate'));
           await send(window, 'settingswithdrawn');
           await window.shows('Change theme?');
+          writeFileSync(join(window.dir, '.fake-gate', 'release'), '');
           await window.shows(
             'The person was not asked to the end; nothing was saved',
           );

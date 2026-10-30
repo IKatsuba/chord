@@ -3,7 +3,8 @@
  * whatever the run's `XDG_CONFIG_HOME` holds: a test's fixture, never a
  * person's own.
  */
-import { pause, type Play } from '../turn.ts';
+import type { Play } from '../turn.ts';
+import { GATE_RELEASE, gateOpened } from './agents.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
 const calls =
@@ -30,8 +31,9 @@ const calls =
   };
 
 /**
- * A second change while the first's box is up: the first asks, the second is
- * refused with that box still open, and the turn ends once the person answers.
+ * A second change while the first's box is up: the first asks, and once the
+ * gate opens, at most 10 s on, the second is refused with that box still open;
+ * the turn ends once the person answers.
  */
 const overlap: Play = async (turn) => {
   const client = await chordClient(turn);
@@ -51,8 +53,7 @@ const overlap: Play = async (turn) => {
       600_000,
     );
 
-    // Long enough for the first to take the box.
-    await pause(turn.signal, 300);
+    await gateOpened(turn, GATE_RELEASE);
     await callChord(
       turn,
       client,
@@ -69,8 +70,9 @@ const overlap: Play = async (turn) => {
 };
 
 /**
- * A change whose call the agent gives up on with the box still up, as a
- * cancelled request is withdrawn: chord says the person was not asked to the end.
+ * A change whose call the agent gives up on with the box up, once the gate
+ * opens, at most 10 s on, as a cancelled request is withdrawn: chord says the
+ * person was not asked to the end.
  */
 const withdrawn: Play = async (turn) => {
   const client = await chordClient(turn);
@@ -93,11 +95,17 @@ const withdrawn: Play = async (turn) => {
       kind: 'other',
       rawInput: args,
     });
-    await client
+
+    const cancelled = new AbortController();
+    const call = client
       .callTool({ name: 'settings', arguments: args }, undefined, {
-        signal: AbortSignal.timeout(1000),
+        signal: cancelled.signal,
       })
       .catch(() => {});
+
+    await gateOpened(turn, GATE_RELEASE);
+    cancelled.abort();
+    await call;
 
     await turn.send({
       sessionUpdate: 'tool_call_update',

@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   classifySetting,
@@ -575,14 +575,81 @@ describe('reading settings (CHD-568)', () => {
     );
   });
 
+  test('an mcpServers no server can be read from fails closed, in every view', async () => {
+    const listed = JSON.stringify({
+      mcpServers: [
+        { env: { TOKEN: SECRET }, headers: { Authorization: SECRET } },
+        [{ env: SECRET, headers: [SECRET] }],
+      ],
+    });
+
+    await placed({ user: listed, project: listed }, async (where) => {
+      const { answer } = await read(where);
+      const server = {
+        env: { TOKEN: '***' },
+        headers: { Authorization: '***' },
+      };
+      const masked = {
+        mcpServers: [server, [{ env: '***', headers: '***' }]],
+      };
+
+      expect(JSON.stringify(answer)).not.toContain(SECRET);
+      expect(answer.user).toStrictEqual(masked);
+      expect(answer.project).toStrictEqual(masked);
+    });
+
+    await placed(
+      { user: JSON.stringify({ mcpServers: SECRET }) },
+      async (where) => {
+        const { answer } = await read(where);
+
+        expect(JSON.stringify(answer)).not.toContain(SECRET);
+        expect(answer.user).toStrictEqual({ mcpServers: '***' });
+      },
+    );
+  });
+
+  test('with HOME unset, no answer names the home the config was found under', async () => {
+    // Under the home but absent, so nothing reads a real settings file.
+    const configHome = join(homedir(), '.chord-test-absent-config');
+    const file = join(
+      '/',
+      '.chord-test-absent-config',
+      'chord',
+      'settings.json',
+    );
+
+    await placed({ project: '{"theme":"dark"}' }, async (where) => {
+      const { answer, files } = await read({
+        ...where,
+        configHome,
+        home: undefined,
+      });
+
+      expect(JSON.stringify({ answer, files })).not.toContain(homedir());
+      expect(files.user).toBe(`~${file} · not there`);
+      expect(answer.problems.map(({ message }) => message)).toStrictEqual([
+        `"theme" is read only from ~${file}, ignored`,
+      ]);
+    });
+  });
+
+  test('a broken user file and a scoped project key name no home', async () => {
+    await placed(
+      { user: '{ broken', project: '{"theme":"dark"}' },
+      async (where) => {
+        const { answer, files } = await read(where);
+
+        expect(JSON.stringify({ answer, files })).not.toContain(where.home!);
+        expect(answer.problems.map(({ file }) => file)).toContain(
+          `~${join('/', '.config', 'chord', 'settings.json')}`,
+        );
+      },
+    );
+  });
+
   test('maskedSettings leaves a settings with nothing to mask as it is', () => {
-    for (const value of [
-      null,
-      3,
-      ['x'],
-      { mcpServers: 3 },
-      { theme: 'dark' },
-    ]) {
+    for (const value of [null, 3, ['x'], { theme: 'dark' }]) {
       expect(maskedSettings(value)).toStrictEqual(value);
     }
   });

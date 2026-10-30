@@ -1,5 +1,6 @@
 import type { z } from '@zod/zod';
 import { readFile } from 'node:fs/promises';
+import { homedir } from 'node:os';
 import { notFound } from './not_found.ts';
 import { TeamSelection } from './session/budgets.ts';
 import {
@@ -334,19 +335,35 @@ function maskedServer(server: unknown): unknown {
  * before any path is walked, so no path reads under a mask.
  */
 export function maskedSettings(settings: unknown): unknown {
-  if (!isObject(settings) || !isObject(settings['mcpServers'])) {
+  if (!isObject(settings) || !Object.hasOwn(settings, 'mcpServers')) {
     return settings;
   }
 
+  const servers = settings['mcpServers'];
+
   return {
     ...settings,
-    mcpServers: Object.fromEntries(
-      Object.entries(settings['mcpServers']).map(([name, server]) => [
-        name,
-        maskedServer(server),
-      ]),
-    ),
+    // A shape no server can be read from still may hold what it would have.
+    mcpServers: isObject(servers)
+      ? Object.fromEntries(
+          Object.entries(servers).map(([name, server]) => [
+            name,
+            maskedServer(server),
+          ]),
+        )
+      : Array.isArray(servers)
+        ? maskedServer(servers)
+        : MASK,
   };
+}
+
+/**
+ * The home an answer's paths are shown from: where `HOME` is unset, the one
+ * the config directory was found under all the same, as the model is never
+ * told it.
+ */
+function shownHome(where: SettingsWhere): string {
+  return where.home ?? homedir();
 }
 
 /** A file as written and what its row says of it, or that it is not there. */
@@ -441,7 +458,8 @@ export async function readSettingsTool(
     return { error: `No setting ${shownSettingPath(path)}` };
   }
 
-  const shown = { cwd: where.cwd, home: where.home };
+  const home = shownHome(where);
+  const shown = { cwd: where.cwd, home };
   const userFile = userSettingsFile(where.configHome);
   const projectFile = settingsFiles(where).at(-1)!;
   const user = await writtenFile(userFile);
@@ -449,7 +467,7 @@ export async function readSettingsTool(
   const loaded = await loadSettings({
     configHome: where.configHome,
     cwd: where.cwd,
-    ...(where.home === undefined ? {} : { home: where.home }),
+    home,
   });
   const atPath = (value: unknown) => settingAt(maskedSettings(value), path);
 

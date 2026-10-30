@@ -253,6 +253,8 @@ async function capture(shot: Shot): Promise<string> {
       '--define',
       'process.env.NODE_ENV:"production"',
       join(ROOT, 'src', 'main.tsx'),
+      // Named, as an unnamed start opens the agent picker first (CHD-532).
+      'claude',
       '-C',
       join(home, 'src', 'app'),
     ];

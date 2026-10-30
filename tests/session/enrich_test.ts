@@ -1,6 +1,11 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { expect, test } from 'bun:test';
-import { EMPTY_WIRE, recalled } from '../../src/session/enrich.ts';
+import {
+  EMPTY_WIRE,
+  heardFromAgent,
+  recalled,
+  updateMessage,
+} from '../../src/session/enrich.ts';
 
 /** A past with tool calls, their updates, chord's filled content and text. */
 function pastOf(calls: number): SessionUpdate[] {
@@ -83,4 +88,41 @@ test('a long past is recalled in linear time (CHD-559)', () => {
   recalled(EMPTY_WIRE, 'session', past);
   // Quadratic, 20,000 calls took seconds; linear, well under one.
   expect(performance.now() - started).toBeLessThan(1_000);
+});
+
+test('a recalled past keeps every tool call id as its own entry, as hearing it live does, reserved names too (CHD-559)', () => {
+  const past = ['__proto__', 'constructor', 'toString', 'call-1'].flatMap(
+    (id): SessionUpdate[] => [
+      {
+        sessionUpdate: 'tool_call',
+        toolCallId: id,
+        title: `Run ${id}`,
+        kind: 'execute',
+        status: 'pending',
+      },
+      {
+        sessionUpdate: 'tool_call_update',
+        toolCallId: id,
+        status: 'completed',
+        content: [{ type: 'content', content: { type: 'text', text: id } }],
+      },
+    ],
+  );
+  const live = past.reduce(
+    (wire, update) => heardFromAgent(wire, updateMessage('session', update)),
+    EMPTY_WIRE,
+  );
+  const tools = recalled(EMPTY_WIRE, 'session', past).sessions['session']!
+    .tools;
+  const heard = live.sessions['session']!.tools;
+
+  expect(Object.getPrototypeOf(tools)).toBe(Object.getPrototypeOf(heard));
+  expect(Object.keys(tools)).toStrictEqual(Object.keys(heard));
+  expect(Object.keys(tools)).toContain('__proto__');
+
+  for (const id of Object.keys(heard)) {
+    expect(Object.getOwnPropertyDescriptor(tools, id)).toStrictEqual(
+      Object.getOwnPropertyDescriptor(heard, id),
+    );
+  }
 });

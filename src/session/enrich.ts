@@ -258,7 +258,20 @@ export function recalled(
 
     for (const update of past) {
       if (isToolUpdate(update)) {
-        tools[update.toolCallId] = toolFacts(tools[update.toolCallId], update);
+        // An own property, as the spread makes it, whatever the id: an
+        // assignment to `__proto__` would set the map's prototype instead.
+        Object.defineProperty(tools, update.toolCallId, {
+          value: toolFacts(
+            Object.hasOwn(tools, update.toolCallId)
+              ? tools[update.toolCallId]
+              : undefined,
+            update,
+          ),
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+
         heard = { ...heard, agent: foldUpdate(heard.agent, update) };
       } else {
         heard = heardUpdate(heard, update);

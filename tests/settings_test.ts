@@ -30,6 +30,92 @@ import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
 import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
 
+describe('CHD-565 tester: offered settings isolation and fresh reads', () => {
+  test('many invalid elements cost one key without exhausting file recovery', () => {
+    for (const offeredAgents of [
+      Array.from({ length: 20 }, () => null),
+      ['known', { name: 'nested' }, ['another']],
+      false,
+      7,
+    ]) {
+      const parsed = parseSettings(
+        'fixture.json',
+        JSON.stringify({
+          offeredAgents,
+          agent: 'fixture',
+          theme: 'light',
+          agents: { fixture: { command: ['fixture', '--acp'] } },
+        }),
+      );
+
+      expect(parsed.settings).toEqual({
+        agent: 'fixture',
+        theme: 'light',
+        agents: { fixture: { command: ['fixture', '--acp'] } },
+      });
+      expect(parsed.problems).toHaveLength(1);
+      expect(parsed.problems[0]).toMatchObject({
+        file: 'fixture.json',
+        kind: 'validation',
+        key: ['offeredAgents'],
+      });
+    }
+  });
+
+  for (const userValid of [false, true]) {
+    test(`a ${userValid ? 'bad' : 'valid'} project list cannot replace the user's ${userValid ? 'valid' : 'bad'} list`, () =>
+      place(
+        {
+          user: JSON.stringify({
+            offeredAgents: userValid ? ['mine', 'other'] : ['mine', null],
+            theme: 'light',
+          }),
+          project: JSON.stringify({
+            offeredAgents: userValid ? [null] : ['project-only'],
+            agent: 'project-only',
+          }),
+        },
+        async (where) => {
+          const loaded = await loadSettings(where);
+
+          expect(loaded.settings.offeredAgents).toEqual(
+            userValid ? ['mine', 'other'] : undefined,
+          );
+          expect(loaded.settings.agent).toBe('project-only');
+          expect(loaded.settings.theme).toBe('light');
+          expect(loaded.problems).toHaveLength(userValid ? 1 : 2);
+          expect(loaded.layers[1]?.settings.offeredAgents).toBeUndefined();
+        },
+      ));
+  }
+
+  test('repair, replacement and removal are observed on the next file read', () =>
+    place(
+      { user: JSON.stringify({ offeredAgents: [], theme: 'dark' }) },
+      async (where) => {
+        const [user] = settingsFiles(where);
+
+        expect(user).toBeDefined();
+        expect((await loadSettings(where)).settings).toEqual({ theme: 'dark' });
+
+        for (const offeredAgents of [['b', 'a', 'b'], ['only']]) {
+          await writeFile(
+            user!,
+            JSON.stringify({ offeredAgents, theme: 'dark' }),
+          );
+
+          const loaded = await loadSettings(where);
+
+          expect(loaded.settings.offeredAgents).toEqual(offeredAgents);
+          expect(loaded.problems).toEqual([]);
+        }
+
+        await writeFile(user!, JSON.stringify({ theme: 'dark' }));
+        expect((await loadSettings(where)).settings).toEqual({ theme: 'dark' });
+      },
+    ));
+});
+
 describe('selected policy admission diagnostics', () => {
   test('invalid nested policy keeps structured paths and refuses selected admission only', async () => {
     await place(

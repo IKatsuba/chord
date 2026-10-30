@@ -485,6 +485,8 @@ const SCENARIOS = [
   'settingsvim',
   'settingsoffered',
   'settingsoverlap',
+  'settingsrefused',
+  'settingswithdrawn',
   'cutcalls',
   'cutcallsback',
   'cutcallsunfinished',

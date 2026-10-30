@@ -1675,6 +1675,113 @@ describe('the settings tool on the transcript (CHD-568)', () => {
     }
   });
 
+  test('each refusal draws its own line with no note, asks nothing and leaves the file', async () => {
+    const server = serveChord();
+    const text = '{"theme":"dark"}';
+    let file = '';
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsrefused');
+          await window.shows('chord knows no agent named "nope"');
+
+          const read = window.frame().replace(/\s+/g, ' ');
+
+          for (const line of [
+            'Settings(agents.claude.modle) ⎿ No setting agents.claude.modle',
+            'Settings(agents.claude.command) ⎿ chord does not write agents.claude.command; edit the settings file by hand',
+            'Settings(mcpServers.linear) ⎿ chord does not write mcpServers.linear; edit the settings file by hand',
+            'Settings(agents.codex) ⎿ agents.codex is not one setting; name agents.codex.model or agents.codex.effort',
+            'Settings(teamSelection) ⎿ teamSelection is not one setting; name teamSelection.intent, teamSelection.prefer.agent or teamSelection.prefer.model',
+            'Settings(editorMode) ⎿ editorMode cannot be "emacs": Invalid option: expected one of "normal"|"vim"',
+            'Settings(agents.nope.model) ⎿ chord knows no agent named "nope"; list_agents names every one',
+          ]) {
+            expect(read).toContain(line);
+          }
+
+          expect(read).not.toContain('Yes, in');
+          expect(readFileSync(file, 'utf8')).toBe(text);
+        },
+        {
+          columns: 120,
+          rows: 60,
+          server,
+          configHome: (dir) => {
+            const home = fixture(text)(dir);
+
+            file = join(home, 'chord', 'settings.json');
+
+            return home;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a file that is not JSON is refused with no box', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingstheme');
+          await window.shows('was not saved: it is not valid JSON');
+          expect(window.frame()).not.toContain('Yes, in');
+        },
+        {
+          columns: 120,
+          rows: 40,
+          server,
+          configHome: fixture('{ broken'),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a call given up on with the box up says the person was not asked to the end', async () => {
+    const server = serveChord();
+    const text = '{"theme":"dark"}';
+    let file = '';
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingswithdrawn');
+          await window.shows('Change theme?');
+          await window.shows(
+            'The person was not asked to the end; nothing was saved',
+          );
+
+          const frame = window.frame();
+
+          expect(frame).toContain('Settings(theme)');
+          expect(frame).not.toContain('Settings(theme) ·');
+          expect(frame).not.toContain('Yes, in');
+          expect(readFileSync(file, 'utf8')).toBe(text);
+        },
+        {
+          columns: 80,
+          rows: 24,
+          server,
+          configHome: (dir) => {
+            const home = fixture(text)(dir);
+
+            file = join(home, 'chord', 'settings.json');
+
+            return home;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
   test('a project holding the key warns above the box', async () => {
     const server = serveChord();
 

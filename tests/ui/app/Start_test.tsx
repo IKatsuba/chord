@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
 import {
@@ -6,6 +7,7 @@ import {
   type EarlierSession,
 } from '../../../src/session/sessions.ts';
 import { Start } from '../../../src/ui/app/Start.tsx';
+import { TAGLINE } from '../../../src/ui/app/start_layout.ts';
 import type { ListedAgent } from '../../../src/agents.ts';
 import { SHORTCUTS } from '../../../src/ui/shortcuts/keys.ts';
 import {
@@ -36,6 +38,7 @@ async function started() {
   const picks: (EarlierSession | undefined)[] = [];
   const app = await draw(
     <Start
+      version='0.65.0'
       agent='claude'
       directory='~/src/app'
       home='/h'
@@ -134,6 +137,7 @@ describe('CHD-445 U2 tester: titled start picker navigation and resets', () => {
         const picks: (EarlierSession | undefined)[] = [];
         const app = await draw(
           <Start
+            version='0.65.0'
             agent='fake'
             directory='/work/app'
             home={undefined}
@@ -240,6 +244,7 @@ describe('CHD-532 startup agent picker', () => {
     const picks: (string | undefined)[] = [];
     const app = await draw(
       <Start
+        version='0.65.0'
         kind='agents'
         agents={list}
         preferred={preferred}
@@ -388,7 +393,10 @@ describe('CHD-532 startup agent picker', () => {
     const app = await choosing(agents, 'one', 80, 24, keymap);
 
     try {
-      expect(app.frame()).toContain('Ctrl+q to cancel');
+      // A longer key takes the hint past the column, so it wraps at a space.
+      expect(stripAnsi(app.frame()).replace(/\s+/g, ' ')).toContain(
+        'Ctrl+q to cancel',
+      );
       expect(
         SHORTCUTS.some((entry) => entry.actions?.includes('select:cancel')),
       ).toBe(true);
@@ -418,6 +426,7 @@ describe('CHD-544 tester: filtered picker keys and empty catalogs', () => {
       const picks: (string | undefined)[] = [];
       const app = await draw(
         <Start
+          version='0.65.0'
           kind='agents'
           agents={[
             {
@@ -472,6 +481,7 @@ describe('CHD-544 tester: filtered picker keys and empty catalogs', () => {
       ]).flat();
       const app = await draw(
         <Start
+          version='0.65.0'
           kind='agents'
           agents={agents}
           preferred='hidden-11'
@@ -493,4 +503,209 @@ describe('CHD-544 tester: filtered picker keys and empty catalogs', () => {
       }
     });
   }
+});
+
+describe('CHD-564 the title page', () => {
+  const list = (count: number): ListedAgent[] =>
+    Array.from({ length: count }, (_, at) => ({
+      name: `agent-${at + 1}`,
+      title: undefined,
+      from: 'settings' as const,
+      start: 'fixture',
+    }));
+  const was = chalk.level;
+
+  beforeAll(() => {
+    chalk.level = 3;
+  });
+
+  afterAll(() => {
+    chalk.level = was;
+  });
+
+  async function page(
+    columns: number,
+    rows: number,
+    {
+      count = 28,
+      colours = paletteOf('dark', true),
+      directory = '~/src/app',
+      preferred = 'agent-5',
+    } = {},
+  ) {
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        kind='agents'
+        agents={list(count)}
+        preferred={preferred}
+        directory={directory}
+        colours={colours}
+        keymap={DEFAULT_KEYMAP}
+        onPick={() => {}}
+      />,
+      { columns, rows },
+    );
+    const lines = () => stripAnsi(app.frame()).split('\n');
+
+    return { ...app, lines, text: () => lines().join('\n') };
+  }
+
+  const rowOf = (lines: string[], text: string) =>
+    lines.findIndex((line) => line.includes(text));
+
+  test('full at 120x40: the block wordmark, tagline and version, the list capped at 14', async () => {
+    const app = await page(120, 40);
+
+    try {
+      const lines = app.lines();
+      const art = rowOf(lines, '██████╗ ██╗');
+
+      expect(art).toBe(5);
+      // The mark's left edge, 57 columns of art centred on 120, the odd
+      // column where Yoga puts it; the word after its 9 and a gap of 3.
+      expect(lines[art]?.indexOf('▀')).toBe(32);
+      expect(lines[art]?.indexOf('█')).toBe(45);
+      expect(rowOf(lines, TAGLINE)).toBe(13);
+      expect(lines[13]?.indexOf(TAGLINE)).toBe(42);
+      expect(rowOf(lines, 'v0.65.0 · ~/src/app')).toBe(14);
+      expect(rowOf(lines, 'Select agent')).toBe(16);
+      // The column is 62 wide centred on 120, its padding inside it.
+      expect(lines[16]?.indexOf('Select agent')).toBe(30);
+      expect(app.text()).toContain('14. agent-14');
+      expect(app.text()).toContain('… +14 more');
+      expect(app.text()).not.toContain('15. agent-15');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('a short list moves the page, not the art out of its step', async () => {
+    const app = await page(120, 40, { count: 5 });
+
+    try {
+      const lines = app.lines();
+
+      expect(rowOf(lines, '██████╗ ██╗')).toBe(10);
+      expect(lines.join('\n')).not.toContain('more');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('compact at 80x24: the tiny wordmark and the version, no tagline', async () => {
+    const app = await page(80, 24);
+
+    try {
+      const lines = app.lines();
+
+      expect(rowOf(lines, '█▀▀ █ █ █▀█ █▀█ █▀▄')).toBe(1);
+      expect(rowOf(lines, 'v0.65.0 · ~/src/app')).toBe(4);
+      expect(rowOf(lines, 'Select agent')).toBe(6);
+      expect(app.text()).not.toContain(TAGLINE);
+      expect(app.text()).toContain('12. agent-12');
+      expect(app.text()).toContain('… +16 more');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('line under 40 columns: the bold word and the version, no art', async () => {
+    const app = await page(39, 24);
+
+    try {
+      expect(rowOf(app.lines(), 'chord v0.65.0 · ~/src/app')).toBe(0);
+      expect(app.text()).not.toContain('▀');
+      expect(rowOf(app.lines(), 'Select agent')).toBe(2);
+      expect(app.text()).toContain('15. agent-15');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('none at 30x8: the picker from the first row, one row of list', async () => {
+    const app = await page(30, 8);
+
+    try {
+      expect(rowOf(app.lines(), 'Select agent')).toBe(0);
+      expect(app.text()).not.toContain('v0.65.0');
+      expect(app.text()).toContain('❯ ↑ 5.');
+      expect(app.text()).toContain('… +27 more');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('the version line cuts its directory from the left', async () => {
+    const app = await page(39, 24, {
+      directory: '~/work/acme/services/billing/acme-api',
+    });
+
+    try {
+      expect(app.lines()[0]).toContain('chord v0.65.0 · …/billing/acme-api');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('no agents: the page with one row, and only the way out', async () => {
+    const app = await page(80, 24, { count: 0 });
+
+    try {
+      const lines = app.lines();
+
+      expect(rowOf(lines, 'v0.65.0')).toBe(10);
+      expect(rowOf(lines, 'No agents available')).toBe(14);
+      expect(rowOf(lines, 'Esc to cancel')).toBe(16);
+      expect(app.text()).not.toContain('Enter or');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  for (const [columns, rows, word] of [
+    [120, 40, 'chord'],
+    [80, 24, 'chord'],
+  ] as const) {
+    test(`PLAIN at ${columns}x${rows}: a bold word in the wordmark's place, in the same rows`, async () => {
+      const plain = await page(columns, rows, {
+        colours: paletteOf('dark', false),
+      });
+      const coloured = await page(columns, rows);
+
+      try {
+        const lines = plain.lines();
+        const at = rowOf(lines, word);
+
+        expect(at).toBeGreaterThan(0);
+        expect(plain.text()).not.toContain('█▀▀');
+        expect(plain.text()).not.toContain('██████╗');
+        expect(rowOf(lines, 'Select agent')).toBe(
+          rowOf(coloured.lines(), 'Select agent'),
+        );
+      } finally {
+        await plain.unmount();
+        await coloured.unmount();
+      }
+    });
+  }
+
+  test('a highlight is kept across a step and back', async () => {
+    const app = await page(120, 40);
+
+    try {
+      await app.write('j');
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+      await app.resize({ columns: 80, rows: 24 });
+      expect(app.text()).toContain('█▀▀ █ █');
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+      await app.resize({ columns: 39, rows: 24 });
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+      await app.resize({ columns: 120, rows: 40 });
+      expect(app.text()).toContain('██████╗ ██╗');
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+    } finally {
+      await app.unmount();
+    }
+  });
 });

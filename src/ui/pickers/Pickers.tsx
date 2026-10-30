@@ -96,6 +96,16 @@ export function borderOf(colour: string | undefined) {
   } as const;
 }
 
+/** The agent picker's hint; the start screen counts the rows these words take. */
+export function useAgentHint(listed: boolean): string {
+  const closeHint = useCloseHint('to cancel');
+
+  return hintOf(
+    ...(listed ? ['↑↓ or j/k to move', 'Enter or 1–9 to select'] : []),
+    closeHint,
+  );
+}
+
 /** The catalog before any agent owns the terminal or starts a session. */
 export function AgentPicker({
   agents,
@@ -111,7 +121,7 @@ export function AgentPicker({
   onPick: (id: string) => void;
 }) {
   const choices = agentChoices(agents, preferred);
-  const closeHint = useCloseHint('to cancel');
+  const hint = useAgentHint(choices.length > 0);
 
   return (
     <box paddingX={1} flexShrink={0}>
@@ -132,12 +142,7 @@ export function AgentPicker({
       )}
       <box marginTop={1}>
         <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            ...(choices.length === 0
-              ? []
-              : ['↑↓ or j/k to move', 'Enter or 1–9 to select']),
-            closeHint,
-          )}
+          {hint}
         </text>
       </box>
     </box>

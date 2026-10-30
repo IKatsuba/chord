@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
-import { startLayout, versionLine } from '../../../src/ui/app/start_layout.ts';
+import {
+  hintRows,
+  startLayout,
+  versionLine,
+  wordmarkColours,
+} from '../../../src/ui/app/start_layout.ts';
 
 const agents = { framed: false, hintRows: 1 };
 const sessions = { framed: true, hintRows: 1 };
@@ -245,5 +250,50 @@ describe('CHD-564 tester: page space and display-width edges', () => {
 
     expect(line).toBe('v0.65.0 · 界 · …/app');
     expect(stringWidth(line)).toBeLessThanOrEqual(20);
+  });
+});
+
+describe('hintRows', () => {
+  const hint = '↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel';
+
+  test.each([
+    [60, 1],
+    [58, 1],
+    [57, 2],
+    [37, 2],
+    [28, 3],
+  ] as const)('at %i columns it takes %i rows', (width, rows) => {
+    expect(hintRows(hint, width)).toBe(rows);
+  });
+
+  test('an empty hint and a window with no room stay countable', () => {
+    expect(hintRows('', 10)).toBe(1);
+    expect(hintRows('Esc', 0)).toBe(3);
+  });
+});
+
+describe('wordmarkColours', () => {
+  test.each([
+    [['#89f5b3', '#47e7a5', '#15c7a2'], '#47e7a5', '#15c7a2'],
+    [['#1e9a5e', '#147d55', '#0a5e57'], '#147d55', '#0a5e57'],
+  ] as const)('truecolor %j: the middle and last stops', (stops, c1, c2) => {
+    expect(wordmarkColours({ level: 'truecolor', stops })).toEqual([c1, c2]);
+  });
+
+  test('256 colours name the nearest of the cube', () => {
+    expect(
+      wordmarkColours({
+        level: '256',
+        stops: ['#89f5b3', '#47e7a5', '#15c7a2'],
+      })?.every((each) => /^ansi256\(\d+\)$/.test(each)),
+    ).toBe(true);
+  });
+
+  test('16 colours take the tone for both, and no colour has no wordmark', () => {
+    expect(wordmarkColours({ level: '16', tone: 'green' })).toEqual([
+      'green',
+      'green',
+    ]);
+    expect(wordmarkColours({ level: 'none' })).toBeUndefined();
   });
 });

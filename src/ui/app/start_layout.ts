@@ -5,6 +5,8 @@
  * step.
  */
 import stringWidth from 'string-width';
+import wrapAnsi from 'wrap-ansi';
+import { type MarkColour, markPaint, MIDDLE } from '../header/mark_rows.ts';
 import { cutPath } from '../pickers/mcp.ts';
 
 /** What the page draws above its picker, from the most to nothing. */
@@ -24,6 +26,42 @@ const LIST_CAP = 14;
 /** The agents' column and resume's frame, in columns, in a wide window. */
 const COLUMN = 62;
 const FRAME = 84;
+
+/** The README's own line, under the full step's art. */
+export const TAGLINE = 'One terminal for every coding agent.';
+
+/** The width of the agents' column or resume's frame, from the window alone. */
+export function startColumn(columns: number, framed: boolean): number {
+  return Math.max(1, Math.min(columns - 2, framed ? FRAME : COLUMN));
+}
+
+/** The rows a hint takes where the picker wraps it, at its spaces. */
+export function hintRows(hint: string, width: number): number {
+  return wrapAnsi(hint, Math.max(1, width), { hard: true, trim: true }).split(
+    '\n',
+  ).length;
+}
+
+/**
+ * The wordmark's solid letters and shadow lines, following the terminal's
+ * depth as the mark does; none where the mark has no colour, as OpenTUI's font
+ * takes a real one only.
+ */
+export function wordmarkColours(
+  colour: MarkColour,
+): readonly [string, string] | undefined {
+  if (colour.level === 'none') {
+    return undefined;
+  }
+
+  if (colour.level === '16') {
+    return [colour.tone, colour.tone];
+  }
+
+  const paint = markPaint(colour.stops, colour.level);
+
+  return [paint(MIDDLE), paint(1)];
+}
 
 /** The page for one window. */
 export function startLayout(page: {
@@ -70,7 +108,7 @@ export function startLayout(page: {
     step,
     listRows,
     top: Math.max(0, Math.floor((rows - pageRows) / 2)),
-    column: Math.max(1, Math.min(columns - 2, framed ? FRAME : COLUMN)),
+    column: startColumn(columns, framed),
   };
 }
 

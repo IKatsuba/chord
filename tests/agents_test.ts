@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -519,4 +519,78 @@ test("openclaw takes no MCP servers by chord's own table, and a setting says oth
   expect(takesMcpServers('codex', false)).toBe(false);
   // An agent chord does not know takes them, as before.
   expect(takesMcpServers('somebody-else')).toBe(true);
+});
+
+describe('CHD-565 tester: offered catalog boundaries', () => {
+  test('names match exactly and object property names remain ordinary agents', () => {
+    const catalog = ['__proto__', 'constructor', 'toString'].map((name) => ({
+      name,
+      title: undefined,
+      start: 'fixture --acp',
+      from: 'settings' as const,
+    }));
+
+    expect(
+      offeredAgents(catalog, [
+        'toString',
+        'Constructor',
+        '__proto__',
+        'constructor ',
+        'constructor',
+        '__proto__',
+      ]),
+    ).toStrictEqual({
+      agents: [catalog[2]!, catalog[0]!, catalog[1]!],
+      unknown: ['Constructor', 'constructor '],
+    });
+  });
+
+  test('an unknown project name can become offered in its own directory', async () => {
+    const elsewhere = await listedAgents({}, () => Promise.resolve(undefined));
+    const project = await listedAgents(
+      { 'project-fixture': ['fixture-agent', '--acp'] },
+      () => Promise.resolve(undefined),
+    );
+
+    expect(offeredAgents(elsewhere, ['project-fixture'])).toStrictEqual({
+      agents: [],
+      unknown: ['project-fixture'],
+    });
+    expect(offeredAgents(project, ['project-fixture'])).toStrictEqual({
+      agents: [
+        {
+          name: 'project-fixture',
+          title: undefined,
+          start: 'fixture-agent --acp',
+          from: 'settings',
+        },
+      ],
+      unknown: [],
+    });
+  });
+
+  test('separate projections leave frozen inputs and the full catalog intact', () => {
+    const catalog = Object.freeze(
+      CATALOG.map((row) => Object.freeze({ ...row })),
+    );
+    const setting = Object.freeze(['cursor', 'missing', 'mine', 'cursor']);
+
+    expect(names(offeredAgents(catalog, setting))).toStrictEqual([
+      'cursor',
+      'mine',
+    ]);
+    expect(names(offeredAgents(catalog, ['codex']))).toStrictEqual(['codex']);
+    expect(names(offeredAgents(catalog, undefined))).toStrictEqual([
+      'claude',
+      'codex',
+      'goose',
+      'mine',
+    ]);
+    expect(catalog).toStrictEqual(CATALOG);
+    expect(setting).toStrictEqual(['cursor', 'missing', 'mine', 'cursor']);
+    expect(offeredAgents([], setting)).toStrictEqual({
+      agents: [],
+      unknown: ['cursor', 'missing', 'mine'],
+    });
+  });
 });

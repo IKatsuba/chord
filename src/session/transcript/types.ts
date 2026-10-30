@@ -726,6 +726,11 @@ export interface SaveBox {
   readonly files: Readonly<Record<string, string>>;
   /** What Esc does: `tell claude what to change`. */
   readonly escape: string;
+  /**
+   * The `asked` of the call this box is about, where its row can outgrow the
+   * transcript: which of several waiting calls it is.
+   */
+  readonly asked?: string;
 }
 
 /**

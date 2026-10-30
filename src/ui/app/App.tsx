@@ -1669,6 +1669,7 @@ export function App({
                     width={columns - 4}
                     changeOverflows={settingsChangeOverflows(
                       state.transcript.entries,
+                      asked.save?.asked,
                       columns - TRANSCRIPT_INSET,
                       state.scroll.view,
                     )}

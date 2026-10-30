@@ -531,22 +531,28 @@ function textLines(text: string): string[] {
 }
 
 /**
- * Whether the `settings` change waiting on the person draws taller than the
- * transcript's `room`, so that following the bottom shows only its tail; a
- * value has no length limit and its row is never folded. `width` is what each
- * call has beside its marker.
+ * Whether the `settings` change a box is about, by its call's `asked`, draws
+ * taller than the transcript's `room`, so that following the bottom shows only
+ * its tail; a value has no length limit and its row is never folded. A box
+ * about no such call never does. `width` is what each call has beside its
+ * marker.
  */
 export function settingsChangeOverflows(
   entries: readonly Entry[],
+  asked: string | undefined,
   width: number,
   room: number,
 ): boolean {
-  const waiting = entries.findLast(
-    (entry) =>
-      entry.kind === 'tool' &&
-      entry.call.chord?.tool === 'settings' &&
-      entry.call.chord.pending === true,
-  );
+  const waiting =
+    asked === undefined
+      ? undefined
+      : entries.find(
+          (entry) =>
+            entry.kind === 'tool' &&
+            entry.call.chord?.tool === 'settings' &&
+            entry.call.chord.pending === true &&
+            entry.call.chord.asked === asked,
+        );
 
   if (waiting?.kind !== 'tool' || waiting.call.chord === undefined) {
     return false;

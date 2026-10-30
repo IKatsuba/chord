@@ -636,6 +636,7 @@ export async function changeSetting(
   change: SettingChange,
   signal: AbortSignal,
   shown: (answer: SettingsChanged) => void,
+  asked: string,
 ): Promise<SettingsChanged | { readonly error: string }> {
   const where = caller.window.settingsWhere(caller);
   const planned = await plannedSetting(
@@ -672,6 +673,7 @@ export async function changeSetting(
         question: `${word[0]!.toUpperCase()}${word.slice(1)} ${shownKey}?`,
         files: {},
         escape,
+        asked,
       },
     },
     signal,
@@ -1573,6 +1575,7 @@ const settingsTool: Register = (server, caller) =>
               pending: true,
               asked,
             }),
+          asked,
         );
 
         return serve(caller, 'settings', input, changed, undefined, asked);

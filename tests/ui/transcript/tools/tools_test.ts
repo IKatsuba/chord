@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type {
+  Entry,
   ToolCall,
   TurnState,
 } from '../../../../src/session/transcript/types.ts';
@@ -15,6 +16,7 @@ import {
   headlineRows,
   mcpArguments,
   sentBody,
+  settingsChangeOverflows,
   summary,
   toneOf,
 } from '../../../../src/ui/transcript/tools/tools.ts';
@@ -1012,5 +1014,60 @@ describe('Guardian presentation follows only its structured status (CHD-521)', (
         }),
       ).toBe(expected);
     }
+  });
+});
+
+describe('settingsChangeOverflows', () => {
+  const row = (asked: string, value: string, tool = 'settings'): Entry =>
+    ({
+      kind: 'tool',
+      turnId: 't',
+      call: {
+        id: asked,
+        chord: {
+          tool,
+          input: {
+            action: 'set',
+            path: ['agents', 'fake', 'model'],
+            value,
+          },
+          answer: { after: value },
+          pending: true,
+          asked,
+        },
+      },
+    }) as Entry;
+  const LONG = 'l'.repeat(1200);
+  const WIDTH = 76;
+  const ROOM = 8;
+
+  test('measures the change its box is about, not the last one waiting', () => {
+    const entries = [row('long', LONG), row('short', 'm')];
+
+    expect(settingsChangeOverflows(entries, 'long', WIDTH, ROOM)).toBe(true);
+    expect(settingsChangeOverflows(entries, 'short', WIDTH, ROOM)).toBe(false);
+  });
+
+  test('a box about no settings call never has it', () => {
+    const entries = [row('long', LONG)];
+
+    expect(settingsChangeOverflows(entries, undefined, WIDTH, ROOM)).toBe(
+      false,
+    );
+    expect(settingsChangeOverflows(entries, 'other', WIDTH, ROOM)).toBe(false);
+  });
+
+  test('another tool sharing the id does not count', () => {
+    const entries = [row('team', LONG, 'propose_team')];
+
+    expect(settingsChangeOverflows(entries, 'team', WIDTH, ROOM)).toBe(false);
+  });
+
+  test('a row exactly as tall as the room fits', () => {
+    // The headline, Now and After: three rows.
+    const entries = [row('short', 'm')];
+
+    expect(settingsChangeOverflows(entries, 'short', WIDTH, 3)).toBe(false);
+    expect(settingsChangeOverflows(entries, 'short', WIDTH, 2)).toBe(true);
   });
 });

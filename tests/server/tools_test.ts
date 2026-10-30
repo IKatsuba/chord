@@ -734,6 +734,7 @@ describe('the settings tool writes (CHD-568)', () => {
         change,
         new AbortController().signal,
         (one) => shown.push(one),
+        'the-call',
       );
       const held = await readFile(file, 'utf8').catch(() => undefined);
 
@@ -775,6 +776,7 @@ describe('the settings tool writes (CHD-568)', () => {
           question: 'Set theme?',
           files: {},
           escape: 'tell claude what to change',
+          asked: 'the-call',
         },
       },
     ]);

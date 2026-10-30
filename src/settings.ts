@@ -912,9 +912,10 @@ function isJsonObject(value: unknown): value is Record<string, unknown> {
  * line, with what JSON leaves raw and a terminal would act on (DEL, C1, line
  * separators, bidi overrides) escaped too.
  */
-export function shownValue(value: unknown): string {
-  return (JSON.stringify(value) ?? 'null').replace(
-    /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu,
+export function shownValue(value: unknown, indent?: number): string {
+  return (JSON.stringify(value, null, indent) ?? 'null').replace(
+    // A raw line feed is the indent's own: JSON escapes any in a string.
+    /(?!\n)[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu,
     (mark) =>
       Array.from(
         { length: mark.length },

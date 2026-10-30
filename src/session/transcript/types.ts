@@ -94,7 +94,8 @@ export type ChordTool =
   | 'list_monitors'
   | 'list_teams'
   | 'run_team'
-  | 'propose_team';
+  | 'propose_team'
+  | 'settings';
 
 /**
  * A request chord's MCP server served: the tool, the arguments it was called
@@ -124,6 +125,14 @@ export interface ChordCall {
    * served sent and again once it went queued after all.
    */
   readonly asked?: string;
+  /**
+   * What a `settings` read of every key says of each file on its row: its name
+   * and state as the window shows them, which the agent's answer does not hold.
+   */
+  readonly settingsFiles?: {
+    readonly user: string;
+    readonly project: string;
+  };
 }
 
 /**

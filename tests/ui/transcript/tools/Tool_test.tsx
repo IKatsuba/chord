@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
@@ -1453,4 +1454,86 @@ describe('tester: Resources answers in narrow and expanded frames', () => {
       }
     });
   }
+});
+
+describe('the settings tool on the transcript (CHD-568)', () => {
+  /** A config home for a window, holding a fixture user's settings file. */
+  const fixture = (text: string) => (dir: string) => {
+    const home = join(dir, 'config');
+
+    mkdirSync(join(home, 'chord'), { recursive: true });
+    writeFileSync(join(home, 'chord', 'settings.json'), text);
+
+    return home;
+  };
+
+  const SECRET = 'secret123';
+  const settings = JSON.stringify({
+    theme: 'dark',
+    nope: 1,
+    mcpServers: { linear: { env: { TOKEN: SECRET } } },
+  });
+
+  for (const columns of [80, 120]) {
+    test(`a read of every key folds to its files, and ctrl+o opens it, masked, at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'settingsread');
+            await window.shows('Settings · read (ctrl+o to expand)');
+
+            const folded = window.frame();
+
+            expect(folded).toContain('· 3 keys');
+            expect(folded).toContain('· not there');
+            expect(folded).toContain('1 problem');
+            expect(folded).not.toContain(SECRET);
+
+            await window.press(CTRL_O);
+            await window.shows('"effective"');
+
+            const open = window.frame();
+
+            expect(open).toContain('Settings · read');
+            expect(open).not.toContain('to expand');
+            expect(open).toContain('"TOKEN": "***"');
+            expect(open).not.toContain(SECRET);
+          },
+          { columns, rows: 60, server, configHome: fixture(settings) },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+
+  test('a read of one key draws the three values, and refuses a name no key has', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsreadkey');
+          await window.shows('Settings(mcpServers.linear.env.TOKEN) · read');
+
+          const frame = window.frame();
+
+          expect(frame).toContain('Effective  "***"');
+          expect(frame).toContain('User       "***"');
+          expect(frame).toContain('Project    not set');
+          expect(frame).not.toContain(SECRET);
+
+          await send(window, 'settingsreadbad');
+          await window.shows('No setting __proto__');
+          expect(window.frame()).toContain('Settings(__proto__)');
+          expect(window.frame()).not.toContain('Settings(__proto__) ·');
+        },
+        { columns: 80, rows: 40, server, configHome: fixture(settings) },
+      );
+    } finally {
+      await server.close();
+    }
+  });
 });

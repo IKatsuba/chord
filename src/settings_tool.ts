@@ -1,12 +1,20 @@
 import type { z } from '@zod/zod';
+import { readFile } from 'node:fs/promises';
+import { notFound } from './not_found.ts';
 import { TeamSelection } from './session/budgets.ts';
 import {
   AGENT_SETTING_SCHEMAS,
   canBeSettingPath,
+  loadSettings,
   SETTING_SCHEMAS,
+  settingAt,
   type SettingChange,
+  type SettingsProblem,
+  settingsFiles,
+  shownPath,
   shownSettingPath,
   shownValue,
+  userSettingsFile,
 } from './settings.ts';
 
 /** When a saved setting reaches the window it was saved from. */
@@ -278,4 +286,191 @@ export function settingRefusal(
 /** A refusal about the file, its name as shown and why in the writer's words. */
 export function notSavedLine(shownFile: string, why: string): string {
   return `${shownFile} was not saved: ${why}`;
+}
+
+/** Where a window's settings files are, and how it shows them. */
+export interface SettingsWhere {
+  readonly configHome: string | undefined;
+  readonly cwd: string;
+  readonly home: string | undefined;
+}
+
+const MASK = '***';
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/** `env` or `headers`: key names kept, every value hidden, whatever its shape. */
+function maskedSecrets(value: unknown): unknown {
+  return isObject(value)
+    ? Object.fromEntries(Object.keys(value).map((key) => [key, MASK]))
+    : MASK;
+}
+
+/** One server, a list that a wrong file gave in place of one included. */
+function maskedServer(server: unknown): unknown {
+  if (Array.isArray(server)) {
+    return server.map(maskedServer);
+  }
+
+  if (!isObject(server)) {
+    return server;
+  }
+
+  const masked = { ...server };
+
+  for (const key of ['env', 'headers']) {
+    if (Object.hasOwn(masked, key)) {
+      masked[key] = maskedSecrets(masked[key]);
+    }
+  }
+
+  return masked;
+}
+
+/**
+ * A settings object with every MCP server's `env` and `headers` hidden. Done
+ * before any path is walked, so no path reads under a mask.
+ */
+export function maskedSettings(settings: unknown): unknown {
+  if (!isObject(settings) || !isObject(settings['mcpServers'])) {
+    return settings;
+  }
+
+  return {
+    ...settings,
+    mcpServers: Object.fromEntries(
+      Object.entries(settings['mcpServers']).map(([name, server]) => [
+        name,
+        maskedServer(server),
+      ]),
+    ),
+  };
+}
+
+/** A file as written and what its row says of it, or that it is not there. */
+async function writtenFile(
+  file: string | undefined,
+): Promise<{ readonly written: unknown; readonly state: string }> {
+  if (file === undefined) {
+    return { written: null, state: 'no home directory' };
+  }
+
+  let text: string;
+
+  try {
+    text = await readFile(file, 'utf8');
+  } catch (error) {
+    return {
+      written: null,
+      state: notFound(error) ? 'not there' : 'cannot be read',
+    };
+  }
+
+  try {
+    const written: unknown = JSON.parse(text);
+
+    if (!isObject(written)) {
+      return { written: null, state: 'not a JSON object' };
+    }
+
+    const keys = Object.keys(written).length;
+
+    return { written, state: `${keys} ${keys === 1 ? 'key' : 'keys'}` };
+  } catch {
+    return { written: null, state: 'not valid JSON' };
+  }
+}
+
+/**
+ * A problem as a read says it: never the parser's words, which quote what it
+ * choked on and may be a masked value, nor a system error's, which names the
+ * person's home.
+ */
+function readProblem(problem: SettingsProblem): string {
+  if (problem.kind === 'read') {
+    return 'cannot be read; the file is ignored';
+  }
+
+  return problem.message.startsWith('not valid JSON')
+    ? 'not valid JSON; the file is ignored'
+    : problem.message;
+}
+
+/** Whether a problem is of the key at `path`, or of a whole file. */
+function concerns(problem: SettingsProblem, path: readonly string[]): boolean {
+  const { key } = problem;
+
+  if (key === undefined || path.length === 0) {
+    return true;
+  }
+
+  return path.slice(0, key.length).every((part, index) => part === key[index]);
+}
+
+/** A `settings` read: the answer the agent gets. */
+export interface SettingsRead {
+  /** The file as written, masked; null where there is none to read. */
+  readonly user: unknown;
+  readonly project: unknown;
+  /** The merged, checked settings, masked. */
+  readonly effective: unknown;
+  readonly problems: readonly {
+    readonly file: string;
+    readonly message: string;
+  }[];
+}
+
+/**
+ * The `settings` tool's read, of every key or of the one at `path`, and what
+ * the row says of each file. Reads are not the writes' business: every key
+ * reads, an unknown one too, and only a name that can be no key is refused.
+ */
+export async function readSettingsTool(
+  where: SettingsWhere,
+  path: readonly string[] = [],
+): Promise<
+  | {
+      readonly answer: SettingsRead;
+      readonly files: { readonly user: string; readonly project: string };
+    }
+  | { readonly error: string }
+> {
+  if (path.length > 0 && !canBeSettingPath(path)) {
+    return { error: `No setting ${shownSettingPath(path)}` };
+  }
+
+  const shown = { cwd: where.cwd, home: where.home };
+  const userFile = userSettingsFile(where.configHome);
+  const projectFile = settingsFiles(where).at(-1)!;
+  const user = await writtenFile(userFile);
+  const project = await writtenFile(projectFile);
+  const loaded = await loadSettings({
+    configHome: where.configHome,
+    cwd: where.cwd,
+    ...(where.home === undefined ? {} : { home: where.home }),
+  });
+  const atPath = (value: unknown) => settingAt(maskedSettings(value), path);
+
+  return {
+    answer: {
+      user: atPath(user.written),
+      project: atPath(project.written),
+      effective: atPath(loaded.settings),
+      problems: loaded.problems
+        .filter((problem) => concerns(problem, path))
+        .map((problem) => ({
+          file: shownPath(problem.file, shown),
+          message: readProblem(problem),
+        })),
+    },
+    files: {
+      user:
+        userFile === undefined
+          ? user.state
+          : `${shownPath(userFile, shown)} · ${user.state}`,
+      project: `${shownPath(projectFile, shown)} · ${project.state}`,
+    },
+  };
 }

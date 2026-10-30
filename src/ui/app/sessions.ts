@@ -2676,6 +2676,7 @@ export function useSessions(
       return { ...answer.ran, ...started };
     },
     teamPlaces: (caller, name) => teamPlaces(caller.key, name),
+    settingsWhere: () => ({ configHome, cwd: place.cwd, home }),
     askPerson: (caller, wait, signal) =>
       conversationAt(caller.key)?.ask(wait, signal) ??
       Promise.resolve(undefined),

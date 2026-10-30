@@ -42,6 +42,7 @@ import type {
   ChordTool,
   PermissionWait,
 } from '../session/transcript/types.ts';
+import { readSettingsTool, type SettingsWhere } from '../settings_tool.ts';
 import {
   checkProposal,
   type FoundTeam,
@@ -293,6 +294,8 @@ export interface WindowView {
     wait: Omit<PermissionWait, 'id'>,
     signal: AbortSignal,
   ): Promise<string | undefined>;
+  /** Where the caller's settings files are, and how the window shows them. */
+  settingsWhere(caller: Caller): SettingsWhere;
   /** Hands a team a job: its lead opened as a child of the caller's. */
   runTeam(caller: Caller, args: RunTeamArgs): Promise<RunTeamAnswer>;
   /** A lead opens a member its team's file has. */
@@ -1432,6 +1435,49 @@ const proposeTeamTool: Register = (server, caller) =>
     },
   );
 
+const settingsTool: Register = (server, caller) =>
+  server.registerTool(
+    'settings',
+    {
+      description:
+        "Reads chord's settings: the user's file and the project's as " +
+        'written, and the merged, checked settings that take effect, with ' +
+        "any problems. Values under an MCP server's env and headers read " +
+        '"***". A path reads one key, as a list of keys, since an agent\'s ' +
+        'name may hold a dot.',
+      inputSchema: {
+        action: z.enum(['read']).describe('What to do'),
+        path: z
+          .array(z.string())
+          .optional()
+          .describe('The key, as a list of keys; every key if left out'),
+      },
+    },
+    async (input) => {
+      if (caller.fork) {
+        return serve(caller, 'settings', input, { error: FORK_REFUSED });
+      }
+
+      const read = await readSettingsTool(
+        caller.window.settingsWhere(caller),
+        input.path,
+      );
+
+      if ('error' in read) {
+        return serve(caller, 'settings', input, read);
+      }
+
+      caller.window.served(caller, {
+        tool: 'settings',
+        input,
+        answer: read.answer,
+        settingsFiles: read.files,
+      });
+
+      return answer(read.answer);
+    },
+  );
+
 const openMember: Register = (server, caller) =>
   server.registerTool(
     'open_agent',
@@ -1513,6 +1559,7 @@ function toolsOf(caller: Caller): readonly Register[] {
         openAgent,
         runTeam,
         proposeTeamTool,
+        settingsTool,
         tellAgent,
         closeAgent,
         clearAgent,
@@ -1562,6 +1609,7 @@ export function toolNames(role: Role): readonly ChordTool[] {
         'open_agent',
         'run_team',
         'propose_team',
+        'settings',
         'send_message',
         'close_agent',
         'clear_agent',

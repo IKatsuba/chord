@@ -316,6 +316,7 @@ import { AGENTS, GATE_RELEASE, gateOpened, heard } from './scenarios/agents.ts';
 import { EFFORTS } from './scenarios/efforts.ts';
 import { MONITORS } from './scenarios/monitors.ts';
 import { senders, SOAK } from './scenarios/soak.ts';
+import { SETTINGS } from './scenarios/settings.ts';
 import { proposing, teamParts, TEAMS } from './scenarios/teams.ts';
 import { TEXT } from './scenarios/text.ts';
 import { TOOLS } from './scenarios/tools.ts';
@@ -473,6 +474,9 @@ const SCENARIOS = [
   'subagentstates',
   'subagentstatesstay',
   'chordtools',
+  'settingsread',
+  'settingsreadkey',
+  'settingsreadbad',
   'cutcalls',
   'cutcallsback',
   'cutcallsunfinished',
@@ -651,6 +655,7 @@ const PLAY: Record<Scenario, Play> = {
   ...AGENTS,
   ...EFFORTS,
   ...MONITORS,
+  ...SETTINGS,
   ...TEAMS,
   ...SOAK,
 };

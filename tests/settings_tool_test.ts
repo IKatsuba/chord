@@ -1,8 +1,15 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   classifySetting,
+  maskedSettings,
   notSavedLine,
+  readSettingsTool,
+  type SettingsRead,
   settingRefusal,
+  type SettingsWhere,
 } from '../src/settings_tool.ts';
 
 const known = ['claude', 'codex', 'my.agent'];
@@ -298,5 +305,285 @@ describe('settingRefusal', () => {
     expect(
       notSavedLine('~/.config/chord/settings.json', 'it is not valid JSON'),
     ).toBe('~/.config/chord/settings.json was not saved: it is not valid JSON');
+  });
+});
+
+describe('reading settings (CHD-568)', () => {
+  /** A home under a temporary root, with the files given written in it. */
+  async function placed(
+    files: { user?: string; project?: string },
+    run: (where: SettingsWhere) => Promise<void>,
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-read-'));
+    const home = join(root, 'home');
+    const where = {
+      home,
+      configHome: join(home, '.config'),
+      cwd: join(root, 'work'),
+    };
+
+    try {
+      await mkdir(join(where.configHome, 'chord'), { recursive: true });
+      await mkdir(join(where.cwd, '.chord'), { recursive: true });
+
+      if (files.user !== undefined) {
+        await writeFile(
+          join(where.configHome, 'chord', 'settings.json'),
+          files.user,
+        );
+      }
+
+      if (files.project !== undefined) {
+        await writeFile(
+          join(where.cwd, '.chord', 'settings.json'),
+          files.project,
+        );
+      }
+
+      await run(where);
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  async function read(
+    where: SettingsWhere,
+    path?: readonly string[],
+  ): Promise<{
+    answer: SettingsRead;
+    files: { user: string; project: string };
+  }> {
+    const result = await readSettingsTool(where, path);
+
+    if ('error' in result) {
+      throw new Error(result.error);
+    }
+
+    return result;
+  }
+
+  const SECRET = 'secret123';
+  const servers = {
+    linear: {
+      url: 'https://mcp.example/linear',
+      args: ['--flag'],
+      env: { TOKEN: SECRET, LIST: [SECRET], DEEP: { A: SECRET } },
+      headers: { Authorization: SECRET },
+    },
+    wrong: { env: SECRET, headers: [SECRET] },
+    listed: [{ env: { TOKEN: SECRET } }],
+    bare: SECRET.length,
+  };
+
+  test('every key reads as written, masked in all three, the rest whole', async () => {
+    const user = JSON.stringify({
+      theme: 'dark',
+      unknownKey: 1,
+      mcpServers: servers,
+      agents: { codex: { command: 'codex-acp --key=visible' } },
+    });
+
+    await placed({ user }, async (where) => {
+      const { answer, files } = await read(where);
+      const said = JSON.stringify(answer);
+
+      expect(said).not.toContain(SECRET);
+      expect(answer.project).toBeNull();
+      expect(answer.user).toMatchObject({
+        theme: 'dark',
+        unknownKey: 1,
+        agents: { codex: { command: 'codex-acp --key=visible' } },
+        mcpServers: {
+          linear: {
+            url: 'https://mcp.example/linear',
+            args: ['--flag'],
+            env: { TOKEN: '***', LIST: '***', DEEP: '***' },
+            headers: { Authorization: '***' },
+          },
+          wrong: { env: '***', headers: '***' },
+          listed: [{ env: { TOKEN: '***' } }],
+          bare: 9,
+        },
+      });
+      expect(answer.effective).toMatchObject({
+        theme: 'dark',
+        mcpServers: { linear: { env: { TOKEN: '***' } } },
+      });
+      expect(files).toStrictEqual({
+        user: `~${join('/', '.config', 'chord', 'settings.json')} · 4 keys`,
+        project: `${join('.chord', 'settings.json')} · not there`,
+      });
+    });
+  });
+
+  test('a project file is masked too and wins in effective', async () => {
+    await placed(
+      {
+        user: '{"agent":"claude"}',
+        project: JSON.stringify({
+          agent: 'codex',
+          mcpServers: { x: { env: { T: SECRET } } },
+        }),
+      },
+      async (where) => {
+        const { answer } = await read(where);
+
+        expect(JSON.stringify(answer)).not.toContain(SECRET);
+        expect(answer.user).toStrictEqual({ agent: 'claude' });
+        expect(answer.project).toStrictEqual({
+          agent: 'codex',
+          mcpServers: { x: { env: { T: '***' } } },
+        });
+        expect(answer.effective).toMatchObject({ agent: 'codex' });
+      },
+    );
+  });
+
+  test('a path walks what is masked, one path deeper being not set', async () => {
+    await placed(
+      { user: JSON.stringify({ mcpServers: servers }) },
+      async (where) => {
+        const key = ['mcpServers', 'linear', 'env', 'TOKEN'];
+
+        expect((await read(where, key)).answer).toStrictEqual({
+          user: '***',
+          project: undefined,
+          effective: '***',
+          problems: [],
+        });
+
+        const deeper = await read(where, [...key, 'more']);
+
+        expect(deeper.answer.user).toBeUndefined();
+        expect(deeper.answer.effective).toBeUndefined();
+
+        const under = await read(where, [
+          'mcpServers',
+          'linear',
+          'env',
+          'DEEP',
+          'A',
+        ]);
+
+        expect(under.answer.user).toBeUndefined();
+        expect(JSON.stringify(under)).not.toContain(SECRET);
+      },
+    );
+  });
+
+  test('an unknown key reads, and a name that can be no key is refused', async () => {
+    await placed({ user: '{"nope":{"deep":1}}' }, async (where) => {
+      const { answer } = await read(where, ['nope', 'deep']);
+
+      expect(answer.user).toBe(1);
+      expect(answer.effective).toBeUndefined();
+      expect(await readSettingsTool(where, ['__proto__'])).toStrictEqual({
+        error: 'No setting __proto__',
+      });
+      expect(await readSettingsTool(where, ['a', 'constructor'])).toStrictEqual(
+        {
+          error: 'No setting a.constructor',
+        },
+      );
+    });
+  });
+
+  test("a broken file with a secret drops the parser's words", async () => {
+    // Bun's parser quotes the token it choked on.
+    const user = `{"mcpServers":{"x":{"env":{"T":${SECRET}}}}}`;
+
+    await placed({ user }, async (where) => {
+      const { answer, files } = await read(where);
+
+      expect(JSON.stringify(answer)).not.toContain(SECRET);
+      expect(answer.user).toBeNull();
+      expect(answer.problems).toStrictEqual([
+        {
+          file: `~${join('/', '.config', 'chord', 'settings.json')}`,
+          message: 'not valid JSON; the file is ignored',
+        },
+      ]);
+      expect(files.user).toEndWith(' · not valid JSON');
+    });
+  });
+
+  test('a file that is no object reads null, and says so', async () => {
+    await placed({ project: '["x"]' }, async (where) => {
+      const { answer, files } = await read(where);
+
+      expect(answer.project).toBeNull();
+      expect(answer.problems.map(({ message }) => message)).toStrictEqual([
+        'not a JSON object; the file is ignored',
+      ]);
+      expect(files.project).toEndWith(' · not a JSON object');
+    });
+  });
+
+  test('no home reads the project alone and says so', async () => {
+    await placed({ project: '{"agent":"codex"}' }, async (where) => {
+      const { answer, files } = await read({
+        ...where,
+        configHome: undefined,
+        home: undefined,
+      });
+
+      expect(answer.user).toBeNull();
+      expect(answer.effective).toStrictEqual({ agent: 'codex' });
+      expect(files.user).toBe('no home directory');
+    });
+  });
+
+  test('a file that cannot be read names no path in its problem', async () => {
+    await placed({}, async (where) => {
+      // A directory where the file goes: read fails, and not as absent.
+      await mkdir(join(where.configHome!, 'chord', 'settings.json'));
+
+      const { answer, files } = await read(where);
+
+      expect(answer.user).toBeNull();
+      expect(answer.problems).toStrictEqual([
+        {
+          file: `~${join('/', '.config', 'chord', 'settings.json')}`,
+          message: 'cannot be read; the file is ignored',
+        },
+      ]);
+      expect(files.user).toEndWith(' · cannot be read');
+    });
+  });
+
+  test("a path keeps its key's problems and those of a whole file", async () => {
+    await placed(
+      {
+        user: '{"theme":3,"mouse":"no"}',
+        project: '{ broken',
+      },
+      async (where) => {
+        const keys = (answer: SettingsRead) =>
+          answer.problems.map(({ message }) => message);
+
+        expect(keys((await read(where)).answer)).toHaveLength(3);
+
+        const theme = keys((await read(where, ['theme'])).answer);
+
+        expect(theme).toHaveLength(2);
+        expect(theme[0]).toContain('"theme"');
+        expect(theme[1]).toBe('not valid JSON; the file is ignored');
+        expect(keys((await read(where, ['agent'])).answer)).toStrictEqual([
+          'not valid JSON; the file is ignored',
+        ]);
+      },
+    );
+  });
+
+  test('maskedSettings leaves a settings with nothing to mask as it is', () => {
+    for (const value of [
+      null,
+      3,
+      ['x'],
+      { mcpServers: 3 },
+      { theme: 'dark' },
+    ]) {
+      expect(maskedSettings(value)).toStrictEqual(value);
+    }
   });
 });

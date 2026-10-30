@@ -65,6 +65,11 @@ function windowOf(probed: string[] = []): WindowView {
     teams: () => Promise.resolve({ found: [], runs: [] }),
     runTeam: () => Promise.resolve({ error: 'no teams here' }),
     teamPlaces: () => Promise.reject(new Error('no teams here')),
+    settingsWhere: () => ({
+      configHome: undefined,
+      cwd: tmpdir(),
+      home: undefined,
+    }),
     askPerson: () => Promise.resolve(undefined),
     openMember: () => Promise.resolve({ error: 'no members here' }),
     message: () => ({ error: 'no parent here' }),

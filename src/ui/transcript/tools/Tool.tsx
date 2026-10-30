@@ -50,6 +50,11 @@ import {
   type TableLine,
 } from './proposal.ts';
 import { planStatus, planText, todoRows } from './plan_ask.ts';
+import {
+  foldedSettingsNote,
+  type SettingsRow,
+  settingsRows,
+} from './settings_row.ts';
 import type { TerminalView } from './terminal.ts';
 import { callTarget } from '../targets.ts';
 import {
@@ -106,7 +111,9 @@ export function Tool({
   const gap = useGap();
 
   const chordServer = useContext(ChordServerName);
-  const line = headline(call, chordServer);
+  const toggle = useHintKey('app:toggleTranscript');
+  const headed = headline(call, chordServer);
+  const line = foldedSettingsNote(headed, call.chord, expanded, toggle);
   const recipient = useAgentColour(line.name);
   const live = toneOf(call, asked);
   const tone = ended && live === 'running' ? 'pending' : live;
@@ -139,6 +146,10 @@ export function Tool({
 
   const proposal =
     call.chord === undefined ? undefined : proposalOf(call.chord);
+  const settings =
+    call.chord === undefined
+      ? undefined
+      : settingsRows(call.chord, expanded, Math.max(width - 5, 1));
   const { lines, hidden, terminals, diffs } = summary(
     call,
     expanded,
@@ -178,6 +189,7 @@ export function Tool({
             width={Math.max(width - 5, 1)}
           />
         )}
+        {settings !== undefined && <SettingsBody rows={settings} />}
         {sent !== undefined && (
           <MessageBody text={sent.text} width={width} ending={sent.ending} />
         )}
@@ -189,6 +201,7 @@ export function Tool({
           />
         )}
         {proposal === undefined &&
+          settings === undefined &&
           sent === undefined &&
           call.plan === undefined &&
           lines.map((line, index) => (
@@ -224,6 +237,34 @@ export function Tool({
       </box>
     </>
   );
+}
+
+/**
+ * What a `settings` call read or changed: labels dim, values in the text's
+ * own colour, each already wrapped under its own column and never folded.
+ */
+function SettingsBody({ rows }: { rows: readonly SettingsRow[] }) {
+  const colours = useColours();
+  const selectable = useSelectable();
+
+  return rows.map((row, index) => (
+    <Under key={index} first={index === 0}>
+      <text {...ROWS} {...selectable}>
+        <span attributes={DIM}>{row.label}</span>
+        <span
+          {...(row.tone === 'warning'
+            ? fg(colours.warning)
+            : row.tone === 'success'
+              ? fg(colours.success)
+              : row.tone === 'dim'
+                ? { attributes: DIM }
+                : {})}
+        >
+          {row.text}
+        </span>
+      </text>
+    </Under>
+  ));
 }
 
 /**

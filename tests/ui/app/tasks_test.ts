@@ -311,7 +311,7 @@ test("/mcp lists chord's server first, and says what it gives or why it was not 
   );
   expect(chordLine(passed, 'claude')).toStrictEqual(
     "chord's server gives claude list_agents, get_budgets, list_sessions, list_teams, " +
-      'spawn_task, open_agent, run_team, propose_team, send_message, close_agent, ' +
+      'spawn_task, open_agent, run_team, propose_team, settings, send_message, close_agent, ' +
       'clear_agent, monitor, stop_monitor and list_monitors.',
   );
   expect(

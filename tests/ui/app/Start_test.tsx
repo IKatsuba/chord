@@ -17,6 +17,109 @@ import {
 import { paletteOf } from '../../../src/ui/theme/theme.ts';
 import { ESC, until } from './render.tsx';
 
+describe('CHD-565 tester: explicit list navigation and clipping', () => {
+  const agents: ListedAgent[] = Array.from({ length: 15 }, (_, at) => ({
+    name: `offered-${at + 1}`,
+    title: undefined,
+    from: 'settings',
+    start: 'fixture',
+  }));
+
+  async function page(offered: readonly string[], columns = 80, rows = 24) {
+    const picks: (string | undefined)[] = [];
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        kind='agents'
+        agents={agents}
+        offered={offered}
+        preferred='outside-the-list'
+        directory='/tmp/chord-qa'
+        colours={paletteOf('dark', false)}
+        keymap={DEFAULT_KEYMAP}
+        onPick={(chosen) => picks.push(chosen)}
+      />,
+      { columns, rows },
+    );
+
+    return { ...app, picks };
+  }
+
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`one known row still waits for a choice at ${columns}x${rows}`, async () => {
+      const app = await page(
+        ['unknown-first', 'offered-7', 'offered-7', 'unknown-first'],
+        columns,
+        rows,
+      );
+
+      try {
+        expect(app.picks).toEqual([]);
+        expect(app.frame()).toContain('❯ 1. offered-7');
+        expect(app.frame()).not.toContain('2.');
+        expect(app.frame()).toContain(
+          'Unknown in offeredAgents: unknown-first',
+        );
+        await app.write('2');
+        expect(app.picks).toEqual([]);
+        await app.write('\r');
+        await app.write('1');
+        expect(app.picks).toEqual(['offered-7']);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
+
+  test('reordered tail stays selected across resizing with its note suppressed', async () => {
+    const offered = [...agents].reverse().map(({ name }) => name);
+    const app = await page([...offered, 'unknown-tail'], 120, 40);
+
+    try {
+      expect(app.frame()).not.toContain('Unknown in offeredAgents');
+
+      for (let at = 1; at < offered.length; at++) {
+        await app.write('j');
+      }
+
+      expect(app.frame()).toMatch(/❯\s+15\.\s+offered-1/);
+      await app.resize({ columns: 80, rows: 24 });
+      expect(app.frame()).toMatch(/❯\s+15\.\s+offered-1/);
+      expect(app.frame()).not.toContain('Unknown in offeredAgents');
+      await app.resize({ columns: 120, rows: 40 });
+      await app.write('k');
+      await app.write('\r');
+      expect(app.picks).toEqual(['offered-2']);
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('an unknown note gives way to rows and returns without changing selection', async () => {
+    const app = await page(['offered-9', 'offered-2', 'typo']);
+
+    try {
+      await app.write('j');
+      expect(app.frame()).toContain('❯ 2. offered-2');
+      expect(app.frame()).toContain('Unknown in offeredAgents: typo');
+      await app.resize({ columns: 30, rows: 8 });
+      expect(app.frame()).not.toContain('Unknown in offeredAgents');
+      await app.resize({ columns: 80, rows: 24 });
+      expect(app.frame()).toContain('❯ 2. offered-2');
+      expect(app.frame()).toContain('Unknown in offeredAgents: typo');
+      await app.write(ESC);
+      await until('cancel offered list', () => app.picks.length === 1);
+      await app.write('\r');
+      expect(app.picks).toEqual([undefined]);
+    } finally {
+      await app.unmount();
+    }
+  });
+});
+
 const NOW = Date.now();
 const ago = (minutes: number) => new Date(NOW - minutes * 60_000).toISOString();
 

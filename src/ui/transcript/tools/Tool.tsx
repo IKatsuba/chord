@@ -111,9 +111,7 @@ export function Tool({
   const gap = useGap();
 
   const chordServer = useContext(ChordServerName);
-  const toggle = useHintKey('app:toggleTranscript');
-  const headed = headline(call, chordServer);
-  const line = foldedSettingsNote(headed, call.chord, expanded, toggle);
+  const line = headline(call, chordServer);
   const recipient = useAgentColour(line.name);
   const live = toneOf(call, asked);
   const tone = ended && live === 'running' ? 'pending' : live;
@@ -180,7 +178,16 @@ export function Tool({
           ) : (
             <ToolMarker tone={tone} />
           )}
-          <HeadlineText line={line} width={width} colour={recipient} />
+          {settings === undefined ? (
+            <HeadlineText line={line} width={width} colour={recipient} />
+          ) : (
+            <SettingsHeadline
+              line={line}
+              call={call.chord}
+              expanded={expanded}
+              width={width}
+            />
+          )}
         </box>
         {proposal !== undefined && (
           <Proposal
@@ -236,6 +243,28 @@ export function Tool({
         ))}
       </box>
     </>
+  );
+}
+
+/** A served `settings` call's headline, which may say the key that opens it. */
+function SettingsHeadline({
+  line,
+  call,
+  expanded,
+  width,
+}: {
+  line: Headline;
+  call: ToolCall['chord'];
+  expanded: boolean;
+  width: number;
+}) {
+  const toggle = useHintKey('app:toggleTranscript');
+
+  return (
+    <HeadlineText
+      line={foldedSettingsNote(line, call, expanded, toggle)}
+      width={width}
+    />
   );
 }
 

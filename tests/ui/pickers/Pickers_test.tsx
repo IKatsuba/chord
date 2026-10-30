@@ -2,8 +2,14 @@ import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
+import { useState } from 'react';
 import { draw } from '../harness.tsx';
-import { ConfigPicker, ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
+import { usePress } from '../../../src/ui/app/input.ts';
+import {
+  ConfigPicker,
+  ModelPicker,
+  PickerList,
+} from '../../../src/ui/pickers/Pickers.tsx';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1578,4 +1584,133 @@ describe('CHD-545 tester: empty and hidden picker choices ignore pick keys', () 
       });
     }
   }
+});
+
+describe('a PickerList in a box narrower than the window', () => {
+  const title = 'a long title that does not fit in the frame it is drawn in';
+  const list = (width?: number) =>
+    draw(
+      <box width={40}>
+        <PickerList
+          choices={[
+            { key: 'a', value: 'a', label: `today  ${title}`, hang: 7 },
+          ]}
+          rows={5}
+          active={false}
+          {...(width === undefined ? {} : { width })}
+          onPick={() => {}}
+        />
+      </box>,
+      { columns: 120, rows: 10 },
+    );
+
+  test('lays its labels out in the width it is given, and cuts none', async () => {
+    const app = await list(40);
+    const frame = stripAnsi(app.frame());
+
+    expect(frame).not.toContain('...');
+    expect(frame.replace(/\s+/g, ' ')).toContain(title);
+    await app.unmount();
+  });
+
+  test("without a width it lays them out in the window's", async () => {
+    const app = await list();
+
+    expect(stripAnsi(app.frame())).toContain('...');
+    await app.unmount();
+  });
+});
+
+describe('CHD-564 tester: a framed list keeps its width and choice', () => {
+  const title =
+    'second session has a title that wraps over several short lines';
+  const choices = [
+    { key: 'first', value: 'first', label: 'today  first session', hang: 7 },
+    {
+      key: 'second',
+      value: 'second',
+      label: `today  ${title}`,
+      hang: 7,
+      current: true,
+    },
+  ];
+
+  test('an explicit width survives terminal resizes with its highlight and keys', async () => {
+    const picked: string[] = [];
+    const app = await draw(
+      <box width={40}>
+        <PickerList
+          choices={choices}
+          rows={10}
+          active
+          width={40}
+          onPick={(id) => picked.push(id)}
+        />
+      </box>,
+      { columns: 120, rows: 20 },
+    );
+
+    try {
+      const before = stripAnsi(app.frame());
+
+      expect(before).not.toContain('...');
+      expect(before.replace(/\s+/g, ' ')).toContain(title);
+      await app.resize({ columns: 80 });
+      expect(stripAnsi(app.frame())).toBe(before);
+      await app.write('\r');
+      await app.write('1');
+      expect(picked).toEqual(['second', 'first']);
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('changing only the frame width reflows the selected label without resetting it', async () => {
+    const picked: string[] = [];
+
+    function ChangingWidth() {
+      const [width, setWidth] = useState(40);
+
+      usePress((input) => {
+        if (input === 'w') {
+          setWidth((was) => (was === 40 ? 62 : 40));
+        }
+      });
+
+      return (
+        <box width={width}>
+          <PickerList
+            choices={choices}
+            rows={3}
+            active
+            width={width}
+            onPick={(id) => picked.push(id)}
+          />
+        </box>
+      );
+    }
+
+    const app = await draw(<ChangingWidth />, { columns: 120, rows: 20 });
+
+    try {
+      const narrow = stripAnsi(app.frame());
+
+      await app.write('j');
+      await app.write('w');
+
+      const wide = stripAnsi(app.frame());
+
+      expect(narrow).not.toContain('first session');
+      expect(wide).toContain('first session');
+      expect(wide).not.toContain('...');
+      expect(wide.replace(/\s+/g, ' ')).toContain(title);
+      await app.write('\r');
+      await app.write('w');
+      expect(stripAnsi(app.frame())).toBe(narrow);
+      await app.write('\r');
+      expect(picked).toEqual(['second', 'second']);
+    } finally {
+      await app.unmount();
+    }
+  });
 });

@@ -77,7 +77,8 @@ bun dev release [version|major|minor|patch|fix] # the owner's release
 bun dev selftest <binary> # check a binary on the fake agent, including tmux
 bun dev registry          # refetch the ACP Registry into src/registry.ts
 bun dev mark              # rasterise scripts/mark.svg into the header mark
-bun dev screenshots       # retake docs/images/ from chord on the fake agent
+bun dev screenshots       # retake docs/images/, including title pages and logos
+bun dev screenshots logo  # the transparent dark and light README logos only
 bun dev memory            # long-run memory check; options in docs/memory.md
 ```
 

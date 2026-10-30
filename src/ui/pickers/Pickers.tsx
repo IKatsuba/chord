@@ -96,6 +96,16 @@ export function borderOf(colour: string | undefined) {
   } as const;
 }
 
+/** The agent picker's hint; the start screen counts the rows these words take. */
+export function useAgentHint(listed: boolean): string {
+  const closeHint = useCloseHint('to cancel');
+
+  return hintOf(
+    ...(listed ? ['↑↓ or j/k to move', 'Enter or 1–9 to select'] : []),
+    closeHint,
+  );
+}
+
 /** The catalog before any agent owns the terminal or starts a session. */
 export function AgentPicker({
   agents,
@@ -111,7 +121,7 @@ export function AgentPicker({
   onPick: (id: string) => void;
 }) {
   const choices = agentChoices(agents, preferred);
-  const closeHint = useCloseHint('to cancel');
+  const hint = useAgentHint(choices.length > 0);
 
   return (
     <box paddingX={1} flexShrink={0}>
@@ -132,12 +142,7 @@ export function AgentPicker({
       )}
       <box marginTop={1}>
         <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            ...(choices.length === 0
-              ? []
-              : ['↑↓ or j/k to move', 'Enter or 1–9 to select']),
-            closeHint,
-          )}
+          {hint}
         </text>
       </box>
     </box>
@@ -265,6 +270,24 @@ export function ModelPicker({
   );
 }
 
+/** The session picker's hint; the start screen counts the rows these words take. */
+export function useResumeHint(
+  listed: boolean,
+  everywhere: boolean,
+  starting: boolean,
+): string {
+  const closeHint = useCloseHint(starting ? 'to quit' : 'to close');
+  const scopeKey = useHintKey('select:toggleScope');
+  const scopeHint =
+    scopeKey === undefined
+      ? undefined
+      : `${capital(scopeKey)} ${
+          everywhere ? 'for this directory' : 'for all directories'
+        }`;
+
+  return hintOf(listed ? 'Enter to resume' : undefined, scopeHint, closeHint);
+}
+
 /**
  * `/resume`: this directory's earlier sessions, newest first, inline above
  * the prompt as the model picker is; each row says when the session was last
@@ -283,6 +306,7 @@ export function ResumePicker({
   active,
   starting = false,
   gap = true,
+  width,
   onPick,
 }: {
   picker: ResumePickerState;
@@ -299,6 +323,8 @@ export function ResumePicker({
   starting?: boolean;
   /** The row above its frame; none where it floats over the transcript. */
   gap?: boolean;
+  /** Its frame's width, where that is not the window's. */
+  width?: number;
   onPick: (chosen: EarlierSession) => void;
 }) {
   const { everywhere } = picker;
@@ -313,18 +339,15 @@ export function ResumePicker({
       open,
     ),
   );
-  const closeHint = useCloseHint(starting ? 'to quit' : 'to close');
   // None where it has no choice, or the room no row for one: the list, and
   // its keys, go.
   const listed =
     choices.length === 0 ? 0 : framedRows(rows, room, choices.length);
-  const scopeKey = useHintKey('select:toggleScope');
-  const scopeHint =
-    scopeKey === undefined
-      ? undefined
-      : `${capital(scopeKey)} ${
-          everywhere ? 'for this directory' : 'for all directories'
-        }`;
+  const hint = useResumeHint(
+    choices.length > 0 && listed > 0,
+    everywhere,
+    starting,
+  );
 
   return (
     <box
@@ -362,6 +385,7 @@ export function ResumePicker({
               choices={choices}
               rows={listed}
               active={active}
+              {...(width === undefined ? {} : { width })}
               onPick={(value) => {
                 const chosen = sessions[Number(value)];
 
@@ -375,13 +399,7 @@ export function ResumePicker({
       </Body>
       <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            choices.length === 0 || listed === 0
-              ? undefined
-              : 'Enter to resume',
-            scopeHint,
-            closeHint,
-          )}
+          {hint}
         </text>
       </box>
     </box>
@@ -879,17 +897,21 @@ export function PickerList({
   choices,
   rows,
   active,
+  width,
   onPick,
   onMove,
 }: {
   choices: readonly PickerChoice[];
   rows: number;
   active: boolean;
+  /** What labels are laid out in, where its box is not as wide as the window. */
+  width?: number;
   onPick: (id: string) => void;
   /** Hears the choice each move highlights. */
   onMove?: (id: string) => void;
 }) {
-  const { width: columns } = useTerminalDimensions();
+  const { width: terminal } = useTerminalDimensions();
+  const columns = width ?? terminal;
   const lines = pickerLayout(choices, rows, columns);
   const heights = lines?.map((each) => each.length);
   const [view, setView] = useState(() =>

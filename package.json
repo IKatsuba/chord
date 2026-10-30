@@ -82,6 +82,7 @@
     "jiti": "^2.7.0",
     "puppeteer-core": "^25.13.0",
     "semver": "^7.8.5",
+    "slice-ansi": "^9.0.1",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.71.1"
   }

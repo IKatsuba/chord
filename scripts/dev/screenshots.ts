@@ -22,6 +22,9 @@
  * plays comes from `CHORD_FAKE_SCENARIO`, so the prompt typed can be a
  * person's words.
  *
+ * `logo` takes the README's two logos the same way: the title page in each
+ * theme, kept to its art, with no window and a transparent background.
+ *
  * Chrome is the system's: `CHROME` names its binary where it is not at
  * macOS's usual place.
  */
@@ -32,6 +35,9 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { AnsiUp } from 'ansi_up';
 import puppeteer from 'puppeteer-core';
 import { quote } from 'shell-quote';
+import sliceAnsi from 'slice-ansi';
+import stripAnsi from 'strip-ansi';
+import { TAGLINE } from '../../src/ui/app/start_layout.ts';
 
 /** What a shot does to the window before it is taken. */
 type Step =
@@ -39,14 +45,28 @@ type Step =
   | { readonly keys: readonly string[] }
   | { readonly until: string }
   | { readonly wait: number }
+  /** chord gone from its pane, as a `/exit` leaves it. */
+  | { readonly exited: true }
   /** The sessions recorded so far aged, the latest first, by these hours. */
-  | { readonly aged: readonly number[] };
+  | { readonly aged: readonly number[] }
+  /** chord started again in the same pane and home, with these arguments. */
+  | { readonly respawn: readonly string[] };
 
-interface Shot {
+export interface Shot {
   /** The file under docs/images, without `.png`. */
   readonly name: string;
   /** The fake agent's scenario for every prompt that names none. */
   readonly scenario: string;
+  /** chord's arguments; `claude` by default, as an unnamed start asks first. */
+  readonly args?: readonly string[];
+  /** What chord's first screen shows; the prompt's hint by default. */
+  readonly first?: string;
+  /** More of chord's environment. */
+  readonly env?: readonly string[];
+  /** The settings' theme; `dark` by default. */
+  readonly theme?: 'dark' | 'light';
+  /** Which group of shots a name on the command line also takes it by. */
+  readonly group?: 'logo';
   readonly steps: readonly Step[];
   /** Whether the project has the `bugfix` team saved; it has by default. */
   readonly team?: boolean;
@@ -57,7 +77,18 @@ function prompt(text: string): Step[] {
   return [{ type: text }, { keys: ['Enter'] }];
 }
 
-const SHOTS: readonly Shot[] = [
+export const SHOTS: readonly Shot[] = [
+  {
+    // Nothing picked, so no agent starts. The system's own PATH leaves out
+    // every own CLI on the machine that takes it, so the list is the same
+    // on any.
+    name: 'start',
+    scenario: 'text',
+    args: [],
+    first: 'Select agent',
+    env: ['PATH=/usr/bin:/bin'],
+    steps: [],
+  },
   {
     name: 'team',
     scenario: 'team',
@@ -131,9 +162,11 @@ const SHOTS: readonly Shot[] = [
         ...prompt('/clear'),
         { wait: 3000 },
       ]),
+      ...prompt('/exit'),
+      { exited: true },
       // Taken one after another, they would all say "just now".
       { aged: [2, 26, 75] },
-      ...prompt('/resume'),
+      { respawn: ['--resume'] },
       { until: 'Resume a session' },
     ],
   },
@@ -161,6 +194,17 @@ const SHOTS: readonly Shot[] = [
   },
 ];
 
+/** The title page's art, for the README: its own colours on no background. */
+const LOGOS: readonly Shot[] = (['dark', 'light'] as const).map((theme) => ({
+  name: `logo-${theme}`,
+  scenario: 'text',
+  args: [],
+  first: TAGLINE,
+  theme,
+  group: 'logo',
+  steps: [],
+}));
+
 const ROOT = new URL('../..', import.meta.url).pathname;
 const IMAGES = join(ROOT, 'docs', 'images');
 const CHROME =
@@ -170,6 +214,9 @@ const CHROME =
 const COLUMNS = 120;
 const ROWS = 37;
 const SOCKET = `chord-screenshots-${String(process.pid)}`;
+/** The art of the title page's `full` step. */
+const LOGO_COLUMNS = 57;
+const LOGO_ROWS = 8;
 
 /** The terminal's own colours behind and in front of chord. */
 const BACKGROUND = '#16171b';
@@ -197,6 +244,18 @@ async function until(text: string, shot: string): Promise<void> {
   while (!screen().includes(text)) {
     if (Date.now() > end) {
       throw new Error(`${shot}: "${text}" never came.\n${screen()}`);
+    }
+
+    await sleep(100);
+  }
+}
+
+async function exited(shot: string): Promise<void> {
+  const end = Date.now() + 30_000;
+
+  while (tmux('display', '-p', '-t', 'shot', '#{pane_dead}').trim() !== '1') {
+    if (Date.now() > end) {
+      throw new Error(`${shot}: chord never left.\n${screen()}`);
     }
 
     await sleep(100);
@@ -245,7 +304,11 @@ async function aged(dir: string, hours: readonly number[]): Promise<void> {
 }
 
 /** A home of chord's own, where the settings and the project are the shot's. */
-async function world(dir: string, team: boolean): Promise<string> {
+async function world(
+  dir: string,
+  team: boolean,
+  theme: 'dark' | 'light',
+): Promise<string> {
   const home = join(dir, 'home');
   const project = join(home, 'src', 'app');
   const teamFile = join(ROOT, 'scripts', 'dev', 'screenshots_team.md');
@@ -266,7 +329,7 @@ async function world(dir: string, team: boolean): Promise<string> {
   await writeFile(
     join(home, '.config', 'chord', 'settings.json'),
     JSON.stringify({
-      theme: 'dark',
+      theme,
       agent: 'claude',
       agents: {
         claude: { command: fake, model: 'claude-opus-5-5' },
@@ -298,7 +361,7 @@ async function capture(shot: Shot): Promise<string> {
   await mkdir(dir, { recursive: true });
 
   try {
-    const home = await world(dir, shot.team ?? true);
+    const home = await world(dir, shot.team ?? true, shot.theme ?? 'dark');
     const env = [
       `HOME=${home}`,
       `XDG_CONFIG_HOME=${join(home, '.config')}`,
@@ -321,16 +384,18 @@ async function capture(shot: Shot): Promise<string> {
         permission: 'Say in the README what changed',
       })}`,
     ];
-    const chord = [
-      process.execPath,
-      '--define',
-      'process.env.NODE_ENV:"production"',
-      join(ROOT, 'src', 'main.tsx'),
-      // Named, as an unnamed start opens the agent picker first (CHD-532).
-      'claude',
-      '-C',
-      join(home, 'src', 'app'),
-    ];
+    const chord = (args: readonly string[]) =>
+      `exec env ${quote([
+        ...env,
+        ...(shot.env ?? []),
+        process.execPath,
+        '--define',
+        'process.env.NODE_ENV:"production"',
+        join(ROOT, 'src', 'main.tsx'),
+        ...args,
+        '-C',
+        join(home, 'src', 'app'),
+      ])}`;
 
     tmux(
       'new-session',
@@ -341,11 +406,13 @@ async function capture(shot: Shot): Promise<string> {
       String(COLUMNS),
       '-y',
       String(ROWS),
-      `exec env ${quote([...env, ...chord])}`,
+      chord(shot.args ?? ['claude']),
     );
     tmux('set', '-g', 'default-terminal', 'tmux-256color');
     tmux('set', '-as', 'terminal-overrides', ',*:RGB');
-    await until('for shortcuts', shot.name);
+    // Its pane outlives a chord that leaves, for a `respawn` to start in.
+    tmux('set', '-w', '-t', 'shot', 'remain-on-exit', 'on');
+    await until(shot.first ?? 'for shortcuts', shot.name);
 
     for (const step of shot.steps) {
       if ('type' in step) {
@@ -356,8 +423,12 @@ async function capture(shot: Shot): Promise<string> {
         await sleep(300);
       } else if ('until' in step) {
         await until(step.until, shot.name);
+      } else if ('exited' in step) {
+        await exited(shot.name);
       } else if ('aged' in step) {
         await aged(join(dir, 'state', 'chord', 'records'), step.aged);
+      } else if ('respawn' in step) {
+        tmux('respawn-pane', '-k', '-t', 'shot', chord(step.respawn));
       } else {
         await sleep(step.wait);
       }
@@ -373,22 +444,70 @@ async function capture(shot: Shot): Promise<string> {
   }
 }
 
-function page(frame: string): string {
+/**
+ * The title page's art out of a captured frame: the rows above the tagline's
+ * gap, from the art's left edge, with their colours. So the logo cannot drift
+ * from what chord draws.
+ */
+export function logoRows(frame: string): string[] {
+  const rows = frame.split('\n');
+  const tagline = rows.findIndex((row) => stripAnsi(row).includes(TAGLINE));
+
+  if (tagline < LOGO_ROWS + 1) {
+    throw new Error('The frame has no title page art above its tagline.');
+  }
+
+  const art = rows.slice(tagline - 1 - LOGO_ROWS, tagline - 1);
+  const left = Math.min(
+    ...art.map((row) => stripAnsi(row).search(/\S/u)).filter((at) => at >= 0),
+  );
+
+  return art.map((row) => sliceAnsi(row, left, left + LOGO_COLUMNS));
+}
+
+/** Rows as HTML, the terminal's colours kept inline. */
+function rowsHtml(frame: readonly string[]): string {
   const ansi = new AnsiUp();
 
   ansi.use_classes = false;
 
-  const rows = frame
-    .replace(/\n$/u, '')
-    .split('\n')
+  return frame
     .map((line) => `<div class="row">${ansi.ansi_to_html(line) || ' '}</div>`)
     .join('');
+}
+
+const FONT = `
+  @font-face { font-family: Term; src: local('JetBrains Mono'), local('JetBrainsMono-Regular'); }
+  @font-face { font-family: Term; font-weight: bold; src: local('JetBrains Mono Bold'), local('JetBrainsMono-Bold'); }
+`;
+
+/**
+ * A logo alone, nothing behind it, its cell a whole 12×24 pixels: the shots'
+ * fractional cell leaves seams between the block glyphs, which show on white.
+ */
+function logoPage(frame: string): string {
+  return `<!doctype html>
+<meta charset="utf-8">
+<style>
+  ${FONT}
+  html, body { margin: 0; background: transparent; }
+  .page {
+    display: inline-block; width: ${String(LOGO_COLUMNS)}ch;
+    font: 20px/24px Term, Menlo, monospace; white-space: pre;
+    font-variant-ligatures: none;
+  }
+  .row { height: 24px; }
+</style>
+<div class="page">${rowsHtml(logoRows(frame))}</div>`;
+}
+
+function page(frame: string): string {
+  const rows = rowsHtml(frame.replace(/\n$/u, '').split('\n'));
 
   return `<!doctype html>
 <meta charset="utf-8">
 <style>
-  @font-face { font-family: Term; src: local('JetBrains Mono'), local('JetBrainsMono-Regular'); }
-  @font-face { font-family: Term; font-weight: bold; src: local('JetBrains Mono Bold'), local('JetBrainsMono-Bold'); }
+  ${FONT}
   html, body { margin: 0; background: transparent; }
   /* The window on a gradient, as Chorded's own pictures show it (CHD-407). */
   .page {
@@ -424,6 +543,9 @@ function page(frame: string): string {
   .title { font-size: 15px; font-weight: 500; color: #ececec; }
   .screen {
     padding: 2px 22px 22px; color: ${FOREGROUND};
+    /* The whole window: a capture ends each row at its last cell drawn, and a
+       centred page has no row that reaches the edge. */
+    width: ${String(COLUMNS)}ch;
     font: 13.5px/1.3 Term, Menlo, monospace; white-space: pre;
     font-variant-ligatures: none;
   }
@@ -454,12 +576,23 @@ export async function screenshots(names: readonly string[]): Promise<void> {
 
     await tab.setViewport({ width: 1600, height: 1000, deviceScaleFactor: 2 });
 
-    for (const shot of SHOTS) {
-      if (only.size > 0 && !only.has(shot.name)) {
+    for (const shot of [...SHOTS, ...LOGOS]) {
+      if (
+        only.size > 0 &&
+        !only.has(shot.name) &&
+        (shot.group === undefined || !only.has(shot.group))
+      ) {
         continue;
       }
 
-      await tab.setContent(page(await capture(shot)), { waitUntil: 'load' });
+      const frame = await capture(shot);
+
+      await tab.setContent(
+        shot.group === 'logo' ? logoPage(frame) : page(frame),
+        {
+          waitUntil: 'load',
+        },
+      );
       await tab.evaluate(() => document.fonts.ready);
 
       const element = await tab.$('.page');
@@ -468,8 +601,12 @@ export async function screenshots(names: readonly string[]): Promise<void> {
         throw new Error(`${shot.name}: nothing was drawn.`);
       }
 
-      // Square and opaque, the backdrop to the picture's edge.
-      await element.screenshot({ path: join(IMAGES, `${shot.name}.png`) });
+      // Square and opaque, the backdrop to the picture's edge; a logo has
+      // none, for the page it sits on.
+      await element.screenshot({
+        path: join(IMAGES, `${shot.name}.png`),
+        omitBackground: shot.group === 'logo',
+      });
       console.log(`docs/images/${shot.name}.png`);
     }
   } finally {

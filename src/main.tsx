@@ -1,3 +1,4 @@
+import manifest from '../package.json' with { type: 'json' };
 import { createResources } from './platform/resources.ts';
 import {
   resourceFixtureCase,
@@ -199,6 +200,7 @@ export const cli = chordCommand().action(async (options, named) => {
 
     start = startServices.render(
       <Start
+        version={manifest.version}
         kind='agents'
         agents={listed}
         preferred={loaded.settings.agent ?? DEFAULT_AGENT}
@@ -383,6 +385,7 @@ export const cli = chordCommand().action(async (options, named) => {
 
     start = startServices.render(
       <Start
+        version={manifest.version}
         agent={agent}
         directory={shownPath(resolve(options.cwd), {
           cwd: resolve(options.cwd),

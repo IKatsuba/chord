@@ -1,4 +1,9 @@
-<h1 align="center">chord</h1>
+<h1 align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/images/logo-dark.png">
+    <img src="docs/images/logo-light.png" alt="chord" width="462">
+  </picture>
+</h1>
 
 <p align="center">
   <strong>One terminal for every coding agent.</strong><br>
@@ -32,6 +37,12 @@ npm install -g @chorded/chord
 chord            # choose an agent, here
 chord codex      # or any other agent
 ```
+
+`chord` opens a title page with the logo, version and directory above the
+agent picker. Smaller windows shrink the art, then leave just a line,
+then the picker.
+
+<img src="docs/images/start.png" alt="The start page with the CHORD logo above the agent picker and Claude highlighted" width="900">
 
 ## Why chord
 
@@ -102,11 +113,11 @@ Claude Code; see
 
 ### Pick up where you left off
 
-`/resume` lists this directory's earlier sessions by the agent's title, or
-the first prompt if untitled. When you quit, chord prints the command that
-brings your main session back.
+`chord --resume` opens a title page listing earlier sessions by the agent's
+title, or the first prompt if untitled. Inside a session, `/resume` opens
+the list. When you quit, chord prints the command to bring main back.
 
-<img src="docs/images/resume.png" alt="The resume picker listing earlier sessions" width="900">
+<img src="docs/images/resume.png" alt="The chord --resume title page with the logo above a framed list of earlier Claude sessions" width="900">
 
 ## Install
 
@@ -187,8 +198,8 @@ how to run chord from source against its scripted test agent, choose checks
 for a change, and follow the code conventions. Found a security issue?
 See [SECURITY.md](SECURITY.md).
 
-The screenshots above are chord itself, run against that test agent and
-captured by `bun dev screenshots`.
+The screenshots above are chord itself, captured by `bun dev screenshots`
+with fixture settings and sessions and the scripted test agent.
 
 ## Licence
 

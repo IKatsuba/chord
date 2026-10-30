@@ -1,4 +1,5 @@
-import { describe, expect, test } from 'bun:test';
+import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
+import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
 import {
@@ -6,6 +7,7 @@ import {
   type EarlierSession,
 } from '../../../src/session/sessions.ts';
 import { Start } from '../../../src/ui/app/Start.tsx';
+import { startLayout, TAGLINE } from '../../../src/ui/app/start_layout.ts';
 import type { ListedAgent } from '../../../src/agents.ts';
 import { SHORTCUTS } from '../../../src/ui/shortcuts/keys.ts';
 import {
@@ -36,6 +38,7 @@ async function started() {
   const picks: (EarlierSession | undefined)[] = [];
   const app = await draw(
     <Start
+      version='0.65.0'
       agent='claude'
       directory='~/src/app'
       home='/h'
@@ -134,6 +137,7 @@ describe('CHD-445 U2 tester: titled start picker navigation and resets', () => {
         const picks: (EarlierSession | undefined)[] = [];
         const app = await draw(
           <Start
+            version='0.65.0'
             agent='fake'
             directory='/work/app'
             home={undefined}
@@ -165,11 +169,19 @@ describe('CHD-445 U2 tester: titled start picker navigation and resets', () => {
           expect(
             frame()
               .split('\n')
-              .filter((line) => line.startsWith('│')).length,
-          ).toBeLessThanOrEqual(Math.floor(rows / 4) + 6);
+              .filter((line) => line.trimStart().startsWith('│')).length,
+          ).toBeLessThanOrEqual(
+            startLayout({
+              columns,
+              rows,
+              lines: 1000,
+              framed: true,
+              hintRows: 1,
+            }).listRows + 6,
+          );
 
           if (reset) {
-            await app.resize({ rows: rows + 4 });
+            await app.resize({ rows: rows - 10 });
             await until(
               'the highlighted title from its first line after resize',
               () => frame().includes('token0 '),
@@ -240,6 +252,7 @@ describe('CHD-532 startup agent picker', () => {
     const picks: (string | undefined)[] = [];
     const app = await draw(
       <Start
+        version='0.65.0'
         kind='agents'
         agents={list}
         preferred={preferred}
@@ -388,7 +401,10 @@ describe('CHD-532 startup agent picker', () => {
     const app = await choosing(agents, 'one', 80, 24, keymap);
 
     try {
-      expect(app.frame()).toContain('Ctrl+q to cancel');
+      // A longer key takes the hint past the column, so it wraps at a space.
+      expect(stripAnsi(app.frame()).replace(/\s+/g, ' ')).toContain(
+        'Ctrl+q to cancel',
+      );
       expect(
         SHORTCUTS.some((entry) => entry.actions?.includes('select:cancel')),
       ).toBe(true);
@@ -418,6 +434,7 @@ describe('CHD-544 tester: filtered picker keys and empty catalogs', () => {
       const picks: (string | undefined)[] = [];
       const app = await draw(
         <Start
+          version='0.65.0'
           kind='agents'
           agents={[
             {
@@ -472,6 +489,7 @@ describe('CHD-544 tester: filtered picker keys and empty catalogs', () => {
       ]).flat();
       const app = await draw(
         <Start
+          version='0.65.0'
           kind='agents'
           agents={agents}
           preferred='hidden-11'
@@ -493,4 +511,637 @@ describe('CHD-544 tester: filtered picker keys and empty catalogs', () => {
       }
     });
   }
+});
+
+describe('CHD-564 the title page', () => {
+  const list = (count: number): ListedAgent[] =>
+    Array.from({ length: count }, (_, at) => ({
+      name: `agent-${at + 1}`,
+      title: undefined,
+      from: 'settings' as const,
+      start: 'fixture',
+    }));
+  const was = chalk.level;
+
+  beforeAll(() => {
+    chalk.level = 3;
+  });
+
+  afterAll(() => {
+    chalk.level = was;
+  });
+
+  async function page(
+    columns: number,
+    rows: number,
+    {
+      count = 28,
+      colours = paletteOf('dark', true),
+      directory = '~/src/app',
+      preferred = 'agent-5',
+    } = {},
+  ) {
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        kind='agents'
+        agents={list(count)}
+        preferred={preferred}
+        directory={directory}
+        colours={colours}
+        keymap={DEFAULT_KEYMAP}
+        onPick={() => {}}
+      />,
+      { columns, rows },
+    );
+    const lines = () => stripAnsi(app.frame()).split('\n');
+
+    return { ...app, lines, text: () => lines().join('\n') };
+  }
+
+  const rowOf = (lines: string[], text: string) =>
+    lines.findIndex((line) => line.includes(text));
+
+  test('full at 120x40: the block wordmark, tagline and version, the list capped at 14', async () => {
+    const app = await page(120, 40);
+
+    try {
+      const lines = app.lines();
+      const art = rowOf(lines, '██████╗ ██╗');
+
+      expect(art).toBe(5);
+      // The mark's left edge, 57 columns of art centred on 120, the odd
+      // column where Yoga puts it; the word after its 9 and a gap of 3.
+      expect(lines[art]?.indexOf('▀')).toBe(32);
+      expect(lines[art]?.indexOf('█')).toBe(45);
+      expect(rowOf(lines, TAGLINE)).toBe(13);
+      expect(lines[13]?.indexOf(TAGLINE)).toBe(42);
+      expect(rowOf(lines, 'v0.65.0 · ~/src/app')).toBe(14);
+      expect(rowOf(lines, 'Select agent')).toBe(16);
+      // The column is 62 wide centred on 120, its padding inside it.
+      expect(lines[16]?.indexOf('Select agent')).toBe(30);
+      expect(app.text()).toContain('14. agent-14');
+      expect(app.text()).toContain('… +14 more');
+      expect(app.text()).not.toContain('15. agent-15');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('a short list moves the page, not the art out of its step', async () => {
+    const app = await page(120, 40, { count: 5 });
+
+    try {
+      const lines = app.lines();
+
+      expect(rowOf(lines, '██████╗ ██╗')).toBe(10);
+      expect(lines.join('\n')).not.toContain('more');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('compact at 80x24: the tiny wordmark and the version, no tagline', async () => {
+    const app = await page(80, 24);
+
+    try {
+      const lines = app.lines();
+
+      expect(rowOf(lines, '█▀▀ █ █ █▀█ █▀█ █▀▄')).toBe(1);
+      expect(rowOf(lines, 'v0.65.0 · ~/src/app')).toBe(4);
+      expect(rowOf(lines, 'Select agent')).toBe(6);
+      expect(app.text()).not.toContain(TAGLINE);
+      expect(app.text()).toContain('12. agent-12');
+      expect(app.text()).toContain('… +16 more');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('line under 40 columns: the bold word and the version, no art', async () => {
+    const app = await page(39, 24);
+
+    try {
+      expect(rowOf(app.lines(), 'chord v0.65.0 · ~/src/app')).toBe(0);
+      expect(app.text()).not.toContain('▀');
+      expect(rowOf(app.lines(), 'Select agent')).toBe(2);
+      expect(app.text()).toContain('15. agent-15');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('none at 30x8: the picker from the first row, one row of list', async () => {
+    const app = await page(30, 8);
+
+    try {
+      expect(rowOf(app.lines(), 'Select agent')).toBe(0);
+      expect(app.text()).not.toContain('v0.65.0');
+      expect(app.text()).toContain('❯ ↑ 5.');
+      expect(app.text()).toContain('… +27 more');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('the version line cuts its directory from the left', async () => {
+    const app = await page(39, 24, {
+      directory: '~/work/acme/services/billing/acme-api',
+    });
+
+    try {
+      expect(app.lines()[0]).toContain('chord v0.65.0 · …/billing/acme-api');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('no agents: the page with one row, and only the way out', async () => {
+    const app = await page(80, 24, { count: 0 });
+
+    try {
+      const lines = app.lines();
+
+      expect(rowOf(lines, 'v0.65.0')).toBe(10);
+      expect(rowOf(lines, 'No agents available')).toBe(14);
+      expect(rowOf(lines, 'Esc to cancel')).toBe(16);
+      expect(app.text()).not.toContain('Enter or');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  for (const [columns, rows, word] of [
+    [120, 40, 'chord'],
+    [80, 24, 'chord'],
+  ] as const) {
+    test(`PLAIN at ${columns}x${rows}: a bold word in the wordmark's place, in the same rows`, async () => {
+      const plain = await page(columns, rows, {
+        colours: paletteOf('dark', false),
+      });
+      const coloured = await page(columns, rows);
+
+      try {
+        const lines = plain.lines();
+        const at = rowOf(lines, word);
+
+        expect(at).toBeGreaterThan(0);
+        expect(plain.text()).not.toContain('█▀▀');
+        expect(plain.text()).not.toContain('██████╗');
+        expect(rowOf(lines, 'Select agent')).toBe(
+          rowOf(coloured.lines(), 'Select agent'),
+        );
+      } finally {
+        await plain.unmount();
+        await coloured.unmount();
+      }
+    });
+  }
+
+  test('a highlight is kept across a step and back', async () => {
+    const app = await page(120, 40);
+
+    try {
+      await app.write('j');
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+      await app.resize({ columns: 80, rows: 24 });
+      expect(app.text()).toContain('█▀▀ █ █');
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+      await app.resize({ columns: 39, rows: 24 });
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+      await app.resize({ columns: 120, rows: 40 });
+      expect(app.text()).toContain('██████╗ ██╗');
+      expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+    } finally {
+      await app.unmount();
+    }
+  });
+});
+
+describe('CHD-564 the title page around --resume', () => {
+  const was = chalk.level;
+  const long =
+    'a long title that goes on well past what the frame of 84 columns can hold on one line of its own, and then some';
+  const sessions: EarlierSession[] = Array.from({ length: 14 }, (_, at) => ({
+    resume: { sessionId: `s${at}`, cwd: '/h/src/app' },
+    lastUsedAt: ago(at + 1),
+    prompt: at === 0 ? long : `prompt ${at}`,
+  }));
+
+  beforeAll(() => {
+    chalk.level = 3;
+  });
+
+  afterAll(() => {
+    chalk.level = was;
+  });
+
+  async function page(
+    columns: number,
+    rows: number,
+    list: readonly EarlierSession[] = sessions,
+  ) {
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        agent='claude'
+        directory='~/src/app'
+        home='/h'
+        cwd='/h/src/app'
+        sessions={list}
+        colours={paletteOf('dark', true)}
+        keymap={DEFAULT_KEYMAP}
+        onPick={() => {}}
+      />,
+      { columns, rows },
+    );
+    const lines = () => stripAnsi(app.frame()).split('\n');
+
+    return { ...app, lines, text: () => lines().join('\n') };
+  }
+
+  const rowOf = (lines: string[], text: string) =>
+    lines.findIndex((line) => line.includes(text));
+
+  test('full at 120x40: art, words naming the agent, a frame of 84 wrapping a long title', async () => {
+    const app = await page(120, 40);
+
+    try {
+      const lines = app.lines();
+      const frame = rowOf(lines, 'Resume a session') - 1;
+
+      expect(app.text()).toContain('██████╗ ██╗');
+      expect(app.text()).toContain(TAGLINE);
+      expect(app.text()).toContain('v0.65.0 · claude · ~/src/app');
+      // 84 columns centred on 120.
+      expect(lines[frame]?.indexOf('╭')).toBe(18);
+      expect(lines[frame]?.indexOf('╮')).toBe(101);
+      expect(app.text()).not.toContain('...');
+      expect(app.text().replace(/[│\s]+/g, ' ')).toContain(long);
+      expect(app.text()).toContain('Esc to quit');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('compact at 80x24: the list scrolls under the tiny wordmark', async () => {
+    const app = await page(80, 24, [
+      ...sessions.slice(1),
+      { ...sessions[1]!, resume: { sessionId: 'x', cwd: '/h/src/app' } },
+    ]);
+
+    try {
+      expect(app.text()).toContain('█▀▀ █ █');
+      expect(app.text()).toContain('v0.65.0 · claude · ~/src/app');
+      expect(app.text()).toContain('… +6 more');
+      expect(app.lines()[0]).toContain('▀▄');
+      expect(app.text()).toContain('Esc to quit');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('line under 40 columns says the agent after the version', async () => {
+    const app = await page(39, 24);
+
+    try {
+      expect(app.lines()[0]).toContain('chord v0.65.0 · claude · ~/src/app');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('ctrl+a counts the other scope, and its page moves', async () => {
+    const here: EarlierSession = sessions[1]!;
+    const there: EarlierSession[] = Array.from({ length: 10 }, (_, at) => ({
+      resume: { sessionId: `t${at}`, cwd: '/h/src/api' },
+      lastUsedAt: ago(100 + at),
+      prompt: `over there ${at}`,
+    }));
+    const app = await page(120, 40, [here, ...there]);
+
+    try {
+      const before = rowOf(app.lines(), 'Resume a session');
+
+      await app.write('\x01');
+      await until('every directory', () => app.text().includes('over there 0'));
+
+      expect(rowOf(app.lines(), 'Resume a session')).toBeLessThan(before);
+    } finally {
+      await app.unmount();
+    }
+  });
+});
+
+describe('CHD-564 tester: title page navigation and terminal depth', () => {
+  const agents: ListedAgent[] = Array.from({ length: 28 }, (_, at) => ({
+    name: `fixture-${at + 1}`,
+    title: undefined,
+    start: 'fixture',
+    from: 'settings',
+  }));
+
+  async function page(columns: number, rows: number, empty = false) {
+    const picks: (string | undefined)[] = [];
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        kind='agents'
+        agents={empty ? [] : agents}
+        preferred='fixture-5'
+        directory='~/src/app'
+        colours={paletteOf('dark', true)}
+        keymap={DEFAULT_KEYMAP}
+        onPick={(chosen) => picks.push(chosen)}
+      />,
+      { columns, rows },
+    );
+
+    return { ...app, picks, text: () => stripAnsi(app.frame()) };
+  }
+
+  test('scrolling to the catalog end keeps the art, words and hint on their rows', async () => {
+    const level = chalk.level;
+
+    chalk.level = 3;
+
+    const app = await page(120, 40);
+
+    try {
+      const before = app.text().split('\n');
+      const fixed = ['██████╗ ██╗', TAGLINE, 'v0.65.0', '↑↓ or j/k'].map(
+        (part) => before.findIndex((line) => line.includes(part)),
+      );
+
+      for (let at = 5; at < 28; at++) {
+        await app.write('j');
+      }
+
+      const after = app.text().split('\n');
+
+      expect(app.text()).toMatch(/❯\s+28\.\s+fixture-28/);
+      expect(app.text()).toContain('… +14 more');
+      expect(fixed.every((row) => row >= 0)).toBe(true);
+
+      for (const row of fixed) {
+        expect(after[row]).toBe(before[row]);
+      }
+
+      await app.write('\r');
+      await app.write('1');
+      expect(app.picks).toEqual(['fixture-28']);
+    } finally {
+      await app.unmount();
+
+      chalk.level = level;
+    }
+  });
+
+  test('the highlighted tail survives full, compact, line and none steps and back', async () => {
+    const app = await page(120, 40);
+
+    try {
+      for (let at = 5; at < 28; at++) {
+        await app.write('j');
+      }
+
+      for (const [columns, rows] of [
+        [80, 24],
+        [39, 24],
+        [30, 8],
+        [120, 40],
+      ] as const) {
+        await app.resize({ columns, rows });
+        expect(app.text()).toMatch(/❯\s+↑?\s*28\.\s+fixture-28/);
+      }
+
+      await app.write('k');
+      await app.write('\r');
+      expect(app.picks).toEqual(['fixture-27']);
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  for (const rows of [2, 5, 8]) {
+    test(`pick keys and Ctrl+C work when a ${rows}-row window clips the page`, async () => {
+      const picking = await page(30, rows);
+
+      try {
+        await picking.write('9');
+        expect(picking.picks).toEqual(['fixture-9']);
+      } finally {
+        await picking.unmount();
+      }
+
+      const leaving = await page(30, rows, true);
+
+      try {
+        await leaving.write('1');
+        await leaving.write('\r');
+        expect(leaving.picks).toEqual([]);
+        await leaving.write('\x03');
+        await leaving.write('\r');
+        expect(leaving.picks).toEqual([undefined]);
+      } finally {
+        await leaving.unmount();
+      }
+    });
+  }
+
+  for (const level of [0, 1, 2] as const) {
+    for (const [columns, rows] of [
+      [120, 40],
+      [80, 24],
+    ] as const) {
+      test(`terminal colour level ${level} draws and picks at ${columns}x${rows}`, async () => {
+        const previous = chalk.level;
+
+        chalk.level = level;
+
+        const app = await page(columns, rows);
+
+        try {
+          expect(app.text()).toContain('Select agent');
+          expect(app.text()).toContain('v0.65.0 · ~/src/app');
+
+          if (level === 0) {
+            expect(app.text()).toContain('chord');
+            expect(app.text()).not.toContain('██████╗');
+            expect(app.text()).not.toContain('█▀▀ █ █');
+          } else {
+            expect(app.text()).toContain(
+              columns === 120 ? '██████╗ ██╗' : '█▀▀ █ █ █▀█',
+            );
+          }
+
+          await app.write('\r');
+          expect(app.picks).toEqual(['fixture-5']);
+        } finally {
+          await app.unmount();
+
+          chalk.level = previous;
+        }
+      });
+    }
+  }
+});
+
+describe('CHD-564 tester: resume page scope, clipping and stable frame', () => {
+  const longTitle = Array.from({ length: 180 }, (_, at) => `word${at}`).join(
+    ' ',
+  );
+  const sessions: EarlierSession[] = [
+    {
+      resume: { sessionId: 'long', cwd: '/h/src/app' },
+      lastUsedAt: ago(2),
+      prompt: longTitle,
+    },
+    {
+      resume: { sessionId: 'foreign', cwd: '/h/src/api' },
+      lastUsedAt: ago(5),
+      prompt: 'foreign title with 界 and emoji 🌱 kept whole',
+    },
+  ];
+
+  async function page(
+    columns: number,
+    rows: number,
+    list = sessions,
+    keymap = DEFAULT_KEYMAP,
+  ) {
+    const picks: (EarlierSession | undefined)[] = [];
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        agent='fixture'
+        directory='~/src/app'
+        home='/h'
+        cwd='/h/src/app'
+        sessions={list}
+        colours={paletteOf('dark', false)}
+        keymap={keymap}
+        onPick={(chosen) => picks.push(chosen)}
+      />,
+      { columns, rows },
+    );
+
+    return { ...app, picks, text: () => stripAnsi(app.frame()) };
+  }
+
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`an empty local scope gains its foreign choices and returns empty at ${columns}x${rows}`, async () => {
+      const app = await page(columns, rows, sessions.slice(1));
+
+      try {
+        expect(app.text()).not.toContain('foreign title');
+        expect(app.text()).not.toContain('Enter to resume');
+        await app.write('1');
+        await app.write('\r');
+        expect(app.picks).toEqual([]);
+        await app.write('\x01');
+        expect(app.text().replace(/[│\s]+/g, ' ')).toContain(
+          'foreign title with 界 and emoji 🌱 kept whole',
+        );
+        expect(app.text()).toContain('Enter to resume');
+        expect(app.text()).toContain('Ctrl+a for this directory');
+        await app.write('\x01');
+        expect(app.text()).not.toContain('foreign title');
+        expect(app.text()).not.toContain('Enter to resume');
+        await app.write(ESC);
+        expect(app.picks).toEqual([undefined]);
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`rebound scope and cancel keys retain their hints and ownership at ${columns}x${rows}`, async () => {
+      const { keymap } = readKeybindings(
+        JSON.stringify({
+          bindings: [
+            {
+              context: 'Select',
+              bindings: {
+                escape: null,
+                'ctrl+a': null,
+                'ctrl+s': 'select:toggleScope',
+                'ctrl+q': 'select:cancel',
+              },
+            },
+          ],
+        }),
+      );
+      const app = await page(
+        columns,
+        rows,
+        [{ ...sessions[0]!, prompt: 'local title' }, sessions[1]!],
+        keymap,
+      );
+
+      try {
+        expect(app.text().replace(/[│\s]+/g, ' ')).toContain(
+          'Ctrl+s for all directories · Ctrl+q to quit',
+        );
+        await app.write(ESC);
+        await app.write('\x01');
+        expect(app.picks).toEqual([]);
+        expect(app.text()).not.toContain('foreign title');
+        await app.write('\x13');
+        expect(app.text()).toContain('foreign title');
+        await app.write('\x11');
+        await app.write('\r');
+        expect(app.picks).toEqual([undefined]);
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`a PLAIN resume page keeps the selected long session through every step at ${columns}x${rows}`, async () => {
+      const app = await page(columns, rows);
+
+      try {
+        expect(app.text()).toContain('chord');
+        expect(app.text()).toContain('v0.65.0 · fixture · ~/src/app');
+        expect(app.text()).not.toContain('...');
+
+        for (const [width, height] of [
+          [39, 24],
+          [30, 8],
+          [120, 40],
+        ] as const) {
+          await app.resize({ columns: width, rows: height });
+        }
+
+        await app.write('\r');
+        await app.write('1');
+        expect(app.picks).toEqual([sessions[0]]);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
+
+  test('a height change inside full preserves a scrolled title when frame and list rows stay fixed', async () => {
+    const app = await page(120, 40);
+
+    try {
+      for (let at = 0; !app.text().includes('word179'); at++) {
+        expect(at).toBeLessThan(80);
+        await app.write('j');
+      }
+
+      expect(app.text()).not.toContain('word0 ');
+      await app.resize({ rows: 44 });
+      expect(app.text()).not.toContain('word0 ');
+      expect(app.text()).toContain('word179');
+      await app.write('\r');
+      expect(app.picks[0]?.resume.sessionId).toBe('long');
+      expect(app.picks).toHaveLength(1);
+    } finally {
+      await app.unmount();
+    }
+  });
 });

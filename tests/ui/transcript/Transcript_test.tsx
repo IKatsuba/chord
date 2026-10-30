@@ -85,9 +85,9 @@ test('a reply draws as markdown, not as its marks', () =>
       );
       expect(window.frame()).toContain('Working…');
       // Inside the open fence in the list, the code is a box under its item.
-      await window.shows('  │ deno task check │');
+      await window.shows('  │ bun quality │');
       expect(window.frame()).toContain('Working…');
-      await window.shows('│ deno task compile --all');
+      await window.shows('│ bun dev compile --all');
 
       const frame = window.frame();
 

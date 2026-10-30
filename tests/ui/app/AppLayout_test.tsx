@@ -640,7 +640,7 @@ describe('CHD-545 U1 tester: zero room and output under an open list', () => {
               () => current().transcript.turn.status === 'idle',
             );
             await send(window, 'callchildgated');
-            await window.shows('deno task test');
+            await window.shows('bun dev test');
 
             if (scrolled) {
               await window.press(PAGE_UP);

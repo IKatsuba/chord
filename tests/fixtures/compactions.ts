@@ -7,8 +7,8 @@ export const COMPACT_SUMMARY = [
   'The person asked for a README section on install, ',
   'then for the tests to run.\n\n',
   '- Read `README.md` and `deno.json`\n',
-  '- Wrote the install section with `deno task install`\n',
-  '- Ran `deno task test`: 3 passed\n\n',
+  '- Wrote the install section with `bun install`\n',
+  '- Ran `bun dev test`: 3 passed\n\n',
   'Next: commit the change.',
 ];
 

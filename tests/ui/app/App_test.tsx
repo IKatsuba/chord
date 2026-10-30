@@ -273,7 +273,7 @@ test('a streamed chunk draws again only the entry it lands in', async () => {
       // A draft drawn on every key leaves the transcript alone too.
       await window.type('a draft');
       await window.shows('a draft');
-      await window.shows('deno task check');
+      await window.shows('bun quality');
 
       expect(draws('This reply came in chunks.')).toStrictEqual(earlier);
       expect(draws('Reading the session layer')).toBeGreaterThan(streamed);
@@ -1088,7 +1088,7 @@ describe('ctrl+x b picks a code block, and its keys copy it or put it in the pro
   test("in a long history, ctrl+x b reaches the newest code past the mounted tail, and ↑ crosses into it from the tail's", () => {
     const { copies, copy } = clipboard();
     const BUILT =
-      'deno task compile --all\nfor bin in dist/*/chord; do echo "built $bin"; done';
+      'bun dev compile --all\nfor bin in dist/*/chord; do echo "built $bin"; done';
     // Enough turns of plain text that the code reply leaves the tail of
     // entries mounted while following (TAIL_ENTRIES).
     // Each turn ends on a reply of its own, which `verbatim` gives back as

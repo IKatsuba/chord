@@ -130,13 +130,11 @@ test('an open code fence mid-stream draws as code to the end', () => {
 });
 
 test('a code block of one line is boxed, with its language', () => {
-  expect(
-    lines('Run:\n\n```sh\ndeno task check\n```\n\ndone', 40),
-  ).toStrictEqual([
+  expect(lines('Run:\n\n```sh\nbun quality\n```\n\ndone', 40)).toStrictEqual([
     'Run:',
-    '┌ sh ─────────────┐',
-    '│ deno task check │',
-    '└─────────────────┘',
+    '┌ sh ─────────┐',
+    '│ bun quality │',
+    '└─────────────┘',
     'done',
   ]);
 });
@@ -154,16 +152,16 @@ test('a code block in a list is boxed under its item', () => {
   const text = [
     '1. Run the checks:',
     '   ```sh',
-    '   deno task check',
+    '   bun quality',
     '   ```',
     '2. Commit once every check has passed.',
   ].join('\n');
 
   expect(lines(text, 24)).toStrictEqual([
     '1. Run the checks:',
-    '  ┌ sh ─────────────┐',
-    '  │ deno task check │',
-    '  └─────────────────┘',
+    '  ┌ sh ─────────┐',
+    '  │ bun quality │',
+    '  └─────────────┘',
     '2. Commit once every',
     '  check has passed.',
   ]);
@@ -255,9 +253,9 @@ test('a fence in a list that is still open is a box to the end', () => {
 
   expect(blocks.at(-1)?.text.split('\n')).toStrictEqual([
     '1. Run the checks:',
-    '  ┌ sh ─────────────┐',
-    '  │ deno task check │',
-    '  └─────────────────┘',
+    '  ┌ sh ─────────┐',
+    '  │ bun quality │',
+    '  └─────────────┘',
   ]);
   expect(lines('- a\n  ```sh\n', 40)).toStrictEqual([
     '- a',
@@ -486,7 +484,7 @@ test('NO_COLOR leaves code plain, at the top and in a quote', async () => {
 const ESC = '\x1b';
 
 test('CHD-69: NO_COLOR leaves inline code and links uncoloured', async () => {
-  const text = 'Run `deno task check` and see [docs](https://e.org).';
+  const text = 'Run `bun quality` and see [docs](https://e.org).';
   const [plain] = await coloured(text, 60, true);
   const [painted] = await coloured(text, 60);
 
@@ -544,15 +542,15 @@ test('soft, a code block is its code for a box as wide as it, its label or its b
   const code = (text: string) => softMarkdown(text, 30, false);
 
   // Its code takes 19 cells; `┌─ sh ─[copy]─[run]─┐` takes 21.
-  expect(code('```sh\ndeno task check\n```')).toStrictEqual([
+  expect(code('```sh\nbun quality\n```')).toStrictEqual([
     {
       kind: 'code',
       label: 'sh',
-      code: 'deno task check',
+      code: 'bun quality',
       width: 21,
       buttons: ['copy', 'run'],
-      copy: 'deno task check',
-      run: 'deno task check',
+      copy: 'bun quality',
+      run: 'bun quality',
     },
   ]);
   // A label wider than its code widens the box so OpenTUI draws it, and
@@ -804,16 +802,16 @@ test('a reply with no code has no blocks, and an indented block has no label, it
 });
 
 test("[run] puts a block's every line in, each leading `$ ` taken off, the rest as written (the owner's answer, CHD-394)", () => {
-  expect(runCommand('deno task check')).toStrictEqual('deno task check');
+  expect(runCommand('bun quality')).toStrictEqual('bun quality');
   expect(runCommand('$ bun install\n$ bun test tests/parse')).toStrictEqual(
     'bun install\nbun test tests/parse',
   );
   expect(
     runCommand(
-      'deno task compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
+      'bun dev compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
     ),
   ).toStrictEqual(
-    'deno task compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
+    'bun dev compile --all\nfor bin in dist/*/chord; do echo "$bin"; done',
   );
   // Only a `$ ` the line starts with: an indented one, or `$` alone, stays.
   expect(runCommand('  $ ls\n$\n$HOME\n$ ')).toStrictEqual(

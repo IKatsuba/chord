@@ -110,7 +110,7 @@ test('tool calls draw their status, their output and a failure', () =>
 test("a command's output streams under its call, folded to its end", () =>
   withWindow(async (window) => {
     await send(window, 'shell');
-    await window.shows('⏺ Run(deno task test)');
+    await window.shows('⏺ Run(bun dev test)');
     // Its first piece arrives while it still runs.
     await window.shows('⎿  Task test deno test');
     expect(

@@ -376,7 +376,7 @@ export const TOOLS = {
     await turn.send({
       sessionUpdate: 'tool_call',
       toolCallId: shell,
-      title: 'Run deno task test',
+      title: 'Run bun dev test',
       kind: 'execute',
       status: 'in_progress',
       content: [{ type: 'terminal', terminalId }],

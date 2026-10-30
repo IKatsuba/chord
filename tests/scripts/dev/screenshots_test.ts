@@ -175,3 +175,45 @@ describe('CHD-564 tester: resume screenshot session fixtures', () => {
     }
   });
 });
+
+describe('CHD-564 tester: logo cell boundaries and background paint', () => {
+  test('the right edge excludes the next cell while foreground and background survive the left crop', () => {
+    const foreground = '\x1b[38;2;71;231;165m';
+    const background = '\x1b[48;2;21;199;162m';
+    const art = Array.from(
+      { length: 8 },
+      () =>
+        `${foreground}${background}${' '.repeat(32)}${'▀'.repeat(57)}OUTSIDE\x1b[0m`,
+    );
+    const frame = [...art, '', TAGLINE, 'v0.65.0', 'Select agent'].join('\n');
+    const cropped = logoRows(frame);
+
+    expect(cropped).toHaveLength(8);
+
+    for (const row of cropped) {
+      expect(stripAnsi(row)).toBe('▀'.repeat(57));
+      expect(row).toContain('38;2;71;231;165');
+      expect(row).toContain('48;2;21;199;162');
+      expect(row).not.toContain('OUTSIDE');
+    }
+  });
+
+  test('blank space above the page and a painted tagline leave the crop unchanged', () => {
+    const art = Array.from(
+      { length: 8 },
+      (_, at) => `${' '.repeat(31)}${'█'.repeat(at + 1)}`,
+    );
+    const plain = [...art, '', TAGLINE].join('\n');
+    const moved = [
+      '',
+      '',
+      '',
+      ...art,
+      '',
+      `\x1b[38;2;228;228;228m${TAGLINE}\x1b[39m`,
+      'v0.65.0 · ~/src/app',
+    ].join('\n');
+
+    expect(logoRows(moved)).toEqual(logoRows(plain));
+  });
+});

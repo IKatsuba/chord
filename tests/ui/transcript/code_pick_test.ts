@@ -15,9 +15,18 @@ import {
   wholeInView,
 } from '../../../src/ui/transcript/code_pick.ts';
 import {
+  codeBlocks,
   codePlaces,
+  openFences,
+  runCommand,
   softMarkdown,
 } from '../../../src/ui/transcript/markdown.ts';
+import {
+  type Entry,
+  emptyTranscript,
+} from '../../../src/session/transcript/types.ts';
+import { appendText } from '../../../src/session/transcript/messages.ts';
+import { listedText } from '../../../src/ui/transcript/code_pick.ts';
 
 /** Two replies: the first with two blocks, the second with one. */
 const BLOCKS: readonly BlockRef[] = [
@@ -373,4 +382,184 @@ test("a picked block's line of keys takes short words where the full one does no
   expect(pickHint(DEFAULT_KEYMAP, true, 76)).toStrictEqual(
     '↑ ↓ another block · c copy · r put in the prompt · esc done',
   );
+});
+
+/** `listedBlocks` as it was before it kept each entry's blocks (CHD-559). */
+function listedOnce(entries: readonly Entry[]) {
+  return entries.flatMap((entry, at) => {
+    const text = listedText(entry);
+
+    if (text === undefined) {
+      return [];
+    }
+
+    const open = openFences(text);
+    const { boxes, quotes } = codePlaces(text);
+
+    return codeBlocks(text).flatMap((block) => {
+      if (open.has(block.index)) {
+        return [];
+      }
+
+      const quote = quotes.findIndex((held) => held.includes(block.index));
+
+      return [
+        {
+          ref: { entry: at, block: block.index },
+          copy: block.text,
+          ...(block.runnable ? { run: runCommand(block.text) } : {}),
+          node: boxes.includes(block.index)
+            ? `code-${at}-${block.index}`
+            : `quote-${at}-${quote}`,
+        },
+      ];
+    });
+  });
+}
+
+describe("a long transcript's code blocks are lexed once per entry (CHD-559)", () => {
+  const reply = (at: number): Entry => ({
+    kind: 'assistant',
+    turnId: `t${at}`,
+    text: [
+      `Reply ${at}:`,
+      '```sh',
+      `$ echo ${at}`,
+      '```',
+      '> ```ts',
+      `> const n = ${at};`,
+      '> ```',
+      ...(at % 4 === 0 ? ['````bash', '$ still open'] : []),
+    ].join('\n'),
+  });
+  const entries: Entry[] = Array.from({ length: 40 }, (_, at): Entry[] => [
+    { kind: 'user', turnId: `t${at}`, text: `ask ${at}` } as Entry,
+    reply(at),
+    {
+      kind: 'message',
+      turnId: `t${at}`,
+      from: { name: 'coder' },
+      text: `\`\`\`js\nlet m = ${at};\n\`\`\``,
+    },
+  ]).flat();
+
+  test('the list is the one listing every entry afresh gave', () => {
+    expect(listedBlocks(entries)).toStrictEqual(listedOnce(entries));
+    // Again, every entry's blocks known.
+    expect(listedBlocks(entries)).toStrictEqual(listedOnce(entries));
+  });
+
+  test('an entry known at one place is named by its new one when the list moves', () => {
+    listedBlocks(entries);
+
+    const moved = [reply(999), ...entries.slice(5)];
+
+    expect(listedBlocks(moved)).toStrictEqual(listedOnce(moved));
+  });
+
+  test("an entry whose text changed is a new entry, and its blocks are its new text's", () => {
+    listedBlocks(entries);
+
+    const closed = entries.map((entry, at) =>
+      at === 1 && entry.kind === 'assistant'
+        ? { ...entry, text: `${entry.text}\n\`\`\`\`` }
+        : entry,
+    );
+
+    expect(listedBlocks(closed)).toStrictEqual(listedOnce(closed));
+    expect(listedBlocks(closed)).not.toStrictEqual(listedBlocks(entries));
+  });
+});
+
+describe('CHD-559 U3 tester: streaming and isolated block listings', () => {
+  test('streamed chunks replace a warm empty listing and close only a matching fence', () => {
+    let state = emptyTranscript;
+    const chunk = (text: string, messageId = 'first') => {
+      state = appendText(
+        state,
+        'turn',
+        'assistant',
+        { type: 'text', text },
+        messageId,
+      );
+
+      return listedBlocks(state.entries);
+    };
+
+    expect(chunk('````bash\n$ echo streamed\n')).toStrictEqual([]);
+
+    const open = state.entries[0]!;
+
+    expect(chunk('```\n')).toStrictEqual([]);
+    expect(chunk('````')).toStrictEqual([
+      {
+        ref: { entry: 0, block: 0 },
+        copy: '$ echo streamed\n```',
+        run: 'echo streamed\n```',
+        node: 'code-0-0',
+      },
+    ]);
+    expect(listedBlocks([open])).toStrictEqual([]);
+    expect(chunk('```ts\nconst second = 2;\n```', 'second')).toHaveLength(2);
+    expect(state.entries).toHaveLength(2);
+    expect(listedBlocks(state.entries)[1]).toStrictEqual({
+      ref: { entry: 1, block: 0 },
+      copy: 'const second = 2;',
+      node: 'code-1-0',
+    });
+  });
+
+  test('replaced messages and independent transcripts retain their own eligibility and positions', () => {
+    const message = {
+      kind: 'message',
+      turnId: 'message',
+      from: { name: 'coder' },
+      text: '> ```sh\n> $ echo original\n> ```',
+    } as const;
+    const original = listedBlocks([message]);
+    const replacement = { ...message, text: 'No code remains.' };
+    const monitor = {
+      ...message,
+      from: { name: 'coder', monitor: { id: 'watch' } },
+    };
+
+    expect(listedBlocks([replacement, monitor])).toStrictEqual([]);
+    expect(listedBlocks([replacement, message])).toStrictEqual([
+      {
+        ref: { entry: 1, block: 0 },
+        copy: '$ echo original',
+        run: 'echo original',
+        node: 'quote-1-0',
+      },
+    ]);
+    expect(listedBlocks([message])).toStrictEqual(original);
+    expect(listedBlocks([])).toStrictEqual([]);
+  });
+
+  test('a caller changing returned blocks cannot alter a later listing or pick', () => {
+    const entry = {
+      kind: 'assistant',
+      turnId: 'turn',
+      text: '```sh\n$ echo safe\n```',
+    } as const;
+    const expected = listedBlocks([entry]);
+    const returned = listedBlocks([entry]);
+
+    Reflect.set(returned[0]!, 'copy', 'changed');
+    Reflect.set(returned[0]!.ref, 'entry', 99);
+    Reflect.set(returned[0]!, 'node', 'wrong-node');
+
+    returned.length = 0;
+
+    const fresh = listedBlocks([entry]);
+
+    expect(fresh).toStrictEqual(expected);
+    expect(
+      reduceCodePick(undefined, {
+        type: 'code_pick_started',
+        blocks: fresh.map(({ ref }) => ref),
+        shown: [],
+      }),
+    ).toStrictEqual({ entry: 0, block: 0 });
+  });
 });

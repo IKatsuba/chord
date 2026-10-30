@@ -17,6 +17,7 @@ import {
 } from '../../../src/ui/app/state.ts';
 import { openForm } from '../../../src/ui/dialogs/form.ts';
 import { emptySearch } from '../../../src/ui/prompt/search.ts';
+import { pastOf } from '../../session/transcript/past.ts';
 import { after, busy, ctrl, escape, plain, ready } from './states.ts';
 
 test('the session starts, connects or fails, and closes', () => {
@@ -1075,5 +1076,175 @@ describe('CHD-535 U2 tester: steering note routing', () => {
         .window.steerRefused,
     ).toEqual(restarted.window.steerRefused);
     expect(restarted.sessions[1]?.draft).toBe('front draft');
+  });
+});
+
+describe('a replayed past reaches the window as one action (CHD-559)', () => {
+  const past = pastOf(40);
+  const one = (from: WindowedState) =>
+    past.reduce(
+      (state, action) =>
+        reduceWindowed(state, { type: 'in_session', key: 0, action }),
+      from,
+    );
+  const whole = (from: WindowedState) =>
+    reduceWindowed(from, { type: 'in_session_past', key: 0, actions: past });
+
+  test('folded at once, the window is as folded an action at a time', () => {
+    const from = windowed(initialAppState, 0);
+
+    expect(whole(from)).toStrictEqual(one(from));
+  });
+
+  test('scrolled back, the past is news as an action at a time, and the view stays', () => {
+    const from = reduceWindowed(windowed(initialAppState, 0), {
+      type: 'in_session',
+      key: 0,
+      action: { type: 'scrolled', step: 'top' },
+    });
+    const each = one(from).sessions[0]!;
+    const at = whole(from).sessions[0]!;
+
+    expect(at.scroll).toStrictEqual(each.scroll);
+    expect(at.transcript).toStrictEqual(each.transcript);
+  });
+
+  test('an action after it leaves the entries the window held as they were', () => {
+    const replayed = whole(windowed(initialAppState, 0));
+    const held = replayed.sessions[0]!.transcript.entries;
+    const copy = [...held];
+    const next = reduceWindowed(replayed, {
+      type: 'in_session',
+      key: 0,
+      action: {
+        type: 'update',
+        turnId: 'live',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: 'after' },
+        },
+      },
+    });
+
+    expect(next.sessions[0]!.transcript.entries).not.toBe(held);
+    expect(held).toStrictEqual(copy);
+    expect(next.sessions[0]!.transcript.entries).toHaveLength(held.length + 1);
+  });
+
+  test('the entries the window held before it are left as they were', () => {
+    const before = whole(windowed(initialAppState, 0));
+    const held = before.sessions[0]!.transcript.entries;
+    const copy = [...held];
+    const after = reduceWindowed(before, {
+      type: 'in_session_past',
+      key: 0,
+      actions: pastOf(3),
+    });
+
+    expect(after.sessions[0]!.transcript.entries).not.toBe(held);
+    expect(held).toStrictEqual(copy);
+  });
+
+  test('a past for a session that has gone changes nothing', () => {
+    const from = windowed(initialAppState, 0);
+
+    expect(
+      reduceWindowed(from, { type: 'in_session_past', key: 9, actions: past }),
+    ).toBe(from);
+  });
+});
+
+describe('CHD-559 U4 tester: populated replay ownership', () => {
+  const updates: AppAction[] = Array.from({ length: 50 }, (_, at) => ({
+    type: 'update',
+    turnId: 'history-39',
+    update: {
+      sessionUpdate: 'agent_message_chunk',
+      content: { type: 'text', text: ` update ${at}` },
+    },
+  }));
+
+  test('update-only replay holds the populated scrolled mount and marks news like live updates', () => {
+    let from = reduceWindowed(windowed(initialAppState, 0), {
+      type: 'in_session_past',
+      key: 0,
+      actions: pastOf(40),
+    });
+
+    from = reduceWindowed(from, {
+      type: 'scroll_measured',
+      content: 1000,
+      view: 24,
+    });
+    from = reduceWindowed(from, { type: 'scrolled', step: 'page_up' });
+
+    const before = from.sessions[0]!;
+    const held = structuredClone(before.transcript);
+    const each = updates.reduce(
+      (state, action) =>
+        reduceWindowed(state, {
+          type: 'in_session',
+          key: 0,
+          action,
+        }),
+      from,
+    );
+    const whole = reduceWindowed(from, {
+      type: 'in_session_past',
+      key: 0,
+      actions: updates,
+    });
+
+    expect(before.scroll.following).toBe(false);
+    expect(before.mounted).toBeGreaterThan(0);
+    expect(whole).toStrictEqual(each);
+    expect(whole.sessions[0]!.mounted).toBe(before.mounted);
+    expect(whole.sessions[0]!.scroll).toMatchObject({
+      following: false,
+      top: before.scroll.top,
+      news: true,
+    });
+    expect(before.transcript).toStrictEqual(held);
+  });
+
+  test('a background replay and its later live update leave the front and prior batches intact', () => {
+    let from = reduceWindowed(windowed(initialAppState, 0), {
+      type: 'agent_opened',
+      key: 2,
+    });
+
+    from = reduceWindowed(from, { type: 'draft_set', text: 'front draft' });
+
+    const front = from.sessions[0]!;
+    const first = reduceWindowed(from, {
+      type: 'in_session_past',
+      key: 2,
+      actions: pastOf(40),
+    });
+    const held = structuredClone(first.sessions[2]!);
+    const next = reduceWindowed(first, {
+      type: 'in_session_past',
+      key: 2,
+      actions: updates,
+    });
+    const live = reduceWindowed(next, {
+      type: 'in_session',
+      key: 2,
+      action: updates[0]!,
+    });
+
+    expect(live.sessions[0]).toBe(front);
+    expect(live.window).toBe(from.window);
+    expect(frontState(live).draft).toBe('front draft');
+    expect(first.sessions[2]).toStrictEqual(held);
+    expect(next.sessions[2]!.transcript.entries).not.toBe(
+      live.sessions[2]!.transcript.entries,
+    );
+    expect(next.sessions[2]!.transcript).toStrictEqual(
+      updates.reduce((state, action) => reduceApp(state, action), {
+        ...initialAppState,
+        ...first.sessions[2]!,
+      }).transcript,
+    );
   });
 });

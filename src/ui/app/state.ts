@@ -10,6 +10,7 @@ import {
   reduceCodePick,
 } from '../transcript/code_pick.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
+import { inBatch } from '../../session/transcript/entries.ts';
 import {
   type AgentModels,
   modelName,
@@ -1227,6 +1228,12 @@ export type WindowedAction =
       readonly key: number;
       readonly action: AppAction;
     }
+  /** What session `key` replayed of its past, folded as one (CHD-559). */
+  | {
+      readonly type: 'in_session_past';
+      readonly key: number;
+      readonly actions: readonly AppAction[];
+    }
   /** An agent or a main session closing: what it spent is kept for the window's total (CHD-373). */
   | { readonly type: 'spend_kept'; readonly kept: KeptSpend }
   /**
@@ -1417,6 +1424,8 @@ export function reduceWindowed(
     }
     case 'in_session':
       return reduceIn(state, action.key, action.action);
+    case 'in_session_past':
+      return reducePast(state, action.key, action.actions);
     default:
       return reduceIn(state, state.front, action);
   }
@@ -1454,6 +1463,43 @@ function reduceIn(
   if (after === before) {
     return state;
   }
+
+  return {
+    ...state,
+    window: key === state.front ? windowOf(after) : state.window,
+    sessions: { ...state.sessions, [key]: sessionOf(after) },
+  };
+}
+
+/**
+ * `actions`, a session's replayed past, folded as one: each over the same
+ * entries the fold made, in place, as a copy for each made a long record's
+ * quadratic (the owner's Q316). What the state held before is not written.
+ */
+function reducePast(
+  state: WindowedState,
+  key: number,
+  actions: readonly AppAction[],
+): WindowedState {
+  const session = state.sessions[key];
+
+  if (session === undefined) {
+    return state;
+  }
+
+  const before = { ...state.window, ...session };
+  const folded = inBatch(() =>
+    actions.reduce<AppState>((each, action) => reduceApp(each, action), before),
+  );
+  // In place, no action of the fold saw its entries change: said once, as
+  // one of them would have, since none of them scrolls the view back.
+  const after = {
+    ...folded,
+    scroll: withNews(
+      folded.scroll,
+      folded.transcript.entries !== before.transcript.entries,
+    ),
+  };
 
   return {
     ...state,

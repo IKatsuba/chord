@@ -250,10 +250,36 @@ export function recalled(
   past: readonly SessionUpdate[],
   total?: TokenUsage,
 ): Wire {
-  return withSession(wire, sessionId, (session) => ({
-    ...past.reduce(heardUpdate, session),
-    ...(total === undefined ? {} : { total }),
-  }));
+  return withSession(wire, sessionId, (session) => {
+    // One map of the past's tool calls, added to in place: a copy for each
+    // call made a long record's resume quadratic (CHD-559).
+    const tools: Record<string, ToolFacts> = { ...session.tools };
+    let heard: SessionWire = { ...session, tools };
+
+    for (const update of past) {
+      if (isToolUpdate(update)) {
+        // An own property, as the spread makes it, whatever the id: an
+        // assignment to `__proto__` would set the map's prototype instead.
+        Object.defineProperty(tools, update.toolCallId, {
+          value: toolFacts(
+            Object.hasOwn(tools, update.toolCallId)
+              ? tools[update.toolCallId]
+              : undefined,
+            update,
+          ),
+          enumerable: true,
+          writable: true,
+          configurable: true,
+        });
+
+        heard = { ...heard, agent: foldUpdate(heard.agent, update) };
+      } else {
+        heard = heardUpdate(heard, update);
+      }
+    }
+
+    return { ...heard, ...(total === undefined ? {} : { total }) };
+  });
 }
 
 /**
@@ -332,34 +358,55 @@ function modeReportedTo(
   );
 }
 
+type ToolUpdate = Extract<
+  SessionUpdate,
+  { sessionUpdate: 'tool_call' | 'tool_call_update' }
+>;
+
+function isToolUpdate(update: SessionUpdate): update is ToolUpdate {
+  return (
+    update.sessionUpdate === 'tool_call' ||
+    update.sessionUpdate === 'tool_call_update'
+  );
+}
+
+/** What a tool call's `update` leaves known of it, `known` before. */
+function toolFacts(
+  known: ToolFacts | undefined,
+  update: ToolUpdate,
+): ToolFacts {
+  return {
+    ...known,
+    ...(typeof update.title === 'string' ? { title: update.title } : {}),
+    ...(typeof update.kind === 'string' ? { kind: update.kind } : {}),
+    // Content chord filled in is none of the agent's: what it sent there
+    // was none, or an empty list that cleared its own.
+    ...(Array.isArray(update.content)
+      ? {
+          ownContent:
+            update.content.length > 0 && !filledIn(update).includes('content'),
+        }
+      : {}),
+  };
+}
+
 function heardUpdate(session: SessionWire, update: SessionUpdate): SessionWire {
   const agent = foldUpdate(session.agent, update);
 
   switch (update.sessionUpdate) {
     case 'tool_call':
-    case 'tool_call_update': {
-      const known = session.tools[update.toolCallId] ?? {};
-      const facts: ToolFacts = {
-        ...known,
-        ...(typeof update.title === 'string' ? { title: update.title } : {}),
-        ...(typeof update.kind === 'string' ? { kind: update.kind } : {}),
-        // Content chord filled in is none of the agent's: what it sent there
-        // was none, or an empty list that cleared its own.
-        ...(Array.isArray(update.content)
-          ? {
-              ownContent:
-                update.content.length > 0 &&
-                !filledIn(update).includes('content'),
-            }
-          : {}),
-      };
-
+    case 'tool_call_update':
       return {
         ...session,
         agent,
-        tools: { ...session.tools, [update.toolCallId]: facts },
+        tools: {
+          ...session.tools,
+          [update.toolCallId]: toolFacts(
+            session.tools[update.toolCallId],
+            update,
+          ),
+        },
       };
-    }
     case 'usage_update': {
       const filled = filledIn(update);
       const cost =

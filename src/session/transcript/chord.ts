@@ -1,4 +1,5 @@
 import { recordedSelection } from '../team_selection.ts';
+import { replacedAt } from './entries.ts';
 /**
  * chord's own calls: a request chord's MCP server served, tied to the tool
  * call the agent made for it by the arguments both carry, since chord knows
@@ -230,7 +231,7 @@ function link(
   const before = entries[waited];
 
   if (before?.kind === 'tool') {
-    return entries.with(waited, {
+    return replacedAt(entries, waited, {
       ...before,
       call: { ...before.call, chord },
     });
@@ -263,7 +264,10 @@ function link(
   const started = task === undefined ? undefined : entries[task];
 
   if (task === undefined || started?.kind !== 'subagent') {
-    return entries.with(index, { ...entry, call: { ...entry.call, chord } });
+    return replacedAt(entries, index, {
+      ...entry,
+      call: { ...entry.call, chord },
+    });
   }
 
   // The task stands where its call stood, and takes the call's updates.

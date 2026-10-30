@@ -301,12 +301,42 @@ export function useSessions(
   // The session main opens next resumes: the one `--resume` asks for, and
   // each `/resume` picks; the one `/clear` opens is new.
   const resuming = useRef<Resume | undefined>(resume);
+  /** What a session replaying its past has said, by its key, so far. */
+  const replays = new Map<number, ConversationEvent[]>();
+  /**
+   * Runs session `key`'s replay of its past, whose actions reach the window
+   * as one, folded at once: one by one a long record's took seconds
+   * (CHD-559).
+   */
+  const replayed = (key: number, replay: () => void) => {
+    const actions: ConversationEvent[] = [];
+
+    replays.set(key, actions);
+
+    try {
+      replay();
+    } finally {
+      replays.delete(key);
+
+      if (actions.length > 0) {
+        dispatch({ type: 'in_session_past', key, actions });
+      }
+    }
+  };
+
   const heard = (key: number, event: ConversationEvent, wait?: Wait) => {
     if (retiredHeard(key, event)) {
       return;
     }
 
-    dispatch({ type: 'in_session', key, action: event });
+    const replay = replays.get(key);
+
+    if (replay === undefined) {
+      dispatch({ type: 'in_session', key, action: event });
+    } else {
+      replay.push(event);
+    }
+
     host.notify(wait, notifiedName(sessions.agents, key) ?? agent);
   };
 
@@ -498,6 +528,7 @@ export function useSessions(
           message,
         }),
       ),
+      (replay) => replayed(key, replay),
     );
 
     return conversation;

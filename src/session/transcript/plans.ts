@@ -4,6 +4,7 @@
  */
 import type { PlanUpdateContent } from '@agentclientprotocol/sdk';
 import type { Entry, Transcript } from './types.ts';
+import { appended, replacedAt } from './entries.ts';
 
 /**
  * The plan `planId` gone, whichever way it was drawn: the live list it is, or
@@ -59,15 +60,12 @@ export function updatePlan(
       ? state
       : {
           ...state,
-          entries: [
-            ...state.entries,
-            {
-              kind: 'assistant',
-              turnId,
-              text,
-              planId: plan.planId,
-            },
-          ],
+          entries: appended(state.entries, {
+            kind: 'assistant',
+            turnId,
+            text,
+            planId: plan.planId,
+          }),
         };
   }
 
@@ -120,7 +118,7 @@ function shownOnce(
     (block) => !(block.type === 'content' && block.content.type === 'text'),
   );
 
-  return entries.with(index, {
+  return replacedAt(entries, index, {
     ...entry,
     call: { ...entry.call, content: kept },
   });

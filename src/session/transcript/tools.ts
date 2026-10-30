@@ -13,6 +13,7 @@ import {
   writeText,
 } from '../terminal_text.ts';
 import type { Terminal, ToolCall, Transcript } from './types.ts';
+import { appended, replacedAt } from './entries.ts';
 
 const STATUS_ORDER: Record<string, number> = {
   pending: 0,
@@ -85,13 +86,13 @@ export function mergeToolCall(
   if (found?.kind !== 'tool') {
     return {
       ...state,
-      entries: [...state.entries, { kind: 'tool', turnId, call }],
+      entries: appended(state.entries, { kind: 'tool', turnId, call }),
     };
   }
 
   return {
     ...state,
-    entries: state.entries.with(index, { ...found, call }),
+    entries: replacedAt(state.entries, index, { ...found, call }),
   };
 }
 

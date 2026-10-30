@@ -1770,3 +1770,44 @@ describe('CHD-476 U2 tester: main clear image ownership', () => {
     });
   }
 });
+
+describe('CHD-559 U3 tester: warm transcript code picking', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`cached blocks remain pickable after another reply at ${columns} columns`, () => {
+      const { copies, copy } = clipboard();
+
+      return withWindow(
+        async (window) => {
+          await send(window, 'markdowncode');
+          await window.shows('A paragraph after.');
+          await leader(window, 'b');
+          await window.shows('another block');
+          await window.press('c');
+          await until('first code copy', () => copies.length === 1);
+
+          expect(copies[0]!.text).toBe('bun dev check');
+          await send(window, 'verbatim warm update');
+          await window.shows('"warm update"');
+          await leader(window, 'b');
+          await window.shows('another block');
+          await window.press('c');
+          await until('cached code copy', () => copies.length === 2);
+
+          expect(copies[1]!.text).toBe(copies[0]!.text);
+          await leader(window, 'b');
+          await window.shows('another block');
+          await window.press(ESC);
+          await until(
+            'pick cancelled',
+            () => !statusRow(window).includes('another block'),
+          );
+          expect(promptRow(window)).not.toContain('bun dev check');
+        },
+        { columns, rows, copy },
+      );
+    });
+  }
+});

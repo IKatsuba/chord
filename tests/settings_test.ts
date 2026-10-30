@@ -1558,6 +1558,87 @@ describe('tester: fresh selected policy failure and repair', () => {
   });
 });
 
+describe('CHD-568 U1 tester: fresh path writes and hostile keys', () => {
+  test('each write rereads unrelated hand edits and refuses a later broken file', async () => {
+    await place({ user: '{}' }, async (where) => {
+      const file = settingsFiles(where)[0]!;
+
+      await saveSettingAt(file, ['theme'], { set: 'dark' });
+      await writeFile(file, '{"theme":"light","keep":{"nested":[1,null]}}');
+      await saveSettingAt(file, ['agents', 'my.agent', 'model'], { set: 'm' });
+      expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({
+        theme: 'light',
+        keep: { nested: [1, null] },
+        agents: { 'my.agent': { model: 'm' } },
+      });
+
+      const broken = '{"env":{"TOKEN":secret123}}';
+
+      await writeFile(file, broken);
+      await expect(
+        saveSettingAt(file, ['theme'], { set: 'dark' }),
+      ).rejects.toThrow('it is not valid JSON');
+      expect(await readFile(file, 'utf8')).toBe(broken);
+      expect(readdirSync(join(file, '..'))).toEqual(['settings.json']);
+    });
+  });
+
+  test('removing a dotted own agent name preserves its siblings and project bytes', async () => {
+    const project = '{ "agents": {"my.agent":{"model":"project"}} }';
+
+    await place(
+      {
+        user: '{"agents":{"my.agent":{"model":false},"hasOwnProperty":{"model":"keep"}}}',
+        project,
+      },
+      async (where) => {
+        const [user, local] = settingsFiles(where);
+
+        await saveSettingAt(user, ['agents', 'my.agent', 'model'], {
+          remove: true,
+        });
+        expect(JSON.parse(await readFile(user!, 'utf8'))).toEqual({
+          agents: { hasOwnProperty: { model: 'keep' } },
+        });
+        expect(await readFile(local!, 'utf8')).toBe(project);
+      },
+    );
+  });
+
+  test('forbidden keys refuse removal at every depth without rewriting bytes', async () => {
+    const raw = '{ "agents": {"codex":{"model":"m"}} }';
+
+    await place({ user: raw }, async (where) => {
+      const file = settingsFiles(where)[0]!;
+
+      for (const key of ['__proto__', 'constructor', 'prototype']) {
+        for (const path of [[key], ['agents', key], ['agents', 'codex', key]]) {
+          await expect(
+            saveSettingAt(file, path, { remove: true }),
+          ).rejects.toThrow(/^No setting /u);
+        }
+      }
+
+      expect(await readFile(file, 'utf8')).toBe(raw);
+    });
+  });
+
+  test('nested values and unusual path keys encode terminal controls without losing Unicode', () => {
+    const controls = Array.from({ length: 160 }, (_, code) =>
+      String.fromCharCode(code),
+    ).join('');
+    const value = { [controls]: ['🙂', '\u200d\u2066\u2029', controls] };
+    const shown = shownValue(value);
+
+    expect(shown).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+    expect(JSON.parse(shown)).toEqual(value);
+    expect(shown).toContain('🙂');
+    expect(shownSettingPath(['agents', '', 'my.agent', controls])).toBe(
+      `agents.""."my.agent".${shownValue(controls)}`,
+    );
+  });
+});
+
 describe('the settings path writer (CHD-568)', () => {
   /** A user's settings file under a temporary root, as `text` when given. */
   async function inFile(

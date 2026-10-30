@@ -949,3 +949,121 @@ describe('CHD-545 U2 tester: short notice preserves both choices', () => {
     }
   }
 });
+
+describe('CHD-545 tester: last fix retains only working hint keys', () => {
+  for (const rows of [12, 24]) {
+    test(`resume scope still works without a local choice at 80x${rows}`, async () => {
+      let latest: WindowedState | undefined;
+      const current = () => latest!.sessions[latest!.front]!;
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows('Resume a session');
+          expect(window.frame()).toContain('Ctrl+a');
+          expect(window.frame()).not.toContain('Enter to resume');
+
+          const id = window.session()!.id;
+          const scroll = current().scroll;
+
+          await window.press('\r');
+          await window.press('1');
+          expect(window.session()!.id).toBe(id);
+          expect(window.pids).toHaveLength(1);
+          await window.press('\x01');
+          await until(
+            'all-directory scope',
+            () => latest?.window.resumePicker?.everywhere === true,
+          );
+          expect(window.frame()).toContain('Ctrl+a');
+
+          if (rows === 12) {
+            expect(window.frame()).not.toMatch(/Enter to resume|↑↓/);
+            await window.press('\r');
+            expect(window.session()!.id).toBe(id);
+            expect(window.pids).toHaveLength(1);
+          } else {
+            await window.shows('saved elsewhere');
+            expect(window.frame()).toContain('Enter to resume');
+          }
+
+          expect(current().scroll).toEqual(scroll);
+          await window.press(ESC);
+          await until(
+            'resume closed',
+            () => !window.frame().includes('Resume a session'),
+          );
+          expect(current().scroll).toEqual(scroll);
+        },
+        {
+          columns: 80,
+          rows,
+          readRecords: () =>
+            Promise.resolve([
+              {
+                path: '/records/elsewhere.jsonl',
+                sessionId: 'elsewhere',
+                agent: 'fake',
+                cwd: '/elsewhere',
+                lastUsedAt: 1,
+                prompt: 'saved elsewhere',
+              },
+            ]),
+          onState: (next) => {
+            latest = next;
+          },
+        },
+      );
+    });
+  }
+
+  test('MCP body keeps one hint gap through repeated height changes', async () => {
+    let latest: WindowedState | undefined;
+    const current = () => latest!.sessions[latest!.front]!;
+    const lines = (window: Window) => stripAnsi(window.frame()).split('\n');
+
+    await withWindow(
+      async (window) => {
+        await ready(window);
+
+        for (const rows of [12, 16, 24, 12]) {
+          await window.resize({ rows });
+          await send(window, '/mcp');
+          await window.shows('Esc to close');
+          await until(
+            'prompt resized',
+            () =>
+              lines(window).findLastIndex((line) => line.startsWith('╭')) ===
+              rows - 4,
+          );
+
+          const shown = lines(window);
+          const hint = shown.findIndex((line) => line.includes('Esc to close'));
+          const text = (at: number) => shown[at]!.replace(/[│\s]/g, '');
+          const scroll = current().scroll;
+
+          expect(text(hint - 1)).toBe('');
+          expect(text(hint - 2)).not.toBe('');
+          expect(shown[rows - 5]!.trim()).toBe('');
+          await window.press(ESC);
+          await until(
+            'MCP panel closed',
+            () => !window.frame().includes('Esc to close'),
+          );
+          expect(current().scroll).toEqual(scroll);
+          expect(
+            lines(window).findLastIndex((line) => line.startsWith('╭')),
+          ).toBe(rows - 4);
+        }
+      },
+      {
+        columns: 80,
+        rows: 24,
+        onState: (next) => {
+          latest = next;
+        },
+      },
+    );
+  });
+});

@@ -1531,3 +1531,51 @@ describe('a picker with nothing to pick names no key that picks (CHD-545)', () =
     });
   }
 });
+
+describe('CHD-545 tester: empty and hidden picker choices ignore pick keys', () => {
+  for (const kind of ['models', 'settings'] as const) {
+    for (const room of [7, Number.POSITIVE_INFINITY]) {
+      test(`${kind} with no choices in ${room} rows cannot dispatch a pick`, async () => {
+        const picked: string[] = [];
+        const app = await draw(
+          kind === 'models' ? (
+            <ModelPicker
+              models={undefined}
+              rows={6}
+              room={room}
+              agent='fake'
+              active
+              onPick={(value) => picked.push(value)}
+            />
+          ) : (
+            <ConfigPicker
+              options={[]}
+              option={undefined}
+              from={undefined}
+              rows={6}
+              room={room}
+              agent='fake'
+              active
+              onOpen={(value) => picked.push(value)}
+              onPick={(id, value) => picked.push(`${id}:${value}`)}
+            />
+          ),
+        );
+
+        try {
+          await until('empty picker hint', () =>
+            app.frame().includes('Esc to close'),
+          );
+          expect(app.frame()).not.toMatch(/Enter|↑↓/);
+          await app.write('\r');
+          await app.write('1');
+          await app.write(DOWN);
+          expect(picked).toEqual([]);
+          expect(app.frame()).toContain('Esc to close');
+        } finally {
+          await app.unmount();
+        }
+      });
+    }
+  }
+});

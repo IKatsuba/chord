@@ -283,6 +283,7 @@ export function ResumePicker({
   active,
   starting = false,
   gap = true,
+  width,
   onPick,
 }: {
   picker: ResumePickerState;
@@ -299,6 +300,8 @@ export function ResumePicker({
   starting?: boolean;
   /** The row above its frame; none where it floats over the transcript. */
   gap?: boolean;
+  /** Its frame's width, where that is not the window's. */
+  width?: number;
   onPick: (chosen: EarlierSession) => void;
 }) {
   const { everywhere } = picker;
@@ -362,6 +365,7 @@ export function ResumePicker({
               choices={choices}
               rows={listed}
               active={active}
+              {...(width === undefined ? {} : { width })}
               onPick={(value) => {
                 const chosen = sessions[Number(value)];
 
@@ -879,17 +883,21 @@ export function PickerList({
   choices,
   rows,
   active,
+  width,
   onPick,
   onMove,
 }: {
   choices: readonly PickerChoice[];
   rows: number;
   active: boolean;
+  /** What labels are laid out in, where its box is not as wide as the window. */
+  width?: number;
   onPick: (id: string) => void;
   /** Hears the choice each move highlights. */
   onMove?: (id: string) => void;
 }) {
-  const { width: columns } = useTerminalDimensions();
+  const { width: terminal } = useTerminalDimensions();
+  const columns = width ?? terminal;
   const lines = pickerLayout(choices, rows, columns);
   const heights = lines?.map((each) => each.length);
   const [view, setView] = useState(() =>

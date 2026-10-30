@@ -3,7 +3,11 @@ import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
-import { ConfigPicker, ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
+import {
+  ConfigPicker,
+  ModelPicker,
+  PickerList,
+} from '../../../src/ui/pickers/Pickers.tsx';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1578,4 +1582,39 @@ describe('CHD-545 tester: empty and hidden picker choices ignore pick keys', () 
       });
     }
   }
+});
+
+describe('a PickerList in a box narrower than the window', () => {
+  const title = 'a long title that does not fit in the frame it is drawn in';
+  const list = (width?: number) =>
+    draw(
+      <box width={40}>
+        <PickerList
+          choices={[
+            { key: 'a', value: 'a', label: `today  ${title}`, hang: 7 },
+          ]}
+          rows={5}
+          active={false}
+          {...(width === undefined ? {} : { width })}
+          onPick={() => {}}
+        />
+      </box>,
+      { columns: 120, rows: 10 },
+    );
+
+  test('lays its labels out in the width it is given, and cuts none', async () => {
+    const app = await list(40);
+    const frame = stripAnsi(app.frame());
+
+    expect(frame).not.toContain('...');
+    expect(frame.replace(/\s+/g, ' ')).toContain(title);
+    await app.unmount();
+  });
+
+  test("without a width it lays them out in the window's", async () => {
+    const app = await list();
+
+    expect(stripAnsi(app.frame())).toContain('...');
+    await app.unmount();
+  });
 });

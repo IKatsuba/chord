@@ -51,7 +51,13 @@ export const EDITOR_MODES = ['normal', 'vim'] as const;
 export type EditorMode = (typeof EDITOR_MODES)[number];
 
 /** The keys read only from the user's file, which is the one chord writes. */
-const USER_ONLY = ['theme', 'editorMode', 'mouse', 'copyOnSelect'] as const;
+const USER_ONLY = [
+  'theme',
+  'editorMode',
+  'mouse',
+  'copyOnSelect',
+  'offeredAgents',
+] as const;
 
 /** One settings file, as written. */
 const SettingsFile = z
@@ -94,6 +100,19 @@ const SettingsFile = z
      * from the user's file, as `mouse` is.
      */
     copyOnSelect: z.boolean(),
+    /**
+     * The agents the start screen and `/new` offer, in the order they show;
+     * read only from the user's file, as it is about what a person picks from,
+     * not a project. Checked whole, so a bad name costs this key alone: an
+     * issue on an item is one the file's parse cannot drop from a list.
+     */
+    offeredAgents: z.custom<string[]>(
+      (value) =>
+        Array.isArray(value) &&
+        value.length > 0 &&
+        value.every((name) => typeof name === 'string' && name.length > 0),
+      'expected a list of one or more agent names',
+    ),
   })
   .partial();
 
@@ -394,6 +413,10 @@ export function mergeSettings(...layers: readonly Settings[]): Settings {
       merged.copyOnSelect = layer.copyOnSelect;
     }
 
+    if (layer.offeredAgents !== undefined) {
+      merged.offeredAgents = layer.offeredAgents;
+    }
+
     if (layer.mcpServers !== undefined) {
       merged.mcpServers = { ...merged.mcpServers, ...layer.mcpServers };
     }
@@ -420,7 +443,7 @@ export interface SettingsLayer {
 /**
  * Reads the user's file, then the project's, which overrides it. A file that
  * is not there is no problem: most people have neither. A `theme`, an
- * `editorMode`, a `mouse` or a `copyOnSelect` in the project's file is a problem and is left out; `home` shows the user's file
+ * `editorMode`, a `mouse`, a `copyOnSelect` or an `offeredAgents` in the project's file is a problem and is left out; `home` shows the user's file
  * from `~` in what it says.
  */
 export async function loadSettings(where: {

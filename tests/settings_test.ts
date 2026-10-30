@@ -912,6 +912,89 @@ test("a project's copyOnSelect alone leaves it unset, so a copy on release", asy
   });
 });
 
+test("offeredAgents is read from the user's file, never the project's", async () => {
+  await place(
+    {
+      user: '{ "offeredAgents": ["codex", "claude"] }',
+      project: '{ "offeredAgents": ["goose"] }',
+    },
+    async (where) => {
+      const { settings, problems } = await loadSettings({
+        ...where,
+        home: join(where.configHome, '..'),
+      });
+      const [, project] = settingsFiles(where);
+
+      expect(settings.offeredAgents).toStrictEqual(['codex', 'claude']);
+      expect(problems).toStrictEqual([
+        {
+          file: project!,
+          kind: 'scope',
+          key: ['offeredAgents'],
+          message:
+            '"offeredAgents" is read only from ~/config/chord/settings.json, ignored',
+        },
+      ]);
+    },
+  );
+});
+
+test("a project's offeredAgents alone leaves it unset", async () => {
+  await place({ project: '{ "offeredAgents": ["goose"] }' }, async (where) => {
+    const { settings, problems } = await loadSettings(where);
+
+    expect(settings.offeredAgents).toStrictEqual(undefined);
+    expect(problems.length).toStrictEqual(1);
+  });
+});
+
+test('offeredAgents keeps its order and its repeats as written', () => {
+  expect(
+    parseSettings('f', '{ "offeredAgents": ["b", "a", "b"] }'),
+  ).toStrictEqual({
+    settings: { offeredAgents: ['b', 'a', 'b'] },
+    problems: [],
+  });
+});
+
+test('a bad offeredAgents counts as absent and costs the file nothing else', () => {
+  for (const offeredAgents of [
+    [],
+    [''],
+    ['claude', ''],
+    ['claude', 1],
+    [1, 2],
+    'claude',
+    null,
+    {},
+  ]) {
+    expect(
+      parseSettings('f', JSON.stringify({ offeredAgents, agent: 'fake' })),
+    ).toStrictEqual({
+      settings: { agent: 'fake' },
+      problems: [
+        {
+          file: 'f',
+          kind: 'validation',
+          key: ['offeredAgents'],
+          message:
+            '"offeredAgents": expected a list of one or more agent names, ignored',
+        },
+      ],
+    });
+  }
+});
+
+test('the later offeredAgents replaces the earlier one whole', () => {
+  expect(
+    mergeSettings({ offeredAgents: ['a', 'b'] }, { offeredAgents: ['c'] })
+      .offeredAgents,
+  ).toStrictEqual(['c']);
+  expect(
+    mergeSettings({ offeredAgents: ['a'] }, {}).offeredAgents,
+  ).toStrictEqual(['a']);
+});
+
 test('a directory is shortened against the home directory alone, and the home path is never shown', () => {
   expect(homePath(join('/h', 'src', 'app'), '/h')).toStrictEqual(
     join('~', 'src', 'app'),

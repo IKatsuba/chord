@@ -24,6 +24,68 @@ import {
   type Window,
 } from './render.tsx';
 
+describe('CHD-565 tester: offered menus across turns and child sessions', () => {
+  const listed = ['codex', 'hidden'].map((name) => ({
+    name,
+    title: undefined,
+    start: 'fixture',
+    from: 'settings' as const,
+  }));
+  const start = {
+    runtimes: ['fake', 'codex', 'hidden'],
+    listed,
+    startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+  };
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a cancelled turn and a bare /new preserve the offered menu at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'costwait');
+          await window.shows('Working until stopped.');
+          await window.type('/new ');
+          await until('the offered menu during a turn', () =>
+            /^ {2}codex\s/m.test(window.frame()),
+          );
+          expect(window.frame()).not.toMatch(/^ {2}(?:fake|hidden)\s/m);
+          await window.press(CTRL_C);
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await send(window, '/new');
+          await window.shows('╭─ fake ');
+          await window.type('/new ');
+          await until('the offered menu in the child', () =>
+            /^ {2}codex\s/m.test(window.frame()),
+          );
+          expect(window.frame()).not.toMatch(/^ {2}(?:fake|hidden)\s/m);
+          await window.press(CTRL_C);
+          await send(window, '/new hidden');
+          await window.shows('╭─ hidden ');
+        },
+        { columns, rows, ...start, offered: ['codex', 'typo', 'codex'] },
+      ));
+
+    test(`only unknown names offer no fallback while named and bare starts work at ${columns}x${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await window.type('/new ');
+          expect(window.frame()).not.toMatch(/^ {2}(?:fake|codex|hidden)\s/m);
+          await window.press(CTRL_C);
+          await send(window, '/new');
+          await window.shows('╭─ fake ');
+          await send(window, '/new hidden');
+          await window.shows('╭─ hidden ');
+        },
+        { columns, rows, ...start, offered: ['unknown-only'] },
+      ));
+  }
+});
+
 test('/new and a space lists the agents chord can start, after /clear as before it (U6)', () =>
   withWindow(
     async (window) => {

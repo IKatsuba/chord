@@ -173,10 +173,13 @@ leader-key hints, agents and background summary on their rows, uncovered.
 Lists can reach the window's top, covering the header. They shrink to the
 available space and scroll to the selection. In a short window, a picker
 keeps its title and hint; with no choice fitting, its list is hidden.
+The hint then names only its Esc action and, in `/resume`, ctrl+a to change
+scope; ↑↓ and Enter are disabled.
 Panels without a list cut their body from the bottom, keeping their title
-and hint or choices. With no visible completion row, navigation and
-acceptance are disabled, including a pick waiting for file matching. Enter
-still submits the draft normally. Completion resumes when a row returns.
+and hint or choices, with one gap before the hint. With no visible completion
+row, navigation and acceptance are disabled, including a pick waiting for
+file matching. Enter still submits the draft normally. Completion resumes
+when a row returns.
 
 `@` opens the file finder; fuzzy matching starts at the first character
 after it. ↑/↓ moves the highlight, Enter or Tab adds the file, and Esc

@@ -18,9 +18,12 @@
   leave the prompt, its gap row and permanent rows fixed and uncovered.
   Frameless lists have a dim top rule; framed pickers keep only their frame.
   They may reach the window's top. Short pickers keep title and hint or
-  choices, cutting the body from the bottom. At zero visible completion rows,
-  suppress paint, navigation and acceptance, including pending picks;
-  preserve normal draft submission and restore completion when room returns.
+  choices, cutting the body from the bottom with one gap before the hint.
+  A picker with no visible choice names only keys that act: its Esc action
+  and `/resume`'s scope key; disable navigation and acceptance.
+  At zero visible completion rows, suppress paint, navigation and acceptance,
+  including pending picks; preserve normal draft submission and restore
+  completion when room returns.
 - Tab sends the oldest personal plain queued row into the running turn; leave
   the draft untouched and skip agent messages and sent/held rows. Esc leaves
   a row while its send is pending. Refusals restore its original queue place.

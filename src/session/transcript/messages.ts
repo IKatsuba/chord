@@ -4,6 +4,7 @@
  */
 import type { ContentBlock } from '@agentclientprotocol/sdk';
 import type { Transcript } from './types.ts';
+import { appended, lastReplaced } from './entries.ts';
 
 /** A chunk's words: a text block's, and nothing of an image or a link. */
 export function textOf(content: ContentBlock): string {
@@ -35,26 +36,20 @@ export function appendText(
   if (continues) {
     return {
       ...state,
-      entries: [
-        ...state.entries.slice(0, -1),
-        {
-          ...last,
-          text: last.text + text,
-        },
-      ],
+      entries: lastReplaced(state.entries, {
+        ...last,
+        text: last.text + text,
+      }),
     };
   }
 
   return {
     ...state,
-    entries: [
-      ...state.entries,
-      {
-        kind,
-        turnId,
-        text,
-        ...(messageId === undefined ? {} : { messageId }),
-      },
-    ],
+    entries: appended(state.entries, {
+      kind,
+      turnId,
+      text,
+      ...(messageId === undefined ? {} : { messageId }),
+    }),
   };
 }

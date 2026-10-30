@@ -610,6 +610,7 @@ export class Conversation {
   #betweenQuiet: AbortController | undefined;
   /** Ended task agents' closes, which the session's own close waits for. */
   readonly #endedTasks = new Set<Promise<void>>();
+  readonly #replaying: (replay: () => void) => void;
   /** The session's monitors still running, by id, in start order. */
   readonly #monitors = new Map<string, Monitoring>();
   /**
@@ -634,7 +635,13 @@ export class Conversation {
     now: () => number = Date.now,
     starting: Starting = {},
     recording?: Recording,
+    /**
+     * Runs a resumed session's replay of its past, each action of it heard
+     * as any other; a window takes them as one batch (CHD-559).
+     */
+    replaying: (replay: () => void) => void = (replay) => replay(),
   ) {
+    this.#replaying = replaying;
     this.#open = open;
     // The record hears each event before the window does, as the window
     // may quit on one.
@@ -2823,16 +2830,18 @@ export class Conversation {
     const past = session.history();
     const usage = usageCountOf(session.agent);
 
-    for (const action of past) {
-      // A turn's tokens a record kept of an agent whose answers give the
-      // session's running total are that total, a record from before chord
-      // knew it too (CHD-472).
-      this.#emit(
-        action.type === 'usage' && usage === 'session'
-          ? { ...action, total: true }
-          : action,
-      );
-    }
+    this.#replaying(() => {
+      for (const action of past) {
+        // A turn's tokens a record kept of an agent whose answers give the
+        // session's running total are that total, a record from before chord
+        // knew it too (CHD-472).
+        this.#emit(
+          action.type === 'usage' && usage === 'session'
+            ? { ...action, total: true }
+            : action,
+        );
+      }
+    });
 
     // Ids go on from the past's, which `stop_monitor` refuses by how they
     // ended.

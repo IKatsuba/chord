@@ -2,6 +2,7 @@
 import type { SessionUpdate } from '@agentclientprotocol/sdk';
 import { textOf } from './messages.ts';
 import type { Compaction, Transcript } from './types.ts';
+import { appended } from './entries.ts';
 
 /**
  * A compaction where its first update put it, each later update patching it
@@ -63,7 +64,11 @@ export function mergeCompaction(
   if (found?.kind !== 'compaction') {
     return {
       ...state,
-      entries: [...state.entries, { kind: 'compaction', turnId, compaction }],
+      entries: appended(state.entries, {
+        kind: 'compaction',
+        turnId,
+        compaction,
+      }),
     };
   }
 

@@ -5,6 +5,7 @@
  */
 import { OUTPUT_LIMIT } from '../context.ts';
 import type { ShellRun, Transcript, TranscriptAction } from './types.ts';
+import { appended } from './entries.ts';
 
 export function shellStarted(
   state: Transcript,
@@ -13,19 +14,16 @@ export function shellStarted(
 ): Transcript {
   return {
     ...state,
-    entries: [
-      ...state.entries,
-      {
-        kind: 'shell',
-        turnId,
-        run: {
-          command,
-          stdout: '',
-          stderr: '',
-          running: true,
-        },
+    entries: appended(state.entries, {
+      kind: 'shell',
+      turnId,
+      run: {
+        command,
+        stdout: '',
+        stderr: '',
+        running: true,
       },
-    ],
+    }),
   };
 }
 
@@ -36,14 +34,11 @@ export function shellReplayed(
 ): Transcript {
   return {
     ...state,
-    entries: [
-      ...state.entries,
-      {
-        kind: 'shell',
-        turnId,
-        run,
-      },
-    ],
+    entries: appended(state.entries, {
+      kind: 'shell',
+      turnId,
+      run,
+    }),
   };
 }
 

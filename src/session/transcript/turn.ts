@@ -17,6 +17,7 @@ import type {
   TurnResult,
   TurnState,
 } from './types.ts';
+import { appended } from './entries.ts';
 
 /**
  * A turn starts on the person's prompt, or on a message, which draws as one
@@ -45,7 +46,7 @@ export function prompted(
       : [{ kind: 'team_part', turnId: owner, part: team }, entry];
 
   if (into !== undefined) {
-    return { ...state, entries: [...state.entries, ...added] };
+    return { ...state, entries: appended(state.entries, ...added) };
   }
 
   const waiting =
@@ -53,7 +54,7 @@ export function prompted(
 
   return {
     ...state,
-    entries: [...state.entries, ...added],
+    entries: appended(state.entries, ...added),
     turn:
       waiting.length > 0
         ? {
@@ -172,7 +173,7 @@ export function settle(
 
     return ending === undefined
       ? state
-      : { ...state, entries: [...state.entries, ending] };
+      : { ...state, entries: appended(state.entries, ending) };
   }
 
   const { since } = state.turn;
@@ -213,7 +214,7 @@ export function settle(
   ];
   // The same array when nothing is added: a new one reads as news.
   const entries =
-    added.length === 0 ? state.entries : [...state.entries, ...added];
+    added.length === 0 ? state.entries : appended(state.entries, ...added);
 
   // Every permission still open outlives the turn: a task agent's as the
   // task does, and the agent's own, which still waits on the person, now

@@ -46,6 +46,7 @@ import type {
   TranscriptAction,
   UsageField,
 } from './types.ts';
+import { appended, replacedAt } from './entries.ts';
 
 const USAGE_FIELDS: readonly string[] = ['used', 'size', 'cost'];
 
@@ -70,7 +71,10 @@ export function reduceTranscript(
 
     return {
       ...under,
-      entries: [...under.entries, closed(under.entries, last.turnId, last)],
+      entries: appended(
+        under.entries,
+        closed(under.entries, last.turnId, last),
+      ),
     };
   }
 
@@ -94,7 +98,7 @@ function withEndLines(state: Transcript, next: Transcript): Transcript {
 
   return lines.length === 0
     ? next
-    : { ...next, entries: [...next.entries, ...lines] };
+    : { ...next, entries: appended(next.entries, ...lines) };
 }
 
 /** `entries` with `ask` on the call it came out of, the latest of that id. */
@@ -105,7 +109,7 @@ function withPlan(entries: readonly Entry[], ask: PlanAsk): readonly Entry[] {
   const entry = entries[at];
 
   return entry?.kind === 'tool'
-    ? entries.with(at, { ...entry, call: { ...entry.call, plan: ask } })
+    ? replacedAt(entries, at, { ...entry, call: { ...entry.call, plan: ask } })
     : entries;
 }
 
@@ -211,118 +215,94 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
     case 'reported':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'report',
-            turnId: action.turnId,
-            command: action.command,
-            rows: action.rows,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'report',
+          turnId: action.turnId,
+          command: action.command,
+          rows: action.rows,
+        }),
       };
     case 'noted':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'note',
-            turnId: action.turnId,
-            command: action.command,
-            text: action.text,
-            failed: action.failed,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'note',
+          turnId: action.turnId,
+          command: action.command,
+          text: action.text,
+          failed: action.failed,
+        }),
       };
     case 'team_shown':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'team',
-            turnId: action.turnId,
-            command: action.command,
-            shown: action.shown,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'team',
+          turnId: action.turnId,
+          command: action.command,
+          shown: action.shown,
+        }),
       };
     case 'failed':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'error',
-            turnId: action.turnId,
-            message: action.message,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'error',
+          turnId: action.turnId,
+          message: action.message,
+        }),
       };
     case 'warned':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'warning',
-            turnId: action.turnId,
-            message: action.message,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'warning',
+          turnId: action.turnId,
+          message: action.message,
+        }),
       };
     case 'left_open':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'left_open',
-            turnId: action.turnId,
-            agents: action.agents,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'left_open',
+          turnId: action.turnId,
+          agents: action.agents,
+        }),
       };
     case 'monitors_left':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'monitors_left',
-            turnId: action.turnId,
-            monitors: action.monitors,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'monitors_left',
+          turnId: action.turnId,
+          monitors: action.monitors,
+        }),
       };
     case 'cycle_started':
       return cycleStarted(state, action.turnId, action.at);
     case 'forked':
       return {
         ...state,
-        entries: [
-          ...state.entries,
-          {
-            kind: 'forked',
-            turnId: action.turnId,
-            from: action.from,
-            at: action.at,
-          },
-        ],
+        entries: appended(state.entries, {
+          kind: 'forked',
+          turnId: action.turnId,
+          from: action.from,
+          at: action.at,
+        }),
       };
     case 'self_started':
       return {
         ...state,
-        entries: [
-          ...state.entries,
+        entries: appended(
+          state.entries,
           closed(state.entries, action.turnId, {
             kind: 'self_started',
             turnId: action.turnId,
             ...(action.from === undefined ? {} : { from: action.from }),
             alone: true,
           }),
-        ],
+        ),
       };
   }
 }

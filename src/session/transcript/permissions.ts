@@ -12,6 +12,7 @@ import type {
   PermissionWait,
   Transcript,
 } from './types.ts';
+import { appended } from './entries.ts';
 
 export function permissionRequested(
   state: Transcript,
@@ -140,7 +141,7 @@ export function permissionSettled(
             ...subagent,
             entries: [...subagent.entries, entry],
           }))
-        : [...state.entries, entry];
+        : appended(state.entries, entry);
 
   return {
     ...state,

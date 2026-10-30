@@ -345,6 +345,8 @@ export interface AppProps {
    * describe and order its names by; the known ones, unlooked, by default.
    */
   listed?: readonly ListedAgent[] | undefined;
+  /** The `offeredAgents` setting, which sets what `/new` lists from `listed`. */
+  offered?: readonly string[] | undefined;
   /** Which key does what, as the keybindings file has it; the defaults else. */
   keymap?: Keymap | undefined;
   /** What was wrong in the keybindings file, for the status line to say. */
@@ -429,6 +431,7 @@ export function App({
     start: startLine(start),
     from: runner,
   })),
+  offered,
   keymap = DEFAULT_KEYMAP,
   keysFailed,
   copy,
@@ -449,7 +452,7 @@ export function App({
           }),
         {
           ...initialAppState,
-          agents: agentItems(runtimes, listed),
+          agents: agentItems(runtimes, listed, offered),
           theme,
           ...(vim ? { vim: startingVim } : {}),
           keys: keymap,

@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { AvailableCommand } from '@agentclientprotocol/sdk';
 import {
   agentItems,
@@ -336,6 +336,61 @@ test('/new puts what will start on top, and marks an own CLI PATH lacks', () => 
     ['claude', 'Claude'],
     ['cursor', 'Cursor · not on PATH'],
   ]);
+});
+
+describe('CHD-565 /new with a list of offered agents', () => {
+  const listed = [
+    { name: 'claude', title: 'Claude', start: 'npx c', from: 'npx' },
+    {
+      name: 'cursor',
+      title: 'Cursor',
+      start: 'agent acp',
+      from: 'cli',
+      found: false,
+    },
+    {
+      name: 'goose',
+      title: 'goose',
+      start: 'goose acp',
+      from: 'cli',
+      found: true,
+    },
+    { name: 'mine', title: undefined, start: 'mine', from: 'settings' },
+  ] as const;
+  const window = ['fake', 'claude', 'cursor', 'goose', 'mine'];
+  const rows = (offered?: readonly string[]) =>
+    agentItems(window, listed, offered).map(({ name, description }) => [
+      name,
+      description,
+    ]);
+
+  test("offers the list's names in its order, not by readiness", () => {
+    expect(rows(['cursor', 'claude', 'mine', 'goose'])).toStrictEqual([
+      ['cursor', 'Cursor · not on PATH'],
+      ['claude', 'Claude'],
+      ['mine', 'from settings'],
+      ['goose', 'goose'],
+    ]);
+  });
+
+  test("leaves out the window's own agent unless the list names it", () => {
+    expect(rows(['claude'])).toStrictEqual([['claude', 'Claude']]);
+  });
+
+  test('leaves out a name the catalog lacks, so only unknown names offer none', () => {
+    expect(rows(['cdex', 'claude'])).toStrictEqual([['claude', 'Claude']]);
+    expect(rows(['cdex'])).toStrictEqual([]);
+  });
+
+  test('with no list, ranks every name by readiness and keeps a missing CLI, last', () => {
+    expect(rows()).toStrictEqual([
+      ['fake', undefined],
+      ['mine', 'from settings'],
+      ['goose', 'goose'],
+      ['claude', 'Claude'],
+      ['cursor', 'Cursor · not on PATH'],
+    ]);
+  });
 });
 
 test('the agent named exactly comes first', () => {

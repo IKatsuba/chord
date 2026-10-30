@@ -670,6 +670,7 @@ export const cli = chordCommand().action(async (options, named) => {
         listAgents().map(({ name }) => name),
       )}
       listed={listed}
+      offered={loaded.settings.offeredAgents}
       background={found}
       keymap={keys.keymap}
       keysFailed={keybindingsNotice(

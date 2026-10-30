@@ -103,6 +103,49 @@ test("/new codex opens a codex agent for main beside main's running turn, which 
     },
   ));
 
+describe('CHD-565 /new with a list of offered agents', () => {
+  const start = {
+    runtimes: ['fake', 'codex', 'zed'],
+    listed: ['zed', 'codex'].map((name) => ({
+      name,
+      title: undefined,
+      start: name,
+      from: 'settings' as const,
+    })),
+    offered: ['zed', 'codex'],
+    startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+  };
+
+  test("the completion lists the list, in its order, without the window's agent", () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('/new ');
+        await until('the agents listed', () =>
+          /^ {2}zed\s/m.test(window.frame()),
+        );
+
+        const frame = window.frame();
+
+        expect(frame.indexOf('  zed')).toBeLessThan(frame.indexOf('  codex'));
+        expect(frame).not.toMatch(/^ {2}fake\s/m);
+        await window.press(CTRL_C);
+      },
+      { columns: 80, rows: 24, ...start },
+    ));
+
+  test('/new with a name outside the list still opens it', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await window.type('/new fake');
+        await window.press('\r');
+        await window.shows('╭─ fake ');
+      },
+      { columns: 120, rows: 40, ...start },
+    ));
+});
+
 describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () => {
   const command = fakeAgentCommand();
   const states = new WeakMap<Window, () => WindowedState>();

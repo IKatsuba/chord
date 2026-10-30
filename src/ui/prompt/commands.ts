@@ -5,7 +5,7 @@
  */
 import type { AvailableCommand } from '@agentclientprotocol/sdk';
 import { Fzf } from 'fzf';
-import { agentNote, type ListedAgent } from '../../agents.ts';
+import { agentNote, type ListedAgent, offeredAgents } from '../../agents.ts';
 
 /** chord's own commands; the agent never hears of them. */
 export type ChordCommand =
@@ -201,23 +201,37 @@ export function teamItems(
  * each described as `chord agents` lists it in `listed`; one it does not
  * list, as `--agent-command` names, by its name alone. Those the settings
  * files start come first, then own CLIs PATH has, then the registry's, and
- * own CLIs PATH lacks last, so what will start is on top.
+ * own CLIs PATH lacks last, so what will start is on top. With the
+ * `offeredAgents` setting, its known names alone and in its order, as the
+ * person chose them; `names` is then only what a typed `/new` may start.
  */
 export function agentItems(
   names: readonly string[],
   listed: readonly ListedAgent[],
+  offered?: readonly string[],
 ): CommandItem[] {
+  const itemOf = (name: string, agent: ListedAgent | undefined) =>
+    ({
+      name,
+      ...(agent === undefined ? {} : { description: agentNote(agent) }),
+      owner: 'chord',
+      of: 'new',
+    }) satisfies CommandItem;
+
+  // Not for an absent setting: `/new` keeps the own CLIs PATH lacks, which
+  // that answer leaves out, as it does today.
+  if (offered !== undefined) {
+    return offeredAgents(listed, offered).agents.map((agent) =>
+      itemOf(agent.name, agent),
+    );
+  }
+
   const ranked = names.map((name) => {
     const agent = listed.find((each) => each.name === name);
 
     return {
       rank: agent === undefined ? 0 : readiness(agent),
-      item: {
-        name,
-        ...(agent === undefined ? {} : { description: agentNote(agent) }),
-        owner: 'chord',
-        of: 'new',
-      } satisfies CommandItem,
+      item: itemOf(name, agent),
     };
   });
 

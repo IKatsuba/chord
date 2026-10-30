@@ -10,6 +10,7 @@ import {
   SHORTCUTS,
 } from '../../../src/ui/shortcuts/keys.ts';
 import { requestRule } from '../../../src/ui/dialogs/permission.ts';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { BUGFIX } from '../agents/teams_window.tsx';
@@ -68,8 +69,10 @@ const SHIFT_DOWN = '\x1b[1;2B';
 /** An SGR wheel report, `up` or down, at the 0-based cell `x`, `y`. */
 const wheel = (x: number, y: number, up: boolean) =>
   `\x1b[<${up ? 64 : 65};${x + 1};${y + 1}M`;
-const BELOW = '── ↓ 4 lines below · pagedown to scroll ──';
-const ABOVE = '── ↑ 4 lines above · pageup to scroll ──';
+// The panel floats over the transcript with a rule on top, which takes a
+// row of its room (CHD-545).
+const BELOW = '── ↓ 5 lines below · pagedown to scroll ──';
+const ABOVE = '── ↑ 5 lines above · pageup to scroll ──';
 const LAST = 'tab enter to add a file';
 
 /** The existing help rows above the prompt, excluding its gap and status. */
@@ -265,7 +268,7 @@ test('the wheel over the panel scrolls it, and it opens again at the top', () =>
       await window.shows(BELOW);
 
       // As many rows as the rule says are below.
-      for (let row = 0; row < 4; row++) {
+      for (let row = 0; row < 5; row++) {
         await window.press(wheel(10, 10, false));
       }
 
@@ -771,10 +774,9 @@ describe('shortcuts scroll rules occupy their own rows (CHD-528)', () => {
 });
 
 test('shortcuts keep their last row or a below rule when a message starts a turn (CHD-530)', async () => {
+  let latest: WindowedState | undefined;
   const server = serveChord();
   const callers: Caller[] = [];
-  const lines = shortcuts().map(shortcutLine);
-  const rows = panelRows(lines, columnCount(lines, 80));
 
   try {
     await withWindow(
@@ -806,60 +808,32 @@ test('shortcuts keep their last row or a below rule when a message starts a turn
         await window.shows('tab enter to add a file or agent');
 
         const sender = callers.find(({ team }) => team === 'lead');
+        const panel = shortcutPanel(window.frame(), 80);
         const before = window.written().length;
 
         assert(sender);
         expect(
           sender.window.tell(sender, 'tester', 'costwait', () => {}),
         ).not.toHaveProperty('error');
-        await window.shows('Working…');
         await until(
-          'the shortened panel to show its last row or count it below',
+          'the tester working',
           () =>
-            window.frame().includes('tab enter to add a file or agent') ||
-            /↓ [1-9]\d* lines? below/.test(window.frame()),
-        ).catch((error: Error) => {
-          throw new Error(`${error.message}; the screen:\n${window.frame()}`);
-        });
-
+            latest?.sessions[latest.front]?.transcript.turn.status !== 'idle',
+        );
         await window.press(END);
         await window.shows('tab enter to add a file or agent');
-        expect(window.frame()).not.toContain('lines below');
 
+        // The panel floats over the Working line, so the turn takes none of
+        // its rows: every frame since shows it as it was (CHD-545).
         const frames = window
           .written()
           .slice(before)
-          .filter(
-            (frame) =>
-              frame.includes('Working…') && frame.includes('lines above'),
-          );
+          .filter((frame) => frame.includes('lines above'));
 
         expect(frames.length).toBeGreaterThan(0);
 
         for (const frame of frames) {
-          expect(
-            frame.includes('tab enter to add a file or agent') ||
-              /↓ [1-9]\d* lines? below/.test(frame),
-            frame,
-          ).toBe(true);
-
-          const actual = shortcutPanel(frame, 80);
-          const above = actual[0]?.match(/↑ (\d+) lines? above/);
-          const below = actual.at(-1)?.match(/↓ (\d+) lines? below/);
-          const offset = Number(above?.[1] ?? 0);
-          const count = actual.length - Number(!!above) - Number(!!below);
-
-          expect(actual, frame).toStrictEqual([
-            ...(above ? [`  ${requestRule('↑', offset, 'pageup', 78)}`] : []),
-            ...rows
-              .slice(offset, offset + count)
-              .map((row) => `  ${row}`.trimEnd()),
-            ...(below
-              ? [
-                  `  ${requestRule('↓', rows.length - offset - count, 'pagedown', 78)}`,
-                ]
-              : []),
-          ]);
+          expect(shortcutPanel(frame, 80), frame).toStrictEqual(panel);
         }
       },
       {
@@ -875,6 +849,9 @@ test('shortcuts keep their last row or a below rule when a message starts a turn
 
             return server.admit(caller);
           },
+        },
+        onState: (next) => {
+          latest = next;
         },
       },
     );

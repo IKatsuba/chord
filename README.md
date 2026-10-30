@@ -143,8 +143,9 @@ chord -p "Explain src/main.tsx"          # one reply on stdout, for scripts
 git diff | chord -p "Review this" --output-format json
 ```
 
-Inside the window, completion lists, history search and `?` appear above
-the prompt; status and agents stay below:
+Inside the window, completion lists, history search, `?` and command pickers
+float over the transcript above the prompt, keeping its height and scroll.
+The prompt, status and agents stay on their rows:
 
 | Key               | Does                                         |
 | ----------------- | -------------------------------------------- |

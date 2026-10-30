@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { draw } from '../harness.tsx';
-import { ConfigPicker } from '../../../src/ui/pickers/Pickers.tsx';
+import { ConfigPicker, ModelPicker } from '../../../src/ui/pickers/Pickers.tsx';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1037,9 +1037,27 @@ describe('CHD-441 tester: takes-none reaches child and task sessions', () => {
             await send(window, '/mcp');
             await window.shows("chord's MCP servers for openclaw.");
             await window.shows('takes no MCP servers');
+
+            // The named child's short panel clips this explanation's tail;
+            // give the text room without weakening the transport checks above.
+            if (rows < 40) {
+              await window.resize({ rows: 40 });
+            }
+
+            await until('the full configuration note', () =>
+              /agents\.\s*openclaw\.mcpServers/.test(
+                window.frame().replaceAll('│', ''),
+              ),
+            );
             expect(window.frame().replaceAll('│', '')).toMatch(
               /agents\.\s*openclaw\.mcpServers/,
             );
+
+            if (rows < 40) {
+              await window.resize({ rows });
+              await window.shows('Esc to close');
+            }
+
             expect(window.frame()).not.toContain('Bearer secret');
             await window.press(ESC);
             await until(
@@ -1455,6 +1473,109 @@ describe('CHD-434 U2 tester: notice ownership and recovery', () => {
           },
           options(columns, rows),
         ));
+    }
+  }
+});
+
+describe('a picker with nothing to pick names no key that picks (CHD-545)', () => {
+  for (const room of [Number.POSITIVE_INFINITY, 12]) {
+    test(`no models, in a room of ${room} rows`, async () => {
+      const drawn = await draw(
+        <ModelPicker
+          models={undefined}
+          rows={6}
+          room={room}
+          agent='fake'
+          active
+          onPick={() => {}}
+        />,
+      );
+
+      try {
+        await until('drawn', () =>
+          drawn.frame().includes('fake offers no models to choose from.'),
+        );
+        expect(drawn.frame()).toContain('Esc to close');
+        expect(drawn.frame()).not.toContain('Enter to switch');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+
+    test(`no settings, in a room of ${room} rows`, async () => {
+      const drawn = await draw(
+        <ConfigPicker
+          options={[]}
+          option={undefined}
+          from={undefined}
+          rows={6}
+          room={room}
+          agent='fake'
+          active
+          onOpen={() => {}}
+          onPick={() => {}}
+        />,
+      );
+
+      try {
+        await until('drawn', () =>
+          drawn
+            .frame()
+            .includes('fake has no settings other than its model and mode.'),
+        );
+        expect(drawn.frame()).toContain('Esc to close');
+        expect(drawn.frame()).not.toContain('Enter to choose');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});
+
+describe('CHD-545 tester: empty and hidden picker choices ignore pick keys', () => {
+  for (const kind of ['models', 'settings'] as const) {
+    for (const room of [7, Number.POSITIVE_INFINITY]) {
+      test(`${kind} with no choices in ${room} rows cannot dispatch a pick`, async () => {
+        const picked: string[] = [];
+        const app = await draw(
+          kind === 'models' ? (
+            <ModelPicker
+              models={undefined}
+              rows={6}
+              room={room}
+              agent='fake'
+              active
+              onPick={(value) => picked.push(value)}
+            />
+          ) : (
+            <ConfigPicker
+              options={[]}
+              option={undefined}
+              from={undefined}
+              rows={6}
+              room={room}
+              agent='fake'
+              active
+              onOpen={(value) => picked.push(value)}
+              onPick={(id, value) => picked.push(`${id}:${value}`)}
+            />
+          ),
+        );
+
+        try {
+          await until('empty picker hint', () =>
+            app.frame().includes('Esc to close'),
+          );
+          expect(app.frame()).not.toMatch(/Enter|↑↓/);
+          await app.write('\r');
+          await app.write('1');
+          await app.write(DOWN);
+          expect(picked).toEqual([]);
+          expect(app.frame()).toContain('Esc to close');
+        } finally {
+          await app.unmount();
+        }
+      });
     }
   }
 });

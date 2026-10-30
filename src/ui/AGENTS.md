@@ -12,14 +12,18 @@
   single log of the caught error and passes every other console error on.
 - A string an agent sent goes through `theme/Ansi.tsx` unless something cleaned it: OpenTUI's text draws escape bytes as text.
 - Choose colours by role from `theme/theme.ts`.
-- Keep transient completions (including `@@`), history search and help above
-  the prompt; status/leader hints, agents and background summary stay below.
-  Ordinary same-draft open/close comparisons keep prompt borders and
-  permanent rows fixed. Only the demonstrated cramped 80×24→80×25
-  resize/menu-close shift is accepted (see `docs/design/CHD-525.md`);
-  it permits no arbitrary shifts. At zero visible completion rows, suppress
-  paint, navigation and acceptance, including pending picks; preserve normal
-  draft submission and restore completion when room returns.
+- Float transient completions (including `@@`), history search, help and
+  command pickers over the transcript above the prompt (CHD-545). Keep the
+  transcript's height, scroll and following state; opening and closing must
+  leave the prompt, its gap row and permanent rows fixed and uncovered.
+  Frameless lists have a dim top rule; framed pickers keep only their frame.
+  They may reach the window's top. Short pickers keep title and hint or
+  choices, cutting the body from the bottom with one gap before the hint.
+  A picker with no visible choice names only keys that act: its Esc action
+  and `/resume`'s scope key; disable navigation and acceptance.
+  At zero visible completion rows, suppress paint, navigation and acceptance,
+  including pending picks; preserve normal draft submission and restore
+  completion when room returns.
 - Tab sends the oldest personal plain queued row into the running turn; leave
   the draft untouched and skip agent messages and sent/held rows. Esc leaves
   a row while its send is pending. Refusals restore its original queue place.

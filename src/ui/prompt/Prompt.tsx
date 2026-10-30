@@ -601,17 +601,22 @@ export function Queue({
 /**
  * The slash command list above the prompt, as
  * Claude Code draws it: each command's name, then what it does, dim; the
- * highlighted one in the permission colour. A list longer than `rows` shows
- * the part around the highlight.
+ * highlighted one in the permission colour. A list longer than `rows`, or
+ * than the `room` the layer it floats in has, shows the part around the
+ * highlight; it is told its room, as a box laid out over the transcript
+ * sizes it to what it draws and cannot measure it (CHD-545, Q315).
  */
 export function CommandList({
   menu,
   rows,
+  room = Number.POSITIVE_INFINITY,
   width,
   onRoom,
 }: {
   menu: CommandMenu;
   rows: number;
+  /** The rows the layer it floats in has; none drawn outside one. */
+  room?: number;
   width: number;
   onRoom?: (room: boolean) => void;
 }) {
@@ -621,7 +626,7 @@ export function CommandList({
   const { start, end } = visibleRange(
     items.length,
     highlighted,
-    rows,
+    Math.min(rows, room),
     menu.top,
   );
   // One name column for the whole list, so it holds still as the list scrolls,
@@ -633,12 +638,9 @@ export function CommandList({
 
   return (
     <Clip
-      flexBasis={end - start}
-      flexShrink={1}
-      minHeight={0}
-      renderAfter={function () {
-        onRoom?.(this.getLayout().height > 0);
-      }}
+      height={end - start}
+      flexShrink={0}
+      renderAfter={() => onRoom?.(room > 0)}
     >
       <scrollbox
         ref={view}
@@ -682,11 +684,14 @@ export function CommandList({
 export function FileList({
   finder,
   rows,
+  room = Number.POSITIVE_INFINITY,
   agentColours = {},
   onRoom,
 }: {
   finder: FileFinder;
   rows: number;
+  /** The rows the layer it floats in has, as the slash list is told. */
+  room?: number;
   onRoom?: (room: boolean) => void;
   agentColours?: Readonly<Record<string, string>>;
 }) {
@@ -695,24 +700,23 @@ export function FileList({
   const { permission } = useColours();
   // A match running long says so in the list's last row, not one more, and
   // the list scrolls a row so the highlighted file stays above it.
+  const limit = Math.min(rows, room);
   const { start, end } = visibleRange(
     files.length,
     highlighted,
-    searching ? Math.max(Math.min(files.length, rows) - 1, 1) : rows,
+    searching ? Math.max(Math.min(files.length, limit) - 1, 1) : limit,
     finder.top,
   );
   const shown = files.slice(start, end);
 
   return (
     <Clip
-      flexBasis={
-        shown.length + Number(finder.empty !== undefined) + Number(searching)
-      }
-      flexShrink={1}
-      minHeight={0}
-      renderAfter={function () {
-        onRoom?.(this.getLayout().height > 0);
-      }}
+      height={Math.min(
+        room,
+        shown.length + Number(finder.empty !== undefined) + Number(searching),
+      )}
+      flexShrink={0}
+      renderAfter={() => onRoom?.(room > 0)}
     >
       <scrollbox
         ref={view}

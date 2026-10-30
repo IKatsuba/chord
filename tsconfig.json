@@ -31,6 +31,7 @@
     "tests/ui/dialogs/Permission_test.tsx",
     "tests/ui/dialogs/Questions_test.tsx",
     "tests/ui/plan/Plan_test.tsx",
+    "tests/ui/prompt/Overlay_test.tsx",
     "tests/ui/prompt/Prompt_test.tsx",
     "tests/ui/splash/Splash_test.tsx",
     "tests/ui/status/Status_test.tsx",

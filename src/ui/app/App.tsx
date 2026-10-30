@@ -61,6 +61,7 @@ import {
 } from '../transcript/code_pick.ts';
 import { bashCommand, typedText } from '../prompt/bash.ts';
 import { agentItems, menuRowLimit, teamQuery } from '../prompt/commands.ts';
+import { Overlay } from '../prompt/Overlay.tsx';
 import { pickedDraft } from '../teams/teams.ts';
 import { inSpinner } from '../transcript/compaction.ts';
 import {
@@ -615,6 +616,15 @@ export function App({
   const listingTeams = teamsPickerShown(state);
   const noticing = noticeShown(state);
   const { notice } = state;
+  // A framed picker floats over the transcript, its frame the edge, no rule.
+  const pickerShown =
+    picking ||
+    configuring ||
+    (resumingShown && state.resumePicker !== undefined) ||
+    theming ||
+    (noticing && notice !== undefined) ||
+    (listingTeams && state.teamsPicker !== undefined) ||
+    listingMcp;
   const viewing = backgroundShown(state);
   // The list under the prompt has the keys, not the view opened from it.
   const listFocus = agentsHaveKeys(state);
@@ -797,9 +807,6 @@ export function App({
   const menu = commandMenu(state, draft);
   const finder = fileFinder(state, draft, cursor);
   const menuRows = menuRowLimit(rows);
-  const transient = Boolean(state.search || finder || menu || state.help);
-  // A menu borrows transcript rows, never the actual permanent agents rows.
-  const keptAgents = Math.min(agentsFull, agentsRoom);
   const completionRoom = (room: boolean) => {
     if ((state.completionHidden === true) !== !room) {
       flushSync(() => dispatch({ type: 'completion_room', room }));
@@ -1455,7 +1462,6 @@ export function App({
                   // Rows the transcript has are rows the folded list may have.
                   renderAfter={() => {
                     if (
-                      !transient &&
                       folded &&
                       (transcriptArea.current?.getLayout().height ?? 0) > 0
                     ) {
@@ -1726,136 +1732,160 @@ export function App({
                     scroller={backgroundScroller}
                   />
                 )}
-                {picking && (
-                  <ModelPicker
-                    models={state.models}
-                    rows={menuRows}
-                    agent={shownAgent}
-                    active={listening}
-                    onPick={sessions.pickModel}
-                  />
-                )}
-                {configuring && (
-                  <ConfigPicker
-                    options={state.options}
-                    option={configOption(state)}
-                    from={state.configPicker?.from}
-                    rows={menuRows}
-                    agent={shownAgent}
-                    active={listening}
-                    onOpen={(id) =>
-                      dispatch({ type: 'config_option_opened', id })
-                    }
-                    onPick={sessions.pickOption}
-                  />
-                )}
-                {resumingShown && state.resumePicker && (
-                  <ResumePicker
-                    // A fresh list for each scope, its highlight on the first row.
-                    key={String(state.resumePicker.everywhere)}
-                    picker={state.resumePicker}
-                    open={sessions.openChildren()}
-                    rows={menuRows}
-                    agent={frontAgent}
-                    home={home}
-                    active={listening}
-                    onPick={(chosen) => sessions.pickResume(chosen)}
-                  />
-                )}
-                {theming && (
-                  <ThemePicker
-                    current={state.theme}
-                    background={background}
-                    windowRows={rows}
-                    active={listening}
-                    onMove={(theme) =>
-                      dispatch({ type: 'theme_previewed', theme })
-                    }
-                    onPick={commands.keepTheme}
-                  />
-                )}
-                {noticing && notice !== undefined && (
-                  <NoticeBox
-                    columns={columns}
-                    active={listening}
-                    onAnswer={(dismissed) => {
-                      if (dismissed) {
-                        sessions.dismissNotice(notice);
-                      }
-
-                      dispatch({ type: 'notice_closed' });
-                    }}
-                  />
-                )}
-                {listingTeams && state.teamsPicker && (
-                  <TeamsPicker
-                    listing={state.teamsPicker}
-                    rows={menuRows}
-                    columns={columns - 4}
-                    active={listening}
-                    onPick={(found) => {
-                      const text = pickedDraft(found);
-
-                      if (text === undefined) {
-                        return;
-                      }
-
-                      dispatch({ type: 'teams_picker_closed' });
-                      showDraft(text, endOf(text));
-                    }}
-                  />
-                )}
-                {listingMcp && (
-                  <McpPanel
-                    servers={here.mcpServers}
-                    ignored={here.mcpIgnored}
-                    heldBack={conversation()?.session?.heldBack ?? []}
-                    agent={shownAgent}
-                    windowRows={rows}
-                    starting={
-                      conversation()?.session === undefined &&
-                      state.connection.status === 'starting'
-                    }
-                    {...(server === undefined
-                      ? {}
-                      : {
-                          chord: chordRow(
-                            conversation()?.session?.chordServer,
-                            child !== undefined,
-                            conversation()?.session?.heldBack.some(
-                              (each) => each.own && each.takes.length === 0,
-                            ) === true,
-                          ),
-                        })}
-                  />
-                )}
                 {held && inputDialog}
                 {inputDialog !== undefined && !held && inputDialog}
-                {state.search ? (
-                  <SearchLine search={state.search} />
-                ) : finder ? (
-                  <FileList
-                    finder={finder}
-                    onRoom={completionRoom}
-                    rows={menuRows}
-                    agentColours={mentionColours}
-                  />
-                ) : menu ? (
-                  <CommandList
-                    menu={menu}
-                    rows={menuRows}
-                    width={columns}
-                    onRoom={completionRoom}
-                  />
-                ) : state.help ? (
-                  <Shortcuts
-                    width={columns}
-                    scroller={panelScroller}
-                    onOverflow={(overflows) =>
-                      dispatch({ type: 'panel_overflowed', overflows })
-                    }
-                  />
-                ) : null}
+                {/* Over the transcript's bottom rows, not in their place
+        (CHD-545). */}
+                <Overlay
+                  columns={columns}
+                  list={(room) =>
+                    state.search ? (
+                      <SearchLine search={state.search} />
+                    ) : finder ? (
+                      <FileList
+                        finder={finder}
+                        onRoom={completionRoom}
+                        rows={menuRows}
+                        room={room}
+                        agentColours={mentionColours}
+                      />
+                    ) : menu ? (
+                      <CommandList
+                        menu={menu}
+                        rows={menuRows}
+                        room={room}
+                        width={columns}
+                        onRoom={completionRoom}
+                      />
+                    ) : state.help ? (
+                      <Shortcuts
+                        width={columns}
+                        room={room}
+                        scroller={panelScroller}
+                        onOverflow={(overflows) =>
+                          dispatch({ type: 'panel_overflowed', overflows })
+                        }
+                      />
+                    ) : null
+                  }
+                  picker={(room) =>
+                    pickerShown ? (
+                      <>
+                        {picking && (
+                          <ModelPicker
+                            models={state.models}
+                            rows={menuRows}
+                            room={room}
+                            agent={shownAgent}
+                            active={listening}
+                            onPick={sessions.pickModel}
+                          />
+                        )}
+                        {configuring && (
+                          <ConfigPicker
+                            options={state.options}
+                            option={configOption(state)}
+                            from={state.configPicker?.from}
+                            rows={menuRows}
+                            room={room}
+                            agent={shownAgent}
+                            active={listening}
+                            onOpen={(id) =>
+                              dispatch({ type: 'config_option_opened', id })
+                            }
+                            onPick={sessions.pickOption}
+                          />
+                        )}
+                        {resumingShown && state.resumePicker && (
+                          <ResumePicker
+                            // A fresh list for each scope, its highlight on the first row.
+                            key={String(state.resumePicker.everywhere)}
+                            picker={state.resumePicker}
+                            open={sessions.openChildren()}
+                            rows={menuRows}
+                            room={room}
+                            agent={frontAgent}
+                            home={home}
+                            active={listening}
+                            gap={false}
+                            onPick={(chosen) => sessions.pickResume(chosen)}
+                          />
+                        )}
+                        {theming && (
+                          <ThemePicker
+                            current={state.theme}
+                            background={background}
+                            room={room}
+                            active={listening}
+                            onMove={(theme) =>
+                              dispatch({ type: 'theme_previewed', theme })
+                            }
+                            onPick={commands.keepTheme}
+                          />
+                        )}
+                        {noticing && notice !== undefined && (
+                          <NoticeBox
+                            columns={columns}
+                            room={room}
+                            active={listening}
+                            onAnswer={(dismissed) => {
+                              if (dismissed) {
+                                sessions.dismissNotice(notice);
+                              }
+
+                              dispatch({ type: 'notice_closed' });
+                            }}
+                          />
+                        )}
+                        {listingTeams && state.teamsPicker && (
+                          <TeamsPicker
+                            listing={state.teamsPicker}
+                            rows={menuRows}
+                            room={room}
+                            columns={columns - 4}
+                            active={listening}
+                            onPick={(found) => {
+                              const text = pickedDraft(found);
+
+                              if (text === undefined) {
+                                return;
+                              }
+
+                              dispatch({ type: 'teams_picker_closed' });
+                              showDraft(text, endOf(text));
+                            }}
+                          />
+                        )}
+                        {listingMcp && (
+                          <McpPanel
+                            servers={here.mcpServers}
+                            ignored={here.mcpIgnored}
+                            heldBack={conversation()?.session?.heldBack ?? []}
+                            agent={shownAgent}
+                            windowRows={rows}
+                            room={room}
+                            starting={
+                              conversation()?.session === undefined &&
+                              state.connection.status === 'starting'
+                            }
+                            {...(server === undefined
+                              ? {}
+                              : {
+                                  chord: chordRow(
+                                    conversation()?.session?.chordServer,
+                                    child !== undefined,
+                                    conversation()?.session?.heldBack.some(
+                                      (each) =>
+                                        each.own && each.takes.length === 0,
+                                    ) === true,
+                                  ),
+                                })}
+                          />
+                        )}
+                      </>
+                    ) : null
+                  }
+                />
                 {inputDialog !== undefined && !held && !viewing ? null : (
                   <PromptInput
                     key={
@@ -1924,7 +1954,6 @@ export function App({
                     onNewer={() => play(newerSteps(context()))}
                   />
                 )}
-                {/* Reserve the permanent status row even while a transient is open. */}
                 <box flexDirection='row' paddingX={2} height={1} flexShrink={0}>
                   {state.pendingKeys === undefined ? (
                     <StatusLine
@@ -1973,15 +2002,9 @@ export function App({
                 </box>
                 <box
                   ref={agentsBox}
-                  flexBasis={
-                    transient
-                      ? keptAgents
-                      : canFold && folded
-                        ? agentsFloor
-                        : agentsFull
-                  }
-                  minHeight={transient ? keptAgents : agentsFloor}
-                  flexShrink={transient || (canFold && folded) ? 0 : 1}
+                  flexBasis={canFold && folded ? agentsFloor : agentsFull}
+                  minHeight={agentsFloor}
+                  flexShrink={canFold && folded ? 0 : 1}
                   overflow='hidden'
                   onSizeChange={() => {
                     const height =
@@ -1990,7 +2013,7 @@ export function App({
 
                     setAgentsRoom(height);
 
-                    if (!transient && canFold && height <= agentsFloor) {
+                    if (canFold && height <= agentsFloor) {
                       setFolded(true);
                     }
                   }}

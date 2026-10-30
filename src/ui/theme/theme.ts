@@ -404,35 +404,30 @@ export const THEME_SAMPLE = {
 } as const;
 
 /**
- * Where `/theme` sits in a window `rows` tall: how many choices it shows,
- * whether the diff sample fits, and whether there is a row for the gap above
- * it. Around it the window keeps its header, the prompt box with its gap and
- * the status line; a window too short for everything drops the gap, then the
- * sample, then choices.
+ * How `/theme` fits the layer it floats in over the transcript, `room` rows
+ * above the prompt (CHD-545): every choice and the diff sample while they fit
+ * around its frame, title and hint; else the choices alone, as many as fit,
+ * with the row that counts the hidden ones; none where not one fits.
  */
-export function themePickerLayout(rows: number): {
+export function themePickerLayout(room: number): {
   readonly choices: number;
   readonly sample: boolean;
-  readonly gap: boolean;
 } {
-  const room = rows - 6;
   // Border, title, the line under it and the gap before the choices, the
   // gap before the hint and the hint itself.
   const frame = 7;
   const count = THEME_SETTINGS.length;
-  const withSample = frame + count + 4;
+  // The sample's three rows and the gap above them.
+  const sample = 4;
 
-  if (room > withSample) {
-    return { choices: count, sample: true, gap: true };
+  if (room >= frame + count + sample) {
+    return { choices: count, sample: true };
   }
 
-  if (room === withSample) {
-    return { choices: count, sample: true, gap: false };
-  }
+  const fits = room - frame;
 
   return {
-    choices: Math.max(3, Math.min(count, room - frame)),
+    choices: Math.max(0, fits >= count ? count : fits - 1),
     sample: false,
-    gap: room > frame + count,
   };
 }

@@ -9,6 +9,89 @@ const known = ['claude', 'codex', 'my.agent'];
 const set = (value: unknown) => ({ set: value });
 const remove = { remove: true } as const;
 
+describe('CHD-568 U2 tester: validation boundaries', () => {
+  test('a malformed list is refused before any unknown agent is considered', () => {
+    const offered = ['unknown-first', null, 'codex'];
+
+    expect(settingRefusal(['offeredAgents'], set(offered), known)).toStartWith(
+      'offeredAgents cannot be ["unknown-first",null,"codex"]: ',
+    );
+    expect(offered).toEqual(['unknown-first', null, 'codex']);
+    expect(
+      settingRefusal(
+        ['offeredAgents'],
+        set(['codex', 'unknown-second']),
+        known,
+      ),
+    ).toBe(
+      'chord knows no agent named "unknown-second"; list_agents names every one',
+    );
+  });
+
+  test('known own agent names may resemble object methods or contain terminal controls', () => {
+    const names = ['toString', 'hasOwnProperty', 'agent.\u009b\u202e'];
+
+    for (const name of names) {
+      expect(
+        settingRefusal(['agents', name, 'model'], set('external-model'), names),
+      ).toBeUndefined();
+      expect(settingRefusal(['agent'], set(name), names)).toBeUndefined();
+      expect(
+        settingRefusal(['teamSelection', 'prefer', 'agent'], set(name), names),
+      ).toBeUndefined();
+    }
+
+    const refused = settingRefusal(
+      ['agents', names[2]!, 'effort'],
+      set('external-effort'),
+      [],
+    );
+
+    expect(refused).toContain('agent.\\u009b\\u202e');
+    expect(refused).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+  });
+
+  test('forbidden keys stay unknown even below hand-edit branches', () => {
+    for (const key of ['__proto__', 'constructor', 'prototype']) {
+      for (const path of [
+        ['mcpServers', 'server', 'env', key],
+        ['agents', 'codex', 'command', key],
+        ['teamSelection', 'constraints', 'models', key],
+      ]) {
+        expect(classifySetting(path)).toEqual({ kind: 'unknown' });
+        expect(settingRefusal(path, remove, known)).toStartWith('No setting ');
+        expect(settingRefusal(path, set(null), known)).toStartWith(
+          'No setting ',
+        );
+      }
+    }
+  });
+
+  test('null resets only the nullable preference, and removal accepts an unknown effort owner', () => {
+    expect(
+      settingRefusal(['teamSelection', 'prefer', 'model'], set(null), []),
+    ).toBeUndefined();
+
+    for (const path of [
+      ['agents', 'codex', 'model'],
+      ['agents', 'codex', 'effort'],
+      ['teamSelection', 'prefer', 'agent'],
+      ['teamSelection', 'intent'],
+    ]) {
+      expect(settingRefusal(path, set(null), known)).toContain(
+        'cannot be null:',
+      );
+    }
+
+    expect(
+      settingRefusal(['agents', 'gone.agent', 'effort'], remove, []),
+    ).toBeUndefined();
+    expect(
+      settingRefusal(['agents', 'codex', 'model'], set('unknown.model'), known),
+    ).toBeUndefined();
+  });
+});
+
 describe('classifySetting', () => {
   test.each([
     [['theme'], true, 'now'],

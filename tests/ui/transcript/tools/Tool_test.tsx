@@ -29,11 +29,13 @@ import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import {
   asked,
   CTRL_O,
+  DOWN,
   END,
   ESC,
   PAGE_UP,
   send,
   until,
+  UP,
   withWindow,
 } from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
@@ -1841,4 +1843,125 @@ describe('the settings tool on the transcript (CHD-568)', () => {
       await server.close();
     }
   });
+});
+
+describe('CHD-568 U4-U6 tester: answering and withdrawing changes', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`arrow choices preserve a denial, then save and remove at ${columns} columns`, async () => {
+      const server = serveChord();
+      const original = '{"theme":"dark","mouse":false}';
+      let file = '';
+      let theme: string | undefined;
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'settingstheme');
+            await window.shows('Change theme?');
+
+            const before = theme;
+
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows(
+              'Not saved · the person will say what to change',
+            );
+            expect(readFileSync(file, 'utf8')).toBe(original);
+            expect(theme).toBe(before);
+
+            await send(window, 'settingstheme');
+            await window.shows('Change theme?');
+            await window.press(DOWN);
+            await window.press(UP);
+            await window.press('\r');
+            await until('the accepted theme is live', () => theme === 'light');
+            expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+              theme: 'light',
+              mouse: false,
+            });
+
+            await send(window, 'settingsremove');
+            await window.shows('Remove theme?');
+            await window.press('1');
+            await until('the removed theme falls back', () => theme === 'auto');
+            expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+              mouse: false,
+            });
+          },
+          {
+            columns,
+            rows,
+            server,
+            configHome: (dir) => {
+              const home = join(dir, 'config');
+
+              mkdirSync(join(home, 'chord'), { recursive: true });
+
+              file = join(home, 'chord', 'settings.json');
+
+              writeFileSync(file, original);
+
+              return home;
+            },
+            onState: (next) => {
+              theme = next.window.theme;
+            },
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+
+    test(`withdrawal frees the box for the next change at ${columns} columns`, async () => {
+      const server = serveChord();
+      const original = '{"theme":"dark"}';
+      let file = '';
+
+      try {
+        await withWindow(
+          async (window) => {
+            mkdirSync(join(window.dir, '.fake-gate'));
+            await send(window, 'settingswithdrawn');
+            await window.shows('Change theme?');
+            writeFileSync(join(window.dir, '.fake-gate', 'release'), '');
+            await window.shows(
+              'The person was not asked to the end; nothing was saved',
+            );
+            expect(readFileSync(file, 'utf8')).toBe(original);
+
+            await send(window, 'settingsmodel');
+            await window.shows('Set agents.fake.model?');
+            await window.press('1');
+            await window.shows('takes effect at the next start');
+            expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+              theme: 'dark',
+              agents: { fake: { model: 'fake-small' } },
+            });
+          },
+          {
+            columns,
+            rows,
+            server,
+            configHome: (dir) => {
+              const home = join(dir, 'config');
+
+              mkdirSync(join(home, 'chord'), { recursive: true });
+
+              file = join(home, 'chord', 'settings.json');
+
+              writeFileSync(file, original);
+
+              return home;
+            },
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
 });

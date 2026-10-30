@@ -1,0 +1,12 @@
+ chord v0.65.0 · …ord-qa.d565
+
+  Select agent
+
+  ❯ 1. claude · Claude Agent
+
+  ↑↓ or j/k to move · Enter 
+  or 1–9 to select · Esc to 
+  cancel
+
+  Unknown in ...one, +3 more
+

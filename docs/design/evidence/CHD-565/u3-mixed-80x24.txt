@@ -1,0 +1,24 @@
+
+
+
+
+                            ▀▄  
+                            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            ▀▀  
+                          v0.65.0 · /tmp/chord-qa.d565
+
+          Select agent
+
+            1. my-agent
+            2. cursor · Cursor · not on PATH
+          ❯ 3. claude · Claude Agent
+
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+
+          Unknown in offeredAgents: cdex, codx
+
+
+
+
+

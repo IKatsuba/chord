@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   my-agent · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d565
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ /tmp/CHD-565-u3/e/chord/settings.json: "offeredAgents": no agent named cdex, left out
+
+ ⏺ /tmp/CHD-565-u3/e/chord/settings.json: "offeredAgents": no agent named codx, left out
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

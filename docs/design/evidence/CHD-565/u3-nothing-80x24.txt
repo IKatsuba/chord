@@ -1,0 +1,24 @@
+
+
+
+
+
+
+                            ▀▄  
+                            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            ▀▀  
+                          v0.65.0 · /tmp/chord-qa.d565
+
+          Select agent
+
+          No agents available
+          offeredAgents in settings.json names no agent chord knows.
+
+          Esc to cancel
+
+
+
+
+
+

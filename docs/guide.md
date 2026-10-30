@@ -163,18 +163,20 @@ another chord process. Both processes then use it, and their turns
 interleave in its record; close it in the other pane before resuming here.
 
 Command and skill completions, `/new` and `/team` completions, `@` and `@@`,
-history search and `?` appear above the prompt. Status, leader-key hints,
-agents and the background summary stay below. Opening or closing a list
-normally keeps the same draft's prompt borders and permanent rows fixed.
-In the [recorded cramped resize case](design/CHD-525.md), with a running
-plan, four queued prompts and an eight-line draft, resizing from 80×24 to
-80×25, selecting the sixth file and closing completion moves the prompt up
-one row as agents grow from three rows to four.
+history search and `?` float over the transcript above the prompt, topped
+by a dim rule. The `/model`, `/config`, `/resume`, `/theme`, `/team`, `/mcp`
+and notice pickers float there too, with only their frame. The transcript
+keeps its height and scroll; new output arrives beneath the list and shows
+when it closes. Opening and closing keep the prompt, its gap row, status,
+leader-key hints, agents and background summary on their rows, uncovered.
 
-Completion lists shrink to the available space and scroll to the selection.
-With no visible row, completion navigation and acceptance are disabled,
-including a pick waiting for file matching. Enter still submits the draft
-normally. Completion resumes when a row is available again.
+Lists can reach the window's top, covering the header. They shrink to the
+available space and scroll to the selection. In a short window, a picker
+keeps its title and hint; with no choice fitting, its list is hidden.
+Panels without a list cut their body from the bottom, keeping their title
+and hint or choices. With no visible completion row, navigation and
+acceptance are disabled, including a pick waiting for file matching. Enter
+still submits the draft normally. Completion resumes when a row returns.
 
 `@` opens the file finder; fuzzy matching starts at the first character
 after it. ↑/↓ moves the highlight, Enter or Tab adds the file, and Esc

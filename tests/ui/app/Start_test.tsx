@@ -986,3 +986,162 @@ describe('CHD-564 tester: title page navigation and terminal depth', () => {
     }
   }
 });
+
+describe('CHD-564 tester: resume page scope, clipping and stable frame', () => {
+  const longTitle = Array.from({ length: 180 }, (_, at) => `word${at}`).join(
+    ' ',
+  );
+  const sessions: EarlierSession[] = [
+    {
+      resume: { sessionId: 'long', cwd: '/h/src/app' },
+      lastUsedAt: ago(2),
+      prompt: longTitle,
+    },
+    {
+      resume: { sessionId: 'foreign', cwd: '/h/src/api' },
+      lastUsedAt: ago(5),
+      prompt: 'foreign title with 界 and emoji 🌱 kept whole',
+    },
+  ];
+
+  async function page(
+    columns: number,
+    rows: number,
+    list = sessions,
+    keymap = DEFAULT_KEYMAP,
+  ) {
+    const picks: (EarlierSession | undefined)[] = [];
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        agent='fixture'
+        directory='~/src/app'
+        home='/h'
+        cwd='/h/src/app'
+        sessions={list}
+        colours={paletteOf('dark', false)}
+        keymap={keymap}
+        onPick={(chosen) => picks.push(chosen)}
+      />,
+      { columns, rows },
+    );
+
+    return { ...app, picks, text: () => stripAnsi(app.frame()) };
+  }
+
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`an empty local scope gains its foreign choices and returns empty at ${columns}x${rows}`, async () => {
+      const app = await page(columns, rows, sessions.slice(1));
+
+      try {
+        expect(app.text()).not.toContain('foreign title');
+        expect(app.text()).not.toContain('Enter to resume');
+        await app.write('1');
+        await app.write('\r');
+        expect(app.picks).toEqual([]);
+        await app.write('\x01');
+        expect(app.text().replace(/[│\s]+/g, ' ')).toContain(
+          'foreign title with 界 and emoji 🌱 kept whole',
+        );
+        expect(app.text()).toContain('Enter to resume');
+        expect(app.text()).toContain('Ctrl+a for this directory');
+        await app.write('\x01');
+        expect(app.text()).not.toContain('foreign title');
+        expect(app.text()).not.toContain('Enter to resume');
+        await app.write(ESC);
+        expect(app.picks).toEqual([undefined]);
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`rebound scope and cancel keys retain their hints and ownership at ${columns}x${rows}`, async () => {
+      const { keymap } = readKeybindings(
+        JSON.stringify({
+          bindings: [
+            {
+              context: 'Select',
+              bindings: {
+                escape: null,
+                'ctrl+a': null,
+                'ctrl+s': 'select:toggleScope',
+                'ctrl+q': 'select:cancel',
+              },
+            },
+          ],
+        }),
+      );
+      const app = await page(
+        columns,
+        rows,
+        [{ ...sessions[0]!, prompt: 'local title' }, sessions[1]!],
+        keymap,
+      );
+
+      try {
+        expect(app.text().replace(/[│\s]+/g, ' ')).toContain(
+          'Ctrl+s for all directories · Ctrl+q to quit',
+        );
+        await app.write(ESC);
+        await app.write('\x01');
+        expect(app.picks).toEqual([]);
+        expect(app.text()).not.toContain('foreign title');
+        await app.write('\x13');
+        expect(app.text()).toContain('foreign title');
+        await app.write('\x11');
+        await app.write('\r');
+        expect(app.picks).toEqual([undefined]);
+      } finally {
+        await app.unmount();
+      }
+    });
+
+    test(`a PLAIN resume page keeps the selected long session through every step at ${columns}x${rows}`, async () => {
+      const app = await page(columns, rows);
+
+      try {
+        expect(app.text()).toContain('chord');
+        expect(app.text()).toContain('v0.65.0 · fixture · ~/src/app');
+        expect(app.text()).not.toContain('...');
+
+        for (const [width, height] of [
+          [39, 24],
+          [30, 8],
+          [120, 40],
+        ] as const) {
+          await app.resize({ columns: width, rows: height });
+        }
+
+        await app.write('\r');
+        await app.write('1');
+        expect(app.picks).toEqual([sessions[0]]);
+      } finally {
+        await app.unmount();
+      }
+    });
+  }
+
+  test('a height change inside full preserves a scrolled title when frame and list rows stay fixed', async () => {
+    const app = await page(120, 40);
+
+    try {
+      for (let at = 0; !app.text().includes('word179'); at++) {
+        expect(at).toBeLessThan(80);
+        await app.write('j');
+      }
+
+      expect(app.text()).not.toContain('word0 ');
+      await app.resize({ rows: 44 });
+      expect(app.text()).not.toContain('word0 ');
+      expect(app.text()).toContain('word179');
+      await app.write('\r');
+      expect(app.picks[0]?.resume.sessionId).toBe('long');
+      expect(app.picks).toHaveLength(1);
+    } finally {
+      await app.unmount();
+    }
+  });
+});

@@ -1037,9 +1037,27 @@ describe('CHD-441 tester: takes-none reaches child and task sessions', () => {
             await send(window, '/mcp');
             await window.shows("chord's MCP servers for openclaw.");
             await window.shows('takes no MCP servers');
+
+            // The named child's short panel clips this explanation's tail;
+            // give the text room without weakening the transport checks above.
+            if (rows < 40) {
+              await window.resize({ rows: 40 });
+            }
+
+            await until('the full configuration note', () =>
+              /agents\.\s*openclaw\.mcpServers/.test(
+                window.frame().replaceAll('│', ''),
+              ),
+            );
             expect(window.frame().replaceAll('│', '')).toMatch(
               /agents\.\s*openclaw\.mcpServers/,
             );
+
+            if (rows < 40) {
+              await window.resize({ rows });
+              await window.shows('Esc to close');
+            }
+
             expect(window.frame()).not.toContain('Bearer secret');
             await window.press(ESC);
             await until(

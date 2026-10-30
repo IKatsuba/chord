@@ -851,3 +851,87 @@ describe('CHD-545 U2 tester: fixture resume, notice and combined layers', () => 
     }
   }
 });
+
+describe('CHD-545 U2 tester: short notice preserves both choices', () => {
+  for (const rows of [12, 16]) {
+    for (const help of [false, true]) {
+      test(`80x${rows}, notice ${help ? 'with shortcuts' : 'alone'} clips its body above the fixed prompt`, async () => {
+        let latest: WindowedState | undefined;
+        const current = () => latest!.sessions[latest!.front]!;
+        const lines = (window: Window) => stripAnsi(window.frame()).split('\n');
+
+        await withWindow(
+          async (window) => {
+            await ready(window);
+
+            const before = lines(window);
+            const prompt = before.findLastIndex((line) => line.startsWith('╭'));
+            const bottom = before.findLastIndex((line) => line.startsWith('╰'));
+            const view = current().scroll.view;
+
+            if (help) {
+              await window.type('?');
+              await until(
+                'shortcuts opened',
+                () => latest?.window.help === true,
+              );
+            }
+
+            await window.session()!.prompt('fullaccess').result;
+            await window.shows('dimcode can start other agents');
+            await window.shows("1. Got it, don't show this again");
+            await window.shows('2. Show it again next time');
+
+            const opened = lines(window);
+            const title = opened.findIndex((line) =>
+              line.includes('dimcode can start other agents'),
+            );
+
+            expect(opened[title - 1]).toStartWith('╭');
+            expect(opened[prompt - 2]).toStartWith('╰');
+            expect(opened.slice(prompt - 1, bottom + 1)).toEqual(
+              before.slice(prompt - 1, bottom + 1),
+            );
+            expect(opened.some((line) => line.startsWith(' ──'))).toBe(false);
+            expect(current().scroll.view).toBe(view);
+
+            if (help) {
+              await window.press(ESC);
+              await until(
+                'shortcuts closed first',
+                () => latest?.window.help === false,
+              );
+              expect(window.frame()).toContain(
+                'dimcode can start other agents',
+              );
+            }
+
+            await window.press('2');
+            await until(
+              'second notice choice closes it',
+              () => !window.frame().includes('dimcode can start other agents'),
+            );
+            expect(lines(window).slice(prompt - 1, bottom + 1)).toEqual(
+              before.slice(prompt - 1, bottom + 1),
+            );
+            expect(current().scroll.view).toBe(view);
+          },
+          {
+            agent: 'dimcode',
+            agentCommand: fakeAgentCommand(
+              undefined,
+              '--dimcode-permission',
+              'read-only',
+            ),
+            columns: 80,
+            rows,
+            configHome: (dir) => join(dir, 'config'),
+            onState: (next) => {
+              latest = next;
+            },
+          },
+        );
+      });
+    }
+  }
+});

@@ -861,45 +861,218 @@ export function saveEditorMode(file: string, mode: EditorMode): Promise<void> {
 
 /**
  * Sets one of the keys chord writes in the user's file, keeping every other
- * key where it is: the
- * file is read, the key set, and the object written whole with two-space
- * indents to a file beside it that is renamed over the old, so a crash cannot
- * leave half a file. A missing file, and its directory, are made. A file that
- * is not a JSON object is never overwritten: the write is refused instead.
+ * key where it is.
  */
-async function saveSetting<K extends (typeof USER_ONLY)[number]>(
+function saveSetting<K extends (typeof USER_ONLY)[number]>(
   file: string,
   key: K,
   value: NonNullable<Settings[K]>,
 ): Promise<void> {
-  let settings: Record<string, unknown> = {};
+  return saveSettingAt(file, [key], { set: value });
+}
+
+/** What a write does at a settings path. */
+export type SettingChange =
+  { readonly set: unknown } | { readonly remove: true };
+
+/** What the writer says with no file to write. */
+export const NO_SETTINGS_HOME =
+  'No settings file without a home directory; nothing was saved';
+
+/**
+ * Names that reach an object's prototype rather than a key of it, so no path
+ * may hold them, whatever a file or a caller says.
+ */
+const NOT_KEYS: ReadonlySet<string> = new Set([
+  '__proto__',
+  'constructor',
+  'prototype',
+]);
+
+/** Whether a path can name a setting at all, whichever setting it is. */
+export function canBeSettingPath(path: readonly string[]): boolean {
+  return path.length > 0 && !path.some((key) => NOT_KEYS.has(key));
+}
+
+function isJsonObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * A value as the person reads it: JSON, so it is what will be written and one
+ * line, with what JSON leaves raw and a terminal would act on (DEL, C1, line
+ * separators, bidi overrides) escaped too.
+ */
+export function shownValue(value: unknown): string {
+  return (JSON.stringify(value) ?? 'null').replace(
+    /[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/gu,
+    (mark) =>
+      Array.from(
+        { length: mark.length },
+        (_, unit) =>
+          `\\u${mark.charCodeAt(unit).toString(16).padStart(4, '0')}`,
+      ).join(''),
+  );
+}
+
+/** A path's keys joined by dots, a key with anything else in it as JSON. */
+export function shownSettingPath(path: readonly string[]): string {
+  return path
+    .map((key) => (/^[A-Za-z0-9_-]+$/u.test(key) ? key : shownValue(key)))
+    .join('.');
+}
+
+/**
+ * The user's file as an object, empty when it is not there. What is wrong
+ * with one that is there is thrown, in the words a refusal ends with.
+ */
+export async function readSettingsObject(
+  file: string,
+): Promise<Record<string, unknown>> {
+  let text: string;
 
   try {
-    const text = await readFile(file, 'utf8');
-    let parsed: unknown;
-
-    try {
-      parsed = JSON.parse(text);
-    } catch {
-      throw new Error('it is not valid JSON');
-    }
-
-    if (
-      typeof parsed !== 'object' ||
-      parsed === null ||
-      Array.isArray(parsed)
-    ) {
-      throw new Error('it is not a JSON object');
-    }
-
-    settings = parsed as Record<string, unknown>;
+    text = await readFile(file, 'utf8');
   } catch (error) {
-    if (!notFound(error)) {
-      throw error;
+    if (notFound(error)) {
+      return {};
     }
+
+    throw error;
   }
 
-  settings[key] = value;
+  let parsed: unknown;
+
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    throw new Error('it is not valid JSON');
+  }
+
+  if (!isJsonObject(parsed)) {
+    throw new Error('it is not a JSON object');
+  }
+
+  return parsed;
+}
+
+/** The value at `path`, by the object's own keys alone. */
+export function settingAt(value: unknown, path: readonly string[]): unknown {
+  let held = value;
+
+  for (const key of path) {
+    if (!isJsonObject(held) || !Object.hasOwn(held, key)) {
+      return undefined;
+    }
+
+    held = held[key];
+  }
+
+  return held;
+}
+
+/**
+ * Why `path` cannot be written in `settings`: the first parent there that is
+ * not an object. It is not the value at the path, so neither a set nor a
+ * remove replaces it or calls the key absent.
+ */
+export function settingParentProblem(
+  settings: Record<string, unknown>,
+  path: readonly string[],
+): string | undefined {
+  let held = settings;
+
+  for (const [depth, key] of path.slice(0, -1).entries()) {
+    if (!Object.hasOwn(held, key)) {
+      return undefined;
+    }
+
+    const next = held[key];
+
+    if (!isJsonObject(next)) {
+      return `its ${shownSettingPath(path.slice(0, depth + 1))} is not an object; edit it by hand`;
+    }
+
+    held = next;
+  }
+
+  return undefined;
+}
+
+/** Sets the leaf at `path`, making the parents it lacks. */
+function setAt(
+  settings: Record<string, unknown>,
+  path: readonly string[],
+  value: unknown,
+): void {
+  let parent = settings;
+
+  for (const key of path.slice(0, -1)) {
+    if (!Object.hasOwn(parent, key)) {
+      parent[key] = {};
+    }
+
+    parent = parent[key] as Record<string, unknown>;
+  }
+
+  parent[path.at(-1)!] = value;
+}
+
+/** Removes the leaf at `path` and the parents that leaves empty. */
+function removeAt(
+  settings: Record<string, unknown>,
+  path: readonly string[],
+): void {
+  for (let depth = path.length; depth > 0; depth--) {
+    const parent = settingAt(settings, path.slice(0, depth - 1)) as Record<
+      string,
+      unknown
+    >;
+
+    delete parent[path[depth - 1]!];
+
+    if (Object.keys(parent).length > 0) {
+      return;
+    }
+  }
+}
+
+/**
+ * Sets or removes the leaf at `path` in the user's file, keeping every other
+ * key: the file is read, changed, and the object written whole with two-space
+ * indents to a file beside it that is renamed over the old, so a crash cannot
+ * leave half a file. A missing file, and its directory, are made. A file that
+ * is not a JSON object, or a parent on the path that is not one, is never
+ * overwritten: the write is refused instead. Removing what is not there
+ * writes nothing.
+ */
+export async function saveSettingAt(
+  file: string | undefined,
+  path: readonly string[],
+  change: SettingChange,
+): Promise<void> {
+  if (file === undefined) {
+    throw new Error(NO_SETTINGS_HOME);
+  }
+
+  if (!canBeSettingPath(path)) {
+    throw new Error(`No setting ${shownSettingPath(path)}`);
+  }
+
+  const settings = await readSettingsObject(file);
+  const problem = settingParentProblem(settings, path);
+
+  if (problem !== undefined) {
+    throw new Error(problem);
+  }
+
+  if ('set' in change) {
+    setAt(settings, path, change.set);
+  } else if (settingAt(settings, path) === undefined) {
+    return;
+  } else {
+    removeAt(settings, path);
+  }
 
   await mkdir(dirname(file), { recursive: true });
 

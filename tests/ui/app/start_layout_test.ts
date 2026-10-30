@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import stringWidth from 'string-width';
 import {
   hintRows,
+  listLines,
   startLayout,
   versionLine,
   wordmarkColours,
@@ -295,5 +296,29 @@ describe('wordmarkColours', () => {
       'green',
     ]);
     expect(wordmarkColours({ level: 'none' })).toBeUndefined();
+  });
+});
+
+describe('listLines', () => {
+  const session = (label: string) => ({
+    key: label,
+    value: label,
+    label: `today  ${label}`,
+    hang: 7,
+  });
+  const long = 'a title long enough that a frame of forty has to wrap it';
+
+  test('labels of one line count one each', () => {
+    expect(listLines([session('a'), session('b')], 84)).toBe(2);
+    expect(listLines([{ key: 'a', value: 'a', label: long }], 10)).toBe(1);
+  });
+
+  test('a label that wraps counts its lines, in the width given', () => {
+    expect(listLines([session(long)], 84)).toBe(1);
+    expect(listLines([session(long)], 40)).toBeGreaterThan(1);
+  });
+
+  test('an empty list takes the row that says so', () => {
+    expect(listLines([], 84)).toBe(1);
   });
 });

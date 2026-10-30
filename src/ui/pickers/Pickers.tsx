@@ -270,6 +270,24 @@ export function ModelPicker({
   );
 }
 
+/** The session picker's hint; the start screen counts the rows these words take. */
+export function useResumeHint(
+  listed: boolean,
+  everywhere: boolean,
+  starting: boolean,
+): string {
+  const closeHint = useCloseHint(starting ? 'to quit' : 'to close');
+  const scopeKey = useHintKey('select:toggleScope');
+  const scopeHint =
+    scopeKey === undefined
+      ? undefined
+      : `${capital(scopeKey)} ${
+          everywhere ? 'for this directory' : 'for all directories'
+        }`;
+
+  return hintOf(listed ? 'Enter to resume' : undefined, scopeHint, closeHint);
+}
+
 /**
  * `/resume`: this directory's earlier sessions, newest first, inline above
  * the prompt as the model picker is; each row says when the session was last
@@ -321,18 +339,15 @@ export function ResumePicker({
       open,
     ),
   );
-  const closeHint = useCloseHint(starting ? 'to quit' : 'to close');
   // None where it has no choice, or the room no row for one: the list, and
   // its keys, go.
   const listed =
     choices.length === 0 ? 0 : framedRows(rows, room, choices.length);
-  const scopeKey = useHintKey('select:toggleScope');
-  const scopeHint =
-    scopeKey === undefined
-      ? undefined
-      : `${capital(scopeKey)} ${
-          everywhere ? 'for this directory' : 'for all directories'
-        }`;
+  const hint = useResumeHint(
+    choices.length > 0 && listed > 0,
+    everywhere,
+    starting,
+  );
 
   return (
     <box
@@ -384,13 +399,7 @@ export function ResumePicker({
       </Body>
       <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            choices.length === 0 || listed === 0
-              ? undefined
-              : 'Enter to resume',
-            scopeHint,
-            closeHint,
-          )}
+          {hint}
         </text>
       </box>
     </box>

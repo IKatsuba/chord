@@ -1,19 +1,20 @@
 import chalk from 'chalk';
 import { useTerminalDimensions } from '@opentui/react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { ListedAgent } from '../../agents.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import { markColour } from '../header/header.ts';
 import { MARK, SPLASH_MARK } from '../header/mark.ts';
 import { Mark } from '../header/Mark.tsx';
 import { bound, type Keymap, keystrokeOf } from '../shortcuts/bindings.ts';
-import { agentChoices } from '../pickers/picker.ts';
+import { agentChoices, sessionChoices } from '../pickers/picker.ts';
 import {
   AgentPicker,
   ResumePicker,
   useAgentHint,
+  useResumeHint,
 } from '../pickers/Pickers.tsx';
-import { menuRowLimit } from '../prompt/commands.ts';
+import { resumeChoices } from '../pickers/state.ts';
 import type { Palette } from '../theme/theme.ts';
 import { Colours, drawnColours, Keys, useColours } from './context.ts';
 import { BOLD, colour, CUT, DIM, TEXT } from '../theme/text.ts';
@@ -21,6 +22,7 @@ import { usePress } from './input.ts';
 import { useApp } from './renderer.tsx';
 import {
   hintRows,
+  listLines,
   startColumn,
   startLayout,
   type StartStep,
@@ -156,6 +158,79 @@ function AgentsPage({
   );
 }
 
+/** The title page around the session picker's frame. */
+function ResumePage({
+  version,
+  directory,
+  agent,
+  home,
+  cwd,
+  sessions,
+  everywhere,
+  active,
+  onPick,
+}: {
+  version: string;
+  directory: string;
+  agent: string;
+  home: string | undefined;
+  cwd: string;
+  sessions: readonly EarlierSession[];
+  everywhere: boolean;
+  active: boolean;
+  onPick: (chosen: EarlierSession) => void;
+}) {
+  const { width: columns, height: rows } = useTerminalDimensions();
+  const column = startColumn(columns, true);
+  const picker = { sessions, cwd, everywhere };
+  // The scope's own rows, which ctrl+a changes; a resize only lays them out.
+  const choices = useMemo(
+    () =>
+      sessionChoices(
+        resumeChoices({ sessions, cwd, everywhere }),
+        Date.now(),
+        everywhere ? { home } : undefined,
+        new Set(),
+      ),
+    [sessions, cwd, everywhere, home],
+  );
+  const hint = useResumeHint(choices.length > 0, everywhere, true);
+  const { step, listRows, top } = startLayout({
+    columns,
+    rows,
+    lines: listLines(choices, column),
+    framed: true,
+    // Inside the frame's borders and its 1-column padding.
+    hintRows: hintRows(hint, column - 4),
+  });
+
+  return (
+    <box width={columns} height={rows} paddingTop={top} alignItems='center'>
+      <Title
+        step={step}
+        version={version}
+        agent={agent}
+        directory={directory}
+        columns={columns}
+      />
+      <box key='resume' width={column} flexShrink={0}>
+        <ResumePicker
+          key={String(everywhere)}
+          picker={picker}
+          open={new Set()}
+          rows={listRows}
+          agent={agent}
+          home={home}
+          active={active}
+          starting
+          width={column}
+          onPick={onPick}
+        />
+      </box>
+    </box>
+  );
+}
+
 /**
  * The startup agent or resume choice before anything opens: no conversation,
  * status or prompt. The chosen value goes to the existing startup path;
@@ -187,7 +262,6 @@ export function Start(
 ) {
   const { version, directory, colours, keymap } = props;
   const { exit } = useApp();
-  const { width: columns, height: rows } = useTerminalDimensions();
 
   drawnColours.current = colours;
 
@@ -235,38 +309,20 @@ export function Start(
             }}
           />
         ) : (
-          <box width={columns} height={rows}>
-            <box
-              flexDirection='row'
-              paddingX={1}
-              justifyContent='space-between'
-              flexShrink={0}
-            >
-              <text {...TEXT} attributes={BOLD}>
-                chord
-              </text>
-              <box flexShrink={0} marginLeft={2}>
-                <text {...TEXT} attributes={DIM}>
-                  {`${props.agent} · ${directory}`}
-                </text>
-              </box>
-            </box>
-            <box flexGrow={1} />
-            <ResumePicker
-              key={String(everywhere)}
-              picker={{ sessions: props.sessions, cwd: props.cwd, everywhere }}
-              open={new Set()}
-              rows={menuRowLimit(rows)}
-              agent={props.agent}
-              home={props.home}
-              active={!picked}
-              starting
-              onPick={(chosen) => {
-                setPicked(true);
-                props.onPick(chosen);
-              }}
-            />
-          </box>
+          <ResumePage
+            version={version}
+            directory={directory}
+            agent={props.agent}
+            home={props.home}
+            cwd={props.cwd}
+            sessions={props.sessions}
+            everywhere={everywhere}
+            active={!picked}
+            onPick={(chosen) => {
+              setPicked(true);
+              props.onPick(chosen);
+            }}
+          />
         )}
       </Keys.Provider>
     </Colours.Provider>

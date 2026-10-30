@@ -8,6 +8,7 @@ import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { type MarkColour, markPaint, MIDDLE } from '../header/mark_rows.ts';
 import { cutPath } from '../pickers/mcp.ts';
+import { type PickerChoice, pickerLayout } from '../pickers/picker.ts';
 
 /** What the page draws above its picker, from the most to nothing. */
 export type StartStep = 'full' | 'compact' | 'line' | 'none';
@@ -40,6 +41,25 @@ export function hintRows(hint: string, width: number): number {
   return wrapAnsi(hint, Math.max(1, width), { hard: true, trim: true }).split(
     '\n',
   ).length;
+}
+
+/**
+ * What a whole list takes in a box of `width`, its wrapped labels counted.
+ * Laid out unscrolled, as it is where it fits; where it does not, scrolling
+ * only narrows its labels, and it still does not.
+ */
+export function listLines(
+  choices: readonly PickerChoice[],
+  width: number,
+): number {
+  const laid = pickerLayout(choices, Number.POSITIVE_INFINITY, width);
+
+  return Math.max(
+    1,
+    laid === undefined
+      ? choices.length
+      : laid.reduce((sum, each) => sum + each.length, 0),
+  );
 }
 
 /**

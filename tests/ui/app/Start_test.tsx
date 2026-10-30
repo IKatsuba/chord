@@ -7,7 +7,7 @@ import {
   type EarlierSession,
 } from '../../../src/session/sessions.ts';
 import { Start } from '../../../src/ui/app/Start.tsx';
-import { TAGLINE } from '../../../src/ui/app/start_layout.ts';
+import { startLayout, TAGLINE } from '../../../src/ui/app/start_layout.ts';
 import type { ListedAgent } from '../../../src/agents.ts';
 import { SHORTCUTS } from '../../../src/ui/shortcuts/keys.ts';
 import {
@@ -169,11 +169,19 @@ describe('CHD-445 U2 tester: titled start picker navigation and resets', () => {
           expect(
             frame()
               .split('\n')
-              .filter((line) => line.startsWith('│')).length,
-          ).toBeLessThanOrEqual(Math.floor(rows / 4) + 6);
+              .filter((line) => line.trimStart().startsWith('│')).length,
+          ).toBeLessThanOrEqual(
+            startLayout({
+              columns,
+              rows,
+              lines: 1000,
+              framed: true,
+              hintRows: 1,
+            }).listRows + 6,
+          );
 
           if (reset) {
-            await app.resize({ rows: rows + 4 });
+            await app.resize({ rows: rows - 10 });
             await until(
               'the highlighted title from its first line after resize',
               () => frame().includes('token0 '),
@@ -704,6 +712,121 @@ describe('CHD-564 the title page', () => {
       await app.resize({ columns: 120, rows: 40 });
       expect(app.text()).toContain('██████╗ ██╗');
       expect(app.text()).toMatch(/❯\s+6\.\s+agent-6/);
+    } finally {
+      await app.unmount();
+    }
+  });
+});
+
+describe('CHD-564 the title page around --resume', () => {
+  const was = chalk.level;
+  const long =
+    'a long title that goes on well past what the frame of 84 columns can hold on one line of its own, and then some';
+  const sessions: EarlierSession[] = Array.from({ length: 14 }, (_, at) => ({
+    resume: { sessionId: `s${at}`, cwd: '/h/src/app' },
+    lastUsedAt: ago(at + 1),
+    prompt: at === 0 ? long : `prompt ${at}`,
+  }));
+
+  beforeAll(() => {
+    chalk.level = 3;
+  });
+
+  afterAll(() => {
+    chalk.level = was;
+  });
+
+  async function page(
+    columns: number,
+    rows: number,
+    list: readonly EarlierSession[] = sessions,
+  ) {
+    const app = await draw(
+      <Start
+        version='0.65.0'
+        agent='claude'
+        directory='~/src/app'
+        home='/h'
+        cwd='/h/src/app'
+        sessions={list}
+        colours={paletteOf('dark', true)}
+        keymap={DEFAULT_KEYMAP}
+        onPick={() => {}}
+      />,
+      { columns, rows },
+    );
+    const lines = () => stripAnsi(app.frame()).split('\n');
+
+    return { ...app, lines, text: () => lines().join('\n') };
+  }
+
+  const rowOf = (lines: string[], text: string) =>
+    lines.findIndex((line) => line.includes(text));
+
+  test('full at 120x40: art, words naming the agent, a frame of 84 wrapping a long title', async () => {
+    const app = await page(120, 40);
+
+    try {
+      const lines = app.lines();
+      const frame = rowOf(lines, 'Resume a session') - 1;
+
+      expect(app.text()).toContain('██████╗ ██╗');
+      expect(app.text()).toContain(TAGLINE);
+      expect(app.text()).toContain('v0.65.0 · claude · ~/src/app');
+      // 84 columns centred on 120.
+      expect(lines[frame]?.indexOf('╭')).toBe(18);
+      expect(lines[frame]?.indexOf('╮')).toBe(101);
+      expect(app.text()).not.toContain('...');
+      expect(app.text().replace(/[│\s]+/g, ' ')).toContain(long);
+      expect(app.text()).toContain('Esc to quit');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('compact at 80x24: the list scrolls under the tiny wordmark', async () => {
+    const app = await page(80, 24, [
+      ...sessions.slice(1),
+      { ...sessions[1]!, resume: { sessionId: 'x', cwd: '/h/src/app' } },
+    ]);
+
+    try {
+      expect(app.text()).toContain('█▀▀ █ █');
+      expect(app.text()).toContain('v0.65.0 · claude · ~/src/app');
+      expect(app.text()).toContain('… +6 more');
+      expect(app.lines()[0]).toContain('▀▄');
+      expect(app.text()).toContain('Esc to quit');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('line under 40 columns says the agent after the version', async () => {
+    const app = await page(39, 24);
+
+    try {
+      expect(app.lines()[0]).toContain('chord v0.65.0 · claude · ~/src/app');
+    } finally {
+      await app.unmount();
+    }
+  });
+
+  test('ctrl+a counts the other scope, and its page moves', async () => {
+    const here: EarlierSession = sessions[1]!;
+    const there: EarlierSession[] = Array.from({ length: 10 }, (_, at) => ({
+      resume: { sessionId: `t${at}`, cwd: '/h/src/api' },
+      lastUsedAt: ago(100 + at),
+      prompt: `over there ${at}`,
+    }));
+    const app = await page(120, 40, [here, ...there]);
+
+    try {
+      const before = rowOf(app.lines(), 'Resume a session');
+
+      await app.write('\x01');
+      await until('every directory', () => app.text().includes('over there 0'));
+
+      expect(rowOf(app.lines(), 'Resume a session')).toBeLessThan(before);
     } finally {
       await app.unmount();
     }

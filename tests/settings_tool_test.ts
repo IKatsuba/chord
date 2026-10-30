@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -305,6 +305,74 @@ describe('settingRefusal', () => {
     expect(
       notSavedLine('~/.config/chord/settings.json', 'it is not valid JSON'),
     ).toBe('~/.config/chord/settings.json was not saved: it is not valid JSON');
+  });
+});
+
+describe('CHD-568 U3 tester: masked fresh reads', () => {
+  test('masking preserves hostile own key names without changing the raw object', () => {
+    const raw: unknown = JSON.parse(
+      '{"mcpServers":{"__proto__":{"env":{"__proto__":"secret-a","constructor":["secret-b"]},"headers":null},"toString":[[{"headers":{"Auth":{"deep":"secret-c"}}}]]}}',
+    );
+    const before = JSON.stringify(raw);
+    const masked = maskedSettings(raw);
+
+    expect(masked).toEqual(
+      JSON.parse(
+        '{"mcpServers":{"__proto__":{"env":{"__proto__":"***","constructor":"***"},"headers":"***"},"toString":[[{"headers":{"Auth":"***"}}]]}}',
+      ),
+    );
+    expect(JSON.stringify(masked)).not.toContain('secret-');
+    expect(JSON.stringify(raw)).toBe(before);
+  });
+
+  test('repeated reads observe repairs and removal without writing either file', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-tester-read-'));
+    const where: SettingsWhere = {
+      home: root,
+      configHome: join(root, '.config'),
+      cwd: join(root, 'work'),
+    };
+    const user = join(where.configHome!, 'chord', 'settings.json');
+    const project = join(where.cwd, '.chord', 'settings.json');
+    const rawUser = '{ "agent":"claude", "theme":"dark" }';
+    const rawProject = '{ "agent":"codex" }';
+
+    try {
+      await mkdir(join(user, '..'), { recursive: true });
+      await mkdir(join(project, '..'), { recursive: true });
+      await writeFile(user, rawUser);
+      await writeFile(project, rawProject);
+
+      const first = await readSettingsTool(where, ['agent']);
+
+      expect(first).toMatchObject({
+        answer: { user: 'claude', project: 'codex', effective: 'codex' },
+      });
+      expect(await readFile(user, 'utf8')).toBe(rawUser);
+      expect(await readFile(project, 'utf8')).toBe(rawProject);
+      await writeFile(project, '{"mcpServers":{"x":{"env":secret-fresh}}}');
+
+      const broken = await readSettingsTool(where, ['agent']);
+
+      expect(broken).toMatchObject({
+        answer: { user: 'claude', effective: 'claude' },
+      });
+      expect(JSON.stringify(broken)).not.toContain('secret-fresh');
+      expect(JSON.stringify(broken)).toContain(
+        'not valid JSON; the file is ignored',
+      );
+
+      await rm(project);
+
+      const removed = await readSettingsTool(where, ['agent']);
+
+      expect(removed).toMatchObject({
+        answer: { user: 'claude', effective: 'claude', problems: [] },
+      });
+      expect(await readFile(user, 'utf8')).toBe(rawUser);
+    } finally {
+      await rm(root, { recursive: true });
+    }
   });
 });
 

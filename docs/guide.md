@@ -60,13 +60,21 @@ git diff | chord -p "Review this" --output-format json
 Each chord process runs one main session with its children. For sessions
 side by side, run chord in separate terminal panes.
 
-A new interactive start with no agent named opens `Select agent` before any
-agent or session starts. It uses the `chord agents` catalog,
+A new interactive start with no agent named opens a centred title page before
+any agent or session starts: the mark and `CHORD` wordmark, tagline, then
+`v… · directory` above `Select agent`. It uses the `chord agents` catalog,
 including settings-defined names. Your configured agent is highlighted
 initially, or Claude Code by default; if absent from the list, the first row
 is highlighted. ↑/↓ or j/k moves, Enter or 1–9 selects. Esc or ctrl+c quits
 without starting a session. The choice is for this run only and is not saved;
 the next unnamed interactive start asks again.
+
+<img src="images/start.png" alt="The title page with the CHORD logo, version and directory above Select agent, with Claude highlighted" width="900">
+
+Smaller windows use compact art without the tagline, then a single
+`chord v… · directory` line, then the picker alone. The list keeps its room
+as the art gives way; resizing keeps the highlight. With full art, at most
+14 list rows show; `… +N more` counts hidden rows above and below.
 
 Agents whose own CLI is not on PATH are hidden; npx/uvx entries and
 settings-defined names stay. These are not checked for installation, login
@@ -91,9 +99,13 @@ and files stay tied here, so chord gives a command to open another
 directory's session where it works. For another agent's sessions, run
 `chord <agent>` and use `/resume`.
 
-`chord --resume` with no id opens the same picker before any agent starts,
-as `claude --resume` does; Enter opens what it picks, from any directory,
-as its own `--resume` would, and Esc quits with nothing started.
+`chord --resume` with no id opens the title page around the framed
+`Resume a session` picker before any agent starts. Its version line adds the
+agent: `v… · agent · directory`. It shrinks with the window as the agent
+page does. Enter opens the selected session from any directory; ctrl+a
+switches the list's directory scope, and Esc quits with nothing started.
+
+<img src="images/resume.png" alt="The chord --resume title page with the logo, version, agent and directory above the framed session picker" width="900">
 
 `/clear` starts a fresh session for the picked agent with an empty transcript;
 your queued prompts return to its draft with their images. `/new` opens
@@ -1342,7 +1354,7 @@ needs. `docs/decisions.md` records why the stack is what it is.
 
 `bun dev --help` lists runtime, test and build commands: `chord` (`--fake`
 for the test agent), `test`, `compile` (`--all` or `--install`), `npm`,
-`registry`, `mark`, `screenshots` (optionally shot names), `memory`,
+`registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
 `selftest <binary>` and `release [version]`.
 
 `bun quality` runs native type and format checks, tracked-file coverage,

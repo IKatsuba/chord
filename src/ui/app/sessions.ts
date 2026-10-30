@@ -56,6 +56,7 @@ import type {
   SpawnArgs,
   WindowView,
 } from '../../server/tools.ts';
+import { settingsBoxClaim } from '../../server/tools.ts';
 import {
   findTeams,
   type FoundTeam,
@@ -2553,6 +2554,9 @@ export function useSessions(
     error: 'Your session was cleared or closed; nothing more goes from it',
   } as const;
 
+  // The window's, as `view` is made anew with each draw.
+  const settingsBox = useRef(settingsBoxClaim());
+
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
     ...(resources === undefined
@@ -2681,6 +2685,7 @@ export function useSessions(
       return { ...answer.ran, ...started };
     },
     teamPlaces: (caller, name) => teamPlaces(caller.key, name),
+    claimSettingsBox: settingsBox.current,
     settingSaved: (path, change) => {
       for (const action of settingPickedUp(path, change, {
         runtimes: runtimeNames,

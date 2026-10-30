@@ -13,7 +13,11 @@ import {
   serveChord,
   SERVER_NAME,
 } from '../../src/server/server.ts';
-import type { Caller, WindowView } from '../../src/server/tools.ts';
+import {
+  type Caller,
+  settingsBoxClaim,
+  type WindowView,
+} from '../../src/server/tools.ts';
 import type { ChordCall } from '../../src/session/transcript/types.ts';
 
 const WINDOW: WindowView = {
@@ -44,6 +48,7 @@ const WINDOW: WindowView = {
   teams: () => Promise.resolve({ found: [], runs: [] }),
   runTeam: () => Promise.resolve({ error: 'no teams here' }),
   teamPlaces: () => Promise.reject(new Error('no teams here')),
+  claimSettingsBox: settingsBoxClaim(),
   settingSaved: () => {},
   settingsWhere: () => ({
     agent: 'fake',

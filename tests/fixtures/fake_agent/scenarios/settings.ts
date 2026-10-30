@@ -3,7 +3,7 @@
  * whatever the run's `XDG_CONFIG_HOME` holds: a test's fixture, never a
  * person's own.
  */
-import type { Play } from '../turn.ts';
+import { pause, type Play } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
 const reads =
@@ -27,7 +27,47 @@ const reads =
     return 'end_turn';
   };
 
+/**
+ * A second change while the first's box is up: the first asks, the second is
+ * refused with that box still open, and the turn ends once the person answers.
+ */
+const overlap: Play = async (turn) => {
+  const client = await chordClient(turn);
+
+  if (client === undefined) {
+    await turn.say('No chord server.');
+
+    return 'end_turn';
+  }
+
+  try {
+    const first = callChord(
+      turn,
+      client,
+      'settings',
+      { action: 'set', path: ['theme'], value: 'light' },
+      600_000,
+    );
+
+    // Long enough for the first to take the box.
+    await pause(turn.signal, 300);
+    await callChord(
+      turn,
+      client,
+      'settings',
+      { action: 'set', path: ['agents', 'fake', 'model'], value: 'fake-small' },
+      600_000,
+    );
+    await first;
+  } finally {
+    await client.close();
+  }
+
+  return 'end_turn';
+};
+
 export const SETTINGS = {
+  settingsoverlap: overlap,
   // Every key, folded on its row until ctrl+o.
   settingsread: reads({ action: 'read' }),
   // One key under a mask, its secret never drawn.

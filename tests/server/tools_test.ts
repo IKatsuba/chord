@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { until } from '../session/conversation_fake.ts';
 import { join } from 'node:path';
 import type { PermissionWait } from '../../src/session/transcript/types.ts';
 import type { SettingsChanged } from '../../src/settings_tool.ts';
@@ -16,6 +17,7 @@ import {
   type ProposeAnswer,
   changeSetting,
   proposeTeam,
+  settingsBoxClaim,
   proposeText,
   type RuntimeOffer,
   sessionsAnswer,
@@ -67,6 +69,7 @@ function windowOf(probed: string[] = []): WindowView {
     teams: () => Promise.resolve({ found: [], runs: [] }),
     runTeam: () => Promise.resolve({ error: 'no teams here' }),
     teamPlaces: () => Promise.reject(new Error('no teams here')),
+    claimSettingsBox: settingsBoxClaim(),
     settingSaved: () => {},
     settingsWhere: () => ({
       agent: 'fake',
@@ -870,6 +873,149 @@ describe('the settings tool writes (CHD-568)', () => {
       expect(refused.answer).toStrictEqual({ error });
       expect(refused.held).toBe(text);
     }
+  });
+
+  const HELD =
+    'Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered';
+
+  /** A window whose box answers when `answer` is called, its asks counted. */
+  async function overlapping(
+    run: (tools: {
+      call: (
+        path: readonly string[],
+        change: { readonly set: unknown } | { readonly remove: true },
+      ) => Promise<SettingsChanged | { readonly error: string }>;
+      answer: (pick: string | undefined) => void;
+      asked: () => number;
+      held: () => Promise<string | undefined>;
+      write: (text: string) => Promise<void>;
+    }) => Promise<void>,
+    text = '{"theme":"dark"}',
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-overlap-'));
+    const file = join(root, 'chord', 'settings.json');
+    const answers: ((pick: string | undefined) => void)[] = [];
+    let asked = 0;
+    const caller: Caller = {
+      role: 'person',
+      key: 0,
+      window: {
+        ...windowOf(),
+        settingsWhere: () => ({
+          agent: 'claude',
+          configHome: root,
+          cwd: join(root, 'work'),
+          home: root,
+        }),
+        askPerson: () => {
+          asked += 1;
+
+          return new Promise((settle) => answers.push(settle));
+        },
+      },
+    };
+
+    try {
+      await mkdir(join(root, 'chord'), { recursive: true });
+      await writeFile(file, text);
+      await run({
+        call: (path, change) =>
+          changeSetting(
+            caller,
+            path,
+            change,
+            new AbortController().signal,
+            () => {},
+            crypto.randomUUID(),
+          ),
+        answer: (pick) => answers.shift()?.(pick),
+        asked: () => asked,
+        held: () => readFile(file, 'utf8'),
+        write: (written) => writeFile(file, written),
+      });
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  test('of two parallel changes one waits and the other is refused, asking and writing nothing', async () => {
+    await overlapping(async ({ call, answer, asked, held }) => {
+      const first = call(['theme'], { set: 'light' });
+      const second = call(['mouse'], { set: false });
+
+      expect(await second).toStrictEqual({ error: HELD });
+      expect(asked()).toBe(1);
+
+      answer('yes');
+      expect(await first).toMatchObject({ saved: true });
+      expect(JSON.parse((await held())!)).toStrictEqual({ theme: 'light' });
+    });
+  });
+
+  test('a change after the first was answered, withdrawn or failed is asked', async () => {
+    await overlapping(async ({ call, answer, asked }) => {
+      for (const pick of ['no', undefined]) {
+        const before = asked();
+        const waiting = call(['theme'], { set: 'light' });
+
+        await until(() => asked() === before + 1);
+        answer(pick);
+        await waiting;
+      }
+
+      const before = asked();
+      const next = call(['theme'], { set: 'light' });
+
+      await until(() => asked() === before + 1);
+      answer('no');
+      expect(await next).toMatchObject({ saved: false });
+    });
+  });
+
+  test('a write that fails gives the place back', async () => {
+    await overlapping(async ({ call, answer, asked, write }) => {
+      const failing = call(['theme'], { set: 'light' });
+
+      await until(() => asked() === 1);
+      await write('{ broken');
+      answer('yes');
+      expect(await failing).toMatchObject({
+        error: expect.stringContaining('was not saved'),
+      });
+      await write('{}');
+
+      const next = call(['mouse'], { set: true });
+
+      await until(() => asked() === 2);
+      answer('no');
+      await next;
+    });
+  });
+
+  test('a refused or unchanged call holds no place', async () => {
+    await overlapping(async ({ call, answer, asked }) => {
+      const waiting = call(['theme'], { set: 'light' });
+
+      await until(() => asked() === 1);
+      expect(await call(['nope'], { set: 1 })).toStrictEqual({
+        error: 'No setting nope',
+      });
+      // The same value, while another waits, is still nothing to do.
+      expect(await call(['theme'], { set: 'dark' })).toMatchObject({
+        unchanged: true,
+      });
+      expect(await call(['mouse'], { set: true })).toStrictEqual({
+        error: HELD,
+      });
+      answer('no');
+      await waiting;
+
+      const next = call(['mouse'], { set: true });
+
+      await until(() => asked() === 2);
+      answer('no');
+      await next;
+    });
   });
 
   test('a file gone bad between the box and the yes is refused, not overwritten', async () => {

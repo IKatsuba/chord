@@ -1649,6 +1649,32 @@ describe('the settings tool on the transcript (CHD-568)', () => {
     }
   });
 
+  test('a second change is refused with the first box still up', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsoverlap');
+          await window.shows('Another settings change is waiting');
+
+          const read = window.frame().replace(/\s+/g, ' ');
+
+          expect(read).toContain('Set theme?');
+          expect(read).toContain(
+            'Settings(agents.fake.model) ⎿ Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered',
+          );
+
+          await window.press('2');
+          await window.shows('Not saved · the person will say what to change');
+        },
+        { columns: 120, rows: 40, server, configHome: fixture('{}') },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
   test('a project holding the key warns above the box', async () => {
     const server = serveChord();
 

@@ -312,6 +312,11 @@ export interface WindowView {
    * the runtime of the session that asks, which the box names.
    */
   settingsWhere(caller: Caller): SettingsWhere & { readonly agent: string };
+  /**
+   * Takes the one place for a `settings` change waiting on the person: how to
+   * give it back, or undefined while another holds it.
+   */
+  claimSettingsBox(): (() => void) | undefined;
   /** A `settings` write was saved: the window takes up what it can at once. */
   settingSaved(path: readonly string[], change: SettingChange): void;
   /** Hands a team a job: its lead opened as a child of the caller's. */
@@ -624,6 +629,31 @@ export function proposeText(
     : 'The person did not save it; they will say what to change.';
 }
 
+/**
+ * A window's one place for a `settings` change waiting on the person. A box
+ * names only the path, so two at once could ask the same question over each
+ * other's rows, and the box would not confirm the write it answers.
+ */
+export function settingsBoxClaim(): () => (() => void) | undefined {
+  let held = false;
+
+  return () => {
+    if (held) {
+      return undefined;
+    }
+
+    held = true;
+
+    return () => {
+      held = false;
+    };
+  };
+}
+
+/** The refusal of a change while another waits on the person. */
+const SETTINGS_BOX_HELD =
+  'Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered';
+
 /** The settings box's choices, by their ids. */
 const SETTING = { yes: 'yes', no: 'no' } as const;
 
@@ -652,52 +682,65 @@ export async function changeSetting(
     return 'error' in planned ? planned : planned.answer;
   }
 
+  // No wait between the check and the claim, so two calls cannot both pass.
+  const release = caller.window.claimSettingsBox();
+
+  if (release === undefined) {
+    return { error: SETTINGS_BOX_HELD };
+  }
+
   const { answer, file } = planned;
   const shownKey = shownSettingPath(path);
   const word = changeWord(answer);
   const escape = `tell ${where.agent} what to change`;
 
-  shown(answer);
-
-  const picked = await caller.window.askPerson(
-    caller,
-    {
-      title: `Settings(${shownKey})`,
-      options: [
-        {
-          optionId: SETTING.yes,
-          name: `Yes, in ${answer.file}`,
-          kind: 'allow_once',
-        },
-        { optionId: SETTING.no, name: `No, ${escape}`, kind: 'reject_once' },
-      ],
-      save: {
-        question: `${word[0]!.toUpperCase()}${word.slice(1)} ${shownKey}?`,
-        files: {},
-        escape,
-        asked,
-      },
-    },
-    signal,
-  );
-
-  if (picked === undefined) {
-    return { error: 'The person was not asked to the end; nothing was saved' };
-  }
-
-  if (picked === SETTING.no) {
-    return { ...answer, saved: false };
-  }
-
   try {
-    await saveSettingAt(file, path, change);
-  } catch (error) {
-    return { error: saveFailure(answer.file, error, shownHome(where)) };
+    shown(answer);
+
+    const picked = await caller.window.askPerson(
+      caller,
+      {
+        title: `Settings(${shownKey})`,
+        options: [
+          {
+            optionId: SETTING.yes,
+            name: `Yes, in ${answer.file}`,
+            kind: 'allow_once',
+          },
+          { optionId: SETTING.no, name: `No, ${escape}`, kind: 'reject_once' },
+        ],
+        save: {
+          question: `${word[0]!.toUpperCase()}${word.slice(1)} ${shownKey}?`,
+          files: {},
+          escape,
+          asked,
+        },
+      },
+      signal,
+    );
+
+    if (picked === undefined) {
+      return {
+        error: 'The person was not asked to the end; nothing was saved',
+      };
+    }
+
+    if (picked === SETTING.no) {
+      return { ...answer, saved: false };
+    }
+
+    try {
+      await saveSettingAt(file, path, change);
+    } catch (error) {
+      return { error: saveFailure(answer.file, error, shownHome(where)) };
+    }
+
+    caller.window.settingSaved(path, change);
+
+    return { ...answer, saved: true };
+  } finally {
+    release();
   }
-
-  caller.window.settingSaved(path, change);
-
-  return { ...answer, saved: true };
 }
 
 /** A monitor started, by its id, or why it was not. */

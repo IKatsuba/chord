@@ -39,3 +39,30 @@ export function framedRows(
 
   return count > rows ? fit(1) : rows;
 }
+
+/**
+ * How many of its rows a framed picker's body shows in `room` rows, its
+ * content `height` rows tall with its parts at `parts` (each its top row and
+ * its rows): all of them where they fit, none to cut; cut, down to the last
+ * row a part draws, so a gap between two parts is not left at the bottom
+ * (CHD-545).
+ */
+export function cutRows(
+  room: number,
+  height: number,
+  parts: readonly (readonly [number, number])[],
+): number | undefined {
+  if (height <= room) {
+    return undefined;
+  }
+
+  for (let rows = Math.max(0, Math.floor(room)); rows > 0; rows--) {
+    const last = rows - 1;
+
+    if (parts.some(([top, size]) => last >= top && last < top + size)) {
+      return rows;
+    }
+  }
+
+  return 0;
+}

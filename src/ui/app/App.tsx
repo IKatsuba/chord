@@ -1863,6 +1863,7 @@ export function App({
                             heldBack={conversation()?.session?.heldBack ?? []}
                             agent={shownAgent}
                             windowRows={rows}
+                            room={room}
                             starting={
                               conversation()?.session === undefined &&
                               state.connection.status === 'starting'

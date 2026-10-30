@@ -42,7 +42,7 @@ import {
 import { diffView } from '../transcript/tools/diff.ts';
 import { DiffRows, Gutter } from '../transcript/tools/Tool.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
-import { framedRows } from '../prompt/overlay.ts';
+import { cutRows, framedRows } from '../prompt/overlay.ts';
 import {
   BOLD,
   colour as paletteColour,
@@ -150,9 +150,46 @@ export function AgentPicker({
  * cut from the bottom at its natural height, so the title and the hint stay
  * and the prompt under the layer is never covered (CHD-545).
  */
-function Body({ children }: { children: ReactNode }) {
+function Body({
+  room,
+  children,
+}: {
+  /** The rows the whole picker may take. */
+  room: number;
+  children: ReactNode;
+}) {
+  // Where cut, the rows it shows: down to its last drawn row, so the gap
+  // before the hint is one, as where it is whole.
+  const [shown, setShown] = useState<number | undefined>(undefined);
+
   return (
-    <box flexShrink={1} minHeight={0} overflow='hidden'>
+    <box
+      flexShrink={1}
+      minHeight={0}
+      overflow='hidden'
+      {...(shown === undefined ? {} : { maxHeight: shown })}
+      renderAfter={function () {
+        const [content] = this.getChildren();
+        const parent = this.parent;
+
+        if (content === undefined || parent === null) {
+          return;
+        }
+
+        // What the rest of the picker takes stays as it is, cut or not.
+        const fits = cutRows(
+          room - (parent.height - this.height),
+          content.height,
+          content
+            .getChildren()
+            .map((each) => [each.y - content.y, each.height] as const),
+        );
+
+        if (fits !== shown) {
+          setShown(fits);
+        }
+      }}
+    >
       <box flexShrink={0} flexDirection='column'>
         {children}
       </box>
@@ -202,7 +239,7 @@ export function ModelPicker({
       >
         Select model
       </text>
-      <Body>
+      <Body room={room}>
         <text {...CUT} attributes={DIM}>
           {choices.length === 0
             ? `${agent} offers no models to choose from.`
@@ -219,10 +256,7 @@ export function ModelPicker({
       </Body>
       <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
-          {hintOf(
-            choices.length === 0 ? undefined : 'Enter to switch',
-            closeHint,
-          )}
+          {hintOf(listed === 0 ? undefined : 'Enter to switch', closeHint)}
         </text>
       </box>
     </box>
@@ -306,7 +340,7 @@ export function ResumePicker({
       >
         Resume a session
       </text>
-      <Body>
+      <Body room={room}>
         <text {...CUT} attributes={DIM}>
           {starting
             ? `Pick one of ${agent}'s earlier sessions to open.`
@@ -338,7 +372,9 @@ export function ResumePicker({
       <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
           {hintOf(
-            choices.length === 0 ? undefined : 'Enter to resume',
+            choices.length === 0 || listed === 0
+              ? undefined
+              : 'Enter to resume',
             scopeHint,
             closeHint,
           )}
@@ -405,7 +441,7 @@ export function TeamsPicker({
       >
         Teams
       </text>
-      <Body>
+      <Body room={room}>
         <text {...TEXT} attributes={DIM}>
           {where}
         </text>
@@ -434,10 +470,12 @@ export function TeamsPicker({
       <box marginTop={1} flexShrink={0}>
         <text {...CUT} attributes={DIM}>
           {hintOf(
-            ...teamsHint(
-              listing.teams.find(({ name }) => name === highlighted),
-              columns,
-            ),
+            ...(listed === 0
+              ? []
+              : teamsHint(
+                  listing.teams.find(({ name }) => name === highlighted),
+                  columns,
+                )),
             closeHint,
           )}
         </text>
@@ -482,9 +520,10 @@ export function ConfigPicker({
   // None where the room has no row for a choice: the list, and its keys, go.
   const listed = framedRows(rows, room, choices.length);
   const close = useCloseHint();
+  // Only the keys that act: none of the list's where it has no row.
   const hint = option
-    ? hintOf('Enter to set', back)
-    : hintOf(choices.length === 0 ? undefined : 'Enter to choose', close);
+    ? hintOf(listed === 0 ? undefined : 'Enter to set', back)
+    : hintOf(listed === 0 ? undefined : 'Enter to choose', close);
 
   return (
     <box
@@ -508,7 +547,7 @@ export function ConfigPicker({
           'Settings'
         )}
       </text>
-      <Body>
+      <Body room={room}>
         <text {...CUT} attributes={DIM}>
           {option ? (
             <>
@@ -587,7 +626,7 @@ export function ThemePicker({
       <text {...TEXT} {...fg(permission)} attributes={BOLD} flexShrink={0}>
         Theme
       </text>
-      <Body>
+      <Body room={room}>
         <text {...CUT} attributes={DIM}>
           {process.env['NO_COLOR']
             ? 'NO_COLOR is set, so chord draws no colour.'
@@ -611,8 +650,7 @@ export function ThemePicker({
       <box marginTop={1} flexShrink={0}>
         <text {...CUT} attributes={DIM}>
           {hintOf(
-            '↑↓ to preview',
-            'Enter to keep',
+            ...(layout.choices === 0 ? [] : ['↑↓ to preview', 'Enter to keep']),
             back && `${back} to ${themeName(current)}`,
           )}
         </text>
@@ -658,7 +696,7 @@ export function NoticeBox({
       <text {...TEXT} {...fg(permission)} attributes={BOLD} flexShrink={0}>
         {DIMCODE_WORDS.title}
       </text>
-      <Body>
+      <Body room={room}>
         {/* Wrapped at spaces, as the transcript is, so a path or a value a
           person types stays whole on its line; only a word longer than the
           line is broken, where it is drawn. */}
@@ -704,6 +742,7 @@ export function McpPanel({
   heldBack = [],
   agent,
   windowRows,
+  room = Number.POSITIVE_INFINITY,
   chord,
   starting = false,
 }: {
@@ -722,6 +761,8 @@ export function McpPanel({
   agent: string;
   /** The window's height, which decides how many servers are listed. */
   windowRows: number;
+  /** The rows the layer it floats in has; none outside one. */
+  room?: number;
 }) {
   const { permission } = useColours();
   const { width: columns } = useTerminalDimensions();
@@ -759,7 +800,7 @@ export function McpPanel({
       <text {...TEXT} {...fg(permission)} attributes={BOLD} flexShrink={0}>
         MCP servers
       </text>
-      <Body>
+      <Body room={room}>
         {servers.length === 0 ? (
           <text {...TEXT} attributes={DIM}>
             {lost === undefined

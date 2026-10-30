@@ -2,6 +2,7 @@ import { expect, test } from 'bun:test';
 import {
   overlayRoom,
   overlayRule,
+  cutRows,
   framedRows,
 } from '../../../src/ui/prompt/overlay.ts';
 
@@ -38,4 +39,21 @@ test('hidden choices take the row that counts them, and a wrapped description it
   expect(framedRows(6, 12, 5)).toBe(5);
   expect(framedRows(6, 12, 2, 2)).toBe(3);
   expect(framedRows(3, 9, 10)).toBe(1);
+});
+
+test('a body that fits is not cut; cut, it ends on a row a part draws, not on a gap (CHD-545)', () => {
+  // Two lines, a gap, two lines, a gap, three lines: nine rows.
+  const parts = [
+    [0, 2],
+    [3, 2],
+    [6, 3],
+  ] as const;
+
+  expect(cutRows(9, 9, parts)).toBeUndefined();
+  expect(cutRows(20, 9, parts)).toBeUndefined();
+  expect(cutRows(8, 9, parts)).toBe(8);
+  // Its sixth row would be the gap after the table: five.
+  expect(cutRows(6, 9, parts)).toBe(5);
+  expect(cutRows(3, 9, parts)).toBe(2);
+  expect(cutRows(0, 9, parts)).toBe(0);
 });

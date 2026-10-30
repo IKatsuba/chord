@@ -399,6 +399,7 @@ for (const rows of [12, 16]) {
     ['/theme', 'Theme', 'Esc to go back'],
     ['/mcp', 'MCP servers', 'Esc to close'],
     ['/config', 'Settings', 'Esc to close'],
+    ['/model', 'Select model', 'Esc to close'],
   ] as const) {
     test(`${command} at 80x${rows} never covers the prompt, its gap or the strip, and keeps its title and hint (CHD-545)`, () =>
       withWindow(
@@ -424,6 +425,19 @@ for (const rows of [12, 16]) {
           expect(after[at - 1]).toStartWith('╭');
           expect(after[prompt - 3]).toContain(hint);
           expect(after[prompt - 2]).toStartWith('╰');
+
+          // Inside the frame, what a row draws past its borders.
+          const drawn = (at: number) => after[at]!.replace(/[│\s]/g, '');
+
+          // One gap before the hint, cut or not.
+          expect(drawn(prompt - 4)).toBe('');
+          expect(drawn(prompt - 5)).not.toBe('');
+
+          // With no row for its list, its hint names Esc alone, the one key
+          // that acts (CHD-545).
+          if (rows === 12 && command !== '/mcp') {
+            expect(after[prompt - 3]).not.toMatch(/Enter|↑↓/);
+          }
         },
         { columns: 80, rows },
       ));

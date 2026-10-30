@@ -186,3 +186,64 @@ describe('versionLine', () => {
     );
   });
 });
+
+describe('CHD-564 tester: page space and display-width edges', () => {
+  test('a wrapped resume hint gives up a list row before hiding the line', () => {
+    const page = { columns: 39, lines: 28, framed: true, hintRows: 2 };
+
+    expect(startLayout({ ...page, rows: 14 })).toMatchObject({
+      step: 'line',
+      listRows: 2,
+      top: 0,
+    });
+    expect(startLayout({ ...page, rows: 13 })).toMatchObject({
+      step: 'none',
+      listRows: 3,
+      top: 0,
+    });
+  });
+
+  test('compact resume reserves the hidden-row indicator only after overflow', () => {
+    const page = { columns: 80, rows: 24, ...sessions };
+
+    expect(startLayout({ ...page, lines: 10 }).listRows).toBe(10);
+    expect(startLayout({ ...page, lines: 11 }).listRows).toBe(9);
+  });
+
+  test('hint wrapping consumes list room without changing either column', () => {
+    for (const framed of [false, true]) {
+      const page = { columns: 120, rows: 31, lines: 100, framed };
+      const shortHint = startLayout({ ...page, hintRows: 1 });
+      const wrappedHint = startLayout({ ...page, hintRows: 3 });
+
+      expect(wrappedHint.step).toBe(shortHint.step);
+      expect(wrappedHint.column).toBe(shortHint.column);
+      expect(wrappedHint.listRows).toBe(shortHint.listRows - 2);
+    }
+  });
+
+  test('a wide-character directory fits exactly by cells, then loses its left', () => {
+    const page = { version: '0.65.0', directory: '~/界/项目' };
+    const whole = 'v0.65.0 · ~/界/项目';
+    const width = stringWidth(whole);
+
+    expect(versionLine({ ...page, width })).toBe(whole);
+
+    const cut = versionLine({ ...page, width: width - 1 });
+
+    expect(cut).toBe('v0.65.0 · …/项目');
+    expect(stringWidth(cut)).toBeLessThanOrEqual(width - 1);
+  });
+
+  test('a wide-character agent keeps its name while the directory shrinks', () => {
+    const line = versionLine({
+      version: '0.65.0',
+      agent: '界',
+      directory: '~/work/services/app',
+      width: 20,
+    });
+
+    expect(line).toBe('v0.65.0 · 界 · …/app');
+    expect(stringWidth(line)).toBeLessThanOrEqual(20);
+  });
+});

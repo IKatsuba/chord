@@ -30,7 +30,7 @@ export const TASK_MESSAGE =
 export const TASK_REPORT =
   'The tokenizer dropped a closing quote when a string ended the line. ' +
   'Fixed in src/parse/tokenize.ts, with two cases added to ' +
-  'tests/parse/tokenize_test.ts. deno task test passes.';
+  'tests/parse/tokenize_test.ts. bun dev test passes.';
 
 /** Why the task fails when the person denies its write. */
 export const TASK_FAILURE =
@@ -196,7 +196,7 @@ async function taskChild(turn: Turn, hold: boolean): Promise<acp.StopReason> {
       await pause(turn.signal, HOLD_MS);
     }
 
-    await work(turn, '`deno task test`', 'execute', '214 passed, 0 failed');
+    await work(turn, '`bun dev test`', 'execute', '214 passed, 0 failed');
     await pause(turn.signal, TASK_STEP_MS * 10);
     await turn.say(TASK_REPORT);
   } finally {

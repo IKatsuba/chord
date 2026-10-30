@@ -869,9 +869,7 @@ test('the subagent scenario folds every state CHD-151 draws, apart from the pare
       },
       'assistant: Now the tests, in the background.',
       {
-        'Run the whole test suite running': [
-          'tool: deno task test in_progress',
-        ],
+        'Run the whole test suite running': ['tool: bun dev test in_progress'],
       },
       'assistant: It is running; I will say when it ends.',
     ]);
@@ -968,7 +966,7 @@ test('a subagent that outlives its turn goes on reaching the session after the a
     expect(runningSubagents(later)).toStrictEqual(0);
     assert(tests !== undefined);
     expect(shape(only(later, tests).entries)).toStrictEqual([
-      'tool: deno task test completed',
+      'tool: bun dev test completed',
       'assistant: Every test passed.',
     ]);
   }));

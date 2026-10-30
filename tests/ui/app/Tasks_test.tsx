@@ -167,7 +167,7 @@ test("a task agent works nested in its parent's turn, asks the person in the par
         await window.shows(
           'Received the message from Fix the tokenizer · fake · report.',
         );
-        expect(window.frame()).toContain('deno task test passes.');
+        expect(window.frame()).toContain('bun dev test passes.');
       },
       { server, runtimes: ['fake'], rows: 60, columns: 120 },
     );

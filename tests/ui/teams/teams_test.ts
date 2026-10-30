@@ -288,7 +288,7 @@ test("/team show's running form gives each agent its file's mode, its state and 
         },
         latest: headlineText({
           name: 'Bash',
-          arg: 'deno task test tests/parse',
+          arg: 'bun dev test tests/parse',
         }),
       },
       { name: 'coder', open: true },
@@ -308,7 +308,7 @@ test("/team show's running form gives each agent its file's mode, its state and 
   expect(lines.map(({ text }) => text)).toStrictEqual([
     'lead      claude · opus          default      ✻ working 8s      → to @coder',
     'tester    claude · sonnet        acceptEdits  ● permission 12s  ' +
-      'Bash(deno task test tests/parse)',
+      'Bash(bun dev test tests/parse)',
     'coder     codex · gpt-5.3-codex  auto         idle',
     'reviewer  claude · opus          plan         not opened',
   ]);
@@ -326,17 +326,17 @@ test("/team show's running form gives each agent its file's mode, its state and 
     'lead      claude · opus          default      ✻ working 8s',
     '          → to @coder',
     'tester    claude · sonnet        acceptEdits  ● permission 12s',
-    '          Bash(deno task test tests/parse)',
+    '          Bash(bun dev test tests/parse)',
     'coder     codex · gpt-5.3-codex  auto         idle',
     'reviewer  claude · opus          plan         not opened',
   ]);
 
   // With 20 cells or more beside the row it wraps there.
-  const latest = 'Bash(deno task test tests/parse --filter strings)';
+  const latest = 'Bash(bun dev test tests/parse --filter strings)';
   const wrapped = runningTable(BUGFIX, [{ ...run.agents[1]!, latest }], 80);
 
   expect(wrapped[0]!.text).toStrictEqual(
-    'tester  claude · sonnet  acceptEdits  ● permission 12s  Bash(deno task test',
+    'tester  claude · sonnet  acceptEdits  ● permission 12s  Bash(bun dev test',
   );
   expect(wrapped[0]!.under).toStrictEqual([
     '                                                        tests/parse --filter',
@@ -397,7 +397,7 @@ test("/team show's running form gives an agent's effort as the last part of its 
         words: 'permission 5s',
         tone: 'warning' as const,
       },
-      latest: 'Bash(deno task test tests/parse)',
+      latest: 'Bash(bun dev test tests/parse)',
     },
     { name: 'coder', open: false },
   ];
@@ -409,7 +409,7 @@ test("/team show's running form gives an agent's effort as the last part of its 
 
   expect(drawn(114)).toStrictEqual([
     'lead    claude · opus · high   default      ◦ idle 6s        ✓ new reply  ← from @tester · claude',
-    'tester  claude · sonnet · low  acceptEdits  ● permission 5s               Bash(deno task test tests/parse)',
+    'tester  claude · sonnet · low  acceptEdits  ● permission 5s               Bash(bun dev test tests/parse)',
     'coder   codex · gpt-5.3-codex  auto         not opened',
   ]);
   // Narrower, the headline goes under the row; the effort stays.
@@ -417,7 +417,7 @@ test("/team show's running form gives an agent's effort as the last part of its 
     'lead    claude · opus · high   default      ◦ idle 6s        ✓ new reply',
     '        ← from @tester · claude',
     'tester  claude · sonnet · low  acceptEdits  ● permission 5s',
-    '        Bash(deno task test tests/parse)',
+    '        Bash(bun dev test tests/parse)',
     'coder   codex · gpt-5.3-codex  auto         not opened',
   ]);
 });
@@ -489,7 +489,7 @@ describe("/team show's running form wraps its own columns where they are wider t
       open: true,
       state: { glyph: '●', words: 'permission 8s', tone: 'warning' },
       mark: { glyph: '←', words: 'new message', tone: 'dim' },
-      latest: 'Bash(deno task test tests/parse)',
+      latest: 'Bash(bun dev test tests/parse)',
     },
   ];
   const drawn = (lines: readonly RunningLine[]) =>
@@ -515,7 +515,7 @@ describe("/team show's running form wraps its own columns where they are wider t
       '        claude-opus-5-5-20261001',
       '        -preview-long',
       '        ● permission 8s  ← new message',
-      '        Bash(deno task test tests/parse)',
+      '        Bash(bun dev test tests/parse)',
     ]);
     expect(states(lines)).toStrictEqual([
       ['◦ idle 9s', '✓ new reply'],
@@ -530,7 +530,7 @@ describe("/team show's running form wraps its own columns where they are wider t
       'lead    fake · fake-large                             default      ◦ idle 9s        ✓ new reply',
       '        ← from @tester · fake',
       'tester  fake · claude-opus-5-5-20261001-preview-long  acceptEdits  ● permission 8s  ← new message',
-      '        Bash(deno task test tests/parse)',
+      '        Bash(bun dev test tests/parse)',
     ]);
     expect(states(lines)).toStrictEqual([
       ['◦ idle 9s', '✓ new reply'],
@@ -595,7 +595,7 @@ test("/team show's running form on a screen too narrow for the name, runtime and
         open: true,
         state: { glyph: '●', words: 'permission 8s', tone: 'warning' },
         mark: { glyph: '←', words: 'new message', tone: 'dim' },
-        latest: 'Bash(deno task test)',
+        latest: 'Bash(bun dev test)',
       },
     ],
     30,
@@ -610,7 +610,7 @@ test("/team show's running form on a screen too narrow for the name, runtime and
     '        acceptEdits',
     '        ● permission 8s',
     '        ← new message',
-    '        Bash(deno task test)',
+    '        Bash(bun dev test)',
   ]);
   expect(
     lines.map((line) => {

@@ -27,3 +27,25 @@ describe('CHD-407 R1 tester: screenshot team', () => {
     ]);
   });
 });
+
+describe('CHD-560 U2 tester: screenshot team modes', () => {
+  for (const file of ['screenshots_team.md', 'screenshots_proposal.md']) {
+    test(`${file} gives the coder auto while retaining the other roles' modes`, async () => {
+      const text = await readFile(
+        new URL(`../../../scripts/dev/${file}`, import.meta.url),
+        'utf8',
+      );
+      const parsed = parseTeam('bugfix', text, ['claude', 'codex']);
+
+      assert('team' in parsed);
+      expect(parsed.team.lead.mode).toBe('default');
+      expect(
+        parsed.team.members.map(({ name, mode }) => ({ name, mode })),
+      ).toStrictEqual([
+        { name: 'tester', mode: 'acceptEdits' },
+        { name: 'coder', mode: 'auto' },
+        { name: 'reviewer', mode: 'plan' },
+      ]);
+    });
+  }
+});

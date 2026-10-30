@@ -1003,7 +1003,7 @@ export const SUBAGENTS = {
         turn,
         open,
         'Run the whole test suite',
-        'Run deno task test and report what fails.',
+        'Run bun dev test and report what fails.',
       );
 
       // A moment before its first call, to see it starting.
@@ -1013,7 +1013,7 @@ export const SUBAGENTS = {
         last,
         'bash',
         {
-          title: 'deno task test',
+          title: 'bun dev test',
           kind: 'execute',
         },
         'in_progress',

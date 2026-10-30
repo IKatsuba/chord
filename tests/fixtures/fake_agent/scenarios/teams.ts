@@ -663,7 +663,7 @@ export const TEAMS = {
 
     await pause(turn.signal, TEAM_STEP_MS * 5);
 
-    return await askToRun(turn, 'deno task test tests/parse');
+    return await askToRun(turn, 'bun dev test tests/parse');
   },
 
   // `coder`'s first turn: a word to `tester`, then it waits.

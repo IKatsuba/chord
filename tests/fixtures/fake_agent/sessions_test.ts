@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import process from 'node:process';
+import { tmpdir } from 'node:os';
+import { openSession, type Session } from '../../../src/session/session.ts';
+import { fakeAgentCommand } from '../fake.ts';
 import { steeredInto, steers } from './sessions.ts';
 
 test('a wait for a steered message settles on one, and stops listening (CHD-470)', async () => {
@@ -107,5 +110,138 @@ describe('CHD-470 tester: steering waiter isolation and cancellation', () => {
       old.stop();
       current.stop();
     }
+  });
+});
+
+describe("what the screenshots ask of the fake's sessions (CHD-560)", () => {
+  const SOURCE = '11111111-1111-4111-8111-111111111111';
+  /** What `read` finds of a session opened with `flags`, closed after. */
+  const opened = async <T>(
+    flags: readonly string[],
+    read: (session: Session) => T,
+    fork?: string,
+  ): Promise<T> => {
+    const session = await openSession({
+      agent: 'fake',
+      cwd: tmpdir(),
+      agentCommand: fakeAgentCommand(undefined, ...flags),
+      ...(fork === undefined ? {} : { fork }),
+    });
+
+    try {
+      return read(session);
+    } finally {
+      await session.close();
+    }
+  };
+
+  const modes = (session: Session) =>
+    session.modes()?.available.map(({ id }) => id);
+  const model = (session: Session) => session.models()?.current;
+
+  test('its modes are the three, and --auto-mode adds auto after them', async () => {
+    expect(await opened([], modes)).toEqual(['default', 'acceptEdits', 'plan']);
+    expect(await opened(['--auto-mode'], modes)).toEqual([
+      'default',
+      'acceptEdits',
+      'plan',
+      'auto',
+    ]);
+  });
+
+  test('a fork is on its first model, and on the one --fork-model names', async () => {
+    expect(await opened(['--fork'], model, SOURCE)).toBe('fake-large');
+    expect(
+      await opened(['--fork', '--fork-model', 'fake-small'], model, SOURCE),
+    ).toBe('fake-small');
+  });
+});
+
+describe('CHD-560 U2 tester: screenshot flag isolation', () => {
+  const source = '22222222-2222-4222-8222-222222222222';
+  const withFlags = async <T>(
+    env: readonly string[],
+    flags: readonly string[],
+    read: (session: Session) => Promise<T> | T,
+    fork?: string,
+  ): Promise<T> => {
+    const session = await openSession({
+      agent: 'fake',
+      cwd: tmpdir(),
+      agentCommand: [
+        'env',
+        '-u',
+        'CHORD_FAKE_AUTO_MODE',
+        '-u',
+        'CHORD_FAKE_FORK_MODEL',
+        ...env,
+        ...fakeAgentCommand(undefined, ...flags),
+      ],
+      ...(fork === undefined ? {} : { fork }),
+    });
+
+    try {
+      return await read(session);
+    } finally {
+      await session.close();
+      await session.exited;
+      expect(session.agentPids.size).toBe(0);
+    }
+  };
+
+  test('environment-enabled auto is selectable while another process keeps the default modes', async () => {
+    await Promise.all([
+      withFlags(['CHORD_FAKE_AUTO_MODE=1'], [], async (session) => {
+        expect(session.modes()?.available.map(({ id }) => id)).toStrictEqual([
+          'default',
+          'acceptEdits',
+          'plan',
+          'auto',
+        ]);
+        await session.setMode('auto');
+        expect(session.modes()?.current).toBe('auto');
+      }),
+      withFlags([], [], (session) => {
+        expect(session.modes()?.available.map(({ id }) => id)).toStrictEqual([
+          'default',
+          'acceptEdits',
+          'plan',
+        ]);
+        expect(session.modes()?.current).toBe('default');
+      }),
+    ]);
+  });
+
+  test('only the documented environment value enables auto, while the flag still enables it', async () => {
+    for (const value of ['0', 'true']) {
+      expect(
+        await withFlags([`CHORD_FAKE_AUTO_MODE=${value}`], [], (session) =>
+          session.modes()?.available.some(({ id }) => id === 'auto'),
+        ),
+      ).toBe(false);
+    }
+
+    expect(
+      await withFlags(['CHORD_FAKE_AUTO_MODE=0'], ['--auto-mode'], (session) =>
+        session.modes()?.available.some(({ id }) => id === 'auto'),
+      ),
+    ).toBe(true);
+  });
+
+  test('the fork model environment affects forks only and the explicit flag wins', async () => {
+    const model = (session: Session) => session.models()?.current;
+    const env = ['CHORD_FAKE_FORK_MODEL=fake-small'];
+
+    expect(await withFlags(env, ['--fork'], model, source)).toBe('fake-small');
+    expect(await withFlags(env, ['--fork'], model)).toBe('fake-large');
+    expect(
+      await withFlags(
+        env,
+        ['--fork', '--fork-model', 'fake-large'],
+        model,
+        source,
+      ),
+    ).toBe('fake-large');
+    expect(await withFlags([], ['--fork'], model, source)).toBe('fake-large');
   });
 });

@@ -253,7 +253,7 @@ test('/team show of a running team gives each agent its state and latest headlin
     await window.shows('bugfix · .chord/teams/bugfix.md · working ');
     await window.shows('on "issue 214: strings at the end');
     await window.shows('tester  fake · fake-small  acceptEdits  ● permission');
-    await window.shows('Bash(deno task test tests/parse)');
+    await window.shows('Bash(bun dev test tests/parse)');
     await window.shows('lead    fake · fake-large  default');
   }));
 
@@ -408,7 +408,7 @@ test('/team show of a running team at 80 columns cuts nothing: the job wraps, an
     await send(window, '/team show bugfix');
     await window.shows('the end of a line lose their closing quote"');
     await window.shows('tester  fake · fake-small  acceptEdits  ● permission');
-    await window.shows('        Bash(deno task test tests/parse)');
+    await window.shows('        Bash(bun dev test tests/parse)');
     expect(window.frame()).not.toMatch(/working \d+s on ".*…/);
 
     // A blank line between the header and the table, however short the frame.
@@ -428,7 +428,7 @@ test("/team show of a running team narrower than its own columns puts each agent
     await send(window, '/team show bugfix');
     await window.shows('      tester  fake · fake-small  acceptEdits\n');
     await window.shows('              ● permission');
-    await window.shows('              Bash(deno task test tests/parse)');
+    await window.shows('              Bash(bun dev test tests/parse)');
   }));
 
 test("/team show paints an agent's state and mark in their colours past a model id of wide characters (CHD-471)", async () => {

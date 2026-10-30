@@ -300,7 +300,7 @@ test('a box short of rows gives way above it, its hint on a row of its own insid
       <PermissionPrompt
         wait={{
           id: 'p',
-          title: '`deno task test tests/parse`',
+          title: '`bun dev test tests/parse`',
           options: [
             { optionId: 'a', name: 'Allow', kind: 'allow_once' },
             { optionId: 'b', name: 'Always allow', kind: 'allow_always' },

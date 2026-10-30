@@ -344,7 +344,7 @@ test("a command's output streams into its terminal as Codex's adapter sends it, 
       turnId: 't1',
       call: {
         id: calls(updates)[0]!.toolCallId,
-        title: 'Run deno task test',
+        title: 'Run bun dev test',
         kind: 'execute',
         status: 'failed',
         content: [{ type: 'terminal', terminalId: terminal.id }],

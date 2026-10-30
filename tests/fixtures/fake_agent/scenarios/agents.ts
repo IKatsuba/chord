@@ -99,7 +99,7 @@ export const LONG_INSTRUCTION = [
   '1. Fix the tokenizer so a string at the end of a line keeps its closing ' +
     'quote.',
   '2. Add two cases to `tests/parse/tokenize_test.ts`.',
-  '3. Run `deno task check` in the foreground and **do not** hand back until ' +
+  '3. Run `bun quality` in the foreground and **do not** hand back until ' +
     'it passes.',
   '',
   'Tell me only what failed, if anything.',
@@ -225,7 +225,7 @@ export const DOCS_MESSAGE =
 
 /** `parser`'s two messages to its parent. */
 export const CHILD_MESSAGES = [
-  'Ran deno task test tests/parse: 2 failures, both in ' +
+  'Ran bun dev test tests/parse: 2 failures, both in ' +
     'tests/parse/printer_test.ts.',
   'All 214 parser tests pass now.',
 ] as const;
@@ -408,7 +408,7 @@ async function callChild(turn: Turn, untilTold = 0): Promise<acp.StopReason> {
   await turn.send({
     sessionUpdate: 'tool_call',
     toolCallId,
-    title: '`deno task test`',
+    title: '`bun dev test`',
     kind: 'execute',
     status: 'in_progress',
   });
@@ -661,7 +661,7 @@ export const AGENTS = {
     const client = await chordClient(turn);
 
     try {
-      await work(turn, '`deno task test tests/parse`', '2 failed, 212 passed');
+      await work(turn, '`bun dev test tests/parse`', '2 failed, 212 passed');
 
       if (client !== undefined) {
         await callChord(turn, client, 'send_message', {
@@ -669,7 +669,7 @@ export const AGENTS = {
         });
       }
 
-      await work(turn, '`deno task test tests/parse`', '214 passed, 0 failed');
+      await work(turn, '`bun dev test tests/parse`', '214 passed, 0 failed');
 
       if (client !== undefined) {
         await callChord(turn, client, 'send_message', {
@@ -707,7 +707,7 @@ export const AGENTS = {
   // A child's turn whose agent goes: a test run, its last words on stderr,
   // then the exit, with the turn never answered.
   async crash(turn) {
-    await work(turn, '`deno task test tests/parse`', 'Killed');
+    await work(turn, '`bun dev test tests/parse`', 'Killed');
     console.error(CRASH_WORDS);
     // Long enough for the line to reach chord before the pipe closes.
     await pause(turn.signal, HELD_STEP_MS);
@@ -835,7 +835,7 @@ export const AGENTS = {
     await turn.send({
       sessionUpdate: 'tool_call',
       toolCallId,
-      title: '`deno task test`',
+      title: '`bun dev test`',
       kind: 'execute',
       status: 'in_progress',
     });

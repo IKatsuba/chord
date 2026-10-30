@@ -276,6 +276,8 @@ previews. Once a code block's fence closes, its top border has `[copy]`
 on the right; `sh` and `bash` blocks also have `[run]`. A block inside a
 quote has no buttons, but the keys below still reach it.
 
+<img src="images/codeblocks.png" alt="A reply's code blocks with copy buttons, and run buttons on shell commands" width="900">
+
 `[copy]` copies the block's text, without its border, label, display wraps
 or trailing newline. The status line says `copied N chars to clipboard`,
 `sent N chars to the terminal's clipboard` over OSC 52, or
@@ -503,6 +505,8 @@ It picks the new agent at once. `/fork <name>` names it; otherwise names are
 are numbered. The source stays open. The fork's header says
 `forked from <source>`, and its view starts with a copy of the source's
 transcript, then `── forked from <source> · HH:MM ──` and its own turns.
+
+<img src="images/fork.png" alt="A fork named arrow-function, with the copied transcript and divider above the prompt and its row beside main in the agents list" width="900">
 
 The runtime must advertise `session/fork`; otherwise the command says
 `This agent does not fork sessions`. Claude Code and Codex adapters advertise

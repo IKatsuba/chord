@@ -276,6 +276,7 @@ import {
   REFUSE_CONFIG,
   RESUME_ONLY,
   NO_LOAD,
+  FORK_MODEL,
   FORKS,
   SILENT_SET_MODE,
   START_FAILS,
@@ -1302,6 +1303,10 @@ const connection = acp
     }
 
     const sessionId = crypto.randomUUID();
+
+    if (FORK_MODEL !== undefined) {
+      models.set(sessionId, FORK_MODEL);
+    }
 
     modes.set(sessionId, 'default');
     mcpServers.set(sessionId, params.mcpServers ?? []);

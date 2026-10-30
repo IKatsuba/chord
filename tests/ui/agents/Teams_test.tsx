@@ -81,7 +81,7 @@ test("a member picked has its run in its box's title, its instructions folded, t
     const frame = window.frame();
 
     expect(frame).toContain('→ to @coder');
-    expect(frame).toContain('Bash(deno task test tests/parse)');
+    expect(frame).toContain('Bash(bun dev test tests/parse)');
     expect(frame).toContain('⏵⏵ accept edits on');
 
     await window.press('3');

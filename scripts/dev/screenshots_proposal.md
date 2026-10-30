@@ -15,7 +15,7 @@ members:
     role: Writes the fix, in the files the lead names
     agent: codex
     model: gpt-6.1-sol
-    mode: plan
+    mode: auto
     instructions: Make that test pass with the smallest change; never touch tests.
   - name: reviewer
     role: Reads the diff and edits nothing

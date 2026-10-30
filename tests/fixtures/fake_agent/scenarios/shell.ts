@@ -36,7 +36,7 @@ async function codexShell(
   await turn.send({
     sessionUpdate: 'tool_call',
     toolCallId,
-    title: 'Run deno task test',
+    title: 'Run bun dev test',
     kind: 'execute',
     status: 'in_progress',
     rawInput: { command: ['deno', 'task', 'test'] },

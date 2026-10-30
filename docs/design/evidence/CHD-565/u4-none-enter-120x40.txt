@@ -1,0 +1,40 @@
+ fake · fake · Fake Large with a 1M context window · opened by main 3s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ fake ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main  fake · Fake Large with a 1M context window · medium  ◦ idle 5s
+    fake  fake · Fake Large with a 1M context window · medium  ◦ idle 2s

@@ -15,9 +15,14 @@ import {
   wholeInView,
 } from '../../../src/ui/transcript/code_pick.ts';
 import {
+  codeBlocks,
   codePlaces,
+  openFences,
+  runCommand,
   softMarkdown,
 } from '../../../src/ui/transcript/markdown.ts';
+import type { Entry } from '../../../src/session/transcript/types.ts';
+import { listedText } from '../../../src/ui/transcript/code_pick.ts';
 
 /** Two replies: the first with two blocks, the second with one. */
 const BLOCKS: readonly BlockRef[] = [
@@ -373,4 +378,91 @@ test("a picked block's line of keys takes short words where the full one does no
   expect(pickHint(DEFAULT_KEYMAP, true, 76)).toStrictEqual(
     '↑ ↓ another block · c copy · r put in the prompt · esc done',
   );
+});
+
+/** `listedBlocks` as it was before it kept each entry's blocks (CHD-559). */
+function listedOnce(entries: readonly Entry[]) {
+  return entries.flatMap((entry, at) => {
+    const text = listedText(entry);
+
+    if (text === undefined) {
+      return [];
+    }
+
+    const open = openFences(text);
+    const { boxes, quotes } = codePlaces(text);
+
+    return codeBlocks(text).flatMap((block) => {
+      if (open.has(block.index)) {
+        return [];
+      }
+
+      const quote = quotes.findIndex((held) => held.includes(block.index));
+
+      return [
+        {
+          ref: { entry: at, block: block.index },
+          copy: block.text,
+          ...(block.runnable ? { run: runCommand(block.text) } : {}),
+          node: boxes.includes(block.index)
+            ? `code-${at}-${block.index}`
+            : `quote-${at}-${quote}`,
+        },
+      ];
+    });
+  });
+}
+
+describe("a long transcript's code blocks are lexed once per entry (CHD-559)", () => {
+  const reply = (at: number): Entry => ({
+    kind: 'assistant',
+    turnId: `t${at}`,
+    text: [
+      `Reply ${at}:`,
+      '```sh',
+      `$ echo ${at}`,
+      '```',
+      '> ```ts',
+      `> const n = ${at};`,
+      '> ```',
+      ...(at % 4 === 0 ? ['````bash', '$ still open'] : []),
+    ].join('\n'),
+  });
+  const entries: Entry[] = Array.from({ length: 40 }, (_, at): Entry[] => [
+    { kind: 'user', turnId: `t${at}`, text: `ask ${at}` } as Entry,
+    reply(at),
+    {
+      kind: 'message',
+      turnId: `t${at}`,
+      from: { name: 'coder' },
+      text: `\`\`\`js\nlet m = ${at};\n\`\`\``,
+    },
+  ]).flat();
+
+  test('the list is the one listing every entry afresh gave', () => {
+    expect(listedBlocks(entries)).toStrictEqual(listedOnce(entries));
+    // Again, every entry's blocks known.
+    expect(listedBlocks(entries)).toStrictEqual(listedOnce(entries));
+  });
+
+  test('an entry known at one place is named by its new one when the list moves', () => {
+    listedBlocks(entries);
+
+    const moved = [reply(999), ...entries.slice(5)];
+
+    expect(listedBlocks(moved)).toStrictEqual(listedOnce(moved));
+  });
+
+  test("an entry whose text changed is a new entry, and its blocks are its new text's", () => {
+    listedBlocks(entries);
+
+    const closed = entries.map((entry, at) =>
+      at === 1 && entry.kind === 'assistant'
+        ? { ...entry, text: `${entry.text}\n\`\`\`\`` }
+        : entry,
+    );
+
+    expect(listedBlocks(closed)).toStrictEqual(listedOnce(closed));
+    expect(listedBlocks(closed)).not.toStrictEqual(listedBlocks(entries));
+  });
 });

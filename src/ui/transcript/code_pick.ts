@@ -308,41 +308,71 @@ export function listedText(entry: Entry): string | undefined {
     : undefined;
 }
 
+/** A listed block of an entry, whatever the entry's place. */
+interface EntryBlock {
+  readonly block: number;
+  readonly copy: string;
+  readonly run?: string;
+  /** Drawn in a box of its own, or else in a quote, by its place. */
+  readonly box: boolean;
+  readonly quote: number;
+}
+
+/**
+ * Each entry's listed blocks, by the entry: the reducer gives an entry whose
+ * text changes a new object, so one lexed is lexed again only once it has
+ * changed, as a long transcript's blocks are listed on each change of it
+ * (CHD-559).
+ */
+const entryBlocks = new WeakMap<Entry, readonly EntryBlock[]>();
+
+/** `entry`'s listed blocks, lexed once. */
+function blocksOf(entry: Entry): readonly EntryBlock[] {
+  const known = entryBlocks.get(entry);
+
+  if (known !== undefined) {
+    return known;
+  }
+
+  const text = listedText(entry);
+  const blocks: EntryBlock[] = [];
+
+  if (text !== undefined) {
+    const open = openFences(text);
+    const { boxes, quotes } = codePlaces(text);
+
+    for (const block of codeBlocks(text)) {
+      if (!open.has(block.index)) {
+        blocks.push({
+          block: block.index,
+          copy: block.text,
+          ...(block.runnable ? { run: runCommand(block.text) } : {}),
+          box: boxes.includes(block.index),
+          quote: quotes.findIndex((held) => held.includes(block.index)),
+        });
+      }
+    }
+  }
+
+  entryBlocks.set(entry, blocks);
+
+  return blocks;
+}
+
 /**
  * Every listed code block of `entries`, in transcript order, each named by
  * its entry's index and its place among the entry's blocks; a block whose
  * fence is still open is not one yet.
  */
 export function listedBlocks(entries: readonly Entry[]): ListedBlock[] {
-  return entries.flatMap((entry, at) => {
-    const text = listedText(entry);
-
-    if (text === undefined) {
-      return [];
-    }
-
-    const open = openFences(text);
-    const { boxes, quotes } = codePlaces(text);
-
-    return codeBlocks(text).flatMap((block): ListedBlock[] => {
-      if (open.has(block.index)) {
-        return [];
-      }
-
-      const quote = quotes.findIndex((held) => held.includes(block.index));
-
-      return [
-        {
-          ref: { entry: at, block: block.index },
-          copy: block.text,
-          ...(block.runnable ? { run: runCommand(block.text) } : {}),
-          node: boxes.includes(block.index)
-            ? `code-${at}-${block.index}`
-            : `quote-${at}-${quote}`,
-        },
-      ];
-    });
-  });
+  return entries.flatMap((entry, at) =>
+    blocksOf(entry).map((each): ListedBlock => ({
+      ref: { entry: at, block: each.block },
+      copy: each.copy,
+      ...(each.run === undefined ? {} : { run: each.run }),
+      node: each.box ? `code-${at}-${each.block}` : `quote-${at}-${each.quote}`,
+    })),
+  );
 }
 
 /**

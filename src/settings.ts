@@ -117,6 +117,15 @@ const SettingsFile = z
   })
   .partial();
 
+/**
+ * Each key's own schema, for a check of that key alone: `parseSettings`'s drop
+ * loop would cost a whole file for a wrong item in a list.
+ */
+export const SETTING_SCHEMAS = SettingsFile.shape;
+
+/** The same for each key of an agent's settings. */
+export const AGENT_SETTING_SCHEMAS = AgentSettings.shape;
+
 export type AgentSettings = z.infer<typeof AgentSettings>;
 export type Settings = z.infer<typeof SettingsFile>;
 

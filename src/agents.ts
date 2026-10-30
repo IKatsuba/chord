@@ -259,6 +259,47 @@ export async function listedAgents(
   return [...known, ...theirs];
 }
 
+/** What the start screen and `/new` offer, and the names chord could not. */
+export interface OfferedAgents {
+  readonly agents: readonly ListedAgent[];
+  /** Names the setting gives that the catalog lacks, in the setting's order. */
+  readonly unknown: readonly string[];
+}
+
+/**
+ * What the `offeredAgents` setting makes of the catalog. Without it, the
+ * catalog but for an own CLI PATH lacks, as picking it could only fail
+ * (CHD-544). With it, the setting's order, and that CLI keeps its row: the
+ * person named it, and the refusal says what to do (CHD-565, the owner's Q325).
+ * A repeated name keeps its first place.
+ */
+export function offeredAgents(
+  catalog: readonly ListedAgent[],
+  offered: readonly string[] | undefined,
+): OfferedAgents {
+  if (offered === undefined) {
+    return {
+      agents: catalog.filter(({ found }) => found !== false),
+      unknown: [],
+    };
+  }
+
+  const agents: ListedAgent[] = [];
+  const unknown: string[] = [];
+
+  for (const name of new Set(offered)) {
+    const agent = catalog.find((listed) => listed.name === name);
+
+    if (agent === undefined) {
+      unknown.push(name);
+    } else {
+      agents.push(agent);
+    }
+  }
+
+  return { agents, unknown };
+}
+
 /** What chord calls an agent with no title, as the settings files alone define it. */
 export const SETTINGS_ONLY = 'from settings';
 

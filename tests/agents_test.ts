@@ -12,6 +12,7 @@ import {
   listAgents,
   listedAgents,
   missingCommand,
+  offeredAgents,
   startLine,
   takesMcpServers,
 } from '../src/agents.ts';
@@ -375,6 +376,76 @@ test('chord agents marks the own CLIs PATH has, and lists the names only the set
     from: 'settings',
   });
   expect(listed.length).toStrictEqual(listAgents().length + 1);
+});
+
+const CATALOG = [
+  { name: 'claude', title: 'Claude', start: 'npx claude', from: 'npx' },
+  { name: 'codex', title: 'Codex', start: 'npx codex', from: 'npx' },
+  {
+    name: 'goose',
+    title: 'goose',
+    start: 'goose acp',
+    from: 'cli',
+    found: true,
+  },
+  {
+    name: 'cursor',
+    title: 'Cursor',
+    start: 'cursor-agent acp',
+    from: 'cli',
+    found: false,
+  },
+  { name: 'mine', title: undefined, start: 'mine --acp', from: 'settings' },
+] as const;
+
+const names = (offered: ReturnType<typeof offeredAgents>) =>
+  offered.agents.map(({ name }) => name);
+
+test('with no list, chord offers the catalog but for an own CLI PATH lacks', () => {
+  const offered = offeredAgents(CATALOG, undefined);
+
+  expect(names(offered)).toStrictEqual(['claude', 'codex', 'goose', 'mine']);
+  expect(offered.unknown).toStrictEqual([]);
+});
+
+test("a list sets what is offered, in the list's order", () => {
+  const offered = offeredAgents(CATALOG, ['mine', 'codex', 'claude']);
+
+  expect(names(offered)).toStrictEqual(['mine', 'codex', 'claude']);
+  expect(offered.unknown).toStrictEqual([]);
+});
+
+test('a listed own CLI PATH lacks keeps its row, marked as the catalog has it', () => {
+  const offered = offeredAgents(CATALOG, ['cursor', 'goose']);
+
+  expect(offered.agents).toStrictEqual([CATALOG[3], CATALOG[2]]);
+});
+
+test('a name the catalog lacks is unknown, in the order of the list', () => {
+  const offered = offeredAgents(CATALOG, ['zed', 'codex', 'aider']);
+
+  expect(names(offered)).toStrictEqual(['codex']);
+  expect(offered.unknown).toStrictEqual(['zed', 'aider']);
+});
+
+test('a list of only unknown names offers nothing rather than the catalog', () => {
+  expect(offeredAgents(CATALOG, ['zed'])).toStrictEqual({
+    agents: [],
+    unknown: ['zed'],
+  });
+});
+
+test('a repeated name keeps its first place, known or unknown', () => {
+  const offered = offeredAgents(CATALOG, [
+    'codex',
+    'zed',
+    'claude',
+    'codex',
+    'zed',
+  ]);
+
+  expect(names(offered)).toStrictEqual(['codex', 'claude']);
+  expect(offered.unknown).toStrictEqual(['zed']);
 });
 
 test('chord agents writes name, title, mark and start in columns', () => {

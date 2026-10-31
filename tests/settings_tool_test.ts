@@ -1075,6 +1075,102 @@ describe('CHD-568 U9 tester: checked plans and linked reads', () => {
     });
   });
 
+  test('linked unknown fields and server tokens stay out of every answer and row', async () => {
+    await fixture(async (where, user, project) => {
+      const target = join(where.home!, 'checked-target.json');
+      const text = JSON.stringify({
+        UNKNOWN_KEY_CANARY: 'UNKNOWN_VALUE_CANARY',
+        agents: { worker: { model: 'kept', FIELD_CANARY: 'AGENT_CANARY' } },
+        teamSelection: { intent: 'economy', FIELD_CANARY: 'TEAM_CANARY' },
+        mcpServers: {
+          linear: {
+            command: 'COMMAND_CANARY',
+            args: ['ARGS_CANARY'],
+            env: { TOKEN: 'ENV_CANARY' },
+            token: 'TOKEN_CANARY',
+            Env: { TOKEN: 'WRONG_CASE_CANARY' },
+          },
+          invalid: { token: 'INVALID_SERVER_CANARY' },
+        },
+      });
+
+      await writeFile(user, '{"agent":"claude"}');
+      await writeFile(target, text);
+      await symlink(target, project);
+
+      for (const path of [
+        [],
+        ['mcpServers'],
+        ['mcpServers', 'linear', 'token'],
+        ['mcpServers', 'linear', 'env', 'TOKEN'],
+        ['agents', 'worker'],
+      ]) {
+        const result = await readSettingsTool(where, path);
+
+        assert('answer' in result);
+        expect(JSON.stringify(result)).not.toContain('CANARY');
+
+        for (const width of [80, 120]) {
+          for (const expanded of [false, true]) {
+            const rows = settingsRows(
+              {
+                tool: 'settings',
+                input: { action: 'read', path },
+                answer: result.answer,
+                settingsFiles: result.files,
+              },
+              expanded,
+              width,
+            );
+
+            expect(JSON.stringify(rows)).not.toContain('CANARY');
+          }
+        }
+      }
+
+      expect(await readFile(target, 'utf8')).toBe(text);
+      expect(await readFile(user, 'utf8')).toBe('{"agent":"claude"}');
+    });
+  });
+
+  test('two broken layers expose only fixed parse words, including a linked project', async () => {
+    await fixture(async (where, user, project) => {
+      const target = join(where.home!, 'broken-target.json');
+
+      await writeFile(user, '{"theme":USER_BROKEN_CANARY}');
+      await writeFile(target, '{"KEY_CANARY":PROJECT_BROKEN_CANARY}');
+      await symlink(target, project);
+
+      for (const path of [[], ['theme']]) {
+        const result = await readSettingsTool(where, path);
+
+        assert('answer' in result);
+        expect(result.answer.problems.map(({ message }) => message)).toEqual([
+          'not valid JSON; ignored',
+          'not valid JSON; ignored',
+        ]);
+        expect(JSON.stringify(result)).not.toContain('CANARY');
+
+        for (const expanded of [false, true]) {
+          expect(
+            JSON.stringify(
+              settingsRows(
+                {
+                  tool: 'settings',
+                  input: { action: 'read', path },
+                  answer: result.answer,
+                  settingsFiles: result.files,
+                },
+                expanded,
+                80,
+              ),
+            ),
+          ).not.toContain('CANARY');
+        }
+      }
+    });
+  });
+
   test('completed reads follow a link, then observe a regular file and dangling replacement', async () => {
     await fixture(async (where, user, project) => {
       const target = join(where.home!, 'target.json');

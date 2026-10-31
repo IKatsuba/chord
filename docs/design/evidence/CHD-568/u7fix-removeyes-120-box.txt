@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u9
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: "theme": invalid option: expected one of "auto"|"dark"|"light"|"dark-
+   daltonized"|"light-daltonized"|"dark-ansi"|"light-ansi", ignored
+
+ › settingsremove
+
+ ⏺ Settings(theme) · remove
+   ⎿  Now    {"env":{"TOKEN":"***"}}
+      After  not set
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for you… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Remove theme?                                                                                                        │
+│                                                                                                                      │
+│ ❯ 1. Yes, in ~/.config/chord/settings.json                                                                           │
+│   2. No, tell fake what to change                                                                                    │
+│                                                                                                                      │
+│ Esc to tell fake what to change                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

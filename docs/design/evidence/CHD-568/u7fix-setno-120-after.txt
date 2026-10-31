@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u9
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: "theme": invalid option: expected one of "auto"|"dark"|"light"|"dark-
+   daltonized"|"light-daltonized"|"dark-ansi"|"light-ansi", ignored
+
+ › settingstheme
+
+ ⏺ Settings(theme) · change
+   ⎿  Now    {"env":{"TOKEN":"***"}}
+      After  "light"
+      Not saved · the person will say what to change
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

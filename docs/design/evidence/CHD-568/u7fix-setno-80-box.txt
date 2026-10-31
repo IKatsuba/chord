@@ -1,0 +1,24 @@
+   "auto"|"dark"|"light"|"dark-daltonized"|"light-daltonized"|"dark-
+   ansi"|"light-ansi", ignored
+
+ › settingstheme
+
+ ⏺ Settings(theme) · change
+   ⎿  Now    {"env":{"TOKEN":"***"}}
+      After  "light"
+
+ ››› Waiting for you… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Change theme?                                                                │
+│                                                                              │
+│ ❯ 1. Yes, in ~/.config/chord/settings.json                                   │
+│   2. No, tell fake what to change                                            │
+│                                                                              │
+│ Esc to tell fake what to change                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

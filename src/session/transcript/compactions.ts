@@ -1,5 +1,5 @@
 /** A compaction the agent ran, by its id, with the summary it kept. */
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { textOf } from './messages.ts';
 import type { Compaction, Transcript } from './types.ts';
 import { appended } from './entries.ts';

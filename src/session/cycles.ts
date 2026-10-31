@@ -4,7 +4,7 @@
  * unasked turns. chord knows one only where the agent marks its end (the
  * owner's Q49, CHD-426): what marks a cycle, read off an update.
  */
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 
 /**
  * The `_claude/origin` kinds of a cycle Claude Code started on its own, as

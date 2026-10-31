@@ -453,8 +453,9 @@ rest.
 
 Read in chord's own client at HEAD 287fedc3: `src/acp/`, `src/session/`,
 `src/headless.ts` and the launch in `src/agents.ts` and `src/clis.ts`, on
-`@agentclientprotocol/sdk` 1.8.0. Each entry says what chord uses and what it
-leaves unused, in the summary's codes.
+`@agentclientprotocol/sdk` 1.8.0; chord has since moved to 2.2.0's `/unstable`
+entry. Each entry says what chord uses and what it leaves unused, in the
+summary's codes.
 
 Four things are not as earlier notes had them: chord never calls
 `session/list`; a cost of 0 from an agent counts as a cost and stops chord's

@@ -3,7 +3,7 @@
  * component. ink-select-input moves the highlight and reads 1–9, ↑/↓, j/k
  * and Enter; this module says what is on the list and what a pick answers.
  */
-import type { PermissionOption } from '@agentclientprotocol/sdk';
+import type { PermissionOption } from '@agentclientprotocol/sdk/unstable';
 import stringWidth from 'string-width';
 import type {
   Entry,

@@ -12,7 +12,7 @@ import type {
   SessionUpdate,
   ToolCallUpdate,
   Usage,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { modelsOf, modesOf } from './agent_state.ts';
 import {
   answerOf,

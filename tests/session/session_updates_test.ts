@@ -6,7 +6,7 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import process from 'node:process';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import type { PendingPermission } from '../../src/session/permissions.ts';
 import { plainText } from '../../src/session/terminal_text.ts';
 import { agentEnv, type Session } from '../../src/session/session.ts';

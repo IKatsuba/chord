@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { AvailableCommand } from '@agentclientprotocol/sdk';
+import type { AvailableCommand } from '@agentclientprotocol/sdk/unstable';
 import {
   agentItems,
   agentQuery,

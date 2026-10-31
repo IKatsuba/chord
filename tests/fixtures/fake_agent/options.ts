@@ -3,7 +3,7 @@
  * at start. Here rather than in `main.ts` because the scenarios read them too,
  * and `main.ts` imports the scenarios.
  */
-import type { McpCapabilities } from '@agentclientprotocol/sdk';
+import type { McpCapabilities } from '@agentclientprotocol/sdk/unstable';
 import process from 'node:process';
 
 /** The flags after the script, as the runtime was given them. */

@@ -256,7 +256,7 @@ import { existsSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { Readable, Writable } from 'node:stream';
 import { setTimeout as delay } from 'node:timers/promises';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { splitContext } from '../../../src/session/context.ts';
 import { FAKE_COMMANDS } from '../commands.ts';
 import { LINK_URL } from '../forms.ts';

@@ -3,7 +3,7 @@
  * when a background task ends, its end only a usage update of an autonomous
  * origin, and codebuddy's unasked turn, marked at both ends.
  */
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { COST_FROM, CYCLE_COST } from '../options.ts';
 import { costs } from '../sessions.ts';
 import { type Client, lifetime, pause, type Play, type Turn } from '../turn.ts';

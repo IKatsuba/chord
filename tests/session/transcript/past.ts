@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import type { TranscriptAction } from '../../../src/session/transcript/types.ts';
 
 /**

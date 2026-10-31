@@ -5,7 +5,7 @@ import type {
   PromptResponse,
   SessionNotification,
   SessionUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import process from 'node:process';
 import { type Agent, openAgent } from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';

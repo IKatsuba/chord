@@ -3,7 +3,7 @@
  * agents in (CHD-435), so it says so with the agent's own words and the ways
  * in the agent offers, read from the protocol, never from the text.
  */
-import type { AuthMethod } from '@agentclientprotocol/sdk';
+import type { AuthMethod } from '@agentclientprotocol/sdk/unstable';
 
 /** ACP's `authRequired`: the agent needs a login before it opens a session. */
 export const AUTH_REQUIRED = -32000;

@@ -3,7 +3,7 @@
  * edits with their diffs, a turn of many calls, and headlines longer than a
  * row, an MCP call's among them.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { EDIT_NEW, EDIT_OLD, REWRITE_NEW, REWRITE_OLD } from '../../edits.ts';
 import {
   NOTE_ARGUMENTS,

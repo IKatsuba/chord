@@ -5,7 +5,7 @@
  * one chord opened, and what the window reads of the subagents the transcript
  * holds.
  */
-import type { SessionNotification } from '@agentclientprotocol/sdk';
+import type { SessionNotification } from '@agentclientprotocol/sdk/unstable';
 import type {
   Entry,
   PermissionWait,

@@ -1,4 +1,4 @@
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { describe, expect, test } from 'bun:test';
 import {
   EMPTY_WIRE,

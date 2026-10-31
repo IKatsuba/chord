@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { FILLED } from '../../src/session/enrich.ts';
 import { turnCost } from '../../src/session/prices.ts';
 import {

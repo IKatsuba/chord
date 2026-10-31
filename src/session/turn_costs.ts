@@ -6,7 +6,7 @@
  * what the sum moved by in it, within one opening of the session; only the
  * first figure of an opening needs to know which.
  */
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import type { CostCount, UsageCount } from '../cost_counts.ts';
 import { filledIn } from './enrich.ts';
 import { PRICE_CURRENCY, turnCost } from './prices.ts';

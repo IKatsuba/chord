@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { McpCapabilities, McpServer } from '@agentclientprotocol/sdk';
+import type {
+  McpCapabilities,
+  McpServer,
+} from '@agentclientprotocol/sdk/unstable';
 import {
   type HeldBack,
   heldBackLine,

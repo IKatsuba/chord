@@ -4,7 +4,7 @@ import type {
   AnyMessage,
   SessionConfigOption,
   SessionUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import {
   enricherRelay,
   FILLED,

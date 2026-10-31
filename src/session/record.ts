@@ -4,7 +4,7 @@
  * session under `records/` in chord's state directory, appended to as the
  * session goes, so a long session costs one line per update, not a rewrite.
  */
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { join } from 'node:path';
 import { appendFile, mkdir, open, readdir, readFile } from 'node:fs/promises';
 import pLimit from 'p-limit';

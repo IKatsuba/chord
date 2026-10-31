@@ -2087,10 +2087,13 @@ the window. One agent process and one ACP v1 connection: start, `initialize`,
 sessions, prompts, the requests the agent sends, and a bounded close.
 
 - **`client()`, not `ClientSideConnection`.** The 2026-10-06 entry names
-  `ClientSideConnection`; in SDK 1.7 it is deprecated in favour of
-  `client().onRequest(...).connect(stream)`, which is what the fake agent's
-  `agent()` mirrors and what acpx 0.19.4 uses too. Same SDK, same
-  `ndJsonStream` on the agent's stdio.
+  `ClientSideConnection`; SDK 1.7 deprecates it and SDK 2.0 removes it in
+  favour of `client().onRequest(...).connect(stream)`, which is what the fake
+  agent's `agent()` mirrors and what acpx 0.19.4 uses too. Same SDK, same
+  `ndJsonStream` on the agent's stdio. From SDK 2.0 the default entry is stable
+  ACP v1 only; chord uses unstable features (plans, forks, subagents), so
+  everything imports `@agentclientprotocol/sdk/unstable`, as its migration
+  guide asks of one app and its in-process peers.
 - **Every message reaches one subscriber raw, before the SDK sees it.** A
   stream tap (`traffic.ts`) hands each JSON-RPC message, either way, to the
   subscriber in wire order, and the agent's stderr with them. The agent's
@@ -6164,8 +6167,8 @@ through `_session/steering`, the extension Claude's adapter (0.87.0) and
 Codex's (2.1.1, as the registry pins it; 1.10.0 the same) answer and
 advertise as `InitializeResponse._meta.steering.supported`. No new library:
 the ACP SDK sends a method its schema lacks through the same
-`connection.agent.request(method, params)` as the rest, which its
-deprecated `extMethod` now defers to, and nothing is hand-rolled on the
+`connection.agent.request(method, params)` as the rest, the replacement SDK
+2.0 names for the `extMethod` it removes, and nothing is hand-rolled on the
 wire. chord reads the advertisement in `connection.ts` and refuses to ask an
 agent that does not make it.
 

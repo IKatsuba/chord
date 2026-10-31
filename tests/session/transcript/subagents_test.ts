@@ -1,6 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import type { ContentBlock, SessionUpdate } from '@agentclientprotocol/sdk';
+import type {
+  ContentBlock,
+  SessionUpdate,
+} from '@agentclientprotocol/sdk/unstable';
 import { subagentsIn } from '../../../src/session/subagents.ts';
 import { taskUpdate } from '../../../src/session/tasks.ts';
 import type {

@@ -7,7 +7,7 @@
  * `coder`'s, which messages `tester`. A team agent's first prompt is played
  * by its part's role, as main.ts reads it, so the job reads as a real one.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { readFileSync } from 'node:fs';
 import { parseTeam } from '../../../../src/teams.ts';
 import { LEAD_OPENS, PROPOSE_TEAM, STEP_MS, TESTER_PLAYS } from '../options.ts';

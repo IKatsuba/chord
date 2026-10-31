@@ -5,7 +5,7 @@
 import type {
   SessionConfigOption,
   SessionModeState,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 
 export interface AgentMode {
   readonly id: string;

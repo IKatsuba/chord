@@ -7,7 +7,7 @@ import type {
   SessionUpdate,
   StateUpdate,
   SubagentUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
 import { TOKEN_FIELDS, type TokenUsage } from '../usage.ts';
 import {

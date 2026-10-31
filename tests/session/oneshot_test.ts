@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtemp, readdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { runOneshot } from '../../src/session/oneshot.ts';
 import type { ElicitationWait } from '../../src/session/transcript/types.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';

@@ -9,7 +9,7 @@ import type {
   SessionConfigOption,
   SessionModeState,
   SessionUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { type AgentOption, optionsFromConfigOptions } from './config.ts';
 import { type AgentEfforts, effortsFrom } from './efforts.ts';
 import { type AgentModels, modelsFrom } from './models.ts';

@@ -14,7 +14,7 @@ import type {
   ToolCallContent,
   ToolCallLocation,
   ToolKind,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import type { PlanPhase, PlanTodo } from '../../acp/plans.ts';
 import type { Questions } from '../questions.ts';
 import type { OpenEscape, TerminalCursor } from '../terminal_text.ts';

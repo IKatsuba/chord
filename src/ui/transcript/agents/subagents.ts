@@ -8,7 +8,7 @@
  */
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
-import type { PlanEntry } from '@agentclientprotocol/sdk';
+import type { PlanEntry } from '@agentclientprotocol/sdk/unstable';
 import type {
   Entry,
   PermissionWait,

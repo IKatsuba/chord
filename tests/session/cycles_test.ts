@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { cycleMark } from '../../src/session/cycles.ts';
 
 const usage = (meta?: Record<string, unknown>) =>

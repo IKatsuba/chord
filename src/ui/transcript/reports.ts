@@ -4,7 +4,7 @@
  * and what chord knows of it. Nothing the agent has not reported is drawn as
  * a zero; the report says the agent has not said.
  */
-import type { Cost } from '@agentclientprotocol/sdk';
+import type { Cost } from '@agentclientprotocol/sdk/unstable';
 import { type AgentModels, modelName } from '../../session/models.ts';
 import type { AgentMode } from '../../session/modes.ts';
 import type { ReportRow, Usage } from '../../session/transcript/types.ts';

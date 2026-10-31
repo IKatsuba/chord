@@ -5,7 +5,7 @@
  * codex-acp 2.2.2's `request_user_input`, factory-droid 0.236.0's, opencode's
  * and dimcode's.
  */
-import type { CreateElicitationRequest } from '@agentclientprotocol/sdk';
+import type { CreateElicitationRequest } from '@agentclientprotocol/sdk/unstable';
 
 /** A form request, before the session it goes to is named. */
 export type QuestionForm = Omit<

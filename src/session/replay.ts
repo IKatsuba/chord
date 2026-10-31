@@ -4,7 +4,10 @@
  * shell runs whose output went with it, and what followed it, and each turn's
  * end. A past chord recorded itself is drawn by `record.ts`.
  */
-import type { ContentBlock, SessionUpdate } from '@agentclientprotocol/sdk';
+import type {
+  ContentBlock,
+  SessionUpdate,
+} from '@agentclientprotocol/sdk/unstable';
 import { splitContext } from './context.ts';
 import { withImages } from './record.ts';
 import type { TranscriptAction } from './transcript/types.ts';

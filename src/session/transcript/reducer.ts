@@ -7,7 +7,7 @@
  * the person for and its answer, a cancel, the turn's result, and the agent
  * going away.
  */
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { filledIn } from '../enrich.ts';
 import { awaitedCall, replacedCall, served } from './chord.ts';
 import { mergeCompaction } from './compactions.ts';

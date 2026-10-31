@@ -9,7 +9,7 @@ import type {
   SessionUpdate,
   StateUpdate,
   ToolCallUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import {
   Conversation,
   type ConversationEvent,

@@ -1,5 +1,5 @@
 /** Codex Guardian reviews, with codex-acp v2.2.2's structured verdicts. */
-import type { ToolCallContent } from '@agentclientprotocol/sdk';
+import type { ToolCallContent } from '@agentclientprotocol/sdk/unstable';
 import { gateOpened, GATE_RELEASE } from './agents.ts';
 import type { Play, Turn } from '../turn.ts';
 

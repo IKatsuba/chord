@@ -1,5 +1,5 @@
 /** Subagents in Codex's draft form, and in ACP's own `subagent_update` as Claude's adapter sends it. */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { clientTakesSubagents } from '../client.ts';
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir } from 'node:fs/promises';

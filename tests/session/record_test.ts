@@ -36,7 +36,7 @@ import {
   windowed,
   type WindowedAction,
 } from '../../src/ui/app/state.ts';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { endedLine } from '../../src/ui/transcript/ended.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';

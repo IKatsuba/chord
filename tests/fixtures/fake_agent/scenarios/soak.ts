@@ -6,7 +6,7 @@
  * `soakturn` back to whoever sent it. Main, the lead and both members so
  * each take turn after turn, three chains through the lead, never ending.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { STEP_MS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';
 import { callChord, chordClient } from './chord_tools.ts';

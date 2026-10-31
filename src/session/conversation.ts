@@ -1,4 +1,7 @@
-import type { AvailableCommand, SessionUpdate } from '@agentclientprotocol/sdk';
+import type {
+  AvailableCommand,
+  SessionUpdate,
+} from '@agentclientprotocol/sdk/unstable';
 import { CYCLE_WORK, cycleMark } from './cycles.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ResourceLink } from '../files.ts';

@@ -4,7 +4,7 @@
  * Claude's adapter (`effort`) and Codex's (`reasoning_effort`) mark theirs so;
  * the option is found by its category alone, never by an id or a name.
  */
-import type { SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 
 export interface AgentEffort {
   readonly id: string;

@@ -10,7 +10,7 @@
 import type {
   ElicitationContentValue,
   ElicitationSchema,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
 import type { ElicitationReply } from '../../session/elicitations.ts';
 import type { KeyPress } from '../shortcuts/state.ts';

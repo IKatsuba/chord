@@ -2,7 +2,7 @@
  * The agent's models: the ones it offers, in its own order, and the one it
  * says it uses. `/model` lists them.
  */
-import type { SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 
 export interface AgentModel {
   readonly id: string;

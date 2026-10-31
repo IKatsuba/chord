@@ -2,7 +2,7 @@
  * What the fake agent's `form` and `link` scenarios ask for, shared with the
  * tests that check how chord draws and answers them.
  */
-import type { ElicitationSchema } from '@agentclientprotocol/sdk';
+import type { ElicitationSchema } from '@agentclientprotocol/sdk/unstable';
 
 /** The `form` scenario's fields: one of each kind a form can ask for. */
 export const FORM_SCHEMA: ElicitationSchema = {

@@ -13,7 +13,7 @@ import type {
   SessionUpdate,
   ToolKind,
   Usage,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import type { Relay } from '../acp/traffic.ts';
 import {
   type AgentState,

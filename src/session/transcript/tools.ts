@@ -2,7 +2,10 @@
  * A tool call, merged from its `tool_call` and every update to it, with the
  * terminals its commands ran in folded from its `_meta`.
  */
-import type { SessionUpdate, ToolCallContent } from '@agentclientprotocol/sdk';
+import type {
+  SessionUpdate,
+  ToolCallContent,
+} from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
 import { OUTPUT_LIMIT } from '../context.ts';
 import { GUARDIAN_REVIEW, MCP_CALL } from '../enrich.ts';

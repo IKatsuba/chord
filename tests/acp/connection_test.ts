@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   type Agent,
   AgentGone,
@@ -829,6 +829,8 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
           ),
         );
       },
+      /** One line on the agent's stdout, as written. */
+      say: (line: string) => out.enqueue(encoder.encode(`${line}\n`)),
       /** The agent's stdout ends, before its stderr has. */
       closeStdout: () => out.close(),
       /** Its last words and its stderr's end, while it lives on. */
@@ -928,6 +930,32 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
 
     return await agent;
   };
+
+  test('a JSON array from the agent is refused by the SDK, unseen by the tap, and the connection lives on', async () => {
+    const held = heldProcess();
+    const seen = new Seen();
+    const agent = connectAgent(held.process, {
+      ...OPTIONS,
+      onTraffic: seen.push,
+    });
+
+    await soon(() => held.heard.length > 0);
+    held.say('[{"jsonrpc":"2.0","method":"session/update","params":{}}]');
+    await soon(() => held.heard.some((each) => each['id'] === null));
+
+    expect(held.heard.find((each) => each['id'] === null)).toMatchObject({
+      error: { code: -32600 },
+    });
+    expect(seen.all.filter((each) => each.from === 'agent')).toEqual([]);
+
+    held.answer('initialize', {
+      protocolVersion: 1,
+      agentCapabilities: {},
+      authMethods: [],
+    });
+
+    await (await agent).close();
+  });
 
   test('at start: the open waits past the end of stdout for the last words, and says them', async () => {
     const held = heldProcess();

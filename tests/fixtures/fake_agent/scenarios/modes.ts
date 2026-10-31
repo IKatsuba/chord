@@ -4,7 +4,7 @@
  */
 import { NO_MODES } from '../options.ts';
 import { configOptions, locked, modes, permissions } from '../sessions.ts';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { type Play } from '../turn.ts';
 
 /** The plan `claudeexitplan` asks to have approved. */

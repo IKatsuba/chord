@@ -1,7 +1,7 @@
 /**
  * Compactions as Claude's and Codex's adapters run them, and one that fails.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { COMPACT_ERROR, COMPACT_SUMMARY } from '../../compactions.ts';
 import { clientTakesCompaction } from '../client.ts';
 import { STEP_MS } from '../options.ts';

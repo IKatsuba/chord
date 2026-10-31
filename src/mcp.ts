@@ -6,7 +6,7 @@
  * reads these files; it never writes `.mcp.json` or the agent's own
  * configuration.
  */
-import type { McpServer } from '@agentclientprotocol/sdk';
+import type { McpServer } from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
 import { join } from 'node:path';
 import { readFile } from 'node:fs/promises';

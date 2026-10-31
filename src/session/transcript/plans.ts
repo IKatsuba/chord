@@ -2,7 +2,7 @@
  * A plan by id: `plan_update` and `plan_removed`. The older `plan` update,
  * which only replaces the live list, the reducer folds itself.
  */
-import type { PlanUpdateContent } from '@agentclientprotocol/sdk';
+import type { PlanUpdateContent } from '@agentclientprotocol/sdk/unstable';
 import type { Entry, Transcript } from './types.ts';
 import { appended, replacedAt } from './entries.ts';
 

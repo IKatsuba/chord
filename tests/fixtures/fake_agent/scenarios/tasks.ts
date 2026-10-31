@@ -4,7 +4,7 @@
  * `send_message` before its report.
  */
 import { once } from 'node:events';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { STEP_MS } from '../options.ts';
 import { steeredInto } from '../sessions.ts';
 import { lifetime, pause, type Play, type Turn } from '../turn.ts';

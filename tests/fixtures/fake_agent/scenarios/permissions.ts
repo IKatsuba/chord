@@ -3,7 +3,7 @@
  * and MCP calls asked for by their name and arguments alone, one of them a
  * file too long for the box.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { RELEASE_NOTES } from '../../release_notes.ts';
 import { STEP_MS } from '../options.ts';
 import { lifetime, pause, steeredIn, type Play, type Turn } from '../turn.ts';

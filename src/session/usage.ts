@@ -3,7 +3,7 @@
  * prompt gives them, and its own cost, as chord found it, kept by chord for
  * the life of the window.
  */
-import type { Usage } from '@agentclientprotocol/sdk';
+import type { Usage } from '@agentclientprotocol/sdk/unstable';
 import type { TurnCost } from './turn_costs.ts';
 
 /**

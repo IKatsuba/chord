@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { setImmediate as settleQueued } from 'node:timers/promises';
-import { type SessionUpdate } from '@agentclientprotocol/sdk';
+import { type SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import {
   Conversation,
   type ConversationEvent,

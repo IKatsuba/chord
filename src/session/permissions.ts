@@ -3,7 +3,7 @@ import type {
   RequestPermissionRequest,
   RequestPermissionResponse,
   ToolCallUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import type { PermissionWait } from './transcript/types.ts';
 
 /**

@@ -1,4 +1,4 @@
-import type { AnyMessage, Stream } from '@agentclientprotocol/sdk';
+import type { AnyMessage, Stream } from '@agentclientprotocol/sdk/unstable';
 
 /**
  * One thing that crossed between chord and the agent: a JSON-RPC message
@@ -57,6 +57,9 @@ export function relayStream(stream: Stream, relay: Relay): Stream {
  * and the SDK would only check them against its schema: an update of a kind it
  * does not know fails that check, and it says so on the console, under the
  * window. `$/cancel_request` still goes through, as the SDK acts on it.
+ *
+ * A JSON array from the agent never comes here: ACP has no batches, so the
+ * SDK's `ndJsonStream`, beneath this tap, answers it -32600 itself.
  */
 export function tapStream(
   stream: Stream,

@@ -1,5 +1,5 @@
 /** Elicitations: a form to fill in and a link to open. */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { FORM_SCHEMA, LINK_URL } from '../../forms.ts';
 import {
   CLAUDE_QUESTION,

@@ -3,9 +3,24 @@
  * whatever the run's `XDG_CONFIG_HOME` holds: a test's fixture, never a
  * person's own.
  */
+import { existsSync } from 'node:fs';
+import {
+  mkdir,
+  mkdtemp,
+  rm,
+  rmdir,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { cwds } from '../sessions.ts';
 import type { Play } from '../turn.ts';
 import { GATE_RELEASE, gateOpened } from './agents.ts';
 import { callChord, chordClient } from './chord_tools.ts';
+
+/** What a linked file holds, none of which a read may show. */
+export const LINK_TARGET = { agent: 'linked-target-agent' };
 
 const calls =
   (...each: readonly Record<string, unknown>[]): Play =>
@@ -119,7 +134,53 @@ const withdrawn: Play = async (turn) => {
   return 'end_turn';
 };
 
+/**
+ * What the read says of a linked project file: a link planted at
+ * `.chord/settings.json` to a file outside it, every key then one, the link
+ * taken away after. A working directory that already holds that file is left
+ * alone, and says so.
+ */
+const readLinked: Play = async (turn) => {
+  const client = await chordClient(turn);
+  const directory = join(cwds.get(turn.sessionId) ?? '.', '.chord');
+  const link = join(directory, 'settings.json');
+
+  if (client === undefined || existsSync(link)) {
+    await turn.say('No link planted.');
+    await client?.close();
+
+    return 'end_turn';
+  }
+
+  const made = !existsSync(directory);
+  const outside = await mkdtemp(join(tmpdir(), 'chord-fake-linked-'));
+  const target = join(outside, 'target.json');
+
+  try {
+    await writeFile(target, JSON.stringify(LINK_TARGET));
+    await mkdir(directory, { recursive: true });
+    await symlink(target, link);
+    await callChord(turn, client, 'settings', { action: 'read' });
+    await callChord(turn, client, 'settings', {
+      action: 'read',
+      path: ['agent'],
+    });
+  } finally {
+    await rm(link, { force: true });
+
+    if (made) {
+      await rmdir(directory);
+    }
+
+    await rm(outside, { recursive: true });
+    await client.close();
+  }
+
+  return 'end_turn';
+};
+
 export const SETTINGS = {
+  settingsreadlinked: readLinked,
   settingsoverlap: overlap,
   // Every key, folded on its row until ctrl+o.
   settingsread: calls({ action: 'read' }),

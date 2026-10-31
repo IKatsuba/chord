@@ -177,7 +177,13 @@ export function settingsRows(
     return [
       ...labelled('Effective  ', valueWords(answer.effective), width),
       ...labelled('User       ', valueWords(answer.user), width),
-      ...labelled('Project    ', valueWords(answer.project), width),
+      ...labelled(
+        'Project    ',
+        call.settingsFiles?.projectLinked === true
+          ? 'not read'
+          : valueWords(answer.project),
+        width,
+      ),
     ];
   }
 

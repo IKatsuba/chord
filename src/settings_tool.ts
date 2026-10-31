@@ -1,6 +1,7 @@
 import type { z } from '@zod/zod';
-import { readFile } from 'node:fs/promises';
+import { lstat, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
+import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { notFound } from './not_found.ts';
 import { TeamSelection } from './session/budgets.ts';
@@ -8,7 +9,9 @@ import {
   AGENT_SETTING_SCHEMAS,
   canBeSettingPath,
   loadSettings,
+  mergeSettings,
   NO_SETTINGS_HOME,
+  parseSettings,
   readSettingsObject,
   SETTING_SCHEMAS,
   settingAt,
@@ -306,59 +309,82 @@ function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-/** `env` or `headers`: key names kept, every value hidden, whatever its shape. */
-function maskedSecrets(value: unknown): unknown {
+/** The keys whose values may carry a secret, whatever holds them. */
+const SECRET_KEYS: ReadonlySet<string> = new Set([
+  'env',
+  'headers',
+  'command',
+  'args',
+  'url',
+]);
+
+/** Every leaf hidden, a list's or an object's shape kept. */
+function maskedLeaves(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(maskedLeaves);
+  }
+
   return isObject(value)
-    ? Object.fromEntries(Object.keys(value).map((key) => [key, MASK]))
+    ? Object.fromEntries(
+        Object.entries(value).map(([key, held]) => [key, maskedLeaves(held)]),
+      )
     : MASK;
 }
 
-/** One server, a list that a wrong file gave in place of one included. */
-function maskedServer(server: unknown): unknown {
-  if (Array.isArray(server)) {
-    return server.map(maskedServer);
+/** Every value under a secret key's name hidden, whatever the depth or shape. */
+function maskedByName(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map(maskedByName);
   }
 
-  if (!isObject(server)) {
-    return server;
-  }
-
-  const masked = { ...server };
-
-  for (const key of ['env', 'headers']) {
-    if (Object.hasOwn(masked, key)) {
-      masked[key] = maskedSecrets(masked[key]);
-    }
-  }
-
-  return masked;
+  return isObject(value)
+    ? Object.fromEntries(
+        Object.entries(value).map(([key, held]) => [
+          key,
+          SECRET_KEYS.has(key) ? maskedLeaves(held) : maskedByName(held),
+        ]),
+      )
+    : value;
 }
 
 /**
- * A settings object with every MCP server's `env` and `headers` hidden. Done
- * before any path is walked, so no path reads under a mask.
+ * Settings with what may be secret hidden, so a file of the wrong shape hides
+ * what the right one would; an `mcpServers` no name can be found in is hidden
+ * whole. Done before any path is walked: a path below a leaf is not set.
  */
 export function maskedSettings(settings: unknown): unknown {
-  if (!isObject(settings) || !Object.hasOwn(settings, 'mcpServers')) {
-    return settings;
+  const masked = maskedByName(settings);
+
+  return isObject(masked) &&
+    Object.hasOwn(masked, 'mcpServers') &&
+    typeof masked['mcpServers'] !== 'object'
+    ? { ...masked, mcpServers: MASK }
+    : masked;
+}
+
+/**
+ * The name of the link a project's settings file is reached through, if one
+ * is: a repository may plant one, and chord's server runs outside any agent's
+ * sandbox, so the tool does not read through it. Only the project's own two
+ * names are looked at, so a working directory under a link is no refusal, and
+ * neither is opened: `lstat` reads no content and sees a dangling link too.
+ */
+async function projectLink(cwd: string): Promise<string | undefined> {
+  const directory = join(cwd, '.chord');
+
+  for (const name of [directory, join(directory, 'settings.json')]) {
+    const found = await lstat(name).catch(() => undefined);
+
+    if (found === undefined) {
+      return undefined;
+    }
+
+    if (found.isSymbolicLink()) {
+      return name;
+    }
   }
 
-  const servers = settings['mcpServers'];
-
-  return {
-    ...settings,
-    // A shape no server can be read from still may hold what it would have.
-    mcpServers: isObject(servers)
-      ? Object.fromEntries(
-          Object.entries(servers).map(([name, server]) => [
-            name,
-            maskedServer(server),
-          ]),
-        )
-      : Array.isArray(servers)
-        ? maskedServer(servers)
-        : MASK,
-  };
+  return undefined;
 }
 
 /**
@@ -371,9 +397,11 @@ export function shownHome(where: SettingsWhere): string {
 }
 
 /** A file as written and what its row says of it, or that it is not there. */
-async function writtenFile(
-  file: string | undefined,
-): Promise<{ readonly written: unknown; readonly state: string }> {
+async function writtenFile(file: string | undefined): Promise<{
+  readonly written: unknown;
+  readonly state: string;
+  readonly text?: string;
+}> {
   if (file === undefined) {
     return { written: null, state: 'no home directory' };
   }
@@ -393,14 +421,14 @@ async function writtenFile(
     const written: unknown = JSON.parse(text);
 
     if (!isObject(written)) {
-      return { written: null, state: 'not a JSON object' };
+      return { written: null, state: 'not a JSON object', text };
     }
 
     const keys = Object.keys(written).length;
 
-    return { written, state: `${keys} ${keys === 1 ? 'key' : 'keys'}` };
+    return { written, state: `${keys} ${keys === 1 ? 'key' : 'keys'}`, text };
   } catch {
-    return { written: null, state: 'not valid JSON' };
+    return { written: null, state: 'not valid JSON', text };
   }
 }
 
@@ -430,6 +458,26 @@ function concerns(problem: SettingsProblem, path: readonly string[]): boolean {
   return path.slice(0, key.length).every((part, index) => part === key[index]);
 }
 
+/** The user's file alone, as a read takes it with the project's left out. */
+function userLayer(
+  file: string | undefined,
+  { state, text }: Awaited<ReturnType<typeof writtenFile>>,
+): { readonly settings: unknown; readonly problems: SettingsProblem[] } {
+  if (file !== undefined && text !== undefined) {
+    const { settings, problems } = parseSettings(file, text);
+
+    return { settings: mergeSettings(settings), problems };
+  }
+
+  return {
+    settings: {},
+    problems:
+      file !== undefined && state === 'cannot be read'
+        ? [{ file, kind: 'read', message: state }]
+        : [],
+  };
+}
+
 /** A `settings` read: the answer the agent gets. */
 export interface SettingsRead {
   /** The file as written, masked; null where there is none to read. */
@@ -454,7 +502,11 @@ export async function readSettingsTool(
 ): Promise<
   | {
       readonly answer: SettingsRead;
-      readonly files: { readonly user: string; readonly project: string };
+      readonly files: {
+        readonly user: string;
+        readonly project: string;
+        readonly projectLinked?: true;
+      };
     }
   | { readonly error: string }
 > {
@@ -467,25 +519,43 @@ export async function readSettingsTool(
   const userFile = userSettingsFile(where.configHome);
   const projectFile = settingsFiles(where).at(-1)!;
   const user = await writtenFile(userFile);
-  const project = await writtenFile(projectFile);
-  const loaded = await loadSettings({
-    configHome: where.configHome,
-    cwd: where.cwd,
-    home,
-  });
+  const link = await projectLink(where.cwd);
+  // Whatever a linked file holds stays out, the problems it would cost too.
+  const project =
+    link === undefined
+      ? await writtenFile(projectFile)
+      : { written: null, state: 'a symbolic link, not read' };
+  const loaded =
+    link === undefined
+      ? await loadSettings({
+          configHome: where.configHome,
+          cwd: where.cwd,
+          home,
+        })
+      : userLayer(userFile, user);
   const atPath = (value: unknown) => settingAt(maskedSettings(value), path);
 
   return {
     answer: {
       user: atPath(user.written),
-      project: atPath(project.written),
+      project: link === undefined ? atPath(project.written) : null,
       effective: atPath(loaded.settings),
-      problems: loaded.problems
-        .filter((problem) => concerns(problem, path))
-        .map((problem) => ({
-          file: shownPath(problem.file, shown),
-          message: readProblem(problem),
-        })),
+      problems: [
+        ...loaded.problems
+          .filter((problem) => concerns(problem, path))
+          .map((problem) => ({
+            file: shownPath(problem.file, shown),
+            message: readProblem(problem),
+          })),
+        ...(link === undefined
+          ? []
+          : [
+              {
+                file: shownPath(projectFile, shown),
+                message: `${shownPath(link, shown)} is a symbolic link, so it was not read: project and effective omit it. A start still follows the link`,
+              },
+            ]),
+      ],
     },
     files: {
       user:
@@ -493,6 +563,7 @@ export async function readSettingsTool(
           ? user.state
           : `${shownPath(userFile, shown)} · ${user.state}`,
       project: `${shownPath(projectFile, shown)} · ${project.state}`,
+      ...(link === undefined ? {} : { projectLinked: true as const }),
     },
   };
 }

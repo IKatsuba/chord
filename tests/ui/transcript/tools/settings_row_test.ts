@@ -91,6 +91,22 @@ describe('settingsRows', () => {
     ]);
   });
 
+  test('a linked project file reads not read, not not set', () => {
+    const rows = settingsRows(
+      {
+        ...read(['agent'], { project: null, effective: 'a' }),
+        settingsFiles: { user: 'u', project: 'p', projectLinked: true },
+      },
+      false,
+      80,
+    );
+
+    expect(rows!.at(-1)).toMatchObject({
+      label: 'Project    ',
+      text: 'not read',
+    });
+  });
+
   test('a long value wraps at the cell under its column, never cut', () => {
     const value = 'x'.repeat(50) + ' ' + 'y'.repeat(50);
     const rows = settingsRows(

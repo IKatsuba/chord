@@ -132,6 +132,8 @@ export interface ChordCall {
   readonly settingsFiles?: {
     readonly user: string;
     readonly project: string;
+    /** The project's file is a link the read would not follow. */
+    readonly projectLinked?: true;
   };
 }
 

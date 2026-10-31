@@ -47,6 +47,7 @@ import {
 } from '../../../fixtures/fake_agent/scenarios/tools.ts';
 import { readFile } from 'node:fs/promises';
 import { serveChord } from '../../../../src/server/server.ts';
+import { LINK_TARGET } from '../../../fixtures/fake_agent/scenarios/settings.ts';
 import { join } from 'node:path';
 
 test("a call whose result came only as rawOutput draws it: a string, a shell's output and its failure, an object's JSON (CHD-440)", () =>
@@ -1810,6 +1811,28 @@ describe('the settings tool on the transcript (CHD-568)', () => {
           server,
           configHome: fixture('{}'),
         },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a linked project file reads as not read, and nothing of it shows', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsreadlinked');
+          await window.shows('Project    not read');
+
+          const read = window.frame().replace(/\s+/g, ' ');
+
+          expect(read).toContain('· a symbolic link, not read');
+          expect(read).toContain('1 problem');
+          expect(read).not.toContain(LINK_TARGET.agent);
+        },
+        { columns: 120, rows: 40, server, configHome: fixture('{}') },
       );
     } finally {
       await server.close();

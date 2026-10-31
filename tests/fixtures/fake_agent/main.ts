@@ -477,6 +477,7 @@ const SCENARIOS = [
   'settingsread',
   'settingsreadkey',
   'settingsreadbad',
+  'settingsreadlinked',
   'settingstheme',
   'settingsmodel',
   'settingsremove',

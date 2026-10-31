@@ -1,0 +1,40 @@
+                "***",
+                "***"
+              ],
+              "env": {
+                "TOKEN": "***"
+              }
+            },
+            "linear": {
+              "type": "http",
+              "url": "***",
+              "headers": {
+                "Authorization": "***"
+              }
+            }
+          },
+          "agents": {
+            "other": {
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": ".chord was not read: chord could not open it as a directory without following a link. project
+             and effective omit it. A start still follows links"
+          }
+        ]
+      }
+
+ ⏺ Settings(agent) · read
+   ⎿  Effective  not set
+      User       not set
+      Project    not read
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

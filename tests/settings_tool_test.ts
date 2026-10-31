@@ -329,7 +329,7 @@ describe('CHD-568 U3 tester: masked fresh reads', () => {
 
     expect(masked).toEqual(
       JSON.parse(
-        '{"mcpServers":{"__proto__":{"env":{"__proto__":"***","constructor":"***"},"headers":"***"},"toString":[[{"headers":{"Auth":"***"}}]]}}',
+        '{"mcpServers":{"__proto__":{"env":{"__proto__":"***","constructor":["***"]},"headers":"***"},"toString":"***"}}',
       ),
     );
     expect(JSON.stringify(masked)).not.toContain('secret-');
@@ -1367,6 +1367,102 @@ describe('a linked project file (CHD-568)', () => {
       assert('answer' in planned);
       expect(planned.answer.shadowedBy).toBe(shownFile);
       expect(JSON.stringify(planned)).not.toContain(CANARY);
+    });
+  });
+});
+
+describe('CHD-568 U7 tester: masked plans and completed link transitions', () => {
+  async function fixture(
+    run: (where: SettingsWhere, user: string, project: string) => Promise<void>,
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-u7-tester-'));
+    const where: SettingsWhere = {
+      home: root,
+      configHome: join(root, '.config'),
+      cwd: join(root, 'work'),
+    };
+    const user = join(where.configHome!, 'chord', 'settings.json');
+    const project = join(where.cwd, '.chord', 'settings.json');
+
+    try {
+      await mkdir(join(user, '..'), { recursive: true });
+      await mkdir(join(project, '..'), { recursive: true });
+      await run(where, user, project);
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  test('set and remove plans mask a malformed leaf by its full path and preserve file bytes', async () => {
+    await fixture(async (where, user) => {
+      const before = {
+        env: { LIST: ['env-canary', { nested: 'env-canary' }] },
+        command: ['command-canary'],
+        mcpServers: { token: 'mcp-canary' },
+        keep: 3,
+      };
+      const text = JSON.stringify({ agents: { claude: { model: before } } });
+
+      await writeFile(user, text);
+
+      for (const change of [set('new-model'), remove]) {
+        const result = await plannedSetting(
+          where,
+          ['agents', 'claude', 'model'],
+          change,
+          known,
+        );
+
+        assert('answer' in result);
+        expect(result.answer.before).toEqual({
+          env: { LIST: ['***', { nested: '***' }] },
+          command: ['***'],
+          mcpServers: '***',
+          keep: 3,
+        });
+        expect(JSON.stringify(result)).not.toContain('canary');
+        expect(await readFile(user, 'utf8')).toBe(text);
+      }
+    });
+  });
+
+  test('later completed reads distinguish a removed link, regular file and dangling replacement', async () => {
+    await fixture(async (where, user, project) => {
+      const target = join(where.home!, 'target.json');
+
+      await writeFile(user, '{"agent":"claude"}');
+      await writeFile(target, '{"agent":"linked-canary","theme":3}');
+      await symlink(target, project);
+
+      const linked = await readSettingsTool(where, ['agent']);
+
+      assert('answer' in linked);
+      expect(linked.answer.project).toBeNull();
+      expect(linked.answer.effective).toBe('claude');
+      expect(JSON.stringify(linked)).not.toContain('linked-canary');
+      expect(linked.answer.problems).toHaveLength(1);
+
+      await rm(project);
+      await writeFile(project, '{"agent":"codex"}');
+
+      const regular = await readSettingsTool(where, ['agent']);
+
+      assert('answer' in regular);
+      expect(regular.answer.project).toBe('codex');
+      expect(regular.answer.effective).toBe('codex');
+      expect(regular.answer.problems).toEqual([]);
+      expect(regular.files.projectLinked).toBeUndefined();
+
+      await rm(project);
+      await symlink(join(where.home!, 'absent-target'), project);
+
+      const dangling = await readSettingsTool(where, ['agent']);
+
+      assert('answer' in dangling);
+      expect(dangling.answer.project).toBeNull();
+      expect(dangling.answer.effective).toBe('claude');
+      expect(dangling.files.projectLinked).toBe(true);
+      expect(dangling.answer.problems).toHaveLength(1);
     });
   });
 });

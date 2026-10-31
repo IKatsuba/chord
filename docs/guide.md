@@ -592,18 +592,21 @@ both.
 | `mcpServers`                   | MCP servers configured for the agent, as `.mcp.json` writes them |             |
 
 The main session's agent can use chord's `settings` tool in the window;
-forks, children and `-p` cannot. `read` returns the user and project files
-as written, the merged, checked settings and any problems. It covers every
-key, or one named by a list such as `["agents", "codex", "model"]`.
-Values under `env`, `headers`, `command`, `args` and `url` are masked as
-`"***"` by key name at any depth, including on a read of one key; lists
-and objects keep their shape. Unknown server fields, such as `token`,
-read as written. A read of every key folds under `Settings`; ctrl+o
-expands it. The tool reads the project file once without following links.
-It refuses a symbolic link at `.chord` or `.chord/settings.json`, a hard
-link, a non-regular file, a file over 1 MiB or any read error. It returns
-`project: null`, leaves the file out of `effective` and reports a problem.
-An absent file is null without a problem. A start still follows links.
+forks, children and `-p` cannot. `read` loads as a start does, follows
+links and returns only checked user and project settings, their merge
+and any problems. A layer with no usable file is null. Read every key or
+one named by a list such as `["agents", "codex", "model"]`. Values under
+`env`, `headers`, `command`, `args` and `url` are masked as `"***"` by key
+name, including on a read of one key; lists and objects keep their shape.
+Unknown or wrong-cased server fields, such as `token` or `Env`, are left
+out. Values under real setting names, and agent, server and `env` key
+names, can reach the model. Problems use fixed words and counts per file,
+never quoting its contents. A read of every key folds under `Settings`;
+ctrl+o expands it.
+
+A linked project file reads as an ordinary file, with no size cap, as at
+start. A FIFO at `.chord/settings.json` can leave a read or write waiting
+forever; cancelling the call does not stop the read.
 
 `set` and `remove` change one key in the user's file only. chord shows the
 old and new values and asks in its box, under any permission mode. One
@@ -614,9 +617,7 @@ The tool may change `theme`, `editorMode`, `mouse`, `copyOnSelect`,
 `agents.<name>.effort`, `teamSelection.intent`, `teamSelection.prefer.agent`
 and `teamSelection.prefer.model`. Everything else stays a hand edit,
 including commands, permission modes, MCP servers and team constraints.
-A project value that wins over the user's is named above the box. For a
-key the project can override, an unread file's warning says it may set
-this too and win.
+A checked project value that wins over the user's is named above the box.
 
 Saved `theme` and `editorMode` take effect at once, as does `offeredAgents`
 in `/new`'s list. Team selection preferences apply at the next selection;

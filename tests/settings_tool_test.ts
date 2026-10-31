@@ -1514,7 +1514,7 @@ describe('CHD-568 U7 tester: masked plans and completed link transitions', () =>
       expect(regular.answer.project).toBe('codex');
       expect(regular.answer.effective).toBe('codex');
       expect(regular.answer.problems).toEqual([]);
-      expect(regular.files.projectLinked).toBeUndefined();
+      expect(regular.files.projectUnread).toBeUndefined();
 
       await rm(project);
       await symlink(join(where.home!, 'absent-target'), project);
@@ -1524,7 +1524,7 @@ describe('CHD-568 U7 tester: masked plans and completed link transitions', () =>
       assert('answer' in dangling);
       expect(dangling.answer.project).toBeNull();
       expect(dangling.answer.effective).toBe('claude');
-      expect(dangling.files.projectLinked).toBe(true);
+      expect(dangling.files.projectUnread).toBe(true);
       expect(dangling.answer.problems).toHaveLength(1);
     });
   });

@@ -1158,7 +1158,7 @@ describe('a linked project file (CHD-568)', () => {
   const CANARY = 'linked-canary-value';
   const shownFile = join('.chord', 'settings.json');
   const unreadFile = (name: string) =>
-    `${name} was not read: chord could not read it as a regular file with one link. project and effective omit it. A start still follows links`;
+    `${name} was not read: chord could not read it as a regular file of one link and at most 1 MiB. project and effective omit it. A start still follows links`;
   const unreadDirectory = (name: string) =>
     `${name} was not read: chord could not open it as a directory without following a link. project and effective omit it. A start still follows links`;
 

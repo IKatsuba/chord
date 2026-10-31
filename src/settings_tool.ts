@@ -485,7 +485,7 @@ const REFUSAL_WORDS: Readonly<
   directory: (name) =>
     `${name} was not read: chord could not open it as a directory without following a link. project and effective omit it. A start still follows links`,
   file: (name) =>
-    `${name} was not read: chord could not read it as a regular file with one link. project and effective omit it. A start still follows links`,
+    `${name} was not read: chord could not read it as a regular file of one link and at most 1 MiB. project and effective omit it. A start still follows links`,
 };
 
 /** A `settings` read: the answer the agent gets. */

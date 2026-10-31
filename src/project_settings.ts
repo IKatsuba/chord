@@ -5,13 +5,7 @@
  * One read from one handle, whose bytes then serve the whole answer. A start
  * still follows links, through `loadSettings`.
  */
-import {
-  closeSync,
-  constants,
-  fstatSync,
-  openSync,
-  readFileSync,
-} from 'node:fs';
+import { closeSync, constants, fstatSync, openSync, readSync } from 'node:fs';
 import { constants as system } from 'node:os';
 import { join } from 'node:path';
 import { notFound } from './not_found.ts';
@@ -27,6 +21,7 @@ export type ProjectRead =
 export interface ProjectReadSeam {
   readonly afterDirectory?: () => void;
   readonly afterFile?: () => void;
+  readonly afterStat?: () => void;
   /** In place of libc's, none for a libc chord cannot reach. */
   readonly openAt?: OpenAt | undefined;
 }
@@ -36,10 +31,36 @@ const REFUSED_FILE: ProjectRead = { kind: 'refused', what: 'file' };
 const ABSENT: ProjectRead = { kind: 'absent' };
 
 /**
+ * The most a project's settings file may hold, far past any real one: the read
+ * is synchronous in the window's own process, and an agent can write in its
+ * project, so a huge or sparse file must not freeze the window.
+ */
+const READ_LIMIT = 1024 * 1024;
+
+/** The file's text, or undefined where it holds more than the limit. */
+function boundedText(fd: number): string | undefined {
+  const bytes = Buffer.alloc(READ_LIMIT + 1);
+  let held = 0;
+
+  while (held < bytes.length) {
+    const read = readSync(fd, bytes, held, bytes.length - held, null);
+
+    if (read === 0) {
+      return bytes.toString('utf8', 0, held);
+    }
+
+    held += read;
+  }
+
+  return undefined;
+}
+
+/**
  * Reads `<cwd>/.chord/settings.json`: `.chord` opened no-follow, the name
  * opened inside that handle no-follow, so no later swap of either path counts,
  * and non-blocking, so a FIFO cannot hang it; then a regular file with one
- * link, as a hard link could reach anything the person can read. Any error but
+ * link, as a hard link could reach anything the person can read, of a bounded
+ * size, growth after the check included. Any error but
  * not-found is a refusal, and nothing is ever opened by name past `.chord`.
  */
 export function readProjectFile(
@@ -80,9 +101,15 @@ export function readProjectFile(
 
       const found = fstatSync(opened.fd);
 
-      return found.isFile() && found.nlink === 1
-        ? { kind: 'read', text: readFileSync(opened.fd, 'utf8') }
-        : REFUSED_FILE;
+      if (!found.isFile() || found.nlink !== 1 || found.size > READ_LIMIT) {
+        return REFUSED_FILE;
+      }
+
+      seam.afterStat?.();
+
+      const text = boundedText(opened.fd);
+
+      return text === undefined ? REFUSED_FILE : { kind: 'read', text };
     } catch {
       return REFUSED_FILE;
     } finally {

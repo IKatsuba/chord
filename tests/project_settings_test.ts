@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { execFileSync } from 'node:child_process';
 import {
+  appendFileSync,
   chmodSync,
   linkSync,
   mkdirSync,
@@ -9,6 +10,7 @@ import {
   renameSync,
   rmSync,
   symlinkSync,
+  truncateSync,
   unlinkSync,
   writeFileSync,
 } from 'node:fs';
@@ -224,6 +226,74 @@ describe('readProjectFile', () => {
   );
 });
 
+describe('a file past the size limit', () => {
+  const MIB = 1024 * 1024;
+
+  test(
+    'a sparse file over the limit is refused, and reads nothing of it',
+    placed((place) => {
+      mkdirSync(place.directory);
+      writeFileSync(place.file, '');
+      truncateSync(place.file, 1024 * MIB);
+      expect(readProjectFile(place.cwd)).toStrictEqual(REFUSED_FILE);
+    }),
+  );
+
+  test(
+    'a file of exactly the limit is read, one byte more is refused',
+    placed((place) => {
+      mkdirSync(place.directory);
+      writeFileSync(place.file, ' '.repeat(MIB));
+      expect(readProjectFile(place.cwd)).toMatchObject({ kind: 'read' });
+      writeFileSync(place.file, ' '.repeat(MIB + 1));
+      expect(readProjectFile(place.cwd)).toStrictEqual(REFUSED_FILE);
+    }),
+  );
+
+  test(
+    'growth past the limit after the fstat is refused',
+    placed((place) => {
+      real(place);
+
+      expect(
+        readProjectFile(place.cwd, {
+          afterStat: () => truncateSync(place.file, MIB + 1),
+        }),
+      ).toStrictEqual(REFUSED_FILE);
+    }),
+  );
+
+  test(
+    'growth that stays within the limit is read',
+    placed((place) => {
+      real(place);
+
+      expect(
+        readProjectFile(place.cwd, {
+          afterStat: () => appendFileSync(place.file, ' '),
+        }),
+      ).toStrictEqual({ kind: 'read', text: `${REAL} ` });
+    }),
+  );
+
+  test(
+    'an oversized file is the one problem, and every handle closes',
+    placed(async (place) => {
+      mkdirSync(place.directory);
+      writeFileSync(place.file, '');
+      truncateSync(place.file, 2 * MIB);
+
+      const before = readdirSync('/dev/fd').length;
+      const { answer } = await everything(place);
+
+      expect(answer.project).toBeNull();
+      expect(answer.effective).toStrictEqual({});
+      expect(answer.problems).toHaveLength(1);
+      expect(readdirSync('/dev/fd').length).toBe(before);
+    }),
+  );
+});
+
 describe('a swap during the read', () => {
   test(
     '.chord to a link after the directory opened reads the real directory',
@@ -381,7 +451,7 @@ describe('nothing of a refused or swapped file reaches the answer or the row', (
       expect(answer.problems).toStrictEqual([
         {
           file: join('.chord', 'settings.json'),
-          message: `${join('.chord', 'settings.json')} was not read: chord could not read it as a regular file with one link. project and effective omit it. A start still follows links`,
+          message: `${join('.chord', 'settings.json')} was not read: chord could not read it as a regular file of one link and at most 1 MiB. project and effective omit it. A start still follows links`,
         },
       ]);
       expect(files).toMatchObject({

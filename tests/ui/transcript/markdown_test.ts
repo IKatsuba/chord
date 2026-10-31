@@ -318,6 +318,22 @@ test('colour is left out when asked, and put in when asked', () => {
   ).toBeTruthy();
 });
 
+test('a repeated definition shows on its own line, and the first one is the link', () => {
+  expect(
+    lines('See [a].\n\n[a]: https://one.org\n[a]: https://two.org\n', 40),
+  ).toStrictEqual([
+    'See a (https://one.org).',
+    '[a]: https://one.org',
+    '[a]: https://two.org',
+  ]);
+});
+
+test("a nested item's wrapped lines hang at its own indent", () => {
+  expect(
+    lines('- outer\n  1. a nested item long enough to wrap\n', 24),
+  ).toStrictEqual(['- outer', '  1. a nested item long', '    enough to wrap']);
+});
+
 test('a reference link resolves once its definition streams in', () => {
   const reply = 'See [docs][ref].\n\n> and [the quote][ref]\n\n';
 

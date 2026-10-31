@@ -386,10 +386,9 @@ binary.
   left beside it. A block is found on the line marked's `list_item` and
   `blockquote` tokens put it on, never by its text, so code that holds a
   fence line of its own stays as written. No list or quote renderer of our
-  own. markdansi's own limits stay: a nested item's wrapped
-  lines, and so a box under it, hang at the outer item's indent; a list made
-  only of code blocks is merged into code, bullets dropped, so its boxes
-  stand alone.
+  own. markdansi's own limit stays: a list made only of code blocks is merged
+  into code, bullets dropped, so its boxes stand alone. From 0.3.7 a nested
+  item's wrapped lines, and a box under it, hang at that item's own indent.
 - **An indented code block is drawn as a code block,** from the code marked
   hands over: markdansi reads one alone as a paragraph and runs its lines
   together.
@@ -2379,7 +2378,7 @@ at 120×40 and 80×24 against the fake agent's `--tokens-only`.
   asked for and the agent's word holds. The fake's `--silent-set-mode` now
   answers the mode's config option that way too, which is what the window
   sends, so the Codex tests go through the enricher.
-- **@pydantic/genai-prices for prices and windows**, exact-pinned at 0.1.13
+- **@pydantic/genai-prices for prices and windows**, exact-pinned (0.2.1 now)
   as it is pre-1.0. Its data is in the package, so nothing is fetched and
   the data moves with the version, as the registry's does with its source;
   `updatePrices` is never called. It matches a model by rules per provider,
@@ -7313,8 +7312,8 @@ accounting is a separate advisory follow-up, not a subscription-routing gate.
   trials tested compile and lifecycle behavior. Select exact
   `codex-app-server-client@0.1.5` public `StdioTransport`/`AppServerClient`
   exports on existing `spawnGroup`, and official
-  `@anthropic-ai/claude-agent-sdk@0.3.311`'s experimental usage getter in a
-  same-binary isolated worker. Retain existing ACP/MCP SDKs, Zod and OpenTUI.
+  `@anthropic-ai/claude-agent-sdk@0.3.311`'s (0.3.316 now) experimental usage
+  getter in a same-binary isolated worker. Retain existing ACP/MCP SDKs, Zod and OpenTUI.
   CodexBar's reusable API loses quota-map buckets; cliMeter and the VS Code
   extension have no standalone fitting collector; Roost requires excluded
   credential access. Generic JSON-RPC clients do not fit Codex's framing

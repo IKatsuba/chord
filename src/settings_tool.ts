@@ -436,7 +436,7 @@ function fileState(
 
 /** A `settings` read: the answer the agent gets. */
 export interface SettingsRead {
-  /** The file's checked settings, masked; null where it was not loaded. */
+  /** The file's checked settings, masked; null where it could not be used. */
   readonly user: unknown;
   readonly project: unknown;
   /** The merged, checked settings, masked. */
@@ -480,13 +480,20 @@ export async function readSettingsTool(
     layers.find((layer) => layer.file === file);
   const problemsOf = (file: string | undefined) =>
     problems.filter((problem) => problem.file === file);
-  const atPath = (layer: SettingsLayer | undefined) =>
-    settingAt(layer === undefined ? null : shownSettings(layer.settings), path);
+  // A file the load could not use is none, not one that is fine and empty.
+  const shownLayer = (file: string | undefined) => {
+    const layer = layerOf(file);
+
+    return layer === undefined ||
+      problemsOf(file).some(({ kind }) => kind === 'parse')
+      ? null
+      : shownSettings(layer.settings);
+  };
 
   return {
     answer: {
-      user: atPath(layerOf(userFile)),
-      project: atPath(layerOf(projectFile)),
+      user: settingAt(shownLayer(userFile), path),
+      project: settingAt(shownLayer(projectFile), path),
       effective: settingAt(shownSettings(settings), path),
       problems: [userFile, projectFile].flatMap((file) =>
         problemWords(problemsOf(file)).map((message) => ({

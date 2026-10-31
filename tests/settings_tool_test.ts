@@ -737,7 +737,7 @@ describe('a read answers only from what the schema checked (CHD-568)', () => {
     await placed({ project: broken }, async (where) => {
       const { answer, files } = await nothingShows(where);
 
-      expect(answer.project).toStrictEqual({});
+      expect(answer.project).toBeNull();
       expect(answer.problems).toStrictEqual([
         {
           file: join('.chord', 'settings.json'),
@@ -842,6 +842,22 @@ describe('a read answers only from what the schema checked (CHD-568)', () => {
     });
   });
 
+  test('a file that cannot be used is null, one with all its keys dropped is empty, and a key in either is not set', async () => {
+    await placed({ user: '{ broken' }, async (where) => {
+      expect((await read(where)).answer.user).toBeNull();
+      expect((await read(where, ['agent'])).answer.user).toBeUndefined();
+    });
+
+    await placed({ user: '{"nope":1}' }, async (where) => {
+      expect((await read(where)).answer.user).toStrictEqual({});
+      expect((await read(where, ['agent'])).answer.user).toBeUndefined();
+    });
+
+    await placed({ user: '{}' }, async (where) => {
+      expect((await read(where)).answer.user).toStrictEqual({});
+    });
+  });
+
   test('a path reads what is masked, and below a leaf is not set', async () => {
     const server = JSON.stringify({
       mcpServers: { x: { command: CANARY, env: { TOKEN: CANARY } } },
@@ -921,6 +937,7 @@ describe('a read answers only from what the schema checked (CHD-568)', () => {
     await placed({ project: '["x"]' }, async (where) => {
       const { answer, files } = await read(where);
 
+      expect(answer.project).toBeNull();
       expect(answer.problems[0]?.message).toBe('not a JSON object; ignored');
       expect(files.project).toEndWith(' · not a JSON object');
     });

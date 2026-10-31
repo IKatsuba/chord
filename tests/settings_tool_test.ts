@@ -1,6 +1,5 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { renameSync, writeFileSync } from 'node:fs';
 import {
   mkdir,
   mkdtemp,
@@ -14,15 +13,14 @@ import { join } from 'node:path';
 import {
   changeWord,
   classifySetting,
-  maskedSettings,
   notSavedLine,
   plannedSetting,
   readSettingsTool,
   saveFailure,
-  type SettingsRead,
   settingRefusal,
   type SettingsWhere,
 } from '../src/settings_tool.ts';
+import { settingsRows } from '../src/ui/transcript/tools/settings_row.ts';
 
 const known = ['claude', 'codex', 'my.agent'];
 const set = (value: unknown) => ({ set: value });
@@ -388,353 +386,6 @@ describe('CHD-568 U3 tester: masked fresh reads', () => {
   });
 });
 
-describe('reading settings (CHD-568)', () => {
-  /** A home under a temporary root, with the files given written in it. */
-  async function placed(
-    files: { user?: string; project?: string },
-    run: (where: SettingsWhere) => Promise<void>,
-  ) {
-    const root = await mkdtemp(join(tmpdir(), 'chord-settings-read-'));
-    const home = join(root, 'home');
-    const where = {
-      home,
-      configHome: join(home, '.config'),
-      cwd: join(root, 'work'),
-    };
-
-    try {
-      await mkdir(join(where.configHome, 'chord'), { recursive: true });
-      await mkdir(join(where.cwd, '.chord'), { recursive: true });
-
-      if (files.user !== undefined) {
-        await writeFile(
-          join(where.configHome, 'chord', 'settings.json'),
-          files.user,
-        );
-      }
-
-      if (files.project !== undefined) {
-        await writeFile(
-          join(where.cwd, '.chord', 'settings.json'),
-          files.project,
-        );
-      }
-
-      await run(where);
-    } finally {
-      await rm(root, { recursive: true });
-    }
-  }
-
-  async function read(
-    where: SettingsWhere,
-    path?: readonly string[],
-  ): Promise<{
-    answer: SettingsRead;
-    files: { user: string; project: string };
-  }> {
-    const result = await readSettingsTool(where, path);
-
-    if ('error' in result) {
-      throw new Error(result.error);
-    }
-
-    return result;
-  }
-
-  const SECRET = 'secret123';
-  const servers = {
-    linear: {
-      url: SECRET,
-      args: ['--flag', SECRET],
-      env: { TOKEN: SECRET, LIST: [SECRET], DEEP: { A: SECRET } },
-      headers: { Authorization: SECRET },
-    },
-    wrong: { env: SECRET, headers: [SECRET] },
-    listed: [{ env: { TOKEN: SECRET } }],
-    bare: SECRET.length,
-  };
-
-  test('every key reads as written, masked in all three, the rest whole', async () => {
-    const user = JSON.stringify({
-      theme: 'dark',
-      unknownKey: 1,
-      mcpServers: servers,
-      agents: { codex: { command: SECRET, mcpServers: false } },
-    });
-
-    await placed({ user }, async (where) => {
-      const { answer, files } = await read(where);
-      const said = JSON.stringify(answer);
-
-      expect(said).not.toContain(SECRET);
-      expect(answer.project).toBeNull();
-      expect(answer.user).toMatchObject({
-        theme: 'dark',
-        unknownKey: 1,
-        agents: { codex: { command: '***', mcpServers: false } },
-        mcpServers: {
-          linear: {
-            url: '***',
-            args: ['***', '***'],
-            env: { TOKEN: '***', LIST: ['***'], DEEP: { A: '***' } },
-            headers: { Authorization: '***' },
-          },
-          wrong: { env: '***', headers: ['***'] },
-          listed: '***',
-          bare: '***',
-        },
-      });
-      expect(answer.effective).toMatchObject({
-        theme: 'dark',
-        mcpServers: { linear: { env: { TOKEN: '***' } } },
-      });
-      expect(files).toStrictEqual({
-        user: `~${join('/', '.config', 'chord', 'settings.json')} · 4 keys`,
-        project: `${join('.chord', 'settings.json')} · not there`,
-      });
-    });
-  });
-
-  test('a project file is masked too and wins in effective', async () => {
-    await placed(
-      {
-        user: '{"agent":"claude"}',
-        project: JSON.stringify({
-          agent: 'codex',
-          mcpServers: { x: { env: { T: SECRET } } },
-        }),
-      },
-      async (where) => {
-        const { answer } = await read(where);
-
-        expect(JSON.stringify(answer)).not.toContain(SECRET);
-        expect(answer.user).toStrictEqual({ agent: 'claude' });
-        expect(answer.project).toStrictEqual({
-          agent: 'codex',
-          mcpServers: { x: { env: { T: '***' } } },
-        });
-        expect(answer.effective).toMatchObject({ agent: 'codex' });
-      },
-    );
-  });
-
-  test('a path walks what is masked, one path deeper being not set', async () => {
-    await placed(
-      { user: JSON.stringify({ mcpServers: servers }) },
-      async (where) => {
-        const key = ['mcpServers', 'linear', 'env', 'TOKEN'];
-
-        expect((await read(where, key)).answer).toStrictEqual({
-          user: '***',
-          project: undefined,
-          effective: '***',
-          problems: [],
-        });
-
-        const deeper = await read(where, [...key, 'more']);
-
-        expect(deeper.answer.user).toBeUndefined();
-        expect(deeper.answer.effective).toBeUndefined();
-
-        const under = await read(where, [
-          'mcpServers',
-          'linear',
-          'env',
-          'DEEP',
-          'A',
-        ]);
-
-        expect(under.answer.user).toBe('***');
-        expect(JSON.stringify(under)).not.toContain(SECRET);
-      },
-    );
-  });
-
-  test('an unknown key reads, and a name that can be no key is refused', async () => {
-    await placed({ user: '{"nope":{"deep":1}}' }, async (where) => {
-      const { answer } = await read(where, ['nope', 'deep']);
-
-      expect(answer.user).toBe(1);
-      expect(answer.effective).toBeUndefined();
-      expect(await readSettingsTool(where, ['__proto__'])).toStrictEqual({
-        error: 'No setting __proto__',
-      });
-      expect(await readSettingsTool(where, ['a', 'constructor'])).toStrictEqual(
-        {
-          error: 'No setting a.constructor',
-        },
-      );
-    });
-  });
-
-  test("a broken file with a secret drops the parser's words", async () => {
-    // Bun's parser quotes the token it choked on.
-    const user = `{"mcpServers":{"x":{"env":{"T":${SECRET}}}}}`;
-
-    await placed({ user }, async (where) => {
-      const { answer, files } = await read(where);
-
-      expect(JSON.stringify(answer)).not.toContain(SECRET);
-      expect(answer.user).toBeNull();
-      expect(answer.problems).toStrictEqual([
-        {
-          file: `~${join('/', '.config', 'chord', 'settings.json')}`,
-          message: 'not valid JSON; the file is ignored',
-        },
-      ]);
-      expect(files.user).toEndWith(' · not valid JSON');
-    });
-  });
-
-  test('a file that is no object reads null, and says so', async () => {
-    await placed({ project: '["x"]' }, async (where) => {
-      const { answer, files } = await read(where);
-
-      expect(answer.project).toBeNull();
-      expect(answer.problems.map(({ message }) => message)).toStrictEqual([
-        'not a JSON object; the file is ignored',
-      ]);
-      expect(files.project).toEndWith(' · not a JSON object');
-    });
-  });
-
-  test('no home reads the project alone and says so', async () => {
-    await placed({ project: '{"agent":"codex"}' }, async (where) => {
-      const { answer, files } = await read({
-        ...where,
-        configHome: undefined,
-        home: undefined,
-      });
-
-      expect(answer.user).toBeNull();
-      expect(answer.effective).toStrictEqual({ agent: 'codex' });
-      expect(files.user).toBe('no home directory');
-    });
-  });
-
-  test('a file that cannot be read names no path in its problem', async () => {
-    await placed({}, async (where) => {
-      // A directory where the file goes: read fails, and not as absent.
-      await mkdir(join(where.configHome!, 'chord', 'settings.json'));
-
-      const { answer, files } = await read(where);
-
-      expect(answer.user).toBeNull();
-      expect(answer.problems).toStrictEqual([
-        {
-          file: `~${join('/', '.config', 'chord', 'settings.json')}`,
-          message: 'cannot be read; the file is ignored',
-        },
-      ]);
-      expect(files.user).toEndWith(' · cannot be read');
-    });
-  });
-
-  test("a path keeps its key's problems and those of a whole file", async () => {
-    await placed(
-      {
-        user: '{"theme":3,"mouse":"no"}',
-        project: '{ broken',
-      },
-      async (where) => {
-        const keys = (answer: SettingsRead) =>
-          answer.problems.map(({ message }) => message);
-
-        expect(keys((await read(where)).answer)).toHaveLength(3);
-
-        const theme = keys((await read(where, ['theme'])).answer);
-
-        expect(theme).toHaveLength(2);
-        expect(theme[0]).toContain('"theme"');
-        expect(theme[1]).toBe('not valid JSON; the file is ignored');
-        expect(keys((await read(where, ['agent'])).answer)).toStrictEqual([
-          'not valid JSON; the file is ignored',
-        ]);
-      },
-    );
-  });
-
-  test('an mcpServers no server can be read from fails closed, in every view', async () => {
-    const listed = JSON.stringify({
-      mcpServers: [
-        { env: { TOKEN: SECRET }, headers: { Authorization: SECRET } },
-        [{ env: SECRET, headers: [SECRET] }],
-      ],
-    });
-
-    await placed({ user: listed, project: listed }, async (where) => {
-      const { answer } = await read(where);
-      const server = {
-        env: { TOKEN: '***' },
-        headers: { Authorization: '***' },
-      };
-      const masked = {
-        mcpServers: [server, '***'],
-      };
-
-      expect(JSON.stringify(answer)).not.toContain(SECRET);
-      expect(answer.user).toStrictEqual(masked);
-      expect(answer.project).toStrictEqual(masked);
-    });
-
-    await placed(
-      { user: JSON.stringify({ mcpServers: SECRET }) },
-      async (where) => {
-        const { answer } = await read(where);
-
-        expect(JSON.stringify(answer)).not.toContain(SECRET);
-        expect(answer.user).toStrictEqual({ mcpServers: '***' });
-      },
-    );
-  });
-
-  test('with HOME unset, no answer names the home the config was found under', async () => {
-    // Under the home but absent, so nothing reads a real settings file.
-    const configHome = join(homedir(), '.chord-test-absent-config');
-    const file = join(
-      '/',
-      '.chord-test-absent-config',
-      'chord',
-      'settings.json',
-    );
-
-    await placed({ project: '{"theme":"dark"}' }, async (where) => {
-      const { answer, files } = await read({
-        ...where,
-        configHome,
-        home: undefined,
-      });
-
-      expect(JSON.stringify({ answer, files })).not.toContain(homedir());
-      expect(files.user).toBe(`~${file} · not there`);
-      expect(answer.problems.map(({ message }) => message)).toStrictEqual([
-        `"theme" is read only from ~${file}, ignored`,
-      ]);
-    });
-  });
-
-  test('a broken user file and a scoped project key name no home', async () => {
-    await placed(
-      { user: '{ broken', project: '{"theme":"dark"}' },
-      async (where) => {
-        const { answer, files } = await read(where);
-
-        expect(JSON.stringify({ answer, files })).not.toContain(where.home!);
-        expect(answer.problems.map(({ file }) => file)).toContain(
-          `~${join('/', '.config', 'chord', 'settings.json')}`,
-        );
-      },
-    );
-  });
-
-  test('maskedSettings leaves a settings with nothing to mask as it is', () => {
-    for (const value of [null, 3, ['x'], { theme: 'dark' }]) {
-      expect(maskedSettings(value)).toStrictEqual(value);
-    }
-  });
-});
-
 describe('planning a settings change (CHD-568)', () => {
   /** A home and project under a temporary root, with the files given. */
   async function placed(
@@ -971,225 +622,53 @@ describe('planning a settings change (CHD-568)', () => {
   });
 });
 
-describe('masking goes by key name (CHD-568)', () => {
-  const S = 'secret123';
+describe('a read answers only from what the schema checked (CHD-568)', () => {
+  const CANARY = 'canary-value-9f';
+  const CANARY_KEY = 'canaryKey9f';
 
-  test.each(['env', 'headers', 'command', 'args', 'url'])(
-    '%s is masked wherever it stands, its shape kept',
-    (key) => {
-      const given = {
-        [key]: S,
-        agents: { a: { [key]: [S, { deep: S }] } },
-        mcpServers: { x: { [key]: { one: S, two: [S] } } },
-        odd: [{ nested: { [key]: 3 } }],
-        keep: 'kept',
-      };
-
-      expect(maskedSettings(given)).toStrictEqual({
-        [key]: '***',
-        agents: { a: { [key]: ['***', { deep: '***' }] } },
-        mcpServers: { x: { [key]: { one: '***', two: ['***'] } } },
-        odd: [{ nested: { [key]: '***' } }],
-        keep: 'kept',
-      });
+  /** A home and a project under a temporary root, with the files given. */
+  async function placed(
+    files: {
+      user?: string;
+      project?: string;
+      plant?: (place: { cwd: string; root: string }) => Promise<void>;
     },
-  );
-
-  test('a name standing where a key would be masks whole, and null is a leaf', () => {
-    expect(
-      maskedSettings({
-        mcpServers: { url: { type: 'http', name: S } },
-        env: null,
-      }),
-    ).toStrictEqual({
-      mcpServers: { url: { type: '***', name: '***' } },
-      env: '***',
-    });
-  });
-
-  test('a server of the wrong shape reads whole, in a map or a list', () => {
-    expect(
-      maskedSettings({
-        mcpServers: {
-          text: S,
-          number: 3,
-          empty: null,
-          list: [S],
-          real: { type: 'http', token: 'as-written' },
-        },
-      }),
-    ).toStrictEqual({
-      mcpServers: {
-        text: '***',
-        number: '***',
-        empty: '***',
-        list: '***',
-        real: { type: 'http', token: 'as-written' },
-      },
-    });
-    expect(
-      maskedSettings({ mcpServers: [S, 3, null, [S], { type: 'http' }] }),
-    ).toStrictEqual({
-      mcpServers: ['***', '***', '***', '***', { type: 'http' }],
-    });
-    expect(maskedSettings({ mcpServers: null })).toStrictEqual({
-      mcpServers: '***',
-    });
-  });
-
-  test('a path into a server of the wrong shape is not set', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'chord-settings-server-'));
+    run: (where: SettingsWhere) => Promise<void>,
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-checked-'));
+    const home = join(root, 'home');
     const where = {
-      home: root,
-      configHome: root,
+      home,
+      configHome: join(home, '.config'),
       cwd: join(root, 'work'),
     };
 
     try {
-      await mkdir(join(root, 'chord'));
-      await writeFile(
-        join(root, 'chord', 'settings.json'),
-        JSON.stringify({ mcpServers: { x: S, list: [{ token: S }] } }),
-      );
-
-      const whole = await readSettingsTool(where);
-      const inside = await readSettingsTool(where, ['mcpServers', 'list', '0']);
-
-      expect(JSON.stringify(whole)).not.toContain(S);
-      assert(!('error' in inside));
-      expect(inside.answer.user).toBeUndefined();
-    } finally {
-      await rm(root, { recursive: true });
-    }
-  });
-
-  test('an agents.<name>.mcpServers that is no boolean reads whole', () => {
-    for (const held of [S, 3, null, [S], { deep: S }]) {
-      expect(
-        maskedSettings({ agents: { a: { mcpServers: held, model: 'm' } } }),
-      ).toStrictEqual({ agents: { a: { mcpServers: '***', model: 'm' } } });
-    }
-  });
-
-  test('a key named mcpServers below the top reads whole unless a boolean, whatever holds it', () => {
-    expect(
-      maskedSettings({
-        agents: { a: [{ mcpServers: S }], b: { deep: { mcpServers: [S] } } },
-        odd: [{ nested: { mcpServers: { x: S } } }],
-        kept: [{ mcpServers: false }],
-      }),
-    ).toStrictEqual({
-      agents: {
-        a: [{ mcpServers: '***' }],
-        b: { deep: { mcpServers: '***' } },
-      },
-      odd: [{ nested: { mcpServers: '***' } }],
-      kept: [{ mcpServers: false }],
-    });
-  });
-
-  test('a path below such a key is not set', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'chord-settings-below-'));
-    const where = { home: root, configHome: root, cwd: join(root, 'work') };
-
-    try {
-      await mkdir(join(root, 'chord'));
-      await writeFile(
-        join(root, 'chord', 'settings.json'),
-        JSON.stringify({ agents: { a: { mcpServers: { token: S } } } }),
-      );
-
-      const below = await readSettingsTool(where, [
-        'agents',
-        'a',
-        'mcpServers',
-        'token',
-      ]);
-
-      assert(!('error' in below));
-      expect(below.answer.user).toBeUndefined();
-      expect(JSON.stringify(below)).not.toContain(S);
-    } finally {
-      await rm(root, { recursive: true });
-    }
-  });
-
-  test('a list of agents masks the same, in a read of every key', async () => {
-    const root = await mkdtemp(join(tmpdir(), 'chord-settings-agents-'));
-    const where = { home: root, configHome: root, cwd: join(root, 'work') };
-
-    try {
-      await mkdir(join(root, 'chord'));
-      await writeFile(
-        join(root, 'chord', 'settings.json'),
-        JSON.stringify({
-          agents: [{ mcpServers: S }, { mcpServers: true }, S],
-        }),
-      );
-
-      const read = await readSettingsTool(where);
-
-      assert(!('error' in read));
-      expect(read.answer.user).toStrictEqual({
-        agents: [{ mcpServers: '***' }, { mcpServers: true }, S],
-      });
-    } finally {
-      await rm(root, { recursive: true });
-    }
-  });
-
-  test('a boolean agents.<name>.mcpServers stays', () => {
-    expect(
-      maskedSettings({ agents: { a: { mcpServers: false, model: 'm' } } }),
-    ).toStrictEqual({ agents: { a: { mcpServers: false, model: 'm' } } });
-  });
-
-  test("a file's own __proto__ key stays a key, and masks under it", () => {
-    const masked = maskedSettings(
-      JSON.parse(`{"__proto__":{"env":"${S}"}}`),
-    ) as object;
-
-    expect(JSON.stringify(masked)).toBe('{"__proto__":{"env":"***"}}');
-    expect(({} as Record<string, unknown>)['env']).toBeUndefined();
-  });
-});
-
-describe('a linked project file (CHD-568)', () => {
-  const CANARY = 'linked-canary-value';
-  const shownFile = join('.chord', 'settings.json');
-  const unreadFile = (name: string) =>
-    `${name} was not read: chord could not read it as a regular file of one link and at most 1 MiB. project and effective omit it. A start still follows links`;
-  const unreadDirectory = (name: string) =>
-    `${name} was not read: chord could not open it as a directory without following a link. project and effective omit it. A start still follows links`;
-
-  /** A project with `plant` run in it, and a target holding the canary. */
-  async function linked(
-    plant: (place: { cwd: string; target: string }) => Promise<void>,
-    run: (where: SettingsWhere) => Promise<void>,
-    user = '{"theme":"dark"}',
-  ) {
-    const root = await mkdtemp(join(tmpdir(), 'chord-settings-linked-'));
-    const home = join(root, 'home');
-    const cwd = join(root, 'work');
-    const target = join(root, 'target.json');
-    const where = { home, configHome: join(home, '.config'), cwd };
-
-    try {
       await mkdir(join(where.configHome, 'chord'), { recursive: true });
-      await mkdir(cwd);
-      await writeFile(join(where.configHome, 'chord', 'settings.json'), user);
-      await writeFile(
-        target,
-        JSON.stringify({ agent: CANARY, theme: 'light', nope: CANARY }),
-      );
-      await plant({ cwd, target });
+      await mkdir(join(where.cwd, '.chord'), { recursive: true });
+
+      if (files.user !== undefined) {
+        await writeFile(
+          join(where.configHome, 'chord', 'settings.json'),
+          files.user,
+        );
+      }
+
+      if (files.project !== undefined) {
+        await writeFile(
+          join(where.cwd, '.chord', 'settings.json'),
+          files.project,
+        );
+      }
+
+      await files.plant?.({ cwd: where.cwd, root });
       await run(where);
     } finally {
       await rm(root, { recursive: true });
     }
   }
 
-  async function reads(where: SettingsWhere, path?: readonly string[]) {
+  async function read(where: SettingsWhere, path?: readonly string[]) {
     const result = await readSettingsTool(where, path);
 
     assert(!('error' in result));
@@ -1197,244 +676,350 @@ describe('a linked project file (CHD-568)', () => {
     return result;
   }
 
-  const fileLink = async ({ cwd, target }: { cwd: string; target: string }) => {
-    await mkdir(join(cwd, '.chord'));
-    await symlink(target, join(cwd, '.chord', 'settings.json'));
-  };
+  /** Everything a read or a change gives: the answer, then its rows. */
+  function everything(input: unknown, answer: unknown, files?: unknown) {
+    const call = {
+      tool: 'settings' as const,
+      input,
+      answer,
+      ...(files === undefined
+        ? {}
+        : { settingsFiles: files as { user: string; project: string } }),
+    };
 
-  test('a link at the file reads null, says so, and shows nothing of its target', async () => {
-    await linked(fileLink, async (where) => {
-      const { answer, files } = await reads(where);
+    return JSON.stringify([
+      answer,
+      files,
+      settingsRows(call, false, 80),
+      settingsRows(call, true, 80),
+    ]);
+  }
 
-      expect(JSON.stringify({ answer, files })).not.toContain(CANARY);
-      expect(answer.project).toBeNull();
-      expect(answer.user).toStrictEqual({ theme: 'dark' });
-      expect(answer.effective).toStrictEqual({ theme: 'dark' });
+  /** Reads every key, one key and one change, each checked for the canaries. */
+  async function nothingShows(where: SettingsWhere) {
+    const whole = await read(where);
+    const key = await read(where, ['agent']);
+    const planned = await plannedSetting(where, ['agent'], set('codex'), known);
+
+    assert('answer' in planned);
+
+    for (const said of [
+      everything({ action: 'read' }, whole.answer, whole.files),
+      everything({ action: 'read', path: ['agent'] }, key.answer, key.files),
+      everything(
+        { action: 'set', path: ['agent'], value: 'codex' },
+        planned.answer,
+      ),
+    ]) {
+      expect(said).not.toContain(CANARY);
+      expect(said).not.toContain(CANARY_KEY);
+    }
+
+    return whole;
+  }
+
+  const unknowns = JSON.stringify({
+    [CANARY_KEY]: CANARY,
+    other: { [CANARY_KEY]: [CANARY] },
+    agents: { fake: { [CANARY_KEY]: CANARY, model: 'm' } },
+    teamSelection: { [CANARY_KEY]: CANARY },
+    agent: 'kept',
+  });
+
+  test('a link to a file of unknown keys and values shows none of them', async () => {
+    await placed(
+      {
+        plant: async ({ cwd, root }) => {
+          const target = join(root, 'target.json');
+
+          await writeFile(target, unknowns);
+          await symlink(target, join(cwd, '.chord', 'settings.json'));
+        },
+      },
+      async (where) => {
+        const { answer } = await nothingShows(where);
+
+        // A start follows links, so this is an ordinary read of what is checked.
+        expect(answer.project).toMatchObject({ agent: 'kept' });
+        expect(answer.effective).toMatchObject({ agent: 'kept' });
+        expect(answer.problems.map(({ message }) => message)).toContain(
+          '4 keys ignored',
+        );
+      },
+    );
+  });
+
+  test('a broken file with a canary token shows no parser word', async () => {
+    const broken = `{"agent":${CANARY}}`;
+
+    await placed({ project: broken }, async (where) => {
+      const { answer, files } = await nothingShows(where);
+
+      expect(answer.project).toStrictEqual({});
       expect(answer.problems).toStrictEqual([
-        { file: shownFile, message: unreadFile(shownFile) },
+        {
+          file: join('.chord', 'settings.json'),
+          message: 'not valid JSON; ignored',
+        },
       ]);
-      expect(files).toMatchObject({
-        project: `${shownFile} · not read`,
-        projectUnread: true,
+      expect(files.project).toEndWith(' · not valid JSON');
+    });
+  });
+
+  test('wrong-typed values under real keys show neither value', async () => {
+    const wrong = JSON.stringify({
+      theme: CANARY,
+      mouse: CANARY,
+      agent: 7,
+      preferredNotifChannel: CANARY,
+    });
+
+    await placed({ user: wrong }, async (where) => {
+      const { answer } = await nothingShows(where);
+
+      expect(answer.user).toStrictEqual({});
+      expect(answer.problems).toStrictEqual([
+        {
+          file: `~${join('/', '.config', 'chord', 'settings.json')}`,
+          message: '4 keys ignored',
+        },
+      ]);
+    });
+  });
+
+  test('a write over a bad value reads not set, in the answer and on the row', async () => {
+    await placed({ user: JSON.stringify({ theme: CANARY }) }, async (where) => {
+      const planned = await plannedSetting(
+        where,
+        ['theme'],
+        set('light'),
+        known,
+      );
+
+      assert('answer' in planned);
+      expect('before' in planned.answer).toBe(false);
+      expect(
+        everything(
+          { action: 'set', path: ['theme'], value: 'light' },
+          planned.answer,
+        ),
+      ).not.toContain(CANARY);
+
+      const removed = await plannedSetting(where, ['theme'], remove, known);
+
+      assert('answer' in removed);
+      expect(removed.answer.unchanged).toBe(true);
+      expect(JSON.stringify(removed)).not.toContain(CANARY);
+    });
+  });
+
+  test('a server keeps only its shape: token and Env are gone with their values', async () => {
+    const server = JSON.stringify({
+      mcpServers: {
+        local: {
+          command: CANARY,
+          args: [CANARY],
+          env: { TOKEN: CANARY },
+          Env: { TOKEN: CANARY },
+          token: CANARY,
+        },
+        remote: {
+          type: 'http',
+          url: 'https://example.test/x',
+          headers: { Auth: CANARY },
+          token: CANARY,
+        },
+        broken: { token: CANARY },
+        text: CANARY,
+      },
+    });
+
+    await placed({ user: server, project: server }, async (where) => {
+      const { answer } = await read(where);
+      const shown = {
+        mcpServers: {
+          local: {
+            command: '***',
+            args: ['***'],
+            env: { TOKEN: '***' },
+          },
+          remote: {
+            type: 'http',
+            url: '***',
+            headers: { Auth: '***' },
+          },
+        },
+      };
+
+      expect(JSON.stringify(answer)).not.toContain(CANARY);
+      expect(answer.user).toStrictEqual(shown);
+      expect(answer.project).toStrictEqual(shown);
+      expect(answer.effective).toStrictEqual(shown);
+      // A server's own shape is not a settings problem.
+      expect(answer.problems).toStrictEqual([]);
+    });
+  });
+
+  test('a path reads what is masked, and below a leaf is not set', async () => {
+    const server = JSON.stringify({
+      mcpServers: { x: { command: CANARY, env: { TOKEN: CANARY } } },
+      agents: {
+        url: { model: 'm', mcpServers: false },
+        a: { command: CANARY },
+      },
+    });
+
+    await placed({ user: server }, async (where) => {
+      const at = async (...path: string[]) =>
+        (await read(where, path)).answer.user;
+
+      expect(await at('mcpServers', 'x', 'env', 'TOKEN')).toBe('***');
+      expect(
+        await at('mcpServers', 'x', 'env', 'TOKEN', 'more'),
+      ).toBeUndefined();
+      expect(await at('agents', 'a', 'command')).toBe('***');
+      // An agent merely named url is masked whole.
+      expect(await at('agents', 'url')).toStrictEqual({
+        model: '***',
+        mcpServers: '***',
       });
     });
   });
 
-  test('a link at .chord names .chord', async () => {
-    await linked(
-      async ({ cwd, target }) => {
-        const elsewhere = join(cwd, '..', 'elsewhere');
-
-        await mkdir(elsewhere);
-        await writeFile(
-          join(elsewhere, 'settings.json'),
-          await readFile(target),
-        );
-        await symlink(elsewhere, join(cwd, '.chord'));
-      },
+  test('a boolean agents.<name>.mcpServers stays', async () => {
+    await placed(
+      { user: '{"agents":{"a":{"mcpServers":false,"model":"m"}}}' },
       async (where) => {
-        const { answer } = await reads(where);
+        expect((await read(where)).answer.user).toStrictEqual({
+          agents: { a: { mcpServers: false, model: 'm' } },
+        });
+      },
+    );
+  });
 
-        expect(JSON.stringify(answer)).not.toContain(CANARY);
+  test('a project key only the user may set is counted, naming nothing', async () => {
+    await placed(
+      { project: JSON.stringify({ theme: 'dark', mouse: false }) },
+      async (where) => {
+        const { answer } = await read(where);
+
+        expect(answer.project).toStrictEqual({});
         expect(answer.problems).toStrictEqual([
-          { file: shownFile, message: unreadDirectory('.chord') },
+          {
+            file: join('.chord', 'settings.json'),
+            message: "2 keys only the user's file may set; ignored",
+          },
         ]);
       },
     );
   });
 
-  test('a dangling link is a link, not an absent file', async () => {
-    await linked(
-      async ({ cwd }) => {
-        await mkdir(join(cwd, '.chord'));
-        await symlink(
-          join(cwd, 'nothing-there'),
-          join(cwd, '.chord', 'settings.json'),
-        );
-      },
-      async (where) => {
-        const { answer, files } = await reads(where);
+  test('one key ignored, and a path read carries the whole list', async () => {
+    await placed({ user: '{"nope":1,"agent":"a"}' }, async (where) => {
+      const { answer } = await read(where, ['agent']);
 
-        expect(answer.project).toBeNull();
-        expect(answer.problems[0]?.message).toBe(unreadFile(shownFile));
-        expect(files.projectUnread).toBe(true);
-      },
-    );
-  });
-
-  test('a working directory under a link is not refused', async () => {
-    await linked(
-      async ({ cwd }) => {
-        await mkdir(join(cwd, '.chord'));
-        await writeFile(
-          join(cwd, '.chord', 'settings.json'),
-          '{"agent":"codex"}',
-        );
-        await symlink(cwd, join(cwd, '..', 'linked-work'));
-      },
-      async (where) => {
-        const { answer, files } = await reads({
-          ...where,
-          cwd: join(where.cwd, '..', 'linked-work'),
-        });
-
-        expect(answer.project).toStrictEqual({ agent: 'codex' });
-        expect(answer.problems).toStrictEqual([]);
-        expect(files.projectUnread).toBeUndefined();
-      },
-    );
-  });
-
-  test('an absent file stays null with no problem', async () => {
-    await linked(
-      () => Promise.resolve(),
-      async (where) => {
-        const { answer, files } = await reads(where);
-
-        expect(answer.project).toBeNull();
-        expect(answer.problems).toStrictEqual([]);
-        expect(files.projectUnread).toBeUndefined();
-      },
-    );
-  });
-
-  test('a path read reads null for it, and keeps the problem', async () => {
-    await linked(fileLink, async (where) => {
-      const { answer, files } = await reads(where, ['agent']);
-
-      expect(answer.project).toBeNull();
-      expect(answer.user).toBeUndefined();
-      expect(answer.effective).toBeUndefined();
-      expect(answer.problems).toHaveLength(1);
-      expect(files.projectUnread).toBe(true);
+      expect(answer.user).toBe('a');
+      expect(answer.problems.map(({ message }) => message)).toStrictEqual([
+        '1 key ignored',
+      ]);
     });
   });
 
-  test("the user's own problems still come, the linked file's none", async () => {
-    await linked(
-      fileLink,
-      async (where) => {
-        const { answer } = await reads(where);
+  test('absent, not an object, unreadable, no home and a name no key has', async () => {
+    await placed({}, async (where) => {
+      const { answer, files } = await read(where);
 
-        expect(answer.problems.map(({ message }) => message)).toStrictEqual([
-          'not valid JSON; the file is ignored',
-          unreadFile(shownFile),
-        ]);
-        expect(answer.effective).toStrictEqual({});
-      },
-      '{ broken',
-    );
-  });
+      expect(answer.user).toBeNull();
+      expect(answer.project).toBeNull();
+      expect(answer.effective).toStrictEqual({});
+      expect(answer.problems).toStrictEqual([]);
+      expect(files.user).toEndWith(' · not there');
+    });
 
-  test('a user file that is a link is read', async () => {
-    await linked(
-      () => Promise.resolve(),
-      async (where) => {
-        const file = join(where.configHome!, 'chord', 'settings.json');
-        const real = join(where.configHome!, 'real.json');
+    await placed({ project: '["x"]' }, async (where) => {
+      const { answer, files } = await read(where);
 
-        await writeFile(real, '{"theme":"light"}');
-        await rm(file);
-        await symlink(real, file);
+      expect(answer.problems[0]?.message).toBe('not a JSON object; ignored');
+      expect(files.project).toEndWith(' · not a JSON object');
+    });
 
-        const { answer } = await reads(where);
+    await placed({}, async (where) => {
+      await mkdir(join(where.configHome!, 'chord', 'settings.json'));
 
-        expect(answer.user).toStrictEqual({ theme: 'light' });
-        expect(answer.problems).toStrictEqual([]);
-      },
-    );
-  });
+      const { answer, files } = await read(where);
 
-  test('no home with a linked file leaves effective empty', async () => {
-    await linked(fileLink, async (where) => {
-      const { answer, files } = await reads({
+      expect(answer.user).toBeNull();
+      expect(answer.problems[0]?.message).toBe('cannot be read; ignored');
+      expect(JSON.stringify(answer)).not.toContain(where.home!);
+      expect(files.user).toEndWith(' · cannot be read');
+    });
+
+    await placed({ project: '{"agent":"a"}' }, async (where) => {
+      const { answer, files } = await read({
         ...where,
         configHome: undefined,
         home: undefined,
       });
 
-      expect(answer.effective).toStrictEqual({});
+      expect(answer.user).toBeNull();
+      expect(answer.effective).toStrictEqual({ agent: 'a' });
       expect(files.user).toBe('no home directory');
     });
-  });
 
-  test('a write says a refused file may shadow a key, and no value', async () => {
-    await linked(fileLink, async (where) => {
-      const planned = await plannedSetting(
-        where,
-        ['agent'],
-        set('codex'),
-        known,
-      );
-
-      assert('answer' in planned);
-      expect(planned.answer.shadowedBy).toBe(shownFile);
-      expect(planned.answer.shadowedUnread).toBe(true);
-      expect(JSON.stringify(planned)).not.toContain(CANARY);
+    await placed({}, async (where) => {
+      expect(await readSettingsTool(where, ['__proto__'])).toStrictEqual({
+        error: 'No setting __proto__',
+      });
     });
   });
 
-  test('a refused .chord names it as what may shadow a kind B key, and a user-only key has no warning', async () => {
-    await linked(
-      async ({ cwd }) => {
-        await mkdir(join(cwd, '..', 'other'));
-        await symlink(join(cwd, '..', 'other'), join(cwd, '.chord'));
-      },
-      async (where) => {
-        const kindB = await plannedSetting(
-          where,
-          ['agent'],
-          set('codex'),
-          known,
-        );
-        const userOnly = await plannedSetting(
-          where,
-          ['theme'],
-          set('light'),
-          known,
-        );
+  test('with HOME unset, no answer names the home', async () => {
+    // Under the home but absent, so nothing reads a real settings file.
+    const configHome = join(homedir(), '.chord-test-absent-config');
 
-        assert('answer' in kindB && 'answer' in userOnly);
-        expect(kindB.answer).toMatchObject({
-          shadowedBy: '.chord',
-          shadowedUnread: true,
-        });
-        expect('shadowedBy' in userOnly.answer).toBe(false);
-      },
-    );
+    await placed({ project: '{"theme":"dark"}' }, async (where) => {
+      const { answer, files } = await read({
+        ...where,
+        configHome,
+        home: undefined,
+      });
+
+      expect(JSON.stringify({ answer, files })).not.toContain(homedir());
+      expect(files.user).toStartWith('~');
+    });
   });
 
-  test('a verified file shadows from the bytes read, a swap after them not counting', async () => {
-    await linked(
-      async ({ cwd }) => {
-        await mkdir(join(cwd, '.chord'));
-        await writeFile(join(cwd, '.chord', 'settings.json'), '{"agent":"a"}');
-      },
+  test('the project shadows from its checked layer alone', async () => {
+    const shadowedBy = join('.chord', 'settings.json');
+
+    await placed(
+      { project: '{"agent":"codex"}', user: '{"agent":"claude"}' },
       async (where) => {
-        const file = join(where.cwd, '.chord', 'settings.json');
+        expect(
+          await plannedSetting(where, ['agent'], set('fake'), [
+            'fake',
+            ...known,
+          ]),
+        ).toMatchObject({ answer: { shadowedBy } });
+      },
+    );
+    await placed({ project: '{"agent":7,"theme":"dark"}' }, async (where) => {
+      for (const path of [['agent'], ['theme']]) {
         const planned = await plannedSetting(
           where,
-          ['agent'],
-          set('codex'),
+          path,
+          set(path[0] === 'agent' ? 'codex' : 'light'),
           known,
-          {
-            afterFile: () => {
-              renameSync(file, `${file}.moved`);
-              writeFileSync(file, `{"nope":"${CANARY}"}`);
-            },
-          },
         );
 
         assert('answer' in planned);
-        expect(planned.answer.shadowedBy).toBe(shownFile);
-        expect(planned.answer.shadowedUnread).toBeUndefined();
-        expect(JSON.stringify(planned)).not.toContain(CANARY);
-      },
-    );
+        expect('shadowedBy' in planned.answer).toBe(false);
+      }
+    });
   });
 });
 
-describe('CHD-568 U7 tester: masked plans and completed link transitions', () => {
+describe('CHD-568 U9 tester: checked plans and linked reads', () => {
   async function fixture(
     run: (where: SettingsWhere, user: string, project: string) => Promise<void>,
   ) {

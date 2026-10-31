@@ -1476,7 +1476,7 @@ describe('the settings tool on the transcript (CHD-568)', () => {
   const settings = JSON.stringify({
     theme: 'dark',
     nope: 1,
-    mcpServers: { linear: { env: { TOKEN: SECRET } } },
+    mcpServers: { linear: { command: SECRET, env: { TOKEN: SECRET } } },
   });
 
   for (const columns of [80, 120]) {
@@ -1491,7 +1491,7 @@ describe('the settings tool on the transcript (CHD-568)', () => {
 
             const folded = window.frame();
 
-            expect(folded).toContain('· 3 keys');
+            expect(folded).toContain('· 2 keys');
             expect(folded).toContain('· not there');
             expect(folded).toContain('1 problem');
             expect(folded).not.toContain(SECRET);
@@ -1817,45 +1817,21 @@ describe('the settings tool on the transcript (CHD-568)', () => {
     }
   });
 
-  test('a linked project file reads as not read, and nothing of it shows', async () => {
+  test('a linked project file reads as an ordinary one, showing only what is checked', async () => {
     const server = serveChord();
 
     try {
       await withWindow(
         async (window) => {
           await send(window, 'settingsreadlinked');
-          await window.shows('Project    not read');
+          await window.shows('Project    "linked-agent"');
 
           const read = window.frame().replace(/\s+/g, ' ');
 
-          expect(read).toContain('.chord/settings.json · not read');
+          expect(read).toContain('.chord/settings.json · 1 key');
           expect(read).toContain('1 problem');
-          expect(read).not.toContain(LINK_TARGET.agent);
-        },
-        { columns: 120, rows: 40, server, configHome: fixture('{}') },
-      );
-    } finally {
-      await server.close();
-    }
-  });
-
-  test('a refused .chord, and a write under a refused file, say what was not read', async () => {
-    const server = serveChord();
-
-    try {
-      await withWindow(
-        async (window) => {
-          await send(window, 'settingsreaddirlinked');
-          await window.shows('Project    not read');
-          expect(window.frame()).not.toContain(LINK_TARGET.agent);
-
-          await send(window, 'settingsagentlinked');
-          await window.shows(
-            '.chord/settings.json was not read and may set this too, and win here',
-          );
-          expect(window.frame()).toContain('Set agent?');
-          await window.press('2');
-          await window.shows('Not saved · the person will say what to change');
+          expect(read).not.toContain(LINK_TARGET.linkedUnknownKey);
+          expect(read).not.toContain('linkedUnknownKey');
         },
         { columns: 120, rows: 40, server, configHome: fixture('{}') },
       );

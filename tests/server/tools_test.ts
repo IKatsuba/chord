@@ -1030,32 +1030,49 @@ describe('the settings tool writes (CHD-568)', () => {
     });
   });
 
-  describe('before reads as a read does', () => {
+  describe('before comes from the checked layer', () => {
     const CANARY = 'before-canary-value';
     const odd = JSON.stringify({ theme: { env: { TOKEN: CANARY } } });
-    const url = JSON.stringify({ agents: { url: { model: CANARY } } });
     /** Everything the agent and the row are given. */
     const said = (result: Awaited<ReturnType<typeof changed>>) =>
       JSON.stringify([result.answer, result.shown]);
 
-    test('on a no, a yes and a remove', async () => {
-      for (const [pick, change] of [
-        ['no', { set: 'dark' }],
-        ['yes', { set: 'dark' }],
-        ['no', { remove: true }],
-        ['yes', { remove: true }],
-        [undefined, { set: 'dark' }],
-      ] as const) {
-        const result = await changed(pick, { text: odd, change });
+    test('a bad value reads not set on a set, answered or not', async () => {
+      for (const pick of ['no', 'yes', undefined]) {
+        const result = await changed(pick, {
+          text: odd,
+          change: { set: 'dark' },
+        });
 
         expect(said(result)).not.toContain(CANARY);
-        expect(result.shown[0]?.before).toStrictEqual({
-          env: { TOKEN: '***' },
-        });
+        expect(result.asked).toHaveLength(1);
+        expect('before' in result.shown[0]!).toBe(false);
       }
     });
 
-    test('for an agent named url, its after still exact', async () => {
+    test('a yes replaces the bad value', async () => {
+      const result = await changed('yes', {
+        text: odd,
+        change: { set: 'dark' },
+      });
+
+      expect(JSON.parse(result.held!)).toStrictEqual({ theme: 'dark' });
+    });
+
+    test('a remove of a bad value has nothing to do, and leaves it', async () => {
+      const result = await changed('yes', {
+        text: odd,
+        change: { remove: true },
+      });
+
+      expect(said(result)).not.toContain(CANARY);
+      expect(result.asked).toStrictEqual([]);
+      expect(result.answer).toMatchObject({ unchanged: true, saved: false });
+      expect(result.held).toBe(odd);
+    });
+
+    test('an agent named url reads masked, its after still exact', async () => {
+      const url = JSON.stringify({ agents: { url: { model: CANARY } } });
       const result = await changed('no', {
         text: url,
         path: ['agents', 'url', 'model'],
@@ -1068,18 +1085,16 @@ describe('the settings tool writes (CHD-568)', () => {
         before: '***',
         after: 'fake-small',
       });
-    });
 
-    test('the value held still says what is unchanged', async () => {
-      const result = await changed('yes', {
+      const same = await changed('yes', {
         text: url,
         path: ['agents', 'url', 'model'],
         change: { set: CANARY },
         known: ['url'],
       });
 
-      expect(result.asked).toStrictEqual([]);
-      expect(result.answer).toMatchObject({ unchanged: true, before: '***' });
+      expect(same.asked).toStrictEqual([]);
+      expect(same.answer).toMatchObject({ unchanged: true, before: '***' });
     });
 
     test('a plain value stays exact', async () => {

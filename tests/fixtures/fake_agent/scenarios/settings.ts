@@ -19,8 +19,14 @@ import type { Play } from '../turn.ts';
 import { GATE_RELEASE, gateOpened } from './agents.ts';
 import { callChord, chordClient } from './chord_tools.ts';
 
-/** What a linked file holds, none of which a read may show. */
-export const LINK_TARGET = { agent: 'linked-target-agent' };
+/**
+ * What the linked file holds: a key the schema checks, which a read shows, and
+ * one it does not, which no read may.
+ */
+export const LINK_TARGET = {
+  agent: 'linked-agent',
+  linkedUnknownKey: 'linked-unknown-value',
+};
 
 const calls =
   (...each: readonly Record<string, unknown>[]): Play =>
@@ -135,78 +141,53 @@ const withdrawn: Play = async (turn) => {
 };
 
 /**
- * Plays `each` with a link planted at `.chord/settings.json` or at `.chord`,
- * to a file outside the project, taken away after. A working directory that
- * already holds the path is left alone, and says so.
+ * A read through a link planted at `.chord/settings.json`, to a file outside
+ * the project: an ordinary read, as a start follows links, the link taken away
+ * after. A working directory that already holds that file is left alone, and
+ * says so.
  */
-const withLink =
-  (
-    at: 'file' | 'directory',
-    ...each: readonly Record<string, unknown>[]
-  ): Play =>
-  async (turn) => {
-    const client = await chordClient(turn);
-    const directory = join(cwds.get(turn.sessionId) ?? '.', '.chord');
-    const file = join(directory, 'settings.json');
+const readLinked: Play = async (turn) => {
+  const client = await chordClient(turn);
+  const directory = join(cwds.get(turn.sessionId) ?? '.', '.chord');
+  const link = join(directory, 'settings.json');
 
-    if (client === undefined || existsSync(at === 'file' ? file : directory)) {
-      await turn.say('No link planted.');
-      await client?.close();
-
-      return 'end_turn';
-    }
-
-    const made = at === 'file' && !existsSync(directory);
-    const outside = await mkdtemp(join(tmpdir(), 'chord-fake-linked-'));
-    const link = at === 'file' ? file : directory;
-
-    try {
-      await writeFile(
-        join(outside, 'settings.json'),
-        JSON.stringify(LINK_TARGET),
-      );
-
-      if (at === 'file') {
-        await mkdir(directory, { recursive: true });
-      }
-
-      await symlink(
-        at === 'file' ? join(outside, 'settings.json') : outside,
-        link,
-      );
-
-      for (const args of each) {
-        await callChord(turn, client, 'settings', args, 600_000);
-      }
-    } finally {
-      await rm(link, { force: true });
-
-      if (made) {
-        await rmdir(directory);
-      }
-
-      await rm(outside, { recursive: true });
-      await client.close();
-    }
+  if (client === undefined || existsSync(link)) {
+    await turn.say('No link planted.');
+    await client?.close();
 
     return 'end_turn';
-  };
+  }
 
-const READ_ALL_THEN_KEY = [
-  { action: 'read' },
-  { action: 'read', path: ['agent'] },
-];
+  const made = !existsSync(directory);
+  const outside = await mkdtemp(join(tmpdir(), 'chord-fake-linked-'));
+  const target = join(outside, 'settings.json');
+
+  try {
+    await writeFile(target, JSON.stringify(LINK_TARGET));
+    await mkdir(directory, { recursive: true });
+    await symlink(target, link);
+    await callChord(turn, client, 'settings', { action: 'read' });
+    await callChord(turn, client, 'settings', {
+      action: 'read',
+      path: ['agent'],
+    });
+  } finally {
+    await rm(link, { force: true });
+
+    if (made) {
+      await rmdir(directory);
+    }
+
+    await rm(outside, { recursive: true });
+    await client.close();
+  }
+
+  return 'end_turn';
+};
 
 export const SETTINGS = {
-  // A refused file, then a refused `.chord`, each every key and then one.
-  settingsreadlinked: withLink('file', ...READ_ALL_THEN_KEY),
-  settingsreaddirlinked: withLink('directory', ...READ_ALL_THEN_KEY),
-  // What a write says of a kind B key a refused file may hold.
-  settingsagentlinked: withLink('file', {
-    action: 'set',
-    path: ['agent'],
-    value: 'fake',
-  }),
+  // A read through a link, which is an ordinary read.
+  settingsreadlinked: readLinked,
   settingsoverlap: overlap,
   // Every key, folded on its row until ctrl+o.
   settingsread: calls({ action: 'read' }),

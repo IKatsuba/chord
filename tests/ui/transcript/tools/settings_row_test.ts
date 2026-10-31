@@ -91,46 +91,6 @@ describe('settingsRows', () => {
     ]);
   });
 
-  test('a linked project file reads not read, not not set', () => {
-    const rows = settingsRows(
-      {
-        ...read(['agent'], { project: null, effective: 'a' }),
-        settingsFiles: { user: 'u', project: 'p', projectUnread: true },
-      },
-      false,
-      80,
-    );
-
-    expect(rows!.at(-1)).toMatchObject({
-      label: 'Project    ',
-      text: 'not read',
-    });
-  });
-
-  test('a refused project file says it may win, a verified one that it does', () => {
-    const said = (answer: unknown) =>
-      settingsRows(
-        {
-          tool: 'settings',
-          input: { action: 'set', path: ['agent'], value: 'a' },
-          answer,
-        },
-        false,
-        80,
-      )!.at(-1);
-
-    expect(
-      said({ after: 'a', shadowedBy: '.chord', shadowedUnread: true }),
-    ).toMatchObject({
-      text: '.chord was not read and may set this too, and win here',
-      tone: 'warning',
-    });
-    expect(said({ after: 'a', shadowedBy: 'p.json' })).toMatchObject({
-      text: 'p.json sets this too, and wins here',
-      tone: 'warning',
-    });
-  });
-
   test('a long value wraps at the cell under its column, never cut', () => {
     const value = 'x'.repeat(50) + ' ' + 'y'.repeat(50);
     const rows = settingsRows(

@@ -1,10 +1,7 @@
 import type { z } from '@zod/zod';
-import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
-import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
-import { notFound } from './not_found.ts';
-import { type ProjectReadSeam, readProjectFile } from './project_settings.ts';
+import { parsedEntry } from './mcp.ts';
 import { TeamSelection } from './session/budgets.ts';
 import {
   AGENT_SETTING_SCHEMAS,
@@ -15,6 +12,8 @@ import {
   SETTING_SCHEMAS,
   settingAt,
   type SettingChange,
+  type Settings,
+  type SettingsLayer,
   settingParentProblem,
   type SettingsProblem,
   settingsFiles,
@@ -304,10 +303,6 @@ export interface SettingsWhere {
 
 const MASK = '***';
 
-function isObject(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
-}
-
 /** The keys whose values may carry a secret, whatever holds them. */
 const SECRET_KEYS: ReadonlySet<string> = new Set([
   'env',
@@ -316,6 +311,10 @@ const SECRET_KEYS: ReadonlySet<string> = new Set([
   'args',
   'url',
 ]);
+
+function isObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
 
 /** Every leaf hidden, a list's or an object's shape kept. */
 function maskedLeaves(value: unknown): unknown {
@@ -330,64 +329,44 @@ function maskedLeaves(value: unknown): unknown {
     : MASK;
 }
 
-/**
- * Every value under a secret key's name hidden, whatever the depth or shape.
- * Below the top level a key named `mcpServers` is an agent's switch, so
- * anything but a boolean there is hidden too, whatever holds it.
- */
-function maskedByName(value: unknown, top = true): unknown {
+/** Every value under a secret key's name hidden, at any depth. */
+function maskedByName(value: unknown): unknown {
   if (Array.isArray(value)) {
-    return value.map((item) => maskedByName(item, false));
+    return value.map(maskedByName);
   }
 
   return isObject(value)
     ? Object.fromEntries(
         Object.entries(value).map(([key, held]) => [
           key,
-          SECRET_KEYS.has(key)
-            ? maskedLeaves(held)
-            : key === 'mcpServers' && !top && typeof held !== 'boolean'
-              ? MASK
-              : maskedByName(held, false),
+          SECRET_KEYS.has(key) ? maskedLeaves(held) : maskedByName(held),
         ]),
       )
     : value;
 }
 
-/** A server of the wrong shape holds no name to mask by, so it is hidden whole. */
-function maskedServer(server: unknown): unknown {
-  return isObject(server) ? server : MASK;
-}
-
 /**
- * Settings with what may be secret hidden, so a file of the wrong shape hides
- * what the right one would: by key name, and whole where an `mcpServers` or a
- * server in it is of the wrong shape. Field names on a real server the names do
- * not cover read as written. Done before any path is walked: a path below a
- * leaf is not set.
+ * Checked settings as a read shows them. The settings schema does not look
+ * inside a server, so each goes through its transport's shape here: a field of
+ * no known name, `token` or `Env`, is gone with its value, and a server that
+ * fails is left out. Masked before any path is walked: a path below a leaf is
+ * not set.
  */
-export function maskedSettings(settings: unknown): unknown {
-  const masked = maskedByName(settings);
+function shownSettings({ mcpServers, ...rest }: Settings): unknown {
+  return maskedByName({
+    ...rest,
+    ...(mcpServers === undefined
+      ? {}
+      : {
+          mcpServers: Object.fromEntries(
+            Object.entries(mcpServers).flatMap(([name, entry]) => {
+              const parsed = parsedEntry(entry);
 
-  if (!isObject(masked) || !Object.hasOwn(masked, 'mcpServers')) {
-    return masked;
-  }
-
-  const servers = masked['mcpServers'];
-
-  return {
-    ...masked,
-    mcpServers: Array.isArray(servers)
-      ? servers.map(maskedServer)
-      : isObject(servers)
-        ? Object.fromEntries(
-            Object.entries(servers).map(([name, server]) => [
-              name,
-              maskedServer(server),
-            ]),
-          )
-        : MASK,
-  };
+              return parsed.success ? [[name, parsed.data]] : [];
+            }),
+          ),
+        }),
+  });
 }
 
 /**
@@ -399,102 +378,70 @@ export function shownHome(where: SettingsWhere): string {
   return where.home ?? homedir();
 }
 
-/** Text as written and what its row says of it. */
-function writtenText(text: string): {
-  readonly written: unknown;
-  readonly state: string;
-} {
-  try {
-    const written: unknown = JSON.parse(text);
-
-    if (!isObject(written)) {
-      return { written: null, state: 'not a JSON object' };
-    }
-
-    const keys = Object.keys(written).length;
-
-    return { written, state: `${keys} ${keys === 1 ? 'key' : 'keys'}` };
-  } catch {
-    return { written: null, state: 'not valid JSON' };
-  }
+/** `1 key`, `3 keys`. */
+function keysWord(count: number): string {
+  return `${count} ${count === 1 ? 'key' : 'keys'}`;
 }
 
-/** The user's file as written, or that it is not there. */
-async function writtenFile(file: string | undefined): Promise<{
-  readonly written: unknown;
-  readonly state: string;
-}> {
-  if (file === undefined) {
-    return { written: null, state: 'no home directory' };
-  }
-
-  try {
-    return writtenText(await readFile(file, 'utf8'));
-  } catch (error) {
-    return {
-      written: null,
-      state: notFound(error) ? 'not there' : 'cannot be read',
-    };
-  }
+/** The kind of parse problem a file has, in the words a read says it by. */
+function parseWords(problem: SettingsProblem): string {
+  return problem.message.startsWith('not valid JSON')
+    ? 'not valid JSON'
+    : problem.message.startsWith('not a JSON object')
+      ? 'not a JSON object'
+      : 'cannot be used';
 }
 
 /**
- * A problem as a read says it: never the parser's words, which quote what it
- * choked on and may be a masked value, nor a system error's, which names the
- * person's home.
+ * What a read says of one file's problems, by kind and count alone: a
+ * problem's message and key quote the file's own names and the parser's words,
+ * and a read carries nothing of a file the schema did not check.
  */
-function readProblem(problem: SettingsProblem): string {
-  if (problem.kind === 'read') {
-    return 'cannot be read; the file is ignored';
-  }
+function problemWords(problems: readonly SettingsProblem[]): string[] {
+  const count = (kind: SettingsProblem['kind']) =>
+    problems.filter((problem) => problem.kind === kind).length;
+  const parse = problems.find(({ kind }) => kind === 'parse');
+  const invalid = count('validation');
+  const scoped = count('scope');
 
-  return problem.message.startsWith('not valid JSON')
-    ? 'not valid JSON; the file is ignored'
-    : problem.message;
+  return [
+    ...(count('read') === 0 ? [] : ['cannot be read; ignored']),
+    ...(parse === undefined ? [] : [`${parseWords(parse)}; ignored`]),
+    ...(invalid === 0 ? [] : [`${keysWord(invalid)} ignored`]),
+    ...(scoped === 0
+      ? []
+      : [`${keysWord(scoped)} only the user's file may set; ignored`]),
+  ];
 }
 
-/** Whether a problem is of the key at `path`, or of a whole file. */
-function concerns(problem: SettingsProblem, path: readonly string[]): boolean {
-  const { key } = problem;
-
-  if (key === undefined || path.length === 0) {
-    return true;
-  }
-
-  return path.slice(0, key.length).every((part, index) => part === key[index]);
-}
-
-/** What the read would not read, as the window shows it. */
-function shownRefused(
-  what: 'directory' | 'file',
-  cwd: string,
-  shown: { readonly cwd: string; readonly home: string },
+/** What a file's row says of it, from what the load left. */
+function fileState(
+  layer: SettingsLayer | undefined,
+  problems: readonly SettingsProblem[],
 ): string {
-  const directory = join(cwd, '.chord');
+  if (problems.some(({ kind }) => kind === 'read')) {
+    return 'cannot be read';
+  }
 
-  return shownPath(
-    what === 'directory' ? directory : join(directory, 'settings.json'),
-    shown,
-  );
+  if (layer === undefined) {
+    return 'not there';
+  }
+
+  const parse = problems.find(({ kind }) => kind === 'parse');
+
+  return parse === undefined
+    ? keysWord(Object.keys(layer.settings).length)
+    : parseWords(parse);
 }
-
-/** The one problem a refused project file costs, by what was refused. */
-const REFUSAL_WORDS: Readonly<
-  Record<'directory' | 'file', (name: string) => string>
-> = {
-  directory: (name) =>
-    `${name} was not read: chord could not open it as a directory without following a link. project and effective omit it. A start still follows links`,
-  file: (name) =>
-    `${name} was not read: chord could not read it as a regular file of one link and at most 1 MiB. project and effective omit it. A start still follows links`,
-};
 
 /** A `settings` read: the answer the agent gets. */
 export interface SettingsRead {
-  /** The file as written, masked; null where there is none to read. */
+  /** The file's checked settings, masked; null where it was not loaded. */
   readonly user: unknown;
   readonly project: unknown;
   /** The merged, checked settings, masked. */
   readonly effective: unknown;
+  /** Per file, by kind and count, with no name from the file. */
   readonly problems: readonly {
     readonly file: string;
     readonly message: string;
@@ -503,21 +450,16 @@ export interface SettingsRead {
 
 /**
  * The `settings` tool's read, of every key or of the one at `path`, and what
- * the row says of each file. Reads are not the writes' business: every key
- * reads, an unknown one too, and only a name that can be no key is refused.
+ * the row says of each file. It loads as a start does, following links, and
+ * answers only from what the schema checked: no raw file is parsed for it.
  */
 export async function readSettingsTool(
   where: SettingsWhere,
   path: readonly string[] = [],
-  seam?: ProjectReadSeam,
 ): Promise<
   | {
       readonly answer: SettingsRead;
-      readonly files: {
-        readonly user: string;
-        readonly project: string;
-        readonly projectUnread?: true;
-      };
+      readonly files: { readonly user: string; readonly project: string };
     }
   | { readonly error: string }
 > {
@@ -529,55 +471,36 @@ export async function readSettingsTool(
   const shown = { cwd: where.cwd, home };
   const userFile = userSettingsFile(where.configHome);
   const projectFile = settingsFiles(where).at(-1)!;
-  const user = await writtenFile(userFile);
-  const read = readProjectFile(where.cwd, seam);
-  const refused = read.kind === 'refused' ? read.what : undefined;
-  // One read's bytes for all of it, and whatever a refused file holds stays
-  // out, the problems it would cost too.
-  const project =
-    read.kind === 'read'
-      ? writtenText(read.text)
-      : {
-          written: null,
-          state: refused === undefined ? 'not there' : 'not read',
-        };
-  const loaded = await loadSettings(
-    { configHome: where.configHome, cwd: where.cwd, home },
-    { text: read.kind === 'read' ? read.text : undefined },
-  );
-  const atPath = (value: unknown) => settingAt(maskedSettings(value), path);
+  const { settings, layers, problems } = await loadSettings({
+    configHome: where.configHome,
+    cwd: where.cwd,
+    home,
+  });
+  const layerOf = (file: string | undefined) =>
+    layers.find((layer) => layer.file === file);
+  const problemsOf = (file: string | undefined) =>
+    problems.filter((problem) => problem.file === file);
+  const atPath = (layer: SettingsLayer | undefined) =>
+    settingAt(layer === undefined ? null : shownSettings(layer.settings), path);
 
   return {
     answer: {
-      user: atPath(user.written),
-      project: refused === undefined ? atPath(project.written) : null,
-      effective: atPath(loaded.settings),
-      problems: [
-        ...loaded.problems
-          .filter((problem) => concerns(problem, path))
-          .map((problem) => ({
-            file: shownPath(problem.file, shown),
-            message: readProblem(problem),
-          })),
-        ...(refused === undefined
-          ? []
-          : [
-              {
-                file: shownPath(projectFile, shown),
-                message: REFUSAL_WORDS[refused](
-                  shownRefused(refused, where.cwd, shown),
-                ),
-              },
-            ]),
-      ],
+      user: atPath(layerOf(userFile)),
+      project: atPath(layerOf(projectFile)),
+      effective: settingAt(shownSettings(settings), path),
+      problems: [userFile, projectFile].flatMap((file) =>
+        problemWords(problemsOf(file)).map((message) => ({
+          file: shownPath(file!, shown),
+          message,
+        })),
+      ),
     },
     files: {
       user:
         userFile === undefined
-          ? user.state
-          : `${shownPath(userFile, shown)} · ${user.state}`,
-      project: `${shownPath(projectFile, shown)} · ${project.state}`,
-      ...(refused === undefined ? {} : { projectUnread: true as const }),
+          ? 'no home directory'
+          : `${shownPath(userFile, shown)} · ${fileState(layerOf(userFile), problemsOf(userFile))}`,
+      project: `${shownPath(projectFile, shown)} · ${fileState(layerOf(projectFile), problemsOf(projectFile))}`,
     },
   };
 }
@@ -585,7 +508,7 @@ export async function readSettingsTool(
 /** What a `set` or `remove` answers, while the box is open and once answered. */
 export interface SettingsChanged {
   readonly path: readonly string[];
-  /** The value in the file, masked as a read is, absent where it holds none. */
+  /** The value the schema checked in the file, absent where it holds none. */
   readonly before?: unknown;
   readonly after?: unknown;
   /** The user's file, as the window shows it. */
@@ -595,13 +518,8 @@ export interface SettingsChanged {
   /** Nothing to do: nothing was asked or written. */
   readonly unchanged?: true;
   readonly takesEffect: TakesEffect;
-  /**
-   * The project's file, as shown, where it holds this key and so wins; or
-   * what the read refused, where it may.
-   */
+  /** The project's file, as shown, where its checked settings hold this key. */
   readonly shadowedBy?: string;
-  /** `shadowedBy` was not read: chord cannot tell whether it holds the key. */
-  readonly shadowedUnread?: true;
 }
 
 /**
@@ -632,7 +550,6 @@ export async function plannedSetting(
   path: readonly string[],
   change: SettingChange,
   knownAgents: readonly string[],
-  seam?: ProjectReadSeam,
 ): Promise<
   | { readonly error: string }
   | { readonly answer: SettingsChanged; readonly file: string }
@@ -667,28 +584,25 @@ export async function plannedSetting(
     return { error: notSavedLine(shownFile, parent) };
   }
 
-  const held = settingAt(settings, path);
-  // As a read shows it: a key under a secret's name, or holding one, is masked
-  // here too, for the row and the agent alike. `held` says what is unchanged.
-  const before = settingAt(maskedSettings(settings), path);
   const after = 'set' in change ? change.set : undefined;
   const projectFile = settingsFiles(where).at(-1)!;
-  const read = readProjectFile(where.cwd, seam);
-  const { layers } = await loadSettings(
-    { configHome: where.configHome, cwd: where.cwd, home },
-    { text: read.kind === 'read' ? read.text : undefined },
-  );
-  // What the project's file's check dropped does not win, so it does not count.
+  const { layers } = await loadSettings({
+    configHome: where.configHome,
+    cwd: where.cwd,
+    home,
+  });
+  const layerAt = (layerFile: string) =>
+    layers.find((layer) => layer.file === layerFile)?.settings;
+  // From the checked layer, so a bad value reads as not set and no raw value
+  // goes in an answer; a set replaces it, and a remove has nothing to remove.
+  const held = settingAt(layerAt(file), path);
+  const userLayer = layerAt(file);
+  const before =
+    userLayer === undefined
+      ? undefined
+      : settingAt(shownSettings(userLayer), path);
   const shadowed =
-    !named.userOnly &&
-    settingAt(
-      layers.find((layer) => layer.file === projectFile)?.settings,
-      path,
-    ) !== undefined;
-  const unread =
-    !named.userOnly && read.kind === 'refused'
-      ? shownRefused(read.what, where.cwd, shown)
-      : undefined;
+    !named.userOnly && settingAt(layerAt(projectFile), path) !== undefined;
 
   return {
     file,
@@ -702,9 +616,6 @@ export async function plannedSetting(
         : {}),
       takesEffect: named.takesEffect,
       ...(shadowed ? { shadowedBy: shownPath(projectFile, shown) } : {}),
-      ...(unread === undefined
-        ? {}
-        : { shadowedBy: unread, shadowedUnread: true as const }),
     },
   };
 }

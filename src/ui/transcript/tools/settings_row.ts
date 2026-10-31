@@ -111,9 +111,7 @@ function changeRows(
     typeof answer.shadowedBy === 'string'
       ? labelled(
           '',
-          answer.shadowedUnread === true
-            ? `${answer.shadowedBy} was not read and may set this too, and win here`
-            : `${answer.shadowedBy} sets this too, and wins here`,
+          `${answer.shadowedBy} sets this too, and wins here`,
           width,
           'warning',
         )
@@ -179,13 +177,7 @@ export function settingsRows(
     return [
       ...labelled('Effective  ', valueWords(answer.effective), width),
       ...labelled('User       ', valueWords(answer.user), width),
-      ...labelled(
-        'Project    ',
-        call.settingsFiles?.projectUnread === true
-          ? 'not read'
-          : valueWords(answer.project),
-        width,
-      ),
+      ...labelled('Project    ', valueWords(answer.project), width),
     ];
   }
 

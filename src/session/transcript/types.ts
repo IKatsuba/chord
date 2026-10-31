@@ -132,8 +132,6 @@ export interface ChordCall {
   readonly settingsFiles?: {
     readonly user: string;
     readonly project: string;
-    /** The project's file is one the read refused. */
-    readonly projectUnread?: true;
   };
 }
 

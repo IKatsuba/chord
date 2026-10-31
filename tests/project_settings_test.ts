@@ -496,3 +496,60 @@ describe('nothing of a refused or swapped file reaches the answer or the row', (
     }),
   );
 });
+
+describe('CHD-568 U8 tester: byte limits and repeated refusal recovery', () => {
+  test(
+    'the exact byte cap accepts UTF-8 JSON and one extra byte refuses it',
+    placed((place) => {
+      mkdirSync(place.directory);
+
+      const bytes = Buffer.alloc(1024 * 1024, ' ');
+      const json = Buffer.from('{"agent":"codex","label":"🙂"}');
+
+      json.copy(bytes);
+      writeFileSync(place.file, bytes);
+      expect(readProjectFile(place.cwd)).toEqual({
+        kind: 'read',
+        text: bytes.toString('utf8'),
+      });
+
+      appendFileSync(place.file, ' ');
+      expect(readProjectFile(place.cwd)).toEqual(REFUSED_FILE);
+      truncateSync(place.file, bytes.length);
+      expect(readProjectFile(place.cwd)).toEqual({
+        kind: 'read',
+        text: bytes.toString('utf8'),
+      });
+    }),
+  );
+
+  test(
+    'oversized and missing reads release handles and a later valid read has no stale refusal',
+    placed(async (place) => {
+      real(place);
+
+      const before = readdirSync('/dev/fd').length;
+
+      for (let round = 0; round < 4; round++) {
+        truncateSync(place.file, 2 * 1024 * 1024);
+
+        const refused = await everything(place);
+
+        expect(refused.answer.project).toBeNull();
+        expect(refused.files.projectUnread).toBe(true);
+        expect(refused.answer.problems).toHaveLength(1);
+        unlinkSync(place.file);
+        expect(readProjectFile(place.cwd)).toEqual({ kind: 'absent' });
+        writeFileSync(place.file, REAL);
+
+        const restored = await everything(place);
+
+        expect(restored.answer.project).toEqual({ agent: 'real' });
+        expect(restored.answer.effective).toEqual({ agent: 'real' });
+        expect(restored.answer.problems).toEqual([]);
+        expect(restored.files.projectUnread).toBeUndefined();
+        expect(readdirSync('/dev/fd').length).toBe(before);
+      }
+    }),
+  );
+});

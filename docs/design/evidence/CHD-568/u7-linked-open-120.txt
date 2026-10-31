@@ -1,0 +1,40 @@
+                "NEST": {
+                  "a": [
+                    "***"
+                  ]
+                }
+              }
+            },
+            "linear": {
+              "type": "http",
+              "url": "***",
+              "headers": {
+                "Authorization": "***"
+              }
+            }
+          },
+          "agents": {
+            "other": {
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": ".chord/settings.json is a symbolic link, so it was not read: project and effective omit it. A
+             start still follows the link"
+          }
+        ]
+      }
+
+ ⏺ Settings(agent) · read
+   ⎿  Effective  not set
+      User       not set
+      Project    not read
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u7
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: "mcpServers.github.env.NEST": invalid input: expected string, received object; the
+   server is ignored
+
+ › settingsreadkey
+
+ ⏺ Settings(mcpServers.linear.env.TOKEN) · read
+   ⎿  Effective  not set
+      User       not set
+      Project    not set
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

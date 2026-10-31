@@ -1,0 +1,24 @@
+              }
+            }
+          },
+          "agents": {
+            "other": {
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": ".chord/settings.json is a symbolic link, so it was no
+            t read: project and effective omit it. A start still follows the
+            link"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

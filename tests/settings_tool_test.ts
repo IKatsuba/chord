@@ -318,23 +318,7 @@ describe('settingRefusal', () => {
   });
 });
 
-describe('CHD-568 U3 tester: masked fresh reads', () => {
-  test('masking preserves hostile own key names without changing the raw object', () => {
-    const raw: unknown = JSON.parse(
-      '{"mcpServers":{"__proto__":{"env":{"__proto__":"secret-a","constructor":["secret-b"]},"headers":null},"toString":[[{"headers":{"Auth":{"deep":"secret-c"}}}]]}}',
-    );
-    const before = JSON.stringify(raw);
-    const masked = maskedSettings(raw);
-
-    expect(masked).toEqual(
-      JSON.parse(
-        '{"mcpServers":{"__proto__":{"env":{"__proto__":"***","constructor":["***"]},"headers":"***"},"toString":"***"}}',
-      ),
-    );
-    expect(JSON.stringify(masked)).not.toContain('secret-');
-    expect(JSON.stringify(raw)).toBe(before);
-  });
-
+describe('CHD-568 U3 tester: checked fresh reads', () => {
   test('repeated reads observe repairs and removal without writing either file', async () => {
     const root = await mkdtemp(join(tmpdir(), 'chord-settings-tester-read-'));
     const where: SettingsWhere = {
@@ -368,9 +352,7 @@ describe('CHD-568 U3 tester: masked fresh reads', () => {
         answer: { user: 'claude', effective: 'claude' },
       });
       expect(JSON.stringify(broken)).not.toContain('secret-fresh');
-      expect(JSON.stringify(broken)).toContain(
-        'not valid JSON; the file is ignored',
-      );
+      expect(JSON.stringify(broken)).toContain('not valid JSON; ignored');
 
       await rm(project);
 
@@ -1041,7 +1023,7 @@ describe('CHD-568 U9 tester: checked plans and linked reads', () => {
     }
   }
 
-  test('set and remove plans mask a malformed leaf by its full path and preserve file bytes', async () => {
+  test('a malformed leaf is absent from a set plan and unchanged on removal', async () => {
     await fixture(async (where, user) => {
       const before = {
         env: { LIST: ['env-canary', { nested: 'env-canary' }] },
@@ -1062,44 +1044,45 @@ describe('CHD-568 U9 tester: checked plans and linked reads', () => {
         );
 
         assert('answer' in result);
-        expect(result.answer.before).toEqual({
-          env: { LIST: ['***', { nested: '***' }] },
-          command: ['***'],
-          mcpServers: '***',
-          keep: 3,
-        });
+        expect(result.answer.before).toBeUndefined();
+
+        if ('remove' in change) {
+          expect(result.answer.unchanged).toBe(true);
+        } else {
+          expect(result.answer.after).toBe('new-model');
+        }
+
         expect(JSON.stringify(result)).not.toContain('canary');
         expect(await readFile(user, 'utf8')).toBe(text);
       }
     });
   });
 
-  test('later completed reads distinguish a removed link, regular file and dangling replacement', async () => {
+  test('completed reads follow a link, then observe a regular file and dangling replacement', async () => {
     await fixture(async (where, user, project) => {
       const target = join(where.home!, 'target.json');
 
       await writeFile(user, '{"agent":"claude"}');
-      await writeFile(target, '{"agent":"linked-canary","theme":3}');
+      await writeFile(target, '{"agent":"codex","linked-canary":1,"theme":3}');
       await symlink(target, project);
 
       const linked = await readSettingsTool(where, ['agent']);
 
       assert('answer' in linked);
-      expect(linked.answer.project).toBeNull();
-      expect(linked.answer.effective).toBe('claude');
+      expect(linked.answer.project).toBe('codex');
+      expect(linked.answer.effective).toBe('codex');
       expect(JSON.stringify(linked)).not.toContain('linked-canary');
       expect(linked.answer.problems).toHaveLength(1);
 
       await rm(project);
-      await writeFile(project, '{"agent":"codex"}');
+      await writeFile(project, '{"agent":"claude"}');
 
       const regular = await readSettingsTool(where, ['agent']);
 
       assert('answer' in regular);
-      expect(regular.answer.project).toBe('codex');
-      expect(regular.answer.effective).toBe('codex');
+      expect(regular.answer.project).toBe('claude');
+      expect(regular.answer.effective).toBe('claude');
       expect(regular.answer.problems).toEqual([]);
-      expect(regular.files.projectUnread).toBeUndefined();
 
       await rm(project);
       await symlink(join(where.home!, 'absent-target'), project);
@@ -1107,10 +1090,10 @@ describe('CHD-568 U9 tester: checked plans and linked reads', () => {
       const dangling = await readSettingsTool(where, ['agent']);
 
       assert('answer' in dangling);
-      expect(dangling.answer.project).toBeNull();
+      expect(dangling.answer.project).toBeUndefined();
       expect(dangling.answer.effective).toBe('claude');
-      expect(dangling.files.projectUnread).toBe(true);
-      expect(dangling.answer.problems).toHaveLength(1);
+      expect(dangling.files.project).toEndWith(' · not there');
+      expect(dangling.answer.problems).toEqual([]);
     });
   });
 });

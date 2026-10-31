@@ -1070,6 +1070,49 @@ describe('masking goes by key name (CHD-568)', () => {
     }
   });
 
+  test('a key named mcpServers below the top reads whole unless a boolean, whatever holds it', () => {
+    expect(
+      maskedSettings({
+        agents: { a: [{ mcpServers: S }], b: { deep: { mcpServers: [S] } } },
+        odd: [{ nested: { mcpServers: { x: S } } }],
+        kept: [{ mcpServers: false }],
+      }),
+    ).toStrictEqual({
+      agents: {
+        a: [{ mcpServers: '***' }],
+        b: { deep: { mcpServers: '***' } },
+      },
+      odd: [{ nested: { mcpServers: '***' } }],
+      kept: [{ mcpServers: false }],
+    });
+  });
+
+  test('a path below such a key is not set', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-below-'));
+    const where = { home: root, configHome: root, cwd: join(root, 'work') };
+
+    try {
+      await mkdir(join(root, 'chord'));
+      await writeFile(
+        join(root, 'chord', 'settings.json'),
+        JSON.stringify({ agents: { a: { mcpServers: { token: S } } } }),
+      );
+
+      const below = await readSettingsTool(where, [
+        'agents',
+        'a',
+        'mcpServers',
+        'token',
+      ]);
+
+      assert(!('error' in below));
+      expect(below.answer.user).toBeUndefined();
+      expect(JSON.stringify(below)).not.toContain(S);
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  });
+
   test('a list of agents masks the same, in a read of every key', async () => {
     const root = await mkdtemp(join(tmpdir(), 'chord-settings-agents-'));
     const where = { home: root, configHome: root, cwd: join(root, 'work') };

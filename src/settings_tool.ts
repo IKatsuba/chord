@@ -331,17 +331,25 @@ function maskedLeaves(value: unknown): unknown {
     : MASK;
 }
 
-/** Every value under a secret key's name hidden, whatever the depth or shape. */
-function maskedByName(value: unknown): unknown {
+/**
+ * Every value under a secret key's name hidden, whatever the depth or shape.
+ * Below the top level a key named `mcpServers` is an agent's switch, so
+ * anything but a boolean there is hidden too, whatever holds it.
+ */
+function maskedByName(value: unknown, top = true): unknown {
   if (Array.isArray(value)) {
-    return value.map(maskedByName);
+    return value.map((item) => maskedByName(item, false));
   }
 
   return isObject(value)
     ? Object.fromEntries(
         Object.entries(value).map(([key, held]) => [
           key,
-          SECRET_KEYS.has(key) ? maskedLeaves(held) : maskedByName(held),
+          SECRET_KEYS.has(key)
+            ? maskedLeaves(held)
+            : key === 'mcpServers' && !top && typeof held !== 'boolean'
+              ? MASK
+              : maskedByName(held, false),
         ]),
       )
     : value;
@@ -352,52 +360,24 @@ function maskedServer(server: unknown): unknown {
   return isObject(server) ? server : MASK;
 }
 
-/** An agent whose `mcpServers` is no boolean, the one thing it can be, hides it. */
-function maskedAgent(agent: unknown): unknown {
-  return isObject(agent) &&
-    Object.hasOwn(agent, 'mcpServers') &&
-    typeof agent['mcpServers'] !== 'boolean'
-    ? { ...agent, mcpServers: MASK }
-    : agent;
-}
-
 /**
  * Settings with what may be secret hidden, so a file of the wrong shape hides
- * what the right one would: by key name, and whole where an `mcpServers`, a
- * server in it or an agent's `mcpServers` is of the wrong shape. Field names on
- * a real server the names do not cover read as written. Done before any path
- * is walked: a path below a leaf is not set.
+ * what the right one would: by key name, and whole where an `mcpServers` or a
+ * server in it is of the wrong shape. Field names on a real server the names do
+ * not cover read as written. Done before any path is walked: a path below a
+ * leaf is not set.
  */
 export function maskedSettings(settings: unknown): unknown {
   const masked = maskedByName(settings);
 
-  if (!isObject(masked)) {
+  if (!isObject(masked) || !Object.hasOwn(masked, 'mcpServers')) {
     return masked;
-  }
-
-  const agents = masked['agents'];
-  const withAgents = Array.isArray(agents)
-    ? { ...masked, agents: agents.map(maskedAgent) }
-    : isObject(agents)
-      ? {
-          ...masked,
-          agents: Object.fromEntries(
-            Object.entries(agents).map(([name, agent]) => [
-              name,
-              maskedAgent(agent),
-            ]),
-          ),
-        }
-      : masked;
-
-  if (!Object.hasOwn(masked, 'mcpServers')) {
-    return withAgents;
   }
 
   const servers = masked['mcpServers'];
 
   return {
-    ...withAgents,
+    ...masked,
     mcpServers: Array.isArray(servers)
       ? servers.map(maskedServer)
       : isObject(servers)

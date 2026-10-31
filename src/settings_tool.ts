@@ -352,24 +352,50 @@ function maskedServer(server: unknown): unknown {
   return isObject(server) ? server : MASK;
 }
 
+/** An agent whose `mcpServers` is no boolean, the one thing it can be, hides it. */
+function maskedAgent(agent: unknown): unknown {
+  return isObject(agent) &&
+    Object.hasOwn(agent, 'mcpServers') &&
+    typeof agent['mcpServers'] !== 'boolean'
+    ? { ...agent, mcpServers: MASK }
+    : agent;
+}
+
 /**
  * Settings with what may be secret hidden, so a file of the wrong shape hides
- * what the right one would: by key name, and where an `mcpServers` or a server
- * in it is no object, whole. Field names on a real server the names do not
- * cover read as written. Done before any path is walked: a path below a leaf
- * is not set.
+ * what the right one would: by key name, and whole where an `mcpServers`, a
+ * server in it or an agent's `mcpServers` is of the wrong shape. Field names on
+ * a real server the names do not cover read as written. Done before any path
+ * is walked: a path below a leaf is not set.
  */
 export function maskedSettings(settings: unknown): unknown {
   const masked = maskedByName(settings);
 
-  if (!isObject(masked) || !Object.hasOwn(masked, 'mcpServers')) {
+  if (!isObject(masked)) {
     return masked;
+  }
+
+  const agents = masked['agents'];
+  const withAgents = isObject(agents)
+    ? {
+        ...masked,
+        agents: Object.fromEntries(
+          Object.entries(agents).map(([name, agent]) => [
+            name,
+            maskedAgent(agent),
+          ]),
+        ),
+      }
+    : masked;
+
+  if (!Object.hasOwn(masked, 'mcpServers')) {
+    return withAgents;
   }
 
   const servers = masked['mcpServers'];
 
   return {
-    ...masked,
+    ...withAgents,
     mcpServers: Array.isArray(servers)
       ? servers.map(maskedServer)
       : isObject(servers)

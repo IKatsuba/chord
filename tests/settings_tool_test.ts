@@ -1062,6 +1062,14 @@ describe('masking goes by key name (CHD-568)', () => {
     }
   });
 
+  test('an agents.<name>.mcpServers that is no boolean reads whole', () => {
+    for (const held of [S, 3, null, [S], { deep: S }]) {
+      expect(
+        maskedSettings({ agents: { a: { mcpServers: held, model: 'm' } } }),
+      ).toStrictEqual({ agents: { a: { mcpServers: '***', model: 'm' } } });
+    }
+  });
+
   test('a boolean agents.<name>.mcpServers stays', () => {
     expect(
       maskedSettings({ agents: { a: { mcpServers: false, model: 'm' } } }),

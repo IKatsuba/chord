@@ -480,8 +480,8 @@ describe('reading settings (CHD-568)', () => {
             headers: { Authorization: '***' },
           },
           wrong: { env: '***', headers: ['***'] },
-          listed: [{ env: { TOKEN: '***' } }],
-          bare: 9,
+          listed: '***',
+          bare: '***',
         },
       });
       expect(answer.effective).toMatchObject({
@@ -669,7 +669,7 @@ describe('reading settings (CHD-568)', () => {
         headers: { Authorization: '***' },
       };
       const masked = {
-        mcpServers: [server, [{ env: '***', headers: ['***'] }]],
+        mcpServers: [server, '***'],
       };
 
       expect(JSON.stringify(answer)).not.toContain(SECRET);
@@ -1004,6 +1004,62 @@ describe('masking goes by key name (CHD-568)', () => {
       mcpServers: { url: { type: '***', name: '***' } },
       env: '***',
     });
+  });
+
+  test('a server of the wrong shape reads whole, in a map or a list', () => {
+    expect(
+      maskedSettings({
+        mcpServers: {
+          text: S,
+          number: 3,
+          empty: null,
+          list: [S],
+          real: { type: 'http', token: 'as-written' },
+        },
+      }),
+    ).toStrictEqual({
+      mcpServers: {
+        text: '***',
+        number: '***',
+        empty: '***',
+        list: '***',
+        real: { type: 'http', token: 'as-written' },
+      },
+    });
+    expect(
+      maskedSettings({ mcpServers: [S, 3, null, [S], { type: 'http' }] }),
+    ).toStrictEqual({
+      mcpServers: ['***', '***', '***', '***', { type: 'http' }],
+    });
+    expect(maskedSettings({ mcpServers: null })).toStrictEqual({
+      mcpServers: '***',
+    });
+  });
+
+  test('a path into a server of the wrong shape is not set', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-server-'));
+    const where = {
+      home: root,
+      configHome: root,
+      cwd: join(root, 'work'),
+    };
+
+    try {
+      await mkdir(join(root, 'chord'));
+      await writeFile(
+        join(root, 'chord', 'settings.json'),
+        JSON.stringify({ mcpServers: { x: S, list: [{ token: S }] } }),
+      );
+
+      const whole = await readSettingsTool(where);
+      const inside = await readSettingsTool(where, ['mcpServers', 'list', '0']);
+
+      expect(JSON.stringify(whole)).not.toContain(S);
+      assert(!('error' in inside));
+      expect(inside.answer.user).toBeUndefined();
+    } finally {
+      await rm(root, { recursive: true });
+    }
   });
 
   test('a boolean agents.<name>.mcpServers stays', () => {

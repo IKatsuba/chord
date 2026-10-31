@@ -347,19 +347,40 @@ function maskedByName(value: unknown): unknown {
     : value;
 }
 
+/** A server of the wrong shape holds no name to mask by, so it is hidden whole. */
+function maskedServer(server: unknown): unknown {
+  return isObject(server) ? server : MASK;
+}
+
 /**
  * Settings with what may be secret hidden, so a file of the wrong shape hides
- * what the right one would; an `mcpServers` no name can be found in is hidden
- * whole. Done before any path is walked: a path below a leaf is not set.
+ * what the right one would: by key name, and where an `mcpServers` or a server
+ * in it is no object, whole. Field names on a real server the names do not
+ * cover read as written. Done before any path is walked: a path below a leaf
+ * is not set.
  */
 export function maskedSettings(settings: unknown): unknown {
   const masked = maskedByName(settings);
 
-  return isObject(masked) &&
-    Object.hasOwn(masked, 'mcpServers') &&
-    typeof masked['mcpServers'] !== 'object'
-    ? { ...masked, mcpServers: MASK }
-    : masked;
+  if (!isObject(masked) || !Object.hasOwn(masked, 'mcpServers')) {
+    return masked;
+  }
+
+  const servers = masked['mcpServers'];
+
+  return {
+    ...masked,
+    mcpServers: Array.isArray(servers)
+      ? servers.map(maskedServer)
+      : isObject(servers)
+        ? Object.fromEntries(
+            Object.entries(servers).map(([name, server]) => [
+              name,
+              maskedServer(server),
+            ]),
+          )
+        : MASK,
+  };
 }
 
 /**
@@ -571,7 +592,7 @@ export async function readSettingsTool(
 /** What a `set` or `remove` answers, while the box is open and once answered. */
 export interface SettingsChanged {
   readonly path: readonly string[];
-  /** The value in the file, absent where it holds none. */
+  /** The value in the file, masked as a read is, absent where it holds none. */
   readonly before?: unknown;
   readonly after?: unknown;
   /** The user's file, as the window shows it. */
@@ -647,7 +668,10 @@ export async function plannedSetting(
     return { error: notSavedLine(shownFile, parent) };
   }
 
-  const before = settingAt(settings, path);
+  const held = settingAt(settings, path);
+  // As a read shows it: a key under a secret's name, or holding one, is masked
+  // here too, for the row and the agent alike. `held` says what is unchanged.
+  const before = settingAt(maskedSettings(settings), path);
   const after = 'set' in change ? change.set : undefined;
   const project = settingsFiles(where).at(-1)!;
   const { layers } = await loadSettings({
@@ -670,7 +694,7 @@ export async function plannedSetting(
       ...(before === undefined ? {} : { before }),
       ...(after === undefined ? {} : { after }),
       file: shownFile,
-      ...(isDeepStrictEqual(before, after)
+      ...(isDeepStrictEqual(held, after)
         ? { saved: false, unchanged: true as const }
         : {}),
       takesEffect: named.takesEffect,

@@ -694,11 +694,13 @@ describe('the settings tool writes (CHD-568)', () => {
       path = ['theme'],
       change = { set: 'light' },
       mid,
+      known,
     }: {
       text?: string;
       path?: readonly string[];
       change?: { readonly set: unknown } | { readonly remove: true };
       mid?: (file: string) => Promise<void>;
+      known?: readonly string[];
     } = {},
   ) {
     const root = await mkdtemp(join(tmpdir(), 'chord-settings-change-'));
@@ -719,6 +721,7 @@ describe('the settings tool writes (CHD-568)', () => {
         key: 0,
         window: {
           ...windowOf(),
+          ...(known === undefined ? {} : { runtimes: () => known }),
           settingSaved: (savedPath, savedChange) =>
             saved.push([savedPath, savedChange]),
           settingsWhere: () => ({
@@ -1024,6 +1027,65 @@ describe('the settings tool writes (CHD-568)', () => {
       await until(() => asked() === 2);
       answer('no');
       await next;
+    });
+  });
+
+  describe('before reads as a read does', () => {
+    const CANARY = 'before-canary-value';
+    const odd = JSON.stringify({ theme: { env: { TOKEN: CANARY } } });
+    const url = JSON.stringify({ agents: { url: { model: CANARY } } });
+    /** Everything the agent and the row are given. */
+    const said = (result: Awaited<ReturnType<typeof changed>>) =>
+      JSON.stringify([result.answer, result.shown]);
+
+    test('on a no, a yes and a remove', async () => {
+      for (const [pick, change] of [
+        ['no', { set: 'dark' }],
+        ['yes', { set: 'dark' }],
+        ['no', { remove: true }],
+        ['yes', { remove: true }],
+        [undefined, { set: 'dark' }],
+      ] as const) {
+        const result = await changed(pick, { text: odd, change });
+
+        expect(said(result)).not.toContain(CANARY);
+        expect(result.shown[0]?.before).toStrictEqual({
+          env: { TOKEN: '***' },
+        });
+      }
+    });
+
+    test('for an agent named url, its after still exact', async () => {
+      const result = await changed('no', {
+        text: url,
+        path: ['agents', 'url', 'model'],
+        change: { set: 'fake-small' },
+        known: ['url'],
+      });
+
+      expect(said(result)).not.toContain(CANARY);
+      expect(result.answer).toMatchObject({
+        before: '***',
+        after: 'fake-small',
+      });
+    });
+
+    test('the value held still says what is unchanged', async () => {
+      const result = await changed('yes', {
+        text: url,
+        path: ['agents', 'url', 'model'],
+        change: { set: CANARY },
+        known: ['url'],
+      });
+
+      expect(result.asked).toStrictEqual([]);
+      expect(result.answer).toMatchObject({ unchanged: true, before: '***' });
+    });
+
+    test('a plain value stays exact', async () => {
+      const result = await changed('no', { text: '{"theme":"dark"}' });
+
+      expect(result.answer).toMatchObject({ before: 'dark', after: 'light' });
     });
   });
 

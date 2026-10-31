@@ -931,6 +931,111 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
     return await agent;
   };
 
+  describe('CHD-561 tester: SDK wire validation preserves the connection', () => {
+    test('arrays after initialize are refused without dispatching their requests', async () => {
+      const held = heldProcess();
+      const agent = await opened(held);
+
+      try {
+        held.say(
+          JSON.stringify([
+            {
+              jsonrpc: '2.0',
+              id: 'batched',
+              method: 'elicitation/create',
+              params: {},
+            },
+          ]),
+        );
+        await forkUntil(() => held.heard.some((each) => each['id'] === null));
+        expect(held.heard.find((each) => each['id'] === null)).toMatchObject({
+          error: { code: -32600 },
+        });
+        expect(held.heard.some((each) => each['id'] === 'batched')).toBe(false);
+
+        const session = agent.newSession({
+          cwd: process.cwd(),
+          mcpServers: [],
+        });
+
+        await forkUntil(() =>
+          held.heard.some((each) => each['method'] === 'session/new'),
+        );
+        held.answer('session/new', { sessionId: 'usable-after-array' });
+        expect((await session).sessionId).toBe('usable-after-array');
+      } finally {
+        await agent.close();
+      }
+    });
+
+    for (const bound of ['minimum', 'maximum']) {
+      test(`a fractional integer ${bound} is refused on the wire; integer and number bounds still reach the handler`, async () => {
+        const held = heldProcess();
+        const requests: acp.CreateElicitationRequest[] = [];
+        const opening = connectAgent(held.process, {
+          ...OPTIONS,
+          onElicitation: (request) => {
+            requests.push(request);
+
+            return Promise.resolve({ action: 'decline' });
+          },
+        });
+
+        await forkUntil(() => held.heard.length > 0);
+        held.answer('initialize', {
+          protocolVersion: 1,
+          agentCapabilities: {},
+        });
+
+        const agent = await opening;
+
+        try {
+          for (const [id, type, value] of [
+            ['fraction', 'integer', 1.5],
+            ['whole', 'integer', 1],
+            ['number', 'number', 1.5],
+          ] as const) {
+            held.say(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id,
+                method: 'elicitation/create',
+                params: {
+                  sessionId: 's',
+                  mode: 'form',
+                  message: 'Choose a value',
+                  requestedSchema: {
+                    type: 'object',
+                    properties: { a: { type, [bound]: value } },
+                  },
+                },
+              }),
+            );
+            await forkUntil(() => held.heard.some((each) => each['id'] === id));
+
+            const answer = held.heard.find((each) => each['id'] === id);
+
+            if (id === 'fraction') {
+              expect(answer).toMatchObject({ error: { code: -32602 } });
+              expect(requests).toEqual([]);
+            } else {
+              expect(answer).toMatchObject({ result: { action: 'decline' } });
+              expect(requests.at(-1)).toMatchObject({
+                requestedSchema: {
+                  properties: { a: { type, [bound]: value } },
+                },
+              });
+            }
+          }
+
+          expect(requests).toHaveLength(2);
+        } finally {
+          await agent.close();
+        }
+      });
+    }
+  });
+
   test('a JSON array from the agent is refused by the SDK, unseen by the tap, and the connection lives on', async () => {
     const held = heldProcess();
     const seen = new Seen();

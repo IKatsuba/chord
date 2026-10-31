@@ -24,6 +24,26 @@ import {
 
 const NOW = 1_000_000;
 
+describe('CHD-561 tester: Unicode background name truncation', () => {
+  test('the pinned name cuts at whole graphemes while preserving its width', () => {
+    const unit = '界é👩‍💻';
+    const segments = new Intl.Segmenter();
+
+    for (const width of [1, 2, 3, 7, 20, 76, 116]) {
+      const shown = pinnedName({ name: unit.repeat(40) }, width);
+
+      expect(shown.cut).toBe(true);
+      expect(shown.text).toEndWith('…');
+      expect(stringWidth(shown.text)).toBeLessThanOrEqual(width);
+      expect(
+        [...segments.segment(shown.text.slice(0, -1))].every(({ segment }) =>
+          ['界', 'é', '👩‍💻'].includes(segment),
+        ),
+      ).toBe(true);
+    }
+  });
+});
+
 function monitor(
   id: string,
   name: string,

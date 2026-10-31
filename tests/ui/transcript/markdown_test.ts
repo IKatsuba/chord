@@ -30,6 +30,25 @@ function lines(text: string, width: number): string[] {
   );
 }
 
+describe('CHD-561 tester: nested list layout on markdansi 0.3.7', () => {
+  test('a nested bullet continuation and its code box stay under the nested text', () => {
+    expect(lines('- a\n  - nested long item that wraps', 20)).toEqual([
+      '- a',
+      '  - nested long item',
+      '    that wraps',
+    ]);
+
+    const boxed = lines(
+      '- outer\n  - Run:\n    ```sh\n    echo hello\n    ```',
+      20,
+    );
+
+    expect(boxed.slice(2).every((row) => row.startsWith('    '))).toBe(true);
+    expect(boxed.some((row) => row.includes('echo hello'))).toBe(true);
+    expect(boxed.every((row) => stringWidth(row) <= 20)).toBe(true);
+  });
+});
+
 test('markdown marks give way to what they mean', () => {
   const shown = lines(MARKDOWN_REPLY, 116).join('\n');
 

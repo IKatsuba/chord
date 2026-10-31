@@ -180,8 +180,8 @@ when listed), each agent's model, effort and mode, MCP servers, theme
 and notifications. Each new unnamed interactive start asks again; the pick
 applies to that run and is not saved. Main's agent can read settings and
 ask to change allowed keys through `settings`; each change needs your yes.
-MCP `env` and `headers` values are masked on read; `args`, `url` and
-`command` read as written, so secrets inline there reach the model.
+`env`, `headers`, `command`, `args` and `url` values are masked on read
+at any depth. Unknown server fields, such as `token`, read as written.
 
 **[The guide](docs/guide.md)** has everything else: every flag, setting, key,
 the team file format, chord's MCP tools for agents, and how sessions are

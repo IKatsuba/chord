@@ -595,10 +595,13 @@ The main session's agent can use chord's `settings` tool in the window;
 forks, children and `-p` cannot. `read` returns the user and project files
 as written, the merged, checked settings and any problems. It covers every
 key, or one named by a list such as `["agents", "codex", "model"]`.
-MCP server `env` and `headers` values are masked as `"***"`, including on
-a read of one key. `args`, `url` and `command` read as written: a secret
-written inline there reaches the model. A read of every key folds under
-`Settings`; ctrl+o expands it.
+Values under `env`, `headers`, `command`, `args` and `url` are masked as
+`"***"` by key name at any depth, including on a read of one key; lists
+and objects keep their shape. Unknown server fields, such as `token`,
+read as written. A read of every key folds under `Settings`; ctrl+o
+expands it. If `.chord` or `.chord/settings.json` is a symbolic link,
+the tool returns `project: null`, leaves it out of `effective` and reports
+a problem naming the link. A start still follows the link.
 
 `set` and `remove` change one key in the user's file only. chord shows the
 old and new values and asks in its box, under any permission mode. One

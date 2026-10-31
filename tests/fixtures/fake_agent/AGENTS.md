@@ -37,6 +37,7 @@
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`),
   `settings.ts` (`settingsread`, `settingsreadkey`, `settingsreadbad`,
+  `settingsreadlinked`,
   `settingstheme`, `settingsmodel`, `settingsremove`, `settingsagent`,
   `settingsvim`, `settingsoffered`, `settingsoverlap`, `settingsrefused`,
   `settingswithdrawn`, `settingslong`), `tasks.ts`
@@ -93,7 +94,8 @@
   `claudesubagents`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
   `claudeslowstop`, `chordtools`, `codexchordcalls`, `codexmodels`,
-  `settingsread`, `settingsreadkey`, `settingsreadbad`, `settingstheme`,
+  `settingsread`, `settingsreadkey`, `settingsreadbad`,
+  `settingsreadlinked`, `settingstheme`,
   `settingsmodel`, `settingsremove`, `settingsagent`, `settingsvim`,
   `settingsoffered`, `settingsoverlap`, `settingsrefused`,
   `settingswithdrawn`, `settingslong`,

@@ -1,0 +1,40 @@
+          "theme": "dark",
+          "mcpServers": {
+            "github": {
+              "command": "***",
+              "args": [
+                "***",
+                "***"
+              ],
+              "env": {
+                "TOKEN": "***"
+              }
+            },
+            "linear": {
+              "type": "http",
+              "url": "***",
+              "headers": {
+                "Authorization": "***"
+              }
+            }
+          },
+          "agents": {
+            "other": {
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": ".chord/settings.json was not read: chord could not read it as a regular file of one link and
+            at most 1 MiB. project and effective omit it. A start still follows links"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1828,9 +1828,34 @@ describe('the settings tool on the transcript (CHD-568)', () => {
 
           const read = window.frame().replace(/\s+/g, ' ');
 
-          expect(read).toContain('· a symbolic link, not read');
+          expect(read).toContain('.chord/settings.json · not read');
           expect(read).toContain('1 problem');
           expect(read).not.toContain(LINK_TARGET.agent);
+        },
+        { columns: 120, rows: 40, server, configHome: fixture('{}') },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a refused .chord, and a write under a refused file, say what was not read', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsreaddirlinked');
+          await window.shows('Project    not read');
+          expect(window.frame()).not.toContain(LINK_TARGET.agent);
+
+          await send(window, 'settingsagentlinked');
+          await window.shows(
+            '.chord/settings.json was not read and may set this too, and win here',
+          );
+          expect(window.frame()).toContain('Set agent?');
+          await window.press('2');
+          await window.shows('Not saved · the person will say what to change');
         },
         { columns: 120, rows: 40, server, configHome: fixture('{}') },
       );

@@ -1,17 +1,16 @@
 import type { z } from '@zod/zod';
-import { lstat, readFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { isDeepStrictEqual } from 'node:util';
 import { notFound } from './not_found.ts';
+import { type ProjectReadSeam, readProjectFile } from './project_settings.ts';
 import { TeamSelection } from './session/budgets.ts';
 import {
   AGENT_SETTING_SCHEMAS,
   canBeSettingPath,
   loadSettings,
-  mergeSettings,
   NO_SETTINGS_HOME,
-  parseSettings,
   readSettingsObject,
   SETTING_SCHEMAS,
   settingAt,
@@ -392,31 +391,6 @@ export function maskedSettings(settings: unknown): unknown {
 }
 
 /**
- * The name of the link a project's settings file is reached through, if one
- * is: a repository may plant one, and chord's server runs outside any agent's
- * sandbox, so the tool does not read through it. Only the project's own two
- * names are looked at, so a working directory under a link is no refusal, and
- * neither is opened: `lstat` reads no content and sees a dangling link too.
- */
-async function projectLink(cwd: string): Promise<string | undefined> {
-  const directory = join(cwd, '.chord');
-
-  for (const name of [directory, join(directory, 'settings.json')]) {
-    const found = await lstat(name).catch(() => undefined);
-
-    if (found === undefined) {
-      return undefined;
-    }
-
-    if (found.isSymbolicLink()) {
-      return name;
-    }
-  }
-
-  return undefined;
-}
-
-/**
  * The home an answer's paths are shown from: where `HOME` is unset, the one
  * the config directory was found under all the same, as the model is never
  * told it.
@@ -425,39 +399,42 @@ export function shownHome(where: SettingsWhere): string {
   return where.home ?? homedir();
 }
 
-/** A file as written and what its row says of it, or that it is not there. */
+/** Text as written and what its row says of it. */
+function writtenText(text: string): {
+  readonly written: unknown;
+  readonly state: string;
+} {
+  try {
+    const written: unknown = JSON.parse(text);
+
+    if (!isObject(written)) {
+      return { written: null, state: 'not a JSON object' };
+    }
+
+    const keys = Object.keys(written).length;
+
+    return { written, state: `${keys} ${keys === 1 ? 'key' : 'keys'}` };
+  } catch {
+    return { written: null, state: 'not valid JSON' };
+  }
+}
+
+/** The user's file as written, or that it is not there. */
 async function writtenFile(file: string | undefined): Promise<{
   readonly written: unknown;
   readonly state: string;
-  readonly text?: string;
 }> {
   if (file === undefined) {
     return { written: null, state: 'no home directory' };
   }
 
-  let text: string;
-
   try {
-    text = await readFile(file, 'utf8');
+    return writtenText(await readFile(file, 'utf8'));
   } catch (error) {
     return {
       written: null,
       state: notFound(error) ? 'not there' : 'cannot be read',
     };
-  }
-
-  try {
-    const written: unknown = JSON.parse(text);
-
-    if (!isObject(written)) {
-      return { written: null, state: 'not a JSON object', text };
-    }
-
-    const keys = Object.keys(written).length;
-
-    return { written, state: `${keys} ${keys === 1 ? 'key' : 'keys'}`, text };
-  } catch {
-    return { written: null, state: 'not valid JSON', text };
   }
 }
 
@@ -487,25 +464,29 @@ function concerns(problem: SettingsProblem, path: readonly string[]): boolean {
   return path.slice(0, key.length).every((part, index) => part === key[index]);
 }
 
-/** The user's file alone, as a read takes it with the project's left out. */
-function userLayer(
-  file: string | undefined,
-  { state, text }: Awaited<ReturnType<typeof writtenFile>>,
-): { readonly settings: unknown; readonly problems: SettingsProblem[] } {
-  if (file !== undefined && text !== undefined) {
-    const { settings, problems } = parseSettings(file, text);
+/** What the read would not read, as the window shows it. */
+function shownRefused(
+  what: 'directory' | 'file',
+  cwd: string,
+  shown: { readonly cwd: string; readonly home: string },
+): string {
+  const directory = join(cwd, '.chord');
 
-    return { settings: mergeSettings(settings), problems };
-  }
-
-  return {
-    settings: {},
-    problems:
-      file !== undefined && state === 'cannot be read'
-        ? [{ file, kind: 'read', message: state }]
-        : [],
-  };
+  return shownPath(
+    what === 'directory' ? directory : join(directory, 'settings.json'),
+    shown,
+  );
 }
+
+/** The one problem a refused project file costs, by what was refused. */
+const REFUSAL_WORDS: Readonly<
+  Record<'directory' | 'file', (name: string) => string>
+> = {
+  directory: (name) =>
+    `${name} was not read: chord could not open it as a directory without following a link. project and effective omit it. A start still follows links`,
+  file: (name) =>
+    `${name} was not read: chord could not read it as a regular file with one link. project and effective omit it. A start still follows links`,
+};
 
 /** A `settings` read: the answer the agent gets. */
 export interface SettingsRead {
@@ -528,13 +509,14 @@ export interface SettingsRead {
 export async function readSettingsTool(
   where: SettingsWhere,
   path: readonly string[] = [],
+  seam?: ProjectReadSeam,
 ): Promise<
   | {
       readonly answer: SettingsRead;
       readonly files: {
         readonly user: string;
         readonly project: string;
-        readonly projectLinked?: true;
+        readonly projectUnread?: true;
       };
     }
   | { readonly error: string }
@@ -548,26 +530,27 @@ export async function readSettingsTool(
   const userFile = userSettingsFile(where.configHome);
   const projectFile = settingsFiles(where).at(-1)!;
   const user = await writtenFile(userFile);
-  const link = await projectLink(where.cwd);
-  // Whatever a linked file holds stays out, the problems it would cost too.
+  const read = readProjectFile(where.cwd, seam);
+  const refused = read.kind === 'refused' ? read.what : undefined;
+  // One read's bytes for all of it, and whatever a refused file holds stays
+  // out, the problems it would cost too.
   const project =
-    link === undefined
-      ? await writtenFile(projectFile)
-      : { written: null, state: 'a symbolic link, not read' };
-  const loaded =
-    link === undefined
-      ? await loadSettings({
-          configHome: where.configHome,
-          cwd: where.cwd,
-          home,
-        })
-      : userLayer(userFile, user);
+    read.kind === 'read'
+      ? writtenText(read.text)
+      : {
+          written: null,
+          state: refused === undefined ? 'not there' : 'not read',
+        };
+  const loaded = await loadSettings(
+    { configHome: where.configHome, cwd: where.cwd, home },
+    { text: read.kind === 'read' ? read.text : undefined },
+  );
   const atPath = (value: unknown) => settingAt(maskedSettings(value), path);
 
   return {
     answer: {
       user: atPath(user.written),
-      project: link === undefined ? atPath(project.written) : null,
+      project: refused === undefined ? atPath(project.written) : null,
       effective: atPath(loaded.settings),
       problems: [
         ...loaded.problems
@@ -576,12 +559,14 @@ export async function readSettingsTool(
             file: shownPath(problem.file, shown),
             message: readProblem(problem),
           })),
-        ...(link === undefined
+        ...(refused === undefined
           ? []
           : [
               {
                 file: shownPath(projectFile, shown),
-                message: `${shownPath(link, shown)} is a symbolic link, so it was not read: project and effective omit it. A start still follows the link`,
+                message: REFUSAL_WORDS[refused](
+                  shownRefused(refused, where.cwd, shown),
+                ),
               },
             ]),
       ],
@@ -592,7 +577,7 @@ export async function readSettingsTool(
           ? user.state
           : `${shownPath(userFile, shown)} · ${user.state}`,
       project: `${shownPath(projectFile, shown)} · ${project.state}`,
-      ...(link === undefined ? {} : { projectLinked: true as const }),
+      ...(refused === undefined ? {} : { projectUnread: true as const }),
     },
   };
 }
@@ -610,8 +595,13 @@ export interface SettingsChanged {
   /** Nothing to do: nothing was asked or written. */
   readonly unchanged?: true;
   readonly takesEffect: TakesEffect;
-  /** The project's file, as shown, where it holds this key and so wins. */
+  /**
+   * The project's file, as shown, where it holds this key and so wins; or
+   * what the read refused, where it may.
+   */
   readonly shadowedBy?: string;
+  /** `shadowedBy` was not read: chord cannot tell whether it holds the key. */
+  readonly shadowedUnread?: true;
 }
 
 /**
@@ -642,6 +632,7 @@ export async function plannedSetting(
   path: readonly string[],
   change: SettingChange,
   knownAgents: readonly string[],
+  seam?: ProjectReadSeam,
 ): Promise<
   | { readonly error: string }
   | { readonly answer: SettingsChanged; readonly file: string }
@@ -681,19 +672,23 @@ export async function plannedSetting(
   // here too, for the row and the agent alike. `held` says what is unchanged.
   const before = settingAt(maskedSettings(settings), path);
   const after = 'set' in change ? change.set : undefined;
-  const project = settingsFiles(where).at(-1)!;
-  const { layers } = await loadSettings({
-    configHome: where.configHome,
-    cwd: where.cwd,
-    home,
-  });
+  const projectFile = settingsFiles(where).at(-1)!;
+  const read = readProjectFile(where.cwd, seam);
+  const { layers } = await loadSettings(
+    { configHome: where.configHome, cwd: where.cwd, home },
+    { text: read.kind === 'read' ? read.text : undefined },
+  );
   // What the project's file's check dropped does not win, so it does not count.
   const shadowed =
     !named.userOnly &&
     settingAt(
-      layers.find((layer) => layer.file === project)?.settings,
+      layers.find((layer) => layer.file === projectFile)?.settings,
       path,
     ) !== undefined;
+  const unread =
+    !named.userOnly && read.kind === 'refused'
+      ? shownRefused(read.what, where.cwd, shown)
+      : undefined;
 
   return {
     file,
@@ -706,7 +701,10 @@ export async function plannedSetting(
         ? { saved: false, unchanged: true as const }
         : {}),
       takesEffect: named.takesEffect,
-      ...(shadowed ? { shadowedBy: shownPath(project, shown) } : {}),
+      ...(shadowed ? { shadowedBy: shownPath(projectFile, shown) } : {}),
+      ...(unread === undefined
+        ? {}
+        : { shadowedBy: unread, shadowedUnread: true as const }),
     },
   };
 }

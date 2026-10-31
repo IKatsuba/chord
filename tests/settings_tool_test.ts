@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { renameSync, writeFileSync } from 'node:fs';
 import {
   mkdir,
   mkdtemp,
@@ -1156,8 +1157,10 @@ describe('masking goes by key name (CHD-568)', () => {
 describe('a linked project file (CHD-568)', () => {
   const CANARY = 'linked-canary-value';
   const shownFile = join('.chord', 'settings.json');
-  const words = (name: string) =>
-    `${name} is a symbolic link, so it was not read: project and effective omit it. A start still follows the link`;
+  const unreadFile = (name: string) =>
+    `${name} was not read: chord could not read it as a regular file with one link. project and effective omit it. A start still follows links`;
+  const unreadDirectory = (name: string) =>
+    `${name} was not read: chord could not open it as a directory without following a link. project and effective omit it. A start still follows links`;
 
   /** A project with `plant` run in it, and a target holding the canary. */
   async function linked(
@@ -1208,11 +1211,11 @@ describe('a linked project file (CHD-568)', () => {
       expect(answer.user).toStrictEqual({ theme: 'dark' });
       expect(answer.effective).toStrictEqual({ theme: 'dark' });
       expect(answer.problems).toStrictEqual([
-        { file: shownFile, message: words(shownFile) },
+        { file: shownFile, message: unreadFile(shownFile) },
       ]);
       expect(files).toMatchObject({
-        project: `${shownFile} · a symbolic link, not read`,
-        projectLinked: true,
+        project: `${shownFile} · not read`,
+        projectUnread: true,
       });
     });
   });
@@ -1234,7 +1237,7 @@ describe('a linked project file (CHD-568)', () => {
 
         expect(JSON.stringify(answer)).not.toContain(CANARY);
         expect(answer.problems).toStrictEqual([
-          { file: shownFile, message: words('.chord') },
+          { file: shownFile, message: unreadDirectory('.chord') },
         ]);
       },
     );
@@ -1253,8 +1256,8 @@ describe('a linked project file (CHD-568)', () => {
         const { answer, files } = await reads(where);
 
         expect(answer.project).toBeNull();
-        expect(answer.problems[0]?.message).toBe(words(shownFile));
-        expect(files.projectLinked).toBe(true);
+        expect(answer.problems[0]?.message).toBe(unreadFile(shownFile));
+        expect(files.projectUnread).toBe(true);
       },
     );
   });
@@ -1277,7 +1280,7 @@ describe('a linked project file (CHD-568)', () => {
 
         expect(answer.project).toStrictEqual({ agent: 'codex' });
         expect(answer.problems).toStrictEqual([]);
-        expect(files.projectLinked).toBeUndefined();
+        expect(files.projectUnread).toBeUndefined();
       },
     );
   });
@@ -1290,7 +1293,7 @@ describe('a linked project file (CHD-568)', () => {
 
         expect(answer.project).toBeNull();
         expect(answer.problems).toStrictEqual([]);
-        expect(files.projectLinked).toBeUndefined();
+        expect(files.projectUnread).toBeUndefined();
       },
     );
   });
@@ -1303,7 +1306,7 @@ describe('a linked project file (CHD-568)', () => {
       expect(answer.user).toBeUndefined();
       expect(answer.effective).toBeUndefined();
       expect(answer.problems).toHaveLength(1);
-      expect(files.projectLinked).toBe(true);
+      expect(files.projectUnread).toBe(true);
     });
   });
 
@@ -1315,7 +1318,7 @@ describe('a linked project file (CHD-568)', () => {
 
         expect(answer.problems.map(({ message }) => message)).toStrictEqual([
           'not valid JSON; the file is ignored',
-          words(shownFile),
+          unreadFile(shownFile),
         ]);
         expect(answer.effective).toStrictEqual({});
       },
@@ -1355,7 +1358,7 @@ describe('a linked project file (CHD-568)', () => {
     });
   });
 
-  test('a write still says a linked file shadows a key, and no value', async () => {
+  test('a write says a refused file may shadow a key, and no value', async () => {
     await linked(fileLink, async (where) => {
       const planned = await plannedSetting(
         where,
@@ -1366,8 +1369,68 @@ describe('a linked project file (CHD-568)', () => {
 
       assert('answer' in planned);
       expect(planned.answer.shadowedBy).toBe(shownFile);
+      expect(planned.answer.shadowedUnread).toBe(true);
       expect(JSON.stringify(planned)).not.toContain(CANARY);
     });
+  });
+
+  test('a refused .chord names it as what may shadow a kind B key, and a user-only key has no warning', async () => {
+    await linked(
+      async ({ cwd }) => {
+        await mkdir(join(cwd, '..', 'other'));
+        await symlink(join(cwd, '..', 'other'), join(cwd, '.chord'));
+      },
+      async (where) => {
+        const kindB = await plannedSetting(
+          where,
+          ['agent'],
+          set('codex'),
+          known,
+        );
+        const userOnly = await plannedSetting(
+          where,
+          ['theme'],
+          set('light'),
+          known,
+        );
+
+        assert('answer' in kindB && 'answer' in userOnly);
+        expect(kindB.answer).toMatchObject({
+          shadowedBy: '.chord',
+          shadowedUnread: true,
+        });
+        expect('shadowedBy' in userOnly.answer).toBe(false);
+      },
+    );
+  });
+
+  test('a verified file shadows from the bytes read, a swap after them not counting', async () => {
+    await linked(
+      async ({ cwd }) => {
+        await mkdir(join(cwd, '.chord'));
+        await writeFile(join(cwd, '.chord', 'settings.json'), '{"agent":"a"}');
+      },
+      async (where) => {
+        const file = join(where.cwd, '.chord', 'settings.json');
+        const planned = await plannedSetting(
+          where,
+          ['agent'],
+          set('codex'),
+          known,
+          {
+            afterFile: () => {
+              renameSync(file, `${file}.moved`);
+              writeFileSync(file, `{"nope":"${CANARY}"}`);
+            },
+          },
+        );
+
+        assert('answer' in planned);
+        expect(planned.answer.shadowedBy).toBe(shownFile);
+        expect(planned.answer.shadowedUnread).toBeUndefined();
+        expect(JSON.stringify(planned)).not.toContain(CANARY);
+      },
+    );
   });
 });
 

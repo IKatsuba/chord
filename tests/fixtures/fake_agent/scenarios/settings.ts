@@ -135,52 +135,78 @@ const withdrawn: Play = async (turn) => {
 };
 
 /**
- * What the read says of a linked project file: a link planted at
- * `.chord/settings.json` to a file outside it, every key then one, the link
- * taken away after. A working directory that already holds that file is left
- * alone, and says so.
+ * Plays `each` with a link planted at `.chord/settings.json` or at `.chord`,
+ * to a file outside the project, taken away after. A working directory that
+ * already holds the path is left alone, and says so.
  */
-const readLinked: Play = async (turn) => {
-  const client = await chordClient(turn);
-  const directory = join(cwds.get(turn.sessionId) ?? '.', '.chord');
-  const link = join(directory, 'settings.json');
+const withLink =
+  (
+    at: 'file' | 'directory',
+    ...each: readonly Record<string, unknown>[]
+  ): Play =>
+  async (turn) => {
+    const client = await chordClient(turn);
+    const directory = join(cwds.get(turn.sessionId) ?? '.', '.chord');
+    const file = join(directory, 'settings.json');
 
-  if (client === undefined || existsSync(link)) {
-    await turn.say('No link planted.');
-    await client?.close();
+    if (client === undefined || existsSync(at === 'file' ? file : directory)) {
+      await turn.say('No link planted.');
+      await client?.close();
 
-    return 'end_turn';
-  }
-
-  const made = !existsSync(directory);
-  const outside = await mkdtemp(join(tmpdir(), 'chord-fake-linked-'));
-  const target = join(outside, 'target.json');
-
-  try {
-    await writeFile(target, JSON.stringify(LINK_TARGET));
-    await mkdir(directory, { recursive: true });
-    await symlink(target, link);
-    await callChord(turn, client, 'settings', { action: 'read' });
-    await callChord(turn, client, 'settings', {
-      action: 'read',
-      path: ['agent'],
-    });
-  } finally {
-    await rm(link, { force: true });
-
-    if (made) {
-      await rmdir(directory);
+      return 'end_turn';
     }
 
-    await rm(outside, { recursive: true });
-    await client.close();
-  }
+    const made = at === 'file' && !existsSync(directory);
+    const outside = await mkdtemp(join(tmpdir(), 'chord-fake-linked-'));
+    const link = at === 'file' ? file : directory;
 
-  return 'end_turn';
-};
+    try {
+      await writeFile(
+        join(outside, 'settings.json'),
+        JSON.stringify(LINK_TARGET),
+      );
+
+      if (at === 'file') {
+        await mkdir(directory, { recursive: true });
+      }
+
+      await symlink(
+        at === 'file' ? join(outside, 'settings.json') : outside,
+        link,
+      );
+
+      for (const args of each) {
+        await callChord(turn, client, 'settings', args, 600_000);
+      }
+    } finally {
+      await rm(link, { force: true });
+
+      if (made) {
+        await rmdir(directory);
+      }
+
+      await rm(outside, { recursive: true });
+      await client.close();
+    }
+
+    return 'end_turn';
+  };
+
+const READ_ALL_THEN_KEY = [
+  { action: 'read' },
+  { action: 'read', path: ['agent'] },
+];
 
 export const SETTINGS = {
-  settingsreadlinked: readLinked,
+  // A refused file, then a refused `.chord`, each every key and then one.
+  settingsreadlinked: withLink('file', ...READ_ALL_THEN_KEY),
+  settingsreaddirlinked: withLink('directory', ...READ_ALL_THEN_KEY),
+  // What a write says of a kind B key a refused file may hold.
+  settingsagentlinked: withLink('file', {
+    action: 'set',
+    path: ['agent'],
+    value: 'fake',
+  }),
   settingsoverlap: overlap,
   // Every key, folded on its row until ctrl+o.
   settingsread: calls({ action: 'read' }),

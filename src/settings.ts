@@ -456,23 +456,37 @@ export interface SettingsLayer {
  * `editorMode`, a `mouse`, a `copyOnSelect` or an `offeredAgents` in the project's file is a problem and is left out; `home` shows the user's file
  * from `~` in what it says.
  */
-export async function loadSettings(where: {
-  configHome: string | undefined;
-  cwd: string;
-  home?: string;
-}): Promise<{
+export async function loadSettings(
+  where: {
+    configHome: string | undefined;
+    cwd: string;
+    home?: string;
+  },
+  /**
+   * The project's file as already read, none for none, so it is not opened
+   * here by name; left out, it is, as a start reads it.
+   */
+  project?: { readonly text: string | undefined },
+): Promise<{
   settings: Settings;
   layers: SettingsLayer[];
   problems: SettingsProblem[];
 }> {
   const layers: SettingsLayer[] = [];
   const problems: SettingsProblem[] = [];
+  const projectFile = settingsFiles(where).at(-1);
 
   for (const file of settingsFiles(where)) {
     let text: string;
 
     try {
-      text = await readFile(file, 'utf8');
+      const given = file === projectFile ? project : undefined;
+
+      if (given !== undefined && given.text === undefined) {
+        continue;
+      }
+
+      text = given?.text ?? (await readFile(file, 'utf8'));
     } catch (error) {
       if (notFound(error)) {
         continue;

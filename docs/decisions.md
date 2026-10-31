@@ -7697,3 +7697,21 @@ OpenTUI passes no mouse event through; and keeping the panel in flow, against
 the design. The owner chose the first: the overlay gives the list the rows it
 may take, and the panel uses them instead of measuring itself. OpenTUI is not
 patched.
+
+## 2026-10-31 — CHD-568: the settings tool's read of a project file (the owner, Q333; main)
+
+chord's MCP server runs outside any agent's sandbox, and a sandboxed agent can
+write in its project, so the `settings` tool's read of
+`.chord/settings.json` must not follow a link or read what a swap put in place.
+`lstat` before the read leaves a window, and so does open, `fstat`, then `lstat`
+by name: `.chord` can become a link and turn back between those steps, and no
+finite sequence of path checks closes that. Opening the name inside a directory
+already open does.
+
+`node:fs` has no `openat`, and `/dev/fd/N/x` fails on macOS, so
+`src/platform/openat.ts` calls libc's through `bun:ffi`, as OpenTUI's native
+library loads. Trial at Bun 1.4.4: it works from source and from a `--compile`
+binary on macOS, and refuses a link with `ELOOP`. The release targets are glibc
+Linux and macOS; a libc chord cannot load is a refusal, never a read by name.
+The bytes of that one read serve the whole answer, through a small way into
+`loadSettings`. A start still follows links.

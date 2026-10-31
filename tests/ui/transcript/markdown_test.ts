@@ -328,7 +328,7 @@ test('a repeated definition shows on its own line, and the first one is the link
   ]);
 });
 
-test("a nested item's wrapped lines hang at its own indent", () => {
+test("a nested item's wrapped lines hang two columns in from its marker", () => {
   expect(
     lines('- outer\n  1. a nested item long enough to wrap\n', 24),
   ).toStrictEqual(['- outer', '  1. a nested item long', '    enough to wrap']);

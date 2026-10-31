@@ -388,7 +388,9 @@ binary.
   fence line of its own stays as written. No list or quote renderer of our
   own. markdansi's own limit stays: a list made only of code blocks is merged
   into code, bullets dropped, so its boxes stand alone. From 0.3.7 a nested
-  item's wrapped lines, and a box under it, hang at that item's own indent.
+  item's wrapped lines, and a box under it, hang two columns in from that
+  item's marker, which still leaves a numbered item's one left of its text
+  (CHD-49).
 - **An indented code block is drawn as a code block,** from the code marked
   hands over: markdansi reads one alone as a paragraph and runs its lines
   together.

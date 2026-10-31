@@ -1,0 +1,24 @@
+              "env": {
+                "T": "***"
+              }
+            },
+            "linear": {
+              "command": "***",
+              "env": {
+                "TOKEN": "***"
+              }
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "1 key ignored"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,24 @@
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: not valid JSON (JSON Parse error: Expected '}
+   '); the file is ignored
+
+ › settingsread
+
+ ⏺ Settings · read
+   ⎿  {
+        "user": null,
+        "project": null,
+        "effective": {},
+        "problems": [
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "not valid JSON; ignored"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

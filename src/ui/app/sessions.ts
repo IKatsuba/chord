@@ -56,6 +56,7 @@ import type {
   SpawnArgs,
   WindowView,
 } from '../../server/tools.ts';
+import { settingsBoxClaim } from '../../server/tools.ts';
 import {
   findTeams,
   type FoundTeam,
@@ -109,7 +110,9 @@ import {
 } from '../../session/window_agents.ts';
 import { subagentPath } from '../../session/subagents.ts';
 import { askerParts } from '../dialogs/asker.ts';
+import type { ListedAgent } from '../../agents.ts';
 import { homePath } from '../../settings.ts';
+import { settingPickedUp } from './setting_picked_up.ts';
 import type { AgentOption } from '../../session/config.ts';
 import {
   DIMCODE_NOTICE,
@@ -252,6 +255,8 @@ export interface SessionsOptions {
   server: ChordServer | undefined;
   /** Every runtime chord can start, which `list_agents` names. */
   runtimes: readonly string[];
+  /** The agents the registry and PATH list, which `/new` is drawn from. */
+  listedAgents?: readonly ListedAgent[] | undefined;
   home: string | undefined;
   /**
    * The user's config directory, whose `chord/teams/` holds the teams for
@@ -290,6 +295,7 @@ export function useSessions(
     resume,
     server,
     runtimes: runtimeNames,
+    listedAgents = [],
     home,
     configHome,
     onQuit,
@@ -2548,6 +2554,9 @@ export function useSessions(
     error: 'Your session was cleared or closed; nothing more goes from it',
   } as const;
 
+  // The window's, as `view` is made anew with each draw.
+  const settingsBox = useRef(settingsBoxClaim());
+
   /** What chord's MCP server reads of the window, when a session calls. */
   const view: WindowView = {
     ...(resources === undefined
@@ -2676,6 +2685,21 @@ export function useSessions(
       return { ...answer.ran, ...started };
     },
     teamPlaces: (caller, name) => teamPlaces(caller.key, name),
+    claimSettingsBox: settingsBox.current,
+    settingSaved: (path, change) => {
+      for (const action of settingPickedUp(path, change, {
+        runtimes: runtimeNames,
+        listed: listedAgents,
+      })) {
+        dispatch(action);
+      }
+    },
+    settingsWhere: (caller) => ({
+      agent: ownedBy(sessions.agents, caller.key)?.main.agent ?? 'the agent',
+      configHome,
+      cwd: place.cwd,
+      home,
+    }),
     askPerson: (caller, wait, signal) =>
       conversationAt(caller.key)?.ask(wait, signal) ??
       Promise.resolve(undefined),

@@ -122,6 +122,18 @@ function toServer(
 }
 
 /**
+ * An entry checked as the transport its `type` names, a command's if none:
+ * only the fields of that shape are left in what a success holds.
+ */
+export function parsedEntry(entry: unknown) {
+  const type = isObject(entry) ? entry.type : undefined;
+
+  return type === 'http' || type === 'sse'
+    ? RemoteEntry.safeParse(entry)
+    : StdioEntry.safeParse(entry);
+}
+
+/**
  * The servers in one file's `mcpServers` object, by name. An entry that is
  * wrong costs only that server: it is named with what is wrong and left out,
  * and the file's other servers still count.
@@ -178,10 +190,7 @@ export function parseServers(
       continue;
     }
 
-    const parsed =
-      type === 'http' || type === 'sse'
-        ? RemoteEntry.safeParse(entry)
-        : StdioEntry.safeParse(entry);
+    const parsed = parsedEntry(entry);
 
     if (!parsed.success) {
       const issue = parsed.error.issues[0];

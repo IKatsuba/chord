@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u5
+ ▀▀     ? for shortcuts · /help
+
+ › settingsoverlap
+
+ ⏺ Settings(theme) · change
+   ⎿  Now    "dark"
+      After  "light"
+      Not saved · the person will say what to change
+
+ ⏺ Settings(agents.fake.model)
+   ⎿  Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

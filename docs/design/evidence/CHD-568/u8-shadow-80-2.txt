@@ -1,0 +1,24 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u10
+ ▀▀     ? for shortcuts · /help
+
+ › settingsagent
+
+ ⏺ Settings(agent) · set
+   ⎿  Now    not set
+      After  "fake"
+      .chord/settings.json sets this too, and wins here
+      Not saved · the person will say what to change
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

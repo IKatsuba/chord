@@ -1,10 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { readdirSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { until } from '../session/conversation_fake.ts';
 import { join } from 'node:path';
 import type { PermissionWait } from '../../src/session/transcript/types.ts';
+import type { SettingsChanged } from '../../src/settings_tool.ts';
 import { parseTeam, type Team } from '../../src/teams.ts';
 import {
   agentsAnswer,
@@ -13,7 +15,9 @@ import {
   monitorsText,
   monitorText,
   type ProposeAnswer,
+  changeSetting,
   proposeTeam,
+  settingsBoxClaim,
   proposeText,
   type RuntimeOffer,
   sessionsAnswer,
@@ -65,6 +69,14 @@ function windowOf(probed: string[] = []): WindowView {
     teams: () => Promise.resolve({ found: [], runs: [] }),
     runTeam: () => Promise.resolve({ error: 'no teams here' }),
     teamPlaces: () => Promise.reject(new Error('no teams here')),
+    claimSettingsBox: settingsBoxClaim(),
+    settingSaved: () => {},
+    settingsWhere: () => ({
+      agent: 'fake',
+      configHome: undefined,
+      cwd: tmpdir(),
+      home: undefined,
+    }),
     askPerson: () => Promise.resolve(undefined),
     openMember: () => Promise.resolve({ error: 'no members here' }),
     message: () => ({ error: 'no parent here' }),
@@ -666,5 +678,463 @@ describe('CHD-533 tester: stored instruction fidelity', () => {
 
     expect(listed.teams[0]).toEqual({ name: 'literal', ...team, runs: [] });
     expect(JSON.stringify(team)).toBe(before);
+  });
+});
+
+describe('the settings tool writes (CHD-568)', () => {
+  /**
+   * `set` or `remove` from a window whose user's file is under a temporary
+   * home, as `text` when given: the box asked, what was drawn as it waited, the
+   * answer and what the file holds after. `mid` runs as the box is up.
+   */
+  async function changed(
+    pick: string | undefined,
+    {
+      text,
+      path = ['theme'],
+      change = { set: 'light' },
+      mid,
+      known,
+    }: {
+      text?: string;
+      path?: readonly string[];
+      change?: { readonly set: unknown } | { readonly remove: true };
+      mid?: (file: string) => Promise<void>;
+      known?: readonly string[];
+    } = {},
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-change-'));
+    const home = join(root, 'home');
+    const file = join(home, '.config', 'chord', 'settings.json');
+
+    try {
+      if (text !== undefined) {
+        await mkdir(join(home, '.config', 'chord'), { recursive: true });
+        await writeFile(file, text);
+      }
+
+      const asked: Omit<PermissionWait, 'id'>[] = [];
+      const shown: SettingsChanged[] = [];
+      const saved: unknown[] = [];
+      const caller: Caller = {
+        role: 'person',
+        key: 0,
+        window: {
+          ...windowOf(),
+          ...(known === undefined ? {} : { runtimes: () => known }),
+          settingSaved: (savedPath, savedChange) =>
+            saved.push([savedPath, savedChange]),
+          settingsWhere: () => ({
+            agent: 'claude',
+            configHome: join(home, '.config'),
+            cwd: join(root, 'work'),
+            home,
+          }),
+          askPerson: async (_caller, wait) => {
+            asked.push(wait);
+            await mid?.(file);
+
+            return pick;
+          },
+        },
+      };
+      const answer = await changeSetting(
+        caller,
+        path,
+        change,
+        new AbortController().signal,
+        (one) => shown.push(one),
+        'the-call',
+      );
+      const held = await readFile(file, 'utf8').catch(() => undefined);
+
+      return { asked, shown, answer, held, saved };
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  const shownFile = `~${join('/', '.config', 'chord', 'settings.json')}`;
+
+  test('a yes draws the change, asks the box, then chord writes it', async () => {
+    const { asked, shown, answer, held } = await changed('yes');
+
+    expect(shown).toStrictEqual([
+      {
+        path: ['theme'],
+        after: 'light',
+        file: shownFile,
+        takesEffect: 'now',
+      },
+    ]);
+    expect(asked).toStrictEqual([
+      {
+        title: 'Settings(theme)',
+        options: [
+          {
+            optionId: 'yes',
+            name: `Yes, in ${shownFile}`,
+            kind: 'allow_once',
+          },
+          {
+            optionId: 'no',
+            name: 'No, tell claude what to change',
+            kind: 'reject_once',
+          },
+        ],
+        save: {
+          question: 'Set theme?',
+          files: {},
+          escape: 'tell claude what to change',
+          asked: 'the-call',
+        },
+      },
+    ]);
+    expect(answer).toStrictEqual({ ...shown[0]!, saved: true });
+    expect(JSON.parse(held!)).toStrictEqual({ theme: 'light' });
+  });
+
+  test("the box names a change and a remove by the row's note", async () => {
+    const text = '{"theme":"dark"}';
+    const question = async (change: { set: unknown } | { remove: true }) =>
+      (await changed('no', { text, change })).asked[0]!.save!.question;
+
+    expect(await question({ set: 'light' })).toBe('Change theme?');
+    expect(await question({ remove: true })).toBe('Remove theme?');
+  });
+
+  test('a no writes nothing and says saved false', async () => {
+    const text = '{"theme":"dark"}';
+    const { answer, held, shown, saved } = await changed('no', { text });
+
+    expect(answer).toStrictEqual({ ...shown[0]!, saved: false });
+    expect(held).toBe(text);
+    expect(saved).toStrictEqual([]);
+  });
+
+  test('the window hears of a write once it is saved, and only then', async () => {
+    expect((await changed('yes')).saved).toStrictEqual([
+      [['theme'], { set: 'light' }],
+    ]);
+    expect((await changed(undefined)).saved).toStrictEqual([]);
+    expect(
+      (
+        await changed('yes', {
+          text: '{"theme":"dark"}',
+          mid: (file) => writeFile(file, '{ broken'),
+        })
+      ).saved,
+    ).toStrictEqual([]);
+    expect(
+      (await changed('yes', { text: '{"theme":"light"}' })).saved,
+    ).toStrictEqual([]);
+  });
+
+  test('a withdrawn box writes nothing, as a refusal', async () => {
+    const { answer, held } = await changed(undefined);
+
+    expect(answer).toStrictEqual({
+      error: 'The person was not asked to the end; nothing was saved',
+    });
+    expect(held).toBeUndefined();
+  });
+
+  test('nothing to do asks nothing and writes nothing', async () => {
+    const text = '{ "theme":   "dark" }';
+    const same = await changed('yes', { text, change: { set: 'dark' } });
+
+    expect(same.asked).toStrictEqual([]);
+    expect(same.shown).toStrictEqual([]);
+    expect(same.answer).toMatchObject({ saved: false, unchanged: true });
+    expect(same.held).toBe(text);
+
+    const absent = await changed('yes', {
+      text,
+      path: ['mouse'],
+      change: { remove: true },
+    });
+
+    expect(absent.asked).toStrictEqual([]);
+    expect(absent.answer).toMatchObject({ saved: false, unchanged: true });
+    expect(absent.held).toBe(text);
+  });
+
+  test('a refusal asks nothing and writes nothing', async () => {
+    const text = '{"agents":{"claude":{"command":"x"}}}';
+
+    for (const [path, change, error] of [
+      [['nope'], { set: 1 }, 'No setting nope'],
+      [
+        ['agents', 'claude', 'command'],
+        { set: 'y' },
+        'chord does not write agents.claude.command; edit the settings file by hand',
+      ],
+    ] as const) {
+      const refused = await changed('yes', { text, path, change });
+
+      expect(refused.asked).toStrictEqual([]);
+      expect(refused.answer).toStrictEqual({ error });
+      expect(refused.held).toBe(text);
+    }
+  });
+
+  const HELD =
+    'Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered';
+
+  /** A window whose box answers when `answer` is called, its asks counted. */
+  async function overlapping(
+    run: (tools: {
+      call: (
+        path: readonly string[],
+        change: { readonly set: unknown } | { readonly remove: true },
+      ) => Promise<SettingsChanged | { readonly error: string }>;
+      answer: (pick: string | undefined) => void;
+      asked: () => number;
+      held: () => Promise<string | undefined>;
+      write: (text: string) => Promise<void>;
+    }) => Promise<void>,
+    text = '{"theme":"dark"}',
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-overlap-'));
+    const file = join(root, 'chord', 'settings.json');
+    const answers: ((pick: string | undefined) => void)[] = [];
+    let asked = 0;
+    const caller: Caller = {
+      role: 'person',
+      key: 0,
+      window: {
+        ...windowOf(),
+        settingsWhere: () => ({
+          agent: 'claude',
+          configHome: root,
+          cwd: join(root, 'work'),
+          home: root,
+        }),
+        askPerson: () => {
+          asked += 1;
+
+          return new Promise((settle) => answers.push(settle));
+        },
+      },
+    };
+
+    try {
+      await mkdir(join(root, 'chord'), { recursive: true });
+      await writeFile(file, text);
+      await run({
+        call: (path, change) =>
+          changeSetting(
+            caller,
+            path,
+            change,
+            new AbortController().signal,
+            () => {},
+            crypto.randomUUID(),
+          ),
+        answer: (pick) => answers.shift()?.(pick),
+        asked: () => asked,
+        held: () => readFile(file, 'utf8'),
+        write: (written) => writeFile(file, written),
+      });
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  test('of two parallel changes one waits and the other is refused, asking and writing nothing', async () => {
+    await overlapping(async ({ call, answer, asked, held }) => {
+      // Which wins is the file reads' to say; only one may.
+      const both = [
+        call(['theme'], { set: 'light' }),
+        call(['mouse'], { set: false }),
+      ];
+
+      expect(await Promise.race(both)).toStrictEqual({ error: HELD });
+      expect(asked()).toBe(1);
+
+      answer('yes');
+
+      const answers = await Promise.all(both);
+      const saved = answers.findIndex((one) => 'saved' in one && one.saved);
+
+      expect(answers[1 - saved]).toStrictEqual({ error: HELD });
+      expect(JSON.parse((await held())!)).toStrictEqual(
+        saved === 0 ? { theme: 'light' } : { theme: 'dark', mouse: false },
+      );
+    });
+  });
+
+  test('a change after the first was answered, withdrawn or failed is asked', async () => {
+    await overlapping(async ({ call, answer, asked }) => {
+      for (const pick of ['no', undefined]) {
+        const before = asked();
+        const waiting = call(['theme'], { set: 'light' });
+
+        await until(() => asked() === before + 1);
+        answer(pick);
+        await waiting;
+      }
+
+      const before = asked();
+      const next = call(['theme'], { set: 'light' });
+
+      await until(() => asked() === before + 1);
+      answer('no');
+      expect(await next).toMatchObject({ saved: false });
+    });
+  });
+
+  test('a write that fails gives the place back', async () => {
+    await overlapping(async ({ call, answer, asked, write }) => {
+      const failing = call(['theme'], { set: 'light' });
+
+      await until(() => asked() === 1);
+      await write('{ broken');
+      answer('yes');
+      expect(await failing).toMatchObject({
+        error: expect.stringContaining('was not saved'),
+      });
+      await write('{}');
+
+      const next = call(['mouse'], { set: true });
+
+      await until(() => asked() === 2);
+      answer('no');
+      await next;
+    });
+  });
+
+  test('a refused or unchanged call holds no place', async () => {
+    await overlapping(async ({ call, answer, asked }) => {
+      const waiting = call(['theme'], { set: 'light' });
+
+      await until(() => asked() === 1);
+      expect(await call(['nope'], { set: 1 })).toStrictEqual({
+        error: 'No setting nope',
+      });
+      // The same value, while another waits, is still nothing to do.
+      expect(await call(['theme'], { set: 'dark' })).toMatchObject({
+        unchanged: true,
+      });
+      expect(await call(['mouse'], { set: true })).toStrictEqual({
+        error: HELD,
+      });
+      answer('no');
+      await waiting;
+
+      const next = call(['mouse'], { set: true });
+
+      await until(() => asked() === 2);
+      answer('no');
+      await next;
+    });
+  });
+
+  describe('before comes from the checked layer', () => {
+    const CANARY = 'before-canary-value';
+    const odd = JSON.stringify({ theme: { env: { TOKEN: CANARY } } });
+    /** Everything the agent and the row are given. */
+    const said = (result: Awaited<ReturnType<typeof changed>>) =>
+      JSON.stringify([result.answer, result.shown]);
+
+    test('a bad value reads not set on a set, answered or not', async () => {
+      for (const pick of ['no', 'yes', undefined]) {
+        const result = await changed(pick, {
+          text: odd,
+          change: { set: 'dark' },
+        });
+
+        expect(said(result)).not.toContain(CANARY);
+        expect(result.asked).toHaveLength(1);
+        expect('before' in result.shown[0]!).toBe(false);
+      }
+    });
+
+    test('a yes replaces the bad value', async () => {
+      const result = await changed('yes', {
+        text: odd,
+        change: { set: 'dark' },
+      });
+
+      expect(JSON.parse(result.held!)).toStrictEqual({ theme: 'dark' });
+    });
+
+    test('a remove of a bad value has nothing to do, and leaves it', async () => {
+      const result = await changed('yes', {
+        text: odd,
+        change: { remove: true },
+      });
+
+      expect(said(result)).not.toContain(CANARY);
+      expect(result.asked).toStrictEqual([]);
+      expect(result.answer).toMatchObject({ unchanged: true, saved: false });
+      expect(result.held).toBe(odd);
+    });
+
+    test('an agent named url reads masked, its after still exact', async () => {
+      const url = JSON.stringify({ agents: { url: { model: CANARY } } });
+      const result = await changed('no', {
+        text: url,
+        path: ['agents', 'url', 'model'],
+        change: { set: 'fake-small' },
+        known: ['url'],
+      });
+
+      expect(said(result)).not.toContain(CANARY);
+      expect(result.answer).toMatchObject({
+        before: '***',
+        after: 'fake-small',
+      });
+
+      const same = await changed('yes', {
+        text: url,
+        path: ['agents', 'url', 'model'],
+        change: { set: CANARY },
+        known: ['url'],
+      });
+
+      expect(same.asked).toStrictEqual([]);
+      expect(same.answer).toMatchObject({ unchanged: true, before: '***' });
+    });
+
+    test('a plain value stays exact', async () => {
+      const result = await changed('no', { text: '{"theme":"dark"}' });
+
+      expect(result.answer).toMatchObject({ before: 'dark', after: 'light' });
+    });
+  });
+
+  test('a file gone bad between the box and the yes is refused, not overwritten', async () => {
+    const broken = '{ broken';
+    const { answer, held } = await changed('yes', {
+      text: '{"theme":"dark"}',
+      mid: (file) => writeFile(file, broken),
+    });
+
+    expect(answer).toStrictEqual({
+      error: `${shownFile} was not saved: it is not valid JSON`,
+    });
+    expect(held).toBe(broken);
+  });
+
+  test("a yes keeps the agent's other keys and removes what it empties", async () => {
+    const text = '{"agents":{"fake":{"command":"c","model":"old"}}}';
+    const kept = await changed('yes', {
+      text,
+      path: ['agents', 'fake', 'model'],
+      change: { set: 'new' },
+    });
+
+    expect(JSON.parse(kept.held!)).toStrictEqual({
+      agents: { fake: { command: 'c', model: 'new' } },
+    });
+
+    const gone = await changed('yes', {
+      text: '{"agents":{"fake":{"model":"old"}},"theme":"dark"}',
+      path: ['agents', 'fake', 'model'],
+      change: { remove: true },
+    });
+
+    expect(JSON.parse(gone.held!)).toStrictEqual({ theme: 'dark' });
   });
 });

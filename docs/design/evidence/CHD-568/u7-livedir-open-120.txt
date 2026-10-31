@@ -1,0 +1,40 @@
+                "***",
+                "***"
+              ],
+              "env": {
+                "TOKEN": "***",
+                "NEST": {
+                  "a": [
+                    "***"
+                  ]
+                }
+              }
+            },
+            "linear": {
+              "type": "http",
+              "url": "***",
+              "headers": {
+                "Authorization": "***"
+              }
+            }
+          },
+          "agents": {
+            "other": {
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": ".chord is a symbolic link, so it was not read: project and effective omit it. A start still f
+            ollows the link"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

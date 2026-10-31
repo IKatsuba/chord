@@ -1,0 +1,24 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u12
+ ▀▀     ? for shortcuts · /help
+
+ › settingsread
+
+ ⏺ Settings · read (ctrl+o to expand)
+   ⎿  User     ~/.config/chord/settings.json · 1 key
+      Project  .chord/settings.json · 0 keys
+      2 problems
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

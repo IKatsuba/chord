@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { draw } from '../../harness.tsx';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
@@ -28,9 +29,13 @@ import { TranscriptEntry } from '../../../../src/ui/transcript/Transcript.tsx';
 import {
   asked,
   CTRL_O,
+  DOWN,
   END,
+  ESC,
+  PAGE_UP,
   send,
   until,
+  UP,
   withWindow,
 } from '../../app/render.tsx';
 import { NOTES_COMMAND } from '../../../fixtures/headlines.ts';
@@ -42,6 +47,7 @@ import {
 } from '../../../fixtures/fake_agent/scenarios/tools.ts';
 import { readFile } from 'node:fs/promises';
 import { serveChord } from '../../../../src/server/server.ts';
+import { LINK_TARGET } from '../../../fixtures/fake_agent/scenarios/settings.ts';
 import { join } from 'node:path';
 
 test("a call whose result came only as rawOutput draws it: a string, a shell's output and its failure, an object's JSON (CHD-440)", () =>
@@ -1450,6 +1456,535 @@ describe('tester: Resources answers in narrow and expanded frames', () => {
             await rendered.unmount();
           }
         }
+      }
+    });
+  }
+});
+
+describe('the settings tool on the transcript (CHD-568)', () => {
+  /** A config home for a window, holding a fixture user's settings file. */
+  const fixture = (text: string) => (dir: string) => {
+    const home = join(dir, 'config');
+
+    mkdirSync(join(home, 'chord'), { recursive: true });
+    writeFileSync(join(home, 'chord', 'settings.json'), text);
+
+    return home;
+  };
+
+  const SECRET = 'secret123';
+  const settings = JSON.stringify({
+    theme: 'dark',
+    nope: 1,
+    mcpServers: { linear: { command: SECRET, env: { TOKEN: SECRET } } },
+  });
+
+  for (const columns of [80, 120]) {
+    test(`a read of every key folds to its files, and ctrl+o opens it, masked, at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'settingsread');
+            await window.shows('Settings · read (ctrl+o to expand)');
+
+            const folded = window.frame();
+
+            expect(folded).toContain('· 2 keys');
+            expect(folded).toContain('· not there');
+            expect(folded).toContain('1 problem');
+            expect(folded).not.toContain(SECRET);
+
+            await window.press(CTRL_O);
+            await window.shows('"effective"');
+
+            const open = window.frame();
+
+            expect(open).toContain('Settings · read');
+            expect(open).not.toContain('to expand');
+            expect(open).toContain('"TOKEN": "***"');
+            expect(open).not.toContain(SECRET);
+          },
+          { columns, rows: 60, server, configHome: fixture(settings) },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a set asks chord's box, then says where it was saved, at ${columns}x${rows}`, async () => {
+      const server = serveChord();
+      let file = '';
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'settingstheme');
+            await window.shows('Set theme?');
+
+            const asked = window.frame();
+
+            expect(asked).toContain('Settings(theme) · set');
+            expect(asked).toContain('Now    not set');
+            expect(asked).toContain('After  "light"');
+            expect(asked).toContain('1. Yes, in ');
+            expect(asked).toContain('2. No, tell fake what to change');
+            expect(asked).toContain('Esc to tell fake what to change');
+            expect(asked).not.toContain('read the whole change');
+
+            await window.press('1');
+            await window.shows('Saved to ');
+            await window.shows('takes effect now');
+            expect(JSON.parse(readFileSync(file, 'utf8'))).toMatchObject({
+              theme: 'light',
+            });
+          },
+          {
+            columns,
+            rows,
+            server,
+            configHome: (dir) => {
+              const home = fixture('{"mouse":true}')(dir);
+
+              file = join(home, 'chord', 'settings.json');
+
+              return home;
+            },
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+  }
+
+  test('Esc on the box saves nothing and the agent hears why', async () => {
+    const server = serveChord();
+    const text = '{"theme":"dark"}';
+    let file = '';
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingstheme');
+          await window.shows('Change theme?');
+          await window.press(ESC);
+          await window.shows('Not saved · the person will say what to change');
+          expect(readFileSync(file, 'utf8')).toBe(text);
+        },
+        {
+          columns: 80,
+          rows: 24,
+          server,
+          configHome: (dir) => {
+            const home = fixture(text)(dir);
+
+            file = join(home, 'chord', 'settings.json');
+
+            return home;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('the same value asks nothing', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingstheme');
+          await window.shows('Settings(theme) · unchanged');
+          expect(window.frame()).toContain(
+            'Already "light"; nothing to change',
+          );
+          expect(window.frame()).not.toContain('Yes, in');
+        },
+        {
+          columns: 80,
+          rows: 24,
+          server,
+          configHome: fixture('{"theme":"light"}'),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a change taller than the room says the key that reads it, and pgup moves there', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingslong');
+          await window.shows('read the whole change');
+
+          const asked = window.frame();
+
+          expect(asked).toContain('Esc to tell fake what to change');
+          expect(asked).toContain('pageup to read the whole change');
+          expect(asked).not.toContain('Settings(agents.fake.model)');
+
+          // A page is the room less two rows, and the row is many rooms tall.
+          await until('the row scrolled to its headline', async () => {
+            await window.press(PAGE_UP);
+
+            return window.frame().includes('Settings(agents.fake.model) · set');
+          });
+
+          expect(window.frame()).toContain('1. Yes, in ');
+        },
+        { columns: 80, rows: 24, server, configHome: fixture('{}') },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a second change is refused with the first box still up', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          mkdirSync(join(window.dir, '.fake-gate'));
+          await send(window, 'settingsoverlap');
+          await window.shows('Set theme?');
+          writeFileSync(join(window.dir, '.fake-gate', 'release'), '');
+          await window.shows('Another settings change is waiting');
+
+          const read = window.frame().replace(/\s+/g, ' ');
+
+          expect(read).toContain('Set theme?');
+          expect(read).toContain(
+            'Settings(agents.fake.model) ⎿ Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered',
+          );
+
+          await window.press('2');
+          await window.shows('Not saved · the person will say what to change');
+        },
+        { columns: 120, rows: 40, server, configHome: fixture('{}') },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('each refusal draws its own line with no note, asks nothing and leaves the file', async () => {
+    const server = serveChord();
+    const text = '{"theme":"dark"}';
+    let file = '';
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsrefused');
+          await window.shows('chord knows no agent named "nope"');
+
+          const read = window.frame().replace(/\s+/g, ' ');
+
+          for (const line of [
+            'Settings(agents.claude.modle) ⎿ No setting agents.claude.modle',
+            'Settings(agents.claude.command) ⎿ chord does not write agents.claude.command; edit the settings file by hand',
+            'Settings(mcpServers.linear) ⎿ chord does not write mcpServers.linear; edit the settings file by hand',
+            'Settings(agents.codex) ⎿ agents.codex is not one setting; name agents.codex.model or agents.codex.effort',
+            'Settings(teamSelection) ⎿ teamSelection is not one setting; name teamSelection.intent, teamSelection.prefer.agent or teamSelection.prefer.model',
+            'Settings(editorMode) ⎿ editorMode cannot be "emacs": Invalid option: expected one of "normal"|"vim"',
+            'Settings(agents.nope.model) ⎿ chord knows no agent named "nope"; list_agents names every one',
+          ]) {
+            expect(read).toContain(line);
+          }
+
+          expect(read).not.toContain('Yes, in');
+          expect(readFileSync(file, 'utf8')).toBe(text);
+        },
+        {
+          columns: 120,
+          rows: 60,
+          server,
+          configHome: (dir) => {
+            const home = fixture(text)(dir);
+
+            file = join(home, 'chord', 'settings.json');
+
+            return home;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a file that is not JSON is refused with no box', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingstheme');
+          await window.shows('was not saved: it is not valid JSON');
+          expect(window.frame()).not.toContain('Yes, in');
+        },
+        {
+          columns: 120,
+          rows: 40,
+          server,
+          configHome: fixture('{ broken'),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a call given up on with the box up says the person was not asked to the end', async () => {
+    const server = serveChord();
+    const text = '{"theme":"dark"}';
+    let file = '';
+
+    try {
+      await withWindow(
+        async (window) => {
+          mkdirSync(join(window.dir, '.fake-gate'));
+          await send(window, 'settingswithdrawn');
+          await window.shows('Change theme?');
+          writeFileSync(join(window.dir, '.fake-gate', 'release'), '');
+          await window.shows(
+            'The person was not asked to the end; nothing was saved',
+          );
+
+          const frame = window.frame();
+
+          expect(frame).toContain('Settings(theme)');
+          expect(frame).not.toContain('Settings(theme) ·');
+          expect(frame).not.toContain('Yes, in');
+          expect(readFileSync(file, 'utf8')).toBe(text);
+        },
+        {
+          columns: 80,
+          rows: 24,
+          server,
+          configHome: (dir) => {
+            const home = fixture(text)(dir);
+
+            file = join(home, 'chord', 'settings.json');
+
+            return home;
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a project holding the key warns above the box', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          mkdirSync(join(window.dir, '.chord'));
+          writeFileSync(
+            join(window.dir, '.chord', 'settings.json'),
+            '{"agent":"claude"}',
+          );
+          await send(window, 'settingsagent');
+          await window.shows('sets this too, and wins here');
+          expect(window.frame()).toContain('Set agent?');
+        },
+        {
+          columns: 120,
+          rows: 40,
+          server,
+          configHome: fixture('{}'),
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a linked project file reads as an ordinary one, showing only what is checked', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsreadlinked');
+          await window.shows('Project    "linked-agent"');
+
+          const read = window.frame().replace(/\s+/g, ' ');
+
+          expect(read).toContain('.chord/settings.json · 1 key');
+          expect(read).toContain('1 problem');
+          expect(read).not.toContain(LINK_TARGET.linkedUnknownKey);
+          expect(read).not.toContain('linkedUnknownKey');
+        },
+        { columns: 120, rows: 40, server, configHome: fixture('{}') },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('a read of one key draws the three values, and refuses a name no key has', async () => {
+    const server = serveChord();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await send(window, 'settingsreadkey');
+          await window.shows('Settings(mcpServers.linear.env.TOKEN) · read');
+
+          const frame = window.frame();
+
+          expect(frame).toContain('Effective  "***"');
+          expect(frame).toContain('User       "***"');
+          expect(frame).toContain('Project    not set');
+          expect(frame).not.toContain(SECRET);
+
+          await send(window, 'settingsreadbad');
+          await window.shows('No setting __proto__');
+          expect(window.frame()).toContain('Settings(__proto__)');
+          expect(window.frame()).not.toContain('Settings(__proto__) ·');
+        },
+        { columns: 80, rows: 40, server, configHome: fixture(settings) },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+describe('CHD-568 U4-U6 tester: answering and withdrawing changes', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`arrow choices preserve a denial, then save and remove at ${columns} columns`, async () => {
+      const server = serveChord();
+      const original = '{"theme":"dark","mouse":false}';
+      let file = '';
+      let theme: string | undefined;
+
+      try {
+        await withWindow(
+          async (window) => {
+            await send(window, 'settingstheme');
+            await window.shows('Change theme?');
+
+            const before = theme;
+
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows(
+              'Not saved · the person will say what to change',
+            );
+            expect(readFileSync(file, 'utf8')).toBe(original);
+            expect(theme).toBe(before);
+
+            await send(window, 'settingstheme');
+            await window.shows('Change theme?');
+            await window.press(DOWN);
+            await window.press(UP);
+            await window.press('\r');
+            await until('the accepted theme is live', () => theme === 'light');
+            expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+              theme: 'light',
+              mouse: false,
+            });
+
+            await send(window, 'settingsremove');
+            await window.shows('Remove theme?');
+            await window.press('1');
+            await until('the removed theme falls back', () => theme === 'auto');
+            expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+              mouse: false,
+            });
+          },
+          {
+            columns,
+            rows,
+            server,
+            configHome: (dir) => {
+              const home = join(dir, 'config');
+
+              mkdirSync(join(home, 'chord'), { recursive: true });
+
+              file = join(home, 'chord', 'settings.json');
+
+              writeFileSync(file, original);
+
+              return home;
+            },
+            onState: (next) => {
+              theme = next.window.theme;
+            },
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+
+    test(`withdrawal frees the box for the next change at ${columns} columns`, async () => {
+      const server = serveChord();
+      const original = '{"theme":"dark"}';
+      let file = '';
+
+      try {
+        await withWindow(
+          async (window) => {
+            mkdirSync(join(window.dir, '.fake-gate'));
+            await send(window, 'settingswithdrawn');
+            await window.shows('Change theme?');
+            writeFileSync(join(window.dir, '.fake-gate', 'release'), '');
+            await window.shows(
+              'The person was not asked to the end; nothing was saved',
+            );
+            expect(readFileSync(file, 'utf8')).toBe(original);
+
+            await send(window, 'settingsmodel');
+            await window.shows('Set agents.fake.model?');
+            await window.press('1');
+            await window.shows('takes effect at the next start');
+            expect(JSON.parse(readFileSync(file, 'utf8'))).toEqual({
+              theme: 'dark',
+              agents: { fake: { model: 'fake-small' } },
+            });
+          },
+          {
+            columns,
+            rows,
+            server,
+            configHome: (dir) => {
+              const home = join(dir, 'config');
+
+              mkdirSync(join(home, 'chord'), { recursive: true });
+
+              file = join(home, 'chord', 'settings.json');
+
+              writeFileSync(file, original);
+
+              return home;
+            },
+          },
+        );
+      } finally {
+        await server.close();
       }
     });
   }

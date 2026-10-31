@@ -1,0 +1,24 @@
+              }
+            }
+          },
+          "agents": {
+            "other": {
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": ".chord was not read: chord could not open it as a dir
+            ectory without following a link. project and effective omit it. A
+             start still follows links"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

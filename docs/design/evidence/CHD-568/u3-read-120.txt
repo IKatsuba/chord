@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: "editorMode": invalid option: expected one of "normal"|"vim", ignored
+
+ ⏺ ~/.config/chord/settings.json: unknown key "bogus", ignored
+
+ ⏺ ~/.config/chord/settings.json: "mcpServers.linear.type": missing; a server with a url needs "http" or "sse"; the
+   server is ignored
+
+ ⏺ ~/.config/chord/settings.json: "mcpServers.odd.env": invalid input: expected record, received string; the server is
+   ignored
+
+ › settingsread
+
+ ⏺ Settings · read (ctrl+o to expand)
+   ⎿  User     ~/.config/chord/settings.json · 6 keys
+      Project  .chord/settings.json · not there
+      2 problems
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

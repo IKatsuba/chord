@@ -1,0 +1,24 @@
+
+ › settingsread
+
+ ⏺ Settings · read
+   ⎿  {
+        "user": {
+          "mouse": false
+        },
+        "project": null,
+        "effective": {
+          "mouse": false
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": "not valid JSON; ignored"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

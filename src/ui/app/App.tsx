@@ -222,6 +222,7 @@ import { Agents } from '../transcript/agents/Agents.tsx';
 import { firstMounted } from '../transcript/mount.ts';
 import { Below, TranscriptEntry } from '../transcript/Transcript.tsx';
 import { Failure } from '../transcript/tools/Tool.tsx';
+import { settingsChangeOverflows } from '../transcript/tools/tools.ts';
 import { SignInBlock } from './SignIn.tsx';
 import { StartFailureBlock } from './StartFailure.tsx';
 import { stepWords } from '../../session/start_failure.ts';
@@ -560,6 +561,7 @@ export function App({
       resume,
       server,
       runtimes,
+      listedAgents: listed,
       home,
       configHome,
       onQuit,
@@ -1666,6 +1668,12 @@ export function App({
                     held={held}
                     away={listFocus}
                     width={columns - 4}
+                    changeOverflows={settingsChangeOverflows(
+                      state.transcript.entries,
+                      asked.save?.asked,
+                      columns - TRANSCRIPT_INSET,
+                      state.scroll.view,
+                    )}
                     active={listening && !listFocus && !viewing}
                     onChoose={(optionId) =>
                       conversation()?.choose(asked.id, optionId)

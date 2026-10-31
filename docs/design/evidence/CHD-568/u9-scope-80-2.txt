@@ -1,0 +1,24 @@
+   ⎿  {
+        "user": {
+          "mouse": false
+        },
+        "project": {},
+        "effective": {
+          "mouse": false
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": "1 key ignored"
+          },
+          {
+            "file": ".chord/settings.json",
+            "message": "2 keys only the user's file may set; ignored"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

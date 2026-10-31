@@ -1,0 +1,24 @@
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": ".chord/settings.json",
+            "message": ".chord/settings.json was not read: chord could not re
+            ad it as a regular file with one link. project and effective omit
+             it. A start still follows links"
+          }
+        ]
+      }
+
+ ⏺ Settings(agent) · read
+   ⎿  Effective  not set
+      User       not set
+      Project    not read
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

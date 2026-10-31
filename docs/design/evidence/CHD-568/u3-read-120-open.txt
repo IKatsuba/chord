@@ -1,0 +1,40 @@
+          "theme": "dark",
+          "mcpServers": {
+            "linear": {
+              "url": "https://mcp.example/linear",
+              "headers": {
+                "Authorization": "***"
+              },
+              "env": {
+                "TOKEN": "***",
+                "NEST": "***"
+              }
+            },
+            "odd": {
+              "command": "x",
+              "env": "***"
+            }
+          },
+          "agents": {
+            "codex": {
+              "command": "codex-acp",
+              "model": "gpt-6.1-sol"
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "\"editorMode\": invalid option: expected one of \"normal\"|\"vim\", ignored"
+          },
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "unknown key \"bogus\", ignored"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

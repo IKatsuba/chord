@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u12
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: unknown key "nope", ignored
+
+ ⏺ ~/.config/chord/settings.json: "mcpServers.bad": expected an object with a command or a url; the server is ignored
+
+ › settingsread
+
+ ⏺ Settings · read (ctrl+o to expand)
+   ⎿  User     ~/.config/chord/settings.json · 1 key
+      Project  .chord/settings.json · not there
+      1 problem
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -43,6 +43,20 @@ import type {
   PermissionWait,
 } from '../session/transcript/types.ts';
 import {
+  saveSettingAt,
+  type SettingChange,
+  shownSettingPath,
+} from '../settings.ts';
+import {
+  changeWord,
+  plannedSetting,
+  readSettingsTool,
+  saveFailure,
+  type SettingsChanged,
+  shownHome,
+  type SettingsWhere,
+} from '../settings_tool.ts';
+import {
   checkProposal,
   type FoundTeam,
   proposalShape,
@@ -293,6 +307,18 @@ export interface WindowView {
     wait: Omit<PermissionWait, 'id'>,
     signal: AbortSignal,
   ): Promise<string | undefined>;
+  /**
+   * Where the caller's settings files are and how the window shows them, and
+   * the runtime of the session that asks, which the box names.
+   */
+  settingsWhere(caller: Caller): SettingsWhere & { readonly agent: string };
+  /**
+   * Takes the one place for a `settings` change waiting on the person: how to
+   * give it back, or undefined while another holds it.
+   */
+  claimSettingsBox(): (() => void) | undefined;
+  /** A `settings` write was saved: the window takes up what it can at once. */
+  settingSaved(path: readonly string[], change: SettingChange): void;
   /** Hands a team a job: its lead opened as a child of the caller's. */
   runTeam(caller: Caller, args: RunTeamArgs): Promise<RunTeamAnswer>;
   /** A lead opens a member its team's file has. */
@@ -601,6 +627,120 @@ export function proposeText(
   return typeof answer.saved === 'string'
     ? `Saved to ${answer.saved}.`
     : 'The person did not save it; they will say what to change.';
+}
+
+/**
+ * A window's one place for a `settings` change waiting on the person. A box
+ * names only the path, so two at once could ask the same question over each
+ * other's rows, and the box would not confirm the write it answers.
+ */
+export function settingsBoxClaim(): () => (() => void) | undefined {
+  let held = false;
+
+  return () => {
+    if (held) {
+      return undefined;
+    }
+
+    held = true;
+
+    return () => {
+      held = false;
+    };
+  };
+}
+
+/** The refusal of a change while another waits on the person. */
+const SETTINGS_BOX_HELD =
+  'Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered';
+
+/** The settings box's choices, by their ids. */
+const SETTING = { yes: 'yes', no: 'no' } as const;
+
+/**
+ * A `settings` `set` or `remove`: checked, drawn as it waits (`shown`), asked
+ * in chord's box whatever mode the runtime is in, and written on a yes by
+ * chord, the agent never writing it.
+ */
+export async function changeSetting(
+  caller: Caller,
+  path: readonly string[],
+  change: SettingChange,
+  signal: AbortSignal,
+  shown: (answer: SettingsChanged) => void,
+  asked: string,
+): Promise<SettingsChanged | { readonly error: string }> {
+  const where = caller.window.settingsWhere(caller);
+  const planned = await plannedSetting(
+    where,
+    path,
+    change,
+    caller.window.runtimes(),
+  );
+
+  if ('error' in planned || planned.answer.unchanged === true) {
+    return 'error' in planned ? planned : planned.answer;
+  }
+
+  // No wait between the check and the claim, so two calls cannot both pass.
+  const release = caller.window.claimSettingsBox();
+
+  if (release === undefined) {
+    return { error: SETTINGS_BOX_HELD };
+  }
+
+  const { answer, file } = planned;
+  const shownKey = shownSettingPath(path);
+  const word = changeWord(answer);
+  const escape = `tell ${where.agent} what to change`;
+
+  try {
+    shown(answer);
+
+    const picked = await caller.window.askPerson(
+      caller,
+      {
+        title: `Settings(${shownKey})`,
+        options: [
+          {
+            optionId: SETTING.yes,
+            name: `Yes, in ${answer.file}`,
+            kind: 'allow_once',
+          },
+          { optionId: SETTING.no, name: `No, ${escape}`, kind: 'reject_once' },
+        ],
+        save: {
+          question: `${word[0]!.toUpperCase()}${word.slice(1)} ${shownKey}?`,
+          files: {},
+          escape,
+          asked,
+        },
+      },
+      signal,
+    );
+
+    if (picked === undefined) {
+      return {
+        error: 'The person was not asked to the end; nothing was saved',
+      };
+    }
+
+    if (picked === SETTING.no) {
+      return { ...answer, saved: false };
+    }
+
+    try {
+      await saveSettingAt(file, path, change);
+    } catch (error) {
+      return { error: saveFailure(answer.file, error, shownHome(where)) };
+    }
+
+    caller.window.settingSaved(path, change);
+
+    return { ...answer, saved: true };
+  } finally {
+    release();
+  }
 }
 
 /** A monitor started, by its id, or why it was not. */
@@ -1432,6 +1572,82 @@ const proposeTeamTool: Register = (server, caller) =>
     },
   );
 
+const settingsTool: Register = (server, caller) =>
+  server.registerTool(
+    'settings',
+    {
+      description:
+        "Reads and edits chord's settings. `read` gives the user's file and " +
+        "the project's as written, and the merged, checked settings that " +
+        "take effect, with any problems; values under an MCP server's env " +
+        'and headers read "***". `set` and `remove` change one key in the ' +
+        "user's file, after chord asks the person, whatever mode you run " +
+        'in; chord writes the file, not you. A path is a list of keys, as ' +
+        "an agent's name may hold a dot. The keys chord writes are theme, " +
+        'editorMode, mouse, copyOnSelect, offeredAgents, ' +
+        'preferredNotifChannel, agent, agents.<name>.model and .effort, ' +
+        'teamSelection.intent and teamSelection.prefer.agent and .model; ' +
+        'the person edits any other by hand. The answer says what changed ' +
+        'and when it takes effect. When `saved` is false and `unchanged` ' +
+        'is not set, the person will say what to change: end your turn and ' +
+        'wait for their words.',
+      inputSchema: {
+        action: z.enum(['read', 'set', 'remove']).describe('What to do'),
+        path: z
+          .array(z.string())
+          .optional()
+          .describe(
+            'The key, as a list of keys; for a read, every key if left out',
+          ),
+        value: z.unknown().optional().describe('What `set` sets it to'),
+      },
+    },
+    async (input, extra) => {
+      if (caller.fork) {
+        return serve(caller, 'settings', input, { error: FORK_REFUSED });
+      }
+
+      if (input.action !== 'read') {
+        const asked = crypto.randomUUID();
+        const changed = await changeSetting(
+          caller,
+          input.path ?? [],
+          input.action === 'set' ? { set: input.value } : { remove: true },
+          extra.signal,
+          (shown) =>
+            caller.window.served(caller, {
+              tool: 'settings',
+              input,
+              answer: shown,
+              pending: true,
+              asked,
+            }),
+          asked,
+        );
+
+        return serve(caller, 'settings', input, changed, undefined, asked);
+      }
+
+      const read = await readSettingsTool(
+        caller.window.settingsWhere(caller),
+        input.path,
+      );
+
+      if ('error' in read) {
+        return serve(caller, 'settings', input, read);
+      }
+
+      caller.window.served(caller, {
+        tool: 'settings',
+        input,
+        answer: read.answer,
+        settingsFiles: read.files,
+      });
+
+      return answer(read.answer);
+    },
+  );
+
 const openMember: Register = (server, caller) =>
   server.registerTool(
     'open_agent',
@@ -1513,6 +1729,7 @@ function toolsOf(caller: Caller): readonly Register[] {
         openAgent,
         runTeam,
         proposeTeamTool,
+        settingsTool,
         tellAgent,
         closeAgent,
         clearAgent,
@@ -1562,6 +1779,7 @@ export function toolNames(role: Role): readonly ChordTool[] {
         'open_agent',
         'run_team',
         'propose_team',
+        'settings',
         'send_message',
         'close_agent',
         'clear_agent',

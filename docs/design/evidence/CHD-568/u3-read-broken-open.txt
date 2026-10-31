@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: not valid JSON (JSON Parse error: Unexpected identifier "SECRETBROKEN"); the file is
+   ignored
+
+ › settingsread
+
+ ⏺ Settings · read
+   ⎿  {
+        "user": null,
+        "project": null,
+        "effective": {},
+        "problems": [
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "not valid JSON; the file is ignored"
+          }
+        ]
+      }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

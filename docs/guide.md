@@ -544,7 +544,7 @@ queued prompts refuses until its turn ends. On an ordinary child, the command
 says `/fork forks main or a fork`. A fork can itself be forked.
 
 A fork has main's tools except `open_agent`, `run_team`, `propose_team`,
-`close_agent` and `clear_agent`, which answer
+`settings`, `close_agent` and `clear_agent`, which answer
 `This tool works only from main and its agents, not from a fork.`
 It can use task agents and monitors. Main and forks cannot message one another.
 Pick a fork in the agents list and press `x` to close it with its tasks and
@@ -590,6 +590,39 @@ both.
 | `mouse`                        | `false` leaves the mouse to the terminal; user's file only |                     |
 | `copyOnSelect`                 | `false` leaves a drag's selection for ctrl+c to copy (on by default); user's file only |                     |
 | `mcpServers`                   | MCP servers configured for the agent, as `.mcp.json` writes them |             |
+
+The main session's agent can use chord's `settings` tool in the window;
+forks, children and `-p` cannot. `read` loads as a start does, follows
+links and returns only checked user and project settings, their merge
+and any problems. A layer with no usable file is null. Read every key or
+one named by a list such as `["agents", "codex", "model"]`. Values under
+`env`, `headers`, `command`, `args` and `url` are masked as `"***"` by key
+name, including on a read of one key; lists and objects keep their shape.
+Unknown or wrong-cased server fields, such as `token` or `Env`, are left
+out. Values under real setting names, and agent, server and `env` key
+names, can reach the model. Problems use fixed words and counts per file,
+never quoting its contents. A read of every key folds under `Settings`;
+ctrl+o expands it.
+
+A linked project file reads as an ordinary file, with no size cap, as at
+start. A FIFO at `.chord/settings.json` can leave a read or write waiting
+forever; cancelling the call does not stop the read.
+
+`set` and `remove` change one key in the user's file only. chord shows the
+old and new values and asks in its box, under any permission mode. One
+change waits at a time; another is refused until you answer.
+An unchanged value or an absent key's removal asks and writes nothing.
+The tool may change `theme`, `editorMode`, `mouse`, `copyOnSelect`,
+`offeredAgents`, `preferredNotifChannel`, `agent`, `agents.<name>.model`,
+`agents.<name>.effort`, `teamSelection.intent`, `teamSelection.prefer.agent`
+and `teamSelection.prefer.model`. Everything else stays a hand edit,
+including commands, permission modes, MCP servers and team constraints.
+A checked project value that wins over the user's is named above the box.
+
+Saved `theme` and `editorMode` take effect at once, as does `offeredAgents`
+in `/new`'s list. Team selection preferences apply at the next selection;
+the rest at the next start. Other windows and hand edits take effect at
+the next start, except team selection preferences.
 
 When a turn ends, a permission is asked or the agent asks you to fill in a form
 or open a link, chord tells the terminal, so a window in the background can say

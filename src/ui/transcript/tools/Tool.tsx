@@ -50,6 +50,11 @@ import {
   type TableLine,
 } from './proposal.ts';
 import { planStatus, planText, todoRows } from './plan_ask.ts';
+import {
+  foldedSettingsNote,
+  type SettingsRow,
+  settingsRows,
+} from './settings_row.ts';
 import type { TerminalView } from './terminal.ts';
 import { callTarget } from '../targets.ts';
 import {
@@ -139,6 +144,10 @@ export function Tool({
 
   const proposal =
     call.chord === undefined ? undefined : proposalOf(call.chord);
+  const settings =
+    call.chord === undefined
+      ? undefined
+      : settingsRows(call.chord, expanded, Math.max(width - 5, 1));
   const { lines, hidden, terminals, diffs } = summary(
     call,
     expanded,
@@ -169,7 +178,16 @@ export function Tool({
           ) : (
             <ToolMarker tone={tone} />
           )}
-          <HeadlineText line={line} width={width} colour={recipient} />
+          {settings === undefined ? (
+            <HeadlineText line={line} width={width} colour={recipient} />
+          ) : (
+            <SettingsHeadline
+              line={line}
+              call={call.chord}
+              expanded={expanded}
+              width={width}
+            />
+          )}
         </box>
         {proposal !== undefined && (
           <Proposal
@@ -178,6 +196,7 @@ export function Tool({
             width={Math.max(width - 5, 1)}
           />
         )}
+        {settings !== undefined && <SettingsBody rows={settings} />}
         {sent !== undefined && (
           <MessageBody text={sent.text} width={width} ending={sent.ending} />
         )}
@@ -189,6 +208,7 @@ export function Tool({
           />
         )}
         {proposal === undefined &&
+          settings === undefined &&
           sent === undefined &&
           call.plan === undefined &&
           lines.map((line, index) => (
@@ -224,6 +244,56 @@ export function Tool({
       </box>
     </>
   );
+}
+
+/** A served `settings` call's headline, which may say the key that opens it. */
+function SettingsHeadline({
+  line,
+  call,
+  expanded,
+  width,
+}: {
+  line: Headline;
+  call: ToolCall['chord'];
+  expanded: boolean;
+  width: number;
+}) {
+  const toggle = useHintKey('app:toggleTranscript');
+
+  return (
+    <HeadlineText
+      line={foldedSettingsNote(line, call, expanded, toggle)}
+      width={width}
+    />
+  );
+}
+
+/**
+ * What a `settings` call read or changed: labels dim, values in the text's
+ * own colour, each already wrapped under its own column and never folded.
+ */
+function SettingsBody({ rows }: { rows: readonly SettingsRow[] }) {
+  const colours = useColours();
+  const selectable = useSelectable();
+
+  return rows.map((row, index) => (
+    <Under key={index} first={index === 0}>
+      <text {...ROWS} {...selectable}>
+        <span attributes={DIM}>{row.label}</span>
+        <span
+          {...(row.tone === 'warning'
+            ? fg(colours.warning)
+            : row.tone === 'success'
+              ? fg(colours.success)
+              : row.tone === 'dim'
+                ? { attributes: DIM }
+                : {})}
+        >
+          {row.text}
+        </span>
+      </text>
+    </Under>
+  ));
 }
 
 /**

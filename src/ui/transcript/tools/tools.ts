@@ -4,7 +4,11 @@
  * `⎿` lines and diffs that show what it produced.
  */
 import type { ToolCallContent, ToolKind } from '@agentclientprotocol/sdk';
-import type { ToolCall, TurnState } from '../../../session/transcript/types.ts';
+import type {
+  Entry,
+  ToolCall,
+  TurnState,
+} from '../../../session/transcript/types.ts';
 import { type DiffView, diffView } from './diff.ts';
 import { isEmpty, type TerminalView, terminalView } from './terminal.ts';
 import { Chalk } from 'chalk';
@@ -12,6 +16,7 @@ import { type Run, runs } from '../../theme/text.ts';
 import { brush } from '../highlight.ts';
 import type { CodeTones } from '../../theme/theme.ts';
 import { chordHeadline, chordLines, cutLine, sentText } from './chord.ts';
+import { settingsRows } from './settings_row.ts';
 import {
   chordCallOf,
   isChordTool,
@@ -523,4 +528,38 @@ function textLines(text: string): string[] {
   const lines = text.replace(/\s+$/, '').split(/\r?\n/);
 
   return lines.length === 1 && lines[0] === '' ? [] : lines;
+}
+
+/**
+ * Whether the `settings` change a box is about, by its call's `asked`, draws
+ * taller than the transcript's `room`, so that following the bottom shows only
+ * its tail; a value has no length limit and its row is never folded. A box
+ * about no such call never does. `width` is what each call has beside its
+ * marker.
+ */
+export function settingsChangeOverflows(
+  entries: readonly Entry[],
+  asked: string | undefined,
+  width: number,
+  room: number,
+): boolean {
+  const waiting =
+    asked === undefined
+      ? undefined
+      : entries.find(
+          (entry) =>
+            entry.kind === 'tool' &&
+            entry.call.chord?.tool === 'settings' &&
+            entry.call.chord.pending === true &&
+            entry.call.chord.asked === asked,
+        );
+
+  if (waiting?.kind !== 'tool' || waiting.call.chord === undefined) {
+    return false;
+  }
+
+  const { chord } = waiting.call;
+  const body = settingsRows(chord, false, Math.max(width - 5, 1))?.length ?? 0;
+
+  return headlineRows(chordHeadline(chord), width).length + body > room;
 }

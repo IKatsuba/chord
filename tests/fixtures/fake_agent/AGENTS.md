@@ -35,7 +35,12 @@
   `claudesubagents`, `claudebackground`, `claudemessage`, `claudewaiting`,
   `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
-  (`chordtools`, `cutcalls`, `cutcallsback`), `tasks.ts`
+  (`chordtools`, `cutcalls`, `cutcallsback`),
+  `settings.ts` (`settingsread`, `settingsreadkey`, `settingsreadbad`,
+  `settingsreadlinked`,
+  `settingstheme`, `settingsmodel`, `settingsremove`, `settingsagent`,
+  `settingsvim`, `settingsoffered`, `settingsoverlap`, `settingsrefused`,
+  `settingswithdrawn`, `settingslong`), `tasks.ts`
   (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
   `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktitled`,
   `tasktillsteered`,
@@ -89,6 +94,12 @@
   `claudesubagents`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
   `claudeslowstop`, `chordtools`, `codexchordcalls`, `codexmodels`,
+  `settingsread`, `settingsreadkey`, `settingsreadbad`,
+  `settingsreadlinked`,
+  `settingstheme`,
+  `settingsmodel`, `settingsremove`, `settingsagent`, `settingsvim`,
+  `settingsoffered`, `settingsoverlap`, `settingsrefused`,
+  `settingswithdrawn`, `settingslong`,
   `claudecycle`, `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
   plays that scenario; `markdownwrap` sends a reply whose heading,
   three-deep nested list, quote and paragraph wrap at 80 columns, with a

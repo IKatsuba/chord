@@ -36,6 +36,7 @@ const CHORD_TOOLS: ReadonlySet<string> = new Set<ChordTool>([
   'list_teams',
   'run_team',
   'propose_team',
+  'settings',
 ]);
 
 export function isChordTool(tool: string): tool is ChordTool {

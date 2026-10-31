@@ -1,0 +1,24 @@
+ ▄▀▀▀   /tmp/chord-qa.des568u12
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: not a JSON object; the file is ignored
+
+ › settingsread
+
+ ⏺ Settings · read
+   ⎿  {
+        "user": null,
+        "project": null,
+        "effective": {},
+        "problems": [
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "not a JSON object; ignored"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

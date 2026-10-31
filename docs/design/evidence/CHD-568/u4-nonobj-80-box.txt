@@ -1,0 +1,24 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u4
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/settings.json: not a JSON object; the file is ignored
+
+ › settingstheme
+
+ ⏺ Settings(theme)
+   ⎿  ~/.config/chord/settings.json was not saved: it is not a JSON object
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

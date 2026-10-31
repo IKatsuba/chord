@@ -1,0 +1,24 @@
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "1 key ignored"
+          },
+          {
+            "file": ".chord/settings.json",
+            "message": "1 key ignored"
+          }
+        ]
+      }
+
+ ⏺ Settings(agent) · read
+   ⎿  Effective  "linked-agent"
+      User       not set
+      Project    "linked-agent"
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

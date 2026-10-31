@@ -56,6 +56,7 @@ export function PermissionPrompt(props: Parameters<typeof AgentPermission>[0]) {
       onChoose={onChoose}
       hidden={props.hidden ?? false}
       away={props.away ?? false}
+      overflows={props.changeOverflows ?? false}
       {...(kept && { kept })}
     />
   );
@@ -117,6 +118,8 @@ function AgentPermission({
    * unmarked and no hint, what it kept still kept (U10).
    */
   away?: boolean;
+  /** chord's own change asked about is taller than the transcript's room. */
+  changeOverflows?: boolean;
   /** Cells inside the box's border and padding, for the asker's row. */
   width?: number;
   active: boolean;
@@ -401,6 +404,7 @@ function SaveBox({
   onChoose,
   kept,
   away = false,
+  overflows = false,
 }: {
   /**
    * Not drawn, its state kept, while the background view stands in its
@@ -412,6 +416,12 @@ function SaveBox({
    * unmarked and no hint, what it kept still kept (U10).
    */
   away?: boolean;
+  /**
+   * The change it asks about is taller than the transcript's room, so the
+   * hint says the key that reads the whole of it, rather than leave the
+   * person answering under its tail.
+   */
+  overflows?: boolean;
   wait: PermissionWait;
   save: SaveBoxQuestion;
   active: boolean;
@@ -420,6 +430,11 @@ function SaveBox({
 }) {
   const { permission } = useColours();
   const key = useHintKey('confirm:no');
+  const pageUp = useHintKey('scroll:pageUp');
+  const whole =
+    overflows && pageUp !== undefined
+      ? ` · ${pageUp} to read the whole change`
+      : '';
 
   return (
     <box
@@ -444,7 +459,7 @@ function SaveBox({
       {key !== undefined && (
         <box marginTop={1}>
           <text {...TEXT} attributes={DIM}>
-            {away ? ' ' : `${capital(key)} to ${save.escape}`}
+            {away ? ' ' : `${capital(key)} to ${save.escape}${whole}`}
           </text>
         </box>
       )}

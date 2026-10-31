@@ -5,6 +5,7 @@
  * (`mcp__chord__spawn_task`) or the answer's JSON, which ctrl+o still shows.
  */
 import { formatElapsed } from '../../../session/elapsed.ts';
+import { settingsHeadline } from './settings_row.ts';
 import { timeoutWords } from '../../../session/monitors.ts';
 import type {
   ChordCall,
@@ -106,6 +107,8 @@ export function chordHeadline(call: ChordCall): Headline {
             ? ' · change'
             : ' · proposal',
       );
+    case 'settings':
+      return settingsHeadline(call);
     case 'send_message':
       return {
         name: answered ?? text(input.to) ?? 'main',
@@ -267,6 +270,9 @@ export function chordLines(call: ChordCall, expanded = false): string[] {
       return text(input.text)?.split('\n') ?? [];
     // Drawn as a table by its own component once served.
     case 'propose_team':
+      return [];
+    // Drawn in rows of its own once served, as a value is never folded.
+    case 'settings':
       return [];
     case 'close_agent':
       return ['Closed'];

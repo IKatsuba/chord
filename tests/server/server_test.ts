@@ -4,6 +4,7 @@ import {
 } from '../../src/session/team_selection.ts';
 import type { Budgets } from '../../src/session/budgets.ts';
 import { describe, expect, test } from 'bun:test';
+import { tmpdir } from 'node:os';
 import { until } from '../session/conversation_fake.ts';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
@@ -12,7 +13,11 @@ import {
   serveChord,
   SERVER_NAME,
 } from '../../src/server/server.ts';
-import type { Caller, WindowView } from '../../src/server/tools.ts';
+import {
+  type Caller,
+  settingsBoxClaim,
+  type WindowView,
+} from '../../src/server/tools.ts';
 import type { ChordCall } from '../../src/session/transcript/types.ts';
 
 const WINDOW: WindowView = {
@@ -43,6 +48,14 @@ const WINDOW: WindowView = {
   teams: () => Promise.resolve({ found: [], runs: [] }),
   runTeam: () => Promise.resolve({ error: 'no teams here' }),
   teamPlaces: () => Promise.reject(new Error('no teams here')),
+  claimSettingsBox: settingsBoxClaim(),
+  settingSaved: () => {},
+  settingsWhere: () => ({
+    agent: 'fake',
+    configHome: undefined,
+    cwd: tmpdir(),
+    home: undefined,
+  }),
   askPerson: () => Promise.resolve(undefined),
   openMember: () => Promise.resolve({ error: 'no members here' }),
   message: () => ({ error: 'no parent here' }),
@@ -124,6 +137,7 @@ test('a session the person opened lists the agents and the sessions', () =>
         'open_agent',
         'run_team',
         'propose_team',
+        'settings',
         'send_message',
         'close_agent',
         'clear_agent',
@@ -865,6 +879,7 @@ test("a fork has the person's tools, but those that open, run or close agents re
         ['close_agent', { to: 'parser' }],
         ['clear_agent', { to: 'parser' }],
         ['run_team', { team: 'bugfix', job: 'Fix it.' }],
+        ['settings', { action: 'read' }],
         [
           'propose_team',
           {

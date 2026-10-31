@@ -2,7 +2,8 @@
 
 - `registry.ts` (`bun dev registry`) and `ui/header/mark.ts`
   (`bun dev mark`) are generated; never edit them.
-- Write settings only through `saveTheme` or `saveEditorMode`: writes are atomic and keep the file's other keys.
+- Write settings only through `saveTheme`, `saveEditorMode` or `saveSettingAt`:
+  writes are atomic and keep the file's other keys.
 - `.mcp.json` and the MCP configuration are read only.
 - Read team files on request, never at start; write only through
   `propose_team`'s save. Selected runs freeze composition and instructions;

@@ -1,26 +1,41 @@
 import { describe, expect, test } from 'bun:test';
 import { readdirSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   agentCommands,
+  canBeSettingPath,
   homePath,
   knownAgents,
   loadSettings,
   mergeSettings,
+  NO_SETTINGS_HOME,
   parseSettings,
   problemLine,
   problemNote,
   refusalLine,
+  readSettingsObject,
   readTeamSelection,
   resolveStartup,
   resumedStartup,
   saveEditorMode,
+  saveSettingAt,
   saveTheme,
+  settingAt,
+  settingParentProblem,
   settingsFiles,
   setWhere,
   shownPath,
+  shownSettingPath,
+  shownValue,
   startupOf,
   unknownOffered,
   unseenProblems,
@@ -1540,5 +1555,385 @@ describe('tester: fresh selected policy failure and repair', () => {
         });
       },
     );
+  });
+});
+
+describe('CHD-568 U1 tester: fresh path writes and hostile keys', () => {
+  test('each write rereads unrelated hand edits and refuses a later broken file', async () => {
+    await place({ user: '{}' }, async (where) => {
+      const file = settingsFiles(where)[0]!;
+
+      await saveSettingAt(file, ['theme'], { set: 'dark' });
+      await writeFile(file, '{"theme":"light","keep":{"nested":[1,null]}}');
+      await saveSettingAt(file, ['agents', 'my.agent', 'model'], { set: 'm' });
+      expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({
+        theme: 'light',
+        keep: { nested: [1, null] },
+        agents: { 'my.agent': { model: 'm' } },
+      });
+
+      const broken = '{"env":{"TOKEN":secret123}}';
+
+      await writeFile(file, broken);
+      await expect(
+        saveSettingAt(file, ['theme'], { set: 'dark' }),
+      ).rejects.toThrow('it is not valid JSON');
+      expect(await readFile(file, 'utf8')).toBe(broken);
+      expect(readdirSync(join(file, '..'))).toEqual(['settings.json']);
+    });
+  });
+
+  test('removing a dotted own agent name preserves its siblings and project bytes', async () => {
+    const project = '{ "agents": {"my.agent":{"model":"project"}} }';
+
+    await place(
+      {
+        user: '{"agents":{"my.agent":{"model":false},"hasOwnProperty":{"model":"keep"}}}',
+        project,
+      },
+      async (where) => {
+        const [user, local] = settingsFiles(where);
+
+        await saveSettingAt(user, ['agents', 'my.agent', 'model'], {
+          remove: true,
+        });
+        expect(JSON.parse(await readFile(user!, 'utf8'))).toEqual({
+          agents: { hasOwnProperty: { model: 'keep' } },
+        });
+        expect(await readFile(local!, 'utf8')).toBe(project);
+      },
+    );
+  });
+
+  test('forbidden keys refuse removal at every depth without rewriting bytes', async () => {
+    const raw = '{ "agents": {"codex":{"model":"m"}} }';
+
+    await place({ user: raw }, async (where) => {
+      const file = settingsFiles(where)[0]!;
+
+      for (const key of ['__proto__', 'constructor', 'prototype']) {
+        for (const path of [[key], ['agents', key], ['agents', 'codex', key]]) {
+          await expect(
+            saveSettingAt(file, path, { remove: true }),
+          ).rejects.toThrow(/^No setting /u);
+        }
+      }
+
+      expect(await readFile(file, 'utf8')).toBe(raw);
+    });
+  });
+
+  test('nested values and unusual path keys encode terminal controls without losing Unicode', () => {
+    const controls = Array.from({ length: 160 }, (_, code) =>
+      String.fromCharCode(code),
+    ).join('');
+    const value = { [controls]: ['🙂', '\u200d\u2066\u2029', controls] };
+    const shown = shownValue(value);
+
+    expect(shown).not.toMatch(/[\p{Cc}\p{Cf}\p{Zl}\p{Zp}]/u);
+    expect(JSON.parse(shown)).toEqual(value);
+    expect(shown).toContain('🙂');
+    expect(shownSettingPath(['agents', '', 'my.agent', controls])).toBe(
+      `agents.""."my.agent".${shownValue(controls)}`,
+    );
+  });
+});
+
+describe('the settings path writer (CHD-568)', () => {
+  /** A user's settings file under a temporary root, as `text` when given. */
+  async function inFile(
+    text: string | undefined,
+    run: (file: string, root: string) => Promise<void>,
+  ) {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-at-'));
+    const file = join(root, 'chord', 'settings.json');
+
+    try {
+      if (text !== undefined) {
+        await mkdir(join(root, 'chord'));
+        await writeFile(file, text);
+      }
+
+      await run(file, root);
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  }
+
+  const json = async (file: string): Promise<unknown> =>
+    JSON.parse(await readFile(file, 'utf8'));
+
+  test("a set keeps every other key, the same agent's too", async () => {
+    await inFile(
+      JSON.stringify({
+        unknownKey: [1],
+        theme: 42,
+        agents: { codex: { command: 'codex-acp', model: 'old' }, other: {} },
+      }),
+      async (file) => {
+        await saveSettingAt(file, ['agents', 'codex', 'model'], {
+          set: 'new',
+        });
+
+        expect(await json(file)).toStrictEqual({
+          unknownKey: [1],
+          theme: 42,
+          agents: { codex: { command: 'codex-acp', model: 'new' }, other: {} },
+        });
+      },
+    );
+  });
+
+  test('a set makes the file, its directory and the parents it lacks', async () => {
+    await inFile(undefined, async (file) => {
+      await saveSettingAt(file, ['teamSelection', 'prefer', 'model'], {
+        set: null,
+      });
+
+      expect(await json(file)).toStrictEqual({
+        teamSelection: { prefer: { model: null } },
+      });
+    });
+  });
+
+  test('the file is two-space JSON with a final newline', async () => {
+    await inFile('{"theme":"dark"}', async (file) => {
+      await saveSettingAt(file, ['mouse'], { set: false });
+
+      expect(await readFile(file, 'utf8')).toBe(
+        '{\n  "theme": "dark",\n  "mouse": false\n}\n',
+      );
+    });
+  });
+
+  test('a bad value at the path itself is replaced', async () => {
+    await inFile('{"theme":{"not":"a theme"}}', async (file) => {
+      await saveSettingAt(file, ['theme'], { set: 'dark' });
+
+      expect(await json(file)).toStrictEqual({ theme: 'dark' });
+    });
+  });
+
+  test('a remove takes the leaf and the parents it leaves empty', async () => {
+    await inFile(
+      JSON.stringify({
+        theme: 'dark',
+        teamSelection: { prefer: { model: 'm' } },
+      }),
+      async (file) => {
+        await saveSettingAt(file, ['teamSelection', 'prefer', 'model'], {
+          remove: true,
+        });
+
+        expect(await json(file)).toStrictEqual({ theme: 'dark' });
+      },
+    );
+  });
+
+  test('a remove stops at a parent that still holds a key', async () => {
+    await inFile(
+      JSON.stringify({
+        agents: { codex: { model: 'm', effort: 'high' }, claude: {} },
+      }),
+      async (file) => {
+        await saveSettingAt(file, ['agents', 'codex', 'model'], {
+          remove: true,
+        });
+
+        expect(await json(file)).toStrictEqual({
+          agents: { codex: { effort: 'high' }, claude: {} },
+        });
+      },
+    );
+  });
+
+  test('a remove of the last key leaves an empty object, not no file', async () => {
+    await inFile('{"theme":"dark"}', async (file) => {
+      await saveSettingAt(file, ['theme'], { remove: true });
+
+      expect(await json(file)).toStrictEqual({});
+    });
+  });
+
+  test('a remove takes a null, which is a value', async () => {
+    await inFile('{"teamSelection":{"intent":null,"a":1}}', async (file) => {
+      await saveSettingAt(file, ['teamSelection', 'intent'], { remove: true });
+
+      expect(await json(file)).toStrictEqual({ teamSelection: { a: 1 } });
+    });
+  });
+
+  test('a remove of an absent key writes nothing and makes nothing', async () => {
+    const written = '{ "agents": {"codex": {}} }';
+
+    await inFile(written, async (file) => {
+      await saveSettingAt(file, ['agents', 'codex', 'model'], { remove: true });
+
+      expect(await readFile(file, 'utf8')).toBe(written);
+    });
+
+    await inFile(undefined, async (file, root) => {
+      await saveSettingAt(file, ['theme'], { remove: true });
+
+      expect(readdirSync(root)).toStrictEqual([]);
+    });
+  });
+
+  test('inherited names are no keys of a parent', async () => {
+    await inFile('{"agents":{}}', async (file) => {
+      await saveSettingAt(file, ['agents', 'toString', 'model'], {
+        remove: true,
+      });
+      expect(await json(file)).toStrictEqual({ agents: {} });
+
+      await saveSettingAt(file, ['agents', 'toString', 'model'], { set: 'm' });
+      expect(await json(file)).toStrictEqual({
+        agents: { toString: { model: 'm' } },
+      });
+    });
+  });
+
+  test.each([
+    ['["a list"]', 'it is not a JSON object'],
+    ['3', 'it is not a JSON object'],
+    ['null', 'it is not a JSON object'],
+    ['{ not json', 'it is not valid JSON'],
+  ])('a file of %s is refused and stays as it was', async (written, why) => {
+    await inFile(written, async (file, root) => {
+      for (const change of [{ set: 'dark' }, { remove: true } as const]) {
+        await expect(saveSettingAt(file, ['theme'], change)).rejects.toThrow(
+          why,
+        );
+      }
+
+      expect(await readFile(file, 'utf8')).toBe(written);
+      expect(readdirSync(join(root, 'chord'))).toStrictEqual(['settings.json']);
+    });
+  });
+
+  test.each([
+    ['{"agents":3}', 'agents'],
+    ['{"agents":[]}', 'agents'],
+    ['{"agents":null}', 'agents'],
+    ['{"agents":{"my.agent":"x"}}', 'agents."my.agent"'],
+  ])(
+    'a parent in %s is refused on set and remove alike',
+    async (written, parent) => {
+      await inFile(written, async (file) => {
+        for (const change of [{ set: 'm' }, { remove: true } as const]) {
+          await expect(
+            saveSettingAt(file, ['agents', 'my.agent', 'model'], change),
+          ).rejects.toThrow(`its ${parent} is not an object; edit it by hand`);
+        }
+
+        expect(await readFile(file, 'utf8')).toBe(written);
+      });
+    },
+  );
+
+  test('no home is refused', async () => {
+    await expect(
+      saveSettingAt(undefined, ['theme'], { set: 'dark' }),
+    ).rejects.toThrow(NO_SETTINGS_HOME);
+  });
+
+  test.each(['__proto__', 'constructor', 'prototype'])(
+    '%s is never a key',
+    async (key) => {
+      expect(canBeSettingPath(['agents', key, 'model'])).toBe(false);
+
+      await inFile('{"agents":{}}', async (file) => {
+        for (const path of [[key], ['agents', key, 'model']]) {
+          await expect(
+            saveSettingAt(file, path, { set: { polluted: true } }),
+          ).rejects.toThrow(/^No setting /u);
+        }
+
+        expect(await json(file)).toStrictEqual({ agents: {} });
+      });
+
+      expect(({} as Record<string, unknown>)['polluted']).toBeUndefined();
+    },
+  );
+
+  test('an empty path is no setting', async () => {
+    expect(canBeSettingPath([])).toBe(false);
+
+    await inFile(undefined, async (file) => {
+      await expect(saveSettingAt(file, [], { set: {} })).rejects.toThrow(
+        /^No setting /u,
+      );
+    });
+  });
+
+  test("a file's own __proto__ key survives a write of another", async () => {
+    await inFile('{"__proto__":{"a":1},"theme":"dark"}', async (file) => {
+      await saveSettingAt(file, ['mouse'], { set: true });
+
+      expect(await readFile(file, 'utf8')).toContain('"__proto__"');
+    });
+  });
+
+  test('a failed write leaves the file and no temporary beside it', async () => {
+    await inFile('{"theme":"dark"}', async (file, root) => {
+      const directory = join(root, 'chord');
+
+      await chmod(directory, 0o500);
+
+      try {
+        await expect(
+          saveSettingAt(file, ['theme'], { set: 'light' }),
+        ).rejects.toThrow();
+      } finally {
+        await chmod(directory, 0o700);
+      }
+
+      expect(await readFile(file, 'utf8')).toBe('{"theme":"dark"}');
+      expect(readdirSync(directory)).toStrictEqual(['settings.json']);
+    });
+  });
+
+  test('readSettingsObject takes an absent file for none', async () => {
+    await inFile(undefined, async (file) => {
+      expect(await readSettingsObject(file)).toStrictEqual({});
+    });
+  });
+
+  test('settingAt reads own keys and stops at what is not an object', () => {
+    const settings = { agents: { codex: { model: 'm' } }, list: ['a'] };
+
+    expect(settingAt(settings, ['agents', 'codex', 'model'])).toBe('m');
+    expect(settingAt(settings, ['agents', 'toString'])).toBeUndefined();
+    expect(settingAt(settings, ['list', '0'])).toBeUndefined();
+    expect(settingAt(settings, [])).toBe(settings);
+  });
+
+  test('settingParentProblem says nothing of the leaf itself', () => {
+    expect(settingParentProblem({ theme: 3 }, ['theme'])).toBeUndefined();
+    expect(
+      settingParentProblem({ agents: { a: {} } }, ['agents', 'b', 'model']),
+    ).toBeUndefined();
+  });
+
+  test('shownValue escapes what JSON leaves raw', () => {
+    expect(shownValue('gpt-6.1')).toBe('"gpt-6.1"');
+    expect(shownValue(['claude', 'codex'])).toBe('["claude","codex"]');
+    expect(shownValue(null)).toBe('null');
+    expect(shownValue('a\u007fb')).toBe('"a\\u007fb"');
+    expect(shownValue('a\u009bb')).toBe('"a\\u009bb"');
+    expect(shownValue('a\u2028b\u2029c')).toBe('"a\\u2028b\\u2029c"');
+    expect(shownValue('a\u202eb')).toBe('"a\\u202eb"');
+    expect(shownValue('a\u{e0001}b')).toBe('"a\\udb40\\udc01b"');
+    expect(shownValue('a\nb')).toBe('"a\\nb"');
+  });
+
+  test('shownSettingPath encodes a key that is not plain', () => {
+    expect(shownSettingPath(['agents', 'codex', 'model'])).toBe(
+      'agents.codex.model',
+    );
+    expect(shownSettingPath(['agents', 'my.agent', 'model'])).toBe(
+      'agents."my.agent".model',
+    );
+    expect(shownSettingPath(['a\u202eb'])).toBe('"a\\u202eb"');
   });
 });

@@ -1,0 +1,40 @@
+        "effective": {
+          "theme": "dark",
+          "mcpServers": {
+            "github": {
+              "command": "***",
+              "args": [
+                "***",
+                "***"
+              ],
+              "env": {
+                "TOKEN": "***",
+                "NEST": {
+                  "a": [
+                    "***"
+                  ]
+                }
+              }
+            },
+            "linear": {
+              "type": "http",
+              "url": "***",
+              "headers": {
+                "Authorization": "***"
+              }
+            }
+          },
+          "agents": {
+            "other": {
+              "command": "***",
+              "mcpServers": false
+            }
+          }
+        },
+        "problems": []
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

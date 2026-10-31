@@ -523,6 +523,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'images_sent':
     case 'vim_toggled':
     case 'vim_changed':
+    case 'agents_offered':
       // A queued message the running turn refused is back in the queue,
       // which the status line says for a while (CHD-535).
       return action.type === 'queued' && action.refused

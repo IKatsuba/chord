@@ -1,0 +1,40 @@
+ ▀▄     chord v0.65.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des568u4
+ ▀▀     ? for shortcuts · /help
+
+ › settingsagent
+
+ ⏺ Settings(agent) · change
+   ⎿  Now    "codex"
+      After  "fake"
+      .chord/settings.json sets this too, and wins here
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for you… (2s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Change agent?                                                                                                        │
+│                                                                                                                      │
+│ ❯ 1. Yes, in ~/.config/chord/settings.json                                                                           │
+│   2. No, tell fake what to change                                                                                    │
+│                                                                                                                      │
+│ Esc to tell fake what to change                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

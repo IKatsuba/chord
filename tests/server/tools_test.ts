@@ -940,15 +940,24 @@ describe('the settings tool writes (CHD-568)', () => {
 
   test('of two parallel changes one waits and the other is refused, asking and writing nothing', async () => {
     await overlapping(async ({ call, answer, asked, held }) => {
-      const first = call(['theme'], { set: 'light' });
-      const second = call(['mouse'], { set: false });
+      // Which wins is the file reads' to say; only one may.
+      const both = [
+        call(['theme'], { set: 'light' }),
+        call(['mouse'], { set: false }),
+      ];
 
-      expect(await second).toStrictEqual({ error: HELD });
+      expect(await Promise.race(both)).toStrictEqual({ error: HELD });
       expect(asked()).toBe(1);
 
       answer('yes');
-      expect(await first).toMatchObject({ saved: true });
-      expect(JSON.parse((await held())!)).toStrictEqual({ theme: 'light' });
+
+      const answers = await Promise.all(both);
+      const saved = answers.findIndex((one) => 'saved' in one && one.saved);
+
+      expect(answers[1 - saved]).toStrictEqual({ error: HELD });
+      expect(JSON.parse((await held())!)).toStrictEqual(
+        saved === 0 ? { theme: 'light' } : { theme: 'dark', mouse: false },
+      );
     });
   });
 

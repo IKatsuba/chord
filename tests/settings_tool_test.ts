@@ -1070,6 +1070,30 @@ describe('masking goes by key name (CHD-568)', () => {
     }
   });
 
+  test('a list of agents masks the same, in a read of every key', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'chord-settings-agents-'));
+    const where = { home: root, configHome: root, cwd: join(root, 'work') };
+
+    try {
+      await mkdir(join(root, 'chord'));
+      await writeFile(
+        join(root, 'chord', 'settings.json'),
+        JSON.stringify({
+          agents: [{ mcpServers: S }, { mcpServers: true }, S],
+        }),
+      );
+
+      const read = await readSettingsTool(where);
+
+      assert(!('error' in read));
+      expect(read.answer.user).toStrictEqual({
+        agents: [{ mcpServers: '***' }, { mcpServers: true }, S],
+      });
+    } finally {
+      await rm(root, { recursive: true });
+    }
+  });
+
   test('a boolean agents.<name>.mcpServers stays', () => {
     expect(
       maskedSettings({ agents: { a: { mcpServers: false, model: 'm' } } }),

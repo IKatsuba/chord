@@ -376,17 +376,19 @@ export function maskedSettings(settings: unknown): unknown {
   }
 
   const agents = masked['agents'];
-  const withAgents = isObject(agents)
-    ? {
-        ...masked,
-        agents: Object.fromEntries(
-          Object.entries(agents).map(([name, agent]) => [
-            name,
-            maskedAgent(agent),
-          ]),
-        ),
-      }
-    : masked;
+  const withAgents = Array.isArray(agents)
+    ? { ...masked, agents: agents.map(maskedAgent) }
+    : isObject(agents)
+      ? {
+          ...masked,
+          agents: Object.fromEntries(
+            Object.entries(agents).map(([name, agent]) => [
+              name,
+              maskedAgent(agent),
+            ]),
+          ),
+        }
+      : masked;
 
   if (!Object.hasOwn(masked, 'mcpServers')) {
     return withAgents;

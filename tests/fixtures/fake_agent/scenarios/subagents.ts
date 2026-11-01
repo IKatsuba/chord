@@ -1,4 +1,4 @@
-/** Subagents in Codex's draft form, and in ACP's own `subagent_update` as Claude's adapter sends it. */
+/** Subagents in the draft form Codex's adapter sent before 2.4, and in ACP's own `subagent_update` as Claude's and Codex's 2.4 send it. */
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { clientTakesSubagents } from '../client.ts';
 import { existsSync } from 'node:fs';
@@ -39,8 +39,8 @@ function subagentId(): string {
 }
 
 /**
- * Starts a subagent under `parent`, as Codex's adapter announces one to a client
- * that takes them: a `subagent_spawned` on the parent's session, after which
+ * Starts a subagent under `parent`, as Codex's adapter before 2.4 announces one
+ * to a client that takes them: a `subagent_spawned` on the parent's session, after which
  * the subagent's work goes out under a session id of its own.
  */
 async function spawn(
@@ -1389,6 +1389,118 @@ export const SUBAGENTS = {
       stopReason: 'end_turn',
     });
     await turn.say('The tests passed.');
+
+    return 'end_turn';
+  },
+
+  // Subagents as Codex's adapter sends them from 2.4: an announcement with no
+  // state and perhaps no title, then each thing as it changes, alone: the
+  // title, the state, whether it can be stopped. One ends done and is renamed
+  // after, one fails.
+  async codexsubagents(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const told = (sessionId: string, fields: Partial<acp.SubagentUpdate>) =>
+      turn.send({ sessionUpdate: 'subagent_update', sessionId, ...fields });
+    const worker = new Turn(turn.client, subagentId(), turn.signal);
+
+    await told(worker.sessionId, { capabilities: {} });
+    await told(worker.sessionId, { title: 'worker' });
+    await worker.send({
+      sessionUpdate: 'session_info_update',
+      title: 'worker',
+    });
+    await worker.send({
+      sessionUpdate: 'config_option_update',
+      configOptions: [],
+    });
+    await told(worker.sessionId, { state: { state: 'running' } });
+    await told(worker.sessionId, { capabilities: { cancel: {} } });
+    await call(
+      worker,
+      'read',
+      {
+        title: 'Read README.md',
+        kind: 'read',
+        locations: [{ path: 'README.md' }],
+      },
+      'completed',
+    );
+    await worker.say('Read.');
+    await told(worker.sessionId, {
+      state: { state: 'idle', stopReason: 'end_turn' },
+    });
+    await told(worker.sessionId, { capabilities: { cancel: null } });
+    await told(worker.sessionId, { title: 'worker renamed' });
+
+    const failing = subagentId();
+
+    await told(failing, {
+      capabilities: {},
+      title: 'failing',
+      description: 'Fail at once',
+    });
+    await told(failing, { state: { state: 'running' } });
+    await told(failing, { capabilities: { cancel: {} } });
+    await told(failing, {
+      state: {
+        state: 'idle',
+        stopReason: 'error',
+        error: { code: -32603, message: 'Subagent work failed' },
+      },
+    });
+    await told(failing, { capabilities: { cancel: null } });
+    await turn.say('Both have ended.');
+
+    return 'end_turn';
+  },
+
+  // A subagent as Codex's 2.4 sends one, at work until a `session/cancel` on
+  // its own id or on the turn, its parent's turn going on after the first.
+  async codexsubagentstop(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const id = subagentId();
+    const told = (fields: Partial<acp.SubagentUpdate>) =>
+      turn.send({ sessionUpdate: 'subagent_update', sessionId: id, ...fields });
+    const stopped = Promise.withResolvers<void>();
+
+    claudeChildren.set(id, () => {
+      stopped.resolve();
+
+      return Promise.resolve();
+    });
+
+    await told({ capabilities: {}, title: 'watcher' });
+    await told({ state: { state: 'running' } });
+    await told({ capabilities: { cancel: {} } });
+
+    const ended = () =>
+      Promise.all([
+        told({ state: { state: 'idle', stopReason: 'cancelled' } }),
+        told({ capabilities: { cancel: null } }),
+      ]);
+
+    try {
+      await Promise.race([stopped.promise, pause(turn.signal, 60_000)]);
+    } catch (error) {
+      await ended();
+
+      throw error;
+    } finally {
+      claudeChildren.delete(id);
+    }
+
+    await ended();
+    await turn.say('It stopped, and the turn goes on.');
 
     return 'end_turn';
   },

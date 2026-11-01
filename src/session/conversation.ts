@@ -1490,8 +1490,8 @@ export class Conversation {
       return;
     }
 
-    // The steer missed the turn and Codex's adapter started one of its own
-    // with it, which no prompt of chord's awaits. The owner's call on
+    // The steer missed the turn and Codex's adapter before 2.4, which ignores
+    // `promptRequired`, started one of its own with it, which no prompt of chord's awaits. The owner's call on
     // CHD-365: cancel that turn at once and send the message as chord's next
     // turn, once the agent has gone quiet, as a message queued behind a turn
     // goes; what the agent did with it before the cancel landed stands.

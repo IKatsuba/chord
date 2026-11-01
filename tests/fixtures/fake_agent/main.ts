@@ -126,8 +126,8 @@
  * `compactfail` fails, with the error Claude's adapter sends. To any other
  * client, each runs as a `Compact conversation` tool call of kind `think`.
  *
- * `subagent` runs subagents in the draft form Codex's adapter sends to a
- * client that declares
+ * `subagent` runs subagents in the draft form Codex's adapter sent before 2.4
+ * to a client that declares
  * `clientCapabilities.subagents`: each announced to its parent by
  * `subagent_spawned`, its work sent under a session id of its own, opaque
  * and never one an earlier fake process gave, as after a resume, and its
@@ -137,7 +137,11 @@
  * outlives the turn by about 2 s. A cancel ends
  * every one still open as `cancelled` before the turn is answered, as the
  * draft form does. `subagentupdate` sends one in ACP's own
- * `subagent_update` shape, running and then idle. `subagentstates` plays
+ * `subagent_update` shape, running and then idle. `codexsubagents` sends two
+ * as Codex's adapter does from 2.4, each announced with no state, then each
+ * thing as it changes alone, one done and renamed after, one failing;
+ * `codexsubagentstop` one at work until a cancel, of its own or the turn's.
+ * `subagentstates` plays
  * what `subagent` never reaches: the parent's plan beside a lone subagent of
  * five calls with a plan of its own, then a pair the parent waits on with a
  * call of its own, both finishing. `claudesubagents` sends four in ACP's
@@ -465,6 +469,8 @@ const SCENARIOS = [
   'cancels',
   'subagent',
   'subagentupdate',
+  'codexsubagents',
+  'codexsubagentstop',
   'claudesubagents',
   'claudebackground',
   'claudeslowstop',
@@ -1518,8 +1524,9 @@ const connection = acp
     }
   })
   // Steering as `--steering` names the adapter: into the turn playing, or,
-  // with none, Claude's `promptRequired` where asked, else a turn of the
-  // agent's own, which Codex's adapter starts whatever it was asked.
+  // with none, `promptRequired` where asked, as Claude's and Codex's from 2.4
+  // answer, else a turn of the agent's own, which Codex's adapter before 2.4
+  // starts whatever it was asked.
   .onRequest(
     '_session/steering',
     (params) => params as SteerRequest,
@@ -1550,7 +1557,7 @@ const connection = acp
       }
 
       if (
-        STEERING === 'claude' &&
+        STEERING !== 'codex' &&
         params._meta?.steering?.idleBehavior === 'promptRequired'
       ) {
         return { outcome: 'promptRequired', reason: 'noRunningTurn' };

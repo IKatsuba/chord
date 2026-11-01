@@ -987,6 +987,86 @@ test("an agent that sends ACP's own subagent_update folds the same way", () =>
     ]);
   }));
 
+describe("subagents as Codex's adapter sends them from 2.4", () => {
+  test('partial updates fold into one block each, its work and error kept', () =>
+    withSession(async (session) => {
+      const before = session.models();
+      const transcript = fold(await play(session, 'codexsubagents'));
+
+      expect(shape(transcript.entries)).toStrictEqual([
+        'user: codexsubagents',
+        {
+          'worker renamed completed': [
+            'tool: Read README.md completed',
+            'assistant: Read.',
+          ],
+        },
+        { 'failing failed': [] },
+        'assistant: Both have ended.',
+      ]);
+
+      const [worker, failing] = subagentsIn(transcript.entries);
+
+      assert(worker !== undefined && failing !== undefined);
+      expect(worker.state).toStrictEqual('completed');
+      // Its stop stays on offer only while it can be stopped.
+      expect(worker.cancellable).toBeUndefined();
+      expect(worker.offeredCancel).toBe(true);
+      expect(failing.state).toStrictEqual('failed');
+      expect(failing.error).toStrictEqual('Subagent work failed');
+      expect(failing.description).toStrictEqual('Fail at once');
+      // A child's title and options are not the session's.
+      expect(session.models()).toStrictEqual(before);
+    }));
+
+  test('a stop on its own id ends that subagent, and the turn goes on', () =>
+    withSession(async (session) => {
+      let stopping = false;
+      const { updates, result } = await run(session, 'codexsubagentstop', {
+        onUpdate: (updates) => {
+          const offered = updates.find(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              update.capabilities?.cancel !== undefined &&
+              update.capabilities.cancel !== null,
+          );
+
+          if (!stopping && offered?.sessionUpdate === 'subagent_update') {
+            stopping = true;
+
+            void session.stopSubagent(offered.sessionId);
+          }
+        },
+      });
+
+      expect(result.status).toStrictEqual('completed');
+      expect(stopping).toBe(true);
+
+      const actions: TranscriptAction[] = updates.map((update) => ({
+        type: 'update',
+        turnId: 'turn',
+        update,
+      }));
+      const [watcher] = subagentsIn(fold(actions).entries);
+
+      assert(watcher !== undefined);
+      expect(watcher.state).toStrictEqual('cancelled');
+      expect(watcher.cancellable).toBeUndefined();
+    }));
+
+  test('a cancel of the turn ends it cancelled too', () =>
+    withSession(async (session) => {
+      const transcript = fold(
+        await play(session, 'codexsubagentstop', { cancelAfterEvents: 3 }),
+      );
+      const [watcher] = subagentsIn(transcript.entries);
+
+      assert(watcher !== undefined);
+      expect(watcher.state).toStrictEqual('cancelled');
+      expect(watcher.cancellable).toBeUndefined();
+    }));
+});
+
 /**
  * Each subagent's title and the states its `subagent_update`s brought, in
  * order, among `actions`; and the text of the `session_message`s heard

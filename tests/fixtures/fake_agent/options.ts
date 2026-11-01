@@ -300,7 +300,7 @@ export const SILENT_SET_MODE =
   ARGS.includes('--silent-set-mode') ||
   process.env.CHORD_FAKE_SILENT_SET_MODE === '1';
 
-const STEERINGS = ['claude', 'codex'] as const;
+const STEERINGS = ['claude', 'codex', 'codex24'] as const;
 
 function steeringAdapter(): (typeof STEERINGS)[number] | undefined {
   const flag = ARGS.indexOf('--steering');
@@ -318,8 +318,8 @@ function steeringAdapter(): (typeof STEERINGS)[number] | undefined {
 }
 
 /**
- * The adapter whose `_session/steering` the fake answers as, `claude` or
- * `codex`; none by default, when it neither advertises nor takes it.
+ * The adapter whose `_session/steering` the fake answers as, `claude`, `codex`
+ * as before 2.4, or `codex24`, which honours `promptRequired`; none by default, when it neither advertises nor takes it.
  */
 export const STEERING = steeringAdapter();
 

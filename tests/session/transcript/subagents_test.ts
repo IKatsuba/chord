@@ -39,6 +39,20 @@ function spawned(id: string, title: string, from?: string): TranscriptAction {
   };
 }
 
+/** A `subagent_update` that says only `fields`, as Codex's adapter sends them. */
+function told(
+  id: string,
+  fields: Record<string, unknown>,
+  at?: number,
+): TranscriptAction {
+  return {
+    type: 'update',
+    turnId: TURN,
+    update: { sessionUpdate: 'subagent_update', sessionId: id, ...fields },
+    ...(at === undefined ? {} : { at }),
+  };
+}
+
 /** A `session_message` heard on the subagent `to`'s session. */
 function message(
   to: string,
@@ -1039,5 +1053,74 @@ describe('CHD-482 U3 tester: late and nested task stops stay singular', () => {
     expect(ends(value)).toMatchObject([{ turnId: TURN, byPerson: true }]);
     expect(ends(value)).toHaveLength(1);
     expect(value.turn.status).toBe('working');
+  });
+});
+
+describe('a subagent_update that says one thing keeps the rest', () => {
+  const only = (actions: TranscriptAction[]): Subagent => {
+    const [subagent] = subagentsIn(fold(actions).entries);
+
+    assert(subagent !== undefined);
+
+    return subagent;
+  };
+
+  test('announced with capabilities alone, it is at work and untitled', () => {
+    const subagent = only([PROMPT, told('a', { capabilities: {} }, 2)]);
+
+    expect(subagent.state).toStrictEqual('running');
+    expect(subagent.title).toBeUndefined();
+    expect(subagent.startedAt).toStrictEqual(2);
+    expect(subagent.cancellable).toBeUndefined();
+    expect(subagent.offeredCancel).toBeUndefined();
+  });
+
+  test('capabilities alone change only whether it can be stopped', () => {
+    const opening = [
+      PROMPT,
+      told('a', { title: 'a', description: 'd', state: { state: 'running' } }),
+      told('a', { capabilities: { cancel: {} } }),
+    ];
+    const offered = only(opening);
+
+    expect(offered.cancellable).toBe(true);
+    expect(offered.offeredCancel).toBe(true);
+    expect(offered.state).toStrictEqual('running');
+    expect(offered.title).toStrictEqual('a');
+    expect(offered.description).toStrictEqual('d');
+
+    const withdrawn = only([
+      ...opening,
+      told('a', { capabilities: { cancel: null } }),
+    ]);
+
+    expect(withdrawn.cancellable).toBeUndefined();
+    expect(withdrawn.offeredCancel).toBe(true);
+    expect(withdrawn.state).toStrictEqual('running');
+  });
+
+  test('after its end, neither capabilities nor a title undo how it ended', () => {
+    const subagent = only([
+      PROMPT,
+      told('a', { title: 'a', state: { state: 'running' } }, 2),
+      told(
+        'a',
+        {
+          state: {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: -32603, message: 'broke' },
+          },
+        },
+        5,
+      ),
+      told('a', { capabilities: { cancel: null } }, 7),
+      told('a', { title: 'b' }, 9),
+    ]);
+
+    expect(subagent.state).toStrictEqual('failed');
+    expect(subagent.error).toStrictEqual('broke');
+    expect(subagent.endedAt).toStrictEqual(5);
+    expect(subagent.title).toStrictEqual('b');
   });
 });

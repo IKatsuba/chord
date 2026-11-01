@@ -54,30 +54,33 @@ test("on Codex's adapter, whose steer cuts nothing, a message told while the tur
     ]);
   }));
 
-test("a steer that meets the turn's end on Claude's adapter is refused, and goes as the next turn", () =>
-  onFake(
-    ['--steering', 'claude', '--steer-late'],
-    async (conversation, events) => {
-      conversation.send('text');
-      await went();
+test.each(['claude', 'codex24'])(
+  "a steer that meets the turn's end on %s's adapter is refused, and goes as the next turn",
+  (adapter) =>
+    onFake(
+      ['--steering', adapter, '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await went();
 
-      let queued = 0;
+        let queued = 0;
 
-      expect(
-        conversation.tell(MAIN, 'Stop.', () => (queued += 1)),
-      ).toStrictEqual('sent');
-      await until(
-        () => events.filter((event) => event.type === 'result').length === 2,
-      );
+        expect(
+          conversation.tell(MAIN, 'Stop.', () => (queued += 1)),
+        ).toStrictEqual('sent');
+        await until(
+          () => events.filter((event) => event.type === 'result').length === 2,
+        );
 
-      expect(promptsIn(events)).toStrictEqual([
-        ['text', undefined],
-        ['Stop.', undefined],
-      ]);
-      // It waited after all, which the sender's row is told.
-      expect(queued).toStrictEqual(1);
-    },
-  ));
+        expect(promptsIn(events)).toStrictEqual([
+          ['text', undefined],
+          ['Stop.', undefined],
+        ]);
+        // It waited after all, which the sender's row is told.
+        expect(queued).toStrictEqual(1);
+      },
+    ),
+);
 
 test("a turn Codex's adapter starts with a steer that missed the turn is cancelled at once, and the message goes as chord's next turn, alone", async () => {
   let cancels = 0;

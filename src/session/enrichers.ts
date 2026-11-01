@@ -281,8 +281,8 @@ export const modeReadBack: Enricher = (message, wire) => {
 export const SUBAGENT_DRAFT = 'chord/subagent_draft';
 
 /**
- * A subagent as ACP's `subagent_update` says it, from the shape Claude's and
- * Codex's adapters send (ACP's draft PR #1992): `subagent_spawned`'s
+ * A subagent as ACP's `subagent_update` says it, from the shape Claude's
+ * adapter once sent and Codex's before 2.4 sends (ACP's draft PR #1992): `subagent_spawned`'s
  * `subagentSessionId`, `name`, `task` and `capabilities` become `sessionId`,
  * `title`, `description` and `capabilities`, and `subagent_state_update`'s
  * `state`, a word, becomes a state object of that word. The rest of the draft

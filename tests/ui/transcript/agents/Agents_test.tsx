@@ -157,7 +157,8 @@ describe("Claude's session messages as rows in the parent (CHD-561)", () => {
       async (window) => {
         await send(window, 'claudelongprompt');
         await window.shows('The handover holds.');
-        expect(window.frame()).toContain('… +3 lines');
+        // Counted once the body is laid out.
+        await window.shows('… +3 lines');
         expect(window.frame()).not.toContain('Check step 7');
         await window.press(CTRL_O);
         await window.shows('Check step 9');
@@ -171,7 +172,7 @@ describe("Claude's session messages as rows in the parent (CHD-561)", () => {
       async (window) => {
         await send(window, 'claudecodeprompt');
         await window.shows('The build holds.');
-        expect(window.frame()).toContain('… +');
+        await window.shows('… +');
         expect(window.frame()).toContain('sh');
         expect(window.frame()).not.toContain('[copy]');
         expect(window.frame()).not.toContain('[run]');
@@ -179,7 +180,7 @@ describe("Claude's session messages as rows in the parent (CHD-561)", () => {
         await window.shows('[run]');
         expect(window.frame()).toContain('[copy]');
       },
-      { rows: 40, columns: 120 },
+      { rows: 80, columns: 120 },
     ));
 
   test('agents launched together keep one group under all their rows', () =>

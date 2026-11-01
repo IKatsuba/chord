@@ -23,6 +23,76 @@ import {
 } from '../app/render.tsx';
 import { withBackground } from './background_window.tsx';
 
+describe('CHD-561 tester: the final growing detail frame follows its tail', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a completed burst reaches the bottom without another key or update at ${columns} columns`, async () => {
+      const item = {
+        kind: 'task' as const,
+        id: 'final-frame',
+        key: 1,
+        name: 'Final burst',
+        startedAt: 0,
+        status: { group: 'done' as const, endedAt: 1 },
+      };
+      const initial: Subagent = {
+        id: item.id,
+        title: item.name,
+        state: 'completed',
+        plan: [],
+        entries: [{ kind: 'assistant', turnId: 't', text: 'Initial tail' }],
+      };
+      let update: ((value: Subagent) => void) | undefined;
+
+      function View() {
+        const [subagent, set] = useState(initial);
+
+        update = set;
+
+        return (
+          <BackgroundView
+            items={[item]}
+            focus={item}
+            detail={item}
+            columns={columns}
+            rows={rows}
+            work={{ subagent, turn: { status: 'idle' }, agent: 'fake' }}
+          />
+        );
+      }
+
+      const drawn = await draw(<View />, { columns, rows });
+
+      try {
+        await until('the initial tail is visible', () =>
+          drawn.frame().includes('Initial tail'),
+        );
+        assert(update !== undefined);
+        update({
+          ...initial,
+          entries: [
+            ...Array.from({ length: 60 }, (_, index) => ({
+              kind: 'assistant' as const,
+              turnId: 't',
+              text: `Completed row ${index}: ${'wrapped work '.repeat(12)}`,
+            })),
+            { kind: 'assistant', turnId: 't', text: 'FINAL PRESENTED TAIL' },
+          ],
+        });
+        await until('the final tail is presented without more input', () =>
+          drawn.frame().includes('FINAL PRESENTED TAIL'),
+        );
+        expect(drawn.frame()).not.toMatch(/↓ \d+ (lines? )?below/);
+        expect(drawn.frame()).toContain('Enter to go to its call');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});
+
 describe("an agent's detail in a short window keeps the frame within its cap (CHD-487)", () => {
   test("at 80x18 the work is one row, its count beside it; at 80x16 none, its count at the state line's end; the hint and the prompt always shown", () =>
     withWindow(

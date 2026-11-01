@@ -56,6 +56,34 @@ const TURN = 't1';
 const FAKE = fakeAgentCommand(undefined, '--step-ms', '1');
 const RESUMING = fakeAgentCommand(undefined, '--step-ms', '1', '--resume-only');
 
+describe('CHD-561 tester: unset launch acknowledgment boundaries', () => {
+  test('the child retains its launch prompt while running at acknowledgment and after hand-back', () =>
+    withSession(async (session) => {
+      const actions = await play(session, 'claudeunsetlaunch');
+      const ack = actions.findIndex(
+        (action) =>
+          action.type === 'update' &&
+          action.update.sessionUpdate === 'session_message' &&
+          action.update.messageId.endsWith(':reply'),
+      );
+
+      expect(ack).toBeGreaterThan(0);
+
+      const atAck = subagentsIn(fold(actions.slice(0, ack + 1)).entries);
+
+      expect(atAck).toHaveLength(1);
+      expect(atAck[0]?.state).toBe('running');
+      expect(atAck[0]?.prompt).toBe('Reply with ok.');
+      expect(atAck[0]?.entries).toEqual([]);
+
+      const ended = subagentsIn(fold(actions).entries);
+
+      expect(ended[0]?.id).toBe(atAck[0]?.id);
+      expect(ended[0]?.state).toBe('completed');
+      expect(ended[0]?.prompt).toBe('Reply with ok.');
+    }));
+});
+
 describe('CHD-561 tester: Claude nested message records', () => {
   test('a fresh process replays root and nested rows with adapter-derived names intact', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-claude-rows-'));

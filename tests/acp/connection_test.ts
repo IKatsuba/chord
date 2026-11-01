@@ -24,6 +24,85 @@ import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 /** Short enough to keep a wedged agent's test quick, long enough to be real. */
 const STOP = { exitMs: 300, termMs: 300, killMs: 2000 } as const;
 
+describe('CHD-561 tester: unset Claude launch wire order', () => {
+  test('the unlinked acknowledgment precedes child-first linked hand-back and idle', () =>
+    withAgent(
+      ['--adapter', 'claude', '--step-ms', '1'],
+      async (agent, seen, cwd) => {
+        const { sessionId: root } = await agent.newSession({
+          cwd,
+          mcpServers: [],
+        });
+        const result = await agent.prompt({
+          sessionId: root,
+          prompt: [text('claudeunsetlaunch')],
+        });
+        const notices = seen.notified(
+          'session/update',
+        ) as acp.SessionNotification[];
+        const relevant = notices.filter(({ update }) =>
+          ['subagent_update', 'session_message'].includes(update.sessionUpdate),
+        );
+        const announcement = relevant[0]?.update;
+
+        assert(announcement?.sessionUpdate === 'subagent_update');
+
+        const child = announcement.sessionId;
+        const messages = relevant.flatMap(({ sessionId, update }) =>
+          update.sessionUpdate === 'session_message'
+            ? [{ sessionId, ...update }]
+            : [],
+        );
+
+        expect(
+          relevant.map(({ sessionId, update }) => [
+            sessionId,
+            update.sessionUpdate,
+          ]),
+        ).toEqual([
+          [root, 'subagent_update'],
+          [root, 'session_message'],
+          [child, 'session_message'],
+          [root, 'session_message'],
+          [child, 'session_message'],
+          [root, 'session_message'],
+          [root, 'subagent_update'],
+        ]);
+        expect(announcement.state).toEqual({ state: 'running' });
+        expect(
+          messages.map((message) => [
+            message.senderSessionId,
+            message.recipientSessionId,
+            message.senderMessageId,
+            message.recipientMessageId,
+          ]),
+        ).toEqual([
+          [root, child, undefined, messages[0]?.messageId],
+          [root, child, messages[0]?.messageId, undefined],
+          [child, root, undefined, undefined],
+          [child, root, undefined, messages[3]?.messageId],
+          [child, root, messages[3]?.messageId, undefined],
+        ]);
+        expect(messages[2]?.messageId).toBe(`${messages[0]?.messageId}:reply`);
+        expect(messages[2]?.content).toEqual([
+          {
+            type: 'text',
+            text: `Async agent launched successfully. (This tool result is internal metadata.)\nagentId: ${child}\noutput_file: /tmp/agent-output`,
+          },
+        ]);
+        expect(messages[3]?.content).toEqual([{ type: 'text', text: 'ok' }]);
+        expect(messages[4]?.content).toEqual(messages[3]?.content);
+
+        const idle = relevant.at(-1)?.update;
+
+        assert(idle?.sessionUpdate === 'subagent_update');
+        expect(idle.sessionId).toBe(child);
+        expect(idle.state).toEqual({ state: 'idle', stopReason: 'end_turn' });
+        expect(result.stopReason).toBe('end_turn');
+      },
+    ));
+});
+
 describe('CHD-561 tester: Codex fixture cancellation lifecycle', () => {
   test('stopping one of two concurrent sessions leaves the other child running', () =>
     withAgent([], async (agent, seen, cwd) => {

@@ -27,6 +27,65 @@ import {
 } from '../app/render.tsx';
 import { withBackground } from './background_window.tsx';
 
+describe('CHD-561 hint tester: late cancellation offer in the App', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const detail of [false, true]) {
+      test(`the old refusal clears in ${detail ? 'detail' : 'list'} at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+
+            let offered = false;
+            const unsubscribe = window.session()?.subscribe((update) => {
+              if (
+                update.sessionUpdate === 'subagent_update' &&
+                Boolean(update.capabilities?.cancel)
+              ) {
+                offered = true;
+              }
+            });
+
+            try {
+              await send(window, 'codexsubagentstop');
+              await window.shows("background  main's agent running");
+              await window.press(DOWN);
+              await window.press('\r');
+              await window.shows('❯ watcher');
+
+              if (detail) {
+                await window.press('\r');
+                await window.shows('Enter to go to its call');
+              }
+
+              expect(offered).toBe(false);
+              await window.press('x');
+              await window.shows('this agent offers no stop');
+              await until('the child advertises its stop', () => offered);
+              await until(
+                'the false refusal clears',
+                () => !window.frame().includes('this agent offers no stop'),
+              );
+              expect(window.frame()).toContain('x to stop');
+              await window.press('x');
+              await window.shows('It stopped, and the turn goes on.');
+              expect(window.frame()).not.toContain('Interrupted by user');
+            } finally {
+              unsubscribe?.();
+            }
+          },
+          {
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--step-ms', '500'),
+          },
+        ));
+    }
+  }
+});
+
 describe('CHD-561 tester: standard Codex subagents in the window', () => {
   for (const [columns, rows] of [
     [80, 24],

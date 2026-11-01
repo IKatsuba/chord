@@ -56,6 +56,61 @@ describe('a refusal that an agent offers no stop, once it offers one', () => {
   });
 });
 
+describe('CHD-561 hint tester: delayed offers respect focus and other errors', () => {
+  const a = { key: 1, id: 'shared' };
+  const b = { key: 2, id: 'shared' };
+
+  test('the same child id in another session cannot clear the current refusal', () => {
+    const state = {
+      ...initialBackground,
+      backgroundView: { focus: b, detail: b, hint: NO_STOP_HINT },
+    };
+
+    expect(
+      reduceBackground(state, { type: 'background_stop_offered', focus: a }),
+    ).toBe(state);
+
+    const cleared = reduceBackground(state, {
+      type: 'background_stop_offered',
+      focus: b,
+    });
+
+    expect(cleared.backgroundView).toEqual({ focus: b, detail: b });
+    expect(
+      reduceBackground(cleared, {
+        type: 'background_stop_offered',
+        focus: b,
+      }),
+    ).toBe(cleared);
+  });
+
+  test('a late offer after close cannot reopen the view or discard a different error', () => {
+    expect(
+      reduceBackground(initialBackground, {
+        type: 'background_stop_offered',
+        focus: a,
+      }),
+    ).toBe(initialBackground);
+
+    for (const hint of [
+      'could not stop: Broken pipe',
+      `${NO_STOP_HINT}: transport unavailable`,
+    ]) {
+      const state = {
+        ...initialBackground,
+        backgroundView: { focus: a, hint },
+      };
+
+      expect(
+        reduceBackground(state, {
+          type: 'background_stop_offered',
+          focus: a,
+        }),
+      ).toBe(state);
+    }
+  });
+});
+
 test("a stop's hint is said only for the stop x last asked for, while the ❯ has stayed on its row since", () => {
   const a = { key: 1, id: 'a' };
   const b = { key: 1, id: 'b' };

@@ -85,17 +85,28 @@ bun dev memory            # long-run memory check; options in docs/memory.md
 `bun dev release --help` lists its stages and selection flags. Give it the
 version or bump instead of editing package.json's version by hand. A different
 version or bump is refused while package.json's version is not on npm;
-`bun dev release` without a version finishes that release. After all
-eligibility guards, every run requires npm authentication, including dry runs
-and runs without publish. A failed `npm whoami` requires stdin and stdout
-terminals for one plain `npm login`, then a successful `npm whoami` recheck;
+`bun dev release` without a version finishes that release. Selecting
+`publish` requires installed, signed-in `gh`, checked by `gh auth status`
+among the eligibility guards. Every run then requires npm authentication,
+including dry runs and runs without publish. A failed `npm whoami` requires
+stdin and stdout terminals for one plain `npm login`, then a successful
+`npm whoami` recheck;
 otherwise it stops before release work. Failed, cancelled or interrupted login
 stops too. npm may open a browser and save credentials or registry settings
 even in a dry run. Stage selection cannot skip authentication. A new version
 needs `compile`; a publishing run commits and pushes it to main before any
 stage. A dry run or run without publish drops its local commit at the end.
 A dry run still submits to Apple; add `--skip notarise` to leave that stage
-out. See `docs/guide.md` for failure and signal cleanup.
+out. `pack` uses `curl` to fetch FFmpeg and zlib source archives into
+`dist/release/source/` and checks their sums against OpenTUI's native
+package `FFMPEG-SOURCE.md`; failed downloads or mismatches stop the release.
+This needs the network in dry runs too. Before npm, publishing and resume
+recheck those archives; `--skip pack` needs an earlier pack's copies.
+After pushing the tag, publish creates a draft GitHub release with the
+archives attached. The owner writes its notes and publishes it. A failed
+draft leaves the version on npm and tagged: use the printed `gh` command
+to finish it, since rerunning cannot. See `docs/guide.md` for failure and
+signal cleanup.
 
 ## How code is written
 

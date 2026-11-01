@@ -249,6 +249,11 @@ cmd+arrows work only where the terminal passes them to chord:
   to chord. Use ctrl+a/e for the line's ends.
 - **tmux:** option+arrows work, but tmux has no super/cmd modifier. Use
   ctrl+a/e for line moves, or a terminal preset that sends those keys.
+  chord uses OpenTUI's Unicode width method under tmux unless you set
+  `OPENTUI_FORCE_WCWIDTH` or `OPENTUI_FORCE_UNICODE`. This adjustment stays
+  in the renderer; processes chord starts do not inherit it. Under tmux
+  3.6a, some VS16 glyphs may still go blank when repainted over earlier
+  wide glyphs; this was also reproduced in tmux alone.
 
 ctrl+g opens the prompt in your editor (`$VISUAL`, then `$EDITOR`, then
 `vi`), run through your shell; what it saves comes back as the prompt with
@@ -1439,11 +1444,16 @@ take comma-separated stages; `--from` and `--to` bound the run. `--only`
 cannot combine with the other three. A new version needs `compile` among
 the selected stages. `--package` selects one package to publish.
 `--dry-run` stops before publishing but still submits to Apple;
-`--dry-run --skip notarise` leaves out that submission.
+`--dry-run --skip notarise` leaves out that submission. `pack` also uses
+`curl` to download FFmpeg and zlib source archives into
+`dist/release/source/`, checking their SHA-256 sums against OpenTUI's native
+package `FFMPEG-SOURCE.md`. A failed download or mismatch stops the release.
+This stage needs the network even in a dry run.
 
 Preflight checks a clean tree and the version. Publishing also needs `main`
-equal to `origin/main` and no `v<version>` tag. After all eligibility guards,
-every run requires successful `npm whoami`, including dry runs and runs
+equal to `origin/main`, no `v<version>` tag, and `gh` installed and signed
+in, checked with `gh auth status` when `publish` is selected. After these
+guards, every run requires successful `npm whoami`, including dry runs and runs
 without `publish`; stage selection cannot skip authentication. Success
 needs no terminal. On failure, stdin and stdout must both be terminals:
 the release runs plain `npm login` once in that terminal, then requires a
@@ -1467,11 +1477,18 @@ an unpushed version commit. SIGKILL may leave it; drop that commit with
 credentials are checked before building when their stages are selected.
 A stopped publish resumes only package.json's version from the packed
 tarballs without rebuilding; a dry run or a run without `publish` refuses
-that resume. Each tarball must match its recorded SHA-256 sum. The main
+that resume. Each tarball must match its recorded SHA-256 sum. Before npm
+publishing, including on resume, the source archives must still match
+`FFMPEG-SOURCE.md`; missing or changed archives stop the release.
+`--skip pack` with `publish` needs archives from an earlier pack. The main
 package waits for all four platform packages on npm, then all five must
-answer before the annotated version tag is pushed to origin. Publishing
-needs the owner at a terminal: npm gets the terminal for each authorisation
-and the CLI waits. See `bun dev release --help` for examples.
+answer before the annotated version tag is pushed to origin. Then
+`gh release create v<version> --draft` attaches the archives to a draft
+GitHub release. The owner fills in its notes and publishes it. If creating
+the draft fails, the version is already on npm and tagged; the release
+prints the exact `gh` command to finish by hand. Rerunning cannot create
+that draft. Publishing needs the owner at a terminal: npm gets the terminal
+for each authorisation and the CLI waits. See `bun dev release --help`.
 
 A chord that has grown large: `kill -USR2 <pid>` writes a heap snapshot of
 it, without stopping it, into `heaps/` in chord's state directory, for

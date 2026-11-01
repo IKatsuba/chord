@@ -14,6 +14,7 @@ import type {
 import {
   paint,
   CodeBlockActions,
+  CodeClipped,
   useAgentColour,
   useColours,
   useHintKey,
@@ -414,9 +415,11 @@ function AgentMessage({
             {rows !== undefined && rows <= MESSAGE_LINES ? (
               body
             ) : (
-              <CodeBlockActions.Provider value={undefined}>
-                {body}
-              </CodeBlockActions.Provider>
+              <CodeClipped.Provider value>
+                <CodeBlockActions.Provider value={undefined}>
+                  {body}
+                </CodeBlockActions.Provider>
+              </CodeClipped.Provider>
             )}
           </Clip>
         ) : (

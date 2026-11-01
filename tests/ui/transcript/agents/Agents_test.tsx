@@ -166,6 +166,22 @@ describe("Claude's session messages as rows in the parent (CHD-561)", () => {
       { rows: 40, columns: 120 },
     ));
 
+  test('while a launch prompt is clipped its code offers no action, and ctrl+o gives them back', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudecodeprompt');
+        await window.shows('The build holds.');
+        expect(window.frame()).toContain('… +');
+        expect(window.frame()).toContain('sh');
+        expect(window.frame()).not.toContain('[copy]');
+        expect(window.frame()).not.toContain('[run]');
+        await window.press(CTRL_O);
+        await window.shows('[run]');
+        expect(window.frame()).toContain('[copy]');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
   test('agents launched together keep one group under all their rows', () =>
     withWindow(
       async (window) => {

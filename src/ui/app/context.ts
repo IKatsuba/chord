@@ -99,6 +99,12 @@ export const CodeIds = createContext<ReadonlyMap<Soft, string> | undefined>(
   undefined,
 );
 
+/**
+ * What is drawn here may be clipped from view: its code blocks have no keys and
+ * no buttons, as nothing hidden may be copied or run.
+ */
+export const CodeClipped = createContext(false);
+
 /** The window's code box actions; none where nothing answers a button. */
 export const CodeBlockActions = createContext<CodeActions | undefined>(
   undefined,

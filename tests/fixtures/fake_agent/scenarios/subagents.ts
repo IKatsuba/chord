@@ -1491,6 +1491,35 @@ export const SUBAGENTS = {
     return 'end_turn';
   },
 
+  // A launch's prompt with code above its fold and more below it.
+  async claudecodeprompt(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Check the build',
+      [
+        'Run this first.\n\n```sh\nbun test\n```',
+        ...Array.from({ length: 8 }, (_, step) => `Then step ${step + 1}.`),
+      ].join('\n\n'),
+    );
+
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('The build holds.');
+
+    return 'end_turn';
+  },
+
   // A SendMessage to a child still at work: the adapter sees no resume, so the
   // call comes after all, once, with its final status.
   async claudesendrunning(turn) {

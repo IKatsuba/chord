@@ -1473,29 +1473,46 @@ export const SUBAGENTS = {
       turn.send({ sessionUpdate: 'subagent_update', sessionId: id, ...fields });
     const stopped = Promise.withResolvers<void>();
 
+    // Sent at once, as a cancelled turn's are sent after its signal has aborted.
+    const ended = async () => {
+      for (const fields of [
+        { state: { state: 'idle', stopReason: 'cancelled' } },
+        { capabilities: { cancel: null } },
+      ]) {
+        await turn.client.notify('session/update', {
+          sessionId: turn.sessionId,
+          update: {
+            sessionUpdate: 'subagent_update',
+            sessionId: id,
+            ...fields,
+          },
+        });
+      }
+    };
+
+    // Its own, so a stop leaves no wait behind for the rest of the session.
+    const waiting = new AbortController();
+
     claudeChildren.set(id, () => {
       stopped.resolve();
 
       return Promise.resolve();
     });
 
-    await told({ capabilities: {}, title: 'watcher' });
-    await told({ state: { state: 'running' } });
-    await told({ capabilities: { cancel: {} } });
-
-    const ended = () =>
-      Promise.all([
-        told({ state: { state: 'idle', stopReason: 'cancelled' } }),
-        told({ capabilities: { cancel: null } }),
-      ]);
-
     try {
-      await Promise.race([stopped.promise, pause(turn.signal, 60_000)]);
+      await told({ capabilities: {}, title: 'watcher' });
+      await told({ state: { state: 'running' } });
+      await told({ capabilities: { cancel: {} } });
+      await Promise.race([
+        stopped.promise,
+        pause(AbortSignal.any([turn.signal, waiting.signal]), 60_000),
+      ]);
     } catch (error) {
       await ended();
 
       throw error;
     } finally {
+      waiting.abort();
       claudeChildren.delete(id);
     }
 

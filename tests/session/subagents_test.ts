@@ -1056,10 +1056,30 @@ describe("subagents as Codex's adapter sends them from 2.4", () => {
 
   test('a cancel of the turn ends it cancelled too', () =>
     withSession(async (session) => {
-      const transcript = fold(
-        await play(session, 'codexsubagentstop', { cancelAfterEvents: 3 }),
+      const actions = await play(session, 'codexsubagentstop', {
+        cancelAfterEvents: 3,
+      });
+      // As the agent sent them: the recorder's own cancel folds to the same.
+      const told = actions.flatMap((action) =>
+        action.type === 'update' &&
+        action.update.sessionUpdate === 'subagent_update'
+          ? [action.update]
+          : [],
       );
-      const [watcher] = subagentsIn(transcript.entries);
+
+      expect(
+        told
+          .slice(-2)
+          .map(({ state, capabilities }) => ({ state, capabilities })),
+      ).toStrictEqual([
+        {
+          state: { state: 'idle', stopReason: 'cancelled' },
+          capabilities: undefined,
+        },
+        { state: undefined, capabilities: { cancel: null } },
+      ]);
+
+      const [watcher] = subagentsIn(fold(actions).entries);
 
       assert(watcher !== undefined);
       expect(watcher.state).toStrictEqual('cancelled');

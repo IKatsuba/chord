@@ -1692,6 +1692,47 @@ export const SUBAGENTS = {
     return 'end_turn';
   },
 
+  // A launch that leaves `run_in_background` unset, in the order Claude's
+  // adapter 0.99.1 was seen sending it live: its result as a `:reply` that says
+  // only it was launched, while the child still runs, then the child's hand-back.
+  async claudeunsetlaunch(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'general-purpose',
+      'Reply with ok',
+      'Reply with ok.',
+    );
+
+    await replied(
+      turn,
+      child.sessionId,
+      'Async agent launched successfully. (This tool result is internal metadata.)\n' +
+        `agentId: ${child.sessionId}\noutput_file: /tmp/agent-output`,
+    );
+    await linked(
+      turn.client,
+      child.callId('handback'),
+      child.sessionId,
+      turn.sessionId,
+      'ok',
+    );
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('It said ok.');
+
+    return 'end_turn';
+  },
+
   // A failure that says nothing of why, and a stop: neither answers.
   async claudenoanswer(turn) {
     if (!clientTakesSubagents) {

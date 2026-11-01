@@ -1117,6 +1117,26 @@ describe("Claude's session messages on the fake (CHD-561)", () => {
       expect(child.entries).toStrictEqual([]);
     }));
 
+  test('a launch left without run_in_background folds in the order seen live, whatever is decided of its first reply', () =>
+    withSession(async (session) => {
+      const { entries } = fold(await play(session, 'claudeunsetlaunch'));
+      const rows = entries.flatMap((entry) =>
+        entry.kind === 'agent_message'
+          ? [[entry.direction, entry.text.split('\n')[0]]]
+          : [],
+      );
+
+      expect(rows).toStrictEqual([
+        ['to', 'Reply with ok.'],
+        [
+          'from',
+          'Async agent launched successfully. (This tool result is internal metadata.)',
+        ],
+        ['from', 'ok'],
+      ]);
+      expect(subagentsIn(entries)[0]?.state).toBe('completed');
+    }));
+
   test('a nested launch counts as one tool use, and its messages stay in its parent', () =>
     withSession(async (session) => {
       const { entries } = fold(await play(session, 'claudenested'));

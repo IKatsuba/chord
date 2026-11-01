@@ -158,6 +158,8 @@
  * two paragraphs; `claudecodeprompt` has code above that fold, `claudepromptgrows` a short prompt with code lengthened past it; `claudesendrunning` messages one still at work, which comes
  * as a call after all; `claudehandback` has one hand its report back, on both
  * sessions, with no `:reply`; `claudefailed` has a lone one fail, saying why;
+ * `claudeunsetlaunch` a launch's `:reply` that says only it was launched,
+ * then its hand-back, in the order seen live;
  * `claudenoanswer` has one fail saying nothing and one stop; `claudenested`
  * has one launch another and have its reply.
  * `claudebetween` starts one in the background that, about 2 s after the
@@ -485,6 +487,7 @@ const SCENARIOS = [
   'claudewrapprompt',
   'claudesendrunning',
   'claudehandback',
+  'claudeunsetlaunch',
   'claudenoanswer',
   'claudefailed',
   'claudenested',

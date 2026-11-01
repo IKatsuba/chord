@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { Fragment as ReactFragment, isValidElement } from 'react';
 import {
   buildOptions,
+  EVERY_PLATFORM,
   loadedNative,
   otherNatives,
 } from '../../../scripts/dev/compile.ts';
@@ -78,6 +79,10 @@ test('a build for this machine leaves out every OpenTUI native but the one its r
   expect(otherNatives('@opentui/core-win32-x64').toSorted()).toStrictEqual(
     without('@opentui/core-win32-x64').toSorted(),
   );
+});
+
+test("compile's install selects every platform and libc, as Bun's --os and --cpu keep only the machine's libc on Linux (CHD-561)", () => {
+  expect(EVERY_PLATFORM).toStrictEqual(['--os=*', '--cpu=*', '--libc=*']);
 });
 
 describe('CHD-468 tester: production JSX shim element semantics', () => {

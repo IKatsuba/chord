@@ -189,17 +189,17 @@
  * `InitializeResponse._meta`, as both adapters do, and answers it as that
  * adapter does: a prompt steered into the turn playing is `injected`, and the
  * turn's next step, or its end, says `Read the message from <sender>.`; with
- * no turn playing, Claude's answers `promptRequired` and does nothing where
- * the request's `_meta.steering.idleBehavior` asks for that, and otherwise,
- * as Codex's always does, plays it as a turn of its own and answers
- * `startedNewTurn`. As Claude's, it names itself in `agentInfo` as that
+ * no turn playing, `claude` and `codex24` answer `promptRequired` and do
+ * nothing where the request's `_meta.steering.idleBehavior` asks for that, and
+ * otherwise, as `codex` always does, like codex-acp before 2.4, it plays it as
+ * a turn of its own and answers `startedNewTurn`. As Claude's, it names itself in `agentInfo` as that
  * adapter does, whose steer cuts the turn's open calls off; the fake cuts
  * none, so a test sees what chord holds back. Without it, the method is not
  * found. With
  * `--steer-late`, or `CHORD_FAKE_STEER_LATE=1`, a steer lands only once the
  * turn playing has ended, as one that meets a turn's end does. With
  * `--steer-refuse`, or `CHORD_FAKE_STEER_REFUSE=1`, every steer is answered
- * `promptRequired`, a turn playing or not. As Codex's, a
+ * `promptRequired`, a turn playing or not. As `codex`, a
  * prompt that comes while a turn plays opens with `Started alongside a turn
  * still playing.`, which chord must never cause.
  * `permissionsteer` asks for a write as `permission` does, then takes its
@@ -967,7 +967,7 @@ function titleAtStart(client: Client, sessionId: string): void {
 
 /**
  * Plays a prompt as a turn of the session's: the one `session/prompt` asks
- * for, or one a steer started with no turn running, as Codex's adapter does,
+ * for, or one a steer started with no turn running, as `--steering codex` does,
  * which says nothing before `answered`, the steer's answer, has gone.
  */
 async function playPrompt(
@@ -981,7 +981,7 @@ async function playPrompt(
 
   heard(params.sessionId, promptText(params.prompt));
 
-  // Codex's adapter does not stop a turn it started itself for a prompt:
+  // An adapter that starts its own turn does not stop it for a prompt:
   // the two would run side by side.
   const alongside = STEERING === 'codex' && turns.has(params.sessionId);
 
@@ -1538,8 +1538,8 @@ const connection = acp
   })
   // Steering as `--steering` names the adapter: into the turn playing, or,
   // with none, `promptRequired` where asked, as Claude's and Codex's from 2.4
-  // answer, else a turn of the agent's own, which Codex's adapter before 2.4
-  // starts whatever it was asked.
+  // answer, else a turn of the agent's own, which `--steering codex` starts
+  // whatever it was asked, as codex-acp before 2.4 did.
   .onRequest(
     '_session/steering',
     (params) => params as SteerRequest,
@@ -1576,7 +1576,7 @@ const connection = acp
         return { outcome: 'promptRequired', reason: 'noRunningTurn' };
       }
 
-      // Codex's answers once the turn it started is running, before it says
+      // Answered once the turn it started is running, before it says
       // anything, here a while after the turn the steer missed has answered.
       const answering =
         late === undefined ? Promise.resolve() : delay(STEP_MS * 20);

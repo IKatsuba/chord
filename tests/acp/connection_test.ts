@@ -656,7 +656,7 @@ test("with no turn running, Claude's adapter answers promptRequired where asked 
     expect(!seen.sent().includes('session/prompt')).toBeTruthy();
   }));
 
-test("with no turn running, Codex's adapter starts a turn of its own that no prompt of chord's owns, whatever it was asked", () =>
+test("with no turn running, an adapter ignoring promptRequired starts a turn of its own that no prompt of chord's owns, whatever it was asked", () =>
   withAgent(['--steering', 'codex'], async (agent, seen, cwd) => {
     const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
 

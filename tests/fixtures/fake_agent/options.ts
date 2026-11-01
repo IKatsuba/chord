@@ -318,8 +318,10 @@ function steeringAdapter(): (typeof STEERINGS)[number] | undefined {
 }
 
 /**
- * The adapter whose `_session/steering` the fake answers as, `claude`, `codex`
- * as before 2.4, or `codex24`, which honours `promptRequired`; none by default, when it neither advertises nor takes it.
+ * The adapter whose `_session/steering` the fake answers as: `claude`; `codex24`,
+ * Codex's from 2.4, which honour `promptRequired`; or `codex`, which ignores it,
+ * as codex-acp before 2.4 did and a person's own command can still start; none
+ * by default, when it neither advertises nor takes it.
  */
 export const STEERING = steeringAdapter();
 
@@ -342,8 +344,8 @@ export const ADAPTER = (() => {
 
 /**
  * A steer lands only once the turn playing has ended, as one sent just as a
- * turn ends does: Claude's adapter then refuses it, Codex's starts a turn of
- * its own with it.
+ * turn ends does: an adapter that honours `promptRequired` then refuses it,
+ * one that ignores it starts a turn of its own with it.
  */
 export const STEER_LATE =
   ARGS.includes('--steer-late') || process.env.CHORD_FAKE_STEER_LATE === '1';

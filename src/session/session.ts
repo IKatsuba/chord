@@ -149,7 +149,8 @@ export interface Turn {
 
 /**
  * How a steer went: `injected` into the running turn, `startedNewTurn` as a
- * turn of the agent's own, or `refused`, the agent having done nothing with
+ * turn of the agent's own, as only an adapter that ignores `promptRequired`
+ * does (codex-acp before 2.4), or `refused`, the agent having done nothing with
  * it, as with no turn running.
  */
 export type SteerOutcome = 'injected' | 'startedNewTurn' | 'refused';

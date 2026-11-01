@@ -90,7 +90,7 @@ export interface SetSessionModelRequest {
  * `_session/steering`, the steering extension Claude's and Codex's adapters
  * answer and ACP's schema does not have yet: a prompt put into the turn the
  * session is running. `promptRequired` asks an agent with no turn running to
- * answer so and do nothing; Claude's adapter honours it, Codex's does not.
+ * answer so and do nothing; Claude's adapter honours it, and Codex's from 2.4.
  */
 export interface SteerRequest {
   readonly sessionId: string;

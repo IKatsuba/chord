@@ -82,7 +82,7 @@ test.each(['claude', 'codex24'])(
     ),
 );
 
-test("a turn Codex's adapter starts with a steer that missed the turn is cancelled at once, and the message goes as chord's next turn, alone", async () => {
+test("a turn an adapter ignoring promptRequired starts with a steer that missed the turn is cancelled at once, and the message goes as chord's next turn, alone", async () => {
   let cancels = 0;
 
   await onFake(
@@ -142,7 +142,7 @@ test("a turn Codex's adapter starts with a steer that missed the turn is cancell
   );
 });
 
-test("what a turn Codex's adapter started on its own sends is that turn's, closed by chord's line, never the reply before it", () =>
+test("what a turn an adapter ignoring promptRequired started on its own sends is that turn's, closed by chord's line, never the reply before it", () =>
   onFake(
     ['--steering', 'codex', '--steer-late'],
     async (conversation, events) => {
@@ -188,7 +188,7 @@ test("what a turn Codex's adapter started on its own sends is that turn's, close
     },
   ));
 
-test("a second message told while the first steer is out never goes into the turn Codex's adapter started with the first, which chord cancels", () =>
+test('a second message told while the first steer is out never goes into the turn an adapter ignoring promptRequired started with the first, which chord cancels', () =>
   onFake(
     ['--steering', 'codex', '--steer-late'],
     async (conversation, events) => {
@@ -1597,7 +1597,7 @@ describe("the person's prompt steered into the running turn (CHD-378)", () => {
       },
     ));
 
-  test("a turn Codex's adapter starts with one that missed the turn is cancelled, and the prompt goes as chord's next turn", async () => {
+  test("a turn an adapter ignoring promptRequired starts with one that missed the turn is cancelled, and the prompt goes as chord's next turn", async () => {
     let cancels = 0;
 
     await onFake(

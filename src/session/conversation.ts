@@ -1490,11 +1490,14 @@ export class Conversation {
       return;
     }
 
-    // The steer missed the turn and Codex's adapter before 2.4, which ignores
-    // `promptRequired`, started one of its own with it, which no prompt of chord's awaits. The owner's call on
-    // CHD-365: cancel that turn at once and send the message as chord's next
-    // turn, once the agent has gone quiet, as a message queued behind a turn
-    // goes; what the agent did with it before the cancel landed stands.
+    // The steer missed the turn and the agent started one of its own with it,
+    // which no prompt of chord's awaits: an adapter that ignores
+    // `promptRequired`, as codex-acp before 2.4 did and a person's own command
+    // can still start; no agent chord pins does. Running the message again
+    // would repeat its calls, so, the owner's call on CHD-365: cancel that turn
+    // at once and send the message as chord's next turn, once the agent has
+    // gone quiet, as a message queued behind a turn goes; what the agent did
+    // with it before the cancel landed stands.
     if (outcome === 'startedNewTurn') {
       const own = crypto.randomUUID();
 

@@ -54,6 +54,50 @@ const TURN = 't1';
 const FAKE = fakeAgentCommand(undefined, '--step-ms', '1');
 const RESUMING = fakeAgentCommand(undefined, '--step-ms', '1', '--resume-only');
 
+describe('CHD-561 tester: standard Codex records and parent isolation', () => {
+  test('a fresh process replays both child endings without adopting child title or config', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-codex-record-'));
+    const stateDir = join(dir, 'state');
+    const live: ConversationEvent[] = [];
+
+    try {
+      const id = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: FAKE,
+        prompts: ['titled', 'codexsubagents'],
+        heard: (event) => live.push(event),
+      });
+      const records = await readRecords(stateDir);
+      const record = records.find((each) => each.sessionId === id);
+
+      assert(record !== undefined);
+      expect(record.title).toBe('Fix the tokenizer');
+
+      const session = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: RESUMING,
+        resume: sessionById(records, id, { agent: 'fake', cwd: dir }),
+      });
+
+      try {
+        expect(timed(pastOf(session))).toEqual(
+          timed(fold(transcriptActions(live))),
+        );
+        expect(
+          subagentsIn(pastOf(session).entries).map((child) => child.state),
+        ).toEqual(['completed', 'failed']);
+        expect(session.models()?.available.length).toBeGreaterThan(0);
+      } finally {
+        await session.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
 function fold(
   actions: readonly TranscriptAction[],
   from: Transcript = emptyTranscript,

@@ -24,6 +24,130 @@ import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 /** Short enough to keep a wedged agent's test quick, long enough to be real. */
 const STOP = { exitMs: 300, termMs: 300, killMs: 2000 } as const;
 
+describe('CHD-561 tester: Codex fixture cancellation lifecycle', () => {
+  test('stopping one of two concurrent sessions leaves the other child running', () =>
+    withAgent([], async (agent, seen, cwd) => {
+      const [first, second] = await Promise.all([
+        agent.newSession({ cwd, mcpServers: [] }),
+        agent.newSession({ cwd, mcpServers: [] }),
+      ]);
+      let secondAnswered = false;
+      const firstTurn = agent.prompt({
+        sessionId: first.sessionId,
+        prompt: [text('codexsubagentstop')],
+      });
+      const secondTurn = agent
+        .prompt({
+          sessionId: second.sessionId,
+          prompt: [text('codexsubagentstop')],
+        })
+        .then((answer) => {
+          secondAnswered = true;
+
+          return answer;
+        });
+
+      firstTurn.catch(() => {});
+
+      secondTurn.catch(() => {});
+
+      const offers = () =>
+        seen.notified('session/update').flatMap((value) => {
+          const notice = value as acp.SessionNotification;
+
+          return notice.update.sessionUpdate === 'subagent_update' &&
+            Boolean(notice.update.capabilities?.cancel)
+            ? [{ parent: notice.sessionId, child: notice.update.sessionId }]
+            : [];
+        });
+
+      await forkUntil(() => offers().length === 2);
+
+      const child = offers().find((offer) => offer.parent === first.sessionId);
+
+      assert(child !== undefined);
+      await agent.stopSubagent(child.child);
+      expect((await firstTurn).stopReason).toBe('end_turn');
+      expect(secondAnswered).toBe(false);
+      await agent.cancel(second.sessionId);
+      expect((await secondTurn).stopReason).toBe('cancelled');
+    }));
+
+  for (const target of ['child', 'parent']) {
+    test(`${target} cancellation leaves the process reusable and closes without a termination signal`, () =>
+      withAgent([], async (agent, seen, cwd) => {
+        const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+        const running = agent.prompt({
+          sessionId,
+          prompt: [text('codexsubagentstop')],
+        });
+
+        running.catch(() => {});
+
+        await forkUntil(() =>
+          seen
+            .updates()
+            .some(
+              (update) =>
+                update.sessionUpdate === 'subagent_update' &&
+                Boolean(update.capabilities?.cancel),
+            ),
+        );
+
+        const offered = seen
+          .updates()
+          .find(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              Boolean(update.capabilities?.cancel),
+          );
+
+        assert(offered?.sessionUpdate === 'subagent_update');
+
+        if (target === 'child') {
+          await agent.stopSubagent(offered.sessionId);
+        } else {
+          await agent.cancel(sessionId);
+        }
+
+        expect((await running).stopReason).toBe(
+          target === 'child' ? 'end_turn' : 'cancelled',
+        );
+        expect(
+          seen
+            .updates()
+            .filter(
+              (update) =>
+                update.sessionUpdate === 'subagent_update' &&
+                update.state?.state === 'idle' &&
+                update.state.stopReason === 'cancelled',
+            ),
+        ).toHaveLength(1);
+        expect(
+          seen.all
+            .filter(
+              (traffic) =>
+                traffic.from === 'chord' &&
+                'method' in traffic.message &&
+                traffic.message.method === 'session/cancel',
+            )
+            .map((traffic) =>
+              'message' in traffic && 'params' in traffic.message
+                ? traffic.message.params
+                : undefined,
+            ),
+        ).toEqual([
+          { sessionId: target === 'child' ? offered.sessionId : sessionId },
+        ]);
+
+        await agent.prompt({ sessionId, prompt: [text('text')] });
+        expect(seen.said()).toContain('Hello, world.');
+        await agent.close();
+        expect(await agent.exited).toEqual({ code: 0 });
+      }));
+  }
+});
+
 function isAlive(pid: number): Promise<boolean> {
   return new Promise((resolve) => {
     execFile('ps', ['-p', String(pid)], (error) => resolve(error === null));

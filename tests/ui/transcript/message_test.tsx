@@ -12,6 +12,7 @@ import type {
 } from '../../../src/session/transcript/types.ts';
 import { AgentColours, Colours } from '../../../src/ui/app/context.ts';
 import { paletteOf, type ThemeName } from '../../../src/ui/theme/theme.ts';
+import { mayHide } from '../../../src/ui/transcript/message.ts';
 import {
   inArrow,
   monitorMessage,
@@ -795,4 +796,14 @@ test("the line closing a turn the agent started on its own with the person's ste
   expect(selfStartedLine(undefined, 120)).toStrictEqual(
     'Interrupted · the agent started this on its own; your message goes as the next turn',
   );
+});
+
+test('a body may hide until it is measured as fitting, for this very text and width', () => {
+  const short = { rows: 6, text: 'a', width: 40 };
+
+  expect(mayHide(undefined, 'a', 40)).toBe(true);
+  expect(mayHide(short, 'a', 40)).toBe(false);
+  expect(mayHide(short, 'b', 40)).toBe(true);
+  expect(mayHide(short, 'a', 39)).toBe(true);
+  expect(mayHide({ ...short, rows: 7 }, 'a', 40)).toBe(true);
 });

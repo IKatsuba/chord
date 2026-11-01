@@ -1520,6 +1520,71 @@ export const SUBAGENTS = {
     return 'end_turn';
   },
 
+  // A launch's short prompt with code, that the agent then lengthens under the
+  // same id, past the fold, once the test's file says so.
+  async claudepromptgrows(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Check the build',
+      'Run this.\n\n```sh\nbun test\n```',
+    );
+
+    await turn.say('Short so far. ');
+    await pause(turn.signal, 800);
+    await linked(
+      turn.client,
+      launches.get(child.sessionId) ?? child.sessionId,
+      turn.sessionId,
+      child.sessionId,
+      [
+        'Run this.\n\n```sh\nbun test\n```',
+        ...Array.from({ length: 8 }, (_, step) => `Then step ${step + 1}.`),
+      ].join('\n\n'),
+    );
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('Long now.');
+
+    return 'end_turn';
+  },
+
+  // A launch's prompt that fits six rows wide and not narrow.
+  async claudewrapprompt(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Check the build',
+      `${'Check every step of the handover and report it. '.repeat(3)}\n\n\`\`\`sh\nbun test\n\`\`\``,
+    );
+
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('Done wrapping.');
+
+    return 'end_turn';
+  },
+
   // A SendMessage to a child still at work: the adapter sees no resume, so the
   // call comes after all, once, with its final status.
   async claudesendrunning(turn) {

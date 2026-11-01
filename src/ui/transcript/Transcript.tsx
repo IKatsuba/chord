@@ -1,6 +1,6 @@
 import { type BoxRenderable, TextAttributes } from '@opentui/core';
 import { useGap } from './gap.ts';
-import { memo, useState } from 'react';
+import { memo, useContext, useState } from 'react';
 import { Clip } from '../app/Clip.tsx';
 import type {
   Compaction,
@@ -41,6 +41,8 @@ import {
   selfStartedLine,
   teamPartLine,
   wrapLine,
+  type BodyRows,
+  mayHide,
   MESSAGE_LINES,
 } from './message.ts';
 import { indicator, type Scroll } from './scroll.ts';
@@ -384,17 +386,34 @@ function AgentMessage({
   const key = useHintKey('app:toggleTranscript');
   const to = entry.direction === 'to';
   const folds = to && entry.launch === true && !expanded;
-  const [rows, setRows] = useState<number | undefined>(undefined);
-  const hidden = folds && rows !== undefined ? rows - MESSAGE_LINES : 0;
+  const actions = useContext(CodeBlockActions);
+  const [measured, setMeasured] = useState<BodyRows | undefined>(undefined);
+  const hides = folds && mayHide(measured, entry.text, width);
+  const hidden =
+    folds && measured !== undefined ? measured.rows - MESSAGE_LINES : 0;
+  // One tree whether it hides or not, so the body is not laid out anew, and
+  // read after each frame, as a new text of the same height reports no change.
   const body = (
-    <box
-      flexShrink={0}
-      onSizeChange={function (this: BoxRenderable) {
-        setRows(this.height);
-      }}
-    >
-      <MessageBody text={entry.text} width={width} />
-    </box>
+    <CodeClipped.Provider value={hides}>
+      <CodeBlockActions.Provider value={hides ? undefined : actions}>
+        <box
+          flexShrink={0}
+          renderAfter={function (this: BoxRenderable) {
+            const rows = this.height;
+
+            if (
+              measured?.rows !== rows ||
+              measured.text !== entry.text ||
+              measured.width !== width
+            ) {
+              setMeasured({ rows, text: entry.text, width });
+            }
+          }}
+        >
+          <MessageBody text={entry.text} width={width} />
+        </box>
+      </CodeBlockActions.Provider>
+    </CodeClipped.Provider>
   );
 
   return (
@@ -410,21 +429,9 @@ function AgentMessage({
             </span>
           </text>
         </box>
-        {folds ? (
-          <Clip maxHeight={MESSAGE_LINES} flexShrink={0}>
-            {rows !== undefined && rows <= MESSAGE_LINES ? (
-              body
-            ) : (
-              <CodeClipped.Provider value>
-                <CodeBlockActions.Provider value={undefined}>
-                  {body}
-                </CodeBlockActions.Provider>
-              </CodeClipped.Provider>
-            )}
-          </Clip>
-        ) : (
-          body
-        )}
+        <Clip flexShrink={0} {...(folds ? { maxHeight: MESSAGE_LINES } : {})}>
+          {body}
+        </Clip>
         {hidden > 0 && (
           <box flexDirection='row' paddingLeft={5}>
             <text {...CUT} attributes={DIM}>

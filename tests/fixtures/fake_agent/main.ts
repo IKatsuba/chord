@@ -155,7 +155,7 @@
  * 4 s, past the turn and past a cancel that stops only the first.
  * `claudeslowstop` is the same, its subagents taking about 2 s to stop alone.
  * `claudelongprompt` launches one on a prompt over six rows, with a reply of
- * two paragraphs; `claudecodeprompt` has code above that fold; `claudesendrunning` messages one still at work, which comes
+ * two paragraphs; `claudecodeprompt` has code above that fold, `claudepromptgrows` a short prompt with code lengthened past it; `claudesendrunning` messages one still at work, which comes
  * as a call after all; `claudehandback` has one hand its report back, on both
  * sessions, with no `:reply`; `claudefailed` has a lone one fail, saying why;
  * `claudenoanswer` has one fail saying nothing and one stop; `claudenested`
@@ -481,6 +481,8 @@ const SCENARIOS = [
   'claudesubagents',
   'claudelongprompt',
   'claudecodeprompt',
+  'claudepromptgrows',
+  'claudewrapprompt',
   'claudesendrunning',
   'claudehandback',
   'claudenoanswer',

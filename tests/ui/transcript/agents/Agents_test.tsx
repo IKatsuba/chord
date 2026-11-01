@@ -7,6 +7,7 @@ import { Agents } from '../../../../src/ui/transcript/agents/Agents.tsx';
 import {
   asked,
   CTRL_O,
+  CTRL_X,
   ESC,
   left,
   send,
@@ -181,6 +182,44 @@ describe("Claude's session messages as rows in the parent (CHD-561)", () => {
         expect(window.frame()).toContain('[copy]');
       },
       { rows: 80, columns: 120 },
+    ));
+
+  test('a prompt that grows past the fold takes its code away from the picker and the buttons', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudepromptgrows');
+        await window.shows('[run]');
+        await window.press(CTRL_X);
+        await window.press('b');
+        await window.shows('bun test');
+        await window.press(ESC);
+        await window.shows('Long now.');
+        await window.shows('… +');
+        expect(window.frame()).not.toContain('[run]');
+        await window.press(CTRL_X);
+        await window.press('b');
+        await window.shows('No code block to pick');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a prompt that a narrower window pushes past the fold loses its code too, and regains it', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudewrapprompt');
+        await window.shows('Done wrapping.');
+        await window.shows('[run]');
+        await window.resize({ columns: 40 });
+        await window.shows('… +');
+        expect(window.frame()).not.toContain('[run]');
+        await window.press(CTRL_X);
+        await window.press('b');
+        await window.shows('No code block to pick');
+        await window.press(ESC);
+        await window.resize({ columns: 120 });
+        await window.shows('[run]');
+      },
+      { rows: 40, columns: 120 },
     ));
 
   test('agents launched together keep one group under all their rows', () =>

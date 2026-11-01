@@ -142,7 +142,7 @@ import {
   useBackgroundHint,
 } from '../background/BackgroundView.tsx';
 import { itemSubagent } from '../background/background.ts';
-import { focusAfter, hintLines } from '../background/view.ts';
+import { focusAfter, hintLines, stopNowOffered } from '../background/view.ts';
 import { agentsHaveKeys, backgroundShown } from '../background/state.ts';
 import { startingVim } from '../prompt/vim.ts';
 import { useCommands } from './commands.ts';
@@ -788,6 +788,16 @@ export function App({
 
     if (focus !== undefined) {
       dispatch({ type: 'background_focused', focus });
+    }
+
+    const offered = stopNowOffered(
+      backgroundItems,
+      state.backgroundView.focus,
+      state.backgroundView.hint,
+    );
+
+    if (offered !== undefined) {
+      dispatch({ type: 'background_stop_offered', focus: offered });
     }
   }, [backgroundItems, state.backgroundView]);
 

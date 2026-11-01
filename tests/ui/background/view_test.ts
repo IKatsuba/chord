@@ -10,6 +10,8 @@ import {
   stepDetail,
   workHead,
   hintLines,
+  NO_STOP_HINT,
+  stopNowOffered,
   laidAt,
   moveView,
   type ViewAt,
@@ -1500,4 +1502,30 @@ test("a short room's state line never passes the cells left it, a part that exac
       })[1]!,
     ),
   ).toBe(`${state.slice(0, -1)}…`);
+});
+
+describe('stopNowOffered', () => {
+  const agent = (stoppable?: boolean): BackgroundItem => ({
+    kind: 'agent',
+    id: 'a',
+    key: 1,
+    name: 'A',
+    startedAt: 0,
+    status: { group: 'running' },
+    ...(stoppable === undefined ? {} : { stoppable }),
+  });
+  const focus = { key: 1, id: 'a' };
+
+  test('names the focused agent once it offers the stop the hint denied', () => {
+    expect(stopNowOffered([agent(true)], focus, NO_STOP_HINT)).toEqual(focus);
+  });
+
+  test('names none while it offers no stop, or the hint says something else', () => {
+    expect(stopNowOffered([agent(false)], focus, NO_STOP_HINT)).toBeUndefined();
+    expect(stopNowOffered([agent()], focus, NO_STOP_HINT)).toBeUndefined();
+    expect(
+      stopNowOffered([agent(true)], focus, 'could not stop'),
+    ).toBeUndefined();
+    expect(stopNowOffered([agent(true)], focus, undefined)).toBeUndefined();
+  });
 });

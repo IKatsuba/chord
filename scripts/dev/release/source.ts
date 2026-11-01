@@ -19,7 +19,7 @@ import { quote } from 'shell-quote';
 import { die, type Release, run, said } from './lib.ts';
 import { sha256 } from './sums.ts';
 
-/** Where the fetched archives and their SHA256SUMS are. */
+/** Where the fetched archives are. */
 export function sourceDir(release: Release): string {
   return join(release.root, 'dist', 'release', 'source');
 }

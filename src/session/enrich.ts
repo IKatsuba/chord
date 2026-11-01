@@ -190,13 +190,9 @@ export function heardFromAgent(wire: Wire, message: AnyMessage): Wire {
   }
 
   if (answer.method === 'initialize') {
-    const { agentInfo } = answer.result as {
-      agentInfo?: { name?: unknown } | null;
-    };
+    const { name } = recordOf(recordOf(answer.result)['agentInfo']);
 
-    return typeof agentInfo?.name === 'string'
-      ? { ...answered, adapter: agentInfo.name }
-      : answered;
+    return typeof name === 'string' ? { ...answered, adapter: name } : answered;
   }
 
   const result = recordOf(answer.result);

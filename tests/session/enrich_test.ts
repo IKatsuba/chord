@@ -405,6 +405,36 @@ describe("Claude's subagents are named by their title, by who the adapter is (CH
     expect(after('@agentclientprotocol/claude-agent-acp')).toBe(true);
   });
 
+  test('a malformed answer to initialize passes as it is, and marks nothing', () => {
+    for (const result of [
+      null,
+      'nope',
+      7,
+      {},
+      { agentInfo: null },
+      { agentInfo: 'x' },
+      { agentInfo: { name: 7 } },
+    ]) {
+      const relay = enricherRelay(ENRICHERS);
+      const answer = { jsonrpc: '2.0', id: 1, result } as never;
+
+      relay.fromChord({
+        jsonrpc: '2.0',
+        id: 1,
+        method: 'initialize',
+        params: {},
+      } as never);
+
+      expect(relay.fromAgent(answer)).toEqual([answer]);
+
+      const [out] = relay.fromAgent(update) as unknown as {
+        params: { update: { _meta?: Record<string, unknown> } };
+      }[];
+
+      expect(out?.params.update._meta?.[NAMED_BY_TITLE]).toBeUndefined();
+    }
+  });
+
   test('another name, or none, leaves it', () => {
     expect(after('codex-acp')).toBeUndefined();
     expect(after()).toBeUndefined();

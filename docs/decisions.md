@@ -5316,10 +5316,11 @@ Each is how 0.5.17 behaves; an upgrade checks them again.
 - React takes a renderable out of the tree without destroying it, and a
   focused one goes on hearing keys: a textarea left focused sent its draft.
   The bridge's textarea blurs as it unmounts.
-- Every renderable is at least one cell high, so a box laid out to no rows
-  drew a row with everything in it on top of each other (the transcript
-  with `?`'s panel open at 80×24). A clipping box (`overflow='hidden'`)
-  reads Yoga's size when its own changes and draws nothing while it is none.
+- Before OpenTUI 0.8 every renderable was at least one cell high, so a box
+  laid out to no rows drew a row with everything in it on top of each other
+  (the transcript with `?`'s panel open at 80×24). From 0.8 it draws nothing
+  by itself; a clipping box (`overflow='hidden'`) still reads Yoga's size and
+  takes its children out of the tree while it is none, so they mount anew.
 - A box given a width or height in cells stops shrinking (OpenTUI's setter
   turns `flexShrink` 1 into 0); Ink's went on shrinking. The bridge sets it
   back after each new size.
@@ -5927,8 +5928,9 @@ What the bridge held that was never Ink's has a home of its own:
 - `prompt/TextArea.tsx`: the `<textarea>` with the terminal's foreground
   and cursor colour, focused a microtask late and blurred as it unmounts.
 - `app/Clip.tsx`: a box that draws nothing while it is laid out to no rows.
-  OpenTUI still draws every box at least a row high, so the transcript's
-  area keeps it.
+  OpenTUI still drew every box at least a row high then, so the transcript's
+  area keeps it. From 0.8 such a box draws nothing, one row to none still
+  fires no `onSizeChange`, and Clip stays for its children's mounting.
   **Widened 2026-10-19, the owner's consent (Q57, option 1; CHD-158 C6).**
   Clip learnt of a size laid out to nothing through `onSizeChange`. A box
   going from one row to none is drawn one cell high both before and after,

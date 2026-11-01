@@ -222,6 +222,11 @@ export async function openTerminal({
 }: {
   mouse: boolean;
 }): Promise<Terminal> {
+  // chord writes bytes of its own to the terminal on the JS thread, desktop
+  // notifications and the session variable, and OpenTUI offers no call for an
+  // app's bytes: frames from its native thread could cut through them (Q336).
+  process.env['OTUI_STDOUT_THREAD'] = '0';
+
   const renderer = await createCliRenderer(terminalOptions({ mouse }));
 
   if (taken === undefined) {

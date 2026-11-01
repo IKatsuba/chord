@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs';
 import { join } from 'node:path';
+import { parse } from 'shell-quote';
 import { ReleaseError } from '../../../../scripts/dev/release/lib.ts';
 import {
   draftRelease,
@@ -47,6 +54,74 @@ function died(run: () => unknown): string {
 
   throw new Error('it did not die');
 }
+
+describe('CHD-561 tester: source isolation and recovery arguments', () => {
+  for (const failure of ['exit 22', 'kill -TERM $$']) {
+    test(`a second download's ${failure} cannot validate the incomplete set or damage another run`, () => {
+      const other = scratch();
+
+      try {
+        nativeNotes(other.root);
+        fetchSource(other.release);
+        at.fake(
+          'curl',
+          `
+case "\${@: -1}" in
+  *zlib*) printf half >"\${@: -2:1}"; ${failure} ;;
+  *) printf 'source of %s' "\${@: -1}" >"\${@: -2:1}" ;;
+esac
+`,
+        );
+
+        expect(died(() => fetchSource(at.release))).toContain('failed');
+        expect(
+          existsSync(join(sourceDir(at.release), 'ffmpeg-9.0.2.tar.xz')),
+        ).toBe(true);
+        expect(
+          existsSync(join(sourceDir(at.release), 'zlib-1.3.2.tar.gz')),
+        ).toBe(false);
+        expect(died(() => fetchedSource(at.release))).toContain(
+          'zlib-1.3.2.tar.gz',
+        );
+        expect(fetchedSource(other.release)).toHaveLength(2);
+      } finally {
+        rmSync(other.place, { recursive: true, force: true });
+      }
+    });
+  }
+
+  test('manual recovery preserves every argument with spaces and shell metacharacters', () => {
+    const root = join(at.root, "source space 'quote';$(unused)");
+
+    mkdirSync(root);
+
+    const release = { ...at.release, root };
+    const files = [
+      join(root, 'ffmpeg one.tar.xz'),
+      join(root, "zlib 'two'.tar.gz"),
+    ];
+
+    at.fake('gh', 'echo denied >&2\nexit 1\n');
+
+    const message = died(() => draftRelease(release, '9.9.9', files));
+    const command = message.split('Finish it with: ')[1];
+
+    expect(command).toBeDefined();
+    expect(parse(command!)).toEqual([
+      'gh',
+      'release',
+      'create',
+      'v9.9.9',
+      '--draft',
+      '--verify-tag',
+      '--title',
+      'chord v9.9.9',
+      '--notes',
+      '',
+      ...files,
+    ]);
+  });
+});
 
 describe('reading the archives a native package names', () => {
   test('FFmpeg and zlib with their sums, and not the build tool', () => {

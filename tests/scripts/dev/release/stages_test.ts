@@ -161,6 +161,68 @@ function ran(): string[] {
     : [];
 }
 
+describe('CHD-561 tester: source fetch interrupts the release parent', () => {
+  test('SIGTERM during curl drops a local version commit before npm packing or a draft', () => {
+    writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
+    at.fake('file', `echo "$1: ${Object.values(KINDS).join(' ')}"\n`);
+    at.fake('curl', 'printf half >"${@: -2:1}"\nkill -TERM $PPID\nexit 22\n');
+
+    const lib = join(import.meta.dir, '../../../../scripts/dev/release');
+    const script = join(at.place, 'source-interrupted.ts');
+    const readGit = (...args: string[]) => {
+      const result = spawnSync('git', args, { cwd: at.root, encoding: 'utf8' });
+
+      expect(result.status).toBe(0);
+
+      return result.stdout.trim();
+    };
+
+    const head = readGit('rev-parse', 'HEAD');
+
+    writeFileSync(
+      script,
+      `
+import { dying } from ${JSON.stringify(join(lib, 'lib.ts'))};
+import { selectStages } from ${JSON.stringify(join(lib, 'select.ts'))};
+import { runRelease } from ${JSON.stringify(join(lib, 'stages.ts'))};
+const options = { dryRun: true, only: ['compile', 'pack'] };
+const release = {
+  root: ${JSON.stringify(at.root)}, env: process.env,
+  sleep: () => Promise.resolve(), out: console.log, err: console.error, tty: true,
+};
+await dying(() => runRelease(release, selectStages(options), options,
+  { platform: 'darwin', arch: 'arm64' }, 'patch'));
+`,
+    );
+
+    const child = spawnSync(process.execPath, [script], {
+      cwd: at.root,
+      env: context().env,
+      encoding: 'utf8',
+      timeout: 10_000,
+    });
+
+    expect(child.signal, child.stdout + child.stderr).toBe('SIGTERM');
+    expect(readGit('rev-parse', 'HEAD')).toBe(head);
+    expect(readGit('status', '--porcelain')).toBe('');
+    expect(ran()).toContain('npm whoami');
+    expect(
+      ran().some(
+        (line) => line.startsWith('npm pack') || line.startsWith('npm publish'),
+      ),
+    ).toBe(false);
+    expect(existsSync(join(at.place, 'gh.log'))).toBe(false);
+    expect(
+      existsSync(
+        join(at.root, 'dist', 'release', 'source', 'ffmpeg-9.0.2.tar.xz'),
+      ),
+    ).toBe(false);
+    expect(
+      JSON.parse(readFileSync(join(at.root, 'package.json'), 'utf8')).version,
+    ).toBe(VERSION);
+  });
+});
+
 test('signing anywhere but an arm64 Mac is refused before anything else', async () => {
   for (const options of [
     {},

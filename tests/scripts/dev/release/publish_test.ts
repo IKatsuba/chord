@@ -235,6 +235,45 @@ function tagged(where: string): string {
 
 const PUBLISH = 'publish --access public ';
 
+describe('CHD-561 tester: complete source guards precede every publish', () => {
+  for (const only of [undefined, 'chord-linux-x64'] as const) {
+    for (const defect of ['missing', 'changed', 'disagreeing notes'] as const) {
+      test(`${defect} blocks ${only ?? 'all packages'} before any platform publish or tag`, async () => {
+        const source = join(repo, 'dist', 'release', 'source');
+        const archive = join(source, 'zlib-1.3.2.tar.gz');
+
+        if (defect === 'missing') {
+          rmSync(archive);
+        } else if (defect === 'changed') {
+          writeFileSync(archive, 'untrusted bytes');
+        } else {
+          writeFileSync(
+            join(
+              repo,
+              'node_modules',
+              '@opentui',
+              'core-linux-x64',
+              'FFMPEG-SOURCE.md',
+            ),
+            `${SOURCE_NOTES}\nchanged build\n`,
+          );
+        }
+
+        // A local inventory must never authorize an incomplete or stale set.
+        writeFileSync(join(source, 'SHA256SUMS'), '');
+        await died(() => publish(context(), { version: VERSION, only }));
+
+        expect(
+          lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
+        ).toEqual([]);
+        expect(lines('gh.log')).toEqual([]);
+        expect(tagged(repo)).toBe('');
+        expect(isPublished('chord-linux-x64')).toBe(false);
+      });
+    }
+  }
+});
+
 describe('a resumed release', () => {
   test('publishes every platform package, then the main one last, and tags', async () => {
     expect(await release()).toBeTrue();

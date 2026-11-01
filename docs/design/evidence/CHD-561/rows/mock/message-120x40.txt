@@ -1,0 +1,40 @@
+ ▀▄     chord v0.66.0
+ ▀▀▀▄   claude · Claude Opus
+ ▄▀▀▀   /tmp/chord-qa.mock
+ ▀▀     ? for shortcuts · /help
+
+ › look at the routing
+
+ → to Agent(Find the session layer)
+   ⎿  Find where chord hands each session/update to its listeners.
+      
+      Report the file that owns the routing, with line numbers.
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Search(connection in tests/acp)
+
+ ← from Agent(Find the session layer)
+   ⎿  Routing lives in src/acp/connection.ts, in the relay at line 412.
+      
+      The listeners are kept in src/session/conversation.ts.
+
+ ⏺ Now I will ask it for the tests.
+
+ → to Agent(Find the session layer)
+   ⎿  Now find the tests that cover it.
+
+
+
+
+
+
+
+
+
+ ››› Working… (3s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    background  main's agent running

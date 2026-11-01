@@ -1,0 +1,24 @@
+
+ ⏺ SendMessage
+   ⎿  {"success":true,"message":"Agent resumed in the background"}
+
+ ⏺ Background(review)
+   ⎿  Async agent launched successfully.
+
+ ⏺ Agent(general-purpose)
+   ⎿  Done (0 tool uses · 0s)
+
+ ⏺ Run(the test suite)
+   ⎿  Error: ```
+      The build still fails.
+      ```
+
+ ⏺ Agent(general-purpose)
+   ⎿  Failed (0 tool uses · 0s)
+
+ ⏺ Both found.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

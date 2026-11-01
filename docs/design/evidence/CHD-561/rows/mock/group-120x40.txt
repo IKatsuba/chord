@@ -1,0 +1,40 @@
+ ▀▄     chord v0.66.0
+ ▀▀▀▄   claude · Claude Opus
+ ▄▀▀▀   /tmp/chord-qa.mock
+ ▀▀     ? for shortcuts · /help
+
+ › look at the routing
+
+ ⏺ I will send two agents.
+
+ → to Agent(Find the session layer)
+   ⎿  Find the routing.
+
+ → to Agent(Run the test suite)
+   ⎿  Run bun test.
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 1 tool use
+   │  ⎿  Read(src/acp/connection.ts)
+   └─ Agent(Run the test suite) · 1 tool use
+      ⎿  Bash(bun test)
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (3s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    background  2 of main's agents running

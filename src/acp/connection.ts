@@ -79,7 +79,7 @@ export interface OpenAgentOptions {
  * `session/set_model`, which ACP v1 has not made stable: chord asks it only
  * of an agent that offers models but no `model` config option, as cursor's
  * and dimcode's adapters answer it. Claude's adapter has no handler for it
- * (claude-agent-acp 0.93.0) and is asked through its `model` config option.
+ * (claude-agent-acp 0.99.1) and is asked through its `model` config option.
  */
 export interface SetSessionModelRequest {
   readonly sessionId: string;

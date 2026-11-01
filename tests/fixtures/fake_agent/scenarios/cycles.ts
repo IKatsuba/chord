@@ -81,7 +81,7 @@ export function runCycle(client: Client, sessionId: string): void {
 /**
  * Ends the turn, then, once it has gone quiet, works on its own as Claude
  * Code does when a background task ends; with `usage` it ends that cycle as
- * claude-agent-acp 0.93.0 does, with a usage update whose `_claude/origin`
+ * claude-agent-acp 0.99.1 does, with a usage update whose `_claude/origin`
  * is `task-notification`, and without it the cycle is never marked ended.
  */
 function claudeCycle(usage: boolean): Play {

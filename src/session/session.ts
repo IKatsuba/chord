@@ -24,7 +24,7 @@ import {
 import type { AgentOption } from './config.ts';
 import type { AgentEfforts } from './efforts.ts';
 import { ElicitationBridge } from './elicitations.ts';
-import { enricherRelay } from './enrich.ts';
+import { CLAUDE_ADAPTER, enricherRelay } from './enrich.ts';
 import { usageCountOf } from '../cost_counts.ts';
 import { ENRICHERS } from './enrichers.ts';
 import { type AgentModels, isModelState, modelConfigId } from './models.ts';
@@ -155,8 +155,7 @@ export interface Turn {
  */
 export type SteerOutcome = 'injected' | 'startedNewTurn' | 'refused';
 
-/** The name Claude's adapter gives itself in `initialize`'s `agentInfo`. */
-export const CLAUDE_ADAPTER = '@agentclientprotocol/claude-agent-acp';
+export { CLAUDE_ADAPTER };
 
 /** One agent process and one ACP session in it, until `close()`. */
 export interface Session {

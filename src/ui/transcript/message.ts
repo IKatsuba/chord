@@ -134,28 +134,6 @@ export function foldMessage(
 }
 
 /**
- * A launch's prompt as its row draws it, `width` wide: often pages long, it
- * folds at `MESSAGE_LINES` rows as laid out, as a task's prompt does, and
- * says how many it left out.
- */
-export function foldedPrompt(
-  text: string,
-  width: number,
-  expanded: boolean,
-): { readonly text: string; readonly hidden: number } {
-  const rows = text
-    .split('\n')
-    .flatMap((line) =>
-      wrapAnsi(line, Math.max(width, 1), { hard: true, trim: false }).split(
-        '\n',
-      ),
-    );
-  const { lines, hidden } = foldMessage(rows, expanded);
-
-  return hidden === 0 ? { text, hidden } : { text: lines.join('\n'), hidden };
-}
-
-/**
  * A monitor's event as its row draws it, `width` wide: the lines it printed,
  * verbatim, as a log's `*` and `_` are no emphasis, each wrapped after its
  * own indent with the space at a break dropped, folded as any message is;

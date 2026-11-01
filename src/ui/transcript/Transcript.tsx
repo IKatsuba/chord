@@ -1,7 +1,7 @@
-import { TextAttributes } from '@opentui/core';
+import { type BoxRenderable, TextAttributes } from '@opentui/core';
 import { useGap } from './gap.ts';
-import { memo } from 'react';
-import stripAnsi from 'strip-ansi';
+import { memo, useState } from 'react';
+import { Clip } from '../app/Clip.tsx';
 import type {
   Compaction,
   Entry,
@@ -13,6 +13,7 @@ import type {
 } from '../../session/transcript/types.ts';
 import {
   paint,
+  CodeBlockActions,
   useAgentColour,
   useColours,
   useHintKey,
@@ -32,7 +33,6 @@ import { compactionLine, inSpinner } from './compaction.ts';
 import { endedLine } from './ended.ts';
 import { Reply } from './Reply.tsx';
 import {
-  foldedPrompt,
   inArrow,
   messageHeader,
   monitorMessage,
@@ -40,6 +40,7 @@ import {
   selfStartedLine,
   teamPartLine,
   wrapLine,
+  MESSAGE_LINES,
 } from './message.ts';
 import { indicator, type Scroll } from './scroll.ts';
 import {
@@ -363,8 +364,9 @@ function ItemEnded({
  */
 /**
  * What was said between the session's agent and a subagent of its, in the
- * shape of any message's row, so the two never drift apart; a launch's prompt
- * folds as a task's does.
+ * shape of any message's row, so the two never drift apart. A launch's prompt
+ * is often pages long: the whole of it is laid out and clipped to six rows, as
+ * a task's prompt folds. What the clip hides offers no code to copy or run.
  */
 function AgentMessage({
   entry,
@@ -380,10 +382,19 @@ function AgentMessage({
   const colour = useAgentColour(name);
   const key = useHintKey('app:toggleTranscript');
   const to = entry.direction === 'to';
-  const folded =
-    to && entry.launch === true
-      ? foldedPrompt(stripAnsi(entry.text), Math.max(width - 5, 1), expanded)
-      : { text: entry.text, hidden: 0 };
+  const folds = to && entry.launch === true && !expanded;
+  const [rows, setRows] = useState<number | undefined>(undefined);
+  const hidden = folds && rows !== undefined ? rows - MESSAGE_LINES : 0;
+  const body = (
+    <box
+      flexShrink={0}
+      onSizeChange={function (this: BoxRenderable) {
+        setRows(this.height);
+      }}
+    >
+      <MessageBody text={entry.text} width={width} />
+    </box>
+  );
 
   return (
     <>
@@ -398,11 +409,23 @@ function AgentMessage({
             </span>
           </text>
         </box>
-        <MessageBody text={folded.text} width={width} />
-        {folded.hidden > 0 && (
+        {folds ? (
+          <Clip maxHeight={MESSAGE_LINES} flexShrink={0}>
+            {rows !== undefined && rows <= MESSAGE_LINES ? (
+              body
+            ) : (
+              <CodeBlockActions.Provider value={undefined}>
+                {body}
+              </CodeBlockActions.Provider>
+            )}
+          </Clip>
+        ) : (
+          body
+        )}
+        {hidden > 0 && (
           <box flexDirection='row' paddingLeft={5}>
             <text {...CUT} attributes={DIM}>
-              {`… +${folded.hidden} ${folded.hidden === 1 ? 'line' : 'lines'}${
+              {`… +${hidden} ${hidden === 1 ? 'line' : 'lines'}${
                 key === undefined ? '' : ` (${key} to expand)`
               }`}
             </text>

@@ -5,6 +5,7 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import { subagentsIn } from '../../../src/session/subagents.ts';
+import { NAMED_BY_TITLE } from '../../../src/session/enrich.ts';
 import { agentItemName } from '../../../src/session/transcript/subagents.ts';
 import { taskUpdate } from '../../../src/session/tasks.ts';
 import type {
@@ -1267,15 +1268,116 @@ describe('session messages between a transcript and its subagents (CHD-561)', ()
     expect(kinds(entries)).toContain('from a: a report');
   });
 
-  test("the name is the title once its parent addressed it; no other agent's moves", () => {
+  test("the name is the title only under Claude's adapter's mark; being addressed moves none", () => {
+    const named: TranscriptAction = {
+      type: 'update',
+      turnId: TURN,
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        title: 'A',
+        description: 'Explore',
+        _meta: { [NAMED_BY_TITLE]: true },
+      },
+    };
+    const claude = subagentsIn(fold([PROMPT, named]).entries)[0];
     const told = subagentsIn(
       fold([PROMPT, spawned('a', 'A'), said('la', ROOT, 'a', 'do a')]).entries,
     )[0];
     const quiet = subagentsIn(fold([PROMPT, spawned('a', 'A')]).entries)[0];
 
-    assert(told !== undefined && quiet !== undefined);
-    expect(agentItemName(told)).toBe('A');
+    assert(claude !== undefined && told !== undefined && quiet !== undefined);
+    expect(agentItemName(claude)).toBe('A');
+    expect(agentItemName(told)).toBe('A, short');
     expect(agentItemName(quiet)).toBe('A, short');
+  });
+
+  test('an update that names only its id keeps the row it names, or clears it', () => {
+    const base = [
+      PROMPT,
+      spawned('a', 'A'),
+      said('la', ROOT, 'a', 'do a'),
+      said('la:reply', 'a', ROOT, 'first'),
+    ];
+    const bare = (content: { type: 'text'; text: string }[] | null) =>
+      ({
+        type: 'update',
+        turnId: TURN,
+        update: {
+          sessionUpdate: 'session_message',
+          messageId: 'la:reply',
+          content,
+        },
+      }) as unknown as TranscriptAction;
+    const { entries } = fold([
+      ...base,
+      bare([{ type: 'text', text: 'second' }]),
+    ]);
+    const row = entries.find(
+      (entry) => entry.kind === 'agent_message' && entry.direction === 'from',
+    );
+
+    expect(kinds(entries)).toContain('from a: second');
+    assert(row?.kind === 'agent_message');
+    expect(row.agentId).toBe('a');
+    expect(kinds(fold([...base, bare(null)]).entries)).toStrictEqual([
+      'user',
+      'to a: do a',
+      'block a',
+    ]);
+  });
+
+  test("on a child's session, an update naming only a nested row's id never touches its prompt", () => {
+    const base = [
+      PROMPT,
+      spawned('a', 'A'),
+      spawned('n', 'N', 'a'),
+      said('ln', 'a', 'n', 'do n', 'a'),
+    ];
+    const bare = (content: { type: 'text'; text: string }[] | null) =>
+      ({
+        type: 'update',
+        turnId: TURN,
+        subagentId: 'a',
+        update: { sessionUpdate: 'session_message', messageId: 'ln', content },
+      }) as unknown as TranscriptAction;
+    const changed = subagentsIn(
+      fold([...base, bare([{ type: 'text', text: 'do n again' }])]).entries,
+    )[0];
+    const cleared = subagentsIn(fold([...base, bare(null)]).entries)[0];
+
+    assert(changed !== undefined && cleared !== undefined);
+    expect(changed.prompt).toBeUndefined();
+    expect(changed.promptId).toBeUndefined();
+    expect(kinds(changed.entries)).toContain('to n: do n again');
+    expect(cleared.prompt).toBeUndefined();
+    expect(kinds(cleared.entries)).toStrictEqual(['block n']);
+  });
+
+  test('clearing the last row before a plan keeps later work after the plan', () => {
+    const plan: TranscriptAction = {
+      type: 'update',
+      turnId: TURN,
+      subagentId: 'a',
+      update: {
+        sessionUpdate: 'plan',
+        entries: [{ content: 'x', priority: 'low', status: 'pending' }],
+      },
+    };
+    const [child] = subagentsIn(
+      fold([
+        PROMPT,
+        spawned('a', 'A'),
+        spawned('n', 'N', 'a'),
+        said('ln', 'a', 'n', 'do n', 'a'),
+        said('more', 'a', 'n', 'and more', 'a'),
+        plan,
+        said('more', 'a', 'n', null, 'a'),
+      ]).entries,
+    );
+
+    assert(child !== undefined);
+    expect(child.planAt).toBe(2);
   });
 
   test('a row put above its plan keeps the plan where it first came', () => {

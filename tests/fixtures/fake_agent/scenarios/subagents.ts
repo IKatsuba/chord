@@ -4,7 +4,7 @@ import { clientTakesSubagents } from '../client.ts';
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { STEP_MS, STOP_GATE } from '../options.ts';
+import { ADAPTER, STEERING, STEP_MS, STOP_GATE } from '../options.ts';
 import { cwds } from '../sessions.ts';
 import { GATE, GATE_RELEASE } from './agents.ts';
 import { lifetime, pause, type Play, Turn, type Update } from '../turn.ts';
@@ -504,7 +504,11 @@ async function announce(
     sessionUpdate: 'subagent_update',
     sessionId: child.sessionId,
     title,
-    ...(role === undefined ? {} : { description: role }),
+    // Its role goes only under Claude's name, which is what tells chord a
+    // description is one: named otherwise, the fake's would read as its task.
+    ...(role === undefined || (ADAPTER !== 'claude' && STEERING !== 'claude')
+      ? {}
+      : { description: role }),
     capabilities: { cancel: {} },
     state: { state: 'running' },
   });

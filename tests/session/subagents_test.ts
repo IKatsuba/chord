@@ -34,6 +34,7 @@ import {
   waitingOn,
 } from '../../src/session/subagents.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { agentItemName } from '../../src/session/transcript/subagents.ts';
 import {
   emptyTranscript,
   type Entry,
@@ -1065,6 +1066,44 @@ describe("Claude's session messages on the fake (CHD-561)", () => {
       ).toStrictEqual(['to', 'from']);
       expect(child.prompt).toBe('Review the session layer.');
     }));
+});
+
+test("under Claude's adapter's name a subagent goes by its title, its role only its description; under another, it does not change", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
+  const nameUnder = async (args: readonly string[]) => {
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, ...args),
+    });
+
+    try {
+      const [child] = subagentsIn(
+        fold(await play(session, 'claudehandback')).entries,
+      );
+
+      assert(child !== undefined);
+
+      return [child.title, child.description, agentItemName(child)];
+    } finally {
+      await session.close();
+    }
+  };
+
+  try {
+    expect(await nameUnder(['--adapter', 'claude'])).toStrictEqual([
+      'explorer',
+      'Explore',
+      'explorer',
+    ]);
+    expect(await nameUnder([])).toStrictEqual([
+      'explorer',
+      undefined,
+      'explorer',
+    ]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
 });
 
 describe("subagents as Codex's adapter sends them from 2.4", () => {

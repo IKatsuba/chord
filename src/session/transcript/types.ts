@@ -345,11 +345,12 @@ export interface Subagent {
   readonly prompt?: string;
   readonly promptId?: string;
   /**
-   * Its parent's session said what it sent it, as only Claude's adapter does:
-   * its title is then its name, its description only its role, and a row
-   * above it, not a call, says what it was asked.
+   * Its parent's session said what it sent it, so a row above it, not a call,
+   * says what it was asked, and no call carries how it failed.
    */
   readonly addressed?: true;
+  /** Its adapter is Claude's: its title is its name, its description a role. */
+  readonly namedByTitle?: true;
   readonly state: SubagentState;
   /**
    * It announced it can be cancelled alone (ACP's `capabilities.cancel`):

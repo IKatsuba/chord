@@ -9,6 +9,7 @@ import type {
   SubagentUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
+import { NAMED_BY_TITLE } from '../enrich.ts';
 import { TOKEN_FIELDS, type TokenUsage } from '../usage.ts';
 import {
   emptyTranscript,
@@ -68,10 +69,17 @@ export function childUpdate(
  */
 function itsOwn(
   subagent: Subagent,
-  { senderSessionId }: { readonly senderSessionId?: string | null },
+  {
+    messageId,
+    senderSessionId,
+  }: { readonly messageId: string; readonly senderSessionId?: string | null },
 ): boolean {
   return (
     senderSessionId === subagent.id ||
+    subagent.entries.some(
+      (entry) =>
+        entry.kind === 'agent_message' && entry.messageId === messageId,
+    ) ||
     (typeof senderSessionId === 'string' &&
       childOf(subagent.entries, senderSessionId) !== undefined)
   );
@@ -120,27 +128,13 @@ export function agentMessage(
   update: Extract<SessionUpdate, { sessionUpdate: 'session_message' }>,
 ): Transcript {
   const { messageId, recipientSessionId, senderSessionId, content } = update;
-  const to =
-    typeof recipientSessionId === 'string'
-      ? childOf(state.entries, recipientSessionId)
-      : undefined;
-  const from =
-    typeof senderSessionId === 'string'
-      ? childOf(state.entries, senderSessionId)
-      : undefined;
-  const child = to ?? from;
-  const entry = child === undefined ? undefined : state.entries[child];
-
-  if (entry?.kind !== 'subagent') {
-    return state;
-  }
-
   const text =
     content === undefined
       ? undefined
       : (content ?? [])
           .flatMap((block) => (block.type === 'text' ? [block.text] : []))
           .join('');
+  // A row already known needs no sender or recipient named again.
   const at = state.entries.findIndex(
     (each) => each.kind === 'agent_message' && each.messageId === messageId,
   );
@@ -158,7 +152,18 @@ export function agentMessage(
         };
   }
 
-  if (text === undefined || text === '') {
+  const to =
+    typeof recipientSessionId === 'string'
+      ? childOf(state.entries, recipientSessionId)
+      : undefined;
+  const from =
+    typeof senderSessionId === 'string'
+      ? childOf(state.entries, senderSessionId)
+      : undefined;
+  const child = to ?? from;
+  const entry = child === undefined ? undefined : state.entries[child];
+
+  if (entry?.kind !== 'subagent' || text === undefined || text === '') {
     return state;
   }
 
@@ -311,14 +316,18 @@ function worked(
 
   const { planId: _, planAt: wasAt, ...rest } = subagent;
   // A row put in or taken out above its plan moves where the plan stands.
-  const firstMoved = after.entries.findIndex(
-    (entry, index) => entry !== subagent.entries[index],
-  );
+  let moved = 0;
+
+  while (
+    moved < after.entries.length &&
+    moved < subagent.entries.length &&
+    after.entries[moved] === subagent.entries[moved]
+  ) {
+    moved++;
+  }
+
   const planAt =
-    wasAt !== undefined &&
-    update.sessionUpdate === 'session_message' &&
-    firstMoved >= 0 &&
-    firstMoved < wasAt
+    wasAt !== undefined && moved < wasAt
       ? wasAt + after.entries.length - subagent.entries.length
       : wasAt;
 
@@ -408,6 +417,8 @@ function patched(
   at: number | undefined,
 ): Subagent {
   const { title, description, capabilities } = update;
+  const namedByTitle =
+    subagent.namedByTitle === true || update._meta?.[NAMED_BY_TITLE] === true;
   const told = subagentStateOf(update.state);
   const next = told ?? subagent.state;
   const {
@@ -464,6 +475,7 @@ function patched(
   return {
     ...kept,
     ...(task === undefined ? {} : { task }),
+    ...(namedByTitle ? { namedByTitle } : {}),
     state: next,
     ...(title === undefined
       ? subagent.title === undefined
@@ -660,13 +672,13 @@ export function isAgentItem(subagent: Subagent): boolean {
 }
 
 /**
- * An agent item's name: its short task, else its title. For a subagent its
- * parent addressed the description is only its role and the title its name;
- * no other agent's says which, so none of theirs moves (CHD-561).
+ * An agent item's name: its short task, else its title. On Claude's adapter
+ * the description is only a role and the title the name; no other agent's
+ * says which, so none of theirs moves (CHD-561).
  */
 export function agentItemName(subagent: Subagent): string {
   return (
-    (subagent.addressed === true
+    (subagent.namedByTitle === true
       ? (subagent.title ?? subagent.description)
       : (subagent.description ?? subagent.title)) ?? 'agent'
   );

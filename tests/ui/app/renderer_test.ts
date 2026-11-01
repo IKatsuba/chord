@@ -16,6 +16,46 @@ import { draw } from '../harness.tsx';
 import { statusReports, until } from './render.tsx';
 
 describe('CHD-561 tester: terminal stdout thread policy', () => {
+  test('a CLI value named --delay-start cannot enable the writer during delayed creation', async () => {
+    const rendererModule = new URL(
+      '../../../src/ui/app/renderer.tsx',
+      import.meta.url,
+    ).href;
+    const cliModule = new URL('../../../src/cli.ts', import.meta.url).href;
+    const code = `
+      import { chordCommand } from ${JSON.stringify(cliModule)};
+      import { openTerminal, leave } from ${JSON.stringify(rendererModule)};
+      await chordCommand().noExit().throwErrors().action(() => {}).parse(['fake', '--model', '--delay-start']);
+      const before = performance.now();
+      const { renderer } = await openTerminal({ mouse: false });
+      try {
+        process.stderr.write('DELAY_POLICY ' + JSON.stringify({
+          delayed: performance.now() - before >= 4900,
+          writer: renderer.nativeSession.stdoutWriter,
+          setting: process.env.OTUI_STDOUT_THREAD,
+        }) + '\\n');
+      } finally { await leave(renderer); }
+    `;
+    const ran = await promisify(execFile)(
+      process.execPath,
+      ['-e', code, '--', 'fake', '--model', '--delay-start'],
+      {
+        env: { ...process.env, OTUI_STDOUT_THREAD: '1' },
+        timeout: 15_000,
+      },
+    );
+    const line = ran.stderr
+      .split('\n')
+      .find((row) => row.startsWith('DELAY_POLICY '));
+
+    assert(line !== undefined, ran.stderr);
+    expect(JSON.parse(line.slice('DELAY_POLICY '.length))).toEqual({
+      delayed: true,
+      writer: false,
+      setting: '1',
+    });
+  });
+
   test('opening chord disables the native writer even when the environment enables it', async () => {
     const rendererModule = new URL(
       '../../../src/ui/app/renderer.tsx',
@@ -50,7 +90,7 @@ describe('CHD-561 tester: terminal stdout thread policy', () => {
     expect(JSON.parse(line.slice('THREAD_POLICY '.length))).toEqual({
       defaultWriter: true,
       writer: false,
-      setting: '0',
+      setting: '1',
     });
   });
 });

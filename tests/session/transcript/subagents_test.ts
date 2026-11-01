@@ -18,6 +18,144 @@ import { fold } from './fold.ts';
 
 const TURN = 't1';
 
+describe('CHD-561 tester: partial messages stay in their session', () => {
+  const row = (
+    messageId: string,
+    senderSessionId: string,
+    recipientSessionId: string,
+    value: string,
+    subagentId?: string,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    ...(subagentId === undefined ? {} : { subagentId }),
+    update: {
+      sessionUpdate: 'session_message',
+      messageId,
+      senderSessionId,
+      recipientSessionId,
+      content: [{ type: 'text', text: value }],
+    },
+  });
+  const partial = (
+    messageId: string,
+    value: string | null,
+    subagentId?: string,
+  ): TranscriptAction =>
+    ({
+      type: 'update',
+      turnId: TURN,
+      ...(subagentId === undefined ? {} : { subagentId }),
+      update: {
+        sessionUpdate: 'session_message',
+        messageId,
+        content: value === null ? null : [{ type: 'text', text: value }],
+      },
+    }) as unknown as TranscriptAction;
+
+  test('equal root and nested reply ids update and clear independently without changing either prompt', () => {
+    const base = [
+      PROMPT,
+      spawned('a', 'A'),
+      row('launch', 'root', 'a', 'Parent task'),
+      message('a', 'launch', text('Parent task'), 'root'),
+      spawned('n', 'N', 'a'),
+      row('nested-launch', 'a', 'n', 'Nested task', 'a'),
+      message('n', 'nested-launch', text('Nested task'), 'a'),
+      row('reply', 'a', 'root', 'Root answer'),
+      row('reply', 'n', 'a', 'Nested answer', 'a'),
+    ];
+    const changed = fold([
+      ...base,
+      partial('reply', 'Root revised'),
+      partial('reply', 'Nested revised', 'a'),
+    ]);
+    const [parent] = subagentsIn(changed.entries);
+
+    assert(parent !== undefined);
+
+    const [nested] = subagentsIn(parent.entries);
+
+    assert(nested !== undefined);
+    expect(parent.prompt).toBe('Parent task');
+    expect(nested.prompt).toBe('Nested task');
+    expect(
+      changed.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Parent task', 'Root revised']);
+    expect(
+      parent.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Nested task', 'Nested revised']);
+
+    const cleared = fold([partial('reply', null, 'a')], changed);
+    const [after] = subagentsIn(cleared.entries);
+
+    assert(after !== undefined);
+    expect(after.prompt).toBe('Parent task');
+    expect(
+      after.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Nested task']);
+    expect(
+      cleared.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Parent task', 'Root revised']);
+  });
+
+  test('removing rows before a plan leaves newly appended work after it', () => {
+    const plan: TranscriptAction = {
+      type: 'update',
+      turnId: TURN,
+      subagentId: 'a',
+      update: {
+        sessionUpdate: 'plan',
+        entries: [
+          {
+            content: 'Plan before new work',
+            priority: 'low',
+            status: 'pending',
+          },
+        ],
+      },
+    };
+    const after = (value: string): TranscriptAction => ({
+      type: 'update',
+      turnId: TURN,
+      subagentId: 'a',
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: value },
+      },
+    });
+    const { entries } = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      spawned('n', 'N', 'a'),
+      row('launch', 'a', 'n', 'Nested task', 'a'),
+      row('more', 'a', 'n', 'More work', 'a'),
+      plan,
+      partial('more', null, 'a'),
+      after('Work after plan'),
+      partial('launch', null, 'a'),
+    ]);
+    const [parent] = subagentsIn(entries);
+
+    assert(parent !== undefined);
+    expect(parent.planAt).toBe(1);
+    expect(parent.entries[0]?.kind).toBe('subagent');
+    expect(parent.entries[parent.planAt ?? 0]).toMatchObject({
+      kind: 'assistant',
+      text: 'Work after plan',
+    });
+    expect(parent.plan[0]?.content).toBe('Plan before new work');
+  });
+});
+
 const PROMPT: TranscriptAction = {
   type: 'prompt',
   turnId: TURN,

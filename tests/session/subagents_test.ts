@@ -56,6 +56,71 @@ const TURN = 't1';
 const FAKE = fakeAgentCommand(undefined, '--step-ms', '1');
 const RESUMING = fakeAgentCommand(undefined, '--step-ms', '1', '--resume-only');
 
+describe('CHD-561 tester: Claude nested message records', () => {
+  test('a fresh process replays root and nested rows with adapter-derived names intact', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-claude-rows-'));
+    const stateDir = join(dir, 'state');
+    const live: ConversationEvent[] = [];
+    const command = fakeAgentCommand(
+      undefined,
+      '--step-ms',
+      '1',
+      '--adapter',
+      'claude',
+      '--resume-only',
+    );
+
+    try {
+      const id = await recordSession({
+        stateDir,
+        cwd: dir,
+        command,
+        prompts: ['claudenested'],
+        heard: (event) => live.push(event),
+      });
+      const session = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: command,
+        resume: sessionById(await readRecords(stateDir), id, {
+          agent: 'fake',
+          cwd: dir,
+        }),
+      });
+
+      try {
+        const expected = fold(transcriptActions(live));
+        const replayed = pastOf(session);
+
+        expect(timed(replayed)).toEqual(timed(expected));
+        expect(shape(replayed.entries)).toEqual(shape(expected.entries));
+
+        const [parent] = subagentsIn(replayed.entries);
+
+        assert(parent !== undefined);
+
+        const [nested] = subagentsIn(parent.entries);
+
+        assert(nested !== undefined);
+        expect(parent.namedByTitle).toBe(true);
+        expect(nested.namedByTitle).toBe(true);
+        expect(parent.prompt).toBe('Review the session layer.');
+        expect(nested.prompt).toBe('Find the routing.');
+        expect(
+          parent.entries.filter((entry) => entry.kind === 'agent_message'),
+        ).toHaveLength(2);
+        expect(
+          replayed.entries.filter((entry) => entry.kind === 'agent_message'),
+        ).toHaveLength(2);
+      } finally {
+        await session.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('CHD-561 tester: standard Codex records and parent isolation', () => {
   test('a fresh process replays both child endings without adopting child title or config', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-codex-record-'));
@@ -1818,7 +1883,7 @@ describe('CHD-432 tester: independent Claude fixture lifetimes', () => {
 
         if (
           update.sessionUpdate === 'subagent_update' &&
-          update.title === 'tester (general-purpose)'
+          update.title === 'Run the test suite'
         ) {
           childId = update.sessionId;
         }

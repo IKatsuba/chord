@@ -403,9 +403,7 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
           await window.shows('Interrupted by user');
           await send(window, 'steps');
           await window.shows('150 steps read.');
-          expect(window.frame()).not.toContain(
-            'Agent(tester (general-purpose))',
-          );
+          expect(window.frame()).not.toContain('Agent(Run the test suite)');
           await window.press(DOWN);
           await window.press('\r');
           await window.shows('Background · 1 in this session');
@@ -419,7 +417,7 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
               const frame = window.frame();
 
               return (
-                frame.includes('Agent(tester (general-purpose))') &&
+                frame.includes('Agent(Run the test suite)') &&
                 !frame.includes('150 steps read.')
               );
             },

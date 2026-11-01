@@ -55,6 +55,7 @@ beforeEach(() => {
     JSON.stringify({ version: VERSION }),
   );
   writeFileSync(join(at.root, '.gitignore'), 'dist/\n');
+  nativeNotes(at.root);
 
   const origin = join(at.place, 'origin.git');
 
@@ -229,22 +230,16 @@ test('a dry run that did not pack says what it ran, and publishes nothing', asyn
 });
 
 test('a dry run that packs fetches and checks the archives, and makes no release', async () => {
-  nativeNotes(at.root);
-  git(at.root, 'add', '-A');
-  git(at.root, 'commit', '-q', '-m', 'natives');
   // Past the archives it fails on what this scratch has not built.
   await died(released({ dryRun: true, only: ['pack'] }));
 
   expect(
-    existsSync(join(at.root, 'dist', 'release', 'source', 'SHA256SUMS')),
+    existsSync(join(at.root, 'dist', 'release', 'source', 'zlib-1.3.2.tar.gz')),
   ).toBeTrue();
   expect(existsSync(join(at.place, 'gh.log'))).toBeFalse();
 });
 
 test('a bad archive stops a dry run before it packs anything', async () => {
-  nativeNotes(at.root);
-  git(at.root, 'add', '-A');
-  git(at.root, 'commit', '-q', '-m', 'natives');
   at.fake('curl', 'printf tampered >"${@: -2:1}"\n');
 
   expect(await died(released({ dryRun: true, only: ['pack'] }))).toContain(

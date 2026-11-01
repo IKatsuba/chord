@@ -21,7 +21,13 @@ import { authenticate } from '../../../../scripts/dev/release/authenticate.ts';
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
 import { publish } from '../../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
-import { executable, fetchedArchives } from './scratch.ts';
+import { parse } from 'shell-quote';
+import {
+  executable,
+  fetchedArchives,
+  nativeNotes,
+  SOURCE_NOTES,
+} from './scratch.ts';
 
 // The release's publishing, on the resume path, which publishes from the
 // packages a stopped run left without building again: npm faked on PATH, the
@@ -122,7 +128,7 @@ beforeEach(() => {
     join(repo, 'package.json'),
     JSON.stringify({ name: '@chorded/chord', version: VERSION }),
   );
-  writeFileSync(join(repo, '.gitignore'), 'dist/\n');
+  writeFileSync(join(repo, '.gitignore'), 'dist/\nnode_modules/\n');
 
   const tgz = join(repo, 'dist', 'release', 'tgz');
   const files = ['chord', ...PLATFORMS].map(
@@ -136,6 +142,7 @@ beforeEach(() => {
   }
 
   recordSums(tgz, files);
+  nativeNotes(repo);
   fetchedArchives(repo);
 
   git(place, 'init', '-q', '--bare', '-b', 'main', origin);
@@ -772,6 +779,31 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
     expect(made()).toStrictEqual([]);
   });
 
+  test('one archive gone stops before npm takes anything, whatever else lies there', async () => {
+    const dir = join(repo, 'dist', 'release', 'source');
+
+    rmSync(join(dir, 'zlib-1.3.2.tar.gz'));
+    writeFileSync(join(dir, 'SHA256SUMS'), '');
+
+    expect(await died(() => release())).toContain('zlib-1.3.2.tar.gz');
+    expect(isPublished('chord')).toBeFalse();
+    expect(made()).toStrictEqual([]);
+  });
+
+  test("archives of an older native package's notes stop before npm takes anything", async () => {
+    nativeNotes(
+      repo,
+      SOURCE_NOTES.replaceAll('ffmpeg-9.0.2', 'ffmpeg-9.0.3').replace(
+        /SHA-256: `[0-9a-f]{64}`/,
+        `SHA-256: \`${'a'.repeat(64)}\``,
+      ),
+    );
+
+    expect(await died(() => release())).toContain('ffmpeg-9.0.3');
+    expect(isPublished('chord')).toBeFalse();
+    expect(made()).toStrictEqual([]);
+  });
+
   test('a changed archive stops before npm takes anything', async () => {
     writeFileSync(
       join(repo, 'dist', 'release', 'source', 'zlib-1.3.2.tar.gz'),
@@ -788,7 +820,26 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
     const said = await died(() => release());
 
     expect(said).toContain('its draft release failed: gh broke');
-    expect(said).toContain(`gh release create ${TAG} --draft`);
+
+    const line = said.slice(said.indexOf('Finish it with: ') + 16);
+    const argv = parse(line) as string[];
+
+    expect(argv.slice(0, 10)).toStrictEqual([
+      'gh',
+      'release',
+      'create',
+      TAG,
+      '--draft',
+      '--verify-tag',
+      '--title',
+      `chord ${TAG}`,
+      '--notes',
+      '',
+    ]);
+    expect(argv.slice(10).map((file) => file.split('/').at(-1))).toStrictEqual([
+      'ffmpeg-9.0.2.tar.xz',
+      'zlib-1.3.2.tar.gz',
+    ]);
     expect(tagged(origin)).toContain(TAG);
   });
 

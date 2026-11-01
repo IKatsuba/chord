@@ -1,6 +1,5 @@
 import { createHash } from 'node:crypto';
 import { loadedNative } from '../../../../scripts/dev/compile.ts';
-import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import { TARGETS } from '../../../../scripts/targets.ts';
 import {
   chmodSync,
@@ -84,16 +83,12 @@ export function nativeNotes(root: string, notes = SOURCE_NOTES): void {
 /** What a pack run leaves in dist/release/source/ under `root`. */
 export function fetchedArchives(root: string): void {
   const dir = join(root, 'dist', 'release', 'source');
-  const files = [FFMPEG_URL, ZLIB_URL].map((url) => {
-    const file = url.slice(url.lastIndexOf('/') + 1);
 
-    mkdirSync(dir, { recursive: true });
-    writeFileSync(join(dir, file), fetched(url));
+  mkdirSync(dir, { recursive: true });
 
-    return file;
-  });
-
-  recordSums(dir, files);
+  for (const url of [FFMPEG_URL, ZLIB_URL]) {
+    writeFileSync(join(dir, url.slice(url.lastIndexOf('/') + 1)), fetched(url));
+  }
 }
 
 /**

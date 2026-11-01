@@ -85,22 +85,18 @@ describe('reading the archives a native package names', () => {
 });
 
 describe('fetching them', () => {
-  test('good sums keep both archives and record them', () => {
+  test('good sums keep both archives', () => {
     fetchSource(at.release);
 
     expect(
       fetchedSource(at.release).map((file) => file.split('/').at(-1)),
     ).toEqual(['ffmpeg-9.0.2.tar.xz', 'zlib-1.3.2.tar.gz']);
-    expect(
-      readFileSync(join(sourceDir(at.release), 'SHA256SUMS'), 'utf8'),
-    ).toContain('  zlib-1.3.2.tar.gz\n');
   });
 
   test('a sum that differs stops the release and keeps nothing that looks good', () => {
     at.fake('curl', 'printf tampered >"${@: -2:1}"\n');
 
     expect(died(() => fetchSource(at.release))).toContain('names');
-    expect(existsSync(join(sourceDir(at.release), 'SHA256SUMS'))).toBeFalse();
     expect(
       existsSync(join(sourceDir(at.release), 'ffmpeg-9.0.2.tar.xz')),
     ).toBeFalse();

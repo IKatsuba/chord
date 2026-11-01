@@ -15,8 +15,9 @@ import {
 import { basename, join } from 'node:path';
 import { loadedNative } from '../compile.ts';
 import { TARGETS } from '../../targets.ts';
+import { quote } from 'shell-quote';
 import { die, type Release, run, said } from './lib.ts';
-import { checkSum, recordSums, sha256, SUMS } from './sums.ts';
+import { sha256 } from './sums.ts';
 
 /** Where the fetched archives and their SHA256SUMS are. */
 export function sourceDir(release: Release): string {
@@ -74,9 +75,14 @@ function archives(release: Release): readonly SourceArchive[] {
   return named;
 }
 
+/** Where an archive lies once fetched, by the name in its address. */
+function archivePath(release: Release, { url }: SourceArchive): string {
+  return join(sourceDir(release), basename(new URL(url).pathname));
+}
+
 /**
- * Fetches the archives and records their sums. Each stays under a name of its
- * own until its sum holds, so a stop on the way leaves none that looks good.
+ * Fetches the archives. Each stays under a name of its own until its sum holds,
+ * so a stop on the way leaves none that looks good.
  */
 export function fetchSource(release: Release): void {
   const dir = sourceDir(release);
@@ -85,9 +91,10 @@ export function fetchSource(release: Release): void {
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
 
-  const files = named.map(({ url, sha256: wanted }) => {
-    const file = basename(new URL(url).pathname);
-    const part = join(dir, `${file}.part`);
+  for (const archive of named) {
+    const { url, sha256: wanted } = archive;
+    const path = archivePath(release, archive);
+    const part = `${path}.part`;
     const fetched = run(release, 'curl', [
       '--fail',
       '--silent',
@@ -109,37 +116,32 @@ export function fetchSource(release: Release): void {
       die(`${url} has sha256 ${sum}; FFMPEG-SOURCE.md names ${wanted}`);
     }
 
-    renameSync(part, join(dir, file));
-
-    return file;
-  });
-
-  recordSums(dir, files);
+    renameSync(part, path);
+  }
 }
 
-/** The archives a packed release holds, each as its sum recorded it. */
+/**
+ * The archives a packed release holds: every one the native packages name now,
+ * with the sum they name, whatever an earlier run left beside them.
+ */
 export function fetchedSource(release: Release): readonly string[] {
-  const dir = sourceDir(release);
-  const sums = join(dir, SUMS);
+  return archives(release).map((archive) => {
+    const path = archivePath(release, archive);
 
-  if (!existsSync(sums)) {
-    die(`no ${sums}: the source archives are fetched by the pack stage`);
-  }
-
-  const files = readFileSync(sums, 'utf8')
-    .split('\n')
-    .flatMap((line) => line.split('  ')[1] ?? [])
-    .map((file) => join(dir, file));
-
-  for (const file of files) {
-    if (!existsSync(file)) {
-      die(`no ${file} to attach to the release`);
+    if (!existsSync(path)) {
+      die(`no ${path}: the source archives are fetched by the pack stage`);
     }
 
-    checkSum(file);
-  }
+    const sum = sha256(path);
 
-  return files;
+    if (sum !== archive.sha256) {
+      die(
+        `${path} has sha256 ${sum}; FFMPEG-SOURCE.md names ${archive.sha256}`,
+      );
+    }
+
+    return path;
+  });
 }
 
 /**
@@ -183,7 +185,7 @@ export function draftRelease(
 
   if (made.status !== 0) {
     die(
-      `${tag} is on npm and tagged, but its draft release failed: ${said(made.stderr)}\nFinish it with: gh ${args.map((arg) => (arg === '' ? "''" : arg)).join(' ')}`,
+      `${tag} is on npm and tagged, but its draft release failed: ${said(made.stderr)}\nFinish it with: ${quote(['gh', ...args])}`,
     );
   }
 

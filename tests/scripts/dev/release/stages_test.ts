@@ -21,7 +21,13 @@ import {
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
 import { KINDS } from '../../../../scripts/dev/release/build.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
-import { executable, type Scratch, scratch } from './scratch.ts';
+import {
+  executable,
+  fetchedArchives,
+  nativeNotes,
+  type Scratch,
+  scratch,
+} from './scratch.ts';
 
 // A whole run's guards and their order, on a scratch repository with a bare
 // origin: npm, bun, security and xcrun faked, each logging what it was asked,
@@ -222,6 +228,45 @@ test('a dry run that did not pack says what it ran, and publishes nothing', asyn
   expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
 });
 
+test('a dry run that packs fetches and checks the archives, and makes no release', async () => {
+  nativeNotes(at.root);
+  git(at.root, 'add', '-A');
+  git(at.root, 'commit', '-q', '-m', 'natives');
+  // Past the archives it fails on what this scratch has not built.
+  await died(released({ dryRun: true, only: ['pack'] }));
+
+  expect(
+    existsSync(join(at.root, 'dist', 'release', 'source', 'SHA256SUMS')),
+  ).toBeTrue();
+  expect(existsSync(join(at.place, 'gh.log'))).toBeFalse();
+});
+
+test('a bad archive stops a dry run before it packs anything', async () => {
+  nativeNotes(at.root);
+  git(at.root, 'add', '-A');
+  git(at.root, 'commit', '-q', '-m', 'natives');
+  at.fake('curl', 'printf tampered >"${@: -2:1}"\n');
+
+  expect(await died(released({ dryRun: true, only: ['pack'] }))).toContain(
+    'FFMPEG-SOURCE.md names',
+  );
+  expect(ran().some((line) => line.startsWith('npm pack'))).toBeFalse();
+});
+
+test('skipping pack leaves publish to stop before npm takes anything', async () => {
+  packed();
+  rmSync(join(at.root, 'dist', 'release', 'source'), {
+    recursive: true,
+    force: true,
+  });
+  writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
+
+  expect(await died(released({ skip: ['pack'] }))).toContain(
+    'fetched by the pack stage',
+  );
+  expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
+});
+
 test('a run without publish prints no version', async () => {
   await released({ only: ['install'] });
 
@@ -230,6 +275,8 @@ test('a run without publish prints no version', async () => {
 
 /** Tarballs a stopped run left, their sums recorded. */
 function packed(): void {
+  fetchedArchives(at.root);
+
   const tgz = join(at.root, 'dist', 'release', 'tgz');
   const files = ['chord', ...PLATFORMS].map(
     (name) => `chorded-${name}-${VERSION}.tgz`,

@@ -10,7 +10,7 @@ import { dirname, join } from 'node:path';
 import { PACKAGES, ReleaseError } from '../../../../scripts/dev/release/lib.ts';
 import { pack } from '../../../../scripts/dev/release/pack.ts';
 import { checkSum } from '../../../../scripts/dev/release/sums.ts';
-import { type Scratch, scratch } from './scratch.ts';
+import { type Scratch, scratch, nativeNotes } from './scratch.ts';
 
 // Packing on fakes: bun lays out npm/, npm packs each package as its name and
 // installs a tarball as the binary built for it, codesign verifies and xattr
@@ -65,6 +65,7 @@ install)
 esac
 `,
   );
+  nativeNotes(at.root);
   at.fake('codesign', 'exit 0\n');
   at.fake('xattr', 'echo "$XATTR"\n');
 });

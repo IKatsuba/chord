@@ -4,7 +4,9 @@
  * and checks the installed copies as a user gets them: the same bytes as
  * built, a macOS one still verifying and not quarantined, and the arm64 one
  * self-tested through the shim, the x64 one under Rosetta. The tarballs then
- * go to dist/release/tgz/ with their sums recorded beside them, for publish.
+ * go to dist/release/tgz/ with their sums recorded beside them, for publish,
+ * and the source archives to dist/release/source/, fetched first, as a bad one
+ * stops the release.
  */
 import type { SpawnSyncOptions } from 'node:child_process';
 import {
@@ -20,6 +22,7 @@ import { die, npm, PACKAGES, type Release, run } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 import { tarballs } from './publish.ts';
 import { selftest } from './selftest.ts';
+import { fetchSource } from './source.ts';
 import { recordSums } from './sums.ts';
 
 /**
@@ -32,6 +35,7 @@ export async function pack(
 ): Promise<void> {
   const out = join(release.root, 'dist', 'release', 'packages');
 
+  fetchSource(release);
   await packages(release, out, test);
 
   const tgz = tarballs(release);

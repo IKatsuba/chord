@@ -299,11 +299,12 @@ export interface ListedBlock {
  * whether or not it is mounted: an assistant's reply, and a message, but a
  * monitor's; none for any other. Code drawn elsewhere, as an expanded tool
  * summary or the plan box, is found only while it is drawn (the lead's
- * choice on CHD-394).
+ * choice on CHD-394), and so is a launch's prompt: folded, it hides lines, and
+ * nothing off screen may be copied or run.
  */
 export function listedText(entry: Entry): string | undefined {
   return entry.kind === 'assistant' ||
-    entry.kind === 'agent_message' ||
+    (entry.kind === 'agent_message' && entry.launch !== true) ||
     (entry.kind === 'message' && entry.from.monitor === undefined)
     ? stripAnsi(entry.text)
     : undefined;

@@ -145,14 +145,21 @@
  * what `subagent` never reaches: the parent's plan beside a lone subagent of
  * five calls with a plan of its own, then a pair the parent waits on with a
  * call of its own, both finishing. `claudesubagents` sends four in ACP's
- * form as Claude's adapter does, each `subagent_update` titled by name and
- * role, open to a cancel of its own, its whole task a `session_message` on
- * its session: one waits on the person for a write (`requires_action`) and
+ * form as Claude's adapter does from 0.95, each `subagent_update` titled by
+ * its name, else its short task, its role as its description, open to a cancel
+ * of its own, its whole task both views of a `session_message` in place of the
+ * call that started it: one waits on the person for a write (`requires_action`) and
  * ends idle `end_turn`, one `error`, one `cancelled`, one `unknown`; a
  * cancel ends each still at work idle `cancelled`. `claudebackground` runs
  * one the turn waits on beside one in the background, which goes on about
  * 4 s, past the turn and past a cancel that stops only the first.
  * `claudeslowstop` is the same, its subagents taking about 2 s to stop alone.
+ * `claudelongprompt` launches one on a prompt over six rows, with a reply of
+ * two paragraphs; `claudesendrunning` messages one still at work, which comes
+ * as a call after all; `claudehandback` has one hand its report back, on both
+ * sessions, with no `:reply`; `claudefailed` has a lone one fail, saying why;
+ * `claudenoanswer` has one fail saying nothing and one stop; `claudenested`
+ * has one launch another and have its reply.
  * `claudebetween` starts one in the background that, about 2 s after the
  * turn has answered, asks to write a report and then asks a form, and
  * `mainbetween` has the session's own agent ask for a write about half a
@@ -472,6 +479,12 @@ const SCENARIOS = [
   'codexsubagents',
   'codexsubagentstop',
   'claudesubagents',
+  'claudelongprompt',
+  'claudesendrunning',
+  'claudehandback',
+  'claudenoanswer',
+  'claudefailed',
+  'claudenested',
   'claudebackground',
   'claudeslowstop',
   'claudemessage',

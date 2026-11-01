@@ -364,7 +364,7 @@ for (const size of [
       await window.press('\r');
       // At the transcript's end, it goes as high as scrolling allows.
       await until("the view to close on the watcher's own row", () =>
-        window.frame().includes('Agent(watcher'),
+        window.frame().includes('Agent(Watch the build'),
       );
       expect(window.frame()).not.toContain('Background ·');
     }, size));

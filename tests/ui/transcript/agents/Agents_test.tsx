@@ -90,9 +90,10 @@ test("Claude's subagents read as each ended, a failure's message and an untracke
       expect(frame).toContain('⎿  Untracked');
       expect(frame).toContain('⎿  Cancelled');
       expect(frame).toContain('⎿  Failed');
-      expect(frame).not.toContain('API Error');
+      // No call carries a failure's text any more, so it shows folded too.
+      expect(frame).toContain('API Error: 529 Overloaded');
       await window.press(CTRL_O);
-      await window.shows('API Error: 529 Overloaded');
+      await window.shows('The agent no longer reports');
 
       frame = window.frame();
 
@@ -108,7 +109,7 @@ test("ctrl+o shows a subagent's whole task, and a later message among its work, 
     async (window) => {
       await send(window, 'claudemessage');
       await window.shows('Both found.');
-      expect(window.frame()).not.toContain('Report the file');
+      expect(window.frame()).toContain('→ to Agent(Find the session layer)');
       await window.press(CTRL_O);
       await window.shows(
         'Report the file that owns the routing, with line numbers.',
@@ -116,12 +117,106 @@ test("ctrl+o shows a subagent's whole task, and a later message among its work, 
 
       const frame = window.frame();
 
-      expect(frame).not.toContain('Find the session layer');
       expect(frame).toContain('← from fake');
       expect(frame).toContain('⎿  Now find the tests that cover it.');
     },
     { rows: 80, columns: 120 },
   ));
+
+describe("Claude's session messages as rows in the parent (CHD-561)", () => {
+  for (const [rows, columns] of [
+    [40, 120],
+    [24, 80],
+  ] as const) {
+    test(`what was asked stands above the block and what came back under it, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudemessage');
+          await window.shows('Both found.');
+
+          const frame = window.frame();
+          const asked = frame.indexOf('→ to Agent(Find the session layer)');
+          const block = frame.indexOf('⏺ Agent(Find the session layer)');
+          const back = frame.indexOf('← from Agent(Find the session layer)');
+          const again = frame.lastIndexOf('→ to Agent(Find the session layer)');
+
+          expect(asked).toBeGreaterThanOrEqual(0);
+          expect(block).toBeGreaterThan(asked);
+          expect(back).toBeGreaterThan(block);
+          expect(again).toBeGreaterThan(back);
+          expect(frame).toContain('Routing lives in src/acp/connection.ts.');
+          expect(frame).toContain('Now find the tests that cover it.');
+          expect(frame).not.toContain('SendMessage');
+        },
+        { rows, columns },
+      ));
+  }
+
+  test('a launch prompt folds at six rows and ctrl+o unfolds it', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudelongprompt');
+        await window.shows('The handover holds.');
+        expect(window.frame()).toContain('… +3 lines');
+        expect(window.frame()).not.toContain('Check step 7');
+        await window.press(CTRL_O);
+        await window.shows('Check step 9');
+        expect(window.frame()).not.toContain('… +3 lines');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('agents launched together keep one group under all their rows', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudesubagents');
+        await window.shows('→ to Agent(Watch the build)');
+
+        const frame = window.frame();
+        const last = frame.lastIndexOf('→ to Agent(Watch the build)');
+
+        expect(last).toBeGreaterThanOrEqual(0);
+        expect(
+          frame.indexOf('→ to Agent(Find the session layer)'),
+        ).toBeLessThan(last);
+        expect(frame.indexOf('Running 4 agents')).toBeGreaterThan(last);
+      },
+      { rows: 60, columns: 120 },
+    ));
+
+  test("a failure's text shows folded under a block with a row, and not under one without", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudefailed');
+        await window.shows('It failed.');
+        expect(window.frame()).toContain('Failed');
+        expect(window.frame()).toContain('The build still fails.');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a failure that says nothing, and a stop, answer with no row', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudenoanswer');
+        await window.shows('Neither answered.');
+        expect(window.frame()).toContain('Failed');
+        expect(window.frame()).toContain('Cancelled');
+        expect(window.frame()).not.toContain('← from');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a message to a child at work stays the call the adapter still sends', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudesendrunning');
+        await window.shows('It is the relay.');
+        expect(window.frame()).toContain('SendMessage');
+      },
+      { rows: 40, columns: 120 },
+    ));
+});
 
 test('Esc leaves a subagent that can be cancelled alone at work until its agent says it ended', () =>
   withWindow(

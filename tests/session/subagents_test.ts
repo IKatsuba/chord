@@ -41,6 +41,7 @@ import {
   type Transcript,
   type TranscriptAction,
 } from '../../src/session/transcript/types.ts';
+import { toolUses } from '../../src/ui/transcript/agents/subagents.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { play, run, said } from '../fixtures/recorder.ts';
 import { recordSession } from '../fixtures/records.ts';
@@ -513,14 +514,14 @@ test("Claude's subagents fold to each end they report", () =>
         ...(error === undefined ? {} : { error }),
       })),
     ).toStrictEqual([
-      { title: 'explorer (Explore)', state: 'completed' },
+      { title: 'Find the session layer', state: 'completed' },
       {
-        title: 'reviewer (general-purpose)',
+        title: 'Review the transcript reducer',
         state: 'failed',
         error: 'API Error: 529 Overloaded',
       },
-      { title: 'tester (general-purpose)', state: 'cancelled' },
-      { title: 'watcher', state: 'untracked' },
+      { title: 'Run the tests', state: 'cancelled' },
+      { title: 'Watch the build', state: 'untracked' },
     ]);
   }));
 
@@ -590,8 +591,8 @@ test("Esc leaves Claude's background subagent at work on screen, and it ends as 
 
     expect(result).toMatchObject({ result: { status: 'cancelled' } });
     expect(subagents.map(({ title }) => title)).toStrictEqual([
-      'tester (general-purpose)',
-      'explorer (Explore)',
+      'Run the test suite',
+      'Find the cancel path',
     ]);
   }));
 
@@ -1031,6 +1032,41 @@ test("an agent that sends ACP's own subagent_update folds the same way", () =>
     ]);
   }));
 
+describe("Claude's session messages on the fake (CHD-561)", () => {
+  test('both views of a hand-back draw once, in the parent; the child keeps its own prompt', () =>
+    withSession(async (session) => {
+      const { entries } = fold(await play(session, 'claudehandback'));
+      const rows = entries.filter((entry) => entry.kind === 'agent_message');
+
+      expect(rows.map(({ direction, text }) => [direction, text])).toEqual([
+        ['to', 'Find the routing and hand it back.'],
+        ['from', 'The relay in connection.ts owns the routing.'],
+      ]);
+
+      const [child] = subagentsIn(entries);
+
+      assert(child !== undefined);
+      expect(child.title).toBe('explorer');
+      expect(child.prompt).toBe('Find the routing and hand it back.');
+      expect(child.entries).toStrictEqual([]);
+    }));
+
+  test('a nested launch counts as one tool use, and its messages stay in its parent', () =>
+    withSession(async (session) => {
+      const { entries } = fold(await play(session, 'claudenested'));
+      const [child] = subagentsIn(entries);
+
+      assert(child !== undefined);
+      expect(toolUses(child)).toBe(1);
+      expect(
+        child.entries.flatMap((entry) =>
+          entry.kind === 'agent_message' ? [entry.direction] : [],
+        ),
+      ).toStrictEqual(['to', 'from']);
+      expect(child.prompt).toBe('Review the session layer.');
+    }));
+});
+
 describe("subagents as Codex's adapter sends them from 2.4", () => {
   test('partial updates fold into one block each, its work and error kept', () =>
     withSession(async (session) => {
@@ -1189,7 +1225,7 @@ test("Claude's subagents come in ACP's own form, with their whole task, ending e
 
     expect(subagents.map(({ title, states }) => ({ title, states }))).toEqual([
       {
-        title: 'explorer (Explore)',
+        title: 'Find the session layer',
         states: [
           { state: 'running' },
           { state: 'requires_action' },
@@ -1198,7 +1234,7 @@ test("Claude's subagents come in ACP's own form, with their whole task, ending e
         ],
       },
       {
-        title: 'reviewer (general-purpose)',
+        title: 'Review the transcript reducer',
         states: [
           { state: 'running' },
           {
@@ -1209,14 +1245,14 @@ test("Claude's subagents come in ACP's own form, with their whole task, ending e
         ],
       },
       {
-        title: 'tester (general-purpose)',
+        title: 'Run the tests',
         states: [
           { state: 'running' },
           { state: 'idle', stopReason: 'cancelled' },
         ],
       },
       {
-        title: 'watcher',
+        title: 'Watch the build',
         states: [{ state: 'running' }, { state: 'unknown' }],
       },
     ]);
@@ -1293,14 +1329,14 @@ test("Claude's background subagent goes on past a cancel that stops the one the 
 
     expect(subagents).toStrictEqual([
       {
-        title: 'tester (general-purpose)',
+        title: 'Run the test suite',
         states: [
           { state: 'running' },
           { state: 'idle', stopReason: 'end_turn' },
         ],
       },
       {
-        title: 'explorer (Explore)',
+        title: 'Find the cancel path',
         states: [
           { state: 'running' },
           { state: 'idle', stopReason: 'cancelled' },
@@ -1315,7 +1351,7 @@ test("a cancel that comes before the next announcement leaves Claude's backgroun
 
     expect(result).toMatchObject({ result: { status: 'cancelled' } });
     expect(subagents[0]).toStrictEqual({
-      title: 'tester (general-purpose)',
+      title: 'Run the test suite',
       states: [{ state: 'running' }, { state: 'idle', stopReason: 'end_turn' }],
     });
   }));

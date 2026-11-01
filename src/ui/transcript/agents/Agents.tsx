@@ -228,7 +228,13 @@ function AgentBlock({
             <EndNote subagent={subagent} />
           </>
         ) : fold.kind === 'ended' ? (
-          <Outcome text={fold.text} failed={fold.failed} />
+          <>
+            <Outcome text={fold.text} failed={fold.failed} />
+            {/* With no call to carry it, this is all that says what broke. */}
+            {subagent.addressed === true && subagent.state === 'failed' && (
+              <EndNote subagent={subagent} />
+            )}
+          </>
         ) : fold.kind === 'starting' ? (
           <Outcome text='Initializing…' />
         ) : (
@@ -409,24 +415,31 @@ function AgentGroup({
                     <EndNote subagent={subagent} />
                   </>
                 ) : (
-                  <Under first>
-                    {line.kind === 'call' ? (
-                      <WorkLineText line={line.line} />
-                    ) : line.kind === 'starting' ? (
-                      <text {...FILL} attributes={DIM}>
-                        Initializing…
-                      </text>
-                    ) : (
-                      <text
-                        {...FILL}
-                        {...(line.ending.failed
-                          ? fg(error)
-                          : { attributes: DIM })}
-                      >
-                        {line.ending.word}
-                      </text>
-                    )}
-                  </Under>
+                  <>
+                    <Under first>
+                      {line.kind === 'call' ? (
+                        <WorkLineText line={line.line} />
+                      ) : line.kind === 'starting' ? (
+                        <text {...FILL} attributes={DIM}>
+                          Initializing…
+                        </text>
+                      ) : (
+                        <text
+                          {...FILL}
+                          {...(line.ending.failed
+                            ? fg(error)
+                            : { attributes: DIM })}
+                        >
+                          {line.ending.word}
+                        </text>
+                      )}
+                    </Under>
+                    {/* With no call to carry it, this is all that says what broke. */}
+                    {subagent.addressed === true &&
+                      subagent.state === 'failed' && (
+                        <EndNote subagent={subagent} />
+                      )}
+                  </>
                 )}
               </box>
             </box>

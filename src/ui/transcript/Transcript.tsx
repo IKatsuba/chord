@@ -1,6 +1,7 @@
 import { TextAttributes } from '@opentui/core';
 import { useGap } from './gap.ts';
 import { memo } from 'react';
+import stripAnsi from 'strip-ansi';
 import type {
   Compaction,
   Entry,
@@ -31,6 +32,7 @@ import { compactionLine, inSpinner } from './compaction.ts';
 import { endedLine } from './ended.ts';
 import { Reply } from './Reply.tsx';
 import {
+  foldedPrompt,
   inArrow,
   messageHeader,
   monitorMessage,
@@ -130,6 +132,8 @@ export const TranscriptEntry = memo(function TranscriptEntry({
           width={width}
         />
       );
+    case 'agent_message':
+      return <AgentMessage entry={entry} expanded={expanded} width={width} />;
     case 'assistant':
       return (
         <>
@@ -357,6 +361,58 @@ function ItemEnded({
  * the outgoing `→` row's do, so a long instruction reads as quoted next to
  * the agent's own bright replies.
  */
+/**
+ * What was said between the session's agent and a subagent of its, in the
+ * shape of any message's row, so the two never drift apart; a launch's prompt
+ * folds as a task's does.
+ */
+function AgentMessage({
+  entry,
+  expanded,
+  width,
+}: {
+  entry: Extract<Entry, { kind: 'agent_message' }>;
+  expanded: boolean;
+  width: number;
+}) {
+  const gap = useGap();
+  const name = entry.title === undefined ? 'Agent' : `Agent(${entry.title})`;
+  const colour = useAgentColour(name);
+  const key = useHintKey('app:toggleTranscript');
+  const to = entry.direction === 'to';
+  const folded =
+    to && entry.launch === true
+      ? foldedPrompt(stripAnsi(entry.text), Math.max(width - 5, 1), expanded)
+      : { text: entry.text, hidden: 0 };
+
+  return (
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Arrow glyph={to ? '→' : '←'} tone='plain' />
+          <text {...CUT}>
+            <span attributes={DIM}>{to ? 'to ' : 'from '}</span>
+            <span attributes={TextAttributes.BOLD} {...fg(colour)}>
+              <Ansi text={name} />
+            </span>
+          </text>
+        </box>
+        <MessageBody text={folded.text} width={width} />
+        {folded.hidden > 0 && (
+          <box flexDirection='row' paddingLeft={5}>
+            <text {...CUT} attributes={DIM}>
+              {`… +${folded.hidden} ${folded.hidden === 1 ? 'line' : 'lines'}${
+                key === undefined ? '' : ` (${key} to expand)`
+              }`}
+            </text>
+          </box>
+        )}
+      </box>
+    </>
+  );
+}
+
 function Message({
   from,
   text,

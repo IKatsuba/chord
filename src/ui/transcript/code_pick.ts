@@ -303,6 +303,7 @@ export interface ListedBlock {
  */
 export function listedText(entry: Entry): string | undefined {
   return entry.kind === 'assistant' ||
+    entry.kind === 'agent_message' ||
     (entry.kind === 'message' && entry.from.monitor === undefined)
     ? stripAnsi(entry.text)
     : undefined;

@@ -1,4 +1,10 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import {
+  GATE,
+  GATE_RELEASE,
+} from '../../../fixtures/fake_agent/scenarios/agents.ts';
 import { useState } from 'react';
 import { draw } from '../../harness.tsx';
 import stripAnsi from 'strip-ansi';
@@ -193,6 +199,8 @@ describe("Claude's session messages as rows in the parent (CHD-561)", () => {
         await window.press('b');
         await window.shows('bun test');
         await window.press(ESC);
+        await mkdir(join(window.dir, GATE), { recursive: true });
+        await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
         await window.shows('Long now.');
         await window.shows('… +');
         expect(window.frame()).not.toContain('[run]');

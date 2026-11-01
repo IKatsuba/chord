@@ -6,7 +6,7 @@ import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ADAPTER, STEERING, STEP_MS, STOP_GATE } from '../options.ts';
 import { cwds } from '../sessions.ts';
-import { GATE, GATE_RELEASE } from './agents.ts';
+import { GATE, GATE_RELEASE, gateOpened } from './agents.ts';
 import { lifetime, pause, type Play, Turn, type Update } from '../turn.ts';
 
 /**
@@ -1539,7 +1539,7 @@ export const SUBAGENTS = {
     );
 
     await turn.say('Short so far. ');
-    await pause(turn.signal, 800);
+    await gateOpened(turn, GATE_RELEASE);
     await linked(
       turn.client,
       launches.get(child.sessionId) ?? child.sessionId,

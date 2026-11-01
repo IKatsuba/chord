@@ -355,8 +355,11 @@ tool-use counts and a team's latest headline. Denied, timed-out or aborted
 reviews, or reviews with an unknown or missing structured status, keep the
 full `Guardian(Review)` block. This behavior has no setting.
 
-An Agent call shows its description; ctrl+o shows the subagent's whole task
-and work, with later messages as `← from <sender>` rows. A Claude subagent
+Claude launches and messages draw as `→ to Agent(<title>)` and
+`← from Agent(<title>)` rows in the parent. A launch prompt folds after six
+rows; ctrl+o opens it and the subagent's work. A clipped prompt offers no
+ctrl+x code actions until opened. Other Agent calls show their description;
+ctrl+o shows their whole task and work. A Claude subagent
 ends `Done`, `Failed` or `Cancelled` by the reason its agent reports;
 `Ended` means no known reason, and `Untracked` means the agent lost sight of
 it and it may still be working. ctrl+o shows any error or explanation.
@@ -1082,7 +1085,7 @@ JSON remains in the session record.
 
 Production readers try any installed version on `darwin-arm64`: Codex through
 its unmodified official PATH npm launcher or native binary, and native Claude
-Code through Agent SDK 0.3.311's experimental getter in an isolated worker.
+Code through Agent SDK 0.3.316's experimental getter in an isolated worker.
 The npm Codex launcher needs existing Node. Missing executables, unsupported
 targets, custom ACP commands and failed or malformed reads return unavailable
 reasons. Chord installs no provider and adds no login or credential reader.
@@ -1475,20 +1478,42 @@ it, without stopping it, into `heaps/` in chord's state directory, for
 Chrome's DevTools. `docs/memory.md` has how, and the long-run memory check
 (`bun dev memory`).
 
+### Rebuilding with a modified libopentui
+
+This procedure was tested only on macOS arm64 (`darwin-arm64`), with
+[OpenTUI v0.8.1](https://github.com/anomalyco/opentui/tree/v0.8.1) source
+and Zig 0.17.0. Install chord's dependencies with `bun install`, then in
+your OpenTUI source checkout:
+
+```sh
+bun install
+cd packages/native
+bun run build
+```
+
+After making your library changes and building, copy
+`packages/native/lib/aarch64-macos/libopentui.dylib` from that checkout over
+`node_modules/@opentui/core-darwin-arm64/libopentui.dylib` in your chord
+checkout, then run `bun dev compile` there. The rebuilt binary is in
+`dist/bun-darwin-arm64/chord` and will not carry chord's signature.
+
 ## Built on
 
 - [ACP Registry](https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json)
   — the agents chord knows by name, frozen into `src/registry.ts`, beside
   `src/clis.ts`'s agents started by their own CLI.
-- [OpenTUI](https://github.com/anomalyco/opentui) — the terminal interface, through
-  its React bindings.
+- [OpenTUI](https://github.com/anomalyco/opentui) 0.8.1 — the terminal interface,
+  through its React bindings.
 - [Agent Client Protocol SDK](https://github.com/agentclientprotocol/typescript-sdk)
-  — the connection to the agent, and the protocol types.
+  2.2.0 — the connection to the agent, and the protocol types.
 - [Cliffy](https://cliffy.io) — the command line.
 
 ## Licence
 
-chord's code is [MIT](../LICENSE).
+chord's code is [MIT](../LICENSE). Its binary includes FFmpeg under
+LGPL-2.1-or-later through OpenTUI. npm platform packages carry
+`LICENSE-FFMPEG`, `LICENSE-ZLIB` and `FFMPEG-SOURCE.md` beside chord's
+`LICENSE`. The source notice identifies the FFmpeg source and build options.
 
 The Chorded name and the chevron mark, which chord draws at the top of a
 session (`scripts/mark.svg`, and `src/ui/header/mark.ts` generated from it), are

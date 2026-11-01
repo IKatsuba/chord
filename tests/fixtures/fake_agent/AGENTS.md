@@ -31,8 +31,11 @@
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
   `subagents.ts` (`subagent`, `subagentupdate`, `subagentstates`,
-  `subagentstatesstay`, `subagentcall`,
-  `claudesubagents`, `claudebackground`, `claudemessage`, `claudewaiting`,
+  `subagentstatesstay`, `subagentcall`, `codexsubagents`, `codexsubagentstop`,
+  `claudesubagents`, `claudelongprompt`, `claudecodeprompt`, `claudepromptgrows`,
+  `claudewrapprompt`, `claudesendrunning`, `claudehandback`,
+  `claudeunsetlaunch`, `claudenoanswer`, `claudefailed`, `claudenested`,
+  `claudebackground`, `claudemessage`, `claudewaiting`,
   `claudenostop`, `claudeslowstop`, `claudebetween`),
   `chord_tools.ts`
   (`chordtools`, `cutcalls`, `cutcallsback`),
@@ -91,7 +94,10 @@
   `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
-  `claudesubagents`,
+  `codexsubagents`, `codexsubagentstop`, `claudesubagents`,
+  `claudelongprompt`, `claudecodeprompt`, `claudepromptgrows`,
+  `claudewrapprompt`, `claudesendrunning`, `claudehandback`,
+  `claudeunsetlaunch`, `claudenoanswer`, `claudefailed`, `claudenested`,
   `claudebackground`, `claudemessage`, `claudewaiting`, `claudenostop`,
   `claudeslowstop`, `chordtools`, `codexchordcalls`, `codexmodels`,
   `settingsread`, `settingsreadkey`, `settingsreadbad`,
@@ -344,7 +350,7 @@
   dimcode's `permission` option, starting at the given `read-only`,
   `workspace-write` or `full-access`; `fullaccess` changes it to
   `full-access` through `config_option_update`;
-  `subagent` runs subagents in Codex's draft form, sent to a
+  `subagent` runs subagents in Codex's pre-2.4 draft form, sent to a
   client that declares `clientCapabilities.subagents` (`subagent_spawned`,
   `subagent_state_update`, each subagent's work under its own session id,
   opaque and never one an earlier fake process gave, as after a resume):
@@ -353,17 +359,29 @@
   line of the parent's, a third alone that runs on about 2 s past the turn's
   answer; a cancel ends each still
   open `cancelled` before the answer; `subagentupdate` sends one in ACP's
-  own `subagent_update`, running then idle; `subagentstates` reaches what
-  `subagent` does not: the parent's own plan beside a lone subagent with a
+  own `subagent_update`, running then idle; `codexsubagents` sends two as
+  Codex 2.4+ does, announced without state, then partial updates, one done
+  and renamed, one failed; `codexsubagentstop` works until individually or
+  parent-cancelled. `subagentstates` reaches what `subagent` does not: the parent's own plan beside a lone subagent with a
   plan of its own and five calls, held about 2 s, then a pair spawned back
-  to back that the parent waits on with a call of its own, as Codex's
-  adapter does, both finishing; `subagentstatesstay` holds the pair at work
+  to back that the parent waits on with a call of its own, both finishing; `subagentstatesstay` holds the pair at work
   until cancelled, at most 10 s, so Esc meets both running;
-  `claudesubagents` sends four in Claude 0.93's ACP form, `subagent_update`,
-  with cancel capabilities and whole tasks as `session_message`: one asks
+  `claudesubagents` sends four in Claude 0.95+'s ACP form, `subagent_update`,
+  titled by name or short task, with the role as description, cancel
+  capabilities and linked `session_message` tasks on both sessions: one asks
   permission (`requires_action`) and ends idle `end_turn`, one `error`,
   one `cancelled`, one `unknown`. Esc ends those still working idle
-  `cancelled`; `claudebackground` starts a foreground and a background
+  `cancelled`. `claudelongprompt` sends a launch over six rows and a
+  two-paragraph reply; `claudecodeprompt` puts code above the fold;
+  `claudepromptgrows` lengthens a short code prompt past it after the gate
+  opens; `claudewrapprompt` fits wide and folds narrow. `claudesendrunning`
+  sends to a working child as a tool call; `claudehandback` reports on both
+  sessions without `:reply`; `claudefailed` gives a failure reason;
+  `claudenoanswer` fails one silently and stops another; `claudenested`
+  launches a child's child and replies. `claudeunsetlaunch` plays the order
+  seen live with `run_in_background` unset: a launch `:reply` acknowledges
+  launch while the child runs, then a separate hand-back reports its answer.
+  `claudebackground` starts a foreground and a background
   subagent together; the background one runs about 4 s past the turn and
   past Esc, which stops only the foreground one. `claudemessage` messages
   an ended subagent again, and it works once more; `claudewaiting` holds
@@ -471,21 +489,19 @@
   `CHORD_FAKE_REFUSE_FORK=1` refuses the advertised method;
   `CHORD_FAKE_HANG_FORK=1` leaves it unanswered. These fixtures prove transport
   and lifecycle behavior, not live cross-process context inheritance.
-  `--steering claude` or `--steering codex` (`CHORD_FAKE_STEERING`)
-  advertises `_session/steering` and answers it as that adapter does: into
-  the turn playing, `injected`, read at its next step or as it ends with
-  `Read the message from <sender>.`, then its images' and links' `Received`
-  lines; with none, Claude's `promptRequired`
-  where the request asks for it, else, and always for Codex, a turn of the
-  agent's own, `startedNewTurn`, answered before that turn says anything,
-  as Codex's adapter answers once it has started. Without the flag it
-  advertises nothing and refuses the method. With `--steering`, `--steer-refuse`
-  (`CHORD_FAKE_STEER_REFUSE=1`) answers every steer with `promptRequired`,
-  whether a turn is running or not. `--steer-late`
-  (`CHORD_FAKE_STEER_LATE=1`) lands a steer only once the turn playing has
-  answered, as one that meets a turn's
-  end does, Codex's answering a while after; as Codex's, a prompt that comes
-  while a turn plays opens with `Started alongside a turn still playing.`.
+  `--steering claude`, `--steering codex24` or `--steering codex`
+  (`CHORD_FAKE_STEERING`) advertises `_session/steering`: during a turn it
+  answers `injected`, read at the next step or the end with
+  `Read the message from <sender>.`, then images' and links' `Received`
+  lines. With no turn, `claude` and `codex24` honor `promptRequired` where
+  asked; otherwise they start a turn and answer `startedNewTurn` before
+  it speaks. `codex` ignores `promptRequired`, as codex-acp before 2.4 did,
+  covering an adapter that advertises steering but starts an idle turn.
+  Without the flag the method is unadvertised and refused. `--steer-refuse`
+  (`CHORD_FAKE_STEER_REFUSE=1`) answers every steer `promptRequired`.
+  `--steer-late` (`CHORD_FAKE_STEER_LATE=1`) lands it after the turn ends;
+  `codex` answers a while later. With `codex`, a prompt during a turn opens
+  with `Started alongside a turn still playing.`.
   `--adapter claude` (`CHORD_FAKE_ADAPTER=claude`) names it in `initialize`
   as Claude's adapter without steering as it, which chord runs cycles of the
   agent's own for (CHD-426). `claudecycle`, `claudecyclebare` and

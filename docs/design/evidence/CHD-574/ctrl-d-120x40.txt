@@ -1,0 +1,40 @@
+$ bun src/main.tsx acp fake --agent-command 'bun tests/fixtures/fake_agent/main.ts'
+chord: acp serves ACP on stdin and stdout, for a client that starts it.
+chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` opens a window.
+hello
+{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}
+{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}
+{"jsonrpc":"2.0","id":1,"result":{"protocolVersion":1,"agentInfo":{"name":"chord","version":"0.67.0"},"authMethods":[],"
+agentCapabilities":{"loadSession":true,"promptCapabilities":{"image":true,"audio":false,"embeddedContext":false},"mcpCap
+abilities":{"http":true,"sse":true},"sessionCapabilities":{"list":{},"resume":{},"close":{}}},"_meta":{"chord/acp":{"ver
+sion":1,"extensions":{},"agent":{"name":"fake"}}}}}
+$ echo EXIT=$?
+EXIT=0
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

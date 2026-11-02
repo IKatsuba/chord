@@ -1062,3 +1062,81 @@ describe('publishing a stable version', () => {
     expect(lines('gh.log').join('\n')).not.toContain('--prerelease');
   });
 });
+
+describe.each(['next', 'beta'])(
+  'tester: CHD-577 publishing failure boundaries on %s',
+  (channel) => {
+    const version = `10.0.0-${channel}.9`;
+    const tag = `v${version}`;
+    const publishes = () =>
+      lines('npm.log').filter((line) => line.startsWith('publish '));
+
+    beforeEach(() => {
+      git(repo, 'checkout', '-q', '-b', channel);
+      writeFileSync(
+        join(repo, 'package.json'),
+        JSON.stringify({ name: '@chorded/chord', version }),
+      );
+      git(repo, 'commit', '-q', '-am', `chore: chord v${version}`);
+      git(repo, 'push', '-q', 'origin', channel);
+
+      const tgz = join(repo, 'dist', 'release', 'tgz');
+      const files = PACKAGES.map((name) => `chorded-${name}-${version}.tgz`);
+
+      for (const file of files) {
+        writeFileSync(join(tgz, file), file);
+      }
+
+      recordSums(tgz, files);
+    });
+
+    test('a late platform is published once with its tag before the main package', async () => {
+      writeFileSync(join(state, 'late', 'chord-linux-x64'), '2');
+
+      expect(await release()).toBeTrue();
+      expect(sleeps).toEqual([15_000, 15_000]);
+      expect(publishes()).toHaveLength(4);
+      expect(
+        publishes().every((line) => line.endsWith(` --tag ${channel}`)),
+      ).toBeTrue();
+      expect(publishes().at(-1)).toContain(`chorded-chord-${version}.tgz`);
+      expect(git(origin, 'tag', '--list', tag)).toBe(tag);
+      expect(lines('gh.log').at(-1)).toContain('--draft --prerelease');
+    });
+
+    test('a platform that never answers prevents main publication, tagging and drafting', async () => {
+      writeFileSync(join(state, 'late', 'chord-linux-x64'), '1000');
+
+      expect(await died(() => release())).toContain(
+        `@chorded/chord-linux-x64@${version} did not answer npm view in 15 minutes`,
+      );
+      expect(
+        publishes().every((line) => line.endsWith(` --tag ${channel}`)),
+      ).toBeTrue();
+      expect(isPublished('chord')).toBeFalse();
+      expect(sleeps).toHaveLength(59);
+      expect(git(origin, 'tag', '--list', tag)).toBe('');
+      expect(
+        lines('gh.log').some((line) => line.startsWith('release ')),
+      ).toBeFalse();
+    });
+
+    test('a failed publish retains the channel argument and stops before later packages', async () => {
+      executable(
+        join(bin, 'npm'),
+        NPM.replace('publish)\n', 'publish)\n\techo refused >&2\n\texit 2\n'),
+      );
+
+      expect(await died(() => release())).toContain('npm publish of');
+      expect(publishes()).toEqual([
+        `publish --access public ${join(repo, 'dist', 'release', 'tgz', `chorded-chord-darwin-x64-${version}.tgz`)} --tag ${channel}`,
+      ]);
+      expect(isPublished('chord-darwin-x64')).toBeFalse();
+      expect(isPublished('chord')).toBeFalse();
+      expect(git(origin, 'tag', '--list', tag)).toBe('');
+      expect(
+        lines('gh.log').some((line) => line.startsWith('release ')),
+      ).toBeFalse();
+    });
+  },
+);

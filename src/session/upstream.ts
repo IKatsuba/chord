@@ -33,18 +33,24 @@ export const FROM = 'chord/from';
 /** The `_meta` key on what chord says of a subagent beyond ACP's words. */
 export const AGENT = 'chord/agent';
 
-const NEEDS: Readonly<
-  Record<string, (capabilities: ClientCapabilities) => unknown>
-> = {
-  subagent_update: (capabilities) => capabilities.subagents,
-  session_message: (capabilities) => capabilities.subagents,
-  session_message_chunk: (capabilities) => capabilities.subagents,
-  plan_update: (capabilities) => capabilities.plan,
-  plan_removed: (capabilities) => capabilities.plan,
-  compaction_update: (capabilities) => capabilities.session?.compaction,
-  compaction_summary_chunk: (capabilities) => capabilities.session?.compaction,
-  notice: (capabilities) => capabilities.session?.notices,
-};
+// Maps, as these are looked up by words off the wire: an object would find
+// `toString` on its prototype.
+const NEEDS: ReadonlyMap<
+  string,
+  (capabilities: ClientCapabilities) => unknown
+> = new Map<string, (capabilities: ClientCapabilities) => unknown>([
+  ['subagent_update', (capabilities) => capabilities.subagents],
+  ['session_message', (capabilities) => capabilities.subagents],
+  ['session_message_chunk', (capabilities) => capabilities.subagents],
+  ['plan_update', (capabilities) => capabilities.plan],
+  ['plan_removed', (capabilities) => capabilities.plan],
+  ['compaction_update', (capabilities) => capabilities.session?.compaction],
+  [
+    'compaction_summary_chunk',
+    (capabilities) => capabilities.session?.compaction,
+  ],
+  ['notice', (capabilities) => capabilities.session?.notices],
+]);
 
 /** The v1 schema's kinds that need nothing declared. */
 const OPEN = new Set([
@@ -74,7 +80,7 @@ export function reaches(
     return false;
   }
 
-  const needs = NEEDS[kind];
+  const needs = NEEDS.get(kind);
 
   return needs === undefined ? OPEN.has(kind) : Boolean(needs(capabilities));
 }
@@ -135,19 +141,21 @@ export function upstreamIdOf(session: UpstreamSession, id: string): string {
     : (session.children.get(id) ?? id);
 }
 
-const ENDED_AS: Readonly<Record<string, StateUpdate>> = {
-  completed: { state: 'idle', stopReason: 'end_turn' },
-  failed: { state: 'idle', stopReason: 'error' },
-  cancelled: { state: 'idle', stopReason: 'cancelled' },
-  disconnected: { state: 'unknown' },
-};
+const ENDED_AS: ReadonlyMap<string, StateUpdate> = new Map<string, StateUpdate>(
+  [
+    ['completed', { state: 'idle', stopReason: 'end_turn' }],
+    ['failed', { state: 'idle', stopReason: 'error' }],
+    ['cancelled', { state: 'idle', stopReason: 'cancelled' }],
+    ['disconnected', { state: 'unknown' }],
+  ],
+);
 
 /** A subagent's update with the adapters' draft state words as ACP's. */
 function acpStateWords(
   update: SessionUpdate & { sessionUpdate: 'subagent_update' },
 ): SessionUpdate {
   const word = update.state?.state;
-  const state = word === undefined ? undefined : ENDED_AS[word];
+  const state = word === undefined ? undefined : ENDED_AS.get(word);
 
   return state === undefined
     ? update

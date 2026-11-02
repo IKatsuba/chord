@@ -85,6 +85,9 @@ describe('what is not sent', () => {
 
   test('a kind the v1 schema lacks never goes', () => {
     expect(reaches(ALL, 'never_heard_of', false)).toBe(false);
+    expect(reaches(ALL, 'toString', false)).toBe(false);
+    expect(reaches(ALL, 'constructor', false)).toBe(false);
+    expect(reaches(ALL, '__proto__', false)).toBe(false);
     expect(reaches(ALL, 'current_mode_update', false)).toBe(false);
   });
 });
@@ -218,8 +221,15 @@ describe('subagent state words', () => {
     });
   }
 
-  for (const word of ['running', 'idle', 'requires_action', 'unknown']) {
-    test(`ACP's ${word} goes as it is`, () => {
+  for (const word of [
+    'running',
+    'idle',
+    'requires_action',
+    'unknown',
+    'toString',
+    'constructor',
+  ]) {
+    test(`the word ${word} goes as it is`, () => {
       const { notification } = mapUpdate(upstreamSession('s1'), ALL, {
         sessionUpdate: 'subagent_update',
         sessionId: 'c',

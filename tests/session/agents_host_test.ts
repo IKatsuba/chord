@@ -93,13 +93,12 @@ function hosted(
       stateDir: join(dir, 'state'),
       open: () => Promise.resolve(held()),
       server: undefined,
-      view: () => ({ offer: host.offer }) as WindowView,
+      resume: undefined,
       ...options,
-      conversation: (_, emit) =>
-        new Conversation(() => Promise.resolve(held()), emit),
     },
     {
       heard: (key, event) => heard.push([key, event]),
+      replayed: (_, replay) => replay(),
       closingHeard: () => {},
       told: (event) => told.push(event),
       stateOf: () => undefined,
@@ -1002,5 +1001,153 @@ Lead it.
     expect(told).toEqual([]);
 
     await host.sessions.closeAll();
+  });
+});
+
+describe("what chord's server reads", () => {
+  test('main opens through the host, and each event is watched before it is heard', async () => {
+    const order: string[] = [];
+    const { host } = hosted(
+      {},
+      {
+        watched: (id, _, event) => {
+          if (event.type === 'connected') {
+            order.push(`watched ${id}`);
+          }
+        },
+        heard: (at, event) => {
+          if (event.type === 'connected') {
+            order.push(`heard ${at}`);
+          }
+        },
+      },
+    );
+    const key = host.sessions.start('fake')!;
+
+    await until(() => order.length === 2);
+
+    expect(order).toEqual([`watched main:${key}`, `heard ${key}`]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('the first session resumes what was asked, the next what is picked', async () => {
+    const asked: unknown[] = [];
+    const resume = { agent: 'fake', sessionId: 'old', cwd: dir } as const;
+    const { host, heard } = hosted(
+      {},
+      {},
+      {
+        resume,
+        open: (options) => {
+          asked.push(options.resume);
+
+          return Promise.resolve(held());
+        },
+      },
+    );
+    const key = host.sessions.start('fake')!;
+
+    await until(() => heard.some(([, event]) => event.type === 'connected'));
+
+    const next = { ...resume, sessionId: 'next' };
+
+    host.resumeNext(next);
+    await host.conversationAt(key)!.clear();
+    await until(() => asked.length === 2);
+
+    expect(asked).toEqual([resume, next]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a replay goes through the port', async () => {
+    const replays: number[] = [];
+    const session = Object.assign(held(), {
+      history: () => [{ type: 'prompt', turnId: 'old', text: 'past', at: 1 }],
+    });
+    const { host, heard } = hosted(
+      {},
+      {
+        replayed: (key, replay) => {
+          replays.push(key);
+          replay();
+        },
+      },
+      { open: () => Promise.resolve(session as never) },
+    );
+    const key = host.sessions.start('fake')!;
+
+    await until(() => heard.some(([, event]) => event.type === 'connected'));
+
+    expect(replays).toEqual([key]);
+    expect(heard.some(([, event]) => event.type === 'prompt')).toBe(true);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a saved setting is told with what the driver can take up', () => {
+    const { host, told } = hosted();
+
+    host.view.settingSaved(['theme'], { set: 'light' });
+
+    expect(told).toEqual([
+      { type: 'setting_saved', picked: { key: 'theme', theme: 'light' } },
+    ]);
+  });
+
+  test('sessions lists main with its children and each fork beside it', async () => {
+    const { host, key, open } = await withMain();
+
+    open('one');
+    open('fork', { forkedFrom: 'main' });
+
+    expect(host.view.sessions()).toMatchObject([
+      { key, runtime: 'fake', children: [{ id: 'one', name: 'one' }] },
+      { runtime: 'fake', children: [] },
+    ]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a caller already let go is refused by every tool that acts', async () => {
+    const { host, key, told } = await withMain();
+    const stale: Caller = {
+      role: 'child',
+      key,
+      agent: 'gone',
+      window: host.view,
+      launch: {
+        valid: () => false,
+        signal: () => new AbortController().signal,
+      },
+    };
+
+    expect(host.view.tell(stale, 'x', 'y', () => {})).toEqual(host.STALE);
+    expect(host.view.message(stale, 'y', () => {})).toEqual(host.STALE);
+    expect(host.view.close(stale, 'x')).toEqual(host.STALE);
+    expect(await host.view.clear(stale, 'x')).toEqual(host.STALE);
+    expect(
+      await host.view.spawn(stale, { agent: 'fake', prompt: 'p' }),
+    ).toEqual(host.STALE);
+    expect(
+      await host.view.openMember(stale, { member: 'm', prompt: 'p' }),
+    ).toEqual(host.STALE);
+    expect(host.view.served(stale, {} as never)).toBeUndefined();
+    expect(told).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('the settings box is held by one change at a time', () => {
+    const { host } = hosted();
+    const release = host.view.claimSettingsBox();
+
+    expect(release).toBeDefined();
+    expect(host.view.claimSettingsBox()).toBeUndefined();
+
+    release!();
+
+    expect(host.view.claimSettingsBox()).toBeDefined();
   });
 });

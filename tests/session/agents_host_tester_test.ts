@@ -6,7 +6,6 @@ import {
   createAgentsHost,
   type AgentsEvent,
 } from '../../src/session/agents_host.ts';
-import type { WindowView } from '../../src/server/tools.ts';
 import {
   Conversation,
   type ConversationEvent,
@@ -30,15 +29,14 @@ describe('CHD-580 layer 1 tester: independent closing sessions', () => {
         runtimes: ['fake'],
         home: undefined,
         configHome: undefined,
-        stateDir: undefined,
+        stateDir: join(tmpdir(), 'chord-host-tester-no-record'),
         open: () => Promise.resolve(heldSession().session),
         server: undefined,
-        view: () => ({}) as WindowView,
-        conversation: (_, emit) =>
-          new Conversation(() => Promise.resolve(heldSession().session), emit),
+        resume: undefined,
       },
       {
         heard: () => {},
+        replayed: (_, replay) => replay(),
         closingHeard: () => {},
         told: (event) => told.push(event),
         stateOf: () => undefined,
@@ -85,18 +83,14 @@ describe('CHD-580 layer 1 tester: independent closing sessions', () => {
           runtimes: ['fake'],
           home: undefined,
           configHome: undefined,
-          stateDir: undefined,
+          stateDir: join(dir, 'state'),
           open: () => Promise.resolve(heldSession().session),
           server: undefined,
-          view: () => ({}) as WindowView,
-          conversation: (_, emit) =>
-            new Conversation(
-              () => Promise.resolve(heldSession().session),
-              emit,
-            ),
+          resume: undefined,
         },
         {
           heard: (key, event) => heard.push([key, event]),
+          replayed: (_, replay) => replay(),
           closingHeard: (key, event) => closing.push([key, event]),
           told: (event) => told.push(event),
           stateOf: () => ({

@@ -21,8 +21,6 @@ import {
 import { andList, createAgentsHost } from '../../session/agents_host.ts';
 import { closeOnForcedExit } from '../../session/leaving.ts';
 import type { Place } from '../../session/place.ts';
-import type { Session } from '../../session/session.ts';
-import { settingPickedUp } from '../../session/setting_picked_up.ts';
 import {
   type ListedTeam,
   ranNote,
@@ -32,15 +30,12 @@ import {
   type TeamRun,
 } from '../../session/team_command.ts';
 import type { ChordServer } from '../../server/server.ts';
-import type { Caller, WindowView } from '../../server/tools.ts';
-import { settingsBoxClaim } from '../../server/tools.ts';
 import { teamDirs } from '../../teams.ts';
 import type {
   ChordCall,
   TeamAgentShown,
   TeamShown,
 } from '../../session/transcript/types.ts';
-import { FileRecording } from '../../session/record.ts';
 import {
   type EarlierSession,
   earlierSessions,
@@ -50,11 +45,6 @@ import {
   type SessionRecord,
 } from '../../session/sessions.ts';
 import { chordStateDir } from '../../session/state_dir.ts';
-import {
-  monitorsIn,
-  startMonitorIn,
-  stopMonitorIn,
-} from '../../session/window_monitors.ts';
 import type { AgentWait } from '../../session/waits.ts';
 import {
   agentOf,
@@ -214,9 +204,6 @@ export function useSessions(
 ) {
   const { all, state, dispatch, redraw, showDraft, stopCommand } = host;
   const { exit } = useApp();
-  // The session main opens next resumes: the one `--resume` asks for, and
-  // each `/resume` picks; the one `/clear` opens is new.
-  const resuming = useRef<Resume | undefined>(resume);
   /** What a session replaying its past has said, by its key, so far. */
   const replays = new Map<number, ConversationEvent[]>();
   /**
@@ -344,112 +331,6 @@ export function useSessions(
     void noticeGate.current.dismiss(id);
   };
 
-  const conversationOf = (
-    agent: string,
-    emit: (event: ConversationEvent) => void,
-    key: number,
-  ) => {
-    const { cwd, mcpServers, startupOf } = place;
-    const {
-      agentCommand,
-      starting,
-      refused,
-      mcpServers: takes,
-    } = startupOf(agent) ?? {};
-    let releaseCurrentCaller = () => {};
-
-    const conversation = new Conversation(
-      (signal) => {
-        if (refused !== undefined) {
-          throw new Error(refused);
-        }
-
-        const next = resuming.current;
-        // A token for each session main opens, `/clear`'s included, good
-        // until that session's agent has gone.
-        let live = true;
-        const launch = {
-          valid: () => live,
-          signal: () => conversation.launchSignal,
-        };
-        const admitted = server?.admit({
-          role: 'person',
-          key,
-          window: view,
-          launch,
-        });
-
-        releaseCurrentCaller();
-
-        // A cleared or closing session's calls stop now, not once its
-        // process has gone (CHD-476).
-        releaseCurrentCaller = () => {
-          live = false;
-
-          if (admitted !== undefined) {
-            server?.revoke(admitted.token);
-          }
-        };
-
-        const options = {
-          agent,
-          cwd,
-          signal,
-          ...(agentCommand === undefined ? {} : { agentCommand }),
-          ...(next === undefined ? {} : { resume: next }),
-          ...(mcpServers.length === 0
-            ? {}
-            : { mcpServers: mcpServers.map(({ server }) => server) }),
-          ...(admitted === undefined ? {} : { chordServer: admitted.server }),
-          ...(takes === false ? { noMcpServers: true } : {}),
-        };
-
-        resuming.current = undefined;
-
-        const revoke = () => {
-          live = false;
-
-          if (admitted !== undefined) {
-            server?.revoke(admitted.token);
-          }
-        };
-
-        return open(options).then(
-          (session: Session) => {
-            void session.exited.finally(revoke);
-
-            return session;
-          },
-          (error: unknown) => {
-            revoke();
-
-            throw error;
-          },
-        );
-      },
-      (event) => {
-        if (event.type === 'cleared' || event.type === 'closing') {
-          releaseCurrentCaller();
-        }
-
-        watchNotice(`main:${key}`, agent, event);
-        emit(event);
-      },
-      Date.now,
-      starting,
-      new FileRecording(stateDir ?? chordStateDir(), (message) =>
-        emit({
-          type: 'failed',
-          turnId: `record-${crypto.randomUUID()}`,
-          message,
-        }),
-      ),
-      (replay) => replayed(key, replay),
-    );
-
-    return conversation;
-  };
-
   const [agentsHost] = useState(() =>
     createAgentsHost(
       {
@@ -460,11 +341,12 @@ export function useSessions(
         stateDir,
         open,
         server,
-        view: () => view,
-        conversation: conversationOf,
+        resources,
+        resume,
       },
       {
         heard: (key, event, wait) => hear.current(key, event, wait),
+        replayed,
         closingHeard: (key, event) => {
           if (!retiredHeard(key, event)) {
             dispatch({ type: 'closing_heard', key, event });
@@ -479,6 +361,15 @@ export function useSessions(
               });
             case 'agents_unfocused':
               return dispatch({ type: 'agents_focused', focused: false });
+            case 'setting_saved':
+              for (const action of settingActions(event.picked, {
+                runtimes: runtimeNames,
+                listed: listedAgents,
+              })) {
+                dispatch(action);
+              }
+
+              return;
             default:
               return dispatch(event);
           }
@@ -512,16 +403,14 @@ export function useSessions(
   );
   const {
     sessions,
+    view,
+    resumeNext,
     conversation,
     conversationAt,
     front,
-    childOf,
-    callerConversation,
     closeRuntimes,
-    offer,
     teamsAt,
     shownTeamFile,
-    teamPlaces,
     runs,
     parentOf,
     keepSpend,
@@ -529,202 +418,14 @@ export function useSessions(
     dropChild,
     clearedHeard,
     MAIN,
-    tell,
-    closeAgent,
     clearByPerson,
-    clearAgent,
-    message,
-    children,
     startRefusal,
     childConversation,
-    stale,
-    STALE,
-    spawn,
     captureLaunch,
     startChild,
     fullRefusal,
-    openAgent,
     runTeamAt,
-    openMember,
   } = agentsHost;
-  // The window's, as `view` is made anew with each draw.
-  const settingsBox = useRef(settingsBoxClaim());
-
-  /** What chord's MCP server reads of the window, when a session calls. */
-  const view: WindowView = {
-    ...(resources === undefined
-      ? {}
-      : {
-          budgets: (caller: Caller, agents?: readonly string[]) =>
-            resources(
-              agents,
-              {
-                cwd: place.cwd,
-                commandOf: (runtime) => place.startupOf(runtime)?.agentCommand,
-              },
-              caller.signal ?? new AbortController().signal,
-            ),
-        }),
-    sessions: () => {
-      const agents = front();
-      const session = agents?.main.conversation.session;
-
-      return agents === undefined
-        ? []
-        : [
-            {
-              key: agents.main.key,
-              runtime: agents.main.agent,
-              id: session?.id,
-              model: session?.models()?.current,
-              children: agents.children
-                .filter((child) => child.forkedFrom === undefined)
-                .map((child) => ({
-                  id: child.id,
-                  name: child.name,
-                  runtime: child.runtime,
-                  model:
-                    child.conversation.session?.models()?.current ??
-                    child.model,
-                })),
-            },
-            // A fork is a session of its own, beside main's (CHD-101).
-            ...agents.children
-              .filter((child) => child.forkedFrom !== undefined)
-              .map((fork) => ({
-                key: fork.key,
-                runtime: fork.runtime,
-                id: fork.conversation.session?.id,
-                model:
-                  fork.conversation.session?.models()?.current ?? fork.model,
-                children: [],
-              })),
-          ];
-    },
-    runtimes: () => runtimeNames,
-    offer,
-    spawn: (caller, args) =>
-      stale(caller) ? Promise.resolve(STALE) : spawn(caller, args),
-    open: (key, args, caller) =>
-      caller !== undefined && stale(caller)
-        ? Promise.resolve(STALE)
-        : openAgent(key, args, caller),
-    teams: async (caller) => {
-      const agents = ownedBy(sessions.agents, caller.key);
-
-      return {
-        found: await teamsAt(caller.key),
-        runs: (agents === undefined ? [] : ownChildren(agents)).flatMap(
-          (child) =>
-            child.team === undefined
-              ? []
-              : [
-                  {
-                    team: child.team,
-                    name: child.name,
-                    id: child.id,
-                  },
-                ],
-        ),
-      };
-    },
-    // As open_agent's, the answer waits on a lead given an effort.
-    runTeam: async (caller, args) => {
-      const launch = captureLaunch(caller.key, caller);
-      const answer = await runTeamAt(
-        caller.key,
-        args,
-        'list_teams lists them',
-        launch,
-      );
-
-      if ('error' in answer) {
-        return answer;
-      }
-
-      const started = await answer.started;
-
-      if (
-        !launch.committed &&
-        (!launch.valid() || childOf(caller.key, answer.ran.id) === undefined)
-      ) {
-        return {
-          error: `Team launch ${answer.ran.id} was cancelled before its first job; the attempted lead is closing.`,
-        };
-      }
-
-      return { ...answer.ran, ...started };
-    },
-    teamPlaces: (caller, name) => teamPlaces(caller.key, name),
-    claimSettingsBox: settingsBox.current,
-    settingSaved: (path, change) => {
-      for (const action of settingActions(settingPickedUp(path, change), {
-        runtimes: runtimeNames,
-        listed: listedAgents,
-      })) {
-        dispatch(action);
-      }
-    },
-    settingsWhere: (caller) => ({
-      agent: ownedBy(sessions.agents, caller.key)?.main.agent ?? 'the agent',
-      configHome,
-      cwd: place.cwd,
-      home,
-    }),
-    askPerson: (caller, wait, signal) =>
-      conversationAt(caller.key)?.ask(wait, signal) ??
-      Promise.resolve(undefined),
-    openMember: (caller, args) =>
-      stale(caller) ? Promise.resolve(STALE) : openMember(caller, args),
-    message: (caller, text, queued) =>
-      stale(caller) ? STALE : message(caller, text, queued),
-    tell: (caller, to, text, queued) =>
-      stale(caller) ? STALE : tell(caller, to, text, queued),
-    close: (caller, to) => (stale(caller) ? STALE : closeAgent(caller, to)),
-    clear: (caller, to) =>
-      stale(caller) ? Promise.resolve(STALE) : clearAgent(caller, to),
-    monitor: (caller, args) =>
-      stale(caller)
-        ? STALE
-        : startMonitorIn(sessions.agents, caller, args, place.cwd),
-    stopMonitor: (caller, id) =>
-      stale(caller) ? STALE : stopMonitorIn(sessions.agents, caller, id),
-    monitors: (caller) => monitorsIn(sessions.agents, caller),
-    served: (caller, call) => {
-      if (caller.launch?.valid() === false || caller.signal?.aborted) {
-        return;
-      }
-
-      return caller.task !== undefined
-        ? children.get(caller.task)?.served(call)
-        : caller.agent !== undefined
-          ? childOf(caller.key, caller.agent)?.conversation.served(call)
-          : conversationAt(caller.key)?.served(call);
-    },
-    servedLater: (caller) => {
-      const { task } = caller;
-      const child = task === undefined ? undefined : children.get(task);
-      const parent = callerConversation(caller.key, caller.by);
-      const agent = task === undefined ? undefined : parent?.task(task);
-
-      if (task === undefined || child === undefined || agent === undefined) {
-        return (call) => view.served(caller, call);
-      }
-
-      // A task that has ended no longer hears its conversation: the call is
-      // kept in its record and drawn in its block in the parent from here.
-      const block = parent?.endedTaskServed(task);
-
-      return (call) => {
-        if (agent.running) {
-          return child.served(call);
-        }
-
-        child.servedEnded(call);
-        block?.(call);
-      };
-    },
-  };
 
   useEffect(() => {
     // The window's one session, its state the window's from its first
@@ -2002,7 +1703,7 @@ export function useSessions(
       sessions.pick(agents.main.key);
       showFront();
 
-      resuming.current = chosen;
+      resumeNext(chosen);
 
       kept(conversationAt(agents.main.key)?.clear());
     }

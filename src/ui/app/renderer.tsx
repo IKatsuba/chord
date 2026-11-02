@@ -18,6 +18,7 @@ import {
   useContext,
   useSyncExternalStore,
 } from 'react';
+import { closeOwned } from '../../session/leaving.ts';
 import { sameStatus } from '../../status.ts';
 import { quietCaught } from './caught.ts';
 import { CrashBoundary } from './Crash.tsx';
@@ -280,23 +281,6 @@ async function giveBack(renderer: CliRenderer | undefined): Promise<void> {
 const giveBackDying = (renderer: CliRenderer | undefined) =>
   giveBack(renderer).catch(() => {});
 
-/** What chord owns that a crash or a signal waits to close, as a quit does. */
-const owned = new Set<() => Promise<void>>();
-
-/**
- * Has a crash or a signal wait for `close` before chord exits, until the
- * returned function is called: the agents a quit closes and reaps would
- * otherwise outlive chord, a hung one never getting its SIGKILL. `close`
- * must settle within its own bounds, as the exit waits for nothing else.
- */
-export function closeOnForcedExit(close: () => Promise<void>): () => void {
-  const entry = () => close();
-
-  owned.add(entry);
-
-  return () => void owned.delete(entry);
-}
-
 /**
  * The leave under way, which a second crash or signal waits for in place of
  * its own: the closes it started are no longer owned, so its own would find
@@ -312,9 +296,8 @@ let leaving: Promise<void> | undefined;
  */
 export function leave(renderer: CliRenderer | undefined): Promise<void> {
   leaving ??= (async () => {
-    const closing = [...owned].map(async (close) => await close());
+    const closing = closeOwned();
 
-    owned.clear();
     await Promise.allSettled([giveBackDying(renderer), ...closing]);
   })().finally(() => (leaving = undefined));
 

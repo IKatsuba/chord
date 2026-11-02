@@ -19,7 +19,7 @@ import {
 import type { TeamSelectionPolicy } from '../../settings.ts';
 import { agentNameProblem } from '../../agent_name.ts';
 import { type Dispatch, useEffect, useRef, useState } from 'react';
-import { closeOnForcedExit, useApp } from './renderer.tsx';
+import { useApp } from './renderer.tsx';
 import { relative, resolve } from 'node:path';
 import type { Wait } from '../../notify.ts';
 import { busyOf, mine } from '../../session/busy.ts';
@@ -29,6 +29,7 @@ import {
   type ConversationEvent,
   type OpenSession,
 } from '../../session/conversation.ts';
+import { closeOnForcedExit } from '../../session/leaving.ts';
 import { OpenAgents } from '../../session/open_agents.ts';
 import type { Place } from '../../session/place.ts';
 import type { Session } from '../../session/session.ts';

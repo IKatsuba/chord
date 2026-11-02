@@ -5,8 +5,8 @@ import { promisify } from 'node:util';
 import type { CliRenderer, ProgramStatus } from '@opentui/core';
 import { useRenderer } from '@opentui/react';
 import { createElement } from 'react';
+import { closeOnForcedExit } from '../../../src/session/leaving.ts';
 import {
-  closeOnForcedExit,
   dieBySignal,
   leave,
   useApp,

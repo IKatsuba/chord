@@ -18,7 +18,6 @@ import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import {
   type Instance,
-  closeOnForcedExit,
   openTerminal,
   render,
   type Terminal,
@@ -59,6 +58,7 @@ import {
   resumeMessage,
   sessionById,
 } from './session/sessions.ts';
+import { closeOnForcedExit } from './session/leaving.ts';
 import { placeOf, readPlace } from './session/place.ts';
 import { openSession } from './session/session.ts';
 import { snapshotOnSignal } from './platform/heap.ts';

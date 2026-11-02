@@ -24,7 +24,7 @@ import type {
 } from '../../../src/session/sessions.ts';
 import type { ShellOptions, ShellProcess } from '../../../src/shell.ts';
 import { App } from '../../../src/ui/app/App.tsx';
-import type { SessionStart } from '../../../src/ui/app/sessions.ts';
+import type { SessionStart } from '../../../src/session/place.ts';
 import type { Resume } from '../../../src/session/sessions.ts';
 import {
   keybindingsNotice,

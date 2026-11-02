@@ -59,6 +59,7 @@ import {
   resumeMessage,
   sessionById,
 } from './session/sessions.ts';
+import { placeOf, readPlace } from './session/place.ts';
 import { openSession } from './session/session.ts';
 import { snapshotOnSignal } from './platform/heap.ts';
 import { execPath } from './platform/process.ts';
@@ -75,27 +76,22 @@ import {
   knownAgents,
   loadKeybindings,
   loadSettings,
-  readTeamSelection,
   problemLine,
   problemNote,
   refusalLine,
   resolveStartup,
-  resumedStartup,
   saveEditorMode,
   saveTheme,
   setWhere,
   shownPath,
   type Sourced,
-  startupOf,
   unknownOffered,
-  unseenProblems,
   userSettingsFile,
 } from './settings.ts';
 import { App } from './ui/app/App.tsx';
 import { chooseAgentAtStart } from './ui/app/startup_choice.ts';
 import { Start } from './ui/app/Start.tsx';
 import { COLOUR } from './ui/app/context.ts';
-import type { Place } from './ui/app/sessions.ts';
 import { keybindingsNotice } from './ui/shortcuts/bindings.ts';
 import { background, paletteOf, resolveTheme } from './ui/theme/theme.ts';
 
@@ -466,118 +462,18 @@ export const cli = chordCommand().action(async (options, named) => {
     ...(agentCommand === undefined ? {} : { agentCommand }),
   };
 
-  /**
-   * What a session working in `dir` starts with: a session resumed by id
-   * may work elsewhere, and its directory's project file and `.mcp.json`
-   * are the ones that speak for it. Each problem is said once, however
-   * many directories read the user's file.
-   */
-  const readPlace = async (dir: string) => {
-    const there =
-      dir === resolve(options.cwd)
-        ? loaded
-        : await loadSettings({
-            configHome: xdgConfig,
-            cwd: dir,
-            ...(home === undefined ? {} : { home }),
-          });
-    const mcp = await loadMcpServers({ layers: there.layers, cwd: dir });
-    const added = unseenProblems(problems, [
-      ...there.problems,
-      ...mcp.problems,
-    ]);
-
-    await report(added);
-    problems.push(...added);
-
-    return {
-      cwd: dir,
-      layers: there.layers,
-      channel: there.settings.preferredNotifChannel,
-      teamSelection: there.settings.teamSelection,
-      mcp,
-      ...resumedStartup(invokedAs, flags, there.layers),
-    };
-  };
-
+  const startup = { configHome: xdgConfig, home, invokedAs, flags };
   // The one place the window reads: the directory its session works in.
-  const read = await readPlace(cwd);
-
-  /** A directory read, as the window takes it: paths as it shows them. */
-  const placeOf = ({
-    cwd,
-    layers,
-    mcp,
-    model,
-    effort,
-    permissionMode,
-    teamSelection,
-  }: Awaited<ReturnType<typeof readPlace>>): Place => {
-    const shown = { cwd, home };
-    const starting = (value: Sourced | undefined) =>
-      value === undefined
-        ? undefined
-        : { id: value.id, from: setWhere(value.from, shown) };
-
-    return {
-      cwd,
-      selectionPolicy: () =>
-        readTeamSelection({
-          configHome: xdgConfig,
-          cwd,
-          ...(home === undefined ? {} : { home }),
-        }),
-      ...(teamSelection === undefined ? {} : { teamSelection }),
-      startupOf: (name) => {
-        const found = startupOf(
-          name,
-          {
-            ...invokedAs,
-            ...(model === undefined ? {} : { model }),
-            ...(effort === undefined ? {} : { effort }),
-            ...(permissionMode === undefined ? {} : { permissionMode }),
-          },
-          layers,
-        );
-        // The window's own agent starts as it was invoked, but this place's
-        // files may refuse its command, unless a flag gave it one.
-        const refused =
-          found.refused ??
-          (name === agent && flags.agentCommand === undefined
-            ? resolveStartup({ agent: name }, layers, name).refused
-            : undefined);
-
-        if (refused !== undefined) {
-          return { refused: refusalLine(name, refused, shown) };
-        }
-
-        return found.agentCommand === undefined && findAgent(name) === undefined
-          ? undefined
-          : {
-              agentCommand: found.agentCommand,
-              ...(takesMcpServers(name, found.mcpServers)
-                ? {}
-                : { mcpServers: false as const }),
-              starting: {
-                model: starting(found.model),
-                effort: starting(found.effort),
-                mode: starting(found.permissionMode),
-              },
-            };
-      },
-      mcpServers: mcp.servers.map((defined) => ({
-        ...defined,
-        from: shownPath(defined.from, shown),
-      })),
-      mcpIgnored: mcp.ignored.map((lost) => ({
-        ...lost,
-        from: shownPath(lost.from, shown),
-      })),
-    };
-  };
+  const read = await readPlace(cwd, {
+    ...startup,
+    loadedAt: resolve(options.cwd),
+    loaded,
+    problems,
+    report,
+  });
 
   const { model, effort, permissionMode, channel, layers } = read;
-  const first = placeOf(read);
+  const first = placeOf(read, startup);
 
   // A session resumed works in its record's directory, whose files may
   // refuse what the command line's would not.

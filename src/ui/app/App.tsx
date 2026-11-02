@@ -25,6 +25,7 @@ import {
 import { type LinkOpener, openLink } from '../../links.ts';
 import type { Notifications } from '../../notify.ts';
 import type { OpenSession, Starting } from '../../session/conversation.ts';
+import type { SessionStart } from '../../session/place.ts';
 import { openSession } from '../../session/session.ts';
 import {
   openSessionLabel,
@@ -160,7 +161,7 @@ import {
 } from './keys.ts';
 import type { ReadLimits } from '../../session/resource_access.ts';
 import type { TeamSelection } from '../../session/budgets.ts';
-import { type SessionStart, useSessions } from './sessions.ts';
+import { useSessions } from './sessions.ts';
 import {
   answerLink,
   useEditor,

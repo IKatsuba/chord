@@ -32,10 +32,15 @@ export function outputStream(
 /** A connection's stream, and what it can say of its answers' writes. */
 export interface SeenStream {
   readonly stream: Stream;
-  /** The answer to this request is on its way, so `drained` waits for it. */
-  expect(id: JsonRpcId): void;
+  /**
+   * The answer to this request is on its way, so `drained` waits for it; settles
+   * once it is written, or cannot be.
+   */
+  expect(id: JsonRpcId): Promise<void>;
   /** Settles once every expected answer is written, or none can be. */
   drained(): Promise<void>;
+  /** Whether a write failed: the other end is gone. */
+  failed(): boolean;
 }
 
 /**
@@ -43,8 +48,9 @@ export interface SeenStream {
  * nothing it exports tells when a message has gone: this sees each one written.
  */
 export function seeingWrites(stream: Stream): SeenStream {
-  const expected = new Set<JsonRpcId>();
+  const expected = new Map<JsonRpcId, () => void>();
   let settled = Promise.withResolvers<void>();
+  let failed = false;
 
   const settleWhenEmpty = () => {
     if (expected.size === 0) {
@@ -53,6 +59,10 @@ export function seeingWrites(stream: Stream): SeenStream {
   };
 
   const giveUp = () => {
+    for (const written of expected.values()) {
+      written();
+    }
+
     expected.clear();
     settled.resolve();
   };
@@ -67,6 +77,8 @@ export function seeingWrites(stream: Stream): SeenStream {
           try {
             await writer.write(message);
           } catch (error) {
+            failed = true;
+
             giveUp();
 
             throw error;
@@ -75,6 +87,7 @@ export function seeingWrites(stream: Stream): SeenStream {
           }
 
           if ('id' in message && !('method' in message)) {
+            expected.get(message.id)?.();
             expected.delete(message.id);
             settleWhenEmpty();
           }
@@ -96,12 +109,17 @@ export function seeingWrites(stream: Stream): SeenStream {
         settled = Promise.withResolvers<void>();
       }
 
-      expected.add(id);
+      const written = Promise.withResolvers<void>();
+
+      expected.set(id, written.resolve);
+
+      return written.promise;
     },
     drained: () => {
       settleWhenEmpty();
 
       return settled.promise;
     },
+    failed: () => failed,
   };
 }

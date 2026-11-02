@@ -161,6 +161,34 @@ describe('seeing writes', () => {
     expect(await settles(drained)).toBe(true);
   });
 
+  test('expect settles on its own answer, and failed says when one could not go', async () => {
+    const { seen, writes, failing } = held();
+    const writer = seen.stream.writable.getWriter();
+    let heard = false;
+
+    void seen.expect(1).then(() => {
+      heard = true;
+    });
+
+    void writer.write(answer(1));
+
+    await until(() => writes.length === 1);
+
+    expect(heard).toBe(false);
+
+    writes[0]?.done();
+
+    await until(() => heard);
+
+    expect(seen.failed()).toBe(false);
+
+    failing.current = true;
+
+    await expect(writer.write(answer(2))).rejects.toThrow('EPIPE');
+
+    expect(seen.failed()).toBe(true);
+  });
+
   test('a request or a notification with the same id is not the answer', async () => {
     const { seen, writes } = held();
     const writer = seen.stream.writable.getWriter();

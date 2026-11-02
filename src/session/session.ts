@@ -12,6 +12,7 @@ import type { Traffic } from '../acp/traffic.ts';
 import { agentStart, findAgent } from '../agents.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
+  type AgentState,
   foldUpdate,
   effortsOf,
   modelsOf,
@@ -230,6 +231,8 @@ export interface Session {
     mentions?: readonly string[],
     links?: readonly ResourceLink[],
   ): Turn;
+  /** What the agent has said of the session besides its turns. */
+  agentState(): AgentState;
   /**
    * Whether the agent takes images in a prompt, as the `promptCapabilities`
    * it gave in `initialize` say.
@@ -694,6 +697,7 @@ export async function openSession(
         },
       };
     },
+    agentState: () => state,
     takesImages: () =>
       connection.init.agentCapabilities?.promptCapabilities?.image === true,
     steers: () => connection.steering,

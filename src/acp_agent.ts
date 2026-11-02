@@ -81,6 +81,19 @@ import type { TurnResult } from './session/transcript/types.ts';
 /** The `_meta` key chord says its own of ACP under. */
 const ACP_META = 'chord/acp';
 
+/**
+ * What a person who ran it by hand reads on stderr; only a stdin that is a
+ * terminal is a person's. A client's stdin is a pipe, and sees no note.
+ */
+export function byHandNote(stdinIsTerminal: boolean): readonly string[] {
+  return stdinIsTerminal
+    ? [
+        'chord: acp serves ACP on stdin and stdout, for a client that starts it.',
+        'chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` opens a window.',
+      ]
+    : [];
+}
+
 /** What a session's directory decides. */
 export interface AcpPlace {
   /** Its settings' and `.mcp.json`'s servers; a client's are laid over them. */

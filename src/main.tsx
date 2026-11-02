@@ -13,7 +13,7 @@ import {
 } from '@opentui/core';
 import process from 'node:process';
 import { text as readText } from 'node:stream/consumers';
-import type { Writable } from 'node:stream';
+import { Readable, type Writable } from 'node:stream';
 import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import {
@@ -35,6 +35,8 @@ import {
   missingCommand,
   offeredAgents,
 } from './agents.ts';
+import { outputStream } from './acp/stdio.ts';
+import { byHandNote, runAcp } from './acp_agent.ts';
 import { joinPiped, runHeadless } from './headless.ts';
 import { loadMcpServers } from './mcp.ts';
 import { terminalEnv } from './notify.ts';
@@ -747,10 +749,175 @@ cli
     );
   });
 
+cli
+  .command(
+    'acp',
+    'Serve ACP on stdin and stdout, for a client that starts chord as its agent; draws nothing.',
+  )
+  .arguments('[agent:string]')
+  .option(
+    '--agent-command <command:string>',
+    "Start this ACP agent command instead of chord's own; [agent] only names it.",
+  )
+  .option(
+    '-m, --model <model:string>',
+    "Start each of [agent]'s sessions on this model, by its id for it.",
+  )
+  .option(
+    '--effort <effort:string>',
+    "Start each of [agent]'s sessions on this effort, by its id for it.",
+  )
+  .option(
+    '--permission-mode <mode:string>',
+    "Start each of [agent]'s sessions in this mode, by its id for it.",
+  )
+  // Cliffy prints a usage error's help on stdout, which here is the protocol.
+  .throwErrors()
+  .action(serveAcp);
+
 cli.command(
   'upgrade',
   upgradeCommand(realpathSync(execPath()), process.env, manifest.version),
 );
+
+/** `chord acp`: `runAcp` on this process's own streams and signals. */
+async function serveAcp(
+  flags: {
+    readonly agentCommand?: string | undefined;
+    readonly model?: string | undefined;
+    readonly effort?: string | undefined;
+    readonly permissionMode?: string | undefined;
+  },
+  named?: string,
+): Promise<void> {
+  const home = process.env['HOME'];
+  const say = (line: string) => {
+    try {
+      process.stderr.write(`${line}\n`);
+    } catch {
+      // A stderr gone is no reason to stop serving.
+    }
+  };
+
+  const settingsAt = (cwd: string) =>
+    loadSettings({
+      configHome: xdgConfig,
+      cwd,
+      ...(home === undefined ? {} : { home }),
+    });
+  const asked = {
+    agent: named,
+    agentCommand: flags.agentCommand,
+    model: flags.model,
+    effort: flags.effort,
+    permissionMode: flags.permissionMode,
+  };
+  const here = process.cwd();
+  const loaded = await settingsAt(here);
+
+  for (const problem of loaded.problems) {
+    say(problemLine(problem));
+  }
+
+  const { agent, agentCommand, refused } = resolveStartup(
+    asked,
+    loaded.layers,
+    DEFAULT_AGENT,
+  );
+
+  if (refused !== undefined) {
+    say(refusalLine(agent, refused, { cwd: here, home }));
+    process.exit(1);
+  }
+
+  if (agentCommand === undefined && findAgent(agent) === undefined) {
+    throw new ValidationError(
+      `Unknown agent "${agent}". \`chord agents\` lists them.`,
+    );
+  }
+
+  for (const line of byHandNote(process.stdin.isTTY === true)) {
+    say(line);
+  }
+
+  // The streams' own errors say what their writes say; unheard, they end chord.
+  process.stderr.on('error', () => {});
+
+  process.stdout.on('error', () => {});
+
+  const signals = ['SIGTERM', 'SIGINT', 'SIGHUP'] as const;
+  const onSignal = (signal: NodeJS.Signals) =>
+    void run.leave({ kind: 'signal', signal });
+  const crashed = (error: unknown) => {
+    say(
+      error instanceof Error ? (error.stack ?? error.message) : String(error),
+    );
+
+    void run.leave({ kind: 'crash' });
+  };
+
+  const run = runAcp({
+    input: Readable.toWeb(
+      process.stdin,
+    ) as unknown as ReadableStream<Uint8Array>,
+    output: outputStream(process.stdout),
+    stderr: say,
+    exit: (how) => {
+      if ('code' in how) {
+        process.exit(how.code);
+      }
+
+      // Raised again with no listener left, so chord dies by it.
+      process.removeAllListeners(how.signal);
+      process.kill(process.pid, how.signal);
+    },
+    agent,
+    ...(agentCommand === undefined ? {} : { agentCommand }),
+    version: manifest.version,
+    stateDir: chordStateDir(),
+    open: openSession,
+    place: async (cwd) => {
+      const there = cwd === here ? loaded : await settingsAt(cwd);
+      const mcp = await loadMcpServers({ layers: there.layers, cwd });
+
+      for (const problem of [
+        ...(cwd === here ? [] : there.problems),
+        ...mcp.problems,
+      ]) {
+        say(problemLine(problem));
+      }
+
+      const found = resolveStartup(
+        { ...asked, agent },
+        there.layers,
+        DEFAULT_AGENT,
+      );
+      const starting = (value: Sourced | undefined) =>
+        value === undefined
+          ? undefined
+          : { id: value.id, from: setWhere(value.from, { cwd, home }) };
+
+      return {
+        mcpServers: mcp.servers.map(({ server }) => server),
+        ...(takesMcpServers(agent, found.mcpServers)
+          ? {}
+          : { noMcpServers: true }),
+        starting: {
+          model: starting(found.model),
+          effort: starting(found.effort),
+          mode: starting(found.permissionMode),
+        },
+      };
+    },
+  });
+
+  for (const signal of signals) {
+    process.on(signal, onSignal);
+  }
+
+  process.on('uncaughtException', crashed);
+  process.on('unhandledRejection', crashed);
+}
 
 /**
  * The window's one clipboard service, OpenTUI's: the system clipboard
@@ -785,6 +952,16 @@ if (import.meta.main) {
   if (args[0] === RESOURCE_WORKER_FLAG) {
     await runResourceWorker(args.slice(1));
   } else {
-    await cli.parse(args);
+    try {
+      await cli.parse(args);
+    } catch (error) {
+      // Only `acp` throws its errors, as its stdout is the protocol.
+      if (!(error instanceof ValidationError)) {
+        throw error;
+      }
+
+      process.stderr.write(`chord: ${error.message}\n`);
+      process.exit(error.exitCode);
+    }
   }
 }

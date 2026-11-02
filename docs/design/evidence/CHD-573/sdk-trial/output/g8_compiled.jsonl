@@ -1,0 +1,8 @@
+{"target":"compiled","case":"eof","garbageLine":false,"blocked":true,"laterInputHandled":true,"action":"stdin EOF","exitMs":66,"closedSeen":true,"saw":["stdin.end","stdin.close","closed","exit"]}
+{"target":"compiled","case":"eof","garbageLine":true,"blocked":true,"laterInputHandled":false,"action":"stdin EOF","exitMs":"not within 5000 ms","closedSeen":false,"saw":["stdin.end","stdin.close"]}
+{"target":"compiled","case":"eof-seen-on-stdin","garbageLine":true,"blocked":true,"laterInputHandled":false,"action":"stdin EOF","exitMs":12,"closedSeen":false,"saw":["stdin.end","leave.from.stdin","exit"]}
+{"target":"compiled","case":"sigterm","garbageLine":true,"blocked":true,"laterInputHandled":false,"action":"SIGTERM","exitMs":55,"saw":["SIGTERM","after.close","exit"]}
+{"target":"compiled","case":"eof-then-sigterm","garbageLine":true,"blocked":true,"laterInputHandled":false,"action":"stdin EOF, then SIGTERM","eofExitMs":"not within 3000 ms","termExitMs":55,"saw":["stdin.end","stdin.close","SIGTERM","after.close","exit"]}
+{"target":"compiled","case":"reader-gone","garbageLine":true,"blocked":true,"laterInputHandled":false,"action":"stdout reader gone","exitMs":11,"saw":["closed","exit"]}
+{"target":"compiled","case":"the client killed","garbageLine":false,"blocked":true,"laterInputHandled":true,"action":"SIGKILL of the client, both pipes close","exitMs":12,"saw":["closed","exit"]}
+{"target":"compiled","case":"the client killed","garbageLine":true,"blocked":true,"laterInputHandled":false,"action":"SIGKILL of the client, both pipes close","exitMs":12,"saw":["closed","exit"]}

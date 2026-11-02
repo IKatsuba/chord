@@ -1,0 +1,8 @@
+{"target":"bun","case":"nobody reads","stdout":"toweb","what":"flood","lastFlood":{"ms":79,"ev":"flood.done","sent":268435456,"rssMiB":522},"loopAlive":true,"afterEofExitMs":23}
+{"target":"bun","case":"process.exit right after the flood","stdout":"toweb","sentPayload":16777216,"bytesRead":65536,"lostMost":true}
+{"target":"bun","case":"nobody reads","stdout":"callback","what":"flood","lastFlood":"none: the first writes are held","loopAlive":true,"afterEofExitMs":21}
+{"target":"bun","case":"process.exit right after the flood","stdout":"callback","sentPayload":16777216,"bytesRead":16817743,"lostMost":false}
+{"target":"bun","case":"nobody reads","stdout":"bun","what":"flood","lastFlood":"none: the first writes are held","loopAlive":false,"afterEofExitMs":"not within 3s"}
+{"target":"bun","case":"process.exit right after the flood","stdout":"bun","sentPayload":16777216,"bytesRead":16817743,"lostMost":false}
+{"target":"bun","case":"nobody reads","stdout":"toweb","what":"flood-unawaited","lastFlood":{"ms":81,"ev":"flood.done","sent":268435456,"rssMiB":582},"loopAlive":true,"afterEofExitMs":22}
+{"target":"bun","case":"nobody reads","stdout":"callback","what":"flood-unawaited","lastFlood":{"ms":10,"ev":"flood.queued","sent":268435456,"rssMiB":36},"loopAlive":true,"afterEofExitMs":21}

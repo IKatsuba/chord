@@ -674,3 +674,33 @@ test('CHD-531 release help discloses mandatory authentication and dry-run effect
     expect(help).toContain(text);
   }
 });
+
+describe('tester: CHD-577 channel argument boundaries', () => {
+  test('channel before the version and an equals value preserve the release selection', async () => {
+    for (const argv of [
+      ['release', '--channel', 'beta', '1.0.0', '--only', 'compile,check'],
+      ['release', '1.0.0', '--channel=beta', '--only', 'compile,check'],
+    ]) {
+      const [call] = await parsed(argv);
+
+      expect(call?.slice(1)).toEqual([
+        ['check', 'compile'],
+        { channel: 'beta', only: ['compile', 'check'] },
+        '1.0.0',
+      ]);
+    }
+  });
+
+  test('a channel does not allow publish in a dry run', async () => {
+    await expect(
+      parsed([
+        'release',
+        '--channel',
+        'next',
+        '--dry-run',
+        '--only',
+        'publish',
+      ]),
+    ).rejects.toThrow(ValidationError);
+  });
+});

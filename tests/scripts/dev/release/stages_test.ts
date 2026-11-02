@@ -1446,3 +1446,96 @@ describe('CHD-531 mandatory authentication preparation', () => {
     ).toBe(false);
   });
 });
+
+describe('tester: CHD-577 branch and cleanup boundaries', () => {
+  function read(...args: string[]): string {
+    const result = spawnSync('git', args, { cwd: at.root, encoding: 'utf8' });
+
+    expect(result.status).toBe(0);
+
+    return result.stdout.trim();
+  }
+
+  function publishing(): Promise<void> {
+    const options = { channel: 'beta', only: ['compile', 'publish'] as const };
+
+    return runRelease(context(), selectStages(options), options, MAC, '10.0.0');
+  }
+
+  beforeEach(() => {
+    writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
+    git(at.root, 'checkout', '-q', '-b', 'beta');
+    git(at.root, 'push', '-q', 'origin', 'beta');
+  });
+
+  test('detached HEAD is refused before authentication or a version commit', async () => {
+    const head = read('rev-parse', 'HEAD');
+
+    git(at.root, 'checkout', '-q', '--detach');
+
+    expect(await died(publishing())).toContain(
+      'a release on channel beta publishes only from branch beta; HEAD is',
+    );
+    expect(read('rev-parse', 'HEAD')).toBe(head);
+    expect(
+      ran().some((line) => /^(bun |npm (whoami|login|publish))/.test(line)),
+    ).toBeFalse();
+  });
+
+  test('a channel behind its origin is refused before authentication', async () => {
+    const head = read('rev-parse', 'HEAD');
+
+    git(at.root, 'commit', '-q', '--allow-empty', '-m', 'remote ahead');
+
+    const remote = read('rev-parse', 'HEAD');
+
+    git(at.root, 'push', '-q', 'origin', 'beta');
+    git(at.root, 'reset', '-q', '--hard', head);
+
+    expect(await died(publishing())).toBe(
+      `beta is not origin/beta: beta is ${head}, origin/beta is ${remote}`,
+    );
+    expect(read('rev-parse', 'HEAD')).toBe(head);
+    expect(ran()).not.toContain('npm whoami');
+  });
+
+  test('a failed nonpublishing channel run restores its version and local commit', async () => {
+    const head = read('rev-parse', 'HEAD');
+
+    git(at.root, 'checkout', '-q', '-b', 'topic');
+    at.fake('bun', 'echo "bun $*" >>"$STATE/ran.log"\nexit 2\n');
+
+    const options = {
+      channel: 'beta',
+      dryRun: true,
+      only: ['check', 'compile'] as const,
+    };
+
+    expect(
+      await died(
+        runRelease(context(), selectStages(options), options, MAC, '10.0.0'),
+      ),
+    ).toBe('bun quality failed');
+    expect(read('rev-parse', 'HEAD')).toBe(head);
+    expect(
+      JSON.parse(readFileSync(join(at.root, 'package.json'), 'utf8')),
+    ).toEqual({ version: VERSION });
+    expect(read('status', '--porcelain')).toBe('');
+    expect(read('rev-parse', 'origin/beta')).toBe(head);
+    expect(ran()).toContain('npm whoami');
+    expect(ran().some((line) => /^npm (login|publish)/.test(line))).toBeFalse();
+  });
+
+  test('a prerelease latest answer fails before authentication or stages', async () => {
+    at.fake('npm', 'echo "npm $*" >>"$STATE/ran.log"\necho 10.0.0-next.1\n');
+
+    const options = { channel: 'beta', only: ['compile', 'publish'] as const };
+
+    expect(
+      await died(
+        runRelease(context(), selectStages(options), options, MAC, 'major'),
+      ),
+    ).toBe("npm's latest 10.0.0-next.1 is no stable version");
+    expect(ran()).toEqual(['npm view @chorded/chord dist-tags.latest']);
+  });
+});

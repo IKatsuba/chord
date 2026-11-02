@@ -64,6 +64,7 @@ Done when chord is the interface its authors open by default.
 | Transcript / verbose view                 | ctrl+o                              | client                                       |
 | Reverse history search                    | ctrl+r                              | client                                       |
 | Headless one-shot                         | `-p "prompt"`, `--output-format json`, `--effort`, `--permission-mode`, `--dangerously-skip-permissions` | ACP, one session, `session/set_config_option` |
+| `chord acp` plain sessions (CHD-574, CHD-576, done) | — | ACP v1 on stdin and stdout; child agents, teams and extensions come in 1.0.0-next.2 |
 | Syntax highlighting in code and diffs     | yes                                 | client                                       |
 | Session config options (effort, etc.)     | `/config`, effort                   | ACP `session/set_config_option`              |
 | Usage and cost                            | `/cost`, `/context`                 | ACP `session/prompt`'s `usage`, `usage_update`; enricher: a cost from the tokens and a window from the model, marked as chord's estimate |

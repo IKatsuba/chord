@@ -819,3 +819,188 @@ describe('opening a child', () => {
     await host.sessions.closeAll();
   });
 });
+
+describe('running a team', () => {
+  const onFake = {
+    place: {
+      startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+    },
+    options: { open: openSession },
+  };
+  const saved = async (text: string) => {
+    const teams = join(dir, '.chord', 'teams');
+
+    await mkdir(teams, { recursive: true });
+    await writeFile(join(teams, 'bugfix.md'), text);
+  };
+
+  const crew = `---
+description: A crew
+lead:
+  agent: fake
+members:
+  - name: coder
+    role: Code
+    agent: fake
+    instructions: Code it.
+---
+Lead it.
+`;
+  const caller = (key: number, agent: string): Caller => ({
+    role: 'child',
+    key,
+    agent,
+    team: 'lead',
+    window: {} as WindowView,
+  });
+
+  test('refuses a team not found, and a file that fails its check', async () => {
+    const { host, key } = await withMain();
+
+    expect(
+      await host.runTeamAt(
+        key,
+        { team: 'who', job: 'j' },
+        'list_teams lists them',
+      ),
+    ).toEqual({ error: 'No team named who · list_teams lists them' });
+
+    await saved('not a team');
+
+    const answer = await host.runTeamAt(
+      key,
+      { team: 'bugfix', job: 'j' },
+      'list_teams lists them',
+    );
+
+    assert('error' in answer);
+    expect(answer.error).toStartWith(
+      `${join('.chord', 'teams', 'bugfix.md')} is not a team chord can run:`,
+    );
+
+    await host.sessions.closeAll();
+  });
+
+  test('a run opens its lead as a child of main, and keeps the file as read', async () => {
+    const { host, key, heard } = await withMain(
+      onFake.place,
+      {},
+      onFake.options,
+    );
+
+    await saved(crew);
+
+    const answer = await host.runTeamAt(
+      key,
+      { team: 'bugfix', job: 'Fix it.' },
+      'list_teams lists them',
+    );
+
+    assert(!('error' in answer));
+
+    const lead = host.childOf(key, answer.ran.id)!;
+
+    expect(answer.ran).toMatchObject({ name: 'bugfix', team: 'bugfix' });
+    expect(lead.team).toBe('bugfix');
+    expect(host.runs.get(lead.id)?.job).toBe('Fix it.');
+
+    await until(() =>
+      heard.some(([at, event]) => at === lead.key && event.type === 'result'),
+    );
+
+    // A file changed since does not change a running team.
+    await saved('not a team');
+
+    expect(
+      host.runs.get(lead.id)?.team.members.map(({ name }) => name),
+    ).toEqual(['coder']);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a launch already cancelled opens nothing', async () => {
+    const { host, key, told } = await withMain();
+    const launch = host.captureLaunch(key);
+
+    await saved(crew);
+    await host.sessions.closeAll();
+
+    expect(
+      await host.runTeamAt(key, { team: 'bugfix', job: 'j' }, 'lists', launch),
+    ).toEqual({ error: 'This launch was cancelled; no run started.' });
+    expect(told.some(({ type }) => type === 'agent_opened')).toBe(false);
+  });
+
+  test('a lead opens a member of its file, once, and no other', async () => {
+    const { host, key } = await withMain(onFake.place, {}, onFake.options);
+
+    await saved(crew);
+
+    const answer = await host.runTeamAt(
+      key,
+      { team: 'bugfix', job: 'Fix it.' },
+      'lists',
+    );
+
+    assert(!('error' in answer));
+
+    const lead = caller(key, answer.ran.id);
+
+    // A lead still starting has no session to open a member from.
+    await until(
+      () =>
+        host.childOf(key, answer.ran.id)?.conversation.session !== undefined,
+    );
+
+    expect(await host.openMember(lead, { member: 'who', prompt: 'p' })).toEqual(
+      {
+        error: 'Team bugfix has no member who; its members are coder',
+      },
+    );
+
+    const opened = await host.openMember(lead, {
+      member: 'coder',
+      prompt: 'Code.',
+    });
+
+    assert(!('error' in opened));
+
+    expect(opened.name).toBe('coder');
+    expect(host.childOf(key, 'coder')?.lead).toBe(answer.ran.id);
+    expect(
+      await host.openMember(lead, { member: 'coder', prompt: 'Again.' }),
+    ).toEqual({ error: 'coder is open; send_message reaches it' });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a closed lead opens no members', async () => {
+    const { host, key } = await withMain();
+
+    expect(
+      await host.openMember(caller(key, 'gone'), {
+        member: 'coder',
+        prompt: 'p',
+      }),
+    ).toEqual({ error: 'You are closed; you open no members' });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a selection of a saved team that fails its check starts nothing', async () => {
+    const { host, key, told } = await withMain();
+
+    await saved('not a team');
+
+    expect(
+      await host.runTeamAt(
+        key,
+        { team: 'bugfix', job: 'j', selection: { reason: 'a test' } },
+        'lists',
+      ),
+    ).toEqual({ error: 'The saved team is invalid. No run started.' });
+    expect(told).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+});

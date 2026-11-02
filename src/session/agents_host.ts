@@ -14,9 +14,12 @@ import type {
   ClearAnswer,
   CloseAnswer,
   EffortStarted,
+  MemberArgs,
   MessageAnswer,
   OpenAnswer,
   OpenArgs,
+  RunTeamAnswer,
+  RunTeamArgs,
   SpawnAnswer,
   SpawnArgs,
   WindowView,
@@ -28,6 +31,7 @@ import {
   type Team,
   teamDirs,
   teamFile,
+  teamPart,
 } from '../teams.ts';
 import { busyOf, type QueuedFrom } from './busy.ts';
 import {
@@ -45,11 +49,21 @@ import { chordStateDir } from './state_dir.ts';
 import { TaskAgent, taskName } from './tasks.ts';
 import type { ListedTeam } from './team_command.ts';
 import {
+  confirmSelectionRole,
+  freezeSelection,
   type FrozenSelection,
+  type SelectionCapabilities,
+  selectionReceipt,
+  validateSelectedRole,
   type SelectionReceipt,
   withSelectionCleanupWarning,
 } from './team_selection.ts';
-import type { MessageFrom, TeamPart, Transcript } from './transcript/types.ts';
+import type {
+  ChordCall,
+  MessageFrom,
+  TeamPart,
+  Transcript,
+} from './transcript/types.ts';
 import type { KeptPlace } from './usage.ts';
 import {
   agentOf,
@@ -63,6 +77,7 @@ import {
   messageRecipients,
   ownChildren,
   ownedBy,
+  runName,
   shownKey,
   type StartedAgents,
 } from './window_agents.ts';
@@ -1646,6 +1661,563 @@ export function createAgentsHost(
     return { ...opened, ...(await started) };
   };
 
+  const selectedCapabilities = async (
+    agent: string,
+    key: number,
+  ): Promise<
+    SelectionCapabilities | { readonly error: string } | undefined
+  > => {
+    // A configured refusal is known before probing; missing capability evidence is different.
+    if (place.startupOf(agent)?.refused !== undefined) {
+      return { error: 'The selected runtime configuration is unavailable.' };
+    }
+
+    const offer = await viewNow().offer(agent, false, key);
+
+    if (offer === undefined || 'error' in offer) {
+      return undefined;
+    }
+
+    return {
+      ...(offer.models.length === 0 ? {} : { models: offer.models }),
+      ...(offer.modes === undefined ? {} : { modes: offer.modes }),
+      ...(offer.efforts === undefined ? {} : { efforts: offer.efforts }),
+    };
+  };
+
+  const refuseSelected = (
+    run: SelectedRun,
+    kind: 'lead' | 'member',
+    name: string,
+    reason: string,
+  ) => {
+    run.receipt = {
+      ...run.receipt,
+      roles: run.receipt.roles.map((role) =>
+        role.role === kind && role.name === name
+          ? { ...role, state: 'refused', note: reason }
+          : role,
+      ),
+    };
+
+    run.publish();
+  };
+
+  const confirmSelected = (
+    run: SelectedRun,
+    kind: 'lead' | 'member',
+    name: string,
+    conversation: Conversation,
+  ): string | undefined => {
+    const role = run.receipt.roles.find(
+      (role) => role.role === kind && role.name === name,
+    )!;
+    const bounded = (value: string | undefined) =>
+      value !== undefined && value.length > 0 && value.length <= 128
+        ? value
+        : null;
+    const actual = {
+      agent: bounded(conversation.session?.agent),
+      model: bounded(conversation.session?.models()?.current),
+      mode: bounded(conversation.session?.modes()?.current),
+      effort: bounded(conversation.session?.efforts()?.current),
+    };
+    const soft =
+      role.planned.effort !== undefined &&
+      (conversation.effortRefused !== undefined ||
+        role.planned.effort !== actual.effort);
+    const confirmed = confirmSelectionRole(
+      role,
+      actual,
+      soft
+        ? 'The requested effort was not confirmed; the runtime effort remains advisory.'
+        : null,
+    );
+
+    run.receipt = {
+      ...run.receipt,
+      roles: run.receipt.roles.map((one) => (one === role ? confirmed : one)),
+    };
+
+    run.publish();
+
+    return confirmed.state === 'refused'
+      ? (confirmed.note ?? 'The selected configuration was not confirmed.')
+      : undefined;
+  };
+
+  const runSelectedTeamAt = async (
+    key: number,
+    args: RunTeamArgs,
+    lists: string,
+    launch: LaunchGuard,
+  ): Promise<RunTeamAnswer> => {
+    const found = (await teamsAt(key)).find((each) => each.name === args.team);
+
+    if (!launch.valid()) {
+      return { error: 'This launch was cancelled; no run started.' };
+    }
+
+    if (found === undefined) {
+      return { error: `No team named ${args.team} · ${lists}` };
+    }
+
+    if ('problem' in found) {
+      return { error: 'The saved team is invalid. No run started.' };
+    }
+
+    const policy = await policyNow();
+
+    if ('error' in policy) {
+      return policy;
+    }
+
+    const preliminary = freezeSelection(
+      found.team,
+      args.selection!,
+      policy.policy,
+      runtimeNames,
+    );
+
+    if ('error' in preliminary) {
+      return preliminary;
+    }
+
+    const capabilities = new Map<string, SelectionCapabilities>();
+
+    for (const agent of new Set([
+      preliminary.frozen.team.lead.agent,
+      ...preliminary.frozen.team.members.map((member) => member.agent),
+    ])) {
+      const known = await selectedCapabilities(agent, key);
+
+      if (known !== undefined && 'error' in known) {
+        const roles = [
+          ...(preliminary.frozen.team.lead.agent === agent ? ['lead'] : []),
+          ...preliminary.frozen.team.members
+            .filter((member) => member.agent === agent)
+            .map((member) => member.name),
+        ];
+
+        return {
+          error: `${roles.join(', ')}.agent: ${known.error} No run started.`,
+        };
+      }
+
+      if (known !== undefined) {
+        capabilities.set(agent, known);
+      }
+
+      if (!launch.valid()) {
+        return { error: 'This launch was cancelled; no run started.' };
+      }
+    }
+
+    const chosen = freezeSelection(
+      found.team,
+      args.selection!,
+      policy.policy,
+      runtimeNames,
+      capabilities,
+    );
+
+    if ('error' in chosen) {
+      return chosen;
+    }
+
+    const frozen = chosen.frozen;
+    const lead = frozen.team.lead;
+    const opening: OpenArgs = { ...lead, prompt: args.job };
+    const refused =
+      (await startRefusal(
+        key,
+        conversationAt(key),
+        opening,
+        'agent',
+        args.team,
+      )) ?? fullRefusal(key);
+    const agents = ownedBy(sessions.agents, key);
+
+    if (!launch.valid()) {
+      return { error: 'This launch was cancelled; no run started.' };
+    }
+
+    if (refused !== undefined || agents === undefined) {
+      return { error: 'The selected lead cannot be admitted. No run started.' };
+    }
+
+    const id = crypto.randomUUID().slice(0, 8);
+    const name = runName(agents, args.team);
+    const write = conversationAt(key)?.captureServed();
+    let leadWrite: ((call: ChordCall) => void) | undefined;
+    const selected: SelectedRun = {
+      frozen,
+      receipt: selectionReceipt(
+        id,
+        { name: found.name, place: found.place },
+        frozen,
+      ),
+      publish: () => {
+        const failed = selected.receipt.roles.find(
+          (role) => role.role === 'lead' && role.state === 'refused',
+        );
+        const call: ChordCall = {
+          tool: 'run_team',
+          input: args,
+          asked: id,
+          answer: {
+            id,
+            name,
+            team: args.team,
+            agent: lead.agent,
+            receipt: selected.receipt,
+          },
+          ...(failed === undefined
+            ? {}
+            : {
+                error: `Team launch ${id}: ${failed.note ?? 'The lead was refused before its first job.'}`,
+              }),
+        };
+
+        write?.(call);
+        leadWrite?.(call);
+        port.redraw?.();
+      },
+    };
+
+    runs.set(id, {
+      ...found,
+      team: frozen.team,
+      job: args.job,
+      selected,
+    });
+
+    const started = startChild(key, opening, {
+      id,
+      name,
+      parent: () => conversationAt(key),
+      from: MAIN,
+      team: { name: args.team },
+      part: teamPart(
+        args.team,
+        frozen.team,
+        {
+          lead: name,
+          others: ownChildren(agents)
+            .filter(isLead)
+            .map((each) => each.name),
+        },
+        place.cwd,
+      ),
+      asked: `selected for team ${args.team}`,
+      launch,
+      checkStarted: (conversation) => {
+        leadWrite = conversation.captureServed();
+
+        return confirmSelected(selected, 'lead', 'lead', conversation);
+      },
+      refused: (reason) => refuseSelected(selected, 'lead', 'lead', reason),
+    });
+
+    selected.publish();
+
+    const invalid = await started.validated;
+
+    if (invalid !== undefined || !launch.committed) {
+      return {
+        error: `Team launch ${id} was refused before its first job; the attempted lead is closing.`,
+        id,
+        receipt: selected.receipt,
+      };
+    }
+
+    const observed = selected.receipt.roles.find(
+      (role) => role.role === 'lead',
+    );
+
+    return {
+      ...started.opened,
+      team: args.team,
+      ...(typeof observed?.actual?.effort === 'string'
+        ? { effort: observed.actual.effort }
+        : {}),
+      ...(typeof observed?.note === 'string' ? { note: observed.note } : {}),
+      receipt: selected.receipt,
+    };
+  };
+
+  /**
+   * `run_team`, and `/team run`: the team's lead opened as a child of main,
+   * `key`'s session, named after the team and numbered past its first run,
+   * on the lead's runtime, model, effort and mode, with the team part and
+   * the job as main's message. Refused for a team not found, `lists` saying
+   * what lists them, a file that fails its check, and as `openAgent` is.
+   * `started` settles where the file's effort left the lead once it is up.
+   */
+  const runTeamAt = async (
+    key: number,
+    { team, job, selection }: RunTeamArgs,
+    lists: string,
+    launch = captureLaunch(key),
+  ): Promise<
+    | Extract<RunTeamAnswer, { readonly error: string }>
+    | {
+        readonly ran: Exclude<RunTeamAnswer, { readonly error: string }>;
+        readonly started: Promise<EffortStarted>;
+      }
+  > => {
+    if (!launch.valid()) {
+      return { error: 'This launch was cancelled; no run started.' };
+    }
+
+    if (selection !== undefined) {
+      const selected = await runSelectedTeamAt(
+        key,
+        { team, job, selection },
+        lists,
+        launch,
+      );
+
+      return 'error' in selected
+        ? selected
+        : { ran: selected, started: Promise.resolve({}) };
+    }
+
+    const found = (await teamsAt(key)).find((each) => each.name === team);
+
+    if (found === undefined) {
+      return { error: `No team named ${team} · ${lists}` };
+    }
+
+    if ('problem' in found) {
+      return {
+        error: `${found.shown} is not a team chord can run: ${found.problem}`,
+      };
+    }
+
+    const { lead } = found.team;
+    const args: OpenArgs = {
+      agent: lead.agent,
+      prompt: job,
+      ...(lead.model === undefined ? {} : { model: lead.model }),
+      ...(lead.effort === undefined ? {} : { effort: lead.effort }),
+      ...(lead.mode === undefined ? {} : { mode: lead.mode }),
+    };
+    const refused =
+      (await startRefusal(key, conversationAt(key), args, 'agent', team)) ??
+      fullRefusal(key);
+    const agents = ownedBy(sessions.agents, key);
+
+    if (!launch.valid()) {
+      return { error: 'This launch was cancelled; no run started.' };
+    }
+
+    if (agents === undefined || refused !== undefined) {
+      return { error: refused ?? 'This session has closed' };
+    }
+
+    const name = runName(agents, team);
+    const others = ownChildren(agents)
+      .filter(isLead)
+      .map((each) => each.name);
+    const { opened, started } = startChild(key, args, {
+      name,
+      parent: () => conversationAt(key),
+      from: MAIN,
+      team: { name: team },
+      part: teamPart(team, found.team, { lead: name, others }, place.cwd),
+      asked: `set by team ${team}`,
+      launch,
+    });
+
+    if (!launch.valid()) {
+      return {
+        error: `Team launch ${opened.id} was cancelled before its first job; the attempted lead is closing.`,
+      };
+    }
+
+    runs.set(opened.id, { ...found, job });
+
+    return { ran: { ...opened, team }, started };
+  };
+
+  /**
+   * A lead's `open_agent`: a member of its team's file, by name, on the
+   * file's runtime, model, effort and mode, with the team part ahead of the lead's
+   * prompt. Refused for a name the file does not have and for one open.
+   */
+  const openMember = async (
+    caller: Caller,
+    { member, prompt }: MemberArgs,
+  ): Promise<OpenAnswer> => {
+    const { key } = caller;
+    const launch = captureLaunch(key, caller);
+    const lead =
+      caller.agent === undefined ? undefined : childOf(key, caller.agent);
+    const run = lead === undefined ? undefined : runs.get(lead.id);
+
+    if (lead === undefined || run === undefined) {
+      return { error: 'You are closed; you open no members' };
+    }
+
+    const defined = run.team.members.find((each) => each.name === member);
+
+    if (defined === undefined) {
+      return {
+        error: `Team ${run.name} has no member ${member}; its members are ${andList(
+          run.team.members.map((each) => each.name),
+        )}`,
+      };
+    }
+
+    /** Why `member` cannot open now: its lead closed, or it is open. */
+    const occupied = () => {
+      const agents = ownedBy(sessions.agents, key);
+
+      if (
+        agents === undefined ||
+        !agents.children.some((each) => each.id === lead.id)
+      ) {
+        return 'You are closed; you open no members';
+      }
+
+      return membersOf(agents, lead.id).some((each) => each.name === member)
+        ? `${member} is open; send_message reaches it`
+        : undefined;
+    };
+
+    const open = occupied();
+
+    if (open !== undefined) {
+      return { error: open };
+    }
+
+    const args: OpenArgs = {
+      agent: defined.agent,
+      prompt,
+      ...(defined.model === undefined ? {} : { model: defined.model }),
+      ...(defined.effort === undefined ? {} : { effort: defined.effort }),
+      ...(defined.mode === undefined ? {} : { mode: defined.mode }),
+    };
+    // Asked again after the wait: two calls for one member may both have
+    // passed the first look, and the lead may have closed meanwhile.
+    const refused = await startRefusal(
+      key,
+      lead.conversation,
+      args,
+      'agent',
+      member,
+    );
+    const raced = occupied();
+
+    if (raced !== undefined) {
+      return { error: raced };
+    }
+
+    if (refused !== undefined) {
+      if (run.selected !== undefined) {
+        const safe = `${member} cannot be admitted on the selected configuration; no first job was delivered.`;
+
+        refuseSelected(run.selected, 'member', member, safe);
+
+        return { error: safe };
+      }
+
+      return { error: refused };
+    }
+
+    if (run.selected !== undefined) {
+      const selected = run.selected;
+      const policy = await policyNow();
+      const capabilities = await selectedCapabilities(defined.agent, key);
+      const invalid =
+        'error' in policy
+          ? policy.error
+          : capabilities !== undefined && 'error' in capabilities
+            ? `${member}.agent: ${capabilities.error}`
+            : validateSelectedRole(
+                member,
+                defined,
+                policy.policy,
+                runtimeNames,
+                capabilities,
+                selected.frozen.selection.members?.[member],
+                'member',
+              );
+      // A competing request's admission is not this role's startup failure.
+      const raced = occupied();
+
+      if (raced !== undefined) {
+        return { error: raced };
+      }
+
+      const unavailable =
+        invalid ??
+        (!launch.valid()
+          ? 'The member request was cancelled before admission.'
+          : undefined);
+
+      if (unavailable !== undefined) {
+        refuseSelected(selected, 'member', member, unavailable);
+
+        return { error: unavailable };
+      }
+
+      const attempt = startChild(key, args, {
+        name: member,
+        parent: () => lead.conversation,
+        from: { name: lead.name, reachable: true },
+        team: { name: run.name, lead: lead.id },
+        part: teamPart(
+          run.name,
+          run.team,
+          { member: defined, lead: lead.name },
+          place.cwd,
+        ),
+        asked: `selected for team ${run.name}`,
+        launch,
+        checkStarted: (conversation) =>
+          confirmSelected(selected, 'member', member, conversation),
+        refused: (reason) => refuseSelected(selected, 'member', member, reason),
+      });
+      const failed = await attempt.validated;
+
+      const observed = selected.receipt.roles.find(
+        (role) => role.role === 'member' && role.name === member,
+      );
+
+      return failed === undefined && launch.committed
+        ? {
+            ...attempt.opened,
+            ...(typeof observed?.actual?.effort === 'string'
+              ? { effort: observed.actual.effort }
+              : {}),
+            ...(typeof observed?.note === 'string'
+              ? { note: observed.note }
+              : {}),
+          }
+        : {
+            error: `${member} was refused before its first job; the attempted member is closing.`,
+          };
+    }
+
+    const { opened, started } = startChild(key, args, {
+      name: member,
+      parent: () => conversationAt(lead.key),
+      from: { name: lead.name, reachable: true },
+      team: { name: run.name, lead: lead.id },
+      part: teamPart(
+        run.name,
+        run.team,
+        { member: defined, lead: lead.name },
+        place.cwd,
+      ),
+      asked: `set by team ${run.name}`,
+    });
+
+    return { ...opened, ...(await started) };
+  };
+
   return {
     sessions,
     conversation,
@@ -1689,5 +2261,7 @@ export function createAgentsHost(
     startChild,
     fullRefusal,
     openAgent,
+    runTeamAt,
+    openMember,
   };
 }

@@ -38,12 +38,15 @@ export function checkChannel(name: string): void {
 
 /**
  * The channel of `version`, its first pre-release identifier; null for a
- * stable version and for what is no version at all, which npm refuses to
- * publish under any tag. A pre-release not shaped `<x.y.z>-<channel>.<n>`
- * throws, so a package.json edited by hand cannot publish past the channel
- * rules.
+ * stable version. What is no version, or a pre-release not shaped
+ * `<x.y.z>-<channel>.<n>`, throws: taken for stable, a mistyped label such as
+ * `1.0.0-next.01` would go to main and publish with no tag.
  */
 export function channelOf(version: string): string | null {
+  if (valid(version) === null) {
+    throw new VersionError(`${version} is no version`);
+  }
+
   const label = prerelease(version);
 
   if (label === null) {

@@ -6,10 +6,11 @@ describe('channelOf', () => {
     expect(channelOf(version)).toBeNull();
   });
 
-  test.each(['latest', '', '1.0', '1.0.0-next.01'])(
-    '%p is no version, which npm refuses under any tag',
+  test.each(['latest', '', '1.0', '1.0.0-next.01', '1.0.0-next.', '1.0.0-'])(
+    '%p is no version, and is refused rather than taken for stable',
     (version) => {
-      expect(channelOf(version)).toBeNull();
+      expect(() => channelOf(version)).toThrow(`${version} is no version`);
+      expect(() => channelOf(version)).toThrow(VersionError);
     },
   );
 

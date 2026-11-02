@@ -9,25 +9,9 @@
  */
 import { gt, inc, prerelease, valid } from 'semver';
 import { channelOf, checkChannel, VersionError } from '../../../src/channel.ts';
+import { BUMPS, type Bump, isBump, isVersionArgument } from './select.ts';
 
-export { VersionError };
-
-/** The bumps the positional takes; `fix` is `patch`'s other name. */
-export const BUMPS = ['major', 'minor', 'patch', 'fix'] as const;
-
-export type Bump = (typeof BUMPS)[number];
-
-function isBump(word: string): word is Bump {
-  return (BUMPS as readonly string[]).includes(word);
-}
-
-/**
- * Whether `word` can be the positional: a bump, or a version written as
- * semver writes it, so `v1.2.3` or `1.2.3+build` is not taken for another.
- */
-export function isVersionArgument(word: string): boolean {
-  return isBump(word) || valid(word) === word;
-}
+export { isVersionArgument, VersionError };
 
 /**
  * The version a release of `wanted` makes of `current`, package.json's, on

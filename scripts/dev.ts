@@ -9,12 +9,13 @@ import type { CompileOptions } from './dev/compile.ts';
 import type { MemoryOptions } from './dev/memory.ts';
 import { PACKAGES } from './dev/release/lib.ts';
 import {
+  BUMPS,
+  isVersionArgument,
   type ReleaseOptions,
   selectStages,
   type Stage,
   STAGES,
 } from './dev/release/select.ts';
-import { BUMPS, isVersionArgument } from './dev/release/version.ts';
 
 /**
  * What each command does once its arguments are parsed. Apart from the

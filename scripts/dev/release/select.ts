@@ -1,9 +1,28 @@
 /**
- * The release's stages, and which of them a run's options leave. Apart from
- * the stages themselves, so parsing `bun dev release` loads none of them.
+ * The release's stages, which of them a run's options leave, and what its
+ * positional may be. Apart from the stages themselves and the version logic,
+ * so parsing any `bun dev` command loads neither, nor src/.
  */
 import { ValidationError } from '@cliffy/command';
+import { valid } from 'semver';
 import type { Package } from './lib.ts';
+
+/** The bumps the positional takes; `fix` is `patch`'s other name. */
+export const BUMPS = ['major', 'minor', 'patch', 'fix'] as const;
+
+export type Bump = (typeof BUMPS)[number];
+
+export function isBump(word: string): word is Bump {
+  return (BUMPS as readonly string[]).includes(word);
+}
+
+/**
+ * Whether `word` can be the positional: a bump, or a version written as
+ * semver writes it, so `v1.2.3` or `1.2.3+build` is not taken for another.
+ */
+export function isVersionArgument(word: string): boolean {
+  return isBump(word) || valid(word) === word;
+}
 
 export const STAGES = [
   'install',

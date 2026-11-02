@@ -50,6 +50,7 @@
     "pip-requirements-js": "^1.0.3",
     "react": "^19.3.1",
     "react-error-boundary": "^6.1.6",
+    "semver": "^7.8.5",
     "shell-quote": "^1.8.3",
     "split2": "^4.2.0",
     "string-width": "^8.3.0",
@@ -81,7 +82,6 @@
     "globals": "^17.13.0",
     "jiti": "^2.7.0",
     "puppeteer-core": "^25.16.0",
-    "semver": "^7.8.5",
     "slice-ansi": "^10.0.0",
     "typescript": "npm:@typescript/typescript6@^6.0.2",
     "typescript-eslint": "^8.72.1"

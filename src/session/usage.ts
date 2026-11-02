@@ -6,6 +6,23 @@
 import type { Usage } from '@agentclientprotocol/sdk/unstable';
 import type { TurnCost } from './turn_costs.ts';
 
+/** What a part of the window's spend is, which its row says in words. */
+export type SpendKind = 'main' | 'agent' | 'team' | 'member' | 'task';
+
+/** Where a closing session's spend goes, and what it is under. */
+export interface KeptPlace {
+  /** The lead of the team run it was of, by chord's id, itself for a lead. */
+  readonly lead?: string | undefined;
+  /** That team's name, for a run whose lead has closed. */
+  readonly team?: string | undefined;
+  readonly name: string;
+  readonly kind: SpendKind;
+  /** The agent the main session is. */
+  readonly agent?: string | undefined;
+  /** The agent a child runs on, as chord starts it. */
+  readonly runtime?: string | undefined;
+}
+
 /**
  * A turn's tokens. A field the agent did not report is absent, never zero,
  * so a report can say what it was not told.

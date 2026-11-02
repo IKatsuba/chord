@@ -342,7 +342,7 @@ export interface WindowView {
   ): MessageAnswer;
   /** Closes the caller's child `to`, by id or name: a lead's, a member. */
   close(caller: Caller, to: string): CloseAnswer;
-  /** `clear_agent`: a child of the caller's cleared; see `useSessions`. */
+  /** `clear_agent`: a child of the caller's cleared; see `agents_host.ts`. */
   clear(caller: Caller, to: string): Promise<ClearAnswer>;
   /** Starts a monitor for the caller, as `monitor` asks. */
   monitor(caller: Caller, args: MonitorArgs): MonitorAnswer;

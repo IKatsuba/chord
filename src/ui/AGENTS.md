@@ -5,6 +5,9 @@
 - No `index.ts`: an import names its file.
 - A feature's `state.ts` knows only its slice and imports nothing from `app/`.
 - `app/App.tsx` defines no component but the window and routes every key through the pure `app/keys.ts`.
+- `app/sessions.ts` adapts `session/agents_host.ts` to the window: keys, focus,
+  replay dispatch, notices and drafts stay here. Fill `/team show`'s running
+  overlay synchronously in the host callback, at the point it reads the run.
 - Draw on OpenTUI's `box`/`text`/`span` through `theme/text.ts` and hear keys through `app/input.ts`'s `usePress`, with no layer between (`docs/decisions.md`, "OpenTUI part 8b").
 - `app/renderer.tsx` wraps the window in `app/Crash.tsx`'s crash boundary.
   Any key gives the terminal back, writes the stack to stderr and exits 1.

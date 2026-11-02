@@ -7923,3 +7923,25 @@ acceptance requires no change in behaviour.
 `src/session/leaving.ts`. The window's `leave`, `dieBySignal` and terminal
 stay in `src/ui/app/renderer.tsx`. chord has two ways out in one file until
 someone joins them. There is no follow-up task for now.
+
+## 2026-11-02 — CHD-580: the host below the window, with behaviour preserved
+
+`src/session/agents_host.ts` owns main, children, teams, typed commands and
+the MCP view. About 2640 lines moved against the estimate of 2800; the hook
+is 1568 lines and the host 2914. The host imports `src/server/` for runtime
+probes, MCP types and the settings-box claim, a new direction, but neither
+React nor `src/ui/`.
+
+This supersedes the CHD-573 design's redraw boundary: `closeByPerson` keeps
+its `redraw?.()`. `closeOnForcedExit`'s registration stays in the hook's
+effect. The notice watch and `clearChild`'s draft restore stay in the
+window through the port's `watched` and `queueBack` callbacks. `/team show`'s
+state, mark and headline overlay stays there too, filled synchronously by
+the host's callback at the same point it read the run.
+
+`replays`, `replayed` and `heard` stay in the hook. Its replay bug is filed
+as CHD-585, kept as it is by the no-behaviour-change rule: `replays` is new
+on each render, captured `replayed` fills the first render's Map, and
+`heard` reads the latest render's. After a re-render, replay events go one
+by one and `in_session_past` is not sent. By source reading, `/resume` in a
+running window hits this; it is not confirmed by a run.

@@ -809,6 +809,12 @@ export function runAcp(options: AcpOptions): AcpRun {
       prompt: ({ params, requestId, signal }) => {
         refuseIfClosing();
 
+        // A cancel that came right behind it has fired already, and an abort
+        // listener hears nothing of one past.
+        if (signal.aborted) {
+          return Promise.resolve({ stopReason: 'cancelled' as const });
+        }
+
         const entry = named(params.sessionId);
         const session = entry.conversation.session;
         const parsed = promptOf(

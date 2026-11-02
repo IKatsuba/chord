@@ -6854,7 +6854,8 @@ Without one, the release is package.json's version, as before.
 - **Only canonical release versions.** An exact version is written as
   semver writes it: no `v` or `=` prefix, no build metadata. Pre-releases
   are refused, and every version, a bump or an exact one, is refused while
-  package.json's own version is a pre-release.
+  package.json's own version is a pre-release. (Superseded for pre-releases
+  by the 2026-11-02 CHD-577 entry: `--channel` makes them.)
 - **An exact version is above package.json's, or is it.** package.json's
   own version is accepted and releases it with no new commit, so a rerun
   after a failed publish can name the version that run committed.
@@ -7703,3 +7704,56 @@ OpenTUI passes no mouse event through; and keeping the panel in flow, against
 the design. The owner chose the first: the overlay gives the list the rows it
 may take, and the panel uses them instead of measuring itself. OpenTUI is not
 patched.
+
+## 2026-11-02 — CHD-577: pre-releases on a channel (owner)
+
+The milestone towards 1.0.0 merges into a branch named `next` and is released
+from it, so the refusal of every pre-release in the CHD-412 entry no longer
+holds. `bun dev release <major|minor|patch|fix|x.y.z> --channel <name>` releases
+one. The owner decided:
+
+- **The version.** The bump or the x.y.z gives the base. package.json on `next`
+  holds a pre-release, so a bump counts from npm's latest stable version. If
+  package.json already holds this channel's pre-release of that base, the number
+  goes up by one; otherwise it starts at 0. From 0.67.0, `major --channel next`
+  gives 1.0.0-next.0 and the same command again 1.0.0-next.1; `1.0.0 --channel
+  next` gives the same two.
+- **`--channel` is the only way to name a pre-release.** A version argument with
+  a label is refused. A channel named `latest` is refused, as it would publish
+  over npm's latest.
+- **The tag.** The channel is the npm dist-tag for every package, platform ones
+  included. npm's latest does not move, and the draft GitHub release is marked a
+  pre-release so it cannot become the repository's latest.
+- **The branch.** A channel release publishes only from the branch named after
+  the channel, level with its origin. A stable release publishes only from main,
+  as before, so one from a channel's branch is refused.
+- **`chord upgrade`.** A channel's build follows only that channel's tag. A
+  stable build keeps following latest and is never moved to a channel.
+- **`next`.** It is protected as main is, and reaches main at the end with one
+  ordinary merge. Other channels' branches, their CI and their protection are
+  not set up here.
+
+What follows from those, settled in the same change:
+
+- **The channel is derived from the version.** `channelOf` in `src/channel.ts`
+  answers a version's first pre-release identifier, or null for a stable version,
+  and the tag, the branch and the pre-release mark all come from it. No channel
+  value is passed through the stages, so a labelled version cannot publish
+  without its tag, including on a resume or with `--package`. A stopped release
+  on a channel finishes with `bun dev release` alone.
+- **A version that cannot be placed is refused.** An invalid version, or a
+  pre-release not shaped `<x.y.z>-<channel>.<n>`, throws rather than answering
+  null, as null means stable and a stable release publishes with no tag.
+- **What a channel name can be.** `/^[a-z][a-z0-9-]*$/`, not a semver range (npm
+  refuses a tag that is one, such as `x` or `v1`), not `latest`, and not `main`,
+  which is the stable branch. A version's label is held to the same rules.
+- **A stable version over a pre-release is accepted.** After `next` is merged
+  into main, package.json holds a `next` version, so 1.0.0 over 1.0.0-next.5 is
+  taken. A bump there is still refused, saying to name the version.
+- **`semver` is a runtime dependency**, as `src/` now imports it.
+- **cliffy's `NpmProvider` reads only `dist-tags.latest`.** `ManagerProvider`
+  implements the Provider's `getVersions`, its extension point, for a channel's
+  build, reading its tag from the same registry document. A channel with no tag
+  fails naming it and never falls back to latest. cliffy's `isOutdated` asks
+  `getVersions` for `--version` and `-l` too, so those fail the same way on such
+  a build.

@@ -601,19 +601,19 @@ client-supplied `acp` transport is refused with -32602.
 
 ### Methods
 
-| Client calls chord          | Does                                                                                                                          |
-| --------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `initialize`                | ACP v1, agent identity and capabilities; no authentication methods                                                            |
-| `session/new`               | Opens a session in `cwd`; answers when the agent is ready                                                                     |
-| `session/list`              | Lists this agent's chord records, optionally filtered by `cwd`, in one answer without pagination                              |
-| `session/load`              | Reopens a chord record and replays its updates before answering                                                               |
-| `session/resume`            | Reopens a chord record without replay                                                                                         |
-| `session/close`             | Stops the session; keeps its record                                                                                           |
-| `session/prompt`            | Sends a prompt; answers when that prompt's turn ends; further prompts queue                                                   |
-| `session/cancel`            | Notification: interrupts the session and withdraws queued client prompts; also stops a named adapter subagent where supported |
-| `$/cancel_request`          | Cancels only the named request; a queued prompt is removed without interrupting another                                       |
-| `session/set_config_option` | Sets a select option and returns all `configOptions`                                                                          |
-| `session/set_mode`          | Sets the permission mode for clients using this method                                                                        |
+| Client calls chord          | Does                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `initialize`                | ACP v1, agent identity and capabilities; no authentication methods                                                                   |
+| `session/new`               | Opens a session in `cwd`; answers when the agent is ready                                                                            |
+| `session/list`              | Lists this agent's chord records, optionally filtered by `cwd`, in one answer without pagination                                     |
+| `session/load`              | Reopens a chord record and replays its updates before answering                                                                      |
+| `session/resume`            | Reopens a chord record without replay                                                                                                |
+| `session/close`             | Stops the session; keeps its record                                                                                                  |
+| `session/prompt`            | Sends a prompt; answers when that prompt's turn ends; further prompts queue                                                          |
+| `session/cancel`            | Notification: requests interruption and withdraws queued client prompts; also requests a named adapter subagent stop where supported |
+| `$/cancel_request`          | Requests cancellation of only the named request; a queued prompt is removed without interrupting another                             |
+| `session/set_config_option` | Sets a select option and returns all `configOptions`                                                                                 |
+| `session/set_mode`          | Sets the permission mode for clients using this method                                                                               |
 
 Models, modes and efforts share `configOptions`; names and values belong
 to the agent. Boolean options are absent and boolean sets are refused.
@@ -699,6 +699,9 @@ for silence nor changes the agent's cycle to fit the client.
 - Half-closing stdin means the client is gone: EOF closes the whole
   connection, so a running prompt gets no answer.
 - A line over 32 MiB closes the connection.
+- Cancellation is cooperative. If the agent ignores it, `session/prompt`
+  stays pending indefinitely, with no timer. Close the session with
+  `session/close` or shut down the connection to stop it.
 
 EOF, broken output, an oversized line, a crash, SIGINT, SIGTERM and SIGHUP
 start the same shutdown, with a 15-second deadline. On a signal or crash,

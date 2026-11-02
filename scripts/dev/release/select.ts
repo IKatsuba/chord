@@ -27,6 +27,7 @@ export interface ReleaseOptions {
   readonly from?: Stage | undefined;
   readonly to?: Stage | undefined;
   readonly package?: Package | undefined;
+  readonly channel?: string | undefined;
 }
 
 /**

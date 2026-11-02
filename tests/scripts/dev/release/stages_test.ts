@@ -815,6 +815,352 @@ if [ -n "$FAIL_CHECK" ] && [ "$1" = 'quality' ]; then exit 2; fi
   });
 });
 
+describe('a channel', () => {
+  const NEXT = '10.0.0-next.3';
+
+  beforeEach(() => {
+    // A registry that knows versions, as a pre-release's tarball name has a
+    // hyphen of its own, and answers npm's latest from LATEST.
+    at.fake(
+      'npm',
+      `echo "npm $*" >>"$STATE/ran.log"
+case "$1" in
+whoami) echo owner ;;
+view)
+  if [ "$3" = dist-tags.latest ]; then
+    if [ -n "$NPM_DOWN" ]; then echo 'npm error code E500' >&2; exit 1; fi
+    echo "\${LATEST-9.9.9}"
+    exit 0
+  fi
+  spec=\${2#@chorded/}
+  if [ -f "$STATE/published/$spec" ]; then echo "\${spec##*@}"; exit 0; fi
+  echo 'npm error code E404' >&2
+  exit 1
+  ;;
+publish)
+  file=$(basename "$4" .tgz)
+  file=\${file#chorded-}
+  name=\${file%%-[0-9]*}
+  touch "$STATE/published/$name@\${file#"$name"-}"
+  ;;
+esac
+`,
+    );
+    at.fake(
+      'bun',
+      `echo "bun $*" >>"$STATE/ran.log"
+if [ "$1" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; fi
+`,
+    );
+    onNpm('chord', VERSION);
+  });
+
+  function onNpm(name: string, version: string): void {
+    writeFileSync(join(at.place, 'published', `${name}@${version}`), '');
+  }
+
+  /** `branch` checked out and on origin, package.json at `version`. */
+  function onBranch(branch: string, version = VERSION): void {
+    git(at.root, 'checkout', '-q', '-b', branch);
+
+    if (version !== VERSION) {
+      writeFileSync(join(at.root, 'package.json'), JSON.stringify({ version }));
+      git(at.root, 'commit', '-q', '-am', `chore: chord v${version}`);
+    }
+
+    git(at.root, 'push', '-q', 'origin', branch);
+  }
+
+  function read(cwd: string, ...args: string[]): string {
+    return String(spawnSync('git', args, { cwd }).stdout).trim();
+  }
+
+  const origin = () => join(at.place, 'origin.git');
+
+  /** A publishing run at `wanted`, stopped by the check that follows the push. */
+  function publishing(
+    wanted: string | undefined,
+    channel: string | undefined,
+    env: Record<string, string> = {},
+  ): Promise<void> {
+    const options = {
+      channel,
+      skip: ['natives', 'sign', 'selftest', 'notarise', 'pack'] as const,
+    };
+
+    return runRelease(
+      context(env),
+      selectStages(options),
+      options,
+      MAC,
+      wanted,
+    );
+  }
+
+  test('a bump counts from npm, starts at 0, and pushes to the branch of the channel', async () => {
+    onBranch('next');
+
+    const main = read(at.root, 'rev-parse', 'main');
+
+    expect(await died(publishing('major', 'next'))).toBe('bun quality failed');
+    expect(read(at.root, 'log', '-1', '--format=%s')).toBe(
+      'chore: chord v10.0.0-next.0',
+    );
+    expect(read(origin(), 'rev-parse', 'next')).toBe(
+      read(at.root, 'rev-parse', 'HEAD'),
+    );
+    expect(read(origin(), 'rev-parse', 'main')).toBe(main);
+    expect(ran()).toContain('npm view @chorded/chord dist-tags.latest');
+  });
+
+  test('the same bump again goes up by one', async () => {
+    onBranch('next', NEXT);
+    onNpm('chord', NEXT);
+
+    await died(publishing('major', 'next'));
+
+    expect(read(at.root, 'log', '-1', '--format=%s')).toBe(
+      'chore: chord v10.0.0-next.4',
+    );
+  });
+
+  test('an exact version gives the same numbers, without asking npm for latest', async () => {
+    onBranch('beta');
+
+    await died(publishing('10.0.0', 'beta'));
+
+    expect(read(at.root, 'log', '-1', '--format=%s')).toBe(
+      'chore: chord v10.0.0-beta.0',
+    );
+    expect(read(origin(), 'rev-parse', 'beta')).toBe(
+      read(at.root, 'rev-parse', 'HEAD'),
+    );
+    expect(ran()).not.toContain('npm view @chorded/chord dist-tags.latest');
+  });
+
+  test('a stable release never asks npm for latest', async () => {
+    await died(publishing('patch', undefined));
+
+    expect(read(at.root, 'log', '-1', '--format=%s')).toBe(
+      'chore: chord v9.9.10',
+    );
+    expect(ran()).not.toContain('npm view @chorded/chord dist-tags.latest');
+  });
+
+  test('a failed read of npm latest stops the release', async () => {
+    onBranch('next');
+
+    const head = read(at.root, 'rev-parse', 'HEAD');
+
+    expect(await died(publishing('major', 'next', { NPM_DOWN: 'yes' }))).toBe(
+      'npm view @chorded/chord dist-tags.latest failed: npm error code E500',
+    );
+    expect(read(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(ran()).toStrictEqual(['npm view @chorded/chord dist-tags.latest']);
+  });
+
+  test('an npm latest that is no stable version stops the release', async () => {
+    onBranch('next');
+
+    expect(await died(publishing('major', 'next', { LATEST: '' }))).toBe(
+      "npm's latest  is no stable version",
+    );
+  });
+
+  test.each([
+    ['main', 'main'],
+    ['another channel', 'beta'],
+  ])('from %s it is refused', async (_name, branch) => {
+    if (branch !== 'main') {
+      onBranch(branch);
+    }
+
+    const head = read(at.root, 'rev-parse', 'HEAD');
+
+    expect(await died(publishing('major', 'next'))).toBe(
+      `a release on channel next publishes only from branch next; HEAD is ${branch}`,
+    );
+    expect(read(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(ran().some((line) => line.startsWith('bun '))).toBeFalse();
+  });
+
+  test('a stable release from its branch is refused', async () => {
+    onBranch('next');
+
+    expect(await died(publishing('patch', undefined))).toBe(
+      'a release that publishes runs from main; HEAD is next',
+    );
+  });
+
+  test('a stable release over its pre-release is refused from its branch and taken from main', async () => {
+    onBranch('next', NEXT);
+    onNpm('chord', NEXT);
+
+    expect(await died(publishing('10.0.0', undefined))).toBe(
+      'a release that publishes runs from main; HEAD is next',
+    );
+
+    // next merged into main, as it ends.
+    git(at.root, 'checkout', '-q', 'main');
+    git(at.root, 'merge', '-q', '--ff-only', 'next');
+    git(at.root, 'push', '-q', 'origin', 'main');
+
+    await died(publishing('10.0.0', undefined));
+
+    expect(read(at.root, 'log', '-1', '--format=%s')).toBe(
+      'chore: chord v10.0.0',
+    );
+    expect(read(origin(), 'rev-parse', 'main')).toBe(
+      read(at.root, 'rev-parse', 'HEAD'),
+    );
+  });
+
+  test('its version without a version given is refused from main', async () => {
+    onBranch('next', NEXT);
+    git(at.root, 'checkout', '-q', 'main');
+    git(at.root, 'merge', '-q', '--ff-only', 'next');
+    git(at.root, 'push', '-q', 'origin', 'main');
+
+    expect(await died(publishing(undefined, undefined))).toBe(
+      'a release on channel next publishes only from branch next; HEAD is main',
+    );
+  });
+
+  test('a branch not level with origin is refused', async () => {
+    onBranch('next');
+
+    const behind = read(at.root, 'rev-parse', 'HEAD');
+
+    git(at.root, 'commit', '-q', '--allow-empty', '-m', 'ahead');
+
+    const head = read(at.root, 'rev-parse', 'HEAD');
+
+    expect(await died(publishing('major', 'next'))).toBe(
+      `next is not origin/next: next is ${head}, origin/next is ${behind}`,
+    );
+  });
+
+  test('a branch not on origin is refused', async () => {
+    git(at.root, 'checkout', '-q', '-b', 'next');
+
+    expect(await died(publishing('major', 'next'))).toStartWith(
+      'git rev-parse origin/next failed:',
+    );
+  });
+
+  test('a push that fails names the branch and drops the commit', async () => {
+    onBranch('next');
+
+    const head = read(at.root, 'rev-parse', 'HEAD');
+
+    executable(
+      join(origin(), 'hooks', 'pre-receive'),
+      '#!/bin/sh\necho refused >&2\nexit 1\n',
+    );
+
+    expect(await died(publishing('major', 'next'))).toStartWith(
+      'git push origin next failed, so chore: chord v10.0.0-next.0 is dropped:',
+    );
+    expect(read(at.root, 'rev-parse', 'HEAD')).toBe(head);
+  });
+
+  describe('a stopped publish', () => {
+    beforeEach(() => {
+      onBranch('next', NEXT);
+      fetchedArchives(at.root);
+
+      const tgz = join(at.root, 'dist', 'release', 'tgz');
+      const files = ['chord', ...PLATFORMS].map(
+        (name) => `chorded-${name}-${NEXT}.tgz`,
+      );
+
+      mkdirSync(tgz, { recursive: true });
+
+      for (const file of files) {
+        writeFileSync(join(tgz, file), file);
+      }
+
+      recordSums(tgz, files);
+      onNpm('chord-darwin-arm64', NEXT);
+    });
+
+    test.each([
+      ['with no version', undefined],
+      ['with its channel', 'next'],
+    ])('resumes %s, building nothing', async (_name, channel) => {
+      await publishing(undefined, channel);
+
+      expect(at.out[0]).toBe(
+        `resuming ${NEXT}: a platform package is published, @chorded/chord is not`,
+      );
+      expect(at.out.at(-1)).toBe(NEXT);
+      expect(ran().some((line) => /^(bun|security|xcrun) /.test(line))).toBe(
+        false,
+      );
+      expect(read(origin(), 'tag', '--list', `v${NEXT}`)).toBe(`v${NEXT}`);
+    });
+
+    test('refuses another channel', async () => {
+      expect(await died(publishing(undefined, 'beta'))).toBe(
+        `package.json's version ${NEXT} is not on channel beta; name a version or a bump`,
+      );
+    });
+
+    test.each([
+      ['an exact version', '10.0.0'],
+      ['a bump', 'major'],
+    ])('refuses %s, as it is not on npm', async (_name, wanted) => {
+      expect(await died(publishing(wanted, 'next'))).toBe(
+        `@chorded/chord@${NEXT} is not published yet; \`bun dev release\` without a version finishes it`,
+      );
+    });
+
+    test('is refused from another branch', async () => {
+      git(at.root, 'checkout', '-q', '-b', 'topic');
+
+      expect(await died(publishing(undefined, undefined))).toBe(
+        'a release on channel next publishes only from branch next; HEAD is topic',
+      );
+    });
+  });
+
+  test.each([
+    ['a labelled version', '10.0.0-next.0', undefined],
+    ['a labelled version on a channel', '10.0.0-next.0', 'next'],
+  ])('%s is refused before anything runs', async (_name, wanted, channel) => {
+    expect(await died(publishing(wanted, channel))).toBe(
+      `${wanted} has a pre-release label; --channel is the only way to name one`,
+    );
+    expect(ran()).toStrictEqual([]);
+  });
+
+  test.each(['latest', 'main', 'x', 'v1', 'Next'])(
+    'channel %s is refused before anything runs',
+    async (channel) => {
+      expect(await died(publishing('major', channel))).toContain(
+        `${channel} is no channel name`,
+      );
+      expect(ran()).toStrictEqual([]);
+    },
+  );
+
+  test.each([
+    ['1.0.0-next', 'a pre-release is written <x.y.z>-<channel>.<n>'],
+    ['1.0.0-latest.0', "npm's latest"],
+    ['1.0.0-next.01', 'is no version'],
+    ['latest', 'is no version'],
+  ])(
+    'a package.json at %s is refused before anything runs',
+    async (version, why) => {
+      writeFileSync(join(at.root, 'package.json'), JSON.stringify({ version }));
+      git(at.root, 'commit', '-q', '-am', 'edited by hand');
+
+      expect(await died(publishing(undefined, undefined))).toContain(why);
+      expect(ran()).toStrictEqual([]);
+    },
+  );
+});
+
 describe('a signal while the version commit is held', () => {
   const lib = join(import.meta.dir, '../../../../scripts/dev/release');
 

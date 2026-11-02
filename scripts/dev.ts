@@ -102,7 +102,9 @@ const RUN: DevActions = {
 
 const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version. Preflight runs on every run, whatever is skipped. After all eligibility guards, mandatory npm authentication runs for every invocation, including dry runs and runs without publish. A successful npm whoami continues without needing a terminal. If it fails, stdin and stdout must be terminals: the release runs plain npm login once with inherited stdio, then rechecks npm whoami. npm may open a browser and save credentials or registry settings, including during a dry run. Failed, cancelled or signal-terminated login, or a failed recheck, stops before release work. Stage selection cannot skip authentication. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
 
-The version is package.json's, or the one given: package.json's own, an exact version above it, or major, minor, patch or fix (patch) to bump it. Pre-releases are refused, and a new version needs the compile stage. Given a new one, the release checks it, writes it into package.json and commits that alone as "chore: chord v<version>" before any stage. A run that publishes pushes the commit to origin's main first, and it stays there if a later stage fails: rerun with no version, or that one. If the push fails, the commit is dropped and the release stops. A dry run, or a run without publish, drops the commit at the end and pushes nothing. Until the commit is pushed or dropped, Ctrl+C, SIGTERM and SIGHUP drop it too; a run killed otherwise may leave it, to be dropped with git reset --keep HEAD~1. A stopped publish resumes only package.json's version.
+The version is package.json's, or the one given: package.json's own, an exact version above it, or major, minor, patch or fix (patch) to bump it. A version with a pre-release label cannot be given, and a new version needs the compile stage. Given a new one, the release checks it, writes it into package.json and commits that alone as "chore: chord v<version>" before any stage. A run that publishes pushes the commit to origin's main first, and it stays there if a later stage fails: rerun with no version, or that one. If the push fails, the commit is dropped and the release stops. A dry run, or a run without publish, drops the commit at the end and pushes nothing. Until the commit is pushed or dropped, Ctrl+C, SIGTERM and SIGHUP drop it too; a run killed otherwise may leave it, to be dropped with git reset --keep HEAD~1. A stopped publish resumes only package.json's version.
+
+--channel <name> releases a pre-release on that channel: <x.y.z>-<name>.<n>. A bump counts from npm's latest stable version, and an exact version is taken as written; if package.json already holds that channel's pre-release of it, n goes up by one, otherwise it starts at 0. So from 0.67.0, major --channel next gives 1.0.0-next.0, and the same command again 1.0.0-next.1. With no version, --channel finishes package.json's version if it is that channel's. The channel is the version's label, and the rest follows from the version whether or not --channel is given: a publishing run needs the branch named after the channel, level with its origin, and pushes there instead of main. A stable version publishes only from main.
 
 Stages:
   install    bun install --frozen-lockfile
@@ -297,6 +299,10 @@ export function devCommand(actions: DevActions = RUN) {
           .option('--from <stage:stage>', 'Start at this stage.')
           .option('--to <stage:stage>', 'Stop after this stage.')
           .option(
+            '--channel <name:string>',
+            'Release a pre-release on this channel, from the branch of that name.',
+          )
+          .option(
             '--package <name:package>',
             'Publish only this package: chord-darwin-arm64, chord-darwin-x64, chord-linux-arm64, chord-linux-x64 or chord.',
             { conflicts: ['dry-run'] },
@@ -304,6 +310,14 @@ export function devCommand(actions: DevActions = RUN) {
           .example('the whole release', 'bun dev release')
           .example('the next minor version', 'bun dev release minor')
           .example('an exact version', 'bun dev release 1.0.0')
+          .example(
+            "the next pre-release on a channel, from that channel's branch",
+            'bun dev release major --channel next',
+          )
+          .example(
+            'a pre-release of an exact version',
+            'bun dev release 1.0.0 --channel next',
+          )
           .example(
             'a dry run of the next patch, package.json as it was after',
             'bun dev release patch --dry-run --skip notarise',

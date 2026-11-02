@@ -11,7 +11,16 @@ import { join } from 'node:path';
 import { authenticate } from './authenticate.ts';
 import { check, compile, install, natives } from './build.ts';
 import { commitVersion, holdVersion, pushVersion } from './bump.ts';
-import { die, identity, type Package, type Release, run, said } from './lib.ts';
+import { channelOf } from '../../../src/channel.ts';
+import {
+  die,
+  identity,
+  npm,
+  type Package,
+  type Release,
+  run,
+  said,
+} from './lib.ts';
 import { notarise, PROFILE } from './notarise.ts';
 import { pack } from './pack.ts';
 import { packageVersion, preflight } from './preflight.ts';
@@ -50,9 +59,10 @@ export async function runRelease(
   }
 
   // Eligibility is checked before npm may hand over the terminal or save
-  // credentials; publishing also requires main level with origin and no tag.
+  // credentials; publishing also requires the version's branch level with
+  // origin and no tag.
   const current = packageVersion(release);
-  const next = target(current, wanted);
+  const next = target(release, current, wanted, options.channel);
 
   // The version enters the binary at compile: a run without it would pack
   // or publish what was built at package.json's.
@@ -153,10 +163,25 @@ export async function runRelease(
   }
 }
 
-/** The version `wanted` makes of `current`, or the release dies saying why. */
-function target(current: string, wanted: string | undefined): string {
+/**
+ * The version `wanted` makes of `current`, or the release dies saying why.
+ * Its channel is asked here too, so a label no channel can have, in a
+ * package.json edited by hand, stops before the guards that follow it.
+ */
+function target(
+  release: Release,
+  current: string,
+  wanted: string | undefined,
+  channel: string | undefined,
+): string {
   try {
-    return releaseVersion(current, wanted);
+    const version = releaseVersion(current, wanted, channel, () =>
+      latestStable(release),
+    );
+
+    channelOf(version);
+
+    return version;
   } catch (error) {
     if (error instanceof VersionError) {
       die(error.message);
@@ -164,6 +189,19 @@ function target(current: string, wanted: string | undefined): string {
 
     throw error;
   }
+}
+
+/** npm's latest stable version, which a bump on a channel counts from. */
+function latestStable(release: Release): string {
+  const view = npm(release, ['view', '@chorded/chord', 'dist-tags.latest']);
+
+  if (view.status !== 0) {
+    die(
+      `npm view @chorded/chord dist-tags.latest failed: ${said(view.stderr)}`,
+    );
+  }
+
+  return said(view.stdout);
 }
 
 /** Publishes, and prints the version last once it is tagged. */

@@ -551,6 +551,36 @@ describe('release [version]', () => {
   });
 });
 
+describe('release --channel', () => {
+  test('passes on the name, the release judges it', async () => {
+    for (const name of ['next', 'latest', 'Next']) {
+      const [call] = await parsed(['release', 'major', '--channel', name]);
+
+      expect(call?.[2]).toMatchObject({ channel: name });
+      expect(call?.[3]).toBe('major');
+    }
+  });
+
+  test('takes no version', async () => {
+    const [call] = await parsed(['release', '--channel', 'next']);
+
+    expect(call?.[2]).toMatchObject({ channel: 'next' });
+    expect(call?.[3]).toBeUndefined();
+  });
+
+  test('is absent without it', async () => {
+    const [call] = await parsed(['release', 'major']);
+
+    expect(call?.[2]).not.toHaveProperty('channel');
+  });
+
+  test('needs a name', async () => {
+    await expect(parsed(['release', '--channel'])).rejects.toThrow(
+      ValidationError,
+    );
+  });
+});
+
 describe('tester: release parsing boundaries', () => {
   test('conflicts are refused with the arguments in either order', async () => {
     for (const pair of [

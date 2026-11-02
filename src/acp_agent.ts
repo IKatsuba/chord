@@ -22,6 +22,7 @@ import {
   type Usage,
 } from '@agentclientprotocol/sdk/unstable';
 import { type AcpRequest, connectAgentApp } from './acp/agent_app.ts';
+import { foldEvent } from './acp/host_fold.ts';
 import { seeingWrites } from './acp/stdio.ts';
 import {
   NO_TURNS,
@@ -32,10 +33,11 @@ import {
 } from './acp/upstream_turns.ts';
 import { transportOf } from './mcp.ts';
 import { DIMCODE_WORDS, dimcodeAtRisk } from './notices.ts';
-import {
+import { createAgentsHost, type FoldedSession } from './session/agents_host.ts';
+import type {
   Conversation,
-  type ConversationEvent,
-  type Starting,
+  ConversationEvent,
+  Starting,
 } from './session/conversation.ts';
 import {
   createLeaving,
@@ -43,7 +45,6 @@ import {
   type LeaveReason,
   type LeaveStep,
 } from './session/leaving.ts';
-import { FileRecording } from './session/record.ts';
 import type { OpenSessionOptions, Session } from './session/session.ts';
 import {
   earlierSessions,
@@ -129,6 +130,8 @@ export interface AcpRun {
 
 /** A session this process holds, from its start until its agent is gone. */
 interface Entry {
+  readonly host: ReturnType<typeof createAgentsHost>;
+  /** Main's, kept: the host lets go of it as soon as it closes. */
   readonly conversation: Conversation;
   /** Its name on stderr, for a way out it holds up. */
   readonly name: string;
@@ -200,9 +203,25 @@ export function runAcp(options: AcpOptions): AcpRun {
   const agentState = (entry: Entry) => entry.conversation.session?.agentState();
 
   const closeEntry = (entry: Entry): Promise<void> => {
-    entry.closing ??= entry.conversation.close().finally(() => {
-      entries.delete(entry);
-    });
+    entry.host.closeRuntimes();
+
+    entry.closing ??= entry.host.sessions
+      .closeAll()
+      .catch((error: unknown) => {
+        // Each agent's own words, for stderr to say what did not close.
+        throw error instanceof AggregateError
+          ? new Error(
+              error.errors
+                .map((each: unknown) =>
+                  each instanceof Error ? each.message : String(each),
+                )
+                .join('; '),
+            )
+          : error;
+      })
+      .finally(() => {
+        entries.delete(entry);
+      });
 
     return entry.closing;
   };
@@ -695,7 +714,72 @@ export function runAcp(options: AcpOptions): AcpRun {
   ): Entry => {
     starts += 1;
 
+    const folds = new Map<number, FoldedSession>();
+    const host = createAgentsHost(
+      {
+        place: {
+          cwd,
+          mcpServers: [],
+          mcpIgnored: [],
+          startupOf: (name) =>
+            name === agent
+              ? {
+                  agentCommand: options.agentCommand,
+                  starting: place.starting,
+                  ...(place.noMcpServers === true
+                    ? { mcpServers: false as const }
+                    : {}),
+                }
+              : undefined,
+        },
+        runtimes: [agent],
+        home: undefined,
+        configHome: undefined,
+        stateDir: options.stateDir,
+        open: (opening) =>
+          options.open({
+            ...opening,
+            onElicitationComplete: (params) => {
+              connection.client
+                .notify('elicitation/complete', params)
+                .catch(() => {});
+            },
+          }),
+        server: undefined,
+        resume: resume?.from,
+        mainServers: servers,
+      },
+      {
+        heard: (key, event) => {
+          folds.set(key, foldEvent(folds.get(key), event));
+          heard(entry, event);
+        },
+        replayed: (_key, replay) => {
+          entry.replaying = true;
+
+          try {
+            replay();
+          } finally {
+            entry.replaying = false;
+          }
+        },
+        // A close takes main out of the host first: what it still says, a
+        // cancelled turn's end and its asks withdrawn, is told as ever.
+        closingHeard: (_key, event) => heard(entry, event),
+        told: (event) => {
+          if (event.type === 'session_closed') {
+            folds.delete(event.key);
+          }
+        },
+        stateOf: (key) => folds.get(key),
+      },
+    );
+
+    host.sessions.start(agent);
+
     const entry: Entry = {
+      host,
+      conversation: host.sessions.agents.main!.conversation,
       name: `session ${starts}`,
       live: false,
       held: [],
@@ -705,38 +789,6 @@ export function runAcp(options: AcpOptions): AcpRun {
       replaying: false,
       ...(resume?.replays === true ? { past: [] } : {}),
       ...(resume === undefined ? {} : { reopens: resume.from.sessionId }),
-      conversation: new Conversation(
-        (signal) =>
-          options.open({
-            agent,
-            cwd,
-            signal,
-            ...(options.agentCommand === undefined
-              ? {}
-              : { agentCommand: options.agentCommand }),
-            mcpServers: servers,
-            ...(resume === undefined ? {} : { resume: resume.from }),
-            onElicitationComplete: (params) => {
-              connection.client
-                .notify('elicitation/complete', params)
-                .catch(() => {});
-            },
-            ...(place.noMcpServers === true ? { noMcpServers: true } : {}),
-          }),
-        (event) => heard(entry, event),
-        Date.now,
-        place.starting,
-        new FileRecording(options.stateDir, (message) => warn(entry, message)),
-        (replay) => {
-          entry.replaying = true;
-
-          try {
-            replay();
-          } finally {
-            entry.replaying = false;
-          }
-        },
-      ),
     };
 
     entries.add(entry);
@@ -764,7 +816,6 @@ export function runAcp(options: AcpOptions): AcpRun {
         },
         { once: true },
       );
-      entry.conversation.start();
     });
 
   /** What a client's servers and the session's directory start a session on. */

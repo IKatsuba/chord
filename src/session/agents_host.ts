@@ -5,6 +5,7 @@
  * the window turns that into the actions it dispatches, each as it comes.
  */
 import { relative } from 'node:path';
+import type { McpServer } from '@agentclientprotocol/sdk/unstable';
 import { agentNameProblem } from '../agent_name.ts';
 import type { Wait } from '../notify.ts';
 import { Runtimes, sessionProbe } from '../server/runtimes.ts';
@@ -121,6 +122,11 @@ export interface AgentsHostOptions {
   readonly resources?: ReadLimits | undefined;
   /** The session main opens first resumes this one. */
   readonly resume: Resume | undefined;
+  /**
+   * Main's servers in place of the place's: a client's go to the session it
+   * named, and children take the settings' only.
+   */
+  readonly mainServers?: readonly McpServer[];
 }
 
 /** What the host reads of a session from its driver's fold. */
@@ -264,6 +270,7 @@ export function createAgentsHost(
     server,
     resources,
     resume,
+    mainServers,
   }: AgentsHostOptions,
   port: AgentsPort,
 ) {
@@ -2271,6 +2278,7 @@ export function createAgentsHost(
       refused,
       mcpServers: takes,
     } = startupOf(agent) ?? {};
+    const servers = mainServers ?? mcpServers.map(({ server }) => server);
     let releaseCurrentCaller = () => {};
 
     const conversation = new Conversation(
@@ -2312,9 +2320,7 @@ export function createAgentsHost(
           signal,
           ...(agentCommand === undefined ? {} : { agentCommand }),
           ...(next === undefined ? {} : { resume: next }),
-          ...(mcpServers.length === 0
-            ? {}
-            : { mcpServers: mcpServers.map(({ server }) => server) }),
+          ...(servers.length === 0 ? {} : { mcpServers: servers }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
           ...(takes === false ? { noMcpServers: true } : {}),
         };

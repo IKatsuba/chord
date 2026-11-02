@@ -133,6 +133,62 @@ async function withMain(
   return { ...made, key, open };
 }
 
+describe('main servers', () => {
+  const server = (name: string) => ({
+    name,
+    command: name,
+    args: [],
+    env: [],
+  });
+
+  test("main takes them in place of the place's; a child, the place's", async () => {
+    const opened: (readonly { readonly name: string }[] | undefined)[] = [];
+    const { host, key } = await withMain(
+      {
+        mcpServers: [{ server: server('settings'), from: 'file' }],
+      },
+      {},
+      {
+        mainServers: [server('client')],
+        open: (options) => {
+          opened.push(options.mcpServers);
+
+          return Promise.resolve(held());
+        },
+      },
+    );
+
+    expect(opened[0]?.map(({ name }) => name)).toEqual(['client']);
+
+    await host.openAgent(key, { agent: 'fake', prompt: 'hi' });
+
+    expect(opened[1]?.map(({ name }) => name)).toEqual(['settings']);
+
+    await host.sessions.closeAll();
+  });
+
+  test("none given, main takes the place's", async () => {
+    const opened: (readonly { readonly name: string }[] | undefined)[] = [];
+    const { host } = await withMain(
+      {
+        mcpServers: [{ server: server('settings'), from: 'file' }],
+      },
+      {},
+      {
+        open: (options) => {
+          opened.push(options.mcpServers);
+
+          return Promise.resolve(held());
+        },
+      },
+    );
+
+    expect(opened[0]?.map(({ name }) => name)).toEqual(['settings']);
+
+    await host.sessions.closeAll();
+  });
+});
+
 describe('closing a child', () => {
   test('says so in order: its spend held, then closed, then the keys', async () => {
     const order: string[] = [];

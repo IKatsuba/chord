@@ -837,6 +837,25 @@ describe('permissions', () => {
       expect(client.said(sessionId)).not.toContain('Permission: allow');
     }));
 
+  test('a close withdraws it upstream, heard as main closes', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      await client.request('session/close', { sessionId });
+
+      await client.until(
+        (message) =>
+          message.method === '$/cancel_request' &&
+          message.params?.requestId === ask.id,
+      );
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'cancelled',
+      );
+    }));
+
   test('a duplicate answer changes nothing', () =>
     onAcp([], async ({ client, newSession, prompt }) => {
       const sessionId = await newSession();

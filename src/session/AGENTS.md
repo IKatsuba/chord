@@ -18,7 +18,10 @@ These rules also cover `src/acp/`.
   task reports lose delivery authority immediately. The next surviving prompt
   carries any team part exactly once; a withdrawn prompt does not spend it.
 - The window's and `acp`'s sessions are recorded; `-p`'s are not.
-- This layer is shared with `-p` and `acp`: nothing here or in `src/acp/` imports from `src/ui/`.
+- Nothing here or in `src/acp/` imports from `src/ui/` or React.
+  `agents_host.ts` owns main, children, teams and their MCP view; it imports
+  `src/server/` for runtime probes, MCP types and the settings-box claim.
+  Window effects and state reads go through its synchronous port callbacks.
 - `get_budgets` returns per-call provider windows or unavailable reasons;
   missing values stay null. `readAt` is the call time, not provider freshness.
   Omitted runtime filters read Claude and Codex; empty filters read none.

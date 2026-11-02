@@ -37,7 +37,6 @@ import { createAgentsHost, type FoldedSession } from './session/agents_host.ts';
 import type {
   Conversation,
   ConversationEvent,
-  Starting,
 } from './session/conversation.ts';
 import {
   createLeaving,
@@ -45,6 +44,7 @@ import {
   type LeaveReason,
   type LeaveStep,
 } from './session/leaving.ts';
+import type { Place } from './session/place.ts';
 import type { OpenSessionOptions, Session } from './session/session.ts';
 import {
   earlierSessions,
@@ -95,13 +95,8 @@ export function byHandNote(stdinIsTerminal: boolean): readonly string[] {
     : [];
 }
 
-/** What a session's directory decides. */
-export interface AcpPlace {
-  /** Its settings' and `.mcp.json`'s servers; a client's are laid over them. */
-  readonly mcpServers: readonly McpServer[];
-  readonly noMcpServers?: boolean;
-  readonly starting?: Starting;
-}
+/** What a session's directory decides: a place, and the runtimes known there. */
+export type AcpPlace = Place & { readonly runtimes: readonly string[] };
 
 export interface AcpOptions {
   readonly input: ReadableStream<Uint8Array>;
@@ -112,7 +107,6 @@ export interface AcpOptions {
   exit(how: LeaveExit): void;
   /** The one agent this process runs, by the name chord knows it. */
   readonly agent: string;
-  readonly agentCommand?: string | string[];
   readonly version: string;
   /** Where records are kept, as the window's are. */
   readonly stateDir: string;
@@ -717,22 +711,8 @@ export function runAcp(options: AcpOptions): AcpRun {
     const folds = new Map<number, FoldedSession>();
     const host = createAgentsHost(
       {
-        place: {
-          cwd,
-          mcpServers: [],
-          mcpIgnored: [],
-          startupOf: (name) =>
-            name === agent
-              ? {
-                  agentCommand: options.agentCommand,
-                  starting: place.starting,
-                  ...(place.noMcpServers === true
-                    ? { mcpServers: false as const }
-                    : {}),
-                }
-              : undefined,
-        },
-        runtimes: [agent],
+        place: { ...place, cwd },
+        runtimes: place.runtimes,
         home: undefined,
         configHome: undefined,
         stateDir: options.stateDir,
@@ -837,6 +817,14 @@ export function runAcp(options: AcpOptions): AcpRun {
 
     refuseIfClosing();
 
+    // Before any host: a refused command must start nothing, and the host's
+    // own refusal is for a child, whose parent is up to hear it.
+    const startRefused = place.startupOf(agent)?.refused;
+
+    if (startRefused !== undefined) {
+      throw new RequestError(-32603, startRefused);
+    }
+
     // A cancel while the place was read: its signal has fired already, and
     // no agent is to be started for it.
     if (signal.aborted) {
@@ -845,7 +833,9 @@ export function runAcp(options: AcpOptions): AcpRun {
 
     // A client's is the nearest layer, by name.
     const servers = new Map(
-      [...place.mcpServers, ...asked].map((server) => [server.name, server]),
+      [...place.mcpServers.map(({ server }) => server), ...asked].map(
+        (server) => [server.name, server],
+      ),
     );
 
     return { place, servers: [...servers.values()] };

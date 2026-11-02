@@ -3,7 +3,12 @@ import assert from 'node:assert';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type AcpOptions, type AcpRun, runAcp } from '../src/acp_agent.ts';
+import {
+  type AcpOptions,
+  type AcpPlace,
+  type AcpRun,
+  runAcp,
+} from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
 import type { LeaveExit } from '../src/session/leaving.ts';
 import {
@@ -43,6 +48,20 @@ interface Acp {
   prompt(sessionId: string, text: string): number;
 }
 
+/** A directory that starts the fake on `flags`, with `servers` of its own. */
+function fakePlace(
+  flags: readonly string[] = [],
+  servers: AcpPlace['mcpServers'][number]['server'][] = [],
+): AcpPlace {
+  return {
+    cwd: '',
+    startupOf: () => ({ agentCommand: fakeAgentCommand(undefined, ...flags) }),
+    mcpServers: servers.map((server) => ({ server, from: 'a test' })),
+    mcpIgnored: [],
+    runtimes: ['fake'],
+  };
+}
+
 async function onAcp(
   flags: readonly string[],
   body: (acp: Acp) => Promise<void>,
@@ -70,11 +89,10 @@ async function onAcp(
     stderr: (line) => lines.push(line),
     exit: (how) => exits.push(how),
     agent: 'fake',
-    agentCommand: fakeAgentCommand(undefined, ...flags),
     version: '1.2.3',
     stateDir,
     open: openSession,
-    place: () => Promise.resolve({ mcpServers: [] }),
+    place: () => Promise.resolve(fakePlace(flags)),
     ...over,
   });
 
@@ -528,12 +546,15 @@ describe('one surface', () => {
       },
       {
         place: () =>
-          Promise.resolve({
-            mcpServers: [
-              { name: 'both', command: 'mine', args: [], env: [] },
-              { name: 'ours', command: 'ours', args: [], env: [] },
-            ],
-          }),
+          Promise.resolve(
+            fakePlace(
+              [],
+              [
+                { name: 'both', command: 'mine', args: [], env: [] },
+                { name: 'ours', command: 'ours', args: [], env: [] },
+              ],
+            ),
+          ),
         open: (options) => {
           if (seen.length === 0) {
             seen.push(options.mcpServers);
@@ -612,6 +633,47 @@ describe('starts that fail', () => {
     );
   });
 
+  test("a command its directory's files refuse is -32603 in their words, nothing started", async () => {
+    let opens = 0;
+    let refuses = true;
+
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        const { error } = await client.request('session/new', {
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(error?.code).toBe(-32603);
+        expect(error?.message).toBe('fake: refused by a file');
+        expect(opens).toBe(0);
+
+        refuses = false;
+
+        // Nothing was left behind, and the process goes on.
+        expect(await newSession()).not.toBe('');
+        expect(opens).toBe(1);
+      },
+      {
+        place: () =>
+          Promise.resolve(
+            refuses
+              ? {
+                  ...fakePlace(),
+                  startupOf: () => ({ refused: 'fake: refused by a file' }),
+                }
+              : fakePlace(),
+          ),
+        open: (options) => {
+          opens += 1;
+
+          return openSession(options);
+        },
+      },
+    );
+  });
+
   test('a login is -32000, its ways in the data', () =>
     onAcp(['--auth-required', 'methods'], async ({ client, cwd }) => {
       const { error } = await client.request('session/new', {
@@ -626,7 +688,7 @@ describe('starts that fail', () => {
     }));
 
   test('a cancel while the place is read starts no agent', async () => {
-    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    const reading = Promise.withResolvers<AcpPlace>();
     let asked = false;
     let opens = 0;
 
@@ -641,7 +703,7 @@ describe('starts that fail', () => {
 
         await client.request('session/list', {});
 
-        reading.resolve({ mcpServers: [] });
+        reading.resolve(fakePlace());
 
         expect((await client.answerTo(id)).error?.code).toBe(-32800);
         expect(client.messages.filter((m) => m.id === id)).toHaveLength(1);
@@ -683,10 +745,16 @@ describe('starts that fail', () => {
         expect((await client.answerTo(id)).error?.code).toBe(-32800);
       },
       {
-        agentCommand: gatedCommand(
-          join(gateDir, 'release'),
-          fakeAgentCommand(),
-        ),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            startupOf: () => ({
+              agentCommand: gatedCommand(
+                join(gateDir, 'release'),
+                fakeAgentCommand(),
+              ),
+            }),
+          }),
       },
     );
 
@@ -1370,7 +1438,7 @@ describe('sessions and records', () => {
   ]) {
     test(`${first} then ${second} of one id at once: one opens it, the other is -32602`, async () => {
       const made: { sessionId?: string } = {};
-      const reading = Promise.withResolvers<{ mcpServers: [] }>();
+      const reading = Promise.withResolvers<AcpPlace>();
       let opens = 0;
 
       await onAcp(
@@ -1382,7 +1450,7 @@ describe('sessions and records', () => {
 
           expect(loser.error?.code).toBe(-32602);
 
-          reading.resolve({ mcpServers: [] });
+          reading.resolve(fakePlace());
 
           expect((await client.answerTo(winner)).error).toBeUndefined();
           expect(opens).toBe(1);
@@ -1413,7 +1481,7 @@ describe('sessions and records', () => {
 
   test('a reopen cancelled gives its id back', async () => {
     const made: { sessionId?: string } = {};
-    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    const reading = Promise.withResolvers<AcpPlace>();
     let places = 0;
 
     await onAcp(
@@ -1428,7 +1496,7 @@ describe('sessions and records', () => {
 
         await client.request('session/list', {});
 
-        reading.resolve({ mcpServers: [] });
+        reading.resolve(fakePlace());
 
         expect((await client.answerTo(load)).error?.code).toBe(-32800);
         expect(
@@ -1439,9 +1507,7 @@ describe('sessions and records', () => {
         place: () => {
           places += 1;
 
-          return places === 1
-            ? reading.promise
-            : Promise.resolve({ mcpServers: [] });
+          return places === 1 ? reading.promise : Promise.resolve(fakePlace());
         },
         state: async (stateDir, cwd) => {
           made.sessionId = await recordSession({
@@ -1457,7 +1523,7 @@ describe('sessions and records', () => {
 
   test('a new session answered with an id being reopened takes an alias', async () => {
     const SHAPED = '11111111-2222-4333-8444-555555555555';
-    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    const reading = Promise.withResolvers<AcpPlace>();
     let places = 0;
 
     await onAcp(
@@ -1473,7 +1539,7 @@ describe('sessions and records', () => {
 
         expect(await newSession()).toBe(`${SHAPED}~2`);
 
-        reading.resolve({ mcpServers: [] });
+        reading.resolve(fakePlace(['--session-id', SHAPED]));
 
         expect((await client.answerTo(load)).error).toBeUndefined();
       },
@@ -1483,7 +1549,7 @@ describe('sessions and records', () => {
 
           return places === 1
             ? reading.promise
-            : Promise.resolve({ mcpServers: [] });
+            : Promise.resolve(fakePlace(['--session-id', SHAPED]));
         },
       },
     );

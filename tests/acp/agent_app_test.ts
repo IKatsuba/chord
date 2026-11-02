@@ -28,11 +28,19 @@ async function withClient(
     stderr: () => {},
     exit: (how) => exits.push(how),
     agent: 'fake',
-    agentCommand: fakeAgentCommand(undefined, ...flags),
     version: '1.2.3',
     stateDir: cwd,
     open: openSession,
-    place: () => Promise.resolve({ mcpServers: [] }),
+    place: () =>
+      Promise.resolve({
+        cwd,
+        startupOf: () => ({
+          agentCommand: fakeAgentCommand(undefined, ...flags),
+        }),
+        mcpServers: [],
+        mcpIgnored: [],
+        runtimes: ['fake'],
+      }),
   });
 
   try {

@@ -6,7 +6,7 @@ import { afterEach, describe, expect, test } from 'bun:test';
 import assert from 'node:assert';
 import { type ChildProcess, spawn, spawnSync } from 'node:child_process';
 import { closeSync, constants, openSync, readSync } from 'node:fs';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -679,4 +679,86 @@ setInterval(() => {}, 1000);
       ).toHaveLength(1);
     }
   }, 40_000);
+});
+
+describe('a place per session', () => {
+  test("a command a session's directory refuses fails that session alone", async () => {
+    const here = await scratch();
+    const there = await scratch();
+    const config = join(here, 'config');
+    const pidFile = join(here, 'agent.pid');
+
+    await mkdir(join(config, 'chord'), { recursive: true });
+    await writeFile(
+      join(config, 'chord', 'settings.json'),
+      JSON.stringify({
+        agents: { fake: { command: [execPath(), AGENT, pidFile] } },
+      }),
+    );
+    await mkdir(join(there, '.chord'));
+    await writeFile(
+      join(there, '.chord', 'settings.json'),
+      JSON.stringify({ agents: { fake: { command: 5 } } }),
+    );
+
+    const child = spawn(execPath(), [MAIN, 'acp', 'fake'], {
+      cwd: here,
+      stdio: ['pipe', 'pipe', 'pipe'],
+      env: {
+        ...process.env,
+        XDG_STATE_HOME: join(here, 'state'),
+        XDG_CONFIG_HOME: config,
+      },
+    });
+
+    chords.push(child);
+    child.stderr.resume();
+
+    const client = new AcpClient((line) => {
+      child.stdin.write(line);
+    }, child.stdout as AsyncIterable<Uint8Array>);
+
+    await client.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    const refused = await client.request('session/new', {
+      cwd: there,
+      mcpServers: [],
+    });
+
+    expect(refused.error?.code).toBe(-32603);
+    expect(refused.error?.message).toContain('fake');
+    expect(refused.error?.message).toContain('.chord/settings.json');
+
+    const { result } = await client.request('session/new', {
+      cwd: here,
+      mcpServers: [],
+    });
+
+    expect(result?.sessionId).toBeString();
+  }, 30_000);
+
+  test('a problem in a directory is said once, however many sessions read it', async () => {
+    const chord = await start();
+    const there = await scratch();
+
+    await writeFile(join(there, '.mcp.json'), 'not json');
+
+    await chord.newSession();
+
+    for (const _ of [1, 2]) {
+      const { result } = await chord.client.request('session/new', {
+        cwd: there,
+        mcpServers: [],
+      });
+
+      expect(result?.sessionId).toBeString();
+    }
+
+    const said = chord.stderr().split('\n');
+
+    expect(said.filter((line) => line.includes('.mcp.json'))).toHaveLength(1);
+  }, 30_000);
 });

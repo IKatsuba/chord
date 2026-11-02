@@ -13,6 +13,7 @@ import {
 } from '../../session/window_agents.ts';
 import type { TaskSpent, Transcript } from '../../session/transcript/types.ts';
 import {
+  type SpendKind,
   type Spent,
   TOKEN_FIELDS,
   type TokenUsage,
@@ -168,9 +169,6 @@ export function taskFigure(spent: TaskSpent | undefined): Figure | undefined {
 
   return Object.keys(figure).length === 0 ? undefined : figure;
 }
-
-/** What a part of the window's spend is, which its row says in words. */
-export type SpendKind = 'main' | 'agent' | 'team' | 'member' | 'task';
 
 /**
  * A part of the window's spend: a session or task with its own figure, or

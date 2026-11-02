@@ -5,9 +5,9 @@
  */
 import type { AgentOption } from '../../session/config.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
+import type { TeamListing } from '../../session/team_command.ts';
 import type { Transcript } from '../../session/transcript/types.ts';
 import { asksPerson } from '../dialogs/state.ts';
-import type { TeamListing } from '../teams/teams.ts';
 import type { ThemeSetting } from '../theme/theme.ts';
 
 export interface PickersState {

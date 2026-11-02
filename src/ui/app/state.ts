@@ -22,7 +22,7 @@ import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { SignIn } from '../../session/sign_in.ts';
 import type { StartFailure } from '../../session/start_failure.ts';
-import { addTurn, type Spent } from '../../session/usage.ts';
+import { addTurn, type KeptPlace, type Spent } from '../../session/usage.ts';
 import type { AgentOption } from '../../session/config.ts';
 import { reduceTranscript } from '../../session/transcript/reducer.ts';
 import {
@@ -117,11 +117,7 @@ import {
   type ViewSession,
   type ViewWindow,
 } from '../transcript/state.ts';
-import {
-  type KeptSpend,
-  sessionParts,
-  type SpendKind,
-} from '../transcript/spend.ts';
+import { type KeptSpend, sessionParts } from '../transcript/spend.ts';
 
 export type Connection =
   | { readonly status: 'starting' }
@@ -1169,16 +1165,6 @@ export interface WindowedState {
    */
   readonly closing?: Readonly<Record<number, Closing>>;
 }
-
-/** Where a closing session's spend goes, and what it is under. */
-export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
-  readonly name: string;
-  readonly kind: SpendKind;
-  /** The agent the main session is. */
-  readonly agent?: string | undefined;
-  /** The agent a child runs on, as chord starts it. */
-  readonly runtime?: string | undefined;
-};
 
 /** A closing session, and where what it spent is kept. */
 interface Closing {

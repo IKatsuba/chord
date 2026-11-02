@@ -17,6 +17,24 @@ export interface TeamWords {
 /** A team file as the picker lists it, its path as the window shows it. */
 export type ListedTeam = FoundTeam & { readonly shown: string };
 
+/** A team's runs open in the window, as the picker and `/team show` read them. */
+export interface TeamRun {
+  readonly id?: string;
+  /** The team's file name. */
+  readonly team: string;
+  /** The run's name, its lead's: `bugfix`, `bugfix 2`. */
+  readonly name: string;
+  /** When its lead opened, on chord's clock. */
+  readonly since: number;
+}
+
+/** What `/team`'s picker and names read: the teams, the runs, the two places. */
+export interface TeamListing {
+  readonly teams: readonly ListedTeam[];
+  readonly runs: readonly TeamRun[];
+  readonly dirs: { readonly project: string; readonly user?: string };
+}
+
 /** What `/team` was asked, by the words after it. */
 export type TeamCommand =
   | { readonly form: 'list' }

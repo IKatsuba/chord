@@ -7,7 +7,11 @@ import { Table } from '@cliffy/table';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
-import type { ListedTeam, TeamWords } from '../../session/team_command.ts';
+import type {
+  ListedTeam,
+  TeamRun,
+  TeamWords,
+} from '../../session/team_command.ts';
 import type {
   MessageFrom,
   TeamAgentShown,
@@ -37,24 +41,6 @@ export function newTeamPrompt(words: string): string {
     "propose_team with it (list_agents gives each runtime's models and " +
     `modes).\n\n${words}`
   );
-}
-
-/** A team's runs open in the window, as the picker and `/team show` read them. */
-export interface TeamRun {
-  readonly id?: string;
-  /** The team's file name. */
-  readonly team: string;
-  /** The run's name, its lead's: `bugfix`, `bugfix 2`. */
-  readonly name: string;
-  /** When its lead opened, on chord's clock. */
-  readonly since: number;
-}
-
-/** What `/team`'s picker and names read: the teams, the runs, the two places. */
-export interface TeamListing {
-  readonly teams: readonly ListedTeam[];
-  readonly runs: readonly TeamRun[];
-  readonly dirs: { readonly project: string; readonly user?: string };
 }
 
 /** A call's headline as one line: `Edit(src/a.ts)`, `→ to @coder`. */

@@ -38,9 +38,12 @@ import {
   type ListedTeam,
   ranNote,
   stoppedLine,
+  type TeamListing,
   teamRefusal,
+  type TeamRun,
 } from '../../session/team_command.ts';
 import { signInNote } from '../../session/sign_in.ts';
+import type { KeptPlace } from '../../session/usage.ts';
 import {
   failureNote,
   sentence,
@@ -173,13 +176,7 @@ import {
   NO_STOP_HINT,
   stopRefused,
 } from '../background/view.ts';
-import {
-  headlineText,
-  messageHeadline,
-  TEAM_WORDS,
-  type TeamListing,
-  type TeamRun,
-} from '../teams/teams.ts';
+import { headlineText, messageHeadline, TEAM_WORDS } from '../teams/teams.ts';
 import {
   firstLine,
   guardianView,
@@ -188,7 +185,6 @@ import {
 import { windowSpend } from '../transcript/spend.ts';
 import {
   type AppAction,
-  type KeptPlace,
   keptSpend,
   type AppState,
   canSend,

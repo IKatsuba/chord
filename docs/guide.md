@@ -568,6 +568,156 @@ Forks close on quit and are not reopened automatically. `/resume` or
 at the divider: the copied source transcript is only in the original view,
 while the agent retains the fork's conversation context.
 
+## `chord acp`
+
+`chord acp [agent]` serves ACP v1 on stdin and stdout, without a window.
+Configure an ACP client to start `chord` with arguments `["acp", "codex"]`,
+for example, and keep both pipes open while it works. Diagnostics go to
+stderr. `initialize` starts no agent; each `session/new` starts a separate
+process of the same agent. There is no session count limit.
+
+Put `acp` first, then its flags:
+
+```sh
+chord acp codex
+chord acp --agent-command "my-agent --acp" --model model-id --effort high --permission-mode plan
+```
+
+The agent comes from the argument, `--agent-command` or the startup
+settings. `--model` (`-m`), `--effort` and `--permission-mode` set starting
+values for each session. `chord --agent-command "my-agent --acp" acp`
+opens the window instead: OpenTUI's terminal queries reach stdout.
+`chord acp --nope` exits 2 with empty stdout and stderr naming `--nope`
+as an unknown agent; with `--agent-command`, it silently becomes the agent's name.
+
+A client names the directory: each `session/new`'s `cwd` loads that
+directory's `.chord/settings.json` and `.mcp.json`. These can start MCP
+servers and set a starting permission mode, with no trust step, as the
+window and `-p` read them. The agent remains the one chosen at startup.
+Client-supplied `mcpServers` override settings servers by name for that
+session; `mcpServers: false` in settings holds them back too. Stdio, HTTP
+and SSE servers are accepted, subject to the agent's capabilities; a
+client-supplied `acp` transport is refused with -32602.
+
+### Methods
+
+| Client calls chord          | Does                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `initialize`                | ACP v1, agent identity and capabilities; no authentication methods                                                                   |
+| `session/new`               | Opens a session in `cwd`; answers when the agent is ready                                                                            |
+| `session/list`              | Lists this agent's chord records, optionally filtered by `cwd`, in one answer without pagination                                     |
+| `session/load`              | Reopens a chord record and replays its updates before answering                                                                      |
+| `session/resume`            | Reopens a chord record without replay                                                                                                |
+| `session/close`             | Stops the session; keeps its record                                                                                                  |
+| `session/prompt`            | Sends a prompt; answers when that prompt's turn ends; further prompts queue                                                          |
+| `session/cancel`            | Notification: requests interruption and withdraws queued client prompts; also requests a named adapter subagent stop where supported |
+| `$/cancel_request`          | Requests cancellation of only the named request; a queued prompt is removed without interrupting another                             |
+| `session/set_config_option` | Sets a select option and returns all `configOptions`                                                                                 |
+| `session/set_mode`          | Sets the permission mode for clients using this method                                                                               |
+
+Models, modes and efforts share `configOptions`; names and values belong
+to the agent. Boolean options are absent and boolean sets are refused.
+There is no `session/set_model` method: use the model config option.
+`authenticate`, `session/fork`, `session/delete`, steering and chord's
+extensions are not served; unsupported requests get -32601.
+
+Prompts take text, resource links and images where the agent supports
+them. `initialize` advertises images; the session answer's
+`_meta["chord/acp"].image` tells whether that agent takes them. Unsupported
+images, audio and embedded resources are refused with -32602.
+
+chord sends `session/update`, calls `session/request_permission` for
+permissions and plan approvals, and relays `elicitation/create` and
+`elicitation/complete`. Permissions have no timeout; errors and unknown
+choices refuse them. `--permission-mode` is a starting value, and there is
+no `--dangerously-skip-permissions` here. An unanswered ask waits until
+answered or cancelled. A plan answer cannot carry the window's note on
+"keep planning"; send that as the next prompt.
+
+A URL-mode elicitation reaches the client raw, with no HTTP/HTTPS check.
+The client must check the scheme itself, unlike the window. A request-scoped
+elicitation is cancelled because it names no request belonging to this
+client. Errors answering elicitation cancel it.
+
+Filesystem and terminal requests are not relayed to the client; agents
+use their own tools on the same machine. Sign in to the agent separately;
+a sign-in failure says what to run. Agent-specific limits on usage,
+images, MCP transports and resuming still apply.
+
+Sessions use the window's records and can reopen in either interface.
+`load` and `resume` refuse an id already open in this process with -32602;
+other processes can still open and write the same record. If an agent
+returns a duplicate live id, the new session gets an upstream-only alias
+such as `s1~2`. Aliases are not listed or reloadable; they do not fix
+collisions in that agent's recorded ids.
+
+### What is not sent
+
+chord uses its full capabilities toward the agent, whatever the client
+declares. One drop-only check applies to live updates and replay alike:
+
+| Update                                                                              | Client must declare  |
+| ----------------------------------------------------------------------------------- | -------------------- |
+| `subagent_update`, `session_message`, `session_message_chunk`, all subagent traffic | `subagents`          |
+| `plan_update`, `plan_removed`                                                       | `plan`               |
+| `compaction_update`, `compaction_summary_chunk`                                     | `session.compaction` |
+| `notice`                                                                            | `session.notices`    |
+| Kinds outside the ACP v1 schema                                                     | Never sent           |
+
+Dropped updates stay in the record. There is no text fallback: a client
+without `plan` can lose a Codex plan, for example. Without `subagents`,
+a subagent's permission is refused with a stderr diagnostic and its
+elicitation is cancelled. Other session-scoped elicitations are relayed
+regardless of declared elicitation capabilities.
+
+chord's child agents, teams and monitors are not available yet; the
+adapter's own subagent traffic does pass under the check above. Slash
+commands go to the agent as typed. `/team` keeps that meaning until
+1.0.0-next.2, when chord will handle it as its own team command.
+
+There are no extensions yet: `initialize` reports an empty `extensions`
+map in `_meta["chord/acp"]`. `_meta` keys are informational and unversioned;
+they do not establish an extension contract. For example, `chord/filled`
+marks chord's estimates, and `chord/held_back` explains withheld MCP
+servers.
+
+Updates after a prompt's answer go immediately. Turns nobody prompted
+can send work and asks with no client prompt pending. A client that
+declares less may read a late chunk as the next reply or omit an unasked
+turn. An ask between turns can then hold the queue until
+`session/cancel`. These losses are accepted; chord neither holds answers
+for silence nor changes the agent's cycle to fit the client.
+
+### Limits and the way out
+
+- A client that stops reading stdout while staying connected can hold
+  unbounded output in memory and keep agents running until chord is killed.
+  There is no blocked-write timeout or output limit.
+- A malformed line while stdout is full stops input reading while the SDK
+  waits to write its parse error. Later requests and stdin EOF stay unseen
+  until stdout is read, the output pipe breaks or chord gets a signal.
+- Half-closing stdin means the client is gone: EOF closes the whole
+  connection, so a running prompt gets no answer.
+- A line over 32 MiB closes the connection.
+- Cancellation is cooperative. If the agent ignores it, `session/prompt`
+  stays pending indefinitely, with no timer. Close the session with
+  `session/close` or shut down the connection to stop it.
+
+EOF, broken output, an oversized line, a crash, SIGINT, SIGTERM and SIGHUP
+start the same shutdown, with a 15-second deadline. On a signal or crash,
+chord attempts to cancel pending prompts and withdraw asks. It waits at
+most 500 ms for writes while closing sessions in parallel, then kills
+remaining registered process groups. The drain is best effort: queued
+output and cancellation answers can be lost if the client is not reading.
+EOF exits 0 after clean cleanup, otherwise 1; broken output, an oversized
+line or a crash exits 1. A signal ends chord by that signal after cleanup,
+even if the deadline expires.
+
+**What holds:** on every shutdown that runs, every process group chord
+spawned has stopped or has been sent SIGKILL. **What does not:** chord
+itself receiving SIGKILL, its event loop blocking synchronously, a process
+leaving its group, or a process group id being reused before cleanup.
+
 ## Settings
 
 chord reads two settings files before it starts: the user's,

@@ -7891,3 +7891,21 @@ answer being cancelled, never a yes; the window's note on "keep planning" is its
 - **Options:** a child takes the session's list with the client's servers, or the settings' only.
 - **Choice: the settings' only.** A client's server goes to the session it named. One argument, and it can
   change later.
+
+## 2026-11-02 — CHD-574/576: plain ACP sessions and client responsibilities
+
+The owner kept directory settings without a trust step: each
+`session/new`'s client-supplied `cwd` loads that directory's
+`.chord/settings.json` and `.mcp.json`, which can start MCP servers and set
+a starting permission mode, as the window and `-p` read them. A client
+must choose the directory accordingly. URL-mode elicitation is relayed
+raw, without the window's HTTP/HTTPS check; the client checks its scheme.
+
+`acp` must come before its flags. `chord --agent-command … acp` opens the
+window, including OpenTUI terminal queries on stdout. Cliffy 1.3.1 takes
+an unknown flag into a free positional slot: `chord acp --nope` exits 2,
+with empty stdout and `Unknown agent "--nope"` on stderr; with
+`--agent-command`, it silently becomes the agent's name. This stays:
+changing it would require rewriting argv or guessing at a leading `-`,
+against the library rule. See [the guide](guide.md#chord-acp) for the
+client contract.

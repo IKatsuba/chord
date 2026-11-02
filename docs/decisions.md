@@ -7909,3 +7909,17 @@ with empty stdout and `Unknown agent "--nope"` on stderr; with
 changing it would require rewriting argv or guessing at a leading `-`,
 against the library rule. See [the guide](guide.md#chord-acp) for the
 client contract.
+
+## 2026-11-02 — CHD-579: keep the window's leave behaviour
+
+The window does not join `createLeaving` in CHD-579, superseding that part
+of the CHD-573 design. `createLeaving` runs once with fixed steps, a 15 s
+deadline, a sweep of spawned groups and stderr lines. The window's leave
+has no deadline, closes only what it was asked to and accepts closes
+added at any time. Joining them would change behaviour; CHD-579's
+acceptance requires no change in behaviour.
+
+`closeOnForcedExit`, its owned set and running those closes move to
+`src/session/leaving.ts`. The window's `leave`, `dieBySignal` and terminal
+stay in `src/ui/app/renderer.tsx`. chord has two ways out in one file until
+someone joins them. There is no follow-up task for now.

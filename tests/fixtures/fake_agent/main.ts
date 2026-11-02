@@ -66,7 +66,9 @@
  * `--silent-set-mode`, or with `CHORD_FAKE_SILENT_SET_MODE=1`, it answers
  * `session/set_mode`, and `session/set_config_option` for the mode, as
  * Codex's adapter does, with an empty answer and no update, though the mode
- * moves.
+ * moves. With `--config-in-responses`, or `CHORD_FAKE_CONFIG_IN_RESPONSES=1`,
+ * `session/set_config_option`'s answer alone says what moved. `--session-id
+ * <id>`, or `CHORD_FAKE_SESSION_ID`, is the id every `session/new` answers with.
  *
  * Besides the scenarios the window draws, three play what a transport has to
  * survive: `late` sends a chunk after answering the prompt, `twins` asks a
@@ -278,7 +280,9 @@ import {
   ARGS,
   AUTH_REQUIRED,
   HANG,
+  CONFIG_IN_RESPONSES,
   NO_CONFIG,
+  SESSION_ID,
   DIMCODE_PERMISSION,
   MCP_TRANSPORTS,
   NO_IMAGES,
@@ -476,6 +480,12 @@ const SCENARIOS = [
   'bigasktwice',
   'unknown',
   'cancels',
+  'flood',
+  'ignorescancel',
+  'requestform',
+  'permissionmeta',
+  'strangerask',
+  'strangerform',
   'subagent',
   'subagentupdate',
   'codexsubagents',
@@ -1269,7 +1279,7 @@ const connection = acp
     refuseSession('session/new');
     await refuseUnsigned(client, requestId);
 
-    const sessionId = crypto.randomUUID();
+    const sessionId = SESSION_ID ?? crypto.randomUUID();
 
     modes.set(sessionId, 'default');
     mcpServers.set(sessionId, params.mcpServers);
@@ -1421,7 +1431,7 @@ const connection = acp
 
     modes.set(params.sessionId, params.modeId);
 
-    if (SILENT_SET_MODE) {
+    if (SILENT_SET_MODE || CONFIG_IN_RESPONSES) {
       return {};
     }
 

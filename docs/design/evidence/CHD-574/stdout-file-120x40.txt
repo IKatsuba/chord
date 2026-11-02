@@ -1,0 +1,40 @@
+$ bun src/main.tsx acp fake --agent-command 'bun tests/fixtures/fake_agent/main.ts' > /tmp/acp-look/out.txt; echo EXIT=$
+?
+chord: acp serves ACP on stdin and stdout, for a client that starts it.
+chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` opens a window.
+hello
+EXIT=0
+$ cat /tmp/acp-look/out.txt
+{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

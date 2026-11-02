@@ -1,0 +1,24 @@
+$ printf 'hello\n' | bun src/main.tsx acp fake --agent-command 'bun tests/fixtur
+es/fake_agent/main.ts'; echo EXIT=$?
+{"jsonrpc":"2.0","id":null,"error":{"code":-32700,"message":"Parse error"}}
+EXIT=0
+$
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

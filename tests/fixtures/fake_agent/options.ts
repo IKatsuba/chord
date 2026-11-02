@@ -137,6 +137,22 @@ function valueOf(flag: string, variable: string): string | undefined {
 export const TITLE_AT_START = valueOf('--title', 'CHORD_FAKE_TITLE');
 
 /**
+ * `--session-id <id>`, or `CHORD_FAKE_SESSION_ID`: every `session/new` answers
+ * with this id, as an agent with per-process counter ids answers two
+ * processes with one.
+ */
+export const SESSION_ID = valueOf('--session-id', 'CHORD_FAKE_SESSION_ID');
+
+/**
+ * `--config-in-responses`, or `CHORD_FAKE_CONFIG_IN_RESPONSES=1`: a change of
+ * configuration is said only in the answer that made it, no update following,
+ * and `session/set_mode`, whose answer has no place for it, says nothing.
+ */
+export const CONFIG_IN_RESPONSES =
+  ARGS.includes('--config-in-responses') ||
+  process.env.CHORD_FAKE_CONFIG_IN_RESPONSES === '1';
+
+/**
  * `--dimcode-permission <value>`, or `CHORD_FAKE_DIMCODE_PERMISSION`: every
  * session offers dimcode's `permission` config option, `read-only`,
  * `workspace-write` or `full-access`, starting at the value given (CHD-434).

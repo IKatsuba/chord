@@ -1,0 +1,24 @@
+$ bun src/main.tsx acp --help
+
+Usage:   chord acp [agent]
+Version: 0.67.0
+
+Description:
+
+  Serve ACP on stdin and stdout, for a client that starts chord as its agent;
+  draws nothing.
+
+Options:
+
+  -h, --help                    - Show this help.
+  --agent-command    <command>  - Start this ACP agent command instead of
+                                  chord's own; [agent] only names it.
+  -m, --model        <model>    - Start each of [agent]'s sessions on this
+                                  model, by its id for it.
+  --effort           <effort>   - Start each of [agent]'s sessions on this
+                                  effort, by its id for it.
+  --permission-mode  <mode>     - Start each of [agent]'s sessions in this
+                                  mode, by its id for it.
+
+$
+

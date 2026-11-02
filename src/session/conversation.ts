@@ -194,8 +194,9 @@ export type ConversationEvent =
   /**
    * An interrupt took every queued prompt of the person's back; none of them
    * will run. Messages stay queued, and go once the interrupted turn ends.
+   * `cancelPrompt` takes back only the one it names.
    */
-  | { readonly type: 'queue_withdrawn' }
+  | { readonly type: 'queue_withdrawn'; readonly turnIds?: readonly string[] }
   /** The agent's slash commands, when they differ from the last reported. */
   | {
       readonly type: 'commands';
@@ -290,6 +291,8 @@ interface Prompt {
   readonly prompt: string;
   readonly attachments: readonly Attachment[];
   readonly mentions: readonly string[];
+  /** Links the caller gave, going after those found for the mentions. */
+  readonly links?: readonly ResourceLink[];
   /** Set on a message from another agent, or chord. */
   readonly from?: MessageFrom;
   /** The team part that goes ahead of a team agent's first message. */
@@ -338,6 +341,16 @@ const NO_PAST: MonitorsPast = { last: 0, ended: new Map(), left: [] };
  * (Q129, built as its option 1 while it is open).
  */
 const LEFT_MONITORS_TOLD: 'turn' | 'held' = 'turn';
+
+/** What a set asked of a session not up, or closing, comes to. */
+function notUp(): Promise<void> {
+  const refused = Promise.reject(new Error('The session is not up.'));
+
+  // A caller may ignore it, as the window does.
+  refused.catch(() => {});
+
+  return refused;
+}
 
 function messageOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
@@ -1049,13 +1062,22 @@ export class Conversation {
    * before the session is up and once closing. `prompt` is what the agent
    * gets, when it is more than the `text` the transcript shows, such as held
    * shell output ahead of it; `attachments` go after it, and a link to each
-   * of the `mentions` that is a file.
+   * of the `mentions` that is a file, then `links` as given. `turnId` is
+   * the caller's to choose when it must know the turn before it is emitted,
+   * which is before this returns.
    */
   send(
     text: string,
     prompt: string = text,
     attachments: readonly Attachment[] = [],
     mentions: readonly string[] = [],
+    {
+      turnId = crypto.randomUUID(),
+      links,
+    }: {
+      readonly turnId?: string;
+      readonly links?: readonly ResourceLink[];
+    } = {},
   ): boolean {
     const session = this.#session;
 
@@ -1065,11 +1087,12 @@ export class Conversation {
 
     const ahead = this.#ahead.splice(0);
     const next = {
-      turnId: crypto.randomUUID(),
+      turnId,
       text,
       prompt: [...ahead, prompt].join('\n\n'),
       attachments,
       mentions,
+      ...(links === undefined ? {} : { links }),
     };
 
     this.#enqueue(session, next);
@@ -2369,7 +2392,10 @@ export class Conversation {
     this.#takenBack = new Set([...this.#takenBack, ...steers]);
 
     if (withdrawn.length > 0 || steers.length > 0) {
-      this.#emit({ type: 'queue_withdrawn' });
+      this.#emit({
+        type: 'queue_withdrawn',
+        turnIds: [...withdrawn.map((queued) => queued.turnId), ...steers],
+      });
     }
 
     // The turn's work is stopped, its task agents' with it.
@@ -2379,19 +2405,7 @@ export class Conversation {
 
     const turn = this.#turn;
 
-    // Before the asks are withdrawn, which would let held messages into the
-    // turn being stopped; they go once it has ended, as any message left.
-    if (turn) {
-      this.#sealed = turn.id;
-    }
-
-    // A plan goes with it, never taken: cursor's names no session, so the
-    // transport cannot tie it to the cancel as it does a permission. Once
-    // sealed, as answering one releases what waited on it.
-    this.#cancelPlans();
-
-    this.#unhold();
-    this.#withdrawAsks();
+    this.#sealAndWithdraw(turn?.id);
 
     // The agent's own cycle has no prompt of chord's to cancel: the session
     // is told to stop, and the cycle ends as a cancelled turn does (CHD-426).
@@ -2424,6 +2438,67 @@ export class Conversation {
     turn.turn.cancel().catch(() => {
       // The turn may settle before the cancel lands; its result says so.
     });
+  }
+
+  /**
+   * Takes one prompt back by its turn: a queued one never reaches the agent,
+   * the rest of the queue untouched; the running one is stopped as an interrupt
+   * stops it, with what is queued behind it running next. Anything else, as a
+   * turn already over, changes nothing.
+   */
+  cancelPrompt(turnId: string): void {
+    if (this.#closing) {
+      return;
+    }
+
+    const queued = this.#queued.some((entry) => entry.turnId === turnId);
+
+    if (queued) {
+      this.#queued = this.#queued.filter((entry) => entry.turnId !== turnId);
+
+      this.#emit({ type: 'queue_withdrawn', turnIds: [turnId] });
+
+      if (this.#queued.length === 0) {
+        this.#settling?.abort();
+      }
+
+      return;
+    }
+
+    const turn = this.#turn;
+
+    if (turn?.id !== turnId) {
+      return;
+    }
+
+    this.#sealAndWithdraw(turnId);
+
+    // It has answered already, and only waits out its trailing updates.
+    if (this.#settling) {
+      return;
+    }
+
+    this.#emit({ type: 'cancel', turnId, at: this.#now() });
+    turn.turn.cancel().catch(() => {
+      // The turn may settle before the cancel lands; its result says so.
+    });
+  }
+
+  /** Nothing more goes into the turn being stopped, and nothing waits in it. */
+  #sealAndWithdraw(turnId: string | undefined): void {
+    // Before the asks are withdrawn, which would let held messages into the
+    // turn being stopped; they go once it has ended, as any message left.
+    if (turnId !== undefined) {
+      this.#sealed = turnId;
+    }
+
+    // A plan goes with it, never taken: cursor's names no session, so the
+    // transport cannot tie it to the cancel as it does a permission. Once
+    // sealed, as answering one releases what waited on it.
+    this.#cancelPlans();
+
+    this.#unhold();
+    this.#withdrawAsks();
   }
 
   /** Answers a permission request with one of its options. */
@@ -2497,11 +2572,17 @@ export class Conversation {
         this.#release();
       };
 
+      const toolCall = { toolCallId: wait.toolCallId ?? id };
       const request: PendingPermission = {
         id,
         sessionId: session.id,
-        toolCall: { toolCallId: wait.toolCallId ?? id },
+        toolCall,
         options: wait.options,
+        raw: {
+          sessionId: session.id,
+          toolCall,
+          options: [...wait.options],
+        },
         signal,
         resolve: finish,
         reject: () =>
@@ -2521,6 +2602,16 @@ export class Conversation {
         permission: { ...wait, id },
       });
     });
+  }
+
+  /** A permission waiting, as the agent asked it, for one who passes it on. */
+  permissionRequest(id: string): PendingPermission | undefined {
+    return this.#permissions.get(id)?.request;
+  }
+
+  /** A form or link waiting, as the agent asked it, for one who passes it on. */
+  elicitationRequest(id: string): PendingElicitation | undefined {
+    return this.#elicitations.get(id)?.request;
   }
 
   #withdrawAsks(): void {
@@ -2576,24 +2667,27 @@ export class Conversation {
 
   /**
    * Asks the agent for a mode. Nothing on screen changes until the agent
-   * reports the mode it is in; a refusal goes into the transcript.
+   * reports the mode it is in; a refusal goes into the transcript, and rejects
+   * what this returns, which a caller may ignore.
    */
-  setMode(id: string): void {
+  setMode(id: string): Promise<void> {
     const session = this.#session;
 
     if (!session || this.#closing) {
-      return;
+      return notUp();
     }
 
     this.#emit({ type: 'mode_asked', id });
 
-    this.#modeChanges = this.#modeChanges.then(async () => {
+    const asked = this.#modeChanges.then(async () => {
       let answered = true;
+      let refusal: unknown;
 
       try {
         await session.setMode(id);
       } catch (error) {
         answered = false;
+        refusal = error;
 
         if (this.#current(session)) {
           this.#emit({
@@ -2611,24 +2705,39 @@ export class Conversation {
       if (this.#current(session)) {
         this.#emit({ type: 'mode_answered', id });
       }
+
+      if (!answered) {
+        throw refusal;
+      }
     });
+
+    this.#modeChanges = asked.catch(() => {});
+
+    return asked;
   }
 
   /**
    * Asks the agent for a model. The status line moves once the agent reports
-   * the model it uses; a refusal goes into the transcript.
+   * the model it uses; a refusal goes into the transcript, and rejects what
+   * this returns, which a caller may ignore.
    */
-  setModel(id: string): void {
+  setModel(id: string): Promise<void> {
     const session = this.#session;
 
     if (!session || this.#closing) {
-      return;
+      return notUp();
     }
 
-    this.#modelChanges = this.#modelChanges.then(async () => {
+    const asked = this.#modelChanges.then(async () => {
+      let refused = false;
+      let refusal: unknown;
+
       try {
         await session.setModel(id);
       } catch (error) {
+        refused = true;
+        refusal = error;
+
         if (this.#current(session)) {
           this.#emit({
             type: 'failed',
@@ -2639,22 +2748,31 @@ export class Conversation {
       }
 
       this.#report(session);
+
+      if (refused) {
+        throw refusal;
+      }
     });
+
+    this.#modelChanges = asked.catch(() => {});
+
+    return asked;
   }
 
   /**
    * Asks the agent to set config option `id` to `value`, as `/config` does.
    * Once it answers, the value it reports goes into the transcript as a note
-   * under `/config`; a refusal goes in the same way, as a failed one.
+   * under `/config`; a refusal goes in the same way, as a failed one, and
+   * rejects what this returns, which a caller may ignore.
    */
-  setOption(id: string, value: string): void {
+  setOption(id: string, value: string): Promise<void> {
     const session = this.#session;
 
     if (!session || this.#closing) {
-      return;
+      return notUp();
     }
 
-    this.#optionChanges = this.#optionChanges.then(async () => {
+    const change = this.#optionChanges.then(async () => {
       const asked = this.#options.find((option) => option.id === id);
 
       try {
@@ -2672,7 +2790,7 @@ export class Conversation {
           });
         }
 
-        return;
+        throw error;
       }
 
       this.#report(session);
@@ -2689,6 +2807,10 @@ export class Conversation {
         });
       }
     });
+
+    this.#optionChanges = change.catch(() => {});
+
+    return change;
   }
 
   /**
@@ -3479,7 +3601,12 @@ export class Conversation {
     ].join('\n\n')}`;
 
     try {
-      const turn = session.prompt(prompt, next.attachments, next.mentions);
+      const turn = session.prompt(
+        prompt,
+        next.attachments,
+        next.mentions,
+        next.links,
+      );
 
       this.#turn = { id: turnId, turn };
       this.#openCalls = new Set();

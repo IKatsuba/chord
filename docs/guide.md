@@ -61,7 +61,7 @@ chord -p "Explain src/main.tsx"                # the reply on stdout, then exit
 git diff | chord -p "Review this" --output-format json
 ```
 
-Each chord process runs one main session with its children. For sessions
+Each chord window runs one main session with its children. For sessions
 side by side, run chord in separate terminal panes.
 
 A new interactive start with no agent named opens a centred title page before

@@ -113,4 +113,10 @@ export default defineConfig(
       'style/blank-around-assignment': 'error',
     },
   },
+  // Below the interface stdout may be the protocol: under `chord acp` a
+  // `console.log` is a line no client can parse.
+  {
+    files: ['src/session/**', 'src/acp/**', 'src/server/**'],
+    rules: { 'no-console': 'error' },
+  },
 );

@@ -112,7 +112,7 @@ export function spawnGroup(
     return process.kill(-pid, name);
   };
 
-  return {
+  const group: GroupProcess = {
     child,
     pid,
     started,
@@ -134,6 +134,56 @@ export function spawnGroup(
       }
     },
   };
+
+  forgetEmptyGroups();
+
+  if (pid !== undefined) {
+    spawned.add(group);
+
+    // The event and not `exit`: that promise also rejects on a failed signal,
+    // which ends nothing.
+    child.once('exit', () => {
+      left.add(group);
+
+      forgetEmptyGroups();
+    });
+  }
+
+  return group;
+}
+
+/** Every group from its spawn until nothing is left in it. */
+const spawned = new Set<GroupProcess>();
+
+/** Those whose leader has exited: only these can be found empty. */
+const left = new Set<GroupProcess>();
+
+function forgetEmptyGroups(): void {
+  for (const group of left) {
+    if (!group.alive()) {
+      left.delete(group);
+      spawned.delete(group);
+    }
+  }
+}
+
+/**
+ * SIGKILL to every group chord spawned that still holds a process, without
+ * waiting: the last thing a way out does. Returns their pids. A kept group's
+ * pgid may have been reused by now, the risk of keeping one at all.
+ */
+export function killSpawnedGroups(): readonly number[] {
+  forgetEmptyGroups();
+
+  const pids = [...spawned].flatMap((group) =>
+    group.pid === undefined ? [] : [group.pid],
+  );
+
+  for (const group of spawned) {
+    group.signal('SIGKILL');
+  }
+
+  return pids;
 }
 
 function exitOf(code: number | null, signal: SignalName | null): Exit {

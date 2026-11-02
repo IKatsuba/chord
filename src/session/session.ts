@@ -1,5 +1,6 @@
 import type {
   AvailableCommand,
+  CompleteElicitationNotification,
   ContentBlock,
   McpServer,
   PromptResponse,
@@ -12,6 +13,7 @@ import type { Traffic } from '../acp/traffic.ts';
 import { agentStart, findAgent } from '../agents.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
+  type AgentState,
   foldUpdate,
   effortsOf,
   modelsOf,
@@ -99,6 +101,8 @@ export interface OpenSessionOptions {
    * agent that would refuse it never sees it.
    */
   chordServer?: McpServer;
+  /** The agent says a link it asked for has been followed. */
+  onElicitationComplete?: (params: CompleteElicitationNotification) => void;
   /**
    * Gives up on a session still starting: the open rejects with the signal's
    * reason once the agent is stopped.
@@ -228,7 +232,10 @@ export interface Session {
     text: string,
     attachments?: readonly Attachment[],
     mentions?: readonly string[],
+    links?: readonly ResourceLink[],
   ): Turn;
+  /** What the agent has said of the session besides its turns. */
+  agentState(): AgentState;
   /**
    * Whether the agent takes images in a prompt, as the `promptCapabilities`
    * it gave in `initialize` say.
@@ -401,6 +408,17 @@ export async function openSession(
   };
 
   const onTraffic = (traffic: Traffic) => {
+    // The tap keeps notifications from the SDK: this is the one place to hear it.
+    if (
+      traffic.from === 'agent' &&
+      'method' in traffic.message &&
+      traffic.message.method === 'elicitation/complete'
+    ) {
+      options.onElicitationComplete?.(
+        traffic.message.params as CompleteElicitationNotification,
+      );
+    }
+
     const notification =
       traffic.from === 'agent' ? updateIn(traffic.message) : undefined;
 
@@ -620,7 +638,7 @@ export async function openSession(
 
       return () => listeners.delete(listener);
     },
-    prompt: (text, attachments = [], mentions = []) => {
+    prompt: (text, attachments = [], mentions = [], links = []) => {
       const blocks = promptBlocks(text, attachments);
       let cancelled = false;
       /** Whether the prompt has gone to the agent, which a cancel then tells. */
@@ -628,14 +646,16 @@ export async function openSession(
       const { promise: sent, resolve: went } = Promise.withResolvers<
         readonly ResourceLink[] | undefined
       >();
-      const send = (links: readonly ResourceLink[]) => {
+      const send = (found: readonly ResourceLink[]) => {
+        const all = [...found, ...links];
+
         gone = true;
 
-        went(links);
+        went(all);
 
         return connection.prompt({
           sessionId: id,
-          prompt: [...blocks, ...links],
+          prompt: [...blocks, ...all],
         });
       };
 
@@ -691,6 +711,7 @@ export async function openSession(
         },
       };
     },
+    agentState: () => state,
     takesImages: () =>
       connection.init.agentCapabilities?.promptCapabilities?.image === true,
     steers: () => connection.steering,

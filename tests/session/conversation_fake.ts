@@ -324,6 +324,7 @@ export async function steeringStub(everyTurn = false) {
     for (const listener of permissions) {
       listener({
         id,
+        raw: {} as unknown as PendingPermission['raw'],
         sessionId: 'held',
         toolCall: { toolCallId: id, title: 'Write notes.txt' },
         options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }],
@@ -339,6 +340,7 @@ export async function steeringStub(everyTurn = false) {
       listener({
         id,
         wait: { id } as unknown as PendingElicitation['wait'],
+        raw: {} as unknown as PendingElicitation['raw'],
         signal: new AbortController().signal,
         answer: () => {},
       });

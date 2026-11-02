@@ -30,6 +30,7 @@ async function withClient(
     agent: 'fake',
     agentCommand: fakeAgentCommand(undefined, ...flags),
     version: '1.2.3',
+    stateDir: cwd,
     open: openSession,
     place: () => Promise.resolve({ mcpServers: [] }),
   });

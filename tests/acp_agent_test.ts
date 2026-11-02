@@ -1,17 +1,25 @@
 import { describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import assert from 'node:assert';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type AcpOptions, type AcpRun, runAcp } from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
 import type { LeaveExit } from '../src/session/leaving.ts';
-import { openSession } from '../src/session/session.ts';
+import {
+  parseRecord,
+  recordActions,
+  type RecordEntry,
+} from '../src/session/record.ts';
+import { openSession, type Session } from '../src/session/session.ts';
+import { readRecords } from '../src/session/sessions.ts';
 import {
   type AcpClient,
   clientOverStreams,
   type WireMessage,
 } from './fixtures/acp_client.ts';
 import { fakeAgentCommand, gatedCommand } from './fixtures/fake.ts';
+import { recordSession } from './fixtures/records.ts';
 import { until } from './session/conversation_fake.ts';
 
 const FULL = {
@@ -23,6 +31,7 @@ const FULL = {
 interface Acp {
   readonly client: AcpClient;
   readonly cwd: string;
+  readonly stateDir: string;
   readonly lines: string[];
   readonly exits: LeaveExit[];
   readonly run: AcpRun;
@@ -39,10 +48,19 @@ async function onAcp(
   body: (acp: Acp) => Promise<void>,
   {
     capabilities = FULL,
+    state,
     ...over
-  }: Partial<AcpOptions> & { capabilities?: object } = {},
+  }: Partial<AcpOptions> & {
+    capabilities?: object;
+    /** Lays a record down in the state directory before chord starts. */
+    state?: (stateDir: string, cwd: string) => Promise<void>;
+  } = {},
 ): Promise<void> {
   const cwd = await mkdtemp(join(tmpdir(), 'chord-acp-'));
+  const stateDir = await mkdtemp(join(tmpdir(), 'chord-acp-state-'));
+
+  await state?.(stateDir, cwd);
+
   const { client, input, output, end } = clientOverStreams();
   const lines: string[] = [];
   const exits: LeaveExit[] = [];
@@ -54,6 +72,7 @@ async function onAcp(
     agent: 'fake',
     agentCommand: fakeAgentCommand(undefined, ...flags),
     version: '1.2.3',
+    stateDir,
     open: openSession,
     place: () => Promise.resolve({ mcpServers: [] }),
     ...over,
@@ -73,6 +92,7 @@ async function onAcp(
     await body({
       client,
       cwd,
+      stateDir,
       lines,
       exits,
       run,
@@ -98,6 +118,7 @@ async function onAcp(
     // No process left behind, whatever the test did.
     await until(() => killSpawnedGroups().length === 0);
     await rm(cwd, { recursive: true, force: true });
+    await rm(stateDir, { recursive: true, force: true });
   }
 }
 
@@ -1032,6 +1053,457 @@ describe('a plan ask', () => {
 
       expect(client.said(sessionId).toLowerCase()).not.toContain('accepted');
     }));
+});
+
+/** Waits for a session's record to hold a line of this kind. */
+async function recorded(stateDir: string, sessionId: string, type: string) {
+  let entries: readonly RecordEntry[] = [];
+
+  await untilAsync(async () => {
+    const records = await readRecords(stateDir);
+    const record = records.find((each) => each.sessionId === sessionId);
+
+    entries =
+      record === undefined
+        ? []
+        : parseRecord(await readFile(record.path, 'utf8'));
+
+    return entries.some((entry) => entry.type === type);
+  });
+
+  return entries;
+}
+
+async function untilAsync(check: () => Promise<boolean>): Promise<void> {
+  const deadline = performance.now() + 10_000;
+
+  while (!(await check())) {
+    if (performance.now() > deadline) {
+      throw new Error(`timed out waiting for ${String(check)}`);
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 5));
+  }
+}
+
+describe('sessions and records', () => {
+  test('a session is recorded as the window records, and recordActions opens it', () =>
+    onAcp([], async ({ client, newSession, prompt, stateDir }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'text'));
+
+      const entries = await recorded(stateDir, sessionId, 'result');
+
+      expect(entries[0]).toMatchObject({
+        type: 'session',
+        sessionId,
+        agent: 'fake',
+      });
+
+      const actions = recordActions(entries);
+
+      expect(actions.some((action) => action.type === 'prompt')).toBe(true);
+      expect(actions.some((action) => action.type === 'update')).toBe(true);
+    }));
+
+  test('session/list is the records, all in one answer, by directory or all', () =>
+    onAcp([], async ({ client, newSession, prompt, cwd, stateDir }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'text'));
+      await recorded(stateDir, sessionId, 'result');
+
+      const here = await client.request('session/list', { cwd });
+      const all = await client.request('session/list', {});
+      const elsewhere = await client.request('session/list', {
+        cwd: '/nowhere',
+      });
+
+      expect(here.result?.sessions).toEqual([
+        {
+          sessionId,
+          cwd,
+          title: 'text',
+          updatedAt: expect.any(String) as string,
+        },
+      ]);
+      expect(here.result).not.toHaveProperty('nextCursor');
+      expect(all.result?.sessions).toEqual(here.result?.sessions);
+      expect(elsewhere.result?.sessions).toEqual([]);
+    }));
+
+  test('a window record of this agent is listed and loaded, its past ahead of the answer', () => {
+    const made: { sessionId?: string } = {};
+
+    return onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const sessionId = made.sessionId as string;
+        const { result } = await client.request('session/list', { cwd });
+
+        expect(result?.sessions).toContainEqual(
+          expect.objectContaining({ sessionId }),
+        );
+
+        const load = client.send('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+        const answer = await client.answerTo(load);
+
+        expect(answer.error).toBeUndefined();
+        expect(answer.result).not.toHaveProperty('sessionId');
+        expect(answer.result).toHaveProperty('configOptions');
+
+        const at = client.messages.indexOf(
+          client.messages.find(
+            (m) => m.id === load && !m.method,
+          ) as WireMessage,
+        );
+        const before = client.messages
+          .slice(0, at)
+          .filter((m) => m.method === 'session/update')
+          .map((m) => m.params?.update as Record<string, unknown>);
+
+        expect(before[0]).toMatchObject({
+          sessionUpdate: 'user_message_chunk',
+          content: { text: 'text' },
+        });
+        expect(
+          before.some((u) => u.sessionUpdate === 'agent_message_chunk'),
+        ).toBe(true);
+      },
+      {
+        state: async (stateDir, cwd) => {
+          made.sessionId = await recordSession({
+            stateDir,
+            cwd,
+            command: fakeAgentCommand(),
+            prompts: ['text'],
+          });
+        },
+      },
+    );
+  });
+
+  test('a load replays under the drop-only check, and the record keeps what it drops', () => {
+    const made: { sessionId?: string } = {};
+
+    return onAcp(
+      [],
+      async ({ client, cwd, stateDir }) => {
+        const sessionId = made.sessionId as string;
+
+        await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        const kinds = client.updates(sessionId).map((u) => u.sessionUpdate);
+
+        expect(kinds).not.toContain('plan_update');
+        expect(kinds).toContain('user_message_chunk');
+
+        const records = await readRecords(stateDir);
+        const text = await readFile(records[0]?.path ?? '', 'utf8');
+
+        expect(text).toContain('plan_update');
+      },
+      {
+        capabilities: {},
+        state: async (stateDir, cwd) => {
+          made.sessionId = await recordSession({
+            stateDir,
+            cwd,
+            command: fakeAgentCommand(),
+            prompts: ['proposal'],
+          });
+        },
+      },
+    );
+  });
+
+  test('session/resume answers with nothing replayed, and the session goes on', () => {
+    const made: { sessionId?: string } = {};
+
+    return onAcp(
+      [],
+      async ({ client, cwd, prompt }) => {
+        const sessionId = made.sessionId as string;
+        const { result, error } = await client.request('session/resume', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(error).toBeUndefined();
+        expect(result).toHaveProperty('configOptions');
+        expect(client.said(sessionId)).toBe('');
+        expect(
+          client
+            .updates(sessionId)
+            .some((u) => u.sessionUpdate === 'user_message_chunk'),
+        ).toBe(false);
+        expect(
+          (await client.answerTo(prompt(sessionId, 'text'))).result?.stopReason,
+        ).toBe('end_turn');
+      },
+      {
+        state: async (stateDir, cwd) => {
+          made.sessionId = await recordSession({
+            stateDir,
+            cwd,
+            command: fakeAgentCommand(),
+            prompts: ['text'],
+          });
+        },
+      },
+    );
+  });
+
+  test('a record laid down before this version still lists and loads', () => {
+    const sessionId = '11111111-2222-4333-8444-555555555555';
+
+    return onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const { result } = await client.request('session/list', { cwd });
+
+        expect(result?.sessions).toEqual([
+          expect.objectContaining({ sessionId, title: 'an older prompt' }),
+        ]);
+
+        const load = await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(load.error).toBeUndefined();
+        expect(client.updates(sessionId)[0]).toMatchObject({
+          sessionUpdate: 'user_message_chunk',
+          content: { text: 'an older prompt' },
+        });
+      },
+      {
+        state: async (stateDir, cwd) => {
+          const dir = join(stateDir, 'records');
+
+          await mkdir(dir, { recursive: true });
+          await writeFile(
+            join(dir, `${sessionId}.jsonl`),
+            `${[
+              {
+                type: 'session',
+                version: 1,
+                sessionId,
+                agent: 'fake',
+                cwd,
+                at: 1,
+              },
+              {
+                type: 'prompt',
+                turnId: 't1',
+                at: 2,
+                prompt: 'an older prompt',
+                images: 0,
+              },
+            ]
+              .map((entry) => JSON.stringify(entry))
+              .join('\n')}\n`,
+          );
+        },
+      },
+    );
+  });
+
+  test('a load or resume of an id live here is -32602, and its turn still answers', () =>
+    onAcp([], async ({ client, cwd, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'long');
+
+      await until(() => client.said(sessionId) !== '');
+
+      for (const method of ['session/load', 'session/resume']) {
+        const { error } = await client.request(method, {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(error?.code).toBe(-32602);
+      }
+
+      client.notify('session/cancel', { sessionId });
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'cancelled',
+      );
+    }));
+
+  test("a load in another directory than the record names the record's", () => {
+    const made: { sessionId?: string } = {};
+
+    return onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const { error } = await client.request('session/load', {
+          sessionId: made.sessionId,
+          cwd: '/elsewhere',
+          mcpServers: [],
+        });
+
+        expect(error?.code).toBe(-32602);
+        expect(error?.message).toContain(cwd);
+      },
+      {
+        state: async (stateDir, cwd) => {
+          made.sessionId = await recordSession({
+            stateDir,
+            cwd,
+            command: fakeAgentCommand(),
+            prompts: ['text'],
+          });
+        },
+      },
+    );
+  });
+
+  test("an id of another agent's record is -32602 in ResumeError's words", () => {
+    const made: { sessionId?: string } = {};
+
+    return onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const { error } = await client.request('session/load', {
+          sessionId: made.sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(error?.code).toBe(-32602);
+        expect(error?.message).toContain('belongs to another agent (other)');
+      },
+      {
+        state: async (stateDir, cwd) => {
+          made.sessionId = await recordSession({
+            stateDir,
+            cwd,
+            command: fakeAgentCommand(),
+            prompts: ['text'],
+            agent: 'other',
+          });
+        },
+      },
+    );
+  });
+
+  test('a session chord never recorded is unlisted, but load by id reaches the agent', () =>
+    onAcp([], async ({ client, cwd }) => {
+      const sessionId = '99999999-2222-4333-8444-555555555555';
+      const { result } = await client.request('session/list', { cwd });
+
+      expect(result?.sessions).toEqual([]);
+
+      const load = await client.request('session/load', {
+        sessionId,
+        cwd,
+        mcpServers: [],
+      });
+
+      expect(load.error).toBeUndefined();
+    }));
+
+  test("an alias is not listed, and its record holds the agent's id", () =>
+    onAcp(
+      ['--session-id', 's1'],
+      async ({ client, cwd, newSession, prompt, stateDir }) => {
+        await newSession();
+
+        const second = await newSession();
+
+        expect(second).toBe('s1~2');
+
+        await client.answerTo(prompt(second, 'text'));
+        await recorded(stateDir, 's1', 'result');
+
+        const { result } = await client.request('session/list', { cwd });
+
+        expect(result?.sessions).toEqual([
+          expect.objectContaining({ sessionId: 's1' }),
+        ]);
+      },
+    ));
+
+  test('a record that cannot be written: stderr and notice, the session goes on', () =>
+    onAcp([], async ({ client, newSession, prompt, lines, stateDir }) => {
+      await writeFile(join(stateDir, 'records'), 'not a directory');
+
+      const sessionId = await newSession();
+      const { result } = await client.answerTo(prompt(sessionId, 'text'));
+
+      expect(result?.stopReason).toBe('end_turn');
+
+      await until(() => lines.some((line) => line.startsWith('chord: ')));
+      await until(() =>
+        client
+          .updates(sessionId)
+          .some((update) => update.sessionUpdate === 'notice'),
+      );
+    }));
+
+  test('an agent dead between turns: the next prompt is -32002, session/resume reopens', async () => {
+    const opened: Session[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt, stateDir }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'text'));
+        await recorded(stateDir, sessionId, 'result');
+
+        const [session] = opened;
+
+        assert(session !== undefined);
+
+        const [pid] = session.agentPids;
+
+        assert(pid !== undefined);
+
+        process.kill(pid, 'SIGKILL');
+
+        await session.exited;
+
+        const dead = await client.answerTo(prompt(sessionId, 'text'));
+
+        expect(dead.error?.code).toBe(-32002);
+
+        const resumed = await client.request('session/resume', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(resumed.error).toBeUndefined();
+        expect(
+          (await client.answerTo(prompt(sessionId, 'text'))).result?.stopReason,
+        ).toBe('end_turn');
+      },
+      {
+        open: async (options) => {
+          const session = await openSession(options);
+
+          opened.push(session);
+
+          return session;
+        },
+      },
+    );
+  });
 });
 
 describe('the way out', () => {

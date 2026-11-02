@@ -8,17 +8,20 @@ import {
   type ClientCapabilities,
   type CreateElicitationResponse,
   type JsonRpcId,
+  type LoadSessionRequest,
+  type LoadSessionResponse,
   type McpServer,
   MessageTooLargeError,
   ndJsonStream,
   type NewSessionResponse,
   RequestError,
   type RequestPermissionResponse,
+  type ResumeSessionRequest,
   type SessionNotification,
   type SessionUpdate,
   type Usage,
 } from '@agentclientprotocol/sdk/unstable';
-import { connectAgentApp } from './acp/agent_app.ts';
+import { type AcpRequest, connectAgentApp } from './acp/agent_app.ts';
 import { seeingWrites } from './acp/stdio.ts';
 import {
   NO_TURNS,
@@ -40,7 +43,15 @@ import {
   type LeaveReason,
   type LeaveStep,
 } from './session/leaving.ts';
+import { FileRecording } from './session/record.ts';
 import type { OpenSessionOptions, Session } from './session/session.ts';
+import {
+  earlierSessions,
+  readRecords,
+  type Resume,
+  ResumeError,
+  sessionById,
+} from './session/sessions.ts';
 import { signInLines, type SignIn } from './session/sign_in.ts';
 import {
   failureLines,
@@ -89,6 +100,8 @@ export interface AcpOptions {
   readonly agent: string;
   readonly agentCommand?: string | string[];
   readonly version: string;
+  /** Where records are kept, as the window's are. */
+  readonly stateDir: string;
   open(options: OpenSessionOptions): Promise<Session>;
   place(cwd: string): Promise<AcpPlace>;
   readonly leaveMs?: number;
@@ -112,6 +125,13 @@ interface Entry {
   live: boolean;
   /** What goes up once the client has its id. */
   held: (() => void)[];
+  /**
+   * Set on a `session/load`: its past, which goes up ahead of the answer.
+   * A resume keeps nothing of it.
+   */
+  past?: ConversationEvent[];
+  /** While the conversation replays the session's past, which is no news. */
+  replaying: boolean;
   turns: Turns;
   opening?:
     | {
@@ -461,16 +481,32 @@ export function runAcp(options: AcpOptions): AcpRun {
     entry.opening = undefined;
 
     sessions.set(upstreamId, entry);
-    // Nothing of the session goes ahead of its id: the client could not place it.
-    void wire.expect(opening.requestId).then(() => {
+
+    const release = () => {
       entry.live = true;
 
-      for (const release of entry.held.splice(0)) {
-        release();
+      for (const go of entry.held.splice(0)) {
+        go();
       }
 
       tellConfig(entry);
-    });
+    };
+
+    // The client asked for this id: its past goes ahead of the answer. A new
+    // id goes first, as nothing of the session can be placed without it.
+    if (entry.past === undefined) {
+      void wire.expect(opening.requestId).then(release);
+    } else {
+      entry.live = true;
+
+      for (const event of entry.past.splice(0)) {
+        if (event.type === 'prompt') {
+          relay(entry, messageChunk(upstreamId, event.text, event.from).update);
+        } else if (event.type === 'update') {
+          relay(entry, event.update, event.subagentId);
+        }
+      }
+    }
 
     opening.resolve({
       sessionId: upstreamId,
@@ -482,10 +518,21 @@ export function runAcp(options: AcpOptions): AcpRun {
           : { 'chord/held_back': session.heldBack }),
       },
     });
+
+    if (entry.past !== undefined) {
+      release();
+    }
+
     tellDimcode(entry);
   };
 
   const heard = (entry: Entry, event: ConversationEvent): void => {
+    if (entry.replaying) {
+      entry.past?.push(event);
+
+      return;
+    }
+
     switch (event.type) {
       case 'update':
         relay(entry, event.update, event.subagentId);
@@ -619,6 +666,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     place: AcpPlace,
     cwd: string,
     servers: readonly McpServer[],
+    resume?: { readonly from: Resume; readonly replays: boolean },
   ): Entry => {
     starts += 1;
 
@@ -629,6 +677,8 @@ export function runAcp(options: AcpOptions): AcpRun {
       turns: NO_TURNS,
       gone: false,
       noticed: false,
+      replaying: false,
+      ...(resume?.replays === true ? { past: [] } : {}),
       conversation: new Conversation(
         (signal) =>
           options.open({
@@ -639,6 +689,7 @@ export function runAcp(options: AcpOptions): AcpRun {
               ? {}
               : { agentCommand: options.agentCommand }),
             mcpServers: servers,
+            ...(resume === undefined ? {} : { resume: resume.from }),
             onElicitationComplete: (params) => {
               connection.client
                 .notify('elicitation/complete', params)
@@ -649,6 +700,16 @@ export function runAcp(options: AcpOptions): AcpRun {
         (event) => heard(entry, event),
         Date.now,
         place.starting,
+        new FileRecording(options.stateDir, (message) => warn(entry, message)),
+        (replay) => {
+          entry.replaying = true;
+
+          try {
+            replay();
+          } finally {
+            entry.replaying = false;
+          }
+        },
       ),
     };
 
@@ -679,6 +740,91 @@ export function runAcp(options: AcpOptions): AcpRun {
       );
       entry.conversation.start();
     });
+
+  /** What a client's servers and the session's directory start a session on. */
+  const placed = async (
+    params: { readonly cwd: string; readonly mcpServers?: McpServer[] | null },
+    signal: AbortSignal,
+  ): Promise<{ place: AcpPlace; servers: McpServer[] }> => {
+    const asked = params.mcpServers ?? [];
+    const refused = asked.find((server) => transportOf(server) === 'acp');
+
+    if (refused !== undefined) {
+      throw RequestError.invalidParams(
+        undefined,
+        `MCP server ${refused.name} has an acp transport, which chord does not take from a client.`,
+      );
+    }
+
+    const place = await options.place(params.cwd);
+
+    refuseIfClosing();
+
+    // A cancel while the place was read: its signal has fired already, and
+    // no agent is to be started for it.
+    if (signal.aborted) {
+      throw RequestError.requestCancelled();
+    }
+
+    // A client's is the nearest layer, by name.
+    const servers = new Map(
+      [...place.mcpServers, ...asked].map((server) => [server.name, server]),
+    );
+
+    return { place, servers: [...servers.values()] };
+  };
+
+  /** A session opened again, under the id the client asked for. */
+  const reopened = async (
+    {
+      params,
+      requestId,
+      signal,
+    }: AcpRequest<LoadSessionRequest | ResumeSessionRequest>,
+    replays: boolean,
+  ): Promise<LoadSessionResponse> => {
+    refuseIfClosing();
+
+    const { sessionId, cwd } = params;
+
+    if (sessions.has(sessionId)) {
+      throw RequestError.invalidParams(
+        undefined,
+        `Session ${sessionId} is already open here.`,
+      );
+    }
+
+    let from: Resume;
+
+    try {
+      from = sessionById(await readRecords(options.stateDir), sessionId, {
+        agent,
+        cwd,
+      });
+    } catch (error) {
+      if (error instanceof ResumeError) {
+        throw RequestError.invalidParams(undefined, error.message);
+      }
+
+      throw error;
+    }
+
+    if (from.cwd !== cwd) {
+      throw RequestError.invalidParams(
+        undefined,
+        `Session ${sessionId} is in ${from.cwd}.`,
+      );
+    }
+
+    const { place, servers } = await placed(params, signal);
+    const { sessionId: _id, ...answer } = await up(
+      openEntry(place, cwd, servers, { from, replays }),
+      requestId,
+      signal,
+    );
+
+    return answer;
+  };
 
   const refuseIfClosing = () => {
     if (leaving.started()) {
@@ -771,41 +917,23 @@ export function runAcp(options: AcpOptions): AcpRun {
       newSession: async ({ params, requestId, signal }) => {
         refuseIfClosing();
 
-        const refused = params.mcpServers.find(
-          (server) => transportOf(server) === 'acp',
-        );
+        const { place, servers } = await placed(params, signal);
 
-        if (refused !== undefined) {
-          throw RequestError.invalidParams(
-            undefined,
-            `MCP server ${refused.name} has an acp transport, which chord does not take from a client.`,
-          );
-        }
-
-        const place = await options.place(params.cwd);
-
-        refuseIfClosing();
-
-        // A cancel while the place was read: its signal has fired already, and
-        // no agent is to be started for it.
-        if (signal.aborted) {
-          throw RequestError.requestCancelled();
-        }
-
-        // A client's is the nearest layer, by name.
-        const servers = new Map(
-          [...place.mcpServers, ...params.mcpServers].map((server) => [
-            server.name,
-            server,
-          ]),
-        );
-
-        return up(
-          openEntry(place, params.cwd, [...servers.values()]),
-          requestId,
-          signal,
-        );
+        return up(openEntry(place, params.cwd, servers), requestId, signal);
       },
+      listSessions: async ({ cwd }) => ({
+        sessions: earlierSessions(await readRecords(options.stateDir), {
+          agent,
+          ...(typeof cwd === 'string' ? { cwd } : {}),
+        }).map(({ resume, prompt, lastUsedAt }) => ({
+          sessionId: resume.sessionId,
+          cwd: resume.cwd,
+          title: prompt,
+          updatedAt: lastUsedAt,
+        })),
+      }),
+      loadSession: (request) => reopened(request, true),
+      resumeSession: (request) => reopened(request, false),
       prompt: ({ params, requestId, signal }) => {
         refuseIfClosing();
 

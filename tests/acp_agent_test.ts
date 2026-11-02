@@ -1344,6 +1344,169 @@ describe('sessions and records', () => {
       );
     }));
 
+  for (const [first, second] of [
+    ['session/load', 'session/load'],
+    ['session/load', 'session/resume'],
+    ['session/resume', 'session/load'],
+  ]) {
+    test(`${first} then ${second} of one id at once: one opens it, the other is -32602`, async () => {
+      const made: { sessionId?: string } = {};
+      const reading = Promise.withResolvers<{ mcpServers: [] }>();
+      let opens = 0;
+
+      await onAcp(
+        [],
+        async ({ client, cwd }) => {
+          const params = { sessionId: made.sessionId, cwd, mcpServers: [] };
+          const winner = client.send(first as string, params);
+          const loser = await client.request(second as string, params);
+
+          expect(loser.error?.code).toBe(-32602);
+
+          reading.resolve({ mcpServers: [] });
+
+          expect((await client.answerTo(winner)).error).toBeUndefined();
+          expect(opens).toBe(1);
+
+          const again = await client.request(second as string, params);
+
+          expect(again.error?.code).toBe(-32602);
+        },
+        {
+          place: () => reading.promise,
+          open: (options) => {
+            opens += 1;
+
+            return openSession(options);
+          },
+          state: async (stateDir, cwd) => {
+            made.sessionId = await recordSession({
+              stateDir,
+              cwd,
+              command: fakeAgentCommand(),
+              prompts: ['text'],
+            });
+          },
+        },
+      );
+    });
+  }
+
+  test('a reopen cancelled gives its id back', async () => {
+    const made: { sessionId?: string } = {};
+    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    let places = 0;
+
+    await onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const params = { sessionId: made.sessionId, cwd, mcpServers: [] };
+        const load = client.send('session/load', params);
+
+        await until(() => places === 1);
+
+        client.notify('$/cancel_request', { requestId: load });
+
+        await client.request('session/list', {});
+
+        reading.resolve({ mcpServers: [] });
+
+        expect((await client.answerTo(load)).error?.code).toBe(-32800);
+        expect(
+          (await client.request('session/load', params)).error,
+        ).toBeUndefined();
+      },
+      {
+        place: () => {
+          places += 1;
+
+          return places === 1
+            ? reading.promise
+            : Promise.resolve({ mcpServers: [] });
+        },
+        state: async (stateDir, cwd) => {
+          made.sessionId = await recordSession({
+            stateDir,
+            cwd,
+            command: fakeAgentCommand(),
+            prompts: ['text'],
+          });
+        },
+      },
+    );
+  });
+
+  test('a new session answered with an id being reopened takes an alias', async () => {
+    const SHAPED = '11111111-2222-4333-8444-555555555555';
+    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    let places = 0;
+
+    await onAcp(
+      ['--session-id', SHAPED],
+      async ({ client, cwd, newSession }) => {
+        const load = client.send('session/load', {
+          sessionId: SHAPED,
+          cwd,
+          mcpServers: [],
+        });
+
+        await until(() => places === 1);
+
+        expect(await newSession()).toBe(`${SHAPED}~2`);
+
+        reading.resolve({ mcpServers: [] });
+
+        expect((await client.answerTo(load)).error).toBeUndefined();
+      },
+      {
+        place: () => {
+          places += 1;
+
+          return places === 1
+            ? reading.promise
+            : Promise.resolve({ mcpServers: [] });
+        },
+      },
+    );
+  });
+
+  test('a reopen that fails gives its id back', async () => {
+    const made: { sessionId?: string } = {};
+    let opens = 0;
+
+    await onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const params = { sessionId: made.sessionId, cwd, mcpServers: [] };
+
+        expect((await client.request('session/load', params)).error?.code).toBe(
+          -32603,
+        );
+        expect(
+          (await client.request('session/load', params)).error,
+        ).toBeUndefined();
+      },
+      {
+        open: (options) => {
+          opens += 1;
+
+          return openSession({
+            ...options,
+            ...(opens === 1 ? { agentCommand: ['/no/such/agent'] } : {}),
+          });
+        },
+        state: async (stateDir, cwd) => {
+          made.sessionId = await recordSession({
+            stateDir,
+            cwd,
+            command: fakeAgentCommand(),
+            prompts: ['text'],
+          });
+        },
+      },
+    );
+  });
+
   test("a load in another directory than the record names the record's", () => {
     const made: { sessionId?: string } = {};
 

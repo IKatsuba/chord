@@ -130,6 +130,8 @@ interface Entry {
    * A resume keeps nothing of it.
    */
   past?: ConversationEvent[];
+  /** The id a load or a resume claimed for it. */
+  reopens?: string;
   /** While the conversation replays the session's past, which is no news. */
   replaying: boolean;
   turns: Turns;
@@ -155,6 +157,11 @@ export function runAcp(options: AcpOptions): AcpRun {
   const wire = seeingWrites(ndJsonStream(options.output, options.input));
   /** Each session the client can name, by the name it has for it. */
   const sessions = new Map<string, Entry>();
+  /**
+   * The ids a load or a resume is opening again: taken from before its first
+   * await until it is up or has failed, or a second could open one record twice.
+   */
+  const reopening = new Set<string>();
   /** Every session not closed yet, those still starting and those gone too. */
   const entries = new Set<Entry>();
   /** Each ask out with the client, by chord's id for it; its withdrawal. */
@@ -470,7 +477,12 @@ export function runAcp(options: AcpOptions): AcpRun {
       return;
     }
 
-    const upstreamId = aliasFor(new Set(sessions.keys()), agentId);
+    // A reopened session is under the id the client asked for, claimed for it.
+    // Anything else keeps clear of what is claimed as of what is live.
+    const upstreamId =
+      entry.reopens === agentId
+        ? agentId
+        : aliasFor(new Set([...sessions.keys(), ...reopening]), agentId);
     const session = entry.conversation.session;
     const { session: upstream, configOptions } = answeredConfig(
       upstreamSession(agentId, upstreamId),
@@ -679,6 +691,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       noticed: false,
       replaying: false,
       ...(resume?.replays === true ? { past: [] } : {}),
+      ...(resume === undefined ? {} : { reopens: resume.from.sessionId }),
       conversation: new Conversation(
         (signal) =>
           options.open({
@@ -785,15 +798,38 @@ export function runAcp(options: AcpOptions): AcpRun {
   ): Promise<LoadSessionResponse> => {
     refuseIfClosing();
 
-    const { sessionId, cwd } = params;
+    const { sessionId } = params;
 
-    if (sessions.has(sessionId)) {
+    if (sessions.has(sessionId) || reopening.has(sessionId)) {
       throw RequestError.invalidParams(
         undefined,
         `Session ${sessionId} is already open here.`,
       );
     }
 
+    reopening.add(sessionId);
+
+    try {
+      const { sessionId: _id, ...answer } = await reopen(
+        { params, requestId, signal },
+        replays,
+      );
+
+      return answer;
+    } finally {
+      reopening.delete(sessionId);
+    }
+  };
+
+  const reopen = async (
+    {
+      params,
+      requestId,
+      signal,
+    }: AcpRequest<LoadSessionRequest | ResumeSessionRequest>,
+    replays: boolean,
+  ): Promise<NewSessionResponse> => {
+    const { sessionId, cwd } = params;
     let from: Resume;
 
     try {
@@ -817,13 +853,12 @@ export function runAcp(options: AcpOptions): AcpRun {
     }
 
     const { place, servers } = await placed(params, signal);
-    const { sessionId: _id, ...answer } = await up(
+
+    return up(
       openEntry(place, cwd, servers, { from, replays }),
       requestId,
       signal,
     );
-
-    return answer;
   };
 
   const refuseIfClosing = () => {

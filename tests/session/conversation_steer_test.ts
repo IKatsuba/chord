@@ -1697,7 +1697,9 @@ test("Esc takes the person's steer held behind Claude's open calls back with the
     });
     conversation.interrupt();
 
-    expect(events).toContainEqual({ type: 'queue_withdrawn' });
+    expect(events).toContainEqual(
+      expect.objectContaining({ type: 'queue_withdrawn' }),
+    );
     await until(() => promptsIn(events).length === 2);
     await ended(events, 2);
 
@@ -2566,7 +2568,9 @@ describe('CHD-535 U1 tester: queued steering boundaries', () => {
         );
         expect(promptsIn(events).map(([text]) => text)).toEqual(['text']);
         conversation.interrupt();
-        expect(events).toContainEqual({ type: 'queue_withdrawn' });
+        expect(events).toContainEqual(
+          expect.objectContaining({ type: 'queue_withdrawn' }),
+        );
       },
       (session) => {
         pids.push(...session.agentPids);

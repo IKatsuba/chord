@@ -228,6 +228,7 @@ export interface Session {
     text: string,
     attachments?: readonly Attachment[],
     mentions?: readonly string[],
+    links?: readonly ResourceLink[],
   ): Turn;
   /**
    * Whether the agent takes images in a prompt, as the `promptCapabilities`
@@ -620,7 +621,7 @@ export async function openSession(
 
       return () => listeners.delete(listener);
     },
-    prompt: (text, attachments = [], mentions = []) => {
+    prompt: (text, attachments = [], mentions = [], links = []) => {
       const blocks = promptBlocks(text, attachments);
       let cancelled = false;
       /** Whether the prompt has gone to the agent, which a cancel then tells. */
@@ -628,14 +629,16 @@ export async function openSession(
       const { promise: sent, resolve: went } = Promise.withResolvers<
         readonly ResourceLink[] | undefined
       >();
-      const send = (links: readonly ResourceLink[]) => {
+      const send = (found: readonly ResourceLink[]) => {
+        const all = [...found, ...links];
+
         gone = true;
 
-        went(links);
+        went(all);
 
         return connection.prompt({
           sessionId: id,
-          prompt: [...blocks, ...links],
+          prompt: [...blocks, ...all],
         });
       };
 

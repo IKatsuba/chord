@@ -103,7 +103,7 @@ describe('tester: CHD-412 version boundaries', () => {
     }
   });
 
-  test('every requested bump or exact version over a prerelease is refused', () => {
+  test('a prerelease accepts unlabelled higher versions and refuses bumps', () => {
     for (const wanted of [
       'major',
       'minor',
@@ -111,10 +111,12 @@ describe('tester: CHD-412 version boundaries', () => {
       'fix',
       '1.2.3-rc.1',
       '1.2.2',
-      '1.2.3',
-      '2.0.0',
     ]) {
       expect(() => releaseVersion('1.2.3-rc.1', wanted)).toThrow(VersionError);
+    }
+
+    for (const wanted of ['1.2.3', '2.0.0']) {
+      expect(releaseVersion('1.2.3-rc.1', wanted)).toBe(wanted);
     }
   });
 });

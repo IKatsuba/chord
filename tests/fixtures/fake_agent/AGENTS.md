@@ -50,7 +50,8 @@
   `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`),
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
-  `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
+  `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`, `flood`,
+  `ignorescancel`). Beside it, what the
   scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
@@ -89,7 +90,8 @@
   `compact`,
   `codexcompact`,
   `compactfail`, `status`,
-  `cancels`, `error`, `slow`, `long`, `longheld`, `costwait`, `costwaitlate`,
+  `cancels`, `error`, `flood`, `ignorescancel`, `slow`, `long`, `longheld`,
+  `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
   `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
@@ -107,7 +109,14 @@
   `settingsoffered`, `settingsoverlap`, `settingsrefused`,
   `settingswithdrawn`, `settingslong`,
   `claudecycle`, `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
-  plays that scenario; `markdownwrap` sends a reply whose heading,
+  plays that scenario; `flood` sends 64 MiB of chunks as fast as they are taken,
+  for a client that stopped reading, until a cancel or its client's going;
+  `ignorescancel` holds its turn through a cancel until its client goes, or 30 s;
+  `--session-id <id>` (`CHORD_FAKE_SESSION_ID`) answers every `session/new`
+  with that id, as an agent with per-process counters does;
+  `--config-in-responses` (`CHORD_FAKE_CONFIG_IN_RESPONSES=1`) says a change of
+  configuration only in the answer to it, never in an update;
+  `markdownwrap` sends a reply whose heading,
   three-deep nested list, quote and paragraph wrap at 80 columns, with a
   two-digit marker, task items, and a soft and a hard line break
   (`docs/design/CHD-396.md`); `markdowncode` sends code boxes with a long

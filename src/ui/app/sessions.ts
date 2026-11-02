@@ -32,6 +32,7 @@ import {
 import { OpenAgents } from '../../session/open_agents.ts';
 import type { Place } from '../../session/place.ts';
 import type { Session } from '../../session/session.ts';
+import { settingPickedUp } from '../../session/setting_picked_up.ts';
 import { signInNote } from '../../session/sign_in.ts';
 import {
   failureNote,
@@ -111,7 +112,7 @@ import { subagentPath } from '../../session/subagents.ts';
 import { askerParts } from '../dialogs/asker.ts';
 import type { ListedAgent } from '../../agents.ts';
 import { homePath } from '../../settings.ts';
-import { settingPickedUp } from './setting_picked_up.ts';
+import { settingActions } from './setting_picked_up.ts';
 import type { AgentOption } from '../../session/config.ts';
 import {
   DIMCODE_NOTICE,
@@ -2648,7 +2649,7 @@ export function useSessions(
     teamPlaces: (caller, name) => teamPlaces(caller.key, name),
     claimSettingsBox: settingsBox.current,
     settingSaved: (path, change) => {
-      for (const action of settingPickedUp(path, change, {
+      for (const action of settingActions(settingPickedUp(path, change), {
         runtimes: runtimeNames,
         listed: listedAgents,
       })) {

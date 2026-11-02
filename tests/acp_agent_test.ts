@@ -751,6 +751,17 @@ describe('permissions', () => {
       await client.answerTo(running);
     }));
 
+  test('an ask under a session the agent never announced is refused, never shown', () =>
+    onAcp([], async ({ client, newSession, prompt, lines }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'strangerask'));
+
+      expect(client.messages.some((m) => m.method === PERMISSION)).toBe(false);
+      expect(client.said(sessionId)).toContain('deny');
+      expect(lines.join('\n')).toContain('a session it does not know');
+    }));
+
   test('an error answer is a refusal, with a line on stderr', () =>
     onAcp([], async ({ client, newSession, prompt, lines }) => {
       const sessionId = await newSession();
@@ -933,6 +944,16 @@ describe('forms and links', () => {
       const sessionId = await newSession();
 
       await client.answerTo(prompt(sessionId, 'requestform'));
+
+      expect(client.messages.some((m) => m.method === FORM)).toBe(false);
+      expect(client.said(sessionId)).toContain('Elicitation answer: cancel');
+    }));
+
+  test('one under a session the agent never announced is cancelled, never asked', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'strangerform'));
 
       expect(client.messages.some((m) => m.method === FORM)).toBe(false);
       expect(client.said(sessionId)).toContain('Elicitation answer: cancel');

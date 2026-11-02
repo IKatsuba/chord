@@ -50,6 +50,7 @@ import {
 import {
   aliasFor,
   answeredConfig,
+  asksIn,
   childOf,
   configChange,
   configSetter,
@@ -267,6 +268,13 @@ export function runAcp(options: AcpOptions): AcpRun {
       return;
     }
 
+    if (!asksIn(upstream, request.sessionId)) {
+      say(`chord: refused a permission for a session it does not know`);
+      conversation.reject(id);
+
+      return;
+    }
+
     // It can name no session that client knows, and must not wait unseen.
     if (request.sessionId !== upstream.agentId && !capabilities?.subagents) {
       say(
@@ -307,6 +315,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     // that client knows.
     if (
       sessionId === undefined ||
+      !asksIn(upstream, sessionId) ||
       (sessionId !== upstream.agentId && !capabilities?.subagents)
     ) {
       conversation.answer(id, { action: 'cancel' });

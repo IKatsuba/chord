@@ -254,6 +254,16 @@ export const FORMS = {
     });
   },
 
+  // A form naming a session this agent never announced.
+  async strangerform(turn) {
+    return await elicit(turn, {
+      sessionId: 'stranger-session',
+      mode: 'form',
+      message: 'Not for this session',
+      requestedSchema: FORM_SCHEMA,
+    });
+  },
+
   // A link to open; the client opens nothing without a key press.
   async link(turn) {
     return await elicit(turn, {

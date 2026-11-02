@@ -484,6 +484,8 @@ const SCENARIOS = [
   'ignorescancel',
   'requestform',
   'permissionmeta',
+  'strangerask',
+  'strangerform',
   'subagent',
   'subagentupdate',
   'codexsubagents',

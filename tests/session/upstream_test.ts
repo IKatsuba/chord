@@ -10,6 +10,7 @@ import type { PlanWait } from '../../src/session/transcript/types.ts';
 import {
   aliasFor,
   answeredConfig,
+  asksIn,
   childOf,
   configChange,
   configOptionsOf,
@@ -195,6 +196,21 @@ describe('ids going up', () => {
       senderSessionId: 's1',
       recipientSessionId: 's1/c',
     });
+  });
+});
+
+describe('what an ask may name', () => {
+  test('the session and a child it announced, nothing else', () => {
+    const { session } = mapUpdate(upstreamSession('s1', 's1~2'), NONE, {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'c',
+    });
+
+    expect(asksIn(session, 's1')).toBe(true);
+    expect(asksIn(session, 'c')).toBe(true);
+    expect(asksIn(session, 'other')).toBe(false);
+    expect(asksIn(session, 's1~2')).toBe(false);
+    expect(asksIn(session, 'toString')).toBe(false);
   });
 });
 

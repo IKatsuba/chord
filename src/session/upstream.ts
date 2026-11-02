@@ -143,6 +143,14 @@ export function upstreamIdOf(session: UpstreamSession, id: string): string {
     : (session.children.get(id) ?? id);
 }
 
+/**
+ * Whether an ask may name this id: the session or a child it announced. Anything
+ * else would reach the client as it is, where it could be another live session.
+ */
+export function asksIn(session: UpstreamSession, id: string): boolean {
+  return id === session.agentId || session.children.has(id);
+}
+
 const ENDED_AS: ReadonlyMap<string, StateUpdate> = new Map<string, StateUpdate>(
   [
     ['completed', { state: 'idle', stopReason: 'end_turn' }],

@@ -18,11 +18,11 @@
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
   `bigask`, `bigasktwice`, `overlapask`, `overlapasksteer`, `mainbetween`,
-  `leftask`, `mainbetweentwice`, `bigaskleft`, `permissionmeta`),
+  `leftask`, `mainbetweentwice`, `bigaskleft`, `permissionmeta`, `strangerask`),
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`),
-  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`, `requestform`),
+  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`, `requestform`, `strangerform`),
   `guardian.ts` (`guardian`, `guardiangated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
@@ -114,6 +114,7 @@
   `ignorescancel` holds its turn through a cancel until its client goes, or 30 s;
   `requestform` asks a form scoped to a request of its own and to no session;
   `permissionmeta` asks with `_meta` on the request and on its call;
+  `strangerask` and `strangerform` ask under a session it never announced;
   `--session-id <id>` (`CHORD_FAKE_SESSION_ID`) answers every `session/new`
   with that id, as an agent with per-process counters does;
   `--config-in-responses` (`CHORD_FAKE_CONFIG_IN_RESPONSES=1`) says a change of

@@ -241,6 +241,22 @@ export const PERMISSIONS = {
     return answer.outcome.outcome === 'cancelled' ? 'cancelled' : 'end_turn';
   },
 
+  // A request naming a session this agent never announced, then what it heard.
+  async strangerask(turn) {
+    const answer = await turn.client.request('session/request_permission', {
+      sessionId: 'stranger-session',
+      toolCall: { toolCallId: turn.callId('write') },
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+
+    await turn.say(`Answered: ${JSON.stringify(answer.outcome)}`);
+
+    return 'end_turn';
+  },
+
   // As `permission`, its next step after the write waiting for a message
   // steered in, as the model's next step waits for the tool's result.
   async permissionsteer(turn) {

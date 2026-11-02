@@ -822,89 +822,83 @@ export function useSessions(
    * `/team show`: the team as the host has it; while it runs in the window,
    * each of the file's agents with its state and latest headline.
    */
-  const showTyped = async (name: string): Promise<TeamShown> => {
-    const shown = await showTeam(name);
+  const showTyped = (name: string): Promise<TeamShown> =>
+    showTeam(name, ({ file, lead, run, members }) => {
+      const now = Date.now();
+      const shownAgent = (
+        agent: string,
+        child: Child<Conversation> | undefined,
+        lead?: true,
+      ): TeamAgentShown => {
+        const who = { name: agent, ...(lead ? { lead } : {}) };
 
-    if (shown.kind !== 'running') {
-      return shown;
-    }
+        if (child === undefined) {
+          return { ...who, open: false };
+        }
 
-    const { file, lead, run, members } = shown;
-    const now = Date.now();
-    const shownAgent = (
-      agent: string,
-      child: Child<Conversation> | undefined,
-      lead?: true,
-    ): TeamAgentShown => {
-      const who = { name: agent, ...(lead ? { lead } : {}) };
+        const row = {
+          key: child.key,
+          name: child.name,
+          runtime: child.runtime,
+          wait: child.wait,
+          picked: false,
+          failed: all.sessions[child.key]?.connection.status === 'failed',
+        };
+        const state = agentState(row, now);
+        const mark = agentMark(row);
+        const latest = stateOf(child.key)?.transcript.entries.findLast(
+          (entry) =>
+            entry.kind === 'message' ||
+            (entry.kind === 'tool' && guardianView(entry.call) === 'block'),
+        );
 
-      if (child === undefined) {
-        return { ...who, open: false };
-      }
-
-      const row = {
-        key: child.key,
-        name: child.name,
-        runtime: child.runtime,
-        wait: child.wait,
-        picked: false,
-        failed: all.sessions[child.key]?.connection.status === 'failed',
-      };
-      const state = agentState(row, now);
-      const mark = agentMark(row);
-      const latest = stateOf(child.key)?.transcript.entries.findLast(
-        (entry) =>
-          entry.kind === 'message' ||
-          (entry.kind === 'tool' && guardianView(entry.call) === 'block'),
-      );
-
-      return {
-        ...who,
-        open: true,
-        state,
-        ...(mark === undefined ? {} : { mark }),
-        ...(latest?.kind === 'tool'
-          ? {
-              latest: headlineText(
-                firstLine(
-                  headline(
-                    latest.call,
-                    child.conversation.session?.chordServer?.name,
+        return {
+          ...who,
+          open: true,
+          state,
+          ...(mark === undefined ? {} : { mark }),
+          ...(latest?.kind === 'tool'
+            ? {
+                latest: headlineText(
+                  firstLine(
+                    headline(
+                      latest.call,
+                      child.conversation.session?.chordServer?.name,
+                    ),
                   ),
                 ),
-              ),
-            }
-          : latest?.kind === 'message'
-            ? { latest: messageHeadline(latest.from) }
-            : {}),
+              }
+            : latest?.kind === 'message'
+              ? { latest: messageHeadline(latest.from) }
+              : {}),
+        };
       };
-    };
 
-    return {
-      kind: 'show',
-      name,
-      file,
-      team: run.team,
-      running: {
-        name: lead.name,
-        since: lead.openedAt,
-        at: now,
-        job: run.job,
-        ...(run.selected === undefined
-          ? {}
-          : { receipt: run.selected.receipt }),
-        agents: [
-          shownAgent('lead', lead, true),
-          ...run.team.members.map((member) =>
-            shownAgent(
-              member.name,
-              members.find((each) => each.name === member.name),
+      return {
+        kind: 'show',
+        name,
+        file,
+        team: run.team,
+        running: {
+          name: lead.name,
+          since: lead.openedAt,
+          at: now,
+          job: run.job,
+          ...(run.selected === undefined
+            ? {}
+            : { receipt: run.selected.receipt }),
+          agents: [
+            shownAgent('lead', lead, true),
+            ...run.team.members.map((member) =>
+              shownAgent(
+                member.name,
+                members.find((each) => each.name === member.name),
+              ),
             ),
-          ),
-        ],
-      },
-    };
-  };
+          ],
+        },
+      };
+    });
 
   /**
    * `/team new`: `typed` drawn as the person's

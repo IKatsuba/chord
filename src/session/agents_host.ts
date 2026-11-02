@@ -237,8 +237,6 @@ interface Opening {
 
 /** A team's open run, as `/team show` reads it, for its driver to fill in. */
 export interface TeamRunNow {
-  readonly kind: 'running';
-  readonly name: string;
   /** Its file, as the host shows paths. */
   readonly file: string;
   readonly lead: Child<Conversation>;
@@ -249,9 +247,6 @@ export interface TeamRunNow {
   };
   readonly members: readonly Child<Conversation>[];
 }
-
-/** `/team show`'s answer: as it stands, or a run its driver fills in. */
-export type TeamShownNow = TeamShown | TeamRunNow;
 
 /** `a, b and c`. */
 function andList(names: readonly string[]): string {
@@ -2790,10 +2785,14 @@ export function createAgentsHost(
 
   /**
    * `/team show`: team `name` as its file has it; while it runs in the
-   * host, its first run as it stands now, the file as the run read it, for
-   * its driver to say what each of its agents is doing.
+   * host, its first run as it stands now, the file as the run read it, which
+   * `fill` turns into what is shown, there and then, saying what each of
+   * its agents is doing.
    */
-  const showTyped = async (name: string): Promise<TeamShownNow> => {
+  const showTyped = async (
+    name: string,
+    fill: (now: TeamRunNow) => TeamShown,
+  ): Promise<TeamShown> => {
     const agents = front();
     const running =
       agents === undefined
@@ -2848,14 +2847,12 @@ export function createAgentsHost(
       return { kind: 'show', name, file: found.shown, team: found.team };
     }
 
-    return {
-      kind: 'running',
-      name,
+    return fill({
       file: found.shown,
       lead,
       run,
       members: membersOf(agents, lead.id),
-    };
+    });
   };
 
   return {

@@ -10,6 +10,7 @@ import {
   type AgentsHostOptions,
   type AgentsPort,
   type FoldedSession,
+  type TeamRunNow,
 } from '../../src/session/agents_host.ts';
 import {
   Conversation,
@@ -1335,13 +1336,17 @@ Lead it.
       onFake.options,
     );
 
-    expect(await host.showTyped('who')).toEqual(
+    const never = () => {
+      throw new Error('no run to fill in');
+    };
+
+    expect(await host.showTyped('who', never)).toEqual(
       said('No team named who · /team lists them'),
     );
 
     await saved();
 
-    expect(await host.showTyped('bugfix')).toMatchObject({
+    expect(await host.showTyped('bugfix', never)).toMatchObject({
       kind: 'show',
       name: 'bugfix',
       file: join('.chord', 'teams', 'bugfix.md'),
@@ -1360,12 +1365,25 @@ Lead it.
     // The running file wins over what was saved since.
     await saved('not a team');
 
-    const shown = await host.showTyped('bugfix');
+    const filled: TeamRunNow[] = [];
+    const shown = host.showTyped('bugfix', (now) => {
+      filled.push(now);
 
-    assert(shown.kind === 'running');
-    expect(shown.lead.id).toBe(answer.ran.id);
-    expect(shown.run.job).toBe('Fix it.');
-    expect(shown.members.map(({ name }) => name)).toEqual(['coder']);
+      return {
+        kind: 'show',
+        name: 'bugfix',
+        file: now.file,
+        team: now.run.team,
+      };
+    });
+
+    // Filled in at once for an open run: nothing queued can come between
+    // what the host read of it and what the driver reads.
+    expect(filled).toHaveLength(1);
+    expect(filled[0]!.lead.id).toBe(answer.ran.id);
+    expect(filled[0]!.run.job).toBe('Fix it.');
+    expect(filled[0]!.members.map(({ name }) => name)).toEqual(['coder']);
+    expect((await shown).kind).toBe('show');
 
     await host.sessions.closeAll();
   });

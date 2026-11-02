@@ -16,7 +16,6 @@ import {
   type SelectionCapabilities,
   type SelectionReceipt,
 } from '../../session/team_selection.ts';
-import type { TeamSelectionPolicy } from '../../settings.ts';
 import { agentNameProblem } from '../../agent_name.ts';
 import { type Dispatch, useEffect, useRef, useState } from 'react';
 import { useApp } from './renderer.tsx';
@@ -29,8 +28,8 @@ import {
   type ConversationEvent,
   type OpenSession,
 } from '../../session/conversation.ts';
+import { createAgentsHost } from '../../session/agents_host.ts';
 import { closeOnForcedExit } from '../../session/leaving.ts';
-import { OpenAgents } from '../../session/open_agents.ts';
 import type { Place } from '../../session/place.ts';
 import type { Session } from '../../session/session.ts';
 import { settingPickedUp } from '../../session/setting_picked_up.ts';
@@ -49,7 +48,6 @@ import {
   sentence,
   stepWords,
 } from '../../session/start_failure.ts';
-import { Runtimes, sessionProbe } from '../../server/runtimes.ts';
 import type { ChordServer } from '../../server/server.ts';
 import type {
   Caller,
@@ -67,14 +65,7 @@ import type {
   WindowView,
 } from '../../server/tools.ts';
 import { settingsBoxClaim } from '../../server/tools.ts';
-import {
-  findTeams,
-  type FoundTeam,
-  type Team,
-  teamDirs,
-  teamFile,
-  teamPart,
-} from '../../teams.ts';
+import { type FoundTeam, type Team, teamDirs, teamPart } from '../../teams.ts';
 import { TaskAgent, taskName } from '../../session/tasks.ts';
 import type {
   ChordCall,
@@ -703,15 +694,6 @@ export function useSessions(
   };
 
   /**
-   * The conversation a caller's own work runs in: a long-lived child's, or
-   * main's; none once it has closed.
-   */
-  const callerConversation = (key: number, agent: string | undefined) =>
-    agent === undefined
-      ? conversationAt(key)
-      : childOf(key, agent)?.conversation;
-
-  /**
    * Waits on a child's start when it was asked for an effort: the answer
    * says the effort it is on and, when it was refused, why, as the
    * transcript does. `settle` takes each event the child reports; `started`
@@ -1283,68 +1265,6 @@ export function useSessions(
     >(),
   );
 
-  /** The team files where main, `key`, works, read now, each path as shown. */
-  const teamsAt = async (key: number): Promise<ListedTeam[]> =>
-    (await findTeams({ configHome, cwd: place.cwd }, runtimeNames)).map(
-      (found) => ({ ...found, shown: shownTeamFile(key, found) }),
-    );
-
-  /**
-   * A team file as the window shows it to main, `key`: a project's from the
-   * directory main works in, the user's from `~`.
-   */
-  const shownTeamFile = (key: number, found: FoundTeam) =>
-    found.place === 'project'
-      ? relative(place.cwd, found.file)
-      : homePath(found.file, home);
-
-  /**
-   * Where a team named `name` goes for main, `key`, a project's file shown
-   * from the directory main works in and the user's from `~`, and the
-   * team saved under the name now.
-   */
-  const teamPlaces = async (key: number, name: string) => {
-    const { cwd } = place;
-    const dirs = teamDirs({ configHome, cwd });
-    const project = teamFile(dirs.project, name);
-    const user =
-      dirs.user === undefined ? undefined : teamFile(dirs.user, name);
-    const saved = (await teamsAt(key)).find((each) => each.name === name);
-    const shown = (file: string) => ({
-      file,
-      shown:
-        file === project || (saved?.place === 'project' && file === saved.file)
-          ? relative(cwd, file)
-          : homePath(file, home),
-    });
-
-    return {
-      agent: ownedBy(sessions.agents, key)?.main.agent ?? 'the agent',
-      project: shown(project),
-      ...(user === undefined ? {} : { user: shown(user) }),
-      ...(saved === undefined
-        ? {}
-        : {
-            saved: {
-              ...shown(saved.file),
-              ...('team' in saved ? { team: saved.team } : {}),
-            },
-          }),
-    };
-  };
-
-  const policyNow = async (): Promise<TeamSelectionPolicy> => {
-    try {
-      return await (place.selectionPolicy?.() ??
-        Promise.resolve({ policy: place.teamSelection ?? {} }));
-    } catch {
-      return {
-        error:
-          'Team selection settings could not be validated. Correct the settings before selecting a team.',
-      };
-    }
-  };
-
   const selectedCapabilities = async (
     agent: string,
     key: number,
@@ -1901,24 +1821,6 @@ export function useSessions(
 
     return { ...opened, ...(await started) };
   };
-
-  /** Session `key`'s open child `to`, by chord's id or its name. */
-  const childOf = (key: number, to: string) =>
-    ownedBy(sessions.agents, key)?.children.find(
-      (child) => child.id === to || child.name === to,
-    );
-
-  /**
-   * Session `key`'s own open child `to`, by chord's id or its name: one the
-   * session opened, a team's lead among them, and no member.
-   */
-  const ownChild = (key: number, to: string) =>
-    ownedBy(sessions.agents, key)?.children.find(
-      (child) =>
-        child.lead === undefined &&
-        child.forkedFrom === undefined &&
-        (child.id === to || child.name === to),
-    );
 
   /**
    * The conversation a child answers to: its lead's for a member, main's
@@ -2486,27 +2388,40 @@ export function useSessions(
       : { delivered };
   };
 
-  const [sessions] = useState(
-    () =>
-      new OpenAgents({
+  const [agentsHost] = useState(() =>
+    createAgentsHost(
+      {
+        place,
+        runtimes: runtimeNames,
+        home,
+        configHome,
         conversation: conversationOf,
+      },
+      {
         heard: (key, event, wait) => hear.current(key, event, wait),
         closingHeard: (key, event) => {
           if (!retiredHeard(key, event)) {
             dispatch({ type: 'closing_heard', key, event });
           }
         },
-      }),
+      },
+    ),
   );
-  // What each runtime offers, read in the window's place: its files say how
-  // a runtime starts there, or that it does not (CHD-466). Made at the
-  // first ask.
-  const runtimesMade = useRef<Runtimes | undefined>(undefined);
-  const runtimes = (): Runtimes =>
-    (runtimesMade.current ??= new Runtimes({
-      probe: sessionProbe(place.cwd, (runtime) => place.startupOf(runtime)),
-    }));
-
+  const {
+    sessions,
+    conversation,
+    conversationAt,
+    front,
+    childOf,
+    ownChild,
+    callerConversation,
+    closeRuntimes,
+    offer,
+    teamsAt,
+    shownTeamFile,
+    teamPlaces,
+    policyNow,
+  } = agentsHost;
   /**
    * Whether `caller` speaks for a session already let go, cleared or
    * closing: what it asks reaches no one (CHD-476).
@@ -2571,29 +2486,7 @@ export function useSessions(
           ];
     },
     runtimes: () => runtimeNames,
-    offer: (runtime, probe) => {
-      const refused = place.startupOf(runtime)?.refused;
-
-      // Refused where the asking session works: nothing is read, nor
-      // started to be.
-      if (refused !== undefined) {
-        return Promise.resolve({ error: refused });
-      }
-
-      const main = sessions.agents.main;
-      const session =
-        main?.agent === runtime ? main.conversation.session : undefined;
-
-      if (session !== undefined) {
-        runtimes().heard(runtime, {
-          models: session.models(),
-          modes: session.modes(),
-          efforts: session.efforts(),
-        });
-      }
-
-      return runtimes().read(runtime, probe);
-    },
+    offer,
     spawn: (caller, args) =>
       stale(caller) ? Promise.resolve(STALE) : spawn(caller, args),
     open: (key, args, caller) =>
@@ -2729,20 +2622,11 @@ export function useSessions(
 
     return () => {
       forget();
-      runtimesMade.current?.close();
+      closeRuntimes();
 
       void sessions.closeAll().catch(() => {});
     };
   }, [sessions]);
-
-  /**
-   * The session in front, read when a key or a pick acts rather than when
-   * the window was drawn, as the first is opened only after.
-   */
-  const conversation = () => sessions.front;
-
-  /** The conversation of main or child `key`; none once it has closed. */
-  const conversationAt = (key: number) => sessions.conversationOf(key);
 
   /**
    * Draws the session `sessions` has in front, on the agent picked in it, as
@@ -2758,10 +2642,6 @@ export function useSessions(
     dispatch({ type: 'session_shown', key: front });
     redraw();
   };
-
-  /** The window's agents, as `sessions` has them now, once main has started. */
-  const front = (): StartedAgents<Conversation> | undefined =>
-    ownedBy(sessions.agents, sessions.agents.main?.key);
 
   /**
    * Moves the pick in the list under the prompt `by` rows, as it is drawn

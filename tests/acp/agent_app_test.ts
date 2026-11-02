@@ -220,3 +220,92 @@ describe('CHD-574 tester: agent app session and ask boundaries', () => {
       expect(answers(client, running)).toHaveLength(1);
     }));
 });
+
+describe('CHD-574 tester: records and reopen independence', () => {
+  test('loading a closed record leaves another session permission unanswered', () =>
+    withClient([], async (client, cwd) => {
+      const first = await newSession(client, cwd);
+
+      await client.answerTo(prompt(client, first, 'text'));
+      await client.request('session/close', { sessionId: first });
+
+      const second = await newSession(client, cwd);
+      const waiting = prompt(client, second, 'permission');
+      const permission = await ask(client, PERMISSION, second);
+      const before = client.updates(second).length;
+      const loaded = await client.request('session/load', {
+        sessionId: first,
+        cwd,
+        mcpServers: [],
+      });
+
+      expect(loaded.error).toBeUndefined();
+      expect(
+        client
+          .updates(first)
+          .filter((update) => update.sessionUpdate === 'user_message_chunk'),
+      ).toContainEqual(
+        expect.objectContaining({ content: { type: 'text', text: 'text' } }),
+      );
+      expect(client.updates(second)).toHaveLength(before);
+      expect(answers(client, waiting)).toHaveLength(0);
+
+      client.respond(permission.id, selected('deny'));
+
+      expect((await client.answerTo(waiting)).result?.stopReason).toBe(
+        'end_turn',
+      );
+      expect(
+        (await client.answerTo(prompt(client, first, 'text'))).result
+          ?.stopReason,
+      ).toBe('end_turn');
+    }));
+
+  for (const method of ['session/load', 'session/resume']) {
+    test(`an immediate cancel of ${method} releases the id for another open`, () =>
+      withClient([], async (client, cwd) => {
+        const sessionId = '11111111-2222-4333-8444-555555555555';
+        const params = { sessionId, cwd, mcpServers: [] };
+        const opening = client.send(method, params);
+
+        client.notify('$/cancel_request', { requestId: opening });
+
+        expect((await client.answerTo(opening)).error?.code).toBe(-32800);
+        expect((await client.request(method, params)).error).toBeUndefined();
+        expect(
+          (await client.answerTo(prompt(client, sessionId, 'text'))).result
+            ?.stopReason,
+        ).toBe('end_turn');
+        expect(answers(client, opening)).toHaveLength(1);
+      }));
+  }
+
+  test('directory filtering keeps two recorded sessions in their own places', () =>
+    withClient([], async (client, cwd) => {
+      const other = await mkdtemp(join(cwd, 'other-'));
+      const first = await newSession(client, cwd);
+      const second = await newSession(client, other);
+
+      for (const sessionId of [first, second]) {
+        await client.answerTo(prompt(client, sessionId, 'text'));
+        await client.request('session/close', { sessionId });
+      }
+
+      for (const [place, sessionId] of [
+        [cwd, first],
+        [other, second],
+      ]) {
+        expect(
+          (await client.request('session/list', { cwd: place })).result
+            ?.sessions,
+        ).toEqual([expect.objectContaining({ sessionId, cwd: place })]);
+      }
+
+      expect((await client.request('session/list')).result?.sessions).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ sessionId: first }),
+          expect.objectContaining({ sessionId: second }),
+        ]),
+      );
+    }));
+});

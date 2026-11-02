@@ -614,6 +614,12 @@ export function runAcp(options: AcpOptions): AcpRun {
 
         refuseIfClosing();
 
+        // A cancel while the place was read: its signal has fired already, and
+        // no agent is to be started for it.
+        if (signal.aborted) {
+          throw RequestError.requestCancelled();
+        }
+
         // A client's is the nearest layer, by name.
         const servers = new Map(
           [...place.mcpServers, ...params.mcpServers].map((server) => [

@@ -600,6 +600,43 @@ describe('starts that fail', () => {
       ).toBeGreaterThan(0);
     }));
 
+  test('a cancel while the place is read starts no agent', async () => {
+    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    let asked = false;
+    let opens = 0;
+
+    await onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const id = client.send('session/new', { cwd, mcpServers: [] });
+
+        await until(() => asked);
+
+        client.notify('$/cancel_request', { requestId: id });
+
+        await client.request('session/list', {});
+
+        reading.resolve({ mcpServers: [] });
+
+        expect((await client.answerTo(id)).error?.code).toBe(-32800);
+        expect(client.messages.filter((m) => m.id === id)).toHaveLength(1);
+        expect(opens).toBe(0);
+      },
+      {
+        place: () => {
+          asked = true;
+
+          return reading.promise;
+        },
+        open: (options) => {
+          opens += 1;
+
+          return openSession(options);
+        },
+      },
+    );
+  });
+
   test('a hanging start stays open until its request is cancelled, leaving no group', async () => {
     const gateDir = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
 

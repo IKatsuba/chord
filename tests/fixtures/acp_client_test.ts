@@ -227,3 +227,38 @@ describe('what the fake agent gained', () => {
       ).toBe(false);
     }));
 });
+
+describe('CHD-574 tester: raw wire evidence survives closure', () => {
+  test('an errored pipe keeps the unterminated fragment for parsing', async () => {
+    const client = new AcpClient(
+      () => {},
+      (async function* () {
+        yield '{"id":1}\ntrailing garbage';
+
+        throw new Error('pipe lost');
+      })(),
+    );
+
+    await until(() => client.closed);
+
+    expect(client.lines).toEqual(['{"id":1}', 'trailing garbage']);
+    expect(() => client.messages).toThrow();
+  });
+
+  test('answer lookup skips a same-id request and distinguishes string ids', async () => {
+    const client = new AcpClient(
+      () => {},
+      (async function* () {
+        yield [
+          '{"id":1,"method":"session/request_permission"}',
+          '{"id":"1","result":{"name":"string"}}',
+          '{"id":1,"result":{"name":"number"}}',
+          '',
+        ].join('\n');
+      })(),
+    );
+
+    expect((await client.answerTo(1)).result).toEqual({ name: 'number' });
+    expect((await client.answerTo('1')).result).toEqual({ name: 'string' });
+  });
+});

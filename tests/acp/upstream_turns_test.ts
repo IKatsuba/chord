@@ -351,3 +351,36 @@ describe('interleavings', () => {
     expect(turnOf(turns, '1')).toBe('b');
   });
 });
+
+describe('CHD-574 tester: late results and independent tables', () => {
+  test('a lost turn answers without clearing a newer running turn', () => {
+    const { turns, sends } = play(
+      bind('old request', 'old'),
+      prompt('old'),
+      { type: 'disconnected' },
+      bind('new request', 'new'),
+      prompt('new'),
+      result('old', FAILED),
+      result('old', FAILED),
+    );
+
+    expect(sends).toEqual([answer('old request', FAILED)]);
+    expect(turns.running).toEqual({ turnId: 'new', origin: 'client' });
+    expect(turnOf(turns, 'new request')).toBe('new');
+    expect(reduceTurns(turns, result('new')).sends).toEqual([
+      answer('new request'),
+    ]);
+  });
+
+  test('closing one table never removes equal ids in another session', () => {
+    const first = play(bind(1, 'same'), prompt('same')).turns;
+    const second = play(bind(1, 'same'), prompt('same')).turns;
+
+    expect(reduceTurns(first, { type: 'closing' }).sends).toEqual([
+      { type: 'cancelled', requestId: 1 },
+    ]);
+    expect(turnOf(second, 1)).toBe('same');
+    expect(reduceTurns(second, result('same')).sends).toEqual([answer(1)]);
+    expect(NO_TURNS.bound.size).toBe(0);
+  });
+});

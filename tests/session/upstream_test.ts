@@ -583,3 +583,52 @@ describe('a message no prompt began', () => {
     });
   });
 });
+
+describe('CHD-574 tester: mapper session boundaries', () => {
+  test('equal child ids stay under separate aliases without changing the input', () => {
+    const original = upstreamSession('main', 'first');
+    const update: SessionUpdate = {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'child/opaque',
+      state: { state: 'completed' },
+      _meta: { kept: 'value' },
+    };
+    const before = structuredClone(update);
+    const first = mapUpdate(original, ALL, update);
+    const second = mapUpdate(upstreamSession('main', 'second'), ALL, update);
+
+    expect(first.notification?.update).toMatchObject({
+      sessionId: 'first/child/opaque',
+      state: { state: 'idle', stopReason: 'end_turn' },
+    });
+    expect(second.notification?.update).toMatchObject({
+      sessionId: 'second/child/opaque',
+    });
+    expect(original.children.size).toBe(0);
+    expect(update).toEqual(before);
+  });
+
+  test('one session announcing config does not suppress another session', () => {
+    const state: AgentState = { commands: [], configOptions: [] };
+    const first = configChange(upstreamSession('same', 'first'), state);
+    const second = configChange(upstreamSession('same', 'second'), state);
+
+    expect(first.notification?.sessionId).toBe('first');
+    expect(second.notification?.sessionId).toBe('second');
+    expect(configChange(first.session, state).notification).toBeUndefined();
+  });
+
+  test('a prototype-like option id is accepted only when explicitly offered', () => {
+    const selected = {
+      outcome: { outcome: 'selected' as const, optionId: 'toString' },
+    };
+
+    expect(permissionAnswerOf([], selected)).toBe('reject');
+    expect(
+      permissionAnswerOf(
+        [{ optionId: 'toString', name: 'Allow', kind: 'allow_once' }],
+        selected,
+      ),
+    ).toEqual({ optionId: 'toString' });
+  });
+});

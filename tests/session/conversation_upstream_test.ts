@@ -340,3 +340,63 @@ describe('a set that answers', () => {
     }
   });
 });
+
+describe('CHD-574 tester: cancellation keeps other work independent', () => {
+  test('repeated queued cancellation withdraws once and leaves the next prompt', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('permission', 'permission', [], [], { turnId: 'a' });
+
+      await until(() => asked(events));
+
+      conversation.send('never sent', 'never sent', [], [], { turnId: 'b' });
+      conversation.send('text', 'text', [], [], { turnId: 'c' });
+      conversation.cancelPrompt('b');
+      conversation.cancelPrompt('b');
+      conversation.cancelPrompt('unknown');
+
+      expect(withdrawn(events)).toEqual([['b']]);
+      expect(resultOf(events, 'a')).toBeUndefined();
+
+      conversation.cancelPrompt('a');
+
+      await until(() => resultOf(events, 'c') !== undefined);
+
+      expect(promptsIn(events).map(([text]) => text)).toEqual([
+        'permission',
+        'text',
+      ]);
+      expect(resultOf(events, 'b')).toBeUndefined();
+    }));
+
+  test('two sessions using the same turn id cancel and finish independently', () =>
+    onFake([], async (first, firstEvents) => {
+      await onFake([], async (second, secondEvents) => {
+        first.send('permission', 'permission', [], [], { turnId: 'same' });
+        second.send('permission', 'permission', [], [], { turnId: 'same' });
+
+        await until(() => asked(firstEvents) && asked(secondEvents));
+
+        first.cancelPrompt('same');
+
+        await until(() => resultOf(firstEvents, 'same') !== undefined);
+
+        expect(resultOf(secondEvents, 'same')).toBeUndefined();
+        expect(
+          secondEvents.some((event) => event.type === 'permission_settled'),
+        ).toBe(false);
+
+        second.cancelPrompt('same');
+
+        await until(() => resultOf(secondEvents, 'same') !== undefined);
+
+        for (const events of [firstEvents, secondEvents]) {
+          expect(events.filter((event) => event.type === 'result')).toEqual([
+            expect.objectContaining({
+              turnId: 'same',
+              result: expect.objectContaining({ status: 'cancelled' }),
+            }),
+          ]);
+        }
+      });
+    }));
+});

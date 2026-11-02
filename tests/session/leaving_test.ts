@@ -114,6 +114,18 @@ describe('leaving', () => {
     expect(exits).toEqual([{ signal: 'SIGHUP' }]);
   });
 
+  test('a drain that fails is kept, and the connection still closes', async () => {
+    const { leaving, calls, exits, lines } = setUp({
+      drained: () => Promise.reject(new Error('EPIPE')),
+    });
+
+    await leaving.leave({ kind: 'eof' });
+
+    expect(calls).toEqual(['close']);
+    expect(lines).toEqual(['chord: drain: EPIPE']);
+    expect(exits).toEqual([{ code: 1 }]);
+  });
+
   test('a stderr that throws does not stop the way out', async () => {
     const { leaving, exits } = setUp({
       stderr: () => {

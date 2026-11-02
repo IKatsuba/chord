@@ -142,10 +142,17 @@ function leave(
   const connection: LeaveStep = {
     name: 'connection',
     run: async () => {
-      await settledWithin(
+      const drain = await settledWithin(
         Promise.resolve().then(() => options.drained()),
         options.drainMs ?? DRAIN_MS,
       );
+
+      // Out of time is the drain's best effort; a failure is a failure, and
+      // the connection is closed all the same.
+      if (drain?.status === 'rejected') {
+        failed('drain', drain.reason);
+      }
+
       await options.closeConnection();
     },
   };

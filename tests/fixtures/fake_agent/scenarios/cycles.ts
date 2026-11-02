@@ -3,7 +3,7 @@
  * when a background task ends, its end only a usage update of an autonomous
  * origin, and codebuddy's unasked turn, marked at both ends.
  */
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import { COST_FROM, CYCLE_COST } from '../options.ts';
 import { costs } from '../sessions.ts';
 import { type Client, lifetime, pause, type Play, type Turn } from '../turn.ts';
@@ -81,7 +81,7 @@ export function runCycle(client: Client, sessionId: string): void {
 /**
  * Ends the turn, then, once it has gone quiet, works on its own as Claude
  * Code does when a background task ends; with `usage` it ends that cycle as
- * claude-agent-acp 0.93.0 does, with a usage update whose `_claude/origin`
+ * claude-agent-acp 0.99.1 does, with a usage update whose `_claude/origin`
  * is `task-notification`, and without it the cycle is never marked ended.
  */
 function claudeCycle(usage: boolean): Play {

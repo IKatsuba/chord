@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { RequestError } from '@agentclientprotocol/sdk';
+import { RequestError } from '@agentclientprotocol/sdk/unstable';
 import {
   asSignIn,
   offersLine,

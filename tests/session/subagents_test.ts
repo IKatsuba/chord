@@ -9,7 +9,7 @@ import type {
   SessionUpdate,
   StateUpdate,
   ToolCallUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import {
   Conversation,
   type ConversationEvent,
@@ -34,6 +34,7 @@ import {
   waitingOn,
 } from '../../src/session/subagents.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
+import { agentItemName } from '../../src/session/transcript/subagents.ts';
 import {
   emptyTranscript,
   type Entry,
@@ -41,6 +42,7 @@ import {
   type Transcript,
   type TranscriptAction,
 } from '../../src/session/transcript/types.ts';
+import { toolUses } from '../../src/ui/transcript/agents/subagents.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { play, run, said } from '../fixtures/recorder.ts';
 import { recordSession } from '../fixtures/records.ts';
@@ -53,6 +55,143 @@ const TURN = 't1';
  */
 const FAKE = fakeAgentCommand(undefined, '--step-ms', '1');
 const RESUMING = fakeAgentCommand(undefined, '--step-ms', '1', '--resume-only');
+
+describe('CHD-561 tester: unset launch acknowledgment boundaries', () => {
+  test('the child retains its launch prompt while running at acknowledgment and after hand-back', () =>
+    withSession(async (session) => {
+      const actions = await play(session, 'claudeunsetlaunch');
+      const ack = actions.findIndex(
+        (action) =>
+          action.type === 'update' &&
+          action.update.sessionUpdate === 'session_message' &&
+          action.update.messageId.endsWith(':reply'),
+      );
+
+      expect(ack).toBeGreaterThan(0);
+
+      const atAck = subagentsIn(fold(actions.slice(0, ack + 1)).entries);
+
+      expect(atAck).toHaveLength(1);
+      expect(atAck[0]?.state).toBe('running');
+      expect(atAck[0]?.prompt).toBe('Reply with ok.');
+      expect(atAck[0]?.entries).toEqual([]);
+
+      const ended = subagentsIn(fold(actions).entries);
+
+      expect(ended[0]?.id).toBe(atAck[0]?.id);
+      expect(ended[0]?.state).toBe('completed');
+      expect(ended[0]?.prompt).toBe('Reply with ok.');
+    }));
+});
+
+describe('CHD-561 tester: Claude nested message records', () => {
+  test('a fresh process replays root and nested rows with adapter-derived names intact', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-claude-rows-'));
+    const stateDir = join(dir, 'state');
+    const live: ConversationEvent[] = [];
+    const command = fakeAgentCommand(
+      undefined,
+      '--step-ms',
+      '1',
+      '--adapter',
+      'claude',
+      '--resume-only',
+    );
+
+    try {
+      const id = await recordSession({
+        stateDir,
+        cwd: dir,
+        command,
+        prompts: ['claudenested'],
+        heard: (event) => live.push(event),
+      });
+      const session = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: command,
+        resume: sessionById(await readRecords(stateDir), id, {
+          agent: 'fake',
+          cwd: dir,
+        }),
+      });
+
+      try {
+        const expected = fold(transcriptActions(live));
+        const replayed = pastOf(session);
+
+        expect(timed(replayed)).toEqual(timed(expected));
+        expect(shape(replayed.entries)).toEqual(shape(expected.entries));
+
+        const [parent] = subagentsIn(replayed.entries);
+
+        assert(parent !== undefined);
+
+        const [nested] = subagentsIn(parent.entries);
+
+        assert(nested !== undefined);
+        expect(parent.namedByTitle).toBe(true);
+        expect(nested.namedByTitle).toBe(true);
+        expect(parent.prompt).toBe('Review the session layer.');
+        expect(nested.prompt).toBe('Find the routing.');
+        expect(
+          parent.entries.filter((entry) => entry.kind === 'agent_message'),
+        ).toHaveLength(2);
+        expect(
+          replayed.entries.filter((entry) => entry.kind === 'agent_message'),
+        ).toHaveLength(2);
+      } finally {
+        await session.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('CHD-561 tester: standard Codex records and parent isolation', () => {
+  test('a fresh process replays both child endings without adopting child title or config', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-codex-record-'));
+    const stateDir = join(dir, 'state');
+    const live: ConversationEvent[] = [];
+
+    try {
+      const id = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: FAKE,
+        prompts: ['titled', 'codexsubagents'],
+        heard: (event) => live.push(event),
+      });
+      const records = await readRecords(stateDir);
+      const record = records.find((each) => each.sessionId === id);
+
+      assert(record !== undefined);
+      expect(record.title).toBe('Fix the tokenizer');
+
+      const session = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: RESUMING,
+        resume: sessionById(records, id, { agent: 'fake', cwd: dir }),
+      });
+
+      try {
+        expect(timed(pastOf(session))).toEqual(
+          timed(fold(transcriptActions(live))),
+        );
+        expect(
+          subagentsIn(pastOf(session).entries).map((child) => child.state),
+        ).toEqual(['completed', 'failed']);
+        expect(session.models()?.available.length).toBeGreaterThan(0);
+      } finally {
+        await session.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
 
 function fold(
   actions: readonly TranscriptAction[],
@@ -469,14 +608,14 @@ test("Claude's subagents fold to each end they report", () =>
         ...(error === undefined ? {} : { error }),
       })),
     ).toStrictEqual([
-      { title: 'explorer (Explore)', state: 'completed' },
+      { title: 'Find the session layer', state: 'completed' },
       {
-        title: 'reviewer (general-purpose)',
+        title: 'Review the transcript reducer',
         state: 'failed',
         error: 'API Error: 529 Overloaded',
       },
-      { title: 'tester (general-purpose)', state: 'cancelled' },
-      { title: 'watcher', state: 'untracked' },
+      { title: 'Run the tests', state: 'cancelled' },
+      { title: 'Watch the build', state: 'untracked' },
     ]);
   }));
 
@@ -546,8 +685,8 @@ test("Esc leaves Claude's background subagent at work on screen, and it ends as 
 
     expect(result).toMatchObject({ result: { status: 'cancelled' } });
     expect(subagents.map(({ title }) => title)).toStrictEqual([
-      'tester (general-purpose)',
-      'explorer (Explore)',
+      'Run the test suite',
+      'Find the cancel path',
     ]);
   }));
 
@@ -987,6 +1126,199 @@ test("an agent that sends ACP's own subagent_update folds the same way", () =>
     ]);
   }));
 
+describe("Claude's session messages on the fake (CHD-561)", () => {
+  test('both views of a hand-back draw once, in the parent; the child keeps its own prompt', () =>
+    withSession(async (session) => {
+      const { entries } = fold(await play(session, 'claudehandback'));
+      const rows = entries.filter((entry) => entry.kind === 'agent_message');
+
+      expect(rows.map(({ direction, text }) => [direction, text])).toEqual([
+        ['to', 'Find the routing and hand it back.'],
+        ['from', 'The relay in connection.ts owns the routing.'],
+      ]);
+
+      const [child] = subagentsIn(entries);
+
+      assert(child !== undefined);
+      expect(child.title).toBe('explorer');
+      expect(child.prompt).toBe('Find the routing and hand it back.');
+      expect(child.entries).toStrictEqual([]);
+    }));
+
+  test('a launch left without run_in_background folds in the order seen live, whatever is decided of its first reply', () =>
+    withSession(async (session) => {
+      const { entries } = fold(await play(session, 'claudeunsetlaunch'));
+      const rows = entries.flatMap((entry) =>
+        entry.kind === 'agent_message'
+          ? [[entry.direction, entry.text.split('\n')[0]]]
+          : [],
+      );
+
+      expect(rows).toStrictEqual([
+        ['to', 'Reply with ok.'],
+        [
+          'from',
+          'Async agent launched successfully. (This tool result is internal metadata.)',
+        ],
+        ['from', 'ok'],
+      ]);
+      expect(subagentsIn(entries)[0]?.state).toBe('completed');
+    }));
+
+  test('a nested launch counts as one tool use, and its messages stay in its parent', () =>
+    withSession(async (session) => {
+      const { entries } = fold(await play(session, 'claudenested'));
+      const [child] = subagentsIn(entries);
+
+      assert(child !== undefined);
+      expect(toolUses(child)).toBe(1);
+      expect(
+        child.entries.flatMap((entry) =>
+          entry.kind === 'agent_message' ? [entry.direction] : [],
+        ),
+      ).toStrictEqual(['to', 'from']);
+      expect(child.prompt).toBe('Review the session layer.');
+    }));
+});
+
+test("under Claude's adapter's name a subagent goes by its title, its role only its description; under another, it does not change", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-subagents-'));
+  const nameUnder = async (args: readonly string[]) => {
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, ...args),
+    });
+
+    try {
+      const [child] = subagentsIn(
+        fold(await play(session, 'claudehandback')).entries,
+      );
+
+      assert(child !== undefined);
+
+      return [child.title, child.description, agentItemName(child)];
+    } finally {
+      await session.close();
+    }
+  };
+
+  try {
+    expect(await nameUnder(['--adapter', 'claude'])).toStrictEqual([
+      'explorer',
+      'Explore',
+      'explorer',
+    ]);
+    expect(await nameUnder([])).toStrictEqual([
+      'explorer',
+      undefined,
+      'explorer',
+    ]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+describe("subagents as Codex's adapter sends them from 2.4", () => {
+  test('partial updates fold into one block each, its work and error kept', () =>
+    withSession(async (session) => {
+      const before = session.models();
+      const transcript = fold(await play(session, 'codexsubagents'));
+
+      expect(shape(transcript.entries)).toStrictEqual([
+        'user: codexsubagents',
+        {
+          'worker renamed completed': [
+            'tool: Read README.md completed',
+            'assistant: Read.',
+          ],
+        },
+        { 'failing failed': [] },
+        'assistant: Both have ended.',
+      ]);
+
+      const [worker, failing] = subagentsIn(transcript.entries);
+
+      assert(worker !== undefined && failing !== undefined);
+      expect(worker.state).toStrictEqual('completed');
+      // Its stop stays on offer only while it can be stopped.
+      expect(worker.cancellable).toBeUndefined();
+      expect(worker.offeredCancel).toBe(true);
+      expect(failing.state).toStrictEqual('failed');
+      expect(failing.error).toStrictEqual('Subagent work failed');
+      expect(failing.description).toStrictEqual('Fail at once');
+      // A child's title and options are not the session's.
+      expect(session.models()).toStrictEqual(before);
+    }));
+
+  test('a stop on its own id ends that subagent, and the turn goes on', () =>
+    withSession(async (session) => {
+      let stopping = false;
+      const { updates, result } = await run(session, 'codexsubagentstop', {
+        onUpdate: (updates) => {
+          const offered = updates.find(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              update.capabilities?.cancel !== undefined &&
+              update.capabilities.cancel !== null,
+          );
+
+          if (!stopping && offered?.sessionUpdate === 'subagent_update') {
+            stopping = true;
+
+            void session.stopSubagent(offered.sessionId);
+          }
+        },
+      });
+
+      expect(result.status).toStrictEqual('completed');
+      expect(stopping).toBe(true);
+
+      const actions: TranscriptAction[] = updates.map((update) => ({
+        type: 'update',
+        turnId: 'turn',
+        update,
+      }));
+      const [watcher] = subagentsIn(fold(actions).entries);
+
+      assert(watcher !== undefined);
+      expect(watcher.state).toStrictEqual('cancelled');
+      expect(watcher.cancellable).toBeUndefined();
+    }));
+
+  test('a cancel of the turn ends it cancelled too', () =>
+    withSession(async (session) => {
+      const actions = await play(session, 'codexsubagentstop', {
+        cancelAfterEvents: 3,
+      });
+      // As the agent sent them: the recorder's own cancel folds to the same.
+      const told = actions.flatMap((action) =>
+        action.type === 'update' &&
+        action.update.sessionUpdate === 'subagent_update'
+          ? [action.update]
+          : [],
+      );
+
+      expect(
+        told
+          .slice(-2)
+          .map(({ state, capabilities }) => ({ state, capabilities })),
+      ).toStrictEqual([
+        {
+          state: { state: 'idle', stopReason: 'cancelled' },
+          capabilities: undefined,
+        },
+        { state: undefined, capabilities: { cancel: null } },
+      ]);
+
+      const [watcher] = subagentsIn(fold(actions).entries);
+
+      assert(watcher !== undefined);
+      expect(watcher.state).toStrictEqual('cancelled');
+      expect(watcher.cancellable).toBeUndefined();
+    }));
+});
+
 /**
  * Each subagent's title and the states its `subagent_update`s brought, in
  * order, among `actions`; and the text of the `session_message`s heard
@@ -1045,7 +1377,7 @@ test("Claude's subagents come in ACP's own form, with their whole task, ending e
 
     expect(subagents.map(({ title, states }) => ({ title, states }))).toEqual([
       {
-        title: 'explorer (Explore)',
+        title: 'Find the session layer',
         states: [
           { state: 'running' },
           { state: 'requires_action' },
@@ -1054,7 +1386,7 @@ test("Claude's subagents come in ACP's own form, with their whole task, ending e
         ],
       },
       {
-        title: 'reviewer (general-purpose)',
+        title: 'Review the transcript reducer',
         states: [
           { state: 'running' },
           {
@@ -1065,14 +1397,14 @@ test("Claude's subagents come in ACP's own form, with their whole task, ending e
         ],
       },
       {
-        title: 'tester (general-purpose)',
+        title: 'Run the tests',
         states: [
           { state: 'running' },
           { state: 'idle', stopReason: 'cancelled' },
         ],
       },
       {
-        title: 'watcher',
+        title: 'Watch the build',
         states: [{ state: 'running' }, { state: 'unknown' }],
       },
     ]);
@@ -1149,14 +1481,14 @@ test("Claude's background subagent goes on past a cancel that stops the one the 
 
     expect(subagents).toStrictEqual([
       {
-        title: 'tester (general-purpose)',
+        title: 'Run the test suite',
         states: [
           { state: 'running' },
           { state: 'idle', stopReason: 'end_turn' },
         ],
       },
       {
-        title: 'explorer (Explore)',
+        title: 'Find the cancel path',
         states: [
           { state: 'running' },
           { state: 'idle', stopReason: 'cancelled' },
@@ -1171,7 +1503,7 @@ test("a cancel that comes before the next announcement leaves Claude's backgroun
 
     expect(result).toMatchObject({ result: { status: 'cancelled' } });
     expect(subagents[0]).toStrictEqual({
-      title: 'tester (general-purpose)',
+      title: 'Run the test suite',
       states: [{ state: 'running' }, { state: 'idle', stopReason: 'end_turn' }],
     });
   }));
@@ -1599,7 +1931,7 @@ describe('CHD-432 tester: independent Claude fixture lifetimes', () => {
 
         if (
           update.sessionUpdate === 'subagent_update' &&
-          update.title === 'tester (general-purpose)'
+          update.title === 'Run the test suite'
         ) {
           childId = update.sessionId;
         }

@@ -1,4 +1,4 @@
-import type { ContentBlock } from '@agentclientprotocol/sdk';
+import type { ContentBlock } from '@agentclientprotocol/sdk/unstable';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { globby } from 'globby';

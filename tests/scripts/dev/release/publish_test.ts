@@ -21,7 +21,13 @@ import { authenticate } from '../../../../scripts/dev/release/authenticate.ts';
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
 import { publish } from '../../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
-import { executable } from './scratch.ts';
+import { parse } from 'shell-quote';
+import {
+  executable,
+  fetchedArchives,
+  nativeNotes,
+  SOURCE_NOTES,
+} from './scratch.ts';
 
 // The release's publishing, on the resume path, which publishes from the
 // packages a stopped run left without building again: npm faked on PATH, the
@@ -112,13 +118,17 @@ beforeEach(() => {
   chmodSync(join(bin, 'npm'), 0o755);
   // npm runs as `node <npm>`; this node runs the fake npm with bash.
   executable(join(bin, 'node'), NODE);
+  executable(
+    join(bin, 'gh'),
+    `#!/bin/bash\nprintf '%s\\n' "$*" >>"$RELEASE_STATE/gh.log"\nif [ -f "$RELEASE_STATE/gh-fails" ] && [ "$1" = release ]; then echo 'gh broke' >&2; exit 1; fi\necho https://github.example/draft\n`,
+  );
 
   mkdirSync(repo);
   writeFileSync(
     join(repo, 'package.json'),
     JSON.stringify({ name: '@chorded/chord', version: VERSION }),
   );
-  writeFileSync(join(repo, '.gitignore'), 'dist/\n');
+  writeFileSync(join(repo, '.gitignore'), 'dist/\nnode_modules/\n');
 
   const tgz = join(repo, 'dist', 'release', 'tgz');
   const files = ['chord', ...PLATFORMS].map(
@@ -132,6 +142,8 @@ beforeEach(() => {
   }
 
   recordSums(tgz, files);
+  nativeNotes(repo);
+  fetchedArchives(repo);
 
   git(place, 'init', '-q', '--bare', '-b', 'main', origin);
   git(repo, 'init', '-q', '-b', 'main');
@@ -222,6 +234,45 @@ function tagged(where: string): string {
 }
 
 const PUBLISH = 'publish --access public ';
+
+describe('CHD-561 tester: complete source guards precede every publish', () => {
+  for (const only of [undefined, 'chord-linux-x64'] as const) {
+    for (const defect of ['missing', 'changed', 'disagreeing notes'] as const) {
+      test(`${defect} blocks ${only ?? 'all packages'} before any platform publish or tag`, async () => {
+        const source = join(repo, 'dist', 'release', 'source');
+        const archive = join(source, 'zlib-1.3.2.tar.gz');
+
+        if (defect === 'missing') {
+          rmSync(archive);
+        } else if (defect === 'changed') {
+          writeFileSync(archive, 'untrusted bytes');
+        } else {
+          writeFileSync(
+            join(
+              repo,
+              'node_modules',
+              '@opentui',
+              'core-linux-x64',
+              'FFMPEG-SOURCE.md',
+            ),
+            `${SOURCE_NOTES}\nchanged build\n`,
+          );
+        }
+
+        // A local inventory must never authorize an incomplete or stale set.
+        writeFileSync(join(source, 'SHA256SUMS'), '');
+        await died(() => publish(context(), { version: VERSION, only }));
+
+        expect(
+          lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
+        ).toEqual([]);
+        expect(lines('gh.log')).toEqual([]);
+        expect(tagged(repo)).toBe('');
+        expect(isPublished('chord-linux-x64')).toBe(false);
+      });
+    }
+  }
+});
 
 describe('a resumed release', () => {
   test('publishes every platform package, then the main one last, and tags', async () => {
@@ -737,5 +788,137 @@ esac
           : [`tag -a ${TAG} -m chord ${TAG}`, `push origin ${TAG}`],
       );
     }
+  });
+});
+
+describe('the draft GitHub release beside a publish (CHD-561)', () => {
+  const made = () =>
+    lines('gh.log').filter((line) => line.startsWith('release '));
+
+  test('all five answering, it drafts the tag with the archives, and never publishes it', async () => {
+    await release();
+
+    const [draft, ...more] = made();
+
+    expect(more).toStrictEqual([]);
+    expect(draft).toStartWith(`release create ${TAG} --draft --verify-tag`);
+    expect(draft).toContain('ffmpeg-9.0.2.tar.xz');
+    expect(draft).toContain('zlib-1.3.2.tar.gz');
+    expect(draft).not.toContain('--latest');
+  });
+
+  test('with no archives it stops before npm takes anything', async () => {
+    rmSync(join(repo, 'dist', 'release', 'source'), {
+      recursive: true,
+      force: true,
+    });
+
+    expect(await died(() => release())).toContain('no ');
+    expect(isPublished('chord')).toBeFalse();
+    expect(made()).toStrictEqual([]);
+  });
+
+  test('one archive gone stops before npm takes anything, whatever else lies there', async () => {
+    const dir = join(repo, 'dist', 'release', 'source');
+
+    rmSync(join(dir, 'zlib-1.3.2.tar.gz'));
+    writeFileSync(join(dir, 'SHA256SUMS'), '');
+
+    expect(await died(() => release())).toContain('zlib-1.3.2.tar.gz');
+    expect(isPublished('chord')).toBeFalse();
+    expect(made()).toStrictEqual([]);
+  });
+
+  test("archives of an older native package's notes stop before npm takes anything", async () => {
+    nativeNotes(
+      repo,
+      SOURCE_NOTES.replaceAll('ffmpeg-9.0.2', 'ffmpeg-9.0.3').replace(
+        /SHA-256: `[0-9a-f]{64}`/,
+        `SHA-256: \`${'a'.repeat(64)}\``,
+      ),
+    );
+
+    expect(await died(() => release())).toContain('ffmpeg-9.0.3');
+    expect(isPublished('chord')).toBeFalse();
+    expect(made()).toStrictEqual([]);
+  });
+
+  test('a changed archive stops before npm takes anything', async () => {
+    writeFileSync(
+      join(repo, 'dist', 'release', 'source', 'zlib-1.3.2.tar.gz'),
+      'changed',
+    );
+
+    expect(await died(() => release())).toContain('zlib-1.3.2.tar.gz');
+    expect(isPublished('chord')).toBeFalse();
+  });
+
+  test('a draft that fails says the version is out, and how to finish', async () => {
+    writeFileSync(join(state, 'gh-fails'), '');
+
+    const said = await died(() => release());
+
+    expect(said).toContain('its draft release failed: gh broke');
+
+    const line = said.slice(said.indexOf('Finish it with: ') + 16);
+    const argv = parse(line) as string[];
+
+    expect(argv.slice(0, 10)).toStrictEqual([
+      'gh',
+      'release',
+      'create',
+      TAG,
+      '--draft',
+      '--verify-tag',
+      '--title',
+      `chord ${TAG}`,
+      '--notes',
+      '',
+    ]);
+    expect(argv.slice(10).map((file) => file.split('/').at(-1))).toStrictEqual([
+      'ffmpeg-9.0.2.tar.xz',
+      'zlib-1.3.2.tar.gz',
+    ]);
+    expect(tagged(origin)).toContain(TAG);
+  });
+
+  test('a single package that leaves another missing makes no draft', async () => {
+    await release('chord-linux-x64');
+
+    expect(made()).toStrictEqual([]);
+  });
+
+  test('no gh, or one not signed in, stops among the guards', async () => {
+    executable(join(bin, 'gh'), '#!/bin/bash\necho nope >&2\nexit 1\n');
+
+    const said = await died(() =>
+      preflight(context(), { dryRun: false, publish: true }),
+    );
+
+    expect(said).toContain('gh auth status');
+    expect(said).toContain('nope');
+    rmSync(join(bin, 'gh'));
+
+    const gone = {
+      ...context(),
+      env: { ...context().env, PATH: bin + ':/usr/bin:/bin' },
+    };
+
+    if (!existsSync('/usr/bin/gh') && !existsSync('/bin/gh')) {
+      expect(
+        await died(() => preflight(gone, { dryRun: false, publish: true })),
+      ).toContain('gh auth status');
+    }
+  });
+
+  test('a run that does not publish does not ask for gh', () => {
+    executable(join(bin, 'gh'), '#!/bin/bash\nexit 1\n');
+    // Nothing stopped, as a dry run refuses to resume one.
+    rmSync(join(state, 'published'), { recursive: true });
+    mkdirSync(join(state, 'published'));
+
+    expect(preflight(context(), { dryRun: true, publish: false }).mode).toBe(
+      'fresh',
+    );
   });
 });

@@ -2,7 +2,7 @@
  * The agent's replies and thoughts, as chunks run on into one block until a
  * new message, another kind or another turn starts the next.
  */
-import type { ContentBlock } from '@agentclientprotocol/sdk';
+import type { ContentBlock } from '@agentclientprotocol/sdk/unstable';
 import type { Transcript } from './types.ts';
 import { appended, lastReplaced } from './entries.ts';
 

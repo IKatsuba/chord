@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { ElicitationSchema } from '@agentclientprotocol/sdk';
+import type { ElicitationSchema } from '@agentclientprotocol/sdk/unstable';
 import {
   answeredRows,
   answeredText,

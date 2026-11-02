@@ -8,7 +8,7 @@
 import type {
   ElicitationContentValue,
   ElicitationSchema,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import type { ElicitationReply } from '../../session/elicitations.ts';
 import {
   answerOf,

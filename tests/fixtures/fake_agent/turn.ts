@@ -2,7 +2,7 @@
  * A turn as every scenario plays it: the updates it sends on its session, at
  * the agent's pace, and the ids of the calls it starts.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { STEP_MS } from './options.ts';
 
 export type Client = acp.AgentContext;

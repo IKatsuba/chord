@@ -5,7 +5,7 @@
  * read and write them too.
  */
 import { EventEmitter, once } from 'node:events';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   DIMCODE_PERMISSION,
   NO_CONFIG,

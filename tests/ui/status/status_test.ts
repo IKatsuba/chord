@@ -36,6 +36,29 @@ function text(facts: StatusFacts, width: number): string {
   return sides.filter((side) => side !== '').join('  ');
 }
 
+describe('CHD-561 tester: status model truncation', () => {
+  test('word-preferred cuts keep Unicode whole and leave room for the notice and usage', () => {
+    const model = '界é👩‍💻 model with a very long descriptive name';
+    const notice = 'Permission waits';
+    const segments = new Intl.Segmenter();
+
+    for (let width = 32; width <= 80; width++) {
+      const view = statusLine({ ...facts, model, notice }, width);
+      const shown = text({ ...facts, model, notice }, width);
+      const cut = view.right.find((part) => part.text.includes('…'))?.text;
+
+      expect(shown).toStartWith(notice);
+      expect(stringWidth(shown)).toBeLessThanOrEqual(width);
+
+      if (cut !== undefined) {
+        expect(model).toStartWith(cut.slice(0, -1));
+        expect([...segments.segment(cut)].at(-1)?.segment).toBe('…');
+        expect(cut).not.toContain('�');
+      }
+    }
+  });
+});
+
 test('context used is the complement of the free share rounded down', () => {
   expect(contextUsed(usage)).toStrictEqual(60);
   expect(contextUsed({ used: 1200, size: 200_000 })).toStrictEqual(1);

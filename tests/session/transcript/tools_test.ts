@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { OUTPUT_LIMIT } from '../../../src/session/context.ts';
 import { recordActions } from '../../../src/session/record.ts';
 import { pastActions } from '../../../src/session/replay.ts';

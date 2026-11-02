@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { PlanEntry, SessionUpdate } from '@agentclientprotocol/sdk';
+import type {
+  PlanEntry,
+  SessionUpdate,
+} from '@agentclientprotocol/sdk/unstable';
 import type { TranscriptAction } from '../../../src/session/transcript/types.ts';
 import { fold } from './fold.ts';
 

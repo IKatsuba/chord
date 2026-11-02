@@ -3,7 +3,7 @@
  * as Claude's effort: each one's values and the one it is set to. `/config`
  * lists them; the mode and the model have keys and pickers of their own.
  */
-import type { SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 
 export interface AgentOptionValue {
   readonly value: string;

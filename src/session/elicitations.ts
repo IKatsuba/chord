@@ -3,7 +3,7 @@ import type {
   CreateElicitationResponse,
   ElicitationContentValue,
   ElicitationSchema,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { questionsOf } from './questions.ts';
 import type { ElicitationWait } from './transcript/types.ts';
 

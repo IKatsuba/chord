@@ -3,7 +3,7 @@ import type {
   McpServer,
   SessionUpdate,
   ToolCallUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { DIMCODE_WORDS, dimcodeAtRisk } from '../notices.ts';
 import { filledIn } from './enrich.ts';
 import { allowOption } from './permissions.ts';

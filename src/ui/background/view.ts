@@ -40,6 +40,22 @@ export function focusedItem(
 }
 
 /**
+ * The focused agent, when the hint still says it offers no stop and it now
+ * offers one.
+ */
+export function stopNowOffered(
+  items: readonly BackgroundItem[],
+  focus: ItemRef | undefined,
+  hint: string | undefined,
+): ItemRef | undefined {
+  const item = hint === NO_STOP_HINT ? focusedItem(items, focus) : undefined;
+
+  return item?.kind === 'agent' && item.stoppable === true
+    ? { key: item.key, id: item.id }
+    : undefined;
+}
+
+/**
  * Where the `❯` goes once `focus`'s row has left `before`, the rows now
  * being `items`: to the row that took its place, or the one above when it
  * was the last; none while its row is still listed, or with no row left

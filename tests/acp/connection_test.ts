@@ -6,7 +6,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
-import type * as acp from '@agentclientprotocol/sdk';
+import type * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   type Agent,
   AgentGone,
@@ -23,6 +23,209 @@ import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 
 /** Short enough to keep a wedged agent's test quick, long enough to be real. */
 const STOP = { exitMs: 300, termMs: 300, killMs: 2000 } as const;
+
+describe('CHD-561 tester: unset Claude launch wire order', () => {
+  test('the unlinked acknowledgment precedes child-first linked hand-back and idle', () =>
+    withAgent(
+      ['--adapter', 'claude', '--step-ms', '1'],
+      async (agent, seen, cwd) => {
+        const { sessionId: root } = await agent.newSession({
+          cwd,
+          mcpServers: [],
+        });
+        const result = await agent.prompt({
+          sessionId: root,
+          prompt: [text('claudeunsetlaunch')],
+        });
+        const notices = seen.notified(
+          'session/update',
+        ) as acp.SessionNotification[];
+        const relevant = notices.filter(({ update }) =>
+          ['subagent_update', 'session_message'].includes(update.sessionUpdate),
+        );
+        const announcement = relevant[0]?.update;
+
+        assert(announcement?.sessionUpdate === 'subagent_update');
+
+        const child = announcement.sessionId;
+        const messages = relevant.flatMap(({ sessionId, update }) =>
+          update.sessionUpdate === 'session_message'
+            ? [{ sessionId, ...update }]
+            : [],
+        );
+
+        expect(
+          relevant.map(({ sessionId, update }) => [
+            sessionId,
+            update.sessionUpdate,
+          ]),
+        ).toEqual([
+          [root, 'subagent_update'],
+          [root, 'session_message'],
+          [child, 'session_message'],
+          [root, 'session_message'],
+          [child, 'session_message'],
+          [root, 'session_message'],
+          [root, 'subagent_update'],
+        ]);
+        expect(announcement.state).toEqual({ state: 'running' });
+        expect(
+          messages.map((message) => [
+            message.senderSessionId,
+            message.recipientSessionId,
+            message.senderMessageId,
+            message.recipientMessageId,
+          ]),
+        ).toEqual([
+          [root, child, undefined, messages[0]?.messageId],
+          [root, child, messages[0]?.messageId, undefined],
+          [child, root, undefined, undefined],
+          [child, root, undefined, messages[3]?.messageId],
+          [child, root, messages[3]?.messageId, undefined],
+        ]);
+        expect(messages[2]?.messageId).toBe(`${messages[0]?.messageId}:reply`);
+        expect(messages[2]?.content).toEqual([
+          {
+            type: 'text',
+            text: `Async agent launched successfully. (This tool result is internal metadata.)\nagentId: ${child}\noutput_file: /tmp/agent-output`,
+          },
+        ]);
+        expect(messages[3]?.content).toEqual([{ type: 'text', text: 'ok' }]);
+        expect(messages[4]?.content).toEqual(messages[3]?.content);
+
+        const idle = relevant.at(-1)?.update;
+
+        assert(idle?.sessionUpdate === 'subagent_update');
+        expect(idle.sessionId).toBe(child);
+        expect(idle.state).toEqual({ state: 'idle', stopReason: 'end_turn' });
+        expect(result.stopReason).toBe('end_turn');
+      },
+    ));
+});
+
+describe('CHD-561 tester: Codex fixture cancellation lifecycle', () => {
+  test('stopping one of two concurrent sessions leaves the other child running', () =>
+    withAgent([], async (agent, seen, cwd) => {
+      const [first, second] = await Promise.all([
+        agent.newSession({ cwd, mcpServers: [] }),
+        agent.newSession({ cwd, mcpServers: [] }),
+      ]);
+      let secondAnswered = false;
+      const firstTurn = agent.prompt({
+        sessionId: first.sessionId,
+        prompt: [text('codexsubagentstop')],
+      });
+      const secondTurn = agent
+        .prompt({
+          sessionId: second.sessionId,
+          prompt: [text('codexsubagentstop')],
+        })
+        .then((answer) => {
+          secondAnswered = true;
+
+          return answer;
+        });
+
+      firstTurn.catch(() => {});
+
+      secondTurn.catch(() => {});
+
+      const offers = () =>
+        seen.notified('session/update').flatMap((value) => {
+          const notice = value as acp.SessionNotification;
+
+          return notice.update.sessionUpdate === 'subagent_update' &&
+            Boolean(notice.update.capabilities?.cancel)
+            ? [{ parent: notice.sessionId, child: notice.update.sessionId }]
+            : [];
+        });
+
+      await forkUntil(() => offers().length === 2);
+
+      const child = offers().find((offer) => offer.parent === first.sessionId);
+
+      assert(child !== undefined);
+      await agent.stopSubagent(child.child);
+      expect((await firstTurn).stopReason).toBe('end_turn');
+      expect(secondAnswered).toBe(false);
+      await agent.cancel(second.sessionId);
+      expect((await secondTurn).stopReason).toBe('cancelled');
+    }));
+
+  for (const target of ['child', 'parent']) {
+    test(`${target} cancellation leaves the process reusable and closes without a termination signal`, () =>
+      withAgent([], async (agent, seen, cwd) => {
+        const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+        const running = agent.prompt({
+          sessionId,
+          prompt: [text('codexsubagentstop')],
+        });
+
+        running.catch(() => {});
+
+        await forkUntil(() =>
+          seen
+            .updates()
+            .some(
+              (update) =>
+                update.sessionUpdate === 'subagent_update' &&
+                Boolean(update.capabilities?.cancel),
+            ),
+        );
+
+        const offered = seen
+          .updates()
+          .find(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              Boolean(update.capabilities?.cancel),
+          );
+
+        assert(offered?.sessionUpdate === 'subagent_update');
+
+        if (target === 'child') {
+          await agent.stopSubagent(offered.sessionId);
+        } else {
+          await agent.cancel(sessionId);
+        }
+
+        expect((await running).stopReason).toBe(
+          target === 'child' ? 'end_turn' : 'cancelled',
+        );
+        expect(
+          seen
+            .updates()
+            .filter(
+              (update) =>
+                update.sessionUpdate === 'subagent_update' &&
+                update.state?.state === 'idle' &&
+                update.state.stopReason === 'cancelled',
+            ),
+        ).toHaveLength(1);
+        expect(
+          seen.all
+            .filter(
+              (traffic) =>
+                traffic.from === 'chord' &&
+                'method' in traffic.message &&
+                traffic.message.method === 'session/cancel',
+            )
+            .map((traffic) =>
+              'message' in traffic && 'params' in traffic.message
+                ? traffic.message.params
+                : undefined,
+            ),
+        ).toEqual([
+          { sessionId: target === 'child' ? offered.sessionId : sessionId },
+        ]);
+
+        await agent.prompt({ sessionId, prompt: [text('text')] });
+        expect(seen.said()).toContain('Hello, world.');
+        await agent.close();
+        expect(await agent.exited).toEqual({ code: 0 });
+      }));
+  }
+});
 
 function isAlive(pid: number): Promise<boolean> {
   return new Promise((resolve) => {
@@ -532,7 +735,7 @@ test("with no turn running, Claude's adapter answers promptRequired where asked 
     expect(!seen.sent().includes('session/prompt')).toBeTruthy();
   }));
 
-test("with no turn running, Codex's adapter starts a turn of its own that no prompt of chord's owns, whatever it was asked", () =>
+test("with no turn running, an adapter ignoring promptRequired starts a turn of its own that no prompt of chord's owns, whatever it was asked", () =>
   withAgent(['--steering', 'codex'], async (agent, seen, cwd) => {
     const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
 
@@ -829,6 +1032,8 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
           ),
         );
       },
+      /** One line on the agent's stdout, as written. */
+      say: (line: string) => out.enqueue(encoder.encode(`${line}\n`)),
       /** The agent's stdout ends, before its stderr has. */
       closeStdout: () => out.close(),
       /** Its last words and its stderr's end, while it lives on. */
@@ -928,6 +1133,137 @@ describe('CHD-495: an agent that goes says why, its stderr read to its end first
 
     return await agent;
   };
+
+  describe('CHD-561 tester: SDK wire validation preserves the connection', () => {
+    test('arrays after initialize are refused without dispatching their requests', async () => {
+      const held = heldProcess();
+      const agent = await opened(held);
+
+      try {
+        held.say(
+          JSON.stringify([
+            {
+              jsonrpc: '2.0',
+              id: 'batched',
+              method: 'elicitation/create',
+              params: {},
+            },
+          ]),
+        );
+        await forkUntil(() => held.heard.some((each) => each['id'] === null));
+        expect(held.heard.find((each) => each['id'] === null)).toMatchObject({
+          error: { code: -32600 },
+        });
+        expect(held.heard.some((each) => each['id'] === 'batched')).toBe(false);
+
+        const session = agent.newSession({
+          cwd: process.cwd(),
+          mcpServers: [],
+        });
+
+        await forkUntil(() =>
+          held.heard.some((each) => each['method'] === 'session/new'),
+        );
+        held.answer('session/new', { sessionId: 'usable-after-array' });
+        expect((await session).sessionId).toBe('usable-after-array');
+      } finally {
+        await agent.close();
+      }
+    });
+
+    for (const bound of ['minimum', 'maximum']) {
+      test(`a fractional integer ${bound} is refused on the wire; integer and number bounds still reach the handler`, async () => {
+        const held = heldProcess();
+        const requests: acp.CreateElicitationRequest[] = [];
+        const opening = connectAgent(held.process, {
+          ...OPTIONS,
+          onElicitation: (request) => {
+            requests.push(request);
+
+            return Promise.resolve({ action: 'decline' });
+          },
+        });
+
+        await forkUntil(() => held.heard.length > 0);
+        held.answer('initialize', {
+          protocolVersion: 1,
+          agentCapabilities: {},
+        });
+
+        const agent = await opening;
+
+        try {
+          for (const [id, type, value] of [
+            ['fraction', 'integer', 1.5],
+            ['whole', 'integer', 1],
+            ['number', 'number', 1.5],
+          ] as const) {
+            held.say(
+              JSON.stringify({
+                jsonrpc: '2.0',
+                id,
+                method: 'elicitation/create',
+                params: {
+                  sessionId: 's',
+                  mode: 'form',
+                  message: 'Choose a value',
+                  requestedSchema: {
+                    type: 'object',
+                    properties: { a: { type, [bound]: value } },
+                  },
+                },
+              }),
+            );
+            await forkUntil(() => held.heard.some((each) => each['id'] === id));
+
+            const answer = held.heard.find((each) => each['id'] === id);
+
+            if (id === 'fraction') {
+              expect(answer).toMatchObject({ error: { code: -32602 } });
+              expect(requests).toEqual([]);
+            } else {
+              expect(answer).toMatchObject({ result: { action: 'decline' } });
+              expect(requests.at(-1)).toMatchObject({
+                requestedSchema: {
+                  properties: { a: { type, [bound]: value } },
+                },
+              });
+            }
+          }
+
+          expect(requests).toHaveLength(2);
+        } finally {
+          await agent.close();
+        }
+      });
+    }
+  });
+
+  test('a JSON array from the agent is refused by the SDK, unseen by the tap, and the connection lives on', async () => {
+    const held = heldProcess();
+    const seen = new Seen();
+    const agent = connectAgent(held.process, {
+      ...OPTIONS,
+      onTraffic: seen.push,
+    });
+
+    await soon(() => held.heard.length > 0);
+    held.say('[{"jsonrpc":"2.0","method":"session/update","params":{}}]');
+    await soon(() => held.heard.some((each) => each['id'] === null));
+
+    expect(held.heard.find((each) => each['id'] === null)).toMatchObject({
+      error: { code: -32600 },
+    });
+    expect(seen.all.filter((each) => each.from === 'agent')).toEqual([]);
+
+    held.answer('initialize', {
+      protocolVersion: 1,
+      agentCapabilities: {},
+      authMethods: [],
+    });
+
+    await (await agent).close();
+  });
 
   test('at start: the open waits past the end of stdout for the last words, and says them', async () => {
     const held = heldProcess();

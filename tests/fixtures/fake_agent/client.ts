@@ -2,7 +2,7 @@
  * What the client said at `initialize` it takes, which the scenarios play to.
  * `main.ts` reads it from the request; the scenarios read it as it stands.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 
 /** Whether the client said at `initialize` that it takes plans by id. */
 export let clientTakesPlans = false;

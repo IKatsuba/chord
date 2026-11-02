@@ -10,6 +10,7 @@ import {
   createCliRenderer,
   type ProgramStatus,
 } from '@opentui/core';
+import { rendererEnvironment } from './terminal_width.ts';
 import { createRoot, useRenderer } from '@opentui/react';
 import {
   createContext,
@@ -222,7 +223,27 @@ export async function openTerminal({
 }: {
   mouse: boolean;
 }): Promise<Terminal> {
-  const renderer = await createCliRenderer(terminalOptions({ mouse }));
+  // chord writes bytes of its own to the terminal on the JS thread, desktop
+  // notifications and the session variable, and OpenTUI offers no call for an
+  // app's bytes: frames from its native thread could cut through them (Q336).
+  // Read as the renderer is made, before its first wait, and put back at once,
+  // as every process chord starts inherits this one's environment.
+  const thread = process.env['OTUI_STDOUT_THREAD'];
+
+  process.env['OTUI_STDOUT_THREAD'] = '0';
+
+  const opening = createCliRenderer({
+    ...terminalOptions({ mouse }),
+    environment: rendererEnvironment((name) => process.env[name]),
+  });
+
+  if (thread === undefined) {
+    delete process.env['OTUI_STDOUT_THREAD'];
+  } else {
+    process.env['OTUI_STDOUT_THREAD'] = thread;
+  }
+
+  const renderer = await opening;
 
   if (taken === undefined) {
     giveBackOnEveryExit();

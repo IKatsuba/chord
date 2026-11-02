@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type SessionUpdate } from '@agentclientprotocol/sdk';
+import { type SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { shellContext, withContext } from '../../src/session/context.ts';
 import { cycleMark } from '../../src/session/cycles.ts';
 import { FileRecording } from '../../src/session/record.ts';

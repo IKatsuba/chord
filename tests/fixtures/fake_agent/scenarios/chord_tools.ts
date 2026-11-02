@@ -250,7 +250,7 @@ export const CHORD_TOOLS = {
   cutcallsunfinished: (turn) => unfinishedCalls(turn, 'failed'),
 
   // The same batch ended as 0.93 ends it under the draft ACP v2
-  // (CLAUDE_AGENT_ACP_EXPERIMENTAL_V2=1): `cancelled`, which ACP v1 has no
+  // (CLAUDE_AGENT_ACP_PROTOCOL=v2 today): `cancelled`, which ACP v1 has no
   // such status for, sent here over chord's v1 connection all the same.
   cutcallsunfinishedv2: (turn) => unfinishedCalls(turn, 'cancelled'),
 

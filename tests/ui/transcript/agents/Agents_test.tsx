@@ -1,18 +1,139 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdir, writeFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import {
+  GATE,
+  GATE_RELEASE,
+} from '../../../fixtures/fake_agent/scenarios/agents.ts';
 import { useState } from 'react';
 import { draw } from '../../harness.tsx';
 import stripAnsi from 'strip-ansi';
 import type { Subagent } from '../../../../src/session/transcript/types.ts';
 import { Agents } from '../../../../src/ui/transcript/agents/Agents.tsx';
+import { clipboard } from '../../app/selecting.ts';
 import {
   asked,
   CTRL_O,
+  CTRL_X,
   ESC,
   left,
   send,
   until,
   withWindow,
 } from '../../app/render.tsx';
+
+describe('CHD-561 tester: launch code actions follow the displayed prompt', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`fitting and expanded code copies and runs, but growth revokes an active pick at ${columns} columns`, async () => {
+      const { copies, copy } = clipboard();
+      const commands: string[] = [];
+
+      await withWindow(
+        async (window) => {
+          await mkdir(join(window.dir, GATE), { recursive: true });
+          await send(window, 'claudepromptgrows');
+          await window.shows('Short so far.');
+          await window.shows('[run]');
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('c copy');
+          await window.press('c');
+          await until('the fitting code is copied', () => copies.length === 1);
+          expect(copies[0]?.text).toBe('bun test');
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('r put in the prompt');
+          await window.press('r');
+          await window.shows('│ ! bun test');
+          expect(commands).toEqual([]);
+          await window.press('\r');
+          await until(
+            'the exact command reaches the fixture shell',
+            () => commands.length === 1,
+          );
+          expect(commands).toEqual(['bun test']);
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('c copy');
+          await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
+          await window.shows('Long now.');
+          await window.shows('… +');
+          expect(window.frame()).not.toContain('[run]');
+          await window.press('c');
+          expect(copies).toHaveLength(1);
+          expect(commands).toEqual(['bun test']);
+          await window.press('\x03');
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('No code block to pick');
+          await window.press(CTRL_O);
+          await window.press('\x1b[H');
+          await window.shows('[run]');
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('c copy');
+          await window.press('c');
+          await until('expanded code is copied', () => copies.length === 2);
+          expect(copies.map(({ text }) => text)).toEqual([
+            'bun test',
+            'bun test',
+          ]);
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('r put in the prompt');
+          await window.press('r');
+          await window.shows('│ ! bun test');
+          expect(commands).toHaveLength(1);
+        },
+        {
+          columns,
+          rows,
+          copy,
+          shell: (command) => {
+            commands.push(command);
+
+            return { stop() {}, ended: Promise.resolve({ code: 0 }) };
+          },
+        },
+      );
+    });
+
+    test(`narrowing revokes a selected block until its full prompt fits again at ${columns} columns`, async () => {
+      const { copies, copy } = clipboard();
+
+      await withWindow(
+        async (window) => {
+          await send(window, 'claudewrapprompt');
+          await window.shows('Done wrapping.');
+          await window.shows('[run]');
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('c copy');
+          await window.resize({ columns: 40 });
+          await window.shows('… +');
+          expect(window.frame()).not.toContain('[copy]');
+          await window.press('c');
+          expect(copies).toEqual([]);
+          await window.press('\x03');
+          await window.resize({ columns });
+          await window.press(CTRL_X);
+          await window.press('b');
+          await window.shows('c copy');
+          await window.press('c');
+          await until(
+            'the fitting prompt regains copying',
+            () => copies.length === 1,
+          );
+          expect(copies[0]?.text).toBe('bun test');
+        },
+        { columns, rows, copy },
+      );
+    });
+  }
+});
 
 test("subagents draw under the turn: one group, a child's permission named, their endings, and one still running after it", () =>
   withWindow(
@@ -90,9 +211,10 @@ test("Claude's subagents read as each ended, a failure's message and an untracke
       expect(frame).toContain('⎿  Untracked');
       expect(frame).toContain('⎿  Cancelled');
       expect(frame).toContain('⎿  Failed');
-      expect(frame).not.toContain('API Error');
+      // No call carries a failure's text any more, so it shows folded too.
+      expect(frame).toContain('API Error: 529 Overloaded');
       await window.press(CTRL_O);
-      await window.shows('API Error: 529 Overloaded');
+      await window.shows('The agent no longer reports');
 
       frame = window.frame();
 
@@ -108,7 +230,7 @@ test("ctrl+o shows a subagent's whole task, and a later message among its work, 
     async (window) => {
       await send(window, 'claudemessage');
       await window.shows('Both found.');
-      expect(window.frame()).not.toContain('Report the file');
+      expect(window.frame()).toContain('→ to Agent(Find the session layer)');
       await window.press(CTRL_O);
       await window.shows(
         'Report the file that owns the routing, with line numbers.',
@@ -116,12 +238,163 @@ test("ctrl+o shows a subagent's whole task, and a later message among its work, 
 
       const frame = window.frame();
 
-      expect(frame).not.toContain('Find the session layer');
       expect(frame).toContain('← from fake');
       expect(frame).toContain('⎿  Now find the tests that cover it.');
     },
     { rows: 80, columns: 120 },
   ));
+
+describe("Claude's session messages as rows in the parent (CHD-561)", () => {
+  for (const [rows, columns] of [
+    [40, 120],
+    [24, 80],
+  ] as const) {
+    test(`what was asked stands above the block and what came back under it, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'claudemessage');
+          await window.shows('Both found.');
+
+          const frame = window.frame();
+          const asked = frame.indexOf('→ to Agent(Find the session layer)');
+          const block = frame.indexOf('⏺ Agent(Find the session layer)');
+          const back = frame.indexOf('← from Agent(Find the session layer)');
+          const again = frame.lastIndexOf('→ to Agent(Find the session layer)');
+
+          expect(asked).toBeGreaterThanOrEqual(0);
+          expect(block).toBeGreaterThan(asked);
+          expect(back).toBeGreaterThan(block);
+          expect(again).toBeGreaterThan(back);
+          expect(frame).toContain('Routing lives in src/acp/connection.ts.');
+          expect(frame).toContain('Now find the tests that cover it.');
+          expect(frame).not.toContain('SendMessage');
+        },
+        { rows, columns },
+      ));
+  }
+
+  test('a launch prompt folds at six rows and ctrl+o unfolds it', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudelongprompt');
+        await window.shows('The handover holds.');
+        // Counted once the body is laid out.
+        await window.shows('… +3 lines');
+        expect(window.frame()).not.toContain('Check step 7');
+        await window.press(CTRL_O);
+        await window.shows('Check step 9');
+        expect(window.frame()).not.toContain('… +3 lines');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('while a launch prompt is clipped its code offers no action, and ctrl+o gives them back', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudecodeprompt');
+        await window.shows('The build holds.');
+        await window.shows('… +');
+        expect(window.frame()).toContain('sh');
+        expect(window.frame()).not.toContain('[copy]');
+        expect(window.frame()).not.toContain('[run]');
+        await window.press(CTRL_O);
+        await window.shows('[run]');
+        expect(window.frame()).toContain('[copy]');
+      },
+      { rows: 80, columns: 120 },
+    ));
+
+  test('a prompt that grows past the fold takes its code away from the picker and the buttons', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudepromptgrows');
+        await window.shows('[run]');
+        await window.press(CTRL_X);
+        await window.press('b');
+        await window.shows('bun test');
+        await window.press(ESC);
+        await mkdir(join(window.dir, GATE), { recursive: true });
+        await writeFile(join(window.dir, GATE, GATE_RELEASE), '');
+        await window.shows('Long now.');
+        await window.shows('… +');
+        expect(window.frame()).not.toContain('[run]');
+        await window.press(CTRL_X);
+        await window.press('b');
+        await window.shows('No code block to pick');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a prompt that a narrower window pushes past the fold loses its code too, and regains it', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudewrapprompt');
+        await window.shows('Done wrapping.');
+        await window.shows('[run]');
+        await window.resize({ columns: 40 });
+        await window.shows('… +');
+        expect(window.frame()).not.toContain('[run]');
+        await window.press(CTRL_X);
+        await window.press('b');
+        await window.shows('No code block to pick');
+        await window.press(ESC);
+        await window.resize({ columns: 120 });
+        await window.shows('[run]');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('agents launched together keep one group under all their rows', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudesubagents');
+        await window.shows('→ to Agent(Watch the build)');
+
+        const frame = window.frame();
+        const last = frame.lastIndexOf('→ to Agent(Watch the build)');
+
+        expect(last).toBeGreaterThanOrEqual(0);
+        expect(
+          frame.indexOf('→ to Agent(Find the session layer)'),
+        ).toBeLessThan(last);
+        expect(frame.indexOf('Running 4 agents')).toBeGreaterThan(last);
+      },
+      { rows: 60, columns: 120 },
+    ));
+
+  test("a failure's text shows folded under a block with a row, and not under one without", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudefailed');
+        await window.shows('It failed.');
+        expect(window.frame()).toContain('Failed');
+        expect(window.frame()).toContain('The build still fails.');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a failure that says nothing, and a stop, answer with no row', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudenoanswer');
+        await window.shows('Neither answered.');
+        expect(window.frame()).toContain('Failed');
+        expect(window.frame()).toContain('Cancelled');
+        expect(window.frame()).not.toContain('← from');
+      },
+      { rows: 40, columns: 120 },
+    ));
+
+  test('a message to a child at work stays the call the adapter still sends', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'claudesendrunning');
+        await window.shows('It is the relay.');
+        expect(window.frame()).toContain('SendMessage');
+      },
+      { rows: 40, columns: 120 },
+    ));
+});
 
 test('Esc leaves a subagent that can be cancelled alone at work until its agent says it ended', () =>
   withWindow(
@@ -545,24 +818,28 @@ describe('CHD-432 tester: whole-task expansion keys', () => {
     [120, 40],
     [80, 24],
   ] as const) {
-    test(`Ctrl+O opens the whole task and sender then folds them again at ${columns} columns`, () =>
+    test(`Ctrl+O opens the child's history while its launch task stays visible at ${columns} columns`, () =>
       withWindow(
         async (window) => {
           await send(window, 'claudemessage');
           await window.shows('Both found.');
-          expect(window.frame()).not.toContain('Report the file');
+          expect(window.frame()).toContain('Report the file');
+          expect(window.frame()).not.toContain('← from fake');
           await window.press(CTRL_O);
-          await window.shows(
-            'Report the file that owns the routing, with line numbers.',
-          );
+          await window.shows('← from fake');
+          expect(
+            window.mounted(
+              'Report the file that owns the routing, with line numbers.',
+            ),
+          ).toBe(true);
           expect(window.frame()).toContain('← from fake');
           expect(window.frame()).toContain('Now find the tests that cover it.');
           await window.press(CTRL_O);
           await until(
-            'the task and message to fold again',
-            () => !window.frame().includes('Report the file'),
+            'the child history to fold again',
+            () => !window.frame().includes('← from fake'),
           );
-          expect(window.frame()).not.toContain('Report the file');
+          expect(window.frame()).toContain('Report the file');
           expect(window.frame()).not.toContain('← from fake');
         },
         { columns, rows },

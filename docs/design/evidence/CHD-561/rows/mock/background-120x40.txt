@@ -1,0 +1,40 @@
+ ▀▄     chord v0.66.0
+ ▀▀▀▄   claude · Claude Opus
+ ▄▀▀▀   /tmp/chord-qa.mock
+ ▀▀     ? for shortcuts · /help
+
+ › look at the routing
+
+ ⏺ I will start a review in the background.
+
+ → to Agent(Background review)
+   ⎿  Review the diff.
+
+ ⏺ Agent(Background review)
+   ⎿  Read(src/ui/app/App.tsx)
+
+ ⏺ It runs on; ask me anything meanwhile.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    background  main's agent running

@@ -1,0 +1,24 @@
+      Report the file that owns the routing, with line numbers.
+
+      ⏺ Read(src/acp/connection.ts)
+
+      ← from fake
+        ⎿  Now find the tests that cover it.
+
+      ⏺ Search(connection in tests/acp)
+        ⎿  Found 2 files
+
+      ⏺ tests/acp/connection_test.ts covers it.
+   ⎿  Done (2 tool uses · 1s)
+
+ ⏺ Now I will ask it for the tests.
+
+ ⏺ SendMessage
+   ⎿  {"success":true,"message":"Agent resumed in the background"}
+
+ ── ↓ 18 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -30,6 +30,25 @@ function lines(text: string, width: number): string[] {
   );
 }
 
+describe('CHD-561 tester: nested list layout on markdansi 0.3.7', () => {
+  test('a nested bullet continuation and its code box stay under the nested text', () => {
+    expect(lines('- a\n  - nested long item that wraps', 20)).toEqual([
+      '- a',
+      '  - nested long item',
+      '    that wraps',
+    ]);
+
+    const boxed = lines(
+      '- outer\n  - Run:\n    ```sh\n    echo hello\n    ```',
+      20,
+    );
+
+    expect(boxed.slice(2).every((row) => row.startsWith('    '))).toBe(true);
+    expect(boxed.some((row) => row.includes('echo hello'))).toBe(true);
+    expect(boxed.every((row) => stringWidth(row) <= 20)).toBe(true);
+  });
+});
+
 test('markdown marks give way to what they mean', () => {
   const shown = lines(MARKDOWN_REPLY, 116).join('\n');
 
@@ -316,6 +335,22 @@ test('colour is left out when asked, and put in when asked', () => {
   expect(
     markdown('**bold**', 40, true)[0]?.text.includes('\x1b[1m'),
   ).toBeTruthy();
+});
+
+test('a repeated definition shows on its own line, and the first one is the link', () => {
+  expect(
+    lines('See [a].\n\n[a]: https://one.org\n[a]: https://two.org\n', 40),
+  ).toStrictEqual([
+    'See a (https://one.org).',
+    '[a]: https://one.org',
+    '[a]: https://two.org',
+  ]);
+});
+
+test("a nested item's wrapped lines hang two columns in from its marker", () => {
+  expect(
+    lines('- outer\n  1. a nested item long enough to wrap\n', 24),
+  ).toStrictEqual(['- outer', '  1. a nested item long', '    enough to wrap']);
 });
 
 test('a reference link resolves once its definition streams in', () => {

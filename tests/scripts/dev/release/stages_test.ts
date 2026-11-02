@@ -21,7 +21,13 @@ import {
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
 import { KINDS } from '../../../../scripts/dev/release/build.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
-import { executable, type Scratch, scratch } from './scratch.ts';
+import {
+  executable,
+  fetchedArchives,
+  nativeNotes,
+  type Scratch,
+  scratch,
+} from './scratch.ts';
 
 // A whole run's guards and their order, on a scratch repository with a bare
 // origin: npm, bun, security and xcrun faked, each logging what it was asked,
@@ -49,6 +55,7 @@ beforeEach(() => {
     JSON.stringify({ version: VERSION }),
   );
   writeFileSync(join(at.root, '.gitignore'), 'dist/\n');
+  nativeNotes(at.root);
 
   const origin = join(at.place, 'origin.git');
 
@@ -154,6 +161,68 @@ function ran(): string[] {
     : [];
 }
 
+describe('CHD-561 tester: source fetch interrupts the release parent', () => {
+  test('SIGTERM during curl drops a local version commit before npm packing or a draft', () => {
+    writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
+    at.fake('file', `echo "$1: ${Object.values(KINDS).join(' ')}"\n`);
+    at.fake('curl', 'printf half >"${@: -2:1}"\nkill -TERM $PPID\nexit 22\n');
+
+    const lib = join(import.meta.dir, '../../../../scripts/dev/release');
+    const script = join(at.place, 'source-interrupted.ts');
+    const readGit = (...args: string[]) => {
+      const result = spawnSync('git', args, { cwd: at.root, encoding: 'utf8' });
+
+      expect(result.status).toBe(0);
+
+      return result.stdout.trim();
+    };
+
+    const head = readGit('rev-parse', 'HEAD');
+
+    writeFileSync(
+      script,
+      `
+import { dying } from ${JSON.stringify(join(lib, 'lib.ts'))};
+import { selectStages } from ${JSON.stringify(join(lib, 'select.ts'))};
+import { runRelease } from ${JSON.stringify(join(lib, 'stages.ts'))};
+const options = { dryRun: true, only: ['compile', 'pack'] };
+const release = {
+  root: ${JSON.stringify(at.root)}, env: process.env,
+  sleep: () => Promise.resolve(), out: console.log, err: console.error, tty: true,
+};
+await dying(() => runRelease(release, selectStages(options), options,
+  { platform: 'darwin', arch: 'arm64' }, 'patch'));
+`,
+    );
+
+    const child = spawnSync(process.execPath, [script], {
+      cwd: at.root,
+      env: context().env,
+      encoding: 'utf8',
+      timeout: 10_000,
+    });
+
+    expect(child.signal, child.stdout + child.stderr).toBe('SIGTERM');
+    expect(readGit('rev-parse', 'HEAD')).toBe(head);
+    expect(readGit('status', '--porcelain')).toBe('');
+    expect(ran()).toContain('npm whoami');
+    expect(
+      ran().some(
+        (line) => line.startsWith('npm pack') || line.startsWith('npm publish'),
+      ),
+    ).toBe(false);
+    expect(existsSync(join(at.place, 'gh.log'))).toBe(false);
+    expect(
+      existsSync(
+        join(at.root, 'dist', 'release', 'source', 'ffmpeg-9.0.2.tar.xz'),
+      ),
+    ).toBe(false);
+    expect(
+      JSON.parse(readFileSync(join(at.root, 'package.json'), 'utf8')).version,
+    ).toBe(VERSION);
+  });
+});
+
 test('signing anywhere but an arm64 Mac is refused before anything else', async () => {
   for (const options of [
     {},
@@ -222,6 +291,39 @@ test('a dry run that did not pack says what it ran, and publishes nothing', asyn
   expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
 });
 
+test('a dry run that packs fetches and checks the archives, and makes no release', async () => {
+  // Past the archives it fails on what this scratch has not built.
+  await died(released({ dryRun: true, only: ['pack'] }));
+
+  expect(
+    existsSync(join(at.root, 'dist', 'release', 'source', 'zlib-1.3.2.tar.gz')),
+  ).toBeTrue();
+  expect(existsSync(join(at.place, 'gh.log'))).toBeFalse();
+});
+
+test('a bad archive stops a dry run before it packs anything', async () => {
+  at.fake('curl', 'printf tampered >"${@: -2:1}"\n');
+
+  expect(await died(released({ dryRun: true, only: ['pack'] }))).toContain(
+    'FFMPEG-SOURCE.md names',
+  );
+  expect(ran().some((line) => line.startsWith('npm pack'))).toBeFalse();
+});
+
+test('skipping pack leaves publish to stop before npm takes anything', async () => {
+  packed();
+  rmSync(join(at.root, 'dist', 'release', 'source'), {
+    recursive: true,
+    force: true,
+  });
+  writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
+
+  expect(await died(released({ skip: ['pack'] }))).toContain(
+    'fetched by the pack stage',
+  );
+  expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
+});
+
 test('a run without publish prints no version', async () => {
   await released({ only: ['install'] });
 
@@ -230,6 +332,8 @@ test('a run without publish prints no version', async () => {
 
 /** Tarballs a stopped run left, their sums recorded. */
 function packed(): void {
+  fetchedArchives(at.root);
+
   const tgz = join(at.root, 'dist', 'release', 'tgz');
   const files = ['chord', ...PLATFORMS].map(
     (name) => `chorded-${name}-${VERSION}.tgz`,

@@ -4,7 +4,10 @@
  * requires every agent to take it, chord's own server under the same rule;
  * and the rest, held back, with why, for the person to be told.
  */
-import type { McpCapabilities, McpServer } from '@agentclientprotocol/sdk';
+import type {
+  McpCapabilities,
+  McpServer,
+} from '@agentclientprotocol/sdk/unstable';
 import { transportOf } from '../mcp.ts';
 
 /** The transports past stdio an agent may advertise, in the order said. */

@@ -12,7 +12,7 @@ import { once } from 'node:events';
 import { existsSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   CHILD_MODEL,
   CHILD_RUNTIME,

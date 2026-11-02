@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { PlanEntry } from '@agentclientprotocol/sdk';
+import type { PlanEntry } from '@agentclientprotocol/sdk/unstable';
 import {
   entryKeys,
   planRowLimit,

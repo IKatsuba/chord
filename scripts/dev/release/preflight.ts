@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { die, PLATFORMS, published, type Release, run, said } from './lib.ts';
+import { ghReady } from './source.ts';
 
 /** What preflight found: a fresh version, or a stopped publish to finish. */
 export interface Preflight {
@@ -84,6 +85,7 @@ export function preflight(
   if (publish) {
     onMain(release);
     notTagged(release, version);
+    ghReady(release);
   }
 
   return { mode, version };

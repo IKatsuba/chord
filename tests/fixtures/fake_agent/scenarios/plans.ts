@@ -2,7 +2,7 @@
  * Plans: one that moves a step at a time, Codex's proposed plan, and the
  * plans cursor and grok put to the client to approve (CHD-437, CHD-457).
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { clientTakesPlans } from '../client.ts';
 import { PLAN_CAPABILITY_ONLY, STEP_MS } from '../options.ts';
 import { pause, type Play, type Turn } from '../turn.ts';

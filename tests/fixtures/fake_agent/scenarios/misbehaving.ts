@@ -2,7 +2,7 @@
  * What a transport has to survive: a turn that fails, a chunk after the
  * answer, and what ACP does not have.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { STEP_MS } from '../options.ts';
 import { strayCancels } from '../sessions.ts';
 import { pause, type Play } from '../turn.ts';

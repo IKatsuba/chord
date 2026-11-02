@@ -4,6 +4,7 @@ import {
   initialBackground,
   reduceBackground,
 } from '../../../src/ui/background/state.ts';
+import { NO_STOP_HINT } from '../../../src/ui/background/view.ts';
 import {
   type AppState,
   keyCommand,
@@ -11,6 +12,104 @@ import {
 } from '../../../src/ui/app/state.ts';
 import { askedIds } from '../../../src/ui/dialogs/state.ts';
 import { busy, escape, plain } from '../app/states.ts';
+
+describe('a refusal that an agent offers no stop, once it offers one', () => {
+  const a = { key: 1, id: 'a' };
+  const run = (hint: string, focus = a) =>
+    (
+      [
+        { type: 'background_opened' },
+        { type: 'background_focused', focus: a },
+        { type: 'background_stop_asked', focus: a, token: 't' },
+        { type: 'background_hinted', token: 't', hint },
+        { type: 'background_stop_offered', focus },
+      ] as const
+    ).reduce(reduceBackground, initialBackground).backgroundView;
+
+  test('is dropped, and the ❯ stays', () => {
+    const view = run(NO_STOP_HINT);
+
+    expect(view?.hint).toBeUndefined();
+    expect(view?.focus).toEqual(a);
+  });
+
+  test('stays when the offer is for another row', () => {
+    expect(run(NO_STOP_HINT, { key: 1, id: 'b' })?.hint).toBe(NO_STOP_HINT);
+  });
+
+  test('leaves any other hint where it was', () => {
+    const hint = 'could not stop: Session not found';
+
+    expect(run(hint)?.hint).toBe(hint);
+  });
+
+  test('reaches the view through the app state too', () => {
+    const state = {
+      ...busy,
+      backgroundView: { focus: a, hint: NO_STOP_HINT },
+    } as AppState;
+
+    expect(
+      reduceApp(state, { type: 'background_stop_offered', focus: a })
+        .backgroundView?.hint,
+    ).toBeUndefined();
+  });
+});
+
+describe('CHD-561 hint tester: delayed offers respect focus and other errors', () => {
+  const a = { key: 1, id: 'shared' };
+  const b = { key: 2, id: 'shared' };
+
+  test('the same child id in another session cannot clear the current refusal', () => {
+    const state = {
+      ...initialBackground,
+      backgroundView: { focus: b, detail: b, hint: NO_STOP_HINT },
+    };
+
+    expect(
+      reduceBackground(state, { type: 'background_stop_offered', focus: a }),
+    ).toBe(state);
+
+    const cleared = reduceBackground(state, {
+      type: 'background_stop_offered',
+      focus: b,
+    });
+
+    expect(cleared.backgroundView).toEqual({ focus: b, detail: b });
+    expect(
+      reduceBackground(cleared, {
+        type: 'background_stop_offered',
+        focus: b,
+      }),
+    ).toBe(cleared);
+  });
+
+  test('a late offer after close cannot reopen the view or discard a different error', () => {
+    expect(
+      reduceBackground(initialBackground, {
+        type: 'background_stop_offered',
+        focus: a,
+      }),
+    ).toBe(initialBackground);
+
+    for (const hint of [
+      'could not stop: Broken pipe',
+      `${NO_STOP_HINT}: transport unavailable`,
+    ]) {
+      const state = {
+        ...initialBackground,
+        backgroundView: { focus: a, hint },
+      };
+
+      expect(
+        reduceBackground(state, {
+          type: 'background_stop_offered',
+          focus: a,
+        }),
+      ).toBe(state);
+    }
+  });
+});
 
 test("a stop's hint is said only for the stop x last asked for, while the ❯ has stayed on its row since", () => {
   const a = { key: 1, id: 'a' };

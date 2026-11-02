@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, expect, test } from 'bun:test';
-import { rmSync } from 'node:fs';
-import { checkKind } from '../../../../scripts/dev/release/build.ts';
+import { readFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { checkKind, natives } from '../../../../scripts/dev/release/build.ts';
 import { ReleaseError } from '../../../../scripts/dev/release/lib.ts';
 import { type Scratch, scratch } from './scratch.ts';
 
@@ -21,6 +22,20 @@ afterEach(() => {
 function kind(said: string) {
   return { ...at.release, env: { ...at.release.env, KIND: said } };
 }
+
+test("natives installs every libc's packages too, as a compile build imports them all", () => {
+  at.fake('bun', 'echo "$*" >"$STATE/bun.log"\nexit 1\n');
+
+  expect(() =>
+    natives({
+      ...at.release,
+      env: { ...at.release.env, STATE: at.place },
+    }),
+  ).toThrow(new ReleaseError("installing every platform's packages failed"));
+  expect(readFileSync(join(at.place, 'bun.log'), 'utf8')).toBe(
+    'install --frozen-lockfile --os=* --cpu=* --libc=*\n',
+  );
+});
 
 test('a binary of the kind its target builds passes', () => {
   expect(() =>

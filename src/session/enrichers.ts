@@ -8,17 +8,20 @@
  * agent left out.
  */
 import type {
+  AnyMessage,
   SessionConfigOption,
   SessionUpdate,
   ToolCallUpdate,
   Usage,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { modelsOf, modesOf } from './agent_state.ts';
 import {
   answerOf,
+  CLAUDE_ADAPTER,
   type Enricher,
   markFilled,
   MCP_CALL,
+  NAMED_BY_TITLE,
   notificationOf,
   recordOf,
   type SessionWire,
@@ -280,9 +283,34 @@ export const modeReadBack: Enricher = (message, wire) => {
  */
 export const SUBAGENT_DRAFT = 'chord/subagent_draft';
 
+/** Marks a subagent's update as its title naming it, on Claude's adapter. */
+export const claudeSubagentName: Enricher = (message, wire) => {
+  const notification = notificationOf(message);
+
+  if (
+    wire.adapter !== CLAUDE_ADAPTER ||
+    notification?.update.sessionUpdate !== 'subagent_update'
+  ) {
+    return [message];
+  }
+
+  return [
+    {
+      ...message,
+      params: {
+        ...notification,
+        update: {
+          ...notification.update,
+          _meta: { ...notification.update._meta, [NAMED_BY_TITLE]: true },
+        },
+      },
+    } as AnyMessage,
+  ];
+};
+
 /**
- * A subagent as ACP's `subagent_update` says it, from the shape Claude's and
- * Codex's adapters send (ACP's draft PR #1992): `subagent_spawned`'s
+ * A subagent as ACP's `subagent_update` says it, from the shape Claude's
+ * adapter once sent and Codex's before 2.4 sends (ACP's draft PR #1992): `subagent_spawned`'s
  * `subagentSessionId`, `name`, `task` and `capabilities` become `sessionId`,
  * `title`, `description` and `capabilities`, and `subagent_state_update`'s
  * `state`, a word, becomes a state object of that word. The rest of the draft
@@ -869,6 +897,7 @@ export const rawOutputContent: Enricher = (message, wire) => {
 /** Every enricher, in the order each runs over what the last one made. */
 export const ENRICHERS: readonly Enricher[] = [
   subagentShape,
+  claudeSubagentName,
   toolCallFacts,
   codexMcpCall,
   codexGuardianReview,

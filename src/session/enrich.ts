@@ -13,7 +13,7 @@ import type {
   SessionUpdate,
   ToolKind,
   Usage,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import type { Relay } from '../acp/traffic.ts';
 import {
   type AgentState,
@@ -25,6 +25,18 @@ import {
 } from './agent_state.ts';
 import { isModelState } from './models.ts';
 import { type TokenUsage, tokensOf } from './usage.ts';
+
+/** The name Claude's adapter gives itself in `initialize`'s `agentInfo`. */
+export const CLAUDE_ADAPTER = '@agentclientprotocol/claude-agent-acp';
+
+/**
+ * The `_meta` key on a `subagent_update` of Claude's adapter, whose title is
+ * the subagent's name and whose description only its role, where every other
+ * agent's description is its task. The wire cannot tell them apart, so chord
+ * says so from who the adapter is, and a record keeps it: one written before
+ * this has no such key, and its names stay.
+ */
+export const NAMED_BY_TITLE = 'chord/named_by_title';
 
 /**
  * The `_meta` key on what chord filled in, naming the fields it filled, so a
@@ -92,6 +104,8 @@ export interface Wire {
    * not the turn's (CHD-472): a fact of the agent, not of what it sent.
    */
   readonly totals?: boolean;
+  /** The name the agent gave itself in `initialize`, whatever command ran it. */
+  readonly adapter?: string;
 }
 
 /**
@@ -173,6 +187,12 @@ export function heardFromAgent(wire: Wire, message: AnyMessage): Wire {
   // An error answers the request too, and moves nothing.
   if (answer === undefined) {
     return answered;
+  }
+
+  if (answer.method === 'initialize') {
+    const { name } = recordOf(recordOf(answer.result)['agentInfo']);
+
+    return typeof name === 'string' ? { ...answered, adapter: name } : answered;
   }
 
   const result = recordOf(answer.result);

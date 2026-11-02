@@ -1,5 +1,5 @@
 /** Synthetic fx ordering, independent of any model's language validation. */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import type { Play, Turn } from '../turn.ts';
 
 export const FX_ERROR_NOTICE =

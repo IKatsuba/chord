@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import { RequestError } from '@agentclientprotocol/sdk';
+import { RequestError } from '@agentclientprotocol/sdk/unstable';
 import { AgentGone } from '../../src/acp/connection.ts';
 import { asSignIn } from '../../src/session/sign_in.ts';
 import {

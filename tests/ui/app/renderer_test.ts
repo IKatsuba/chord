@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import type { CliRenderer, ProgramStatus } from '@opentui/core';
 import { useRenderer } from '@opentui/react';
 import { createElement } from 'react';
@@ -11,6 +14,86 @@ import {
 } from '../../../src/ui/app/renderer.tsx';
 import { draw } from '../harness.tsx';
 import { statusReports, until } from './render.tsx';
+
+describe('CHD-561 tester: terminal stdout thread policy', () => {
+  test('a CLI value named --delay-start cannot enable the writer during delayed creation', async () => {
+    const rendererModule = new URL(
+      '../../../src/ui/app/renderer.tsx',
+      import.meta.url,
+    ).href;
+    const cliModule = new URL('../../../src/cli.ts', import.meta.url).href;
+    const code = `
+      import { chordCommand } from ${JSON.stringify(cliModule)};
+      import { openTerminal, leave } from ${JSON.stringify(rendererModule)};
+      await chordCommand().noExit().throwErrors().action(() => {}).parse(['fake', '--model', '--delay-start']);
+      const before = performance.now();
+      const { renderer } = await openTerminal({ mouse: false });
+      try {
+        process.stderr.write('DELAY_POLICY ' + JSON.stringify({
+          delayed: performance.now() - before >= 4900,
+          writer: renderer.nativeSession.stdoutWriter,
+          setting: process.env.OTUI_STDOUT_THREAD,
+        }) + '\\n');
+      } finally { await leave(renderer); }
+    `;
+    const ran = await promisify(execFile)(
+      process.execPath,
+      ['-e', code, '--', 'fake', '--model', '--delay-start'],
+      {
+        env: { ...process.env, OTUI_STDOUT_THREAD: '1' },
+        timeout: 15_000,
+      },
+    );
+    const line = ran.stderr
+      .split('\n')
+      .find((row) => row.startsWith('DELAY_POLICY '));
+
+    assert(line !== undefined, ran.stderr);
+    expect(JSON.parse(line.slice('DELAY_POLICY '.length))).toEqual({
+      delayed: true,
+      writer: false,
+      setting: '1',
+    });
+  });
+
+  test('opening chord disables the native writer even when the environment enables it', async () => {
+    const rendererModule = new URL(
+      '../../../src/ui/app/renderer.tsx',
+      import.meta.url,
+    ).href;
+    const code = `
+      import { NativeSession } from '@opentui/core';
+      import { openTerminal, leave } from ${JSON.stringify(rendererModule)};
+      const baseline = new NativeSession(process.stdout);
+      const defaultWriter = baseline.stdoutWriter;
+      await baseline.close();
+      const { renderer } = await openTerminal({ mouse: false });
+      try {
+        process.stderr.write('THREAD_POLICY ' + JSON.stringify({
+          defaultWriter,
+          writer: renderer.nativeSession.stdoutWriter,
+          setting: process.env.OTUI_STDOUT_THREAD,
+        }) + '\\n');
+      } finally {
+        await leave(renderer);
+      }
+    `;
+    const ran = await promisify(execFile)(process.execPath, ['-e', code], {
+      env: { ...process.env, OTUI_STDOUT_THREAD: '1' },
+      timeout: 15_000,
+    });
+    const line = ran.stderr
+      .split('\n')
+      .find((row) => row.startsWith('THREAD_POLICY '));
+
+    assert(line !== undefined, ran.stderr);
+    expect(JSON.parse(line.slice('THREAD_POLICY '.length))).toEqual({
+      defaultWriter: true,
+      writer: false,
+      setting: '1',
+    });
+  });
+});
 
 describe('CHD-382 U2 tester: status while the editor owns the terminal', () => {
   for (const rejects of [false, true]) {

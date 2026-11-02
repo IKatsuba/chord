@@ -1,7 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import type { ContentBlock, SessionUpdate } from '@agentclientprotocol/sdk';
+import type {
+  ContentBlock,
+  SessionUpdate,
+} from '@agentclientprotocol/sdk/unstable';
 import { subagentsIn } from '../../../src/session/subagents.ts';
+import { NAMED_BY_TITLE } from '../../../src/session/enrich.ts';
+import { agentItemName } from '../../../src/session/transcript/subagents.ts';
 import { taskUpdate } from '../../../src/session/tasks.ts';
 import type {
   Entry,
@@ -12,6 +17,144 @@ import type {
 import { fold } from './fold.ts';
 
 const TURN = 't1';
+
+describe('CHD-561 tester: partial messages stay in their session', () => {
+  const row = (
+    messageId: string,
+    senderSessionId: string,
+    recipientSessionId: string,
+    value: string,
+    subagentId?: string,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    ...(subagentId === undefined ? {} : { subagentId }),
+    update: {
+      sessionUpdate: 'session_message',
+      messageId,
+      senderSessionId,
+      recipientSessionId,
+      content: [{ type: 'text', text: value }],
+    },
+  });
+  const partial = (
+    messageId: string,
+    value: string | null,
+    subagentId?: string,
+  ): TranscriptAction =>
+    ({
+      type: 'update',
+      turnId: TURN,
+      ...(subagentId === undefined ? {} : { subagentId }),
+      update: {
+        sessionUpdate: 'session_message',
+        messageId,
+        content: value === null ? null : [{ type: 'text', text: value }],
+      },
+    }) as unknown as TranscriptAction;
+
+  test('equal root and nested reply ids update and clear independently without changing either prompt', () => {
+    const base = [
+      PROMPT,
+      spawned('a', 'A'),
+      row('launch', 'root', 'a', 'Parent task'),
+      message('a', 'launch', text('Parent task'), 'root'),
+      spawned('n', 'N', 'a'),
+      row('nested-launch', 'a', 'n', 'Nested task', 'a'),
+      message('n', 'nested-launch', text('Nested task'), 'a'),
+      row('reply', 'a', 'root', 'Root answer'),
+      row('reply', 'n', 'a', 'Nested answer', 'a'),
+    ];
+    const changed = fold([
+      ...base,
+      partial('reply', 'Root revised'),
+      partial('reply', 'Nested revised', 'a'),
+    ]);
+    const [parent] = subagentsIn(changed.entries);
+
+    assert(parent !== undefined);
+
+    const [nested] = subagentsIn(parent.entries);
+
+    assert(nested !== undefined);
+    expect(parent.prompt).toBe('Parent task');
+    expect(nested.prompt).toBe('Nested task');
+    expect(
+      changed.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Parent task', 'Root revised']);
+    expect(
+      parent.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Nested task', 'Nested revised']);
+
+    const cleared = fold([partial('reply', null, 'a')], changed);
+    const [after] = subagentsIn(cleared.entries);
+
+    assert(after !== undefined);
+    expect(after.prompt).toBe('Parent task');
+    expect(
+      after.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Nested task']);
+    expect(
+      cleared.entries
+        .filter((entry) => entry.kind === 'agent_message')
+        .map((entry) => entry.text),
+    ).toEqual(['Parent task', 'Root revised']);
+  });
+
+  test('removing rows before a plan leaves newly appended work after it', () => {
+    const plan: TranscriptAction = {
+      type: 'update',
+      turnId: TURN,
+      subagentId: 'a',
+      update: {
+        sessionUpdate: 'plan',
+        entries: [
+          {
+            content: 'Plan before new work',
+            priority: 'low',
+            status: 'pending',
+          },
+        ],
+      },
+    };
+    const after = (value: string): TranscriptAction => ({
+      type: 'update',
+      turnId: TURN,
+      subagentId: 'a',
+      update: {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: value },
+      },
+    });
+    const { entries } = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      spawned('n', 'N', 'a'),
+      row('launch', 'a', 'n', 'Nested task', 'a'),
+      row('more', 'a', 'n', 'More work', 'a'),
+      plan,
+      partial('more', null, 'a'),
+      after('Work after plan'),
+      partial('launch', null, 'a'),
+    ]);
+    const [parent] = subagentsIn(entries);
+
+    assert(parent !== undefined);
+    expect(parent.planAt).toBe(1);
+    expect(parent.entries[0]?.kind).toBe('subagent');
+    expect(parent.entries[parent.planAt ?? 0]).toMatchObject({
+      kind: 'assistant',
+      text: 'Work after plan',
+    });
+    expect(parent.plan[0]?.content).toBe('Plan before new work');
+  });
+});
 
 const PROMPT: TranscriptAction = {
   type: 'prompt',
@@ -33,6 +176,20 @@ function spawned(id: string, title: string, from?: string): TranscriptAction {
       state: { state: 'running' },
     },
     ...(from === undefined ? {} : { subagentId: from }),
+  };
+}
+
+/** A `subagent_update` that says only `fields`, as Codex's adapter sends them. */
+function told(
+  id: string,
+  fields: Record<string, unknown>,
+  at?: number,
+): TranscriptAction {
+  return {
+    type: 'update',
+    turnId: TURN,
+    update: { sessionUpdate: 'subagent_update', sessionId: id, ...fields },
+    ...(at === undefined ? {} : { at }),
   };
 }
 
@@ -1036,5 +1193,352 @@ describe('CHD-482 U3 tester: late and nested task stops stay singular', () => {
     expect(ends(value)).toMatchObject([{ turnId: TURN, byPerson: true }]);
     expect(ends(value)).toHaveLength(1);
     expect(value.turn.status).toBe('working');
+  });
+});
+
+describe('a subagent_update that says one thing keeps the rest', () => {
+  const only = (actions: TranscriptAction[]): Subagent => {
+    const [subagent] = subagentsIn(fold(actions).entries);
+
+    assert(subagent !== undefined);
+
+    return subagent;
+  };
+
+  test('announced with capabilities alone, it is at work and untitled', () => {
+    const subagent = only([PROMPT, told('a', { capabilities: {} }, 2)]);
+
+    expect(subagent.state).toStrictEqual('running');
+    expect(subagent.title).toBeUndefined();
+    expect(subagent.startedAt).toStrictEqual(2);
+    expect(subagent.cancellable).toBeUndefined();
+    expect(subagent.offeredCancel).toBeUndefined();
+  });
+
+  test('capabilities alone change only whether it can be stopped', () => {
+    const opening = [
+      PROMPT,
+      told('a', { title: 'a', description: 'd', state: { state: 'running' } }),
+      told('a', { capabilities: { cancel: {} } }),
+    ];
+    const offered = only(opening);
+
+    expect(offered.cancellable).toBe(true);
+    expect(offered.offeredCancel).toBe(true);
+    expect(offered.state).toStrictEqual('running');
+    expect(offered.title).toStrictEqual('a');
+    expect(offered.description).toStrictEqual('d');
+
+    const withdrawn = only([
+      ...opening,
+      told('a', { capabilities: { cancel: null } }),
+    ]);
+
+    expect(withdrawn.cancellable).toBeUndefined();
+    expect(withdrawn.offeredCancel).toBe(true);
+    expect(withdrawn.state).toStrictEqual('running');
+  });
+
+  test('after its end, neither capabilities nor a title undo how it ended', () => {
+    const subagent = only([
+      PROMPT,
+      told('a', { title: 'a', state: { state: 'running' } }, 2),
+      told(
+        'a',
+        {
+          state: {
+            state: 'idle',
+            stopReason: 'error',
+            error: { code: -32603, message: 'broke' },
+          },
+        },
+        5,
+      ),
+      told('a', { capabilities: { cancel: null } }, 7),
+      told('a', { title: 'b' }, 9),
+    ]);
+
+    expect(subagent.state).toStrictEqual('failed');
+    expect(subagent.error).toStrictEqual('broke');
+    expect(subagent.endedAt).toStrictEqual(5);
+    expect(subagent.title).toStrictEqual('b');
+  });
+});
+
+describe('session messages between a transcript and its subagents (CHD-561)', () => {
+  const said = (
+    messageId: string,
+    senderSessionId: string,
+    recipientSessionId: string,
+    text: string | null | undefined,
+    subagentId?: string,
+  ): TranscriptAction => ({
+    type: 'update',
+    turnId: TURN,
+    ...(subagentId === undefined ? {} : { subagentId }),
+    update: {
+      sessionUpdate: 'session_message',
+      messageId,
+      senderSessionId,
+      recipientSessionId,
+      ...(text === undefined
+        ? {}
+        : { content: text === null ? null : [{ type: 'text', text }] }),
+    },
+  });
+  const ROOT = 'root';
+  const kinds = (entries: readonly Entry[]) =>
+    entries.map((entry) =>
+      entry.kind === 'agent_message'
+        ? `${entry.direction} ${entry.agentId}: ${entry.text}`
+        : entry.kind === 'subagent'
+          ? `block ${entry.subagent.id}`
+          : entry.kind,
+    );
+
+  test("a launch's row goes above the run its block stands in, in the order they came", () => {
+    const { entries } = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      said('la', ROOT, 'a', 'do a'),
+      spawned('b', 'B'),
+      said('lb', ROOT, 'b', 'do b'),
+    ]);
+
+    expect(kinds(entries)).toStrictEqual([
+      'user',
+      'to a: do a',
+      'to b: do b',
+      'block a',
+      'block b',
+    ]);
+  });
+
+  test('a reply, with or without its suffix, comes where it arrives; a later message too, whole', () => {
+    const { entries } = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      said('la', ROOT, 'a', 'do a'),
+      said('la:reply', 'a', ROOT, 'done'),
+      said('hand', 'a', ROOT, 'a report'),
+      said('send', ROOT, 'a', 'and more'),
+    ]);
+
+    expect(kinds(entries)).toStrictEqual([
+      'user',
+      'to a: do a',
+      'block a',
+      'from a: done',
+      'from a: a report',
+      'to a: and more',
+    ]);
+
+    const rows = entries.filter((entry) => entry.kind === 'agent_message');
+
+    expect(rows.map((row) => row.launch === true)).toStrictEqual([
+      true,
+      false,
+      false,
+      false,
+    ]);
+  });
+
+  test('upserted by its id: content left out keeps it, none takes the row away', () => {
+    const base = [
+      PROMPT,
+      spawned('a', 'A'),
+      said('la', ROOT, 'a', 'do a'),
+      said('la:reply', 'a', ROOT, 'first'),
+    ];
+
+    expect(
+      kinds(fold([...base, said('la:reply', 'a', ROOT, 'second')]).entries),
+    ).toContain('from a: second');
+    expect(
+      kinds(fold([...base, said('la:reply', 'a', ROOT, undefined)]).entries),
+    ).toContain('from a: first');
+    expect(
+      kinds(fold([...base, said('la:reply', 'a', ROOT, null)]).entries),
+    ).toStrictEqual(['user', 'to a: do a', 'block a']);
+  });
+
+  test('a message about no subagent here draws nothing', () => {
+    expect(
+      kinds(
+        fold([PROMPT, spawned('a', 'A'), said('x', 'p', 'q', 'hello')]).entries,
+      ),
+    ).toStrictEqual(['user', 'block a']);
+  });
+
+  test('a row goes by the title its subagent goes by now', () => {
+    const { entries } = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      said('la', ROOT, 'a', 'do a'),
+      { ...spawned('a', 'Better'), turnId: TURN },
+    ]);
+    const row = entries.find((entry) => entry.kind === 'agent_message');
+
+    expect(row?.kind === 'agent_message' && row.title).toBe('Better');
+  });
+
+  test('inside a child: its prompt stays its prompt, and its own side draws as its work or nothing', () => {
+    const { entries } = fold([
+      PROMPT,
+      spawned('a', 'A'),
+      said('la', ROOT, 'a', 'do a'),
+      said('la', ROOT, 'a', 'do a', 'a'),
+      spawned('n', 'N', 'a'),
+      said('ln', 'a', 'n', 'do n', 'a'),
+      said('ln:reply', 'n', 'a', 'n done', 'a'),
+      said('back', 'a', ROOT, 'a report', 'a'),
+      said('back', 'a', ROOT, 'a report'),
+    ]);
+    const [child] = subagentsIn(entries);
+
+    assert(child !== undefined);
+    expect(child.prompt).toBe('do a');
+    expect(kinds(child.entries)).toStrictEqual([
+      'to n: do n',
+      'block n',
+      'from n: n done',
+    ]);
+    expect(kinds(entries)).toContain('from a: a report');
+  });
+
+  test("the name is the title only under Claude's adapter's mark; being addressed moves none", () => {
+    const named: TranscriptAction = {
+      type: 'update',
+      turnId: TURN,
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 'a',
+        title: 'A',
+        description: 'Explore',
+        _meta: { [NAMED_BY_TITLE]: true },
+      },
+    };
+    const claude = subagentsIn(fold([PROMPT, named]).entries)[0];
+    const told = subagentsIn(
+      fold([PROMPT, spawned('a', 'A'), said('la', ROOT, 'a', 'do a')]).entries,
+    )[0];
+    const quiet = subagentsIn(fold([PROMPT, spawned('a', 'A')]).entries)[0];
+
+    assert(claude !== undefined && told !== undefined && quiet !== undefined);
+    expect(agentItemName(claude)).toBe('A');
+    expect(agentItemName(told)).toBe('A, short');
+    expect(agentItemName(quiet)).toBe('A, short');
+  });
+
+  test('an update that names only its id keeps the row it names, or clears it', () => {
+    const base = [
+      PROMPT,
+      spawned('a', 'A'),
+      said('la', ROOT, 'a', 'do a'),
+      said('la:reply', 'a', ROOT, 'first'),
+    ];
+    const bare = (content: { type: 'text'; text: string }[] | null) =>
+      ({
+        type: 'update',
+        turnId: TURN,
+        update: {
+          sessionUpdate: 'session_message',
+          messageId: 'la:reply',
+          content,
+        },
+      }) as unknown as TranscriptAction;
+    const { entries } = fold([
+      ...base,
+      bare([{ type: 'text', text: 'second' }]),
+    ]);
+    const row = entries.find(
+      (entry) => entry.kind === 'agent_message' && entry.direction === 'from',
+    );
+
+    expect(kinds(entries)).toContain('from a: second');
+    assert(row?.kind === 'agent_message');
+    expect(row.agentId).toBe('a');
+    expect(kinds(fold([...base, bare(null)]).entries)).toStrictEqual([
+      'user',
+      'to a: do a',
+      'block a',
+    ]);
+  });
+
+  test("on a child's session, an update naming only a nested row's id never touches its prompt", () => {
+    const base = [
+      PROMPT,
+      spawned('a', 'A'),
+      spawned('n', 'N', 'a'),
+      said('ln', 'a', 'n', 'do n', 'a'),
+    ];
+    const bare = (content: { type: 'text'; text: string }[] | null) =>
+      ({
+        type: 'update',
+        turnId: TURN,
+        subagentId: 'a',
+        update: { sessionUpdate: 'session_message', messageId: 'ln', content },
+      }) as unknown as TranscriptAction;
+    const changed = subagentsIn(
+      fold([...base, bare([{ type: 'text', text: 'do n again' }])]).entries,
+    )[0];
+    const cleared = subagentsIn(fold([...base, bare(null)]).entries)[0];
+
+    assert(changed !== undefined && cleared !== undefined);
+    expect(changed.prompt).toBeUndefined();
+    expect(changed.promptId).toBeUndefined();
+    expect(kinds(changed.entries)).toContain('to n: do n again');
+    expect(cleared.prompt).toBeUndefined();
+    expect(kinds(cleared.entries)).toStrictEqual(['block n']);
+  });
+
+  test('clearing the last row before a plan keeps later work after the plan', () => {
+    const plan: TranscriptAction = {
+      type: 'update',
+      turnId: TURN,
+      subagentId: 'a',
+      update: {
+        sessionUpdate: 'plan',
+        entries: [{ content: 'x', priority: 'low', status: 'pending' }],
+      },
+    };
+    const [child] = subagentsIn(
+      fold([
+        PROMPT,
+        spawned('a', 'A'),
+        spawned('n', 'N', 'a'),
+        said('ln', 'a', 'n', 'do n', 'a'),
+        said('more', 'a', 'n', 'and more', 'a'),
+        plan,
+        said('more', 'a', 'n', null, 'a'),
+      ]).entries,
+    );
+
+    assert(child !== undefined);
+    expect(child.planAt).toBe(2);
+  });
+
+  test('a row put above its plan keeps the plan where it first came', () => {
+    const plan: TranscriptAction = {
+      type: 'update',
+      turnId: TURN,
+      subagentId: 'a',
+      update: {
+        sessionUpdate: 'plan',
+        entries: [{ content: 'x', priority: 'low', status: 'pending' }],
+      },
+    };
+    const [child] = subagentsIn(
+      fold([
+        PROMPT,
+        spawned('a', 'A'),
+        spawned('n', 'N', 'a'),
+        plan,
+        said('ln', 'a', 'n', 'do n', 'a'),
+      ]).entries,
+    );
+
+    assert(child !== undefined);
+    expect(child.planAt).toBe(2);
   });
 });

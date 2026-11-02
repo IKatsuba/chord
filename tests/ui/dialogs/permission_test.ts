@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { PermissionOption } from '@agentclientprotocol/sdk';
+import type { PermissionOption } from '@agentclientprotocol/sdk/unstable';
 import type { PermissionWait } from '../../../src/session/transcript/types.ts';
 import {
   askedPermission,

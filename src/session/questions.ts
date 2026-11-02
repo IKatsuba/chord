@@ -11,7 +11,7 @@
 import type {
   CreateElicitationRequest,
   ElicitationContentValue,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { recordOf } from './enrich.ts';
 
 /** The `_meta` key on an elicitation request that holds its questions. */

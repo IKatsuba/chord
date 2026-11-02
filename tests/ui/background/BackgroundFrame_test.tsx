@@ -27,6 +27,146 @@ import {
 } from '../app/render.tsx';
 import { withBackground } from './background_window.tsx';
 
+describe('CHD-561 hint tester: late cancellation offer in the App', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const detail of [false, true]) {
+      test(`the old refusal clears in ${detail ? 'detail' : 'list'} at ${columns} columns`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+
+            let offered = false;
+            const unsubscribe = window.session()?.subscribe((update) => {
+              if (
+                update.sessionUpdate === 'subagent_update' &&
+                Boolean(update.capabilities?.cancel)
+              ) {
+                offered = true;
+              }
+            });
+
+            try {
+              await send(window, 'codexsubagentstop');
+              await window.shows("background  main's agent running");
+              await window.press(DOWN);
+              await window.press('\r');
+              await window.shows('❯ watcher');
+
+              if (detail) {
+                await window.press('\r');
+                await window.shows('Enter to go to its call');
+              }
+
+              expect(offered).toBe(false);
+              await window.press('x');
+              await window.shows('this agent offers no stop');
+              await until('the child advertises its stop', () => offered);
+              await until(
+                'the false refusal clears',
+                () => !window.frame().includes('this agent offers no stop'),
+              );
+              expect(window.frame()).toContain('x to stop');
+              await window.press('x');
+              await window.shows('It stopped, and the turn goes on.');
+              expect(window.frame()).not.toContain('Interrupted by user');
+            } finally {
+              unsubscribe?.();
+            }
+          },
+          {
+            columns,
+            rows,
+            agentCommand: fakeAgentCommand(undefined, '--step-ms', '500'),
+          },
+        ));
+    }
+  }
+});
+
+describe('CHD-561 tester: standard Codex subagents in the window', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`x works after an early refusal once the cancel capability arrives at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+
+          let offered = false;
+          const unsubscribe = window.session()?.subscribe((update) => {
+            if (
+              update.sessionUpdate === 'subagent_update' &&
+              Boolean(update.capabilities?.cancel)
+            ) {
+              offered = true;
+            }
+          });
+
+          try {
+            await send(window, 'codexsubagentstop');
+            await window.shows("background  main's agent running");
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('❯ watcher');
+            expect(offered).toBe(false);
+            await window.press('x');
+            await window.shows('this agent offers no stop');
+            await until('the child offers cancellation', () => offered);
+            await window.press('x');
+            await window.shows('It stopped, and the turn goes on.');
+            expect(window.frame()).not.toContain('Interrupted by user');
+          } finally {
+            unsubscribe?.();
+          }
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--step-ms', '500'),
+        },
+      ));
+
+    test(`x stops the offered child alone at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'codexsubagentstop');
+          await window.shows("background  main's agent running");
+          await window.press(DOWN);
+          await window.press('\r');
+          await window.shows('❯ watcher');
+          await window.press('x');
+          await window.shows('It stopped, and the turn goes on.');
+          expect(window.frame()).toContain('Cancelled');
+          expect(window.frame()).not.toContain('Interrupted by user');
+          await send(window, 'text');
+          await window.shows('Hello, world.');
+        },
+        { columns, rows },
+      ));
+
+    test(`an untitled announcement draws before its title arrives at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, 'codexsubagents');
+          await window.shows('⏺ Agent');
+          expect(window.frame()).not.toContain('Agent(worker)');
+          await window.shows('Agent(worker)');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--step-ms', '500'),
+        },
+      ));
+  }
+});
+
 describe('CHD-424 tester: background frame edges', () => {
   async function withSlowTask(body: (window: Window) => Promise<void>) {
     const server = serveChord();
@@ -224,7 +364,7 @@ for (const size of [
       await window.press('\r');
       // At the transcript's end, it goes as high as scrolling allows.
       await until("the view to close on the watcher's own row", () =>
-        window.frame().includes('Agent(watcher'),
+        window.frame().includes('Agent(Watch the build'),
       );
       expect(window.frame()).not.toContain('Background ·');
     }, size));
@@ -263,9 +403,7 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
           await window.shows('Interrupted by user');
           await send(window, 'steps');
           await window.shows('150 steps read.');
-          expect(window.frame()).not.toContain(
-            'Agent(tester (general-purpose))',
-          );
+          expect(window.frame()).not.toContain('Agent(Run the test suite)');
           await window.press(DOWN);
           await window.press('\r');
           await window.shows('Background · 1 in this session');
@@ -279,7 +417,7 @@ describe('CHD-2 tester: navigation leaves the transcript tail', () => {
               const frame = window.frame();
 
               return (
-                frame.includes('Agent(tester (general-purpose))') &&
+                frame.includes('Agent(Run the test suite)') &&
                 !frame.includes('150 steps read.')
               );
             },

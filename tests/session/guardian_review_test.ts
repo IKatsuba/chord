@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { guardianReview } from '../../src/session/guardian_review.ts';
 import { FILLED, GUARDIAN_REVIEW } from '../../src/session/enrich.ts';
 import { recordActions, type RecordEntry } from '../../src/session/record.ts';

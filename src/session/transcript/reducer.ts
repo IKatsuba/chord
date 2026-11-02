@@ -7,7 +7,7 @@
  * the person for and its answer, a cancel, the turn's result, and the agent
  * going away.
  */
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { filledIn } from '../enrich.ts';
 import { awaitedCall, replacedCall, served } from './chord.ts';
 import { mergeCompaction } from './compactions.ts';
@@ -28,6 +28,7 @@ import {
 import {
   childUpdate,
   itemEndLines,
+  agentMessage,
   mergeSubagent,
   subagentStopping,
 } from './subagents.ts';
@@ -316,6 +317,8 @@ function applyUpdate(
   switch (update.sessionUpdate) {
     case 'subagent_update':
       return mergeSubagent(state, turnId, update, at);
+    case 'session_message':
+      return agentMessage(state, turnId, update);
     case 'agent_message_chunk':
     case 'agent_thought_chunk':
       return appendText(

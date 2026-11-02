@@ -1,4 +1,4 @@
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import manifest from '../../package.json' with { type: 'json' };
 import type { Exit } from '../platform/process.ts';
 import {
@@ -79,7 +79,7 @@ export interface OpenAgentOptions {
  * `session/set_model`, which ACP v1 has not made stable: chord asks it only
  * of an agent that offers models but no `model` config option, as cursor's
  * and dimcode's adapters answer it. Claude's adapter has no handler for it
- * (claude-agent-acp 0.93.0) and is asked through its `model` config option.
+ * (claude-agent-acp 0.99.1) and is asked through its `model` config option.
  */
 export interface SetSessionModelRequest {
   readonly sessionId: string;
@@ -90,7 +90,7 @@ export interface SetSessionModelRequest {
  * `_session/steering`, the steering extension Claude's and Codex's adapters
  * answer and ACP's schema does not have yet: a prompt put into the turn the
  * session is running. `promptRequired` asks an agent with no turn running to
- * answer so and do nothing; Claude's adapter honours it, Codex's does not.
+ * answer so and do nothing; Claude's adapter honours it, and Codex's from 2.4.
  */
 export interface SteerRequest {
   readonly sessionId: string;

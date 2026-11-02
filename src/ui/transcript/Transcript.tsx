@@ -1,6 +1,7 @@
-import { TextAttributes } from '@opentui/core';
+import { type BoxRenderable, TextAttributes } from '@opentui/core';
 import { useGap } from './gap.ts';
-import { memo } from 'react';
+import { memo, useContext, useState } from 'react';
+import { Clip } from '../app/Clip.tsx';
 import type {
   Compaction,
   Entry,
@@ -12,6 +13,8 @@ import type {
 } from '../../session/transcript/types.ts';
 import {
   paint,
+  CodeBlockActions,
+  CodeClipped,
   useAgentColour,
   useColours,
   useHintKey,
@@ -38,6 +41,9 @@ import {
   selfStartedLine,
   teamPartLine,
   wrapLine,
+  type BodyRows,
+  mayHide,
+  MESSAGE_LINES,
 } from './message.ts';
 import { indicator, type Scroll } from './scroll.ts';
 import {
@@ -130,6 +136,8 @@ export const TranscriptEntry = memo(function TranscriptEntry({
           width={width}
         />
       );
+    case 'agent_message':
+      return <AgentMessage entry={entry} expanded={expanded} width={width} />;
     case 'assistant':
       return (
         <>
@@ -357,6 +365,87 @@ function ItemEnded({
  * the outgoing `→` row's do, so a long instruction reads as quoted next to
  * the agent's own bright replies.
  */
+/**
+ * What was said between the session's agent and a subagent of its, in the
+ * shape of any message's row, so the two never drift apart. A launch's prompt
+ * is often pages long: the whole of it is laid out and clipped to six rows, as
+ * a task's prompt folds. What the clip hides offers no code to copy or run.
+ */
+function AgentMessage({
+  entry,
+  expanded,
+  width,
+}: {
+  entry: Extract<Entry, { kind: 'agent_message' }>;
+  expanded: boolean;
+  width: number;
+}) {
+  const gap = useGap();
+  const name = entry.title === undefined ? 'Agent' : `Agent(${entry.title})`;
+  const colour = useAgentColour(name);
+  const key = useHintKey('app:toggleTranscript');
+  const to = entry.direction === 'to';
+  const folds = to && entry.launch === true && !expanded;
+  const actions = useContext(CodeBlockActions);
+  const [measured, setMeasured] = useState<BodyRows | undefined>(undefined);
+  const hides = folds && mayHide(measured, entry.text, width);
+  const hidden =
+    folds && measured !== undefined ? measured.rows - MESSAGE_LINES : 0;
+  // One tree whether it hides or not, so the body is not laid out anew, and
+  // read after each frame, as a new text of the same height reports no change.
+  const body = (
+    <CodeClipped.Provider value={hides}>
+      <CodeBlockActions.Provider value={hides ? undefined : actions}>
+        <box
+          flexShrink={0}
+          renderAfter={function (this: BoxRenderable) {
+            const rows = this.height;
+
+            if (
+              measured?.rows !== rows ||
+              measured.text !== entry.text ||
+              measured.width !== width
+            ) {
+              setMeasured({ rows, text: entry.text, width });
+            }
+          }}
+        >
+          <MessageBody text={entry.text} width={width} />
+        </box>
+      </CodeBlockActions.Provider>
+    </CodeClipped.Provider>
+  );
+
+  return (
+    <>
+      {gap.spacer}
+      <box {...gap.props} flexShrink={0}>
+        <box flexDirection='row'>
+          <Arrow glyph={to ? '→' : '←'} tone='plain' />
+          <text {...CUT}>
+            <span attributes={DIM}>{to ? 'to ' : 'from '}</span>
+            <span attributes={TextAttributes.BOLD} {...fg(colour)}>
+              <Ansi text={name} />
+            </span>
+          </text>
+        </box>
+        <Clip flexShrink={0} {...(folds ? { maxHeight: MESSAGE_LINES } : {})}>
+          {body}
+        </Clip>
+        {hidden > 0 && (
+          <box flexDirection='row' paddingLeft={5}>
+            <text {...CUT} attributes={DIM}>
+              {`… +${hidden} ${hidden === 1 ? 'line' : 'lines'}${
+                key === undefined ? '' : ` (${key} to expand)`
+              }`}
+            </text>
+          </box>
+        )}
+      </box>
+    </>
+  );
+}
+
 function Message({
   from,
   text,

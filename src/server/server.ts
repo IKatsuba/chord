@@ -4,7 +4,7 @@
  * token of its own, which says which session calls and so which tools it
  * has; a request without a token chord gave out is refused.
  */
-import type { McpServer as AcpMcpServer } from '@agentclientprotocol/sdk';
+import type { McpServer as AcpMcpServer } from '@agentclientprotocol/sdk/unstable';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';

@@ -2,7 +2,7 @@
 
 Every agent chord can start, read for what it can do over ACP and how: the
 25 in the ACP Registry, at the versions `src/registry.ts` pins (fetched
-2026-10-17, refreshed by CHD-432), and the 11 CLIs in `src/clis.ts`, at
+2026-11-01, refreshed by CHD-561), and the 11 CLIs in `src/clis.ts`, at
 the release current when they were read. Section 1 is the summary, agents as
 rows; section 2 is what chord itself uses of each capability and what it
 leaves unused; section 3 has a part per agent with the details and sources;
@@ -10,10 +10,14 @@ section 4 is what this changes on the board, for the owner. Agents go by their
 registry id or CLI name; chord itself calls `claude-acp` `claude` and
 `codex-acp` `codex`.
 
-It builds on CHD-432's study of the registry at the same pins, and on
+It builds on CHD-432's study of the earlier registry pins, and on
 [`design/CHD-1.md`](design/CHD-1.md) for forms and permissions. Nothing was
 run against a model. Packages, release notes, docs and public repositories
-were read only.
+were read only. CHD-561 refreshed the registry pins and the Claude 0.99.1
+and Codex 2.5.0 findings named below from source, not observation. Other
+findings retain their stated reading versions; a newer pin does not verify
+them again. Live CHD-561 checks are recorded separately in
+[the design](design/CHD-561.md).
 
 For an agent whose licence limits reverse-engineering (bob, cursor, nova,
 auggie, factory-droid, poolside), the owner's rule of 2026-10-18, recorded on
@@ -43,10 +47,10 @@ columns; section 3 uses them too.
 | auggie | 1 c | SDK 0.14.1 c [au1] | v1 + unstable c [au2] |
 | autohand | 1, the client's echoed c [ah1] | SDK 0.12.0 c [ah2] | v1 + unstable c [ah3] |
 | bob | 1 c [bo1] | SDK 1.3.0 c [bo2] | v1 + private `_bob/*` n, c [bo3] |
-| claude-acp | 1, fixed; 2 behind an env c [cl1] | SDK 1.9.0, pinned c [cl2] | v1 + unstable, RFDs, own c [cl3] |
+| claude-acp | 1 + 2, negotiated c [cl1] | SDK 2.1.0, pinned c [cl2] | v1 + v2, RFDs, own c [cl1, cl3] |
 | cline | 1, whatever is asked c [ci1] | SDK 0.16.1 c [ci2] | v1 + `set_model` c [ci3] |
 | codebuddy-code | 1 c [cb1] | SDK 1.7.0 c [cb2] | v1 + `set_model`, `resume` c [cb3] |
-| codex-acp | 1; v2 reverted in 2.1.0 c [cx1] | SDK 1.5.0 c [cx2] | v1 + unstable, drafts, own c [cx3] |
+| codex-acp | 1 + 2, negotiated c [cx1] | SDK ~2.1.0 c [cx2] | v1 + v2, subagents, own c [cx1, cx3, cx19] |
 | deepagents | 1, the client's echoed c [da1] | SDK ^0.17.0 (0.17.1) c [da2] | v1 only c [da3] |
 | dimcode | 1 c [dm1] | SDK 0.21.1 c [dm2] | v1 + unstable, `_lody/*` c [dm3] |
 | dirac | 1, always c [di1] | SDK 1.3.0 c [di2] | v1 + unstable and drafts c [di3] |
@@ -87,7 +91,7 @@ columns; section 3 uses them too.
 | claude-acp | ✓ + `_meta`, no `models` c [cl4] | ✓ replays subagents c [cl5] | ✓ r [cl5] | ✓ paged, cwd filter n [cl6] | ✓; fork point by `_meta` c [cl7] | ✓ · ✓ n [cl8] |
 | cline | ✓ needs a login c [ci4] | ✓ model back to default r [ci5] | ✗ r [ci5] | ✗ c [ci6] | ✗ c [ci6] | ✗ · ✗ c [ci6] |
 | codebuddy-code | ✓ c [cb4] | ✓ full replay c [cb5] | ◐ served, not advertised c [cb6] | ✗ c [cb3] | ✗ c [cb3] | ✗ · ✗ c [cb3] |
-| codex-acp | ✓; roots marked trusted c [cx4] | ✓ with child tree, tasks n [cx5] | ✓ survives a restart r [cx5] | ✓ the person's other threads c [cx6] | ✓; fork point by `_meta` c [cx7] | ◐ archives · ✓ c [cx8] |
+| codex-acp | ✓; roots marked trusted c [cx4] | ✓ with child tree, tasks n [cx5] | ✓ survives a restart r [cx5] | ✓ chats; excludes exec/review c [cx6] | ✓; fork point by `_meta` c [cx7] | ◐ archives · ✓ c [cx8] |
 | deepagents | ✓ c [da4] | ◐ memory only r [da5] | ✗ c | ✗ c | ✗ c | ✗ · ✗ c |
 | dimcode | ✓ read-only preset c [dm4] | ✓ c [dm5] | ✓ no replay c [dm5] | ✓ paged c [dm6] | ✓ unstable, at a turn c [dm7] | ✗ · ✓ c [dm8] |
 | dirac | ✓; worktree opt-in c [di4] | ✓ replays its journal c [di5] | ✗ advertised, -32601 c [di6] | ✗ not reachable c [di7] | ✗ c | ✓ · ✓ c [di8] |
@@ -125,7 +129,7 @@ columns; section 3 uses them too.
 | auggie | default · ask c [au5] | ✓ legacy, may be null c [au5] | ✗ c | ✗ over ACP c [au5] |
 | autohand | ✓ six, legacy r [ah7] | ✓ legacy, next run r [ah7] | ✓ nine selects r [ah7] | ◐ no `thought_level` r [ah8] |
 | bob | ✓ `set_mode` n, c [bo7] | ✗ n, c [bo8] | ✗ c [bo8] | ✗ c [bo8] |
-| claude-acp | ✓ five, `auto` per model n [cl9] | ◐ option only, no set_model c [cl3] | ✓ five incl. effort, fast c [cl10] | ✓ `thought_level` c [cl10] |
+| claude-acp | ✓ five, `auto` per model n [cl9] | ◐ option only, no set_model c [cl3] | ✓ up to six incl. effort, fast, ultracode c [cl10] | ✓ `thought_level` c [cl10] |
 | cline | ✓ plan · act r [ci7] | ◐ `provider` select first c [ci8] | ✓ five, one boolean c [ci8] | ✗ `--thinking` flag only c [ci9] |
 | codebuddy-code | ✓ seven permission modes c [cb7] | ✓ c [cb7] | ✓ six selects and more c [cb7] | ✓ `thought_level` c [cb7] |
 | codex-acp | ✓ four, `agent` default c [cx9] | ✓ + `set_model` c [cx10] | ✓ five incl. Plan, Fast c [cx11] | ✓ `thought_level` c [cx11] |
@@ -166,7 +170,7 @@ columns; section 3 uses them too.
 | auggie | ✓ c [au6] | ✓ c [au6] | ✗ dropped c [au6] | ✗ dropped c [au6] | ◐ `file://` path only c [au6] |
 | autohand | ✓ c | ◐ never reaches the model c [ah9] | ✗ placeholder text c [ah9] | ✓ inlined c [ah10] | ✓ read, inlined c [ah10] |
 | bob | ✓ c [bo9] | ✓ n, c [bo9] | ◐ as `[audio]` c [bo9] | ✓ text inlined c [bo9] | ◐ as text, not fetched c [bo9] |
-| claude-acp | ✓ c [cl11] | ✓ base64 · URL c [cl11] | ✗ dropped c [cl11] | ◐ text only c [cl11] | ◐ as a markdown link c [cl11] |
+| claude-acp | ✓ c [cl11] | ✓ base64 · URL c [cl11] | ✗ dropped c [cl11] | ◐ text, image, PDF blobs c [cl11] | ◐ as a markdown link c [cl11] |
 | cline | ✓ c [ci10] | ✗ though advertised c [ci10] | ✗ c [ci10] | ✗ c [ci10] | ✗ c [ci10] |
 | codebuddy-code | ✓ c [cb8] | ✓ base64 or http c [cb8] | ✗ dropped silently c [cb8] | ◐ text only c [cb8] | ◐ as link text c [cb8] |
 | codex-acp | ✓ c [cx12] | ✓ c [cx12] | ✗ dropped c [cx12] | ✓ text · blobs c [cx12] | ◐ text link only c [cx12] |
@@ -248,7 +252,7 @@ columns; section 3 uses them too.
 | auggie | once · reject c [au9] | error denies c [au9] | ✗ · ✗ c | ✓ task-list tools c [au10] |
 | autohand | once · always · reject, opt-in r [ah14] | ?; chord's SDK refuses all r [ah14] | ✗ · ✗ r | ✓ todo and plan tools r [ah15] |
 | bob | once · always · reject n, c [bo12] | cancelled; no timeout c [bo12] | ✓ · ✗ c [bo13] | ✓ n [bo14] |
-| claude-acp | once · always · reject once n [cl14] | aborts tool · no timeout n [cl14] | ✓ · ✓ c [cl15] | ✓ + `plan_update` r [cl16] |
+| claude-acp | once · always · reject once c [cl14] | aborts or denies tool · no timeout c [cl14] | ✓ · ✓ c [cl15] | ✓ + `plan_update` r [cl16] |
 | cline | once · always · reject c [ci13] | reject · no timeout c [ci13] | ✗ · ✗ r [ci14] | ✗ r [ci15] |
 | codebuddy-code | ◐ allow · reject r [cb11] | ? · timeout ends the turn c [cb12] | ✓ · ✗ c [cb13] | ✓ from `TodoWrite` c [cb14] |
 | codex-acp | all four kinds n [cx14] | fails closed · no timeout n [cx14] | ✓ · ✓ c [cx15] | ✓ + `plan_update` n [cx16] |
@@ -289,10 +293,10 @@ columns; section 3 uses them too.
 | auggie | the whole loop c [au11] | ✗; a prompt runs twice c [au11] | as one call c [au12] | ✗ · ✗ · ✗ c |
 | autohand | kills the CLI run r [ah16] | ✗ queued r [ah16] | ✗ r | ✗ · ✗ · ✗ r [ah17] |
 | bob | turn and task c [bo15] | ✗ refused c [bo16] | as one call c [bo17] | ✗ · ✗ · ✗ c [bo18] |
-| claude-acp | ◐ foreground only n [cl17] | ✓ `_session/steering` c [cl18] | RFD subagent_update r [cl19] | ✓ · ✓ · at the end c [cl20] |
+| claude-acp | ◐ foreground only n [cl17] | ✓ `_session/steering` c [cl18] | RFD subagent_update c [cl19] | ✓ · ✓ · at the end c [cl20] |
 | cline | ◐ lost after a 2nd prompt r [ci16] | ✗ queued r [ci16] | flat in parent r [ci17] | ✗ · ✗ · ✗ r [ci18] |
 | codebuddy-code | ◐ turn; background ? c [cb15] | ✗ queued c [cb16] | flat, `parentToolCallId` r c [cb17] | ✓ · ✗ · ✗ r c [cb18] |
-| codex-acp | ◐ root turn only c [cx17] | ✓; ignores `promptRequired` c [cx18] | draft subagent_spawned n [cx19] | last call · whole turn · ✗ c [cx20] |
+| codex-acp | ✓ root or standard child c [cx17] | ✓; honors `promptRequired` c [cx18] | standard subagent_update c [cx19] | last call · whole turn · ✗ c [cx20] |
 | deepagents | newest stream c [da13] | ✗; a prompt runs alongside r [da13] | as one call r [da14] | ✗ · ✗ · ✗ r |
 | dimcode | ◐ run, permissions, terminals c [dm17] | own `_lody`; a prompt refused c [dm18] | as one call; `_lody` opt-in c [dm19] | ✓ · ✗ · ✓ 0 if unpriced c [dm20] |
 | dirac | turn, asks, subagents c [di17] | own `whisper`; busy refused c [di18] | ◐ one call, flat c [di19] | ✓ · ◐ session total · ◐ c [di20] |
@@ -453,8 +457,9 @@ rest.
 
 Read in chord's own client at HEAD 287fedc3: `src/acp/`, `src/session/`,
 `src/headless.ts` and the launch in `src/agents.ts` and `src/clis.ts`, on
-`@agentclientprotocol/sdk` 1.8.0. Each entry says what chord uses and what it
-leaves unused, in the summary's codes.
+`@agentclientprotocol/sdk` 1.8.0; chord has since moved to 2.2.0's `/unstable`
+entry. Each entry says what chord uses and what it leaves unused, in the
+summary's codes.
 
 Four things are not as earlier notes had them: chord never calls
 `session/list`; a cost of 0 from an agent counts as a cost and stops chord's
@@ -979,8 +984,8 @@ lines show as agent text. chord does not see the telemetry.
 #### bob
 
 - Name: Bob
-- Pinned: `@ibm/bob` 2.0.8
-- Run as: `npx -y @ibm/bob@2.0.8 acp`
+- Pinned: `@ibm/bob` 2.0.9
+- Run as: `npx -y @ibm/bob@2.0.9 acp`
 - Source: <https://bob.ibm.com>
 
 `@ibm/bob` 2.0.8, the registry pin (release date 2026-10-14), read from its
@@ -1126,27 +1131,26 @@ correction: after a cancel the next prompt waits rather than being refused
 #### claude-acp
 
 - Name: Claude Agent
-- Pinned: `@agentclientprotocol/claude-agent-acp` 0.93.0
-- Run as: `npx -y @agentclientprotocol/claude-agent-acp@0.93.0`
+- Pinned: `@agentclientprotocol/claude-agent-acp` 0.99.1
+- Run as: `npx -y @agentclientprotocol/claude-agent-acp@0.99.1`
 - Source: <https://github.com/agentclientprotocol/claude-agent-acp>
 
-`@agentclientprotocol/claude-agent-acp` 0.93.0, the registry pin, read from
-the npm package's `dist/` (plain `tsc` output) and the repository at tag
-`v0.93.0` for `README.md` and `docs/`. Paths are relative to the package root
-(`dist/…`) or the repository root (`docs/…`). The adapter is Apache-2.0, no
-limits on reading. It drives `@anthropic-ai/claude-agent-sdk` 0.3.300 under
-Anthropic's terms, which spawns the Claude Code CLI; neither was read, only
-the adapter's calls into them. Several cells correct CHD-432's study: its
-own usage and session titles reach every client, and its `/mcp` is hidden
-by chord's.
+`@agentclientprotocol/claude-agent-acp` 0.99.1, the registry pin, reread for
+CHD-561 in the marked footnotes; others retain the 0.93.0 reading. Sources
+are the npm packages' `dist/` (plain `tsc` output) and repository docs at
+`v0.93.0` and `v0.99.1`. Paths are relative to the package or repository
+root. The adapter is Apache-2.0, with no limits on reading. It pins
+`@anthropic-ai/claude-agent-sdk` 0.3.312, which spawns Claude Code; neither
+was read, only the adapter's calls into them. Its usage and session titles
+reach every client, and chord's `/mcp` hides its own.
 
 **Footnotes.**
 
-- **cl1.** `dist/acp-agent.js:1413` answers `protocolVersion: 1` whatever is
-  asked. With `CLAUDE_AGENT_ACP_EXPERIMENTAL_V2=1` a router answers 2 to a
-  client asking 2 or more (`dist/index.js:81-83`, `dist/serve.js:19-42`).
-- **cl2.** `package.json:68` pins `@agentclientprotocol/sdk` 1.9.0; chord
-  runs 1.8.0.
+- **cl1.** Read at 0.99.1, not observed: `dist/serve.js:6-19,51-57`
+  negotiates v1 or v2 by default. `CLAUDE_AGENT_ACP_PROTOCOL` selects
+  `auto`, `v1` or `v2`.
+- **cl2.** Read at 0.99.1: `package.json:68` pins ACP SDK 2.1.0;
+  `dist/acp-agent.js:1` uses its `/unstable` entry. chord uses 2.2.0.
 - **cl3.** The handler list `dist/acp-agent.js:10420-10447`: v1 methods plus
   `session/fork`, `providers/*`, `logout`, the subagents RFD, `notice`,
   `plan_update`, and own `_session/steering`, `_session/async_task/stop`,
@@ -1166,13 +1170,15 @@ by chord's.
   unloaded session answers `{}` (`docs/air-extensions.md:1468-1478`).
 - **cl9.** `default`, `acceptEdits`, `plan`, `auto` when the model has it,
   `bypassPermissions` unless barred (`docs/air-extensions.md:688-697`).
-- **cl10.** `mode`, `model`, `effort` (category `thought_level`), `fast`
-  (category `model_config`, a select unless booleans are declared) and
-  `agent` when the person has agents (`dist/acp-agent.js:9446-9582`,
-  `dist/session-effort.js:91`).
-- **cl11.** `dist/acp-agent.js:9680-9745`: audio is dropped; a resource keeps
-  its text as a `<context ref>` block and drops a blob; a `resource_link`
-  becomes the text `[@name](file://…)` for the model to read itself.
+- **cl10.** Read at 0.99.1, not observed: `dist/acp-agent.js:10168-10212`
+  offers `mode`, `model` when available, `effort` (`thought_level`),
+  `fast`, `ultracode` and `agent`, conditionally by model and configured
+  agents. Fast and ultracode are selects unless booleans are declared.
+- **cl11.** Read at 0.99.1, not observed: `dist/acp-agent.js:10315-10388`
+  drops audio; text resources become linked `<context ref>` text.
+  `dist/blob-resources.js:67-94` accepts image and PDF blobs and decodes
+  text MIME types; other blobs are skipped in v1. Images accept base64 or
+  HTTP URLs; a `resource_link` becomes a text link.
 - **cl12.** `docs/air-extensions.md:297-331` (the column for clients that
   are not AIR). Kinds `execute`, `read`, `edit`, `search`, `fetch`, `think`,
   `switch_mode`, `other`. Terminal content goes only to a client declaring
@@ -1180,14 +1186,18 @@ by chord's.
   command's output once, at the end.
 - **cl13.** A Bash call stays `pending` until done; an unfinished call ends
   `failed` with a reason line (CHD-432).
-- **cl14.** `allow_once`, `allow_always`, `reject_once`, never
-  `reject_always`. A cancelled outcome or a signal abort stops the tool use;
-  the request is raced against the tool's signal, with no timeout of its own
-  (`docs/air-extensions.md:621-646,711-722`).
-- **cl15.** AskUserQuestion, MCP form elicitation and the refusal-fallback
-  dialog as forms; MCP URL elicitation and MCP OAuth as URLs
-  (`dist/acp-agent.js:8358-8370,8487-8503,1063-1150`). Without `form`,
-  AskUserQuestion is off.
+- **cl14.** Read at 0.99.1, not observed:
+  `dist/permissions/options/shared.js:17-30` builds `allow_once`,
+  `allow_always` and `reject_once`. `dist/acp-agent.js:7684-7720` races
+  permissions and elicitations against abort, with no timeout of its own.
+  A cancelled foreground permission aborts the tool; for an uncancelled
+  background child it becomes a denial (`:8077-8094`).
+- **cl15.** Read at 0.99.1, not observed:
+  `dist/acp-agent.js:8139-8248,8940-8949,9070-9086` forwards
+  AskUserQuestion, MCP forms and refusal-fallback consent as forms, MCP
+  URL requests as URLs. Unsupported or unrepresentable MCP requests,
+  aborts and client errors become `cancel`; only explicit decline becomes
+  `decline`. Form support gates AskUserQuestion and refusal fallback.
 - **cl16.** Entries from TodoWrite and Task*, and a markdown `plan_update` of
   an approved plan to a client declaring `plan` (CHD-432).
 - **cl17.** The turn and its foreground subagents stop; background subagents
@@ -1195,8 +1205,11 @@ by chord's.
 - **cl18.** `dist/acp-agent.js:2600-2636`: answers `injected`,
   `startedNewTurn`, and `promptRequired` when idle and asked so. A
   concurrent `session/prompt` is queued (`promptQueueing`).
-- **cl19.** RFD `subagent_update` and `session_message` to a client
-  declaring `subagents`; a cancel on a child id stops that child (CHD-432).
+- **cl19.** Read at 0.99.1, not observed: `dist/native-subagents.js`
+  sends RFD `subagent_update` and linked `session_message` on both sessions.
+  The title is the name, else short task, else role; the description is the
+  role unless already the title (`:1509-1517`). A child-id cancel stops that
+  child (`:586-607`). AIR retains the older draft shape.
 - **cl20.** `usage_update` used and size; cost (`total_cost_usd`) only at
   the turn's end (`dist/acp-agent.js:5003-5011`); `PromptResponse.usage`.
   Its own usage `_meta` comes too, see Custom.
@@ -1204,10 +1217,13 @@ by chord's.
   `keybindings-help`, `login`, `logout`, `output-style:new`,
   `release-notes`, `todos`; MCP prompts as `mcp:<server>:<cmd>`; plus the
   adapter's `/mcp` and `/remote-control` (`dist/acp-agent.js:9604-9662`).
-- **cl22.** A title generated once per session through the CLI's
-  `generate_session_title`, a model call, else the stored custom title, as
-  `session_info_update` to every client (`dist/session-titles.js:136-175`).
-  CHD-432's study had no session titles for claude; that is wrong.
+- **cl22.** Read at 0.99.1, not observed:
+  `dist/session-titles.js:118-145,336-377` requests the title while the
+  prompt runs, reusing the CLI
+  title already stored or being generated. A stored custom title wins;
+  absent one, `generateSessionTitle` can generate and persist a title.
+  A null or failed generation can retry. Titles are published through
+  `session_info_update`. This does not establish a second model call.
 - **cl23.** Terminal login methods only to a client declaring `auth.terminal`
   or `_meta["terminal-auth"]`, gateway only with `auth._meta.gateway`;
   chord declares none and gets `authMethods: []`
@@ -1268,18 +1284,11 @@ by chord's.
 - `_meta.claudeCode.emitRawSDKMessages`: every SDK message as
   `_claude/sdkMessage`, in Claude Code's private wire format.
 
-**In chord.** chord sends `session/new` with no `_meta`, so it pays for a
-prompt suggestion every turn and a title call every session, and shows
-neither (`session_info_update` is dropped). It sets model and effort through
-the config options and never needs `session/set_model`, which 0.93.0 lacks;
-the comment at `src/acp/connection.ts:58-61` that the adapter answers it is
-stale. Fast mode shows in `/config` as an on/off select. It reads the RFD
-subagents but never cancels one on its own id, though claude would honour
-it. `_meta.quota`, `_claude/rateLimit` and `_auth/status_update` are
-ignored. Warnings arrive as `**Warning:**` reply text, as chord does not
-declare `session.notices`. chord's `/mcp` hides claude's, as it hides
-codex's `/mcp` and `/status`. With `authMethods: []` and no `authenticate`
-call, login stays outside chord. Fork, delete, close and list are never called.
+**In chord.** Model and effort use config options. RFD launches and replies
+appear as `→ to Agent(<title>)` and `← from Agent(<title>)` rows in the
+parent; ctrl+o opens the child's work. The background view offers an
+individual stop when the adapter advertises it. These are CHD-561 client
+changes; the source readings above do not prove live provider behavior.
 After a turn goes quiet, the agent's first work starts a cycle of its own,
 shown as working, with its own turn id. It ends and notifies on a
 `usage_update` whose `_claude/origin` kind is `task-notification`, `peer`,
@@ -1290,16 +1299,17 @@ between turns, with ctrl+x a to answer.
 
 **Sources.**
 
-- `@agentclientprotocol/claude-agent-acp` 0.93.0 on npm;
-  <https://github.com/agentclientprotocol/claude-agent-acp/tree/v0.93.0>,
+- `@agentclientprotocol/claude-agent-acp` 0.99.1 on npm;
+  <https://github.com/agentclientprotocol/claude-agent-acp/tree/v0.99.1>,
   `README.md` and `docs/air-extensions.md`.
-- CHD-432's notes on claude-acp.
+- The earlier 0.93.0 package and repository docs, and CHD-432's notes on
+  claude-acp.
 
 #### cline
 
 - Name: Cline
-- Pinned: `cline` 3.0.73
-- Run as: `npx -y cline@3.0.73 --acp`
+- Pinned: `cline` 3.0.74
+- Run as: `npx -y cline@3.0.74 --acp`
 - Source: <https://github.com/cline/cline>
 
 Cline 3.0.73, the registry pin, read at tag `cli-v3.0.73` (c718573) of
@@ -1421,8 +1431,8 @@ auto-approve boolean and `session_info_update`.
 #### codebuddy-code
 
 - Name: Codebuddy Code
-- Pinned: `@tencent-ai/codebuddy-code` 2.168.2
-- Run as: `npx -y @tencent-ai/codebuddy-code@2.168.2 --acp`
+- Pinned: `@tencent-ai/codebuddy-code` 2.179.1
+- Run as: `npx -y @tencent-ai/codebuddy-code@2.179.1 --acp`
 - Source: <https://www.codebuddy.cn/cli/>
 
 `@tencent-ai/codebuddy-code` 2.168.2, the registry pin, dated 2026-10-16 in
@@ -1567,26 +1577,26 @@ capability keys.
 #### codex-acp
 
 - Name: Codex
-- Pinned: `@agentclientprotocol/codex-acp` 2.2.2
-- Run as: `npx -y @agentclientprotocol/codex-acp@2.2.2`
+- Pinned: `@agentclientprotocol/codex-acp` 2.5.0
+- Run as: `npx -y @agentclientprotocol/codex-acp@2.5.0`
 - Source: <https://github.com/agentclientprotocol/codex-acp>
 
-`@agentclientprotocol/codex-acp` 2.2.2 (2026-10-10), the registry pin, read
-in the repository at tag `v2.2.2` (commit `202e66e`) and checked against the
-npm package's `dist/index.js` (esbuild, not minified). Paths are relative to
-the repository root (`src/…`, `docs/…`) or the package root (`dist/…`).
-Apache-2.0, no limits on reading. It runs `@openai/codex` 0.160.1 as an
+`@agentclientprotocol/codex-acp` 2.5.0 (2026-10-29), the registry pin,
+reread for CHD-561 at tag `v2.5.0` for the footnotes marked below. Other
+footnotes retain the 2.2.2 reading. Paths are relative to the repository
+root (`src/…`, `docs/…`) or the package root (`dist/…`). Apache-2.0, no
+limits on reading. It declares `@openai/codex` ^0.165.0 and drives its
 app-server over JSON-RPC; Codex itself was not read, only the adapter's
-calls into it. Several cells correct CHD-432's study: the answer's `usage`
-is now the whole turn, titles and its own usage reach every client, and its
-`/status` is hidden by chord's as well as its `/mcp`.
+calls into it. These refreshed findings were read, not observed.
 
 **Footnotes.**
 
-- **cx1.** `src/CodexAcpServer.ts:484`, bundled as `PROTOCOL_VERSION = 1`
-  (`dist/index.js:4241`); no v2 router. `CHANGELOG.md` 2.1.0 adds ACP v2 and
-  reverts it in the same release.
-- **cx2.** `package.json` `^1.5.0`, locked and bundled at 1.5.0.
+- **cx1.** Read at 2.5.0: `src/AcpAgentRouter.ts:214` serves both v1
+  and v2 through the SDK protocol router; `src/CodexAcpServer.ts:595-603`
+  selects the connection for the negotiated version.
+- **cx2.** Read at 2.5.0: `package.json:71` declares SDK ~2.1.0;
+  `src/CodexAcpServer.ts:1,55` imports `/unstable` and
+  `/experimental/v2/unstable`.
 - **cx3.** Methods `src/CodexAcpServer.ts:453-4004`, `extMethod` switch
   `:557-688`: v1 plus `session/fork`, `session/set_model`, `providers/*`,
   `logout`, draft subagents, `compaction_update`, `notice`, `plan_update`,
@@ -1601,9 +1611,9 @@ is now the whole turn, titles and its own usage reach every client, and its
 - **cx5.** Load replays the history, the child tree and async tasks
   (`docs/subagent-sessions.md`); resume survives an app-server restart
   (CHD-432).
-- **cx6.** Cwd filter and cursor over Codex threads from `cli`, `vscode`,
-  `exec`, `appServer` and `unknown`, so the person's Codex CLI and VS Code
-  sessions too (`src/CodexAcpClient.ts:1272-1320`). chord never calls it.
+- **cx6.** Read at 2.5.0: `src/CodexAcpClient.ts:1454-1480` lists
+  `cli`, `vscode`, `appServer` and `unknown` threads, excluding `exec`
+  and review runs. It keeps cwd filtering and cursor paging.
 - **cx7.** The whole thread, or up to the turn holding the message given in
   `_meta.jetbrains.air.fork` (`src/SessionFork.ts:74-125`), see Custom.
 - **cx8.** For a client that is not AIR, `session/delete` archives the
@@ -1618,9 +1628,10 @@ is now the whole turn, titles and its own usage reach every client, and its
   `reasoning_effort` (category `thought_level`, the model's efforts) and
   `fast-mode` (a select unless booleans are declared)
   (`src/CodexAcpServer.ts:2272-2300`, `src/ModelConfigOption.ts:72-95`).
-- **cx12.** `src/CodexAcpClient.ts:1361-1391`: audio is dropped; a resource
-  keeps its text as `<context ref>`, an image blob as an image, another blob
-  as base64; a `resource_link` is a text link only.
+- **cx12.** Read at 2.5.0: `src/CodexAcpClient.ts:1556-1585` drops
+  audio. Images use a supported URL or a base64 data URL. Text resources
+  become linked `<context ref>` text; image blobs become images, other
+  blobs become base64 text with MIME type. Resource links become text links.
 - **cx13.** `docs/air-extensions.md:237-348` (the column for other
   clients). Kinds `execute`, `read`, `search`, `edit`, `fetch`, `think`,
   `switch_mode`, `other`. Every command carries `terminal` content with an
@@ -1636,15 +1647,22 @@ is now the whole turn, titles and its own usage reach every client, and its
   (`src/CodexElicitationHandler.ts:290-306,419-480`).
 - **cx16.** Standard `plan` entries, and plan-mode markdown as `plan_update`
   to a client declaring `plan` (`docs/air-extensions.md:636-674`).
-- **cx17.** `turn/interrupt` on the root thread only; a child id stops
-  nothing, and background terminals keep running
-  (`src/CodexAcpServer.ts:3994-4004`, `docs/subagent-sessions.md`).
-- **cx18.** `src/CodexAcpServer.ts:2029-2147` answers `injected`,
-  `startedNewTurn` or `failed`; there is no `idleBehavior` in `src/`, so a
-  steer with no turn running starts one.
-- **cx19.** Draft `subagent_spawned` and `subagent_state_update` to a client
-  declaring `subagents`; no targeted cancel or close
-  (`docs/subagent-sessions.md`).
+- **cx17.** Read at 2.5.0: `src/CodexAcpServer.ts:5573-5606` routes
+  a standard child-id cancel to
+  `src/subagents/StandardSubagentEventRouter.ts:576-601`, which interrupts that live child and its descendants. It requires
+  an advertised cancel capability and an active turn. A root cancel
+  interrupts the root turn. This source read does not prove background
+  terminal cleanup or a live cancellation result.
+- **cx18.** Read at 2.5.0: `src/CodexAcpServer.ts:2920-2948`
+  honors `_meta.steering.idleBehavior: "promptRequired"` when idle,
+  answering `promptRequired` without starting a turn. Otherwise the
+  legacy idle fallback starts one; a running turn can accept `injected`.
+- **cx19.** Read at 2.5.0:
+  `src/subagents/StandardSubagentEventRouter.ts:330-341,560-571` announces standard `subagent_update` without state, then
+  publishes partial state, title and cancel-capability updates. It routes
+  child work under child session IDs and replays recorded conversations.
+  `docs/subagent-sessions.md` still describes the earlier draft and its
+  lack of targeted cancel; it is stale for this standard path.
 - **cx20.** `usage_update.used` is the last request's tokens, `size` the
   context window; no cost. `PromptResponse.usage` is the whole turn: the
   thread's total at the end minus at the start, else the summed per-request
@@ -1694,8 +1712,9 @@ is now the whole turn, titles and its own usage reach every client, and its
   `_meta.jetbrains.air.customInstructions`, read with no AIR declaration,
   new sessions only (`src/AirExtension.ts:101-108`), and
   `_meta.mcpStartupAwaitTimeoutMs`, which waits for the passed MCP servers.
-- `_session/steering`, announced by `_meta.steering.supported`; no
-  `promptRequired`, so a late steer starts and spends a turn.
+- `_session/steering`, announced by `_meta.steering.supported`; honors
+  `promptRequired` when idle (cx18); without it the legacy fallback starts
+  a turn.
 - `_session/goal` and `/goal`: a long-running objective that keeps spending
   between prompts. The method works for any client; its snapshots are
   AIR-only (`src/CodexAcpServer.ts:592-650`).
@@ -1713,27 +1732,20 @@ is now the whole turn, titles and its own usage reach every client, and its
 - Plan review as a `session/request_permission` of kind `switch_mode` with
   options `implement_plan` and `revise_plan`.
 
-**In chord.** chord sets model and effort through the config options and
-mode with `set_mode`, and an enricher fills in the mode Codex leaves out
-after it. Draft subagents are reshaped into the RFD shape by an enricher.
-chord never cancels a child on its own id, which would stop nothing on codex
-anyway. It reads `PromptResponse.usage`, which is now the whole turn, and
-estimates the cost. It drops the generated title, though codex spends a
-model call on it, and ignores `_meta.quota` and `_auth/status_update`. The
-default `agent` mode sends approvals to Codex's model reviewer, more spend
-chord does not show. chord's `/mcp` and `/status` hide codex's, so Codex's
-MCP sign-in and rate limits cannot be reached. chord passes the person's MCP
-servers as they are, never checked against `mcpCapabilities.sse: false`, so
-an SSE server in the person's settings fails `session/new`. Steering carries
-only messages from other agents; a late one starts a turn on codex. List,
-fork, delete and close are never called.
+**In chord.** Standard subagent updates feed the same tree and background
+view as Claude's. The view offers a child stop when advertised. Steering
+requests `promptRequired` for an idle fallback; the `--steering codex24`
+fake covers that response, while `--steering codex` retains the pre-2.4
+behavior that ignores it. These fixture checks do not prove live behavior;
+see the separate CHD-561 design evidence.
 
 **Sources.**
 
-- `@agentclientprotocol/codex-acp` 2.2.2 on npm;
-  <https://github.com/agentclientprotocol/codex-acp/tree/v2.2.2>, `README.md`,
+- `@agentclientprotocol/codex-acp` 2.5.0 repository source;
+  <https://github.com/agentclientprotocol/codex-acp/tree/v2.5.0>, `README.md`,
   `CHANGELOG.md`, `docs/air-extensions.md`, `docs/subagent-sessions.md`.
-- CHD-432's notes on codex-acp.
+- The earlier 2.2.2 repository and npm package, and CHD-432's notes on
+  codex-acp.
 
 #### deepagents
 
@@ -1838,8 +1850,8 @@ is queued, which keeps a second stream from starting. chord never calls
 #### dimcode
 
 - Name: DimCode
-- Pinned: `dimcode` 0.5.19
-- Run as: `npx -y dimcode@0.5.19 acp`
+- Pinned: `dimcode` 0.5.22
+- Run as: `npx -y dimcode@0.5.22 acp`
 - Source: <https://dimcode.dev/docs/acp.html>
 
 Read at 0.5.19, the registry's pin, from the npm wrapper `dimcode@0.5.19`
@@ -1989,8 +2001,8 @@ no `_lody` method.
 #### dirac
 
 - Name: Dirac
-- Pinned: `dirac-cli` 0.5.21
-- Run as: `npx -y dirac-cli@0.5.21 --acp`
+- Pinned: `dirac-cli` 0.5.24
+- Run as: `npx -y dirac-cli@0.5.24 --acp`
 - Source: <https://github.com/dirac-run/dirac>
 
 Read at `dirac-cli` 0.5.21, the ACP Registry's pin, from the repository
@@ -2139,8 +2151,8 @@ which avoids dirac's busy error. Titles, close, delete and every
 #### factory-droid
 
 - Name: Factory Droid
-- Pinned: `droid` 0.244.0
-- Run as: `npx -y droid@0.244.0 exec --output-format acp-daemon`
+- Pinned: `droid` 1.1.0
+- Run as: `npx -y droid@1.1.0 exec --output-format acp-daemon`
 - Source: <https://factory.ai/product/cli>
 
 Read at 0.244.0, the registry pin, released 2026-10-16 by Factory's
@@ -2397,8 +2409,8 @@ prompt is queued, which keeps a second turn from running at once.
 #### gemini
 
 - Name: Gemini CLI
-- Pinned: `@google/gemini-cli` 0.64.0
-- Run as: `npx -y @google/gemini-cli@0.64.0 --acp`
+- Pinned: `@google/gemini-cli` 0.66.0
+- Run as: `npx -y @google/gemini-cli@0.66.0 --acp`
 - Source: <https://github.com/google-gemini/gemini-cli>
 
 Read at `@google/gemini-cli` 0.64.0, the ACP Registry's pin, from the
@@ -2523,8 +2535,8 @@ are ignored; chord never calls `session/list`.
 #### github-copilot-cli
 
 - Name: Copilot
-- Pinned: `@github/copilot` 1.0.98
-- Run as: `npx -y @github/copilot@1.0.98 --acp`
+- Pinned: `@github/copilot` 1.0.105
+- Run as: `npx -y @github/copilot@1.0.105 --acp`
 - Source: <https://github.com/github/copilot-cli>
 
 Read at `@github/copilot` 1.0.98, the ACP Registry's pin; the display name is
@@ -2644,8 +2656,8 @@ Copilot's questions reach chord as forms, now that chord declares
 #### glm-acp-agent
 
 - Name: GLM Agent
-- Pinned: `glm-acp-agent` 1.15.0
-- Run as: `npx -y glm-acp-agent@1.15.0`
+- Pinned: `glm-acp-agent` 1.17.0
+- Run as: `npx -y glm-acp-agent@1.17.0`
 - Source: <https://github.com/stefandevo/glm-acp-agent>
 
 Read at 1.15.0, the registry's pin, from the npm package
@@ -2778,8 +2790,8 @@ itself.
 #### grok-build
 
 - Name: Grok Build
-- Pinned: `@xai-official/grok` 1.0.63
-- Run as: `npx -y @xai-official/grok@1.0.63 agent stdio`
+- Pinned: `@xai-official/grok` 1.0.73
+- Run as: `npx -y @xai-official/grok@1.0.73 agent stdio`
 - Source: <https://x.ai/cli>
 
 Read at two versions, kept apart. The registry pins `@xai-official/grok`
@@ -2953,8 +2965,8 @@ unused.
 #### kilo
 
 - Name: Kilo
-- Pinned: `@kilocode/cli` 7.8.12
-- Run as: `npx -y @kilocode/cli@7.8.12 acp`
+- Pinned: `@kilocode/cli` 7.8.18
+- Run as: `npx -y @kilocode/cli@7.8.18 acp`
 - Source: <https://github.com/Kilo-Org/kilocode>
 
 Kilo CLI 7.8.12, the registry pin (`@kilocode/cli`), read at tag `v7.8.12` of
@@ -3316,8 +3328,8 @@ reading).
 #### nova
 
 - Name: Nova
-- Pinned: `@compass-ai/nova` 1.1.55
-- Run as: `npx -y @compass-ai/nova@1.1.55 acp`
+- Pinned: `@compass-ai/nova` 1.1.62
+- Run as: `npx -y @compass-ai/nova@1.1.62 acp`
 - Source: <https://github.com/Compass-Agentic-Platform/nova>
 
 Read at 1.1.55, the registry's pin, from the npm package
@@ -3702,8 +3714,8 @@ prompts, so the abort on a second prompt is not hit.
 #### qwen-code
 
 - Name: Qwen Code
-- Pinned: `@qwen-code/qwen-code` 0.25.2
-- Run as: `npx -y @qwen-code/qwen-code@0.25.2 --acp --experimental-skills`
+- Pinned: `@qwen-code/qwen-code` 0.26.5
+- Run as: `npx -y @qwen-code/qwen-code@0.26.5 --acp --experimental-skills`
 - Source: <https://github.com/QwenLM/qwen-code>
 
 Read at `@qwen-code/qwen-code` 0.25.2, the ACP Registry's pin, from the
@@ -3852,8 +3864,8 @@ cancel can hold a queued prompt up to 5 s (CHD-432). chord never calls
 #### sigit
 
 - Name: siGit Code
-- Pinned: `@smbcloud/sigit` 1.7.0
-- Run as: `npx -y @smbcloud/sigit@1.7.0`
+- Pinned: `@smbcloud/sigit` 1.7.7
+- Run as: `npx -y @smbcloud/sigit@1.7.7`
 - Source: <https://github.com/getsigit/sigit>
 
 Read at 1.7.0, the registry's pin, in the npm wrapper `@smbcloud/sigit@1.7.0`
@@ -5671,8 +5683,9 @@ agent's Custom or In chord paragraph instead, the item says so.
   glm (gl18), openclaw (oc13), qoder and cursor (cu15); run a second loop at
   once on auggie (au11), fast-agent and deepagents; and be refused by bob
   (bo15), droid (dr18), kimi (km19), minimax (mm18), zeroclaw (zc13), dimcode
-  (dm18), dirac (di18), opencode v2 and fx unflagged (fx18). codex ignores
-  `idleBehavior: "promptRequired"`, so a late steer starts a new turn; devin
+  (dm18), dirac (di18), opencode v2 and fx unflagged (fx18). Codex 2.5.0
+  honors `idleBehavior: "promptRequired"` when idle (cx18, read, not
+  observed); the pre-2.4 fallback starts a turn. devin
   (dv18), Junie and cline steer in their CLI but not over ACP. chord's queue
   avoids all of these; steering dialects are a question above.
 - **CHD-380** (changes), An agent's cost of 0 hides chord's estimate: fx on a
@@ -5761,8 +5774,9 @@ this reading does to it.
   `rawInput` (claude, Custom), and codex's AIR changes every update's shape
   (codex, Custom). Without AIR, a cancel on a claude child's id stops that
   child (cl19), while background subagents outlive the parent's cancel (cl17);
-  on codex a child id stops nothing (cx17). The question's "no other registry
-  adapter" no longer holds: codebuddy stops one background task by the
+  codex 2.5.0 also accepts targeted cancellation for a standard child (cx17,
+  read, not observed). The question's "no other registry adapter" no longer
+  holds: codebuddy stops one background task by the
   `terminalId` its backgrounded call carries opt-in or not, with no model call
   (cb10; codebuddy, Custom), its private opt-in needed only for the task's
   state and output; dimcode stops a subagent by `_lody/subagents/cancel`
@@ -5886,8 +5900,6 @@ New items that a question above already holds are not repeated here.
   the registry's `DROID_DISABLE_AUTO_UPDATE` occurs nowhere in droid 0.244.0,
   where only `FACTORY_DROID_AUTO_UPDATE_ENABLED=false` works (factory-droid,
   Custom). Whether each is a note, a mark or nothing is open.
-- **A stale comment.** `src/acp/connection.ts:58-61` says claude answers
-  `session/set_model`; claude 0.93.0 has no such handler (claude, In chord).
 - **kiro after CLI 3.0.** Whether kiro's argv gains `--agent-engine=v3` before
   or after CLI 3.0, due at the end of October 2026, and whether kiro is read
   again then (kiro, intro).

@@ -3,7 +3,10 @@
  * `Read(src/main.tsx)` headline, the marker's tone for its status, and the few
  * `⎿` lines and diffs that show what it produced.
  */
-import type { ToolCallContent, ToolKind } from '@agentclientprotocol/sdk';
+import type {
+  ToolCallContent,
+  ToolKind,
+} from '@agentclientprotocol/sdk/unstable';
 import type {
   Entry,
   ToolCall,

@@ -1,0 +1,24 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d561today
+ ▀▀     ? for shortcuts · /help
+
+ › claudemessage
+
+ ⏺ I will have a look with a subagent.
+
+ ⏺ Find(the session layer)
+   ⎿  Routing lives in src/acp/connection.ts, in the relay at line 412.
+       
+      The listeners are kept in **src/session/conversation.ts**.
+
+ ⏺ Agent(Explore)
+   ⎿  Done (2 tool uses · 1s)
+
+ ⏺ Now I will ask it for the tests.
+
+ ── ↓ 18 lines below · end to jump to the bottom ──────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

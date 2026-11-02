@@ -6,7 +6,7 @@
  * person in the parent's session. It ends with its first turn, whose last message
  * is the report, delivered to the parent as a message; then chord closes it.
  */
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import type { ConversationEvent } from './conversation.ts';
 import type { ElicitationReply } from './elicitations.ts';
 import { endWord } from './monitors.ts';

@@ -1,12 +1,12 @@
-/** Subagents in Codex's draft form, and in ACP's own `subagent_update` as Claude's adapter sends it. */
-import * as acp from '@agentclientprotocol/sdk';
+/** Subagents in the draft form Codex's adapter sent before 2.4, and in ACP's own `subagent_update` as Claude's and Codex's 2.4 send it. */
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { clientTakesSubagents } from '../client.ts';
 import { existsSync } from 'node:fs';
 import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { STEP_MS, STOP_GATE } from '../options.ts';
+import { ADAPTER, STEERING, STEP_MS, STOP_GATE } from '../options.ts';
 import { cwds } from '../sessions.ts';
-import { GATE, GATE_RELEASE } from './agents.ts';
+import { GATE, GATE_RELEASE, gateOpened } from './agents.ts';
 import { lifetime, pause, type Play, Turn, type Update } from '../turn.ts';
 
 /**
@@ -39,8 +39,8 @@ function subagentId(): string {
 }
 
 /**
- * Starts a subagent under `parent`, as Codex's adapter announces one to a client
- * that takes them: a `subagent_spawned` on the parent's session, after which
+ * Starts a subagent under `parent`, as Codex's adapter before 2.4 announces one
+ * to a client that takes them: a `subagent_spawned` on the parent's session, after which
  * the subagent's work goes out under a session id of its own.
  */
 async function spawn(
@@ -411,17 +411,68 @@ async function alone(child: Turn, work: Promise<void>): Promise<void> {
 }
 
 /**
- * Starts a subagent under `parent` as Claude's adapter announces one in ACP's
- * own form: a `subagent_update` titled by its name and role, the short task as
- * its description, running and open to a cancel of its own; then, on its own
- * session, its whole task as a `session_message` from the parent's call that
- * started it. `signal` is the parent's unless the subagent outlives its turn.
+ * What a call in place of which the adapter sends a message said, as its two
+ * views: the sender's on the sender's session, then the recipient's on theirs,
+ * each naming the other (`linkedSessionMessages` in claude-agent-acp 0.99).
+ */
+async function linked(
+  client: Turn['client'],
+  messageId: string,
+  sender: string,
+  recipient: string,
+  text: string,
+): Promise<void> {
+  const message = {
+    sessionUpdate: 'session_message' as const,
+    messageId,
+    senderSessionId: sender,
+    recipientSessionId: recipient,
+    content: [{ type: 'text' as const, text }],
+  };
+
+  await client.notify('session/update', {
+    sessionId: sender,
+    update: { ...message, recipientMessageId: messageId },
+  });
+  await client.notify('session/update', {
+    sessionId: recipient,
+    update: { ...message, senderMessageId: messageId },
+  });
+}
+
+/** The tool id each Claude subagent's launch went under, its reply's prefix. */
+const launches = new Map<string, string>();
+
+/**
+ * A foreground subagent's answer, in its parent's transcript alone: its own
+ * has it as an agent message (`launchReply` in claude-agent-acp 0.99).
+ */
+async function replied(parent: Turn, childId: string, text: string) {
+  await parent.client.notify('session/update', {
+    sessionId: parent.sessionId,
+    update: {
+      sessionUpdate: 'session_message',
+      messageId: `${launches.get(childId) ?? childId}:reply`,
+      senderSessionId: childId,
+      recipientSessionId: parent.sessionId,
+      content: [{ type: 'text', text }],
+    },
+  });
+}
+
+/**
+ * Starts a subagent under `parent` as Claude's adapter announces one from 0.95
+ * to a client that takes them: a `subagent_update` titled by its name, else
+ * its short task, its role as its description unless that is the title, running
+ * and open to a cancel of its own; then its whole task as both views of a
+ * `session_message`, in place of the call that started it. `signal` is the
+ * parent's unless the subagent outlives its turn.
  */
 async function announce(
   parent: Turn,
   working: Working | undefined,
+  role: string | undefined,
   title: string,
-  description: string,
   task: string,
   signal = parent.signal,
   stopAfterMs = 0,
@@ -453,21 +504,32 @@ async function announce(
     sessionUpdate: 'subagent_update',
     sessionId: child.sessionId,
     title,
-    description,
+    // Its role goes only under Claude's name, which is what tells chord a
+    // description is one: named otherwise, the fake's would read as its task.
+    ...(role === undefined || (ADAPTER !== 'claude' && STEERING !== 'claude')
+      ? {}
+      : { description: role }),
     capabilities: { cancel: {} },
     state: { state: 'running' },
   });
   working?.add(child.sessionId);
   atWork.add(child.sessionId);
+
+  const launch = parent.callId('agent');
+
+  launches.set(child.sessionId, launch);
   await alone(
     child,
-    child.send({
-      sessionUpdate: 'session_message',
-      messageId: parent.callId('agent'),
-      senderSessionId: parent.sessionId,
-      recipientSessionId: child.sessionId,
-      content: [{ type: 'text', text: task }],
-    }),
+    (async () => {
+      await pause(child.signal);
+      await linked(
+        parent.client,
+        launch,
+        parent.sessionId,
+        child.sessionId,
+        task,
+      );
+    })(),
   );
 
   return child;
@@ -775,7 +837,7 @@ async function background(
     const tests = await announce(
       turn,
       undefined,
-      'tester (general-purpose)',
+      'general-purpose',
       'Run the test suite',
       'Run bun test in the background and report what fails.',
       lifetime.signal,
@@ -789,7 +851,7 @@ async function background(
     const looker = await announce(
       turn,
       working,
-      'explorer (Explore)',
+      'Explore',
       'Find the cancel path',
       'Find where chord ends a turn on Esc.',
       turn.signal,
@@ -1136,7 +1198,7 @@ export const SUBAGENTS = {
       const explorer = await announce(
         turn,
         working,
-        'explorer (Explore)',
+        'Explore',
         'Find the session layer',
         'Find where chord hands each session/update to its listeners and ' +
           'say which file owns the routing.\n\nReport paths and line ' +
@@ -1145,21 +1207,21 @@ export const SUBAGENTS = {
       const reviewer = await announce(
         turn,
         working,
-        'reviewer (general-purpose)',
+        'general-purpose',
         'Review the transcript reducer',
         'Review src/session/transcript/reducer.ts for updates it drops.',
       );
       const tester = await announce(
         turn,
         working,
-        'tester (general-purpose)',
+        'general-purpose',
         'Run the tests',
         'Run bun test and report what fails.',
       );
       const watcher = await announce(
         turn,
         working,
-        'watcher',
+        undefined,
         'Watch the build',
         'Watch the build and say when it breaks.',
       );
@@ -1199,7 +1261,7 @@ export const SUBAGENTS = {
     const tests = await announce(
       turn,
       undefined,
-      'tester (general-purpose)',
+      'general-purpose',
       'Run the whole test suite',
       'Run bun test in the background and write a report of what fails.',
       lifetime.signal,
@@ -1231,7 +1293,7 @@ export const SUBAGENTS = {
       const explorer = await announce(
         turn,
         working,
-        'explorer (Explore)',
+        'Explore',
         'Find the session layer',
         'Find where chord hands each session/update to its listeners.\n\n' +
           'Report the file that owns the routing, with line numbers.',
@@ -1255,24 +1317,24 @@ export const SUBAGENTS = {
             state: 'idle',
             stopReason: 'end_turn',
           });
+          await replied(
+            turn,
+            explorer.sessionId,
+            'Routing lives in src/acp/connection.ts.',
+          );
         })(),
       );
 
       // One stopped alone is not messaged again.
       if (!stoppedAlone.has(explorer.sessionId)) {
         await turn.say('I will ask it for the tests too. ');
-        await turn.client.notify('session/update', {
-          sessionId: explorer.sessionId,
-          update: {
-            sessionUpdate: 'session_message',
-            messageId: turn.callId('send'),
-            senderSessionId: turn.sessionId,
-            recipientSessionId: explorer.sessionId,
-            content: [
-              { type: 'text', text: 'Now find the tests that cover it.' },
-            ],
-          },
-        });
+        await linked(
+          turn.client,
+          turn.callId('send'),
+          turn.sessionId,
+          explorer.sessionId,
+          'Now find the tests that cover it.',
+        );
         await report(turn, working, explorer.sessionId, { state: 'running' });
         await alone(
           explorer,
@@ -1324,7 +1386,7 @@ export const SUBAGENTS = {
       const child = await announce(
         turn,
         working,
-        'tester (general-purpose)',
+        'general-purpose',
         'Run the test suite',
         'Run bun test and report what fails.',
       );
@@ -1372,7 +1434,7 @@ export const SUBAGENTS = {
     const child = await announce(
       turn,
       working,
-      'tester (general-purpose)',
+      'general-purpose',
       'Run the test suite',
       'Run bun test and report what fails.',
     );
@@ -1389,6 +1451,493 @@ export const SUBAGENTS = {
       stopReason: 'end_turn',
     });
     await turn.say('The tests passed.');
+
+    return 'end_turn';
+  },
+
+  // A launch's prompt over six rows, and a reply over two paragraphs.
+  async claudelongprompt(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Check the handover',
+      Array.from(
+        { length: 9 },
+        (_, step) =>
+          `${step + 1}. Check step ${step + 1} of the handover and report what it finds.`,
+      ).join('\n'),
+    );
+
+    await child.say('Checked.');
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await replied(
+      turn,
+      child.sessionId,
+      'Every step holds.\n\nStep 9 was the slowest to check.',
+    );
+    await turn.say('The handover holds.');
+
+    return 'end_turn';
+  },
+
+  // A launch's prompt with code above its fold and more below it.
+  async claudecodeprompt(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Check the build',
+      [
+        'Run this first.\n\n```sh\nbun test\n```',
+        ...Array.from({ length: 8 }, (_, step) => `Then step ${step + 1}.`),
+      ].join('\n\n'),
+    );
+
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('The build holds.');
+
+    return 'end_turn';
+  },
+
+  // A launch's short prompt with code, that the agent then lengthens under the
+  // same id, past the fold, once the test's file says so.
+  async claudepromptgrows(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Check the build',
+      'Run this.\n\n```sh\nbun test\n```',
+    );
+
+    await turn.say('Short so far. ');
+    await gateOpened(turn, GATE_RELEASE);
+    await linked(
+      turn.client,
+      launches.get(child.sessionId) ?? child.sessionId,
+      turn.sessionId,
+      child.sessionId,
+      [
+        'Run this.\n\n```sh\nbun test\n```',
+        ...Array.from({ length: 8 }, (_, step) => `Then step ${step + 1}.`),
+      ].join('\n\n'),
+    );
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('Long now.');
+
+    return 'end_turn';
+  },
+
+  // A launch's prompt that fits six rows wide and not narrow.
+  async claudewrapprompt(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Check the build',
+      `${'Check every step of the handover and report it. '.repeat(3)}\n\n\`\`\`sh\nbun test\n\`\`\``,
+    );
+
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('Done wrapping.');
+
+    return 'end_turn';
+  },
+
+  // A SendMessage to a child still at work: the adapter sees no resume, so the
+  // call comes after all, once, with its final status.
+  async claudesendrunning(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'Find the session layer',
+      'Find the routing.',
+    );
+
+    await call(
+      turn,
+      'send',
+      { title: 'SendMessage', kind: 'other' },
+      'completed',
+      'Message queued',
+    );
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await replied(turn, child.sessionId, 'It is the relay.');
+
+    return 'end_turn';
+  },
+
+  // A child that hands its report back: both views, with no `:reply`, and on
+  // its own session a one-option config update, its model as it runs.
+  async claudehandback(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'Explore',
+      'explorer',
+      'Find the routing and hand it back.',
+    );
+
+    await child.send({
+      sessionUpdate: 'config_option_update',
+      configOptions: [
+        {
+          id: 'model',
+          name: 'Model',
+          category: 'model',
+          type: 'select',
+          currentValue: 'child-model',
+          options: [{ value: 'child-model', name: 'Child model' }],
+        },
+      ],
+    });
+    await linked(
+      turn.client,
+      child.callId('handback'),
+      child.sessionId,
+      turn.sessionId,
+      'The relay in connection.ts owns the routing.',
+    );
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+
+    return 'end_turn';
+  },
+
+  // A lone failure that says why, with no answer.
+  async claudefailed(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      undefined,
+      'Run the test suite',
+      'Run bun test and report what fails.',
+    );
+
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'error',
+      error: { code: -32603, message: 'The build still fails.' },
+    });
+    await turn.say('It failed.');
+
+    return 'end_turn';
+  },
+
+  // A launch that leaves `run_in_background` unset, in the order Claude's
+  // adapter 0.99.1 was seen sending it live: its result as a `:reply` that says
+  // only it was launched, while the child still runs, then the child's hand-back.
+  async claudeunsetlaunch(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'general-purpose',
+      'Reply with ok',
+      'Reply with ok.',
+    );
+
+    await replied(
+      turn,
+      child.sessionId,
+      'Async agent launched successfully. (This tool result is internal metadata.)\n' +
+        `agentId: ${child.sessionId}\noutput_file: /tmp/agent-output`,
+    );
+    await linked(
+      turn.client,
+      child.callId('handback'),
+      child.sessionId,
+      turn.sessionId,
+      'ok',
+    );
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await turn.say('It said ok.');
+
+    return 'end_turn';
+  },
+
+  // A failure that says nothing of why, and a stop: neither answers.
+  async claudenoanswer(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const failing = await announce(
+      turn,
+      working,
+      undefined,
+      'Run the test suite',
+      'Run bun test and report what fails.',
+    );
+
+    await report(turn, working, failing.sessionId, {
+      state: 'idle',
+      stopReason: 'error',
+    });
+
+    const told = await announce(
+      turn,
+      working,
+      undefined,
+      'Watch the build',
+      'Watch the build.',
+    );
+
+    await report(turn, working, told.sessionId, {
+      state: 'idle',
+      stopReason: 'cancelled',
+    });
+    await turn.say('Neither answered.');
+
+    return 'end_turn';
+  },
+
+  // A child that launches one of its own, and has its reply, and then its own
+  // answer to its parent.
+  async claudenested(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const working: Working = new Set();
+    const child = await announce(
+      turn,
+      working,
+      'general-purpose',
+      'Review the layer',
+      'Review the session layer.',
+    );
+    const inner = await announce(
+      child,
+      working,
+      'Explore',
+      'Find the routing',
+      'Find the routing.',
+    );
+
+    await inner.say('The relay.');
+    await report(child, working, inner.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await replied(child, inner.sessionId, 'It is the relay.');
+    await child.say('Reviewed.');
+    await report(turn, working, child.sessionId, {
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    await replied(turn, child.sessionId, 'The layer holds.');
+
+    return 'end_turn';
+  },
+
+  // Subagents as Codex's adapter sends them from 2.4: an announcement with no
+  // state and perhaps no title, then each thing as it changes, alone: the
+  // title, the state, whether it can be stopped. One ends done and is renamed
+  // after, one fails.
+  async codexsubagents(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const told = (sessionId: string, fields: Partial<acp.SubagentUpdate>) =>
+      turn.send({ sessionUpdate: 'subagent_update', sessionId, ...fields });
+    const worker = new Turn(turn.client, subagentId(), turn.signal);
+
+    await told(worker.sessionId, { capabilities: {} });
+    await told(worker.sessionId, { title: 'worker' });
+    await worker.send({
+      sessionUpdate: 'session_info_update',
+      title: 'worker',
+    });
+    await worker.send({
+      sessionUpdate: 'config_option_update',
+      configOptions: [],
+    });
+    await told(worker.sessionId, { state: { state: 'running' } });
+    await told(worker.sessionId, { capabilities: { cancel: {} } });
+    await call(
+      worker,
+      'read',
+      {
+        title: 'Read README.md',
+        kind: 'read',
+        locations: [{ path: 'README.md' }],
+      },
+      'completed',
+    );
+    await worker.say('Read.');
+    await told(worker.sessionId, {
+      state: { state: 'idle', stopReason: 'end_turn' },
+    });
+    await told(worker.sessionId, { capabilities: { cancel: null } });
+    await told(worker.sessionId, { title: 'worker renamed' });
+
+    const failing = subagentId();
+
+    await told(failing, {
+      capabilities: {},
+      title: 'failing',
+      description: 'Fail at once',
+    });
+    await told(failing, { state: { state: 'running' } });
+    await told(failing, { capabilities: { cancel: {} } });
+    await told(failing, {
+      state: {
+        state: 'idle',
+        stopReason: 'error',
+        error: { code: -32603, message: 'Subagent work failed' },
+      },
+    });
+    await told(failing, { capabilities: { cancel: null } });
+    await turn.say('Both have ended.');
+
+    return 'end_turn';
+  },
+
+  // A subagent as Codex's 2.4 sends one, at work until a `session/cancel` on
+  // its own id or on the turn, its parent's turn going on after the first.
+  async codexsubagentstop(turn) {
+    if (!clientTakesSubagents) {
+      await turn.say('Subagents go only to a client that takes them.');
+
+      return 'end_turn';
+    }
+
+    const id = subagentId();
+    const told = (fields: Partial<acp.SubagentUpdate>) =>
+      turn.send({ sessionUpdate: 'subagent_update', sessionId: id, ...fields });
+    const stopped = Promise.withResolvers<void>();
+
+    // Sent at once, as a cancelled turn's are sent after its signal has aborted.
+    const ended = async () => {
+      for (const fields of [
+        { state: { state: 'idle', stopReason: 'cancelled' } },
+        { capabilities: { cancel: null } },
+      ]) {
+        await turn.client.notify('session/update', {
+          sessionId: turn.sessionId,
+          update: {
+            sessionUpdate: 'subagent_update',
+            sessionId: id,
+            ...fields,
+          },
+        });
+      }
+    };
+
+    // Its own, so a stop leaves no wait behind for the rest of the session.
+    const waiting = new AbortController();
+
+    claudeChildren.set(id, () => {
+      stopped.resolve();
+
+      return Promise.resolve();
+    });
+
+    try {
+      await told({ capabilities: {}, title: 'watcher' });
+      await told({ state: { state: 'running' } });
+      await told({ capabilities: { cancel: {} } });
+      await Promise.race([
+        stopped.promise,
+        pause(AbortSignal.any([turn.signal, waiting.signal]), 60_000),
+      ]);
+    } catch (error) {
+      await ended();
+
+      throw error;
+    } finally {
+      waiting.abort();
+      claudeChildren.delete(id);
+    }
+
+    await ended();
+    await turn.say('It stopped, and the turn goes on.');
 
     return 'end_turn';
   },

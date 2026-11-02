@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import { effortsFrom } from '../../src/session/efforts.ts';
 
 /** Codex's adapter's option, as 2.2.2 sends it. */

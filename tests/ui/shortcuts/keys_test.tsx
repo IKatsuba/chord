@@ -9,7 +9,7 @@ import * as harness from '../harness.tsx';
 import type {
   ElicitationPropertySchema,
   ElicitationSchema,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { ElicitationForm } from '../../../src/ui/dialogs/Form.tsx';
 import { PermissionPrompt } from '../../../src/ui/dialogs/Permission.tsx';
 import {

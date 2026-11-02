@@ -2,9 +2,10 @@
  * The release's last stage: the packed tarballs published to npm, the
  * platform packages first, then, once npm answers for each, the main one,
  * whose exact-version optionalDependencies must resolve; then, once npm
- * answers for all five, the version tagged and the tag pushed. What npm has
- * already is skipped, so a stopped publish is finished by running it again.
- * Never unpublish.
+ * answers for all five, the version tagged and the tag pushed, and a draft
+ * GitHub release made of it with the source archives. What npm has already is
+ * skipped, so a stopped publish is finished by running it again. Never
+ * unpublish, and never publish the draft: that is the owner's.
  *
  * npm asks the owner to authorise each publish in the terminal and the
  * browser, so each `npm publish` gets the terminal and is waited on however
@@ -24,6 +25,7 @@ import {
   said,
   waitPublished,
 } from './lib.ts';
+import { draftRelease, fetchedSource } from './source.ts';
 import { checkSum } from './sums.ts';
 
 /** Where the packed tarballs and their SHA256SUMS are. */
@@ -46,6 +48,8 @@ export async function publish(
   release: Release,
   { version, only }: PublishOptions,
 ): Promise<boolean> {
+  // Before anything npm cannot take back.
+  const archives = fetchedSource(release);
   let asked = false;
 
   const publishOne = (name: Package) => {
@@ -132,6 +136,7 @@ export async function publish(
   }
 
   tag(release, version);
+  draftRelease(release, version, archives);
 
   return true;
 }

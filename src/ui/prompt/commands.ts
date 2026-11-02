@@ -3,7 +3,7 @@
  * typed `/name` matches, which is highlighted, and what Tab and Enter do with
  * it. The window draws it and dispatches; nothing here touches a terminal.
  */
-import type { AvailableCommand } from '@agentclientprotocol/sdk';
+import type { AvailableCommand } from '@agentclientprotocol/sdk/unstable';
 import { Fzf } from 'fzf';
 import { agentNote, type ListedAgent, offeredAgents } from '../../agents.ts';
 

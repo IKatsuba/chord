@@ -14,7 +14,7 @@ import type {
   ToolCallContent,
   ToolCallLocation,
   ToolKind,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import type { PlanPhase, PlanTodo } from '../../acp/plans.ts';
 import type { Questions } from '../questions.ts';
 import type { OpenEscape, TerminalCursor } from '../terminal_text.ts';
@@ -344,6 +344,13 @@ export interface Subagent {
    */
   readonly prompt?: string;
   readonly promptId?: string;
+  /**
+   * Its parent's session said what it sent it, so a row above it, not a call,
+   * says what it was asked, and no call carries how it failed.
+   */
+  readonly addressed?: true;
+  /** Its adapter is Claude's: its title is its name, its description a role. */
+  readonly namedByTitle?: true;
   readonly state: SubagentState;
   /**
    * It announced it can be cancelled alone (ACP's `capabilities.cancel`):
@@ -409,6 +416,23 @@ export type Entry =
        * in place of `from`.
        */
       readonly byAgent?: true;
+    }
+  | {
+      /**
+       * A `session_message` between the transcript's agent and a subagent of
+       * its, in place of the tool call an adapter no longer sends for it: a
+       * launch's prompt, a message sent, a reply or a report.
+       */
+      readonly kind: 'agent_message';
+      readonly turnId: string;
+      readonly messageId: string;
+      readonly direction: 'to' | 'from';
+      /** The subagent's id, and its title as its updates last said it. */
+      readonly agentId: string;
+      readonly title?: string;
+      readonly text: string;
+      /** The first sent to it: its task, which folds as a task's prompt does. */
+      readonly launch?: true;
     }
   | {
       readonly kind: 'assistant' | 'thought';

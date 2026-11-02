@@ -3,7 +3,7 @@ import type {
   McpServer,
   SessionUpdate,
   ToolCallUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import { type OneshotOutcome, runOneshot } from './session/oneshot.ts';
 import { signInLines, signInOf } from './session/sign_in.ts';
 import {

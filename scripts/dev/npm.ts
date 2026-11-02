@@ -12,6 +12,18 @@ import { chmod, copyFile, mkdir, rm, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import manifest from '../../package.json' with { type: 'json' };
 import { platformPackage, SCOPE, TARGETS } from '../targets.ts';
+import { loadedNative } from './compile.ts';
+
+/**
+ * The notices of what OpenTUI's native library statically links, FFmpeg and
+ * zlib, which every binary embeds, and so every package that carries one
+ * passes on beside chord's LICENSE, from the native package it was built with.
+ */
+export const NATIVE_NOTICES = [
+  'LICENSE-FFMPEG',
+  'LICENSE-ZLIB',
+  'FFMPEG-SOURCE.md',
+] as const;
 
 const SHIM = `#!/usr/bin/env node
 // The \`chord\` command npm installs: it runs the binary of this machine's
@@ -100,13 +112,26 @@ export async function npm(): Promise<void> {
     await chmod(join(dir, 'bin', 'chord'), 0o755).catch(() => {});
 
     await copyFile(join(root, 'LICENSE'), join(dir, 'LICENSE'));
+
+    for (const notice of NATIVE_NOTICES) {
+      await copyFile(
+        join(
+          root,
+          'node_modules',
+          loadedNative(target.os, target.cpu, undefined),
+          notice,
+        ),
+        join(dir, notice),
+      );
+    }
+
     await writeJson(join(dir, 'package.json'), {
       name,
       ...common,
       description: `The chord binary for ${target.os}-${target.cpu}.`,
       os: [target.os],
       cpu: [target.cpu],
-      files: ['bin/'],
+      files: ['bin/', ...NATIVE_NOTICES],
     });
   }
 

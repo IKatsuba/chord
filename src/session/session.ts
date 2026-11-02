@@ -5,7 +5,7 @@ import type {
   PromptResponse,
   SessionNotification,
   SessionUpdate,
-} from '@agentclientprotocol/sdk';
+} from '@agentclientprotocol/sdk/unstable';
 import process from 'node:process';
 import { type Agent, openAgent } from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
@@ -24,7 +24,7 @@ import {
 import type { AgentOption } from './config.ts';
 import type { AgentEfforts } from './efforts.ts';
 import { ElicitationBridge } from './elicitations.ts';
-import { enricherRelay } from './enrich.ts';
+import { CLAUDE_ADAPTER, enricherRelay } from './enrich.ts';
 import { usageCountOf } from '../cost_counts.ts';
 import { ENRICHERS } from './enrichers.ts';
 import { type AgentModels, isModelState, modelConfigId } from './models.ts';
@@ -149,13 +149,13 @@ export interface Turn {
 
 /**
  * How a steer went: `injected` into the running turn, `startedNewTurn` as a
- * turn of the agent's own, or `refused`, the agent having done nothing with
+ * turn of the agent's own, as only an adapter that ignores `promptRequired`
+ * does (codex-acp before 2.4), or `refused`, the agent having done nothing with
  * it, as with no turn running.
  */
 export type SteerOutcome = 'injected' | 'startedNewTurn' | 'refused';
 
-/** The name Claude's adapter gives itself in `initialize`'s `agentInfo`. */
-export const CLAUDE_ADAPTER = '@agentclientprotocol/claude-agent-acp';
+export { CLAUDE_ADAPTER };
 
 /** One agent process and one ACP session in it, until `close()`. */
 export interface Session {

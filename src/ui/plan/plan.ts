@@ -4,7 +4,7 @@
  * folds. A finished plan leaves the list for the transcript when its turn
  * ends (`src/session/transcript/turn.ts`).
  */
-import type { PlanEntry } from '@agentclientprotocol/sdk';
+import type { PlanEntry } from '@agentclientprotocol/sdk/unstable';
 
 /** Claude Code's boxes, with a half-filled one for the step under way. */
 export const PLAN_MARKS = {

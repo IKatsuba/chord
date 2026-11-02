@@ -6,7 +6,10 @@ import { execFile } from 'node:child_process';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type McpServer, type SessionUpdate } from '@agentclientprotocol/sdk';
+import {
+  type McpServer,
+  type SessionUpdate,
+} from '@agentclientprotocol/sdk/unstable';
 import type { AgentOption } from '../../src/session/config.ts';
 import {
   Conversation,

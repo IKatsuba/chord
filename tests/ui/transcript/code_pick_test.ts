@@ -563,3 +563,18 @@ describe('CHD-559 U3 tester: streaming and isolated block listings', () => {
     ).toStrictEqual({ entry: 0, block: 0 });
   });
 });
+
+test("a launch's prompt lists no block, as a fold can hide its lines, and any other row between agents does", () => {
+  const row = (launch: boolean): Entry => ({
+    kind: 'agent_message',
+    turnId: 't',
+    messageId: 'm',
+    direction: 'to',
+    agentId: 'a',
+    text: '```sh\nrm -rf hidden\n```',
+    ...(launch ? { launch: true as const } : {}),
+  });
+
+  expect(listedBlocks([row(true)])).toStrictEqual([]);
+  expect(listedBlocks([row(false)])).toHaveLength(1);
+});

@@ -36,7 +36,7 @@ import {
   windowed,
   type WindowedAction,
 } from '../../src/ui/app/state.ts';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { endedLine } from '../../src/ui/transcript/ended.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
@@ -1740,7 +1740,7 @@ describe("the person's stop of a background agent is kept, so a resume says it a
         id = events.flatMap((event) =>
           event.type === 'update' &&
           event.update.sessionUpdate === 'subagent_update' &&
-          event.update.description === 'Run the test suite'
+          event.update.title === 'Run the test suite'
             ? [event.update.sessionId]
             : [],
         )[0];
@@ -2855,5 +2855,68 @@ describe('CHD-557 tester: record discovery boundaries and disappearing files', (
           .sort(),
       );
     });
+  });
+});
+
+describe("Claude's session messages in a record (CHD-561)", () => {
+  const update = (body: Record<string, unknown>) =>
+    ({ type: 'update', update: body }) as unknown as RecordEntry;
+  const announced = update({
+    sessionUpdate: 'subagent_update',
+    sessionId: 'a',
+    title: 'Find the routing',
+    state: { state: 'running' },
+  });
+  const rows = (entries: readonly RecordEntry[]) =>
+    recordActions(entries)
+      .reduce(
+        (state, action) =>
+          action.type === 'usage' ? state : reduceTranscript(state, action),
+        emptyTranscript,
+      )
+      .entries.flatMap((entry) =>
+        entry.kind === 'subagent'
+          ? ['block']
+          : entry.kind === 'agent_message'
+            ? [entry.direction]
+            : entry.kind === 'tool'
+              ? ['tool']
+              : [],
+      );
+
+  test('one on the new wire reads back with its rows', () => {
+    expect(
+      rows([
+        announced,
+        update({
+          sessionUpdate: 'session_message',
+          messageId: 'l',
+          senderSessionId: 'root',
+          recipientSessionId: 'a',
+          content: [{ type: 'text', text: 'Find it.' }],
+        }),
+        update({
+          sessionUpdate: 'session_message',
+          messageId: 'l:reply',
+          senderSessionId: 'a',
+          recipientSessionId: 'root',
+          content: [{ type: 'text', text: 'Found.' }],
+        }),
+      ]),
+    ).toStrictEqual(['to', 'block', 'from']);
+  });
+
+  test('an old one keeps its tool calls, and needs no rows', () => {
+    expect(
+      rows([
+        update({
+          sessionUpdate: 'tool_call',
+          toolCallId: 't',
+          title: 'Find(the routing)',
+          status: 'completed',
+        }),
+        announced,
+      ]),
+    ).toStrictEqual(['tool', 'block']);
   });
 });

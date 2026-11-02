@@ -7,6 +7,24 @@ import stripAnsi from 'strip-ansi';
 import { TAGLINE } from '../../../src/ui/app/start_layout.ts';
 import { parseTeam } from '../../../src/teams.ts';
 
+describe('CHD-561 tester: ANSI logo crop on slice-ansi 10', () => {
+  test('wide, combined and joined characters at the right edge keep their colour and fit', () => {
+    const green = '\x1b[38;2;71;231;165m';
+    const content = `${'█'.repeat(50)}界é👩‍💻██`;
+    const art = Array<string>(8).fill(
+      `${green}${' '.repeat(4)}${content}AFTER\x1b[39m`,
+    );
+    const cropped = logoRows([...art, '', TAGLINE].join('\n'));
+
+    for (const row of cropped) {
+      expect(stripAnsi(row)).toBe(content);
+      expect(stringWidth(row)).toBe(57);
+      expect(row).toContain(green);
+      expect(row).not.toContain('AFTER');
+    }
+  });
+});
+
 describe('CHD-407 R1 tester: screenshot team', () => {
   test('the dedicated team parses with the selected runtime and model pairs', async () => {
     const text = await readFile(

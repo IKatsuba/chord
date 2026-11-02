@@ -1,0 +1,24 @@
+ ▄▀▀▀   /tmp/chord-qa.mock
+ ▀▀     ? for shortcuts · /help
+
+ › look at the routing
+
+ → to Agent(Find the session layer)
+   ⎿  1. Check step 1 of the handover and report what it finds.
+      2. Check step 2 of the handover and report what it finds.
+      3. Check step 3 of the handover and report what it finds.
+      4. Check step 4 of the handover and report what it finds.
+      5. Check step 5 of the handover and report what it finds.
+      6. Check step 6 of the handover and report what it finds.
+      … +3 lines (ctrl+o to expand)
+
+ ⏺ Agent(Find the session layer)
+   ⎿  Read(docs/handover.md)
+
+ ››› Working… (3s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    background  main's agent running

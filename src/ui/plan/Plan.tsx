@@ -1,4 +1,4 @@
-import type { PlanEntry } from '@agentclientprotocol/sdk';
+import type { PlanEntry } from '@agentclientprotocol/sdk/unstable';
 import { useGap } from '../transcript/gap.ts';
 import { TextAttributes } from '@opentui/core';
 import { useSelectable } from '../app/context.ts';

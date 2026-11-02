@@ -386,10 +386,11 @@ binary.
   left beside it. A block is found on the line marked's `list_item` and
   `blockquote` tokens put it on, never by its text, so code that holds a
   fence line of its own stays as written. No list or quote renderer of our
-  own. markdansi's own limits stay: a nested item's wrapped
-  lines, and so a box under it, hang at the outer item's indent; a list made
-  only of code blocks is merged into code, bullets dropped, so its boxes
-  stand alone.
+  own. markdansi's own limit stays: a list made only of code blocks is merged
+  into code, bullets dropped, so its boxes stand alone. From 0.3.7 a nested
+  item's wrapped lines, and a box under it, hang two columns in from that
+  item's marker, which still leaves a numbered item's one left of its text
+  (CHD-49).
 - **An indented code block is drawn as a code block,** from the code marked
   hands over: markdansi reads one alone as a paragraph and runs its lines
   together.
@@ -2087,10 +2088,13 @@ the window. One agent process and one ACP v1 connection: start, `initialize`,
 sessions, prompts, the requests the agent sends, and a bounded close.
 
 - **`client()`, not `ClientSideConnection`.** The 2026-10-06 entry names
-  `ClientSideConnection`; in SDK 1.7 it is deprecated in favour of
-  `client().onRequest(...).connect(stream)`, which is what the fake agent's
-  `agent()` mirrors and what acpx 0.19.4 uses too. Same SDK, same
-  `ndJsonStream` on the agent's stdio.
+  `ClientSideConnection`; SDK 1.7 deprecates it and SDK 2.0 removes it in
+  favour of `client().onRequest(...).connect(stream)`, which is what the fake
+  agent's `agent()` mirrors and what acpx 0.19.4 uses too. Same SDK, same
+  `ndJsonStream` on the agent's stdio. From SDK 2.0 the default entry is stable
+  ACP v1 only; chord uses unstable features (plans, forks, subagents), so
+  everything imports `@agentclientprotocol/sdk/unstable`, as its migration
+  guide asks of one app and its in-process peers.
 - **Every message reaches one subscriber raw, before the SDK sees it.** A
   stream tap (`traffic.ts`) hands each JSON-RPC message, either way, to the
   subscriber in wire order, and the agent's stderr with them. The agent's
@@ -2376,7 +2380,7 @@ at 120×40 and 80×24 against the fake agent's `--tokens-only`.
   asked for and the agent's word holds. The fake's `--silent-set-mode` now
   answers the mode's config option that way too, which is what the window
   sends, so the Codex tests go through the enricher.
-- **@pydantic/genai-prices for prices and windows**, exact-pinned at 0.1.13
+- **@pydantic/genai-prices for prices and windows**, exact-pinned (0.2.1 now)
   as it is pre-1.0. Its data is in the package, so nothing is fetched and
   the data moves with the version, as the registry's does with its source;
   `updatePrices` is never called. It matches a model by rules per provider,
@@ -5312,10 +5316,11 @@ Each is how 0.5.17 behaves; an upgrade checks them again.
 - React takes a renderable out of the tree without destroying it, and a
   focused one goes on hearing keys: a textarea left focused sent its draft.
   The bridge's textarea blurs as it unmounts.
-- Every renderable is at least one cell high, so a box laid out to no rows
-  drew a row with everything in it on top of each other (the transcript
-  with `?`'s panel open at 80×24). A clipping box (`overflow='hidden'`)
-  reads Yoga's size when its own changes and draws nothing while it is none.
+- Before OpenTUI 0.8 every renderable was at least one cell high, so a box
+  laid out to no rows drew a row with everything in it on top of each other
+  (the transcript with `?`'s panel open at 80×24). From 0.8 it draws nothing
+  by itself; a clipping box (`overflow='hidden'`) still reads Yoga's size and
+  takes its children out of the tree while it is none, so they mount anew.
 - A box given a width or height in cells stops shrinking (OpenTUI's setter
   turns `flexShrink` 1 into 0); Ink's went on shrinking. The bridge sets it
   back after each new size.
@@ -5923,8 +5928,9 @@ What the bridge held that was never Ink's has a home of its own:
 - `prompt/TextArea.tsx`: the `<textarea>` with the terminal's foreground
   and cursor colour, focused a microtask late and blurred as it unmounts.
 - `app/Clip.tsx`: a box that draws nothing while it is laid out to no rows.
-  OpenTUI still draws every box at least a row high, so the transcript's
-  area keeps it.
+  OpenTUI still drew every box at least a row high then, so the transcript's
+  area keeps it. From 0.8 such a box draws nothing, one row to none still
+  fires no `onSizeChange`, and Clip stays for its children's mounting.
   **Widened 2026-10-19, the owner's consent (Q57, option 1; CHD-158 C6).**
   Clip learnt of a size laid out to nothing through `onSizeChange`. A box
   going from one row to none is drawn one cell high both before and after,
@@ -6164,8 +6170,8 @@ through `_session/steering`, the extension Claude's adapter (0.87.0) and
 Codex's (2.1.1, as the registry pins it; 1.10.0 the same) answer and
 advertise as `InitializeResponse._meta.steering.supported`. No new library:
 the ACP SDK sends a method its schema lacks through the same
-`connection.agent.request(method, params)` as the rest, which its
-deprecated `extMethod` now defers to, and nothing is hand-rolled on the
+`connection.agent.request(method, params)` as the rest, the replacement SDK
+2.0 names for the `extMethod` it removes, and nothing is hand-rolled on the
 wire. chord reads the advertisement in `connection.ts` and refuses to ask an
 agent that does not make it.
 
@@ -7310,8 +7316,8 @@ accounting is a separate advisory follow-up, not a subscription-routing gate.
   trials tested compile and lifecycle behavior. Select exact
   `codex-app-server-client@0.1.5` public `StdioTransport`/`AppServerClient`
   exports on existing `spawnGroup`, and official
-  `@anthropic-ai/claude-agent-sdk@0.3.311`'s experimental usage getter in a
-  same-binary isolated worker. Retain existing ACP/MCP SDKs, Zod and OpenTUI.
+  `@anthropic-ai/claude-agent-sdk@0.3.311`'s (0.3.316 now) experimental usage
+  getter in a same-binary isolated worker. Retain existing ACP/MCP SDKs, Zod and OpenTUI.
   CodexBar's reusable API loses quota-map buckets; cliMeter and the VS Code
   extension have no standalone fitting collector; Roost requires excluded
   credential access. Generic JSON-RPC clients do not fit Codex's framing

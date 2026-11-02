@@ -5,7 +5,7 @@
  * what was chord's estimate and what was never reported said rather than
  * guessed (CHD-373, CHD-378's option C, the owner's Q58).
  */
-import type { Cost } from '@agentclientprotocol/sdk';
+import type { Cost } from '@agentclientprotocol/sdk/unstable';
 import {
   isLead,
   membersOf,

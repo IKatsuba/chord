@@ -13,6 +13,7 @@ import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import {
   CodeBlockActions,
+  CodeClipped,
   CodeIds,
   ListedEntry,
   useColours,
@@ -303,6 +304,11 @@ function Buttons({ code, lit }: { code: Code; lit: boolean }) {
     button === 'copy'
       ? actions?.copy(code.copy)
       : code.run !== undefined && actions?.prompt(code.run);
+
+  // Nothing under a clip answers them, so they offer nothing.
+  if (useContext(CodeClipped)) {
+    return null;
+  }
 
   return (
     <box position='absolute' top={0} right={2} flexDirection='row' gap={1}>

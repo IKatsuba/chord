@@ -1,7 +1,7 @@
 /** The background's part of the window's state: its view, while open. */
 import type { Transcript } from '../../session/transcript/types.ts';
 import { askedIds } from '../dialogs/state.ts';
-import type { ItemRef } from './view.ts';
+import { type ItemRef, NO_STOP_HINT } from './view.ts';
 
 export interface BackgroundState {
   /**
@@ -75,6 +75,11 @@ export type BackgroundAction =
       readonly token: string;
       readonly hint: string;
     }
+  /**
+   * The agent at `focus` now offers a stop, which an agent that says so only
+   * after its announcement can, so a refusal saying it offers none is false.
+   */
+  | { readonly type: 'background_stop_offered'; readonly focus: ItemRef }
   /** `enter` on a monitor's row opened its detail. */
   | { readonly type: 'background_detail_opened'; readonly focus: ItemRef }
   /** `esc` or `←` in the detail went back to the rows, the `❯` where it was. */
@@ -216,6 +221,17 @@ export function reduceBackground(
               stopping: { focus: action.focus, token: action.token },
             },
           };
+    }
+    case 'background_stop_offered': {
+      const view = state.backgroundView;
+
+      if (view?.hint !== NO_STOP_HINT || !same(view.focus, action.focus)) {
+        return state;
+      }
+
+      const { hint: _, ...rest } = view;
+
+      return { ...state, backgroundView: rest };
     }
     case 'background_hinted': {
       const view = state.backgroundView;

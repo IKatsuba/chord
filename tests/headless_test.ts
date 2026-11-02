@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import {
   failureOf,
   type HeadlessOptions,

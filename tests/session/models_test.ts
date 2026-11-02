@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { SessionConfigOption } from '@agentclientprotocol/sdk';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import { modelName, modelsFrom, sameModels } from '../../src/session/models.ts';
 
 const MODEL_OPTION: SessionConfigOption = {

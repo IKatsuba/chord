@@ -133,6 +133,30 @@ export function foldMessage(
   return { lines: shown, hidden: kept.length - shown.length };
 }
 
+/** How many rows a body laid out to, and for which text at which width. */
+export interface BodyRows {
+  readonly rows: number;
+  readonly text: string;
+  readonly width: number;
+}
+
+/**
+ * Whether a body clipped to `MESSAGE_LINES` may hide anything: unless it was
+ * measured, for this very text at this width, as fitting. Until then it counts
+ * as hiding, as nothing hidden may be copied or run.
+ */
+export function mayHide(
+  measured: BodyRows | undefined,
+  text: string,
+  width: number,
+): boolean {
+  return (
+    measured?.text !== text ||
+    measured.width !== width ||
+    measured.rows > MESSAGE_LINES
+  );
+}
+
 /**
  * A monitor's event as its row draws it, `width` wide: the lines it printed,
  * verbatim, as a log's `*` and `_` are no emphasis, each wrapped after its

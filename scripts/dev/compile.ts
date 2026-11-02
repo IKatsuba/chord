@@ -22,6 +22,13 @@ export interface CompileOptions {
 const root = new URL('../..', import.meta.url).pathname;
 
 /**
+ * `bun install`'s selection of every platform's optional packages. A compile
+ * build keeps every OpenTUI native import, and Bun skips the packages whose
+ * `libc` is not the machine's on Linux, whatever `--os` and `--cpu` say.
+ */
+export const EVERY_PLATFORM = ['--os=*', '--cpu=*', '--libc=*'] as const;
+
+/**
  * OpenTUI's `react/jsx-dev-runtime` imports resolved to
  * `./jsx_dev_runtime.ts`. Its published JS builds elements with `jsxDEV`,
  * its ErrorBoundary's fallback among them, and with NODE_ENV production
@@ -137,7 +144,7 @@ export async function compile(args: CompileOptions): Promise<void> {
 
   // A binary embeds only the clipboard addon that is installed, which is
   // otherwise the host's alone, so a cross-compiled one could not read it.
-  run(['install', '--os=*', '--cpu=*']);
+  run(['install', ...EVERY_PLATFORM]);
 
   for (const target of targets) {
     const output = args.install

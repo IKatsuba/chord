@@ -4,7 +4,7 @@
  * ones too, and the window's total, each with a note (CHD-373 S4, CHD-378's C as settled for the build); a cell that does
  * not fit wraps inside itself, and nothing is cut (CHD-473).
  */
-import type { Cost } from '@agentclientprotocol/sdk';
+import type { Cost } from '@agentclientprotocol/sdk/unstable';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import type { ReportRow } from '../../session/transcript/types.ts';

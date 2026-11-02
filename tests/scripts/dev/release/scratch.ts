@@ -1,4 +1,6 @@
 import { createHash } from 'node:crypto';
+import { loadedNative } from '../../../../scripts/dev/compile.ts';
+import { TARGETS } from '../../../../scripts/targets.ts';
 import {
   chmodSync,
   existsSync,
@@ -46,6 +48,49 @@ export function executable(path: string, body: string): void {
   symlinkSync(file, path);
 }
 
+/** The archives the native packages name here, and what curl fetches of them. */
+export const FFMPEG_URL = 'https://ffmpeg.example/releases/ffmpeg-9.0.2.tar.xz';
+export const ZLIB_URL = 'https://zlib.example/fossils/zlib-1.3.2.tar.gz';
+
+const fetched = (url: string) => `source of ${url}`;
+const hash = (text: string) => createHash('sha256').update(text).digest('hex');
+
+/** FFMPEG-SOURCE.md as OpenTUI's native packages lay it out. */
+export const SOURCE_NOTES = `# FFmpeg
+
+- Source: ${FFMPEG_URL}
+- SHA-256: \`${hash(fetched(FFMPEG_URL))}\`
+- License: LGPL-2.1-or-later (\`COPYING.LGPLv2.1\`)
+- zlib 1.3.2: ${ZLIB_URL}
+- zlib SHA-256: \`${hash(fetched(ZLIB_URL))}\`
+- NASM 3.02 (not linked): https://nasm.example/nasm-3.02.tar.xz
+`;
+
+/** Every target's native package under `root`, with `notes`. */
+export function nativeNotes(root: string, notes = SOURCE_NOTES): void {
+  for (const target of TARGETS) {
+    const dir = join(
+      root,
+      'node_modules',
+      loadedNative(target.os, target.cpu, undefined),
+    );
+
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, 'FFMPEG-SOURCE.md'), notes);
+  }
+}
+
+/** What a pack run leaves in dist/release/source/ under `root`. */
+export function fetchedArchives(root: string): void {
+  const dir = join(root, 'dist', 'release', 'source');
+
+  mkdirSync(dir, { recursive: true });
+
+  for (const url of [FFMPEG_URL, ZLIB_URL]) {
+    writeFileSync(join(dir, url.slice(url.lastIndexOf('/') + 1)), fetched(url));
+  }
+}
+
 /**
  * A release on a scratch directory: its root, a bin directory first on PATH
  * for the commands a test fakes, and what it printed and slept.
@@ -74,6 +119,16 @@ export function scratch(): Scratch {
   mkdirSync(bin);
   // npm runs as `node <npm>`: this node runs a faked npm with bash.
   executable(join(bin, 'node'), '#!/bin/bash\nexec /bin/bash "$@"\n');
+  // Nothing here reaches GitHub or the network: `gh` logs what it was asked,
+  // `curl` writes what the notes' sums expect.
+  executable(
+    join(bin, 'gh'),
+    `#!/bin/bash\nprintf '%s\\n' "$*" >>'${join(place, 'gh.log')}'\necho https://github.example/draft\n`,
+  );
+  executable(
+    join(bin, 'curl'),
+    `#!/bin/bash\nprintf 'source of %s' "\${@: -1}" >"\${@: -2:1}"\n`,
+  );
 
   return {
     place,

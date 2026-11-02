@@ -7,7 +7,7 @@ import { expect } from 'bun:test';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import type { SessionUpdate } from '@agentclientprotocol/sdk';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { run } from '../fixtures/recorder.ts';

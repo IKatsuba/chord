@@ -3,6 +3,7 @@
  * platform's native packages, and every binary, built on this arm64 Mac.
  */
 import { join } from 'node:path';
+import { EVERY_PLATFORM } from '../compile.ts';
 import { die, type Release, run } from './lib.ts';
 import { natives as signNatives } from './sign.ts';
 
@@ -28,7 +29,7 @@ export function natives(release: Release): void {
     run(
       release,
       'bun',
-      ['install', '--frozen-lockfile', '--os=*', '--cpu=*'],
+      ['install', '--frozen-lockfile', ...EVERY_PLATFORM],
       loud,
     ).status !== 0
   ) {

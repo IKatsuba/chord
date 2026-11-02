@@ -1,7 +1,7 @@
 /**
  * Commands run as Codex's adapter and Claude's run them, with their terminals.
  */
-import * as acp from '@agentclientprotocol/sdk';
+import * as acp from '@agentclientprotocol/sdk/unstable';
 import { BASH_OUTPUT, CUT_OUTPUT, SHELL_OUTPUT } from '../../terminals.ts';
 import { clientTerminalOutput } from '../client.ts';
 import { STEP_MS } from '../options.ts';

@@ -20,7 +20,7 @@ describe('a request between turns (CHD-158)', () => {
     withWindow(async (window) => {
       await send(window, 'claudebetween');
       await window.shows(
-        'Agent(tester (general-purpose)) asks · between turns',
+        'Agent(Run the whole test suite) asks · between turns',
       );
       await window.shows('ctrl+x a to answer');
 
@@ -45,7 +45,7 @@ describe('a request between turns (CHD-158)', () => {
 
       // The form after it waits the same way, above the prompt.
       await window.shows(
-        'Agent(tester (general-purpose)) asks for input · between turns',
+        'Agent(Run the whole test suite) asks for input · between turns',
       );
 
       frame = window.frame();
@@ -79,7 +79,7 @@ describe('a request between turns (CHD-158)', () => {
       await leader(window, 'a');
       await window.press('1');
       await window.shows(
-        'Agent(tester (general-purpose)) asks for input · between turns',
+        'Agent(Run the whole test suite) asks for input · between turns',
       );
 
       const held = window.frame();
@@ -121,7 +121,7 @@ describe('a request between turns (CHD-158)', () => {
 
         const frame = window.frame();
 
-        expect(frame).toContain('Agent(tester (general-purpose)) asks');
+        expect(frame).toContain('Agent(Run the whole test suite) asks');
         expect(frame).toContain('between turns');
         // Never cut from the left, as the row in a turn was.
         expect(frame).not.toMatch(/│ …/);

@@ -525,14 +525,10 @@ function WorkDetail({
 
     if (box !== null) {
       // Following, at the end view as this frame lays it out. A scroll the
-      // scrollbox clamps to limits it has yet to lay out lands a frame
-      // later, which is asked for, as nothing else may draw one.
+      // scrollbox clamps to limits it has yet to lay out, OpenTUI applies
+      // again once they are.
       if (following.current && box.scrollTop !== wanted.current) {
         box.scrollTo(wanted.current);
-
-        if (box.scrollTop !== wanted.current) {
-          box.requestRender();
-        }
       }
 
       setAt(box.scrollTop);

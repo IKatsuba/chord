@@ -6,7 +6,7 @@
  */
 import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
-import type { McpServer } from '@agentclientprotocol/sdk';
+import type { McpServer } from '@agentclientprotocol/sdk/unstable';
 import { type DefinedServer, type Ignored, transportOf } from '../../mcp.ts';
 import { type HeldBack, takenWords } from '../../session/servers.ts';
 import { toolNames } from '../../server/tools.ts';

@@ -90,7 +90,8 @@ the runtime supports it. `/clear` starts the picked agent afresh.
 ### Subagents, folded
 
 When the agent fans out, its subagents run as one tree; ctrl+o shows their
-whole task, work and later messages. Claude, Codex and Cursor subagents
+whole task and work. Claude launches and messages appear as
+`→ to Agent(<title>)` and `← from Agent(<title>)` rows. Claude, Codex and Cursor subagents
 join monitors and spawned tasks in the `background` summary under the
 agents list. From an empty prompt, ↓ past the agents reaches it; Enter opens
 a frame above the prompt, at most half the screen. Enter shows the item's
@@ -208,9 +209,13 @@ with fixture settings and sessions and the scripted test agent.
 
 ## Licence
 
-chord's code is [MIT](LICENSE). The Chorded name and the chevron mark are
-trademarks of Igor Katsuba and are not covered by the licence; a fork should
-draw its own ([TRADEMARKS.md](TRADEMARKS.md)).
+chord's code is [MIT](LICENSE). Its binary includes FFmpeg under
+LGPL-2.1-or-later through OpenTUI. npm platform packages include
+`LICENSE-FFMPEG`, `LICENSE-ZLIB` and `FFMPEG-SOURCE.md` beside chord's
+`LICENSE`; [the guide](docs/guide.md#rebuilding-with-a-modified-libopentui)
+explains how to rebuild with a modified library. The Chorded name and
+chevron mark are trademarks of Igor Katsuba, outside the licence; a fork
+should draw its own ([TRADEMARKS.md](TRADEMARKS.md)).
 
 chord is the open sibling of [Chorded](https://chorded.app), a native macOS
 workspace for agent sessions driven by key chords.

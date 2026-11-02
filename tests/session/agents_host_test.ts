@@ -14,6 +14,7 @@ import {
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
 import type { Place } from '../../src/session/place.ts';
+import type { Caller, WindowView } from '../../src/server/tools.ts';
 import { heldSession, until } from './conversation_fake.ts';
 
 const HOST = fileURLToPath(
@@ -402,5 +403,241 @@ describe('the host, with no window', () => {
 
     expect(found?.name).toBe('bugfix');
     expect(found?.shown).toBe(join('.chord', 'teams', 'bugfix.md'));
+  });
+});
+
+describe('messages between agents', () => {
+  /** `conversation`'s `tell` kept: who said what, as `sent` answers. */
+  const heardBy = (conversation: Conversation) => {
+    const said: [string, string][] = [];
+
+    conversation.tell = (from, text) => {
+      said.push([from.name, text]);
+
+      return 'sent';
+    };
+
+    return said;
+  };
+
+  const asMain = (key: number): Caller => ({
+    role: 'person',
+    key,
+    window: {} as WindowView,
+  });
+  const asChild = (key: number, agent: string, team?: 'lead' | 'member') =>
+    ({
+      role: 'child',
+      key,
+      agent,
+      ...(team === undefined ? {} : { team }),
+      window: {} as WindowView,
+    }) as Caller;
+
+  test('main reaches its child, by id or name, as main', async () => {
+    const { host, key, open } = await withMain();
+    const child = open('one');
+    const said = heardBy(host.conversationAt(child)!);
+
+    expect(host.tell(asMain(key), 'one', 'hello')).toEqual({
+      delivered: 'sent',
+      to: 'one',
+    });
+    expect(said).toEqual([['main', 'hello']]);
+    expect(host.tell(asMain(key), 'who', 'hello')).toEqual({
+      error: 'No agent who is open in this session; list_sessions names them',
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a message to a child still starting waits with what it holds', async () => {
+    const { host, key, open } = await withMain();
+    const child = open('one');
+
+    host.early.set(child, []);
+
+    expect(host.tell(asMain(key), 'one', 'early')).toEqual({
+      delivered: 'queued',
+      to: 'one',
+    });
+    expect(host.early.get(child)).toEqual([
+      [{ name: 'main', reachable: true }, 'early'],
+    ]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('team agents reach their lead, members and main directly', async () => {
+    const { host, key, open } = await withMain();
+    const lead = open('lead', { team: 'bugfix' });
+    const member = open('member', { team: 'bugfix', lead: 'lead' });
+    const toLead = heardBy(host.conversationAt(lead)!);
+    const toMember = heardBy(host.conversationAt(member)!);
+    const toMain = heardBy(host.conversationAt(key)!);
+
+    expect(host.tell(asChild(key, 'member', 'member'), 'lead', 'hi')).toEqual({
+      delivered: 'sent',
+      to: 'lead',
+    });
+    expect(host.tell(asChild(key, 'lead', 'lead'), 'member', 'go')).toEqual({
+      delivered: 'sent',
+      to: 'member',
+    });
+    expect(host.tell(asChild(key, 'lead', 'lead'), 'main', 'done')).toEqual({
+      delivered: 'sent',
+      to: 'main',
+    });
+    expect(toLead).toEqual([['member', 'hi']]);
+    expect(toMember).toEqual([['lead', 'go']]);
+    expect(toMain).toEqual([['lead', 'done']]);
+
+    host.dropChild(member);
+
+    expect(host.tell(asChild(key, 'lead', 'lead'), 'member', 'go')).toEqual({
+      error: 'member is closed; open_agent opens it again',
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test("a child's message goes to main, and none once it closed", async () => {
+    const { host, key, open } = await withMain();
+    const child = open('one');
+    const said = heardBy(host.conversationAt(key)!);
+
+    expect(host.message(asChild(key, 'one'), 'report')).toEqual({
+      delivered: 'sent',
+    });
+    expect(said).toEqual([['one', 'report']]);
+
+    host.dropChild(child);
+
+    expect(host.message(asChild(key, 'one'), 'late')).toEqual({
+      error: 'You are closed; nothing more reaches your parent',
+    });
+
+    await host.sessions.closeAll();
+  });
+});
+
+describe('closing and clearing by a tool', () => {
+  const caller = (key: number): Caller => ({
+    role: 'person',
+    key,
+    window: {} as WindowView,
+  });
+
+  test('close_agent closes, redraws, and says what closed or why not', async () => {
+    let redraws = 0;
+    const { host, key, open } = await withMain({}, { redraw: () => redraws++ });
+
+    open('one');
+
+    expect(host.closeAgent(caller(key), 'one')).toEqual({ closed: 'one' });
+    expect(redraws).toBe(1);
+    expect(host.closeAgent(caller(key), 'one')).toEqual({
+      error: 'one is closed; open_agent starts another',
+    });
+    expect(redraws).toBe(1);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a clear asks the driver for the queue, holds what comes, settles once up', async () => {
+    const order: string[] = [];
+    const { host, key, told, open } = await withMain(
+      {},
+      {
+        queueBack: (at, typed) => order.push(`queue ${at} ${typed}`),
+        stopCommand: (at) => order.push(`stop ${at}`),
+      },
+    );
+    const child = open('one');
+
+    await until(() => host.conversationAt(child)?.session !== undefined);
+
+    const clearing = host.clearAgent(caller(key), 'one');
+
+    expect(order).toEqual([`queue ${child} undefined`, `stop ${child}`]);
+    expect(host.early.get(child)).toEqual([]);
+    expect(told.at(-1)).toMatchObject({
+      type: 'spend_closing',
+      from: child,
+      place: { name: 'one', kind: 'agent', runtime: 'fake' },
+    });
+
+    expect(
+      host.clearedHeard(child, { type: 'connected' } as ConversationEvent),
+    ).toBe(true);
+    expect(await clearing).toEqual({ cleared: 'one', id: 'one' });
+    expect(host.early.has(child)).toBe(false);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a second clear under way is refused', async () => {
+    const { host, key, open } = await withMain();
+    const child = open('one');
+
+    await until(() => host.conversationAt(child)?.session !== undefined);
+
+    const first = host.clearAgent(caller(key), 'one');
+
+    expect(await host.clearAgent(caller(key), 'one')).toEqual({
+      error: 'Could not clear one: it is being cleared already',
+    });
+
+    host.clearedHeard(child, { type: 'connected' } as ConversationEvent);
+    await first;
+    await host.sessions.closeAll();
+  });
+
+  test('what waited on a clear that fails is said to be dropped', async () => {
+    const { host, key, open } = await withMain();
+    const child = open('one');
+
+    await until(() => host.conversationAt(child)?.session !== undefined);
+
+    const clearing = host.clearAgent(caller(key), 'one');
+
+    host.early.get(child)!.push([{ name: 'lead', reachable: true }, 'late']);
+    host.clearedHeard(child, {
+      type: 'connect_failed',
+      message: 'no room',
+    } as ConversationEvent);
+
+    expect(await clearing).toEqual({
+      error:
+        'Could not clear one: no room. 1 queued message from lead was not delivered.',
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test("the person's clear tells its parent", async () => {
+    const { host, key, open } = await withMain();
+    const child = open('one');
+    const said: string[] = [];
+
+    await until(() => host.conversationAt(child)?.session !== undefined);
+
+    host.conversationAt(key)!.deliver = (_, text) => {
+      said.push(text);
+
+      return 'sent';
+    };
+
+    const clearing = host.clearByPerson(host.childOf(key, 'one')!);
+
+    host.clearedHeard(child, { type: 'connected' } as ConversationEvent);
+
+    expect(await clearing).toBeUndefined();
+    expect(said).toHaveLength(1);
+    expect(said[0]).toStartWith(
+      "The person cleared one's context (fake, id one)",
+    );
+
+    await host.sessions.closeAll();
   });
 });

@@ -7,7 +7,13 @@
 import { relative } from 'node:path';
 import type { Wait } from '../notify.ts';
 import { Runtimes, sessionProbe } from '../server/runtimes.ts';
-import type { WindowView } from '../server/tools.ts';
+import type {
+  Caller,
+  ClearAnswer,
+  CloseAnswer,
+  MessageAnswer,
+  WindowView,
+} from '../server/tools.ts';
 import { homePath, type TeamSelectionPolicy } from '../settings.ts';
 import {
   findTeams,
@@ -35,6 +41,7 @@ import {
   type ChildInfo,
   isLead,
   membersOf,
+  messageRecipients,
   ownedBy,
   shownKey,
   type StartedAgents,
@@ -109,8 +116,18 @@ export interface AgentsPort {
   readonly stateOf: (key: number) => FoldedSession | undefined;
   /** Starts the box afresh; no window, none. */
   readonly redraw?: () => void;
+  /**
+   * The person's own prompts queued in session `key` back into its box, after
+   * `typed`, or else what is typed there; no window, none.
+   */
+  readonly queueBack?: (key: number, typed: string | undefined) => void;
   /** Stops the command running in session `key`; no window, none. */
   readonly stopCommand?: (key: number) => void;
+}
+
+/** `a, b and c`. */
+export function andList(names: readonly string[]): string {
+  return new Intl.ListFormat('en', { type: 'conjunction' }).format(names);
 }
 
 export function createAgentsHost(
@@ -502,6 +519,440 @@ export function createAgentsHost(
     }
   };
 
+  /**
+   * An event of child `key` while it is being cleared, which is no first
+   * start: its fresh session up, failed or closing settles the clear, and
+   * what waited for it goes then. Whether it was being cleared (CHD-476).
+   */
+  const clearedHeard = (key: number, event: ConversationEvent): boolean => {
+    const cleared = clearing.get(key);
+
+    if (cleared === undefined) {
+      return false;
+    }
+
+    if (
+      event.type === 'connected' ||
+      event.type === 'connect_failed' ||
+      event.type === 'closing'
+    ) {
+      const waited = early.get(key) ?? [];
+
+      early.delete(key);
+      clearing.delete(key);
+
+      // After the event is drawn, as a first start's messages go.
+      if (event.type === 'connected') {
+        queueMicrotask(() => {
+          const child = agentOf(sessions.agents, key)?.child;
+
+          for (const [from, text] of waited) {
+            if (child !== undefined) {
+              deliverTo(child, from, text);
+            }
+          }
+        });
+      }
+
+      // Up, they go; failed or closed, they are dropped, and said so.
+      cleared(
+        event.type === 'connected'
+          ? undefined
+          : event.type === 'closing'
+            ? 'it was closed'
+            : event.message,
+        event.type === 'connected' ? [] : waited.map(([from]) => from),
+      );
+    }
+
+    return true;
+  };
+
+  /**
+   * A `send_message` to child `key`: into its running turn, a turn there,
+   * queued, or held until it is up; `queued` is called if a message sent
+   * into its turn goes as the next turn after all.
+   */
+  const deliverTo = (
+    child: Child<Conversation>,
+    from: MessageFrom,
+    text: string,
+    queued?: () => void,
+  ): 'sent' | 'queued' | undefined => {
+    const held = early.get(child.key);
+
+    if (held !== undefined) {
+      held.push([from, text]);
+
+      return 'queued';
+    }
+
+    return child.conversation.tell(from, text, queued);
+  };
+
+  /** `deliverTo`'s answer to the sender: a refusal when nothing went. */
+  const sentTo = (
+    child: Child<Conversation>,
+    from: MessageFrom,
+    text: string,
+    queued?: () => void,
+  ): MessageAnswer => {
+    const delivered = deliverTo(child, from, text, queued);
+
+    return delivered === undefined
+      ? { error: `${child.name} is closing; nothing reaches it` }
+      : { delivered, to: child.name };
+  };
+
+  /** How the parent's messages read to a child: from `main`. */
+  const MAIN: MessageFrom = { name: 'main', reachable: true };
+
+  /**
+   * A message to `to`: a parent's to its child, or a team agent's, as
+   * `teamTell` routes it; a turn there, or queued.
+   */
+  const tell = (
+    caller: Caller,
+    to: string,
+    text: string,
+    queued?: () => void,
+  ): MessageAnswer => {
+    if (caller.team !== undefined) {
+      return teamTell(caller, to, text, queued);
+    }
+
+    const agents = ownedBy(sessions.agents, caller.key);
+    const target =
+      agents &&
+      messageRecipients(agents, caller.key).find(
+        (each) => each.id === to || each.name === to,
+      );
+    const child =
+      target && agents?.children.find((each) => each.key === target.key);
+
+    if (child === undefined) {
+      return { error: noChild(caller.key, to) };
+    }
+
+    return sentTo(child, MAIN, text, queued);
+  };
+
+  /**
+   * A team agent's message, straight to whom it names, never routed through
+   * the lead: a lead's to `main`, to one of its open members, which hear it
+   * from their parent, or to another run's lead; a member's to its lead or
+   * to another open member of its team. Nothing counts them.
+   */
+  const teamTell = (
+    caller: Caller,
+    to: string,
+    text: string,
+    queued?: () => void,
+  ): MessageAnswer => {
+    const agents = ownedBy(sessions.agents, caller.key);
+    const self =
+      caller.agent === undefined
+        ? undefined
+        : childOf(caller.key, caller.agent);
+
+    if (agents === undefined || self === undefined) {
+      return { error: 'You are closed; nothing more reaches anyone' };
+    }
+
+    const from: MessageFrom = {
+      name: self.name,
+      runtime: self.runtime,
+      reachable: true,
+    };
+    const named = (child: ChildInfo) => child.id === to || child.name === to;
+    const lead = isLead(self)
+      ? self
+      : agents.children.find((each) => each.id === self.lead);
+
+    if (lead === undefined) {
+      return { error: 'Your lead has closed; nothing more reaches it' };
+    }
+
+    const targets = messageRecipients(agents, self.key);
+    const target = targets.find((each) => each.id === to || each.name === to);
+
+    if (target?.key === agents.main.key) {
+      const delivered = conversationAt(agents.main.key)?.tell(
+        from,
+        text,
+        queued,
+      );
+
+      return delivered === undefined
+        ? { error: 'main has closed' }
+        : { delivered, to: 'main' };
+    }
+
+    const member =
+      target &&
+      agents.children.find(
+        (each) => each.key === target.key && each.lead === lead.id,
+      );
+
+    if (member !== undefined) {
+      return sentTo(
+        member,
+        self === lead ? { name: lead.name, reachable: true } : from,
+        text,
+        queued,
+      );
+    }
+
+    const other =
+      target && agents.children.find((each) => each.key === target.key);
+
+    if (other !== undefined) {
+      return sentTo(other, from, text, queued);
+    }
+
+    const closed = agents.closed.findLast(
+      (each) =>
+        named(each) &&
+        (each.lead === lead.id || (self === lead && isLead(each))),
+    );
+
+    if (closed !== undefined) {
+      return {
+        error:
+          closed.lead === undefined
+            ? `${closed.name} is closed`
+            : `${closed.name} is closed; ${
+                self === lead ? 'open_agent opens' : `${lead.name} can open`
+              } it again`,
+      };
+    }
+
+    return {
+      error: `No agent ${to} is open for you; you reach ${andList(targets.map((each) => each.name))}`,
+    };
+  };
+
+  /**
+   * `close_agent`: the parent closes its child `to`, a lead's with its
+   * members, and is told nothing; a lead closes one of its members.
+   */
+  const closeAgent = (caller: Caller, to: string): CloseAnswer => {
+    const lead =
+      caller.team === 'lead' && caller.agent !== undefined
+        ? childOf(caller.key, caller.agent)
+        : undefined;
+    const agents = ownedBy(sessions.agents, caller.key);
+    const child =
+      lead === undefined
+        ? ownChild(caller.key, to)
+        : agents &&
+          membersOf(agents, lead.id).find(
+            (each) => each.id === to || each.name === to,
+          );
+
+    if (child === undefined) {
+      return {
+        error:
+          lead === undefined
+            ? noChild(caller.key, to)
+            : `No member ${to} of yours is open`,
+      };
+    }
+
+    dropChild(child.key);
+    (lead?.conversation ?? conversationAt(caller.key))?.agentClosed(child.id);
+    port.redraw?.();
+
+    return { closed: child.name };
+  };
+
+  /**
+   * Clears `child`'s context (CHD-476): its session let go as main's /clear
+   * lets main's, a fresh one in its place under the same id and name, which
+   * runs nothing until its next message, its first again. Settles once that
+   * session is up, with why not if it is not, and the messages queued to it
+   * from others that were dropped, said so.
+   */
+  const clearChild = async (
+    child: Child<Conversation>,
+    typed?: string,
+  ): Promise<{ readonly failed?: string; readonly dropped?: string }> => {
+    // Queued in its session, or held while it still starts.
+    if (clearing.has(child.key)) {
+      return { failed: 'it is being cleared already' };
+    }
+
+    // Queued or held in its session, or held while it still starts.
+    const before = [
+      ...(early.get(child.key) ?? []).map(([from]) => from),
+      ...child.conversation.queuedFrom,
+    ];
+    const up = Promise.withResolvers<{
+      readonly failed?: string;
+      readonly later: readonly MessageFrom[];
+    }>();
+
+    // The person's own prompts queued for it come back into its box, their
+    // images and held output with them, whoever clears it.
+    port.queueBack?.(child.key, typed);
+
+    clearing.set(child.key, (failed, later = []) =>
+      up.resolve({ ...(failed === undefined ? {} : { failed }), later }),
+    );
+    // What comes while it restarts waits for the fresh session.
+    early.set(child.key, []);
+    port.stopCommand?.(child.key);
+    keepChild(child, true)(child.conversation.clear(parts.get(child.key)));
+
+    const { failed, later } = await up.promise;
+    // Those sent while it restarted count too when it did not come up.
+    const others = [...before, ...later].map((from) => from.name);
+    const dropped =
+      others.length === 0
+        ? undefined
+        : `${others.length} queued message${others.length === 1 ? '' : 's'} ` +
+          `from ${andList([...new Set(others)])} ` +
+          `${others.length === 1 ? 'was' : 'were'} not delivered.`;
+
+    return {
+      ...(failed === undefined ? {} : { failed }),
+      ...(dropped === undefined ? {} : { dropped }),
+    };
+  };
+
+  /** Why `name` was not cleared, and the messages to it that went nowhere. */
+  const notCleared = (
+    name: string,
+    failed: string,
+    dropped: string | undefined,
+  ) =>
+    `Could not clear ${name}: ${failed}${dropped === undefined ? '' : `. ${dropped}`}`;
+
+  /**
+   * The person's clear of `child`: as `clearChild`, and its parent told
+   * once it is up, as it did not ask; a fork has none. Why not, if not.
+   */
+  const clearByPerson = async (
+    child: Child<Conversation>,
+  ): Promise<string | undefined> => {
+    const { failed, dropped } = await clearChild(child, '');
+
+    if (failed !== undefined) {
+      return notCleared(child.name, failed, dropped);
+    }
+
+    const model =
+      conversationAt(child.key)?.session?.models()?.current ?? child.model;
+    const described = `${[child.runtime, model]
+      .filter((part) => part !== undefined)
+      .join(' · ')}, id ${child.id}`;
+
+    parentOf(child)?.deliver(
+      { name: 'chord' },
+      `The person cleared ${child.name}'s context (${described}). It is ` +
+        'open with a fresh session and knows nothing of earlier turns; ' +
+        `your next message is its first.${dropped === undefined ? '' : ` ${dropped}`}`,
+    );
+
+    return undefined;
+  };
+
+  /**
+   * `clear_agent`: the caller clears a child of its own, found as
+   * `close_agent` finds it, and hears once its fresh session is up.
+   */
+  const clearAgent = async (
+    caller: Caller,
+    to: string,
+  ): Promise<ClearAnswer> => {
+    const lead =
+      caller.team === 'lead' && caller.agent !== undefined
+        ? childOf(caller.key, caller.agent)
+        : undefined;
+    const agents = ownedBy(sessions.agents, caller.key);
+    const child =
+      lead === undefined
+        ? ownChild(caller.key, to)
+        : agents &&
+          membersOf(agents, lead.id).find(
+            (each) => each.id === to || each.name === to,
+          );
+
+    if (child === undefined) {
+      return {
+        error:
+          lead === undefined
+            ? noChild(caller.key, to)
+            : `No member ${to} of yours is open`,
+      };
+    }
+
+    const { failed, dropped } = await clearChild(child);
+
+    return failed === undefined
+      ? {
+          cleared: child.name,
+          id: child.id,
+          ...(dropped === undefined ? {} : { dropped }),
+        }
+      : { error: notCleared(child.name, failed, dropped) };
+  };
+
+  /**
+   * A child's message to its parent: into its running turn, a turn there,
+   * or queued.
+   */
+  const message = (
+    caller: Caller,
+    text: string,
+    queued?: () => void,
+  ): MessageAnswer => {
+    if (caller.agent !== undefined) {
+      const child = childOf(caller.key, caller.agent);
+      const agents = ownedBy(sessions.agents, caller.key);
+      const target =
+        agents &&
+        child &&
+        messageRecipients(agents, child.key).find(
+          (each) => each.key === agents.main.key,
+        );
+      const parent = target && conversationAt(target.key);
+
+      if (conversationAt(caller.key) === undefined) {
+        return { error: 'The session that opened you has closed' };
+      }
+
+      if (child === undefined) {
+        return { error: 'You are closed; nothing more reaches your parent' };
+      }
+
+      const delivered = parent?.tell(
+        { name: child.name, runtime: child.runtime, reachable: true },
+        text,
+        queued,
+      );
+
+      return delivered === undefined
+        ? { error: 'The session that opened you has closed' }
+        : { delivered };
+    }
+
+    // A task a child started reports to that child.
+    const owner = callerConversation(caller.key, caller.by);
+    const task =
+      caller.task === undefined ? undefined : owner?.task(caller.task);
+
+    if (task === undefined || !task.running) {
+      return { error: 'Your task has ended; nothing more reaches its parent' };
+    }
+
+    const delivered = owner?.tell(task.from, text, queued);
+
+    return delivered === undefined
+      ? { error: 'The session that started you has closed' }
+      : { delivered };
+  };
+
   return {
     sessions,
     conversation,
@@ -527,5 +978,13 @@ export function createAgentsHost(
     retiredKey,
     keepChild,
     dropChild,
+    clearedHeard,
+    deliverTo,
+    MAIN,
+    tell,
+    closeAgent,
+    clearByPerson,
+    clearAgent,
+    message,
   };
 }

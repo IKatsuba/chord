@@ -5,7 +5,9 @@ import { fileURLToPath } from 'node:url';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   createAgentsHost,
+  type AgentsEvent,
   type AgentsPort,
+  type FoldedSession,
 } from '../../src/session/agents_host.ts';
 import {
   Conversation,
@@ -61,6 +63,7 @@ afterEach(async () => {
 /** A host on held sessions, its place a fresh directory, and what it told. */
 function hosted(place: Partial<Place> = {}, port: Partial<AgentsPort> = {}) {
   const heard: [number, ConversationEvent][] = [];
+  const told: AgentsEvent[] = [];
   const host = createAgentsHost(
     {
       place: {
@@ -79,12 +82,240 @@ function hosted(place: Partial<Place> = {}, port: Partial<AgentsPort> = {}) {
     {
       heard: (key, event) => heard.push([key, event]),
       closingHeard: () => {},
+      told: (event) => told.push(event),
+      stateOf: () => undefined,
       ...port,
     },
   );
 
-  return { host, heard };
+  return { host, heard, told };
 }
+
+/** Main up on a held session, with children to open beside it. */
+async function withMain(
+  place: Partial<Place> = {},
+  port: Partial<AgentsPort> = {},
+) {
+  const made = hosted(place, port);
+  const key = made.host.sessions.start('fake')!;
+
+  await until(() => made.heard.some(([, event]) => event.type === 'connected'));
+
+  const open = (
+    id: string,
+    info: { team?: string; lead?: string; forkedFrom?: string } = {},
+  ) =>
+    made.host.sessions.openChild(
+      { id, name: id, runtime: 'fake', openedAt: 1, ...info },
+      (emit) =>
+        new Conversation(() => Promise.resolve(heldSession().session), emit),
+    )!;
+
+  return { ...made, key, open };
+}
+
+describe('closing a child', () => {
+  test('says so in order: its spend held, then closed, then the keys', async () => {
+    const order: string[] = [];
+    const { host, told, open } = await withMain(
+      {},
+      { stopCommand: (at) => order.push(`stop ${at}`) },
+    );
+    const child = open('one');
+
+    host.dropChild(child);
+
+    expect(order).toEqual([`stop ${child}`]);
+    expect(told.map(({ type }) => type)).toEqual([
+      'spend_closing',
+      'session_closed',
+      'agents_unfocused',
+    ]);
+    expect(told[1]).toEqual({
+      type: 'session_closed',
+      key: child,
+      front: host.sessions.agents.main!.key,
+    });
+
+    await until(() => told.some(({ type }) => type === 'spend_closed'));
+    await host.sessions.closeAll();
+  });
+
+  test("takes a lead's members first and forgets its run", async () => {
+    const { host, told, open } = await withMain();
+    const lead = open('lead', { team: 'bugfix' });
+    const member = open('member', { team: 'bugfix', lead: 'lead' });
+
+    host.runs.set('lead', {
+      name: 'bugfix',
+      place: 'project',
+      file: 'bugfix.md',
+      team: { lead: { agent: 'fake', instructions: '' }, members: [] },
+      job: 'job',
+    } as never);
+    host.dropChild(lead);
+
+    expect(
+      told.flatMap((event) =>
+        event.type === 'session_closed' ? [event.key] : [],
+      ),
+    ).toEqual([member, lead]);
+    expect(host.runs.size).toBe(0);
+
+    await host.sessions.closeAll();
+  });
+
+  test('settles a clear under way and what waited on it', async () => {
+    const { host, open } = await withMain();
+    const child = open('one');
+    const settled: unknown[] = [];
+
+    host.clearing.set(child, (failed, dropped) =>
+      settled.push(failed, dropped),
+    );
+    host.early.set(child, [[{ name: 'main', reachable: true }, 'hello']]);
+    host.dropChild(child);
+
+    expect(settled).toEqual([
+      'it was closed',
+      [{ name: 'main', reachable: true }],
+    ]);
+    expect(host.early.has(child)).toBe(false);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a stale fold leaves its turn alone; a busy one is interrupted', async () => {
+    const fold: { now?: FoldedSession } = {};
+    const { host, open } = await withMain({}, { stateOf: () => fold.now });
+    const interruptsOf = (child: number) => {
+      const interrupted = { count: 0 };
+
+      host.conversationAt(child)!.interrupt = () => {
+        interrupted.count++;
+
+        return true;
+      };
+
+      return interrupted;
+    };
+
+    const quiet = open('quiet');
+    const quietOnes = interruptsOf(quiet);
+
+    host.dropChild(quiet);
+
+    expect(quietOnes.count).toBe(0);
+
+    const busy = open('busy');
+    const busyOnes = interruptsOf(busy);
+
+    fold.now = {
+      queue: [],
+      transcript: { turn: { status: 'awaiting_permission' } } as never,
+    };
+
+    host.dropChild(busy);
+
+    expect(busyOnes.count).toBe(1);
+
+    await host.sessions.closeAll();
+  });
+
+  test('an unknown key does nothing', async () => {
+    const { host, told } = await withMain();
+
+    host.dropChild(99);
+
+    expect(told).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+
+  test("retired keys count down apart from every session's", () => {
+    const { host } = hosted();
+
+    expect([host.retiredKey(), host.retiredKey()]).toEqual([-1, -2]);
+  });
+});
+
+describe('who a child answers to', () => {
+  test('main for a child, its lead for a member, no one for a fork', async () => {
+    const { host, key, open } = await withMain();
+
+    open('lead', { team: 'bugfix' });
+    open('member', { team: 'bugfix', lead: 'lead' });
+    open('fork', { forkedFrom: 'main' });
+
+    const of = (id: string) => host.childOf(key, id)!;
+
+    expect(host.parentOf(of('lead'))).toBe(host.conversationAt(key));
+    expect(host.parentOf(of('member'))).toBe(of('lead').conversation);
+    expect(host.parentOf(of('fork'))).toBeUndefined();
+
+    await host.sessions.closeAll();
+  });
+
+  test('says why no child answers: closed, left open or unknown', async () => {
+    const fold: { now?: FoldedSession } = {};
+    const { host, key, open } = await withMain({}, { stateOf: () => fold.now });
+
+    host.dropChild(open('once'));
+
+    fold.now = {
+      queue: [],
+      transcript: {
+        entries: [
+          {
+            kind: 'left_open',
+            agents: [{ name: 'gone' }, { name: 'crew', team: 'bugfix' }],
+          },
+        ],
+      } as never,
+    };
+
+    expect(host.noChild(key, 'once')).toBe(
+      'once is closed; open_agent starts another',
+    );
+    expect(host.noChild(key, 'gone')).toBe(
+      'gone was closed when this session was left; open_agent starts another',
+    );
+    expect(host.noChild(key, 'crew')).toBe(
+      'crew was closed when this session was left; run_team starts the team again',
+    );
+    expect(host.noChild(key, 'who')).toBe(
+      'No agent who is open in this session; list_sessions names them',
+    );
+
+    await host.sessions.closeAll();
+  });
+
+  test('a lead that disconnects takes its members; its parent hears', async () => {
+    const { host, key, told, open } = await withMain();
+    const lead = open('lead', { team: 'bugfix' });
+    const member = open('member', { team: 'bugfix', lead: 'lead' });
+    const parent = host.conversationAt(key)!;
+    const delivered: string[] = [];
+
+    parent.deliver = (_, text) => {
+      delivered.push(text);
+
+      return 'sent';
+    };
+
+    host.tellEnded(key, lead, { type: 'disconnected' } as ConversationEvent);
+
+    expect(
+      told.flatMap((event) =>
+        event.type === 'session_closed' ? [event.key] : [],
+      ),
+    ).toEqual([member]);
+    expect(delivered).toHaveLength(1);
+    expect(delivered[0]).toContain('lead');
+
+    await host.sessions.closeAll();
+  });
+});
 
 describe('the host, with no window', () => {
   test('its static imports reach neither OpenTUI nor React', async () => {

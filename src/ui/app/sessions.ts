@@ -11,10 +11,7 @@ import {
   freezeSelection,
   selectionReceipt,
   validateSelectedRole,
-  withSelectionCleanupWarning,
-  type FrozenSelection,
   type SelectionCapabilities,
-  type SelectionReceipt,
 } from '../../session/team_selection.ts';
 import { agentNameProblem } from '../../agent_name.ts';
 import { type Dispatch, useEffect, useRef, useState } from 'react';
@@ -28,7 +25,10 @@ import {
   type ConversationEvent,
   type OpenSession,
 } from '../../session/conversation.ts';
-import { createAgentsHost } from '../../session/agents_host.ts';
+import {
+  createAgentsHost,
+  type SelectedRun,
+} from '../../session/agents_host.ts';
 import { closeOnForcedExit } from '../../session/leaving.ts';
 import type { Place } from '../../session/place.ts';
 import type { Session } from '../../session/session.ts';
@@ -42,7 +42,6 @@ import {
   type TeamRun,
 } from '../../session/team_command.ts';
 import { signInNote } from '../../session/sign_in.ts';
-import type { KeptPlace } from '../../session/usage.ts';
 import {
   failureNote,
   sentence,
@@ -65,7 +64,7 @@ import type {
   WindowView,
 } from '../../server/tools.ts';
 import { settingsBoxClaim } from '../../server/tools.ts';
-import { type FoundTeam, type Team, teamDirs, teamPart } from '../../teams.ts';
+import { teamDirs, teamPart } from '../../teams.ts';
 import { TaskAgent, taskName } from '../../session/tasks.ts';
 import type {
   ChordCall,
@@ -93,7 +92,6 @@ import type { AgentWait } from '../../session/waits.ts';
 import {
   agentOf,
   type Child,
-  childEnded,
   type ChildInfo,
   childName,
   isLead,
@@ -816,31 +814,12 @@ export function useSessions(
   };
 
   /**
-   * Messages for a long-lived child that is still starting, its first
-   * prompt first, by its key: they go, in order, once it is up.
-   */
-  const early = useRef(
-    new Map<number, [MessageFrom, string, (TeamPart | undefined)?][]>(),
-  );
-
-  /** Each team agent's part, by its key, that its first message carries. */
-  const parts = useRef(new Map<number, TeamPart>());
-
-  /** Each child being cleared, by its key: told once its fresh session is up or failed. */
-  const clearing = useRef(
-    new Map<
-      number,
-      (failed?: string, dropped?: readonly MessageFrom[]) => void
-    >(),
-  );
-
-  /**
    * An event of child `key` while it is being cleared, which is no first
    * start: its fresh session up, failed or closing settles the clear, and
    * what waited for it goes then. Whether it was being cleared (CHD-476).
    */
   const clearedHeard = (key: number, event: ConversationEvent): boolean => {
-    const cleared = clearing.current.get(key);
+    const cleared = clearing.get(key);
 
     if (cleared === undefined) {
       return false;
@@ -851,10 +830,10 @@ export function useSessions(
       event.type === 'connect_failed' ||
       event.type === 'closing'
     ) {
-      const waited = early.current.get(key) ?? [];
+      const waited = early.get(key) ?? [];
 
-      early.current.delete(key);
-      clearing.current.delete(key);
+      early.delete(key);
+      clearing.delete(key);
 
       // After the event is drawn, as a first start's messages go.
       if (event.type === 'connected') {
@@ -894,7 +873,7 @@ export function useSessions(
     text: string,
     queued?: () => void,
   ): 'sent' | 'queued' | undefined => {
-    const held = early.current.get(child.key);
+    const held = early.get(child.key);
 
     if (held !== undefined) {
       held.push([from, text]);
@@ -1002,7 +981,7 @@ export function useSessions(
     };
     const childKey = sessions.agents.nextKey;
 
-    early.current.set(
+    early.set(
       childKey,
       opening.idle ? [] : [[opening.from, args.prompt, opening.part]],
     );
@@ -1010,7 +989,7 @@ export function useSessions(
     dispatch({ type: 'agent_opened', key: childKey });
 
     if (opening.part !== undefined) {
-      parts.current.set(childKey, opening.part);
+      parts.set(childKey, opening.part);
     }
 
     const effort = effortStart(args, () => conversationAt(childKey));
@@ -1078,9 +1057,9 @@ export function useSessions(
             }
 
             if (event.type === 'connected' || event.type === 'connect_failed') {
-              const held = early.current.get(own) ?? [];
+              const held = early.get(own) ?? [];
 
-              early.current.delete(own);
+              early.delete(own);
 
               // After the event is drawn, so the first turn comes after it.
               queueMicrotask(() => {
@@ -1242,28 +1221,6 @@ export function useSessions(
 
     return { ...opened, ...(await started) };
   };
-
-  /**
-   * Each open run's team, by its lead's id: the file as it was read when the
-   * run started, so a file changed since does not change a running team,
-   * and the job it was handed.
-   */
-  interface SelectedRun {
-    readonly frozen: FrozenSelection;
-    receipt: SelectionReceipt;
-    readonly publish: () => void;
-  }
-
-  const runs = useRef(
-    new Map<
-      string,
-      FoundTeam & {
-        readonly team: Team;
-        readonly job: string;
-        readonly selected?: SelectedRun;
-      }
-    >(),
-  );
 
   const selectedCapabilities = async (
     agent: string,
@@ -1489,7 +1446,7 @@ export function useSessions(
       },
     };
 
-    runs.current.set(id, {
+    runs.set(id, {
       ...found,
       team: frozen.team,
       job: args.job,
@@ -1640,7 +1597,7 @@ export function useSessions(
       };
     }
 
-    runs.current.set(opened.id, { ...found, job });
+    runs.set(opened.id, { ...found, job });
 
     return { ran: { ...opened, team }, started };
   };
@@ -1658,7 +1615,7 @@ export function useSessions(
     const launch = captureLaunch(key, caller);
     const lead =
       caller.agent === undefined ? undefined : childOf(key, caller.agent);
-    const run = lead === undefined ? undefined : runs.current.get(lead.id);
+    const run = lead === undefined ? undefined : runs.get(lead.id);
 
     if (lead === undefined || run === undefined) {
       return { error: 'You are closed; you open no members' };
@@ -1823,52 +1780,6 @@ export function useSessions(
   };
 
   /**
-   * The conversation a child answers to: its lead's for a member, main's
-   * session's for any other.
-   */
-  const parentOf = (child: Child<Conversation>): Conversation | undefined => {
-    const agents = front();
-
-    // A fork is no one's child: no one is told of it (CHD-101).
-    if (child.forkedFrom !== undefined) {
-      return undefined;
-    }
-
-    return child.lead === undefined
-      ? agents && conversationAt(agents.main.key)
-      : agents?.children.find((each) => each.id === child.lead)?.conversation;
-  };
-
-  /**
-   * Why main, `key`, has no open child `to`: closed, or open when the
-   * session was left, as a resumed past's closing note names it.
-   */
-  const noChild = (key: number, to: string): string => {
-    const closed = ownedBy(sessions.agents, key)?.closed.findLast(
-      (child) =>
-        child.lead === undefined && (child.id === to || child.name === to),
-    );
-
-    if (closed !== undefined) {
-      return `${closed.name} is closed; open_agent starts another`;
-    }
-
-    const left = stateOf(key)
-      ?.transcript.entries.flatMap((entry) =>
-        entry.kind === 'left_open' ? entry.agents : [],
-      )
-      .findLast((agent) => agent.name === to);
-
-    return left === undefined
-      ? `No agent ${to} is open in this session; list_sessions names them`
-      : left.team === undefined
-        ? `${to} was closed when this session was left; open_agent starts ` +
-          'another'
-        : `${to} was closed when this session was left; run_team starts ` +
-          'the team again';
-  };
-
-  /**
    * A message to `to`: a parent's to its child, or a team agent's, as
    * `teamTell` routes it; a turn there, or queued.
    */
@@ -1994,160 +1905,6 @@ export function useSessions(
   };
 
   /**
-   * Tells main, `key`, with `← chord`, of an `event` that ends its
-   * child `own`'s work on its own, as `childEnded` words it; a child the
-   * window has let go is no news.
-   */
-  const tellEnded = (key: number, own: number, event: ConversationEvent) => {
-    if (event.type !== 'disconnected' && event.type !== 'result') {
-      return;
-    }
-
-    const child = agentOf(sessions.agents, own)?.child;
-    const lead = child !== undefined && isLead(child);
-    const text =
-      child &&
-      childEnded(child.name, event, child.conversation.session?.gone(), lead);
-
-    if (child === undefined || text === undefined) {
-      return;
-    }
-
-    // A lead gone leaves its members nobody to answer to.
-    if (lead && event.type === 'disconnected') {
-      const agents = ownedBy(sessions.agents, key);
-
-      for (const member of agents === undefined
-        ? []
-        : membersOf(agents, child.id)) {
-        dropChild(member.key);
-      }
-    }
-
-    parentOf(child)?.deliver({ name: 'chord' }, text);
-  };
-
-  /**
-   * Takes child `key` out of the window and closes its agent, its turn
-   * cancelled first so the agent ends it as it would any cancel; a lead's
-   * members go first, as a parent's children close with it.
-   */
-  /**
-   * Holds session `key` as it closes, or is cleared, for the window's total
-   * (the owner's Q59: closed agents count): its last events still count,
-   * a cancelled turn's end among them, until `settled` is called with its
-   * close, or at once with none (CHD-373).
-   */
-  const keepSpend = (key: number, place: KeptPlace, from?: number) => {
-    dispatch({
-      type: 'spend_closing',
-      key,
-      place,
-      ...(from === undefined ? {} : { from }),
-    });
-
-    return (closed?: Promise<unknown>) => {
-      const kept = () => dispatch({ type: 'spend_closed', key });
-
-      if (closed === undefined) {
-        kept();
-      } else {
-        void closed.then(kept, kept);
-      }
-    };
-  };
-
-  // Keys of the sessions main let go, held as they close, apart from every
-  // session's own, which count up from one.
-  const retiredKeys = useRef(0);
-  const retiredKey = () => --retiredKeys.current;
-
-  /**
-   * Holds what a child spent, by its team, as it closes, or as a clear lets
-   * its session go, under a key of its own (CHD-476).
-   */
-  const keepChild = (
-    child: ChildInfo & { readonly key: number },
-    retiring = false,
-  ) =>
-    keepSpend(
-      retiring ? retiredKey() : child.key,
-      {
-        // A run's lead is `lead` under its team's row, as when it is open.
-        name: isLead(child) ? 'lead' : child.name,
-        kind: child.team === undefined ? 'agent' : 'member',
-        runtime: child.runtime,
-        ...(child.team === undefined ? {} : { team: child.team }),
-        ...(isLead(child)
-          ? { lead: child.id }
-          : child.lead === undefined
-            ? {}
-            : { lead: child.lead }),
-      },
-      retiring ? child.key : undefined,
-    );
-
-  const dropChild = (key: number) => {
-    const found = agentOf(sessions.agents, key);
-    const child = found?.child;
-
-    if (found === undefined || child === undefined) {
-      return;
-    }
-
-    for (const member of membersOf(sessions.agents, child.id)) {
-      dropChild(member.key);
-    }
-
-    const selected = runs.current.get(child.lead ?? child.id)?.selected;
-
-    runs.current.delete(child.id);
-
-    // Closed while it restarts: the clear settles, what waited for the
-    // fresh session counted as not delivered (CHD-476).
-    const clearingIt = clearing.current.get(key);
-
-    clearing.current.delete(key);
-    clearingIt?.(
-      'it was closed',
-      (early.current.get(key) ?? []).map(([from]) => from),
-    );
-    early.current.delete(key);
-
-    if (stateOf(key) && busyOf(stateOf(key)!) !== undefined) {
-      child.conversation.interrupt();
-    }
-
-    stopCommand(key);
-
-    const kept = keepChild(child);
-    const closed = sessions.closeChild(key);
-
-    kept(closed);
-    void closed.catch(() => {
-      if (selected !== undefined) {
-        selected.receipt = withSelectionCleanupWarning(selected.receipt);
-
-        selected.publish();
-      }
-    });
-
-    dispatch({
-      type: 'session_closed',
-      key,
-      front: shownKey(sessions.agents) ?? all.front,
-    });
-
-    // The list goes with the last child, and the keys go back to the box.
-    if (
-      agentOf(sessions.agents, key) === undefined &&
-      front()?.children.length === 0
-    ) {
-      dispatch({ type: 'agents_focused', focused: false });
-    }
-  };
-
-  /**
    * `close_agent`: the parent closes its child `to`, a lead's with its
    * members, and is told nothing; a lead closes one of its members.
    */
@@ -2193,13 +1950,13 @@ export function useSessions(
     typed?: string,
   ): Promise<{ readonly failed?: string; readonly dropped?: string }> => {
     // Queued in its session, or held while it still starts.
-    if (clearing.current.has(child.key)) {
+    if (clearing.has(child.key)) {
       return { failed: 'it is being cleared already' };
     }
 
     // Queued or held in its session, or held while it still starts.
     const before = [
-      ...(early.current.get(child.key) ?? []).map(([from]) => from),
+      ...(early.get(child.key) ?? []).map(([from]) => from),
       ...child.conversation.queuedFrom,
     ];
     const up = Promise.withResolvers<{
@@ -2228,16 +1985,13 @@ export function useSessions(
       }
     }
 
-    clearing.current.set(child.key, (failed, later = []) =>
+    clearing.set(child.key, (failed, later = []) =>
       up.resolve({ ...(failed === undefined ? {} : { failed }), later }),
     );
     // What comes while it restarts waits for the fresh session.
-    early.current.set(child.key, []);
+    early.set(child.key, []);
     stopCommand(child.key);
-    keepChild(
-      child,
-      true,
-    )(child.conversation.clear(parts.current.get(child.key)));
+    keepChild(child, true)(child.conversation.clear(parts.get(child.key)));
 
     const { failed, later } = await up.promise;
     // Those sent while it restarted count too when it did not come up.
@@ -2404,6 +2158,22 @@ export function useSessions(
             dispatch({ type: 'closing_heard', key, event });
           }
         },
+        told: (event) => {
+          switch (event.type) {
+            case 'session_closed':
+              return dispatch({
+                ...event,
+                front: event.front ?? allNow.current.front,
+              });
+            case 'agents_unfocused':
+              return dispatch({ type: 'agents_focused', focused: false });
+            default:
+              return dispatch(event);
+          }
+        },
+        stateOf: (key) => stateOf(key),
+        redraw,
+        stopCommand,
       },
     ),
   );
@@ -2421,6 +2191,17 @@ export function useSessions(
     shownTeamFile,
     teamPlaces,
     policyNow,
+    early,
+    parts,
+    clearing,
+    runs,
+    parentOf,
+    noChild,
+    tellEnded,
+    keepSpend,
+    retiredKey,
+    keepChild,
+    dropChild,
   } = agentsHost;
   /**
    * Whether `caller` speaks for a session already let go, cleared or
@@ -3264,8 +3045,7 @@ export function useSessions(
             (child) =>
               isLead(child) && (child.id === name || child.name === name),
           );
-    const associated =
-      running === undefined ? undefined : runs.current.get(running.id);
+    const associated = running === undefined ? undefined : runs.get(running.id);
 
     if (associated === undefined && agents !== undefined) {
       const transcript = stateOf(agents.main.key)?.transcript;
@@ -3305,7 +3085,7 @@ export function useSessions(
         isLead(child) &&
         (child.team === name || child.id === name || child.name === name),
     );
-    const run = lead === undefined ? undefined : runs.current.get(lead.id);
+    const run = lead === undefined ? undefined : runs.get(lead.id);
 
     if (lead === undefined || run === undefined) {
       return { kind: 'show', name, file: found.shown, team: found.team };

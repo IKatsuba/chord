@@ -204,3 +204,76 @@ describe('seeing writes', () => {
     expect(await settles(drained)).toBe(true);
   });
 });
+
+describe('CHD-574 tester: distinct response lifetimes', () => {
+  test('numeric and string request ids settle independently, including an error', async () => {
+    const { seen, writes } = held();
+    const writer = seen.stream.writable.getWriter();
+
+    seen.expect(1);
+    seen.expect('1');
+
+    const drained = seen.drained();
+    const first = writer.write(answer(1));
+
+    await until(() => writes.length === 1);
+
+    writes[0]?.done();
+
+    await first;
+
+    expect(await settles(drained)).toBe(false);
+
+    const second = writer.write({
+      jsonrpc: '2.0',
+      id: '1',
+      error: { code: -32603, message: 'closing' },
+    });
+
+    await until(() => writes.length === 2);
+
+    writes[1]?.done();
+
+    await second;
+    await drained;
+
+    writer.releaseLock();
+  });
+
+  test('a later expected answer starts a fresh drain after the first settled', async () => {
+    const { seen, writes } = held();
+    const writer = seen.stream.writable.getWriter();
+
+    for (const id of [1, 2]) {
+      seen.expect(id);
+
+      const drained = seen.drained();
+      const written = writer.write(answer(id));
+
+      await until(() => writes.length === id);
+
+      expect(await settles(drained)).toBe(false);
+
+      writes[id - 1]?.done();
+
+      await written;
+      await drained;
+    }
+
+    writer.releaseLock();
+  });
+
+  test('abort releases a drain while no answer was written', async () => {
+    const { seen } = held();
+    const writer = seen.stream.writable.getWriter();
+
+    seen.expect('unanswered');
+
+    const drained = seen.drained();
+
+    await writer.abort(new Error('client gone'));
+    await drained;
+
+    writer.releaseLock();
+  });
+});

@@ -303,3 +303,58 @@ describe('expiry', () => {
     expect(exits).toEqual([{ code: 1 }]);
   });
 });
+
+describe('CHD-574 tester: shutdown failure boundaries', () => {
+  test('a synchronous drain failure still closes and preserves the failure', async () => {
+    const { leaving, calls, lines, exits } = setUp({
+      drained: () => {
+        throw new Error('drain threw');
+      },
+    });
+
+    await leaving.leave({ kind: 'eof' });
+
+    expect(calls).toEqual(['close']);
+    expect(lines).toEqual(['chord: drain: drain threw']);
+    expect(exits).toEqual([{ code: 1 }]);
+  });
+
+  test('an answer can reenter leave without starting another shutdown', async () => {
+    let nested: Promise<void> | undefined;
+    const { leaving, exits, calls } = setUp({
+      answer: () => {
+        calls.push('answer');
+
+        nested = leaving.leave({ kind: 'eof' });
+      },
+    });
+    const first = leaving.leave({ kind: 'signal', signal: 'SIGINT' });
+
+    expect(nested).toBe(first);
+
+    await first;
+
+    expect(calls).toEqual(['answer', 'close']);
+    expect(exits).toEqual([{ signal: 'SIGINT' }]);
+  });
+
+  test('a held drain and two hung hosts share the deadline independently', async () => {
+    const { leaving, lines, exits } = setUp({
+      drained: () => NEVER,
+      drainMs: 1_000,
+      leaveMs: 20,
+      steps: [
+        { name: 'first host', run: () => NEVER },
+        { name: 'second host', run: () => NEVER },
+        { name: 'collector', run: () => {} },
+      ],
+    });
+
+    await leaving.leave({ kind: 'eof' });
+
+    expect(lines).toEqual([
+      'chord: not settled at the deadline: connection, first host, second host',
+    ]);
+    expect(exits).toEqual([{ code: 1 }]);
+  });
+});

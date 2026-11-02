@@ -482,6 +482,7 @@ const SCENARIOS = [
   'cancels',
   'flood',
   'ignorescancel',
+  'requestform',
   'subagent',
   'subagentupdate',
   'codexsubagents',

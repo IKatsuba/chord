@@ -339,6 +339,7 @@ export async function steeringStub(everyTurn = false) {
       listener({
         id,
         wait: { id } as unknown as PendingElicitation['wait'],
+        raw: {} as unknown as PendingElicitation['raw'],
         signal: new AbortController().signal,
         answer: () => {},
       });

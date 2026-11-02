@@ -6,7 +6,11 @@ import { type AcpOptions, type AcpRun, runAcp } from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
 import type { LeaveExit } from '../src/session/leaving.ts';
 import { openSession } from '../src/session/session.ts';
-import { type AcpClient, clientOverStreams } from './fixtures/acp_client.ts';
+import {
+  type AcpClient,
+  clientOverStreams,
+  type WireMessage,
+} from './fixtures/acp_client.ts';
 import { fakeAgentCommand, gatedCommand } from './fixtures/fake.ts';
 import { until } from './session/conversation_fake.ts';
 
@@ -692,6 +696,307 @@ describe('an agent that dies', () => {
     }));
 });
 
+/** The request chord made of the client with `method`, waited for. */
+const asked = (client: AcpClient, method: string, nth = 0) =>
+  until(
+    () =>
+      client.messages.filter(
+        (message) => message.method === method && message.id !== undefined,
+      ).length > nth,
+  ).then(
+    () =>
+      client.messages.filter(
+        (message) => message.method === method && message.id !== undefined,
+      )[nth] as WireMessage & { id: number },
+  );
+const PERMISSION = 'session/request_permission';
+const selected = (optionId: string) => ({
+  outcome: { outcome: 'selected', optionId },
+});
+
+describe('permissions', () => {
+  test('forwarded whole; the answer reaches the agent', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      expect(ask.params?.sessionId).toBe(sessionId);
+      expect(ask.params?.toolCall).toMatchObject({
+        title: 'Write notes.txt',
+        rawInput: { file_path: 'notes.txt' },
+      });
+
+      client.respond(ask.id, selected('allow'));
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'end_turn',
+      );
+      expect(client.said(sessionId)).toContain('Permission: allow');
+    }));
+
+  test('an error answer is a refusal, with a line on stderr', () =>
+    onAcp([], async ({ client, newSession, prompt, lines }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      client.respondError(ask.id, -32603, 'the client broke');
+
+      await client.answerTo(running);
+
+      expect(client.said(sessionId)).toContain('Permission: deny');
+      expect(lines.join('\n')).toContain('the client broke');
+    }));
+
+  test('an unknown option is a refusal before choose', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      client.respond(ask.id, selected('nothing-offered'));
+
+      await client.answerTo(running);
+
+      expect(client.said(sessionId)).toContain('Permission: deny');
+    }));
+
+  test('a cancel withdraws it upstream and ends the turn; a late answer changes nothing', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      client.notify('session/cancel', { sessionId });
+
+      await client.until(
+        (message) =>
+          message.method === '$/cancel_request' &&
+          message.params?.requestId === ask.id,
+      );
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'cancelled',
+      );
+
+      client.respond(ask.id, selected('allow'));
+      client.respond(ask.id, selected('allow'));
+
+      expect(
+        (await client.answerTo(prompt(sessionId, 'text'))).result?.stopReason,
+      ).toBe('end_turn');
+      expect(client.said(sessionId)).not.toContain('Permission: allow');
+    }));
+
+  test('a duplicate answer changes nothing', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      client.respond(ask.id, selected('deny'));
+      client.respond(ask.id, selected('allow'));
+
+      await client.answerTo(running);
+
+      expect(client.said(sessionId)).toContain('Permission: deny');
+      expect(client.said(sessionId)).not.toContain('Permission: allow');
+    }));
+
+  test("a child's ask goes under its composite id", () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'subagent');
+      const ask = await asked(client, PERMISSION);
+
+      expect(String(ask.params?.sessionId).startsWith(`${sessionId}/`)).toBe(
+        true,
+      );
+
+      client.respond(ask.id, selected('allow'));
+      client.notify('session/cancel', { sessionId });
+
+      await client.answerTo(running);
+    }));
+
+  test("a child's ask to a client without subagents is refused, on stderr", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'subagent');
+
+        await until(() =>
+          lines.some((line) => line.includes("subagent's permission")),
+        );
+
+        expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+          false,
+        );
+
+        client.notify('session/cancel', { sessionId });
+
+        await client.answerTo(running);
+      },
+      { capabilities: {} },
+    ));
+});
+
+describe('forms and links', () => {
+  const FORM = 'elicitation/create';
+
+  test('a form goes raw under the session; its answer reaches the agent', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'form');
+      const form = await asked(client, FORM);
+
+      expect(form.params).toMatchObject({
+        sessionId,
+        mode: 'form',
+        message: 'Set up the deploy target',
+      });
+      expect(form.params).toHaveProperty('requestedSchema');
+
+      client.respond(form.id, { action: 'decline' });
+
+      await client.answerTo(running);
+
+      expect(client.said(sessionId)).toContain('Elicitation answer: decline');
+    }));
+
+  test('a form to a client that declared none still goes', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'form');
+        const form = await asked(client, FORM);
+
+        client.respond(form.id, { action: 'cancel' });
+
+        await client.answerTo(running);
+      },
+      { capabilities: {} },
+    ));
+
+  test('an error answer is cancel', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'form');
+      const form = await asked(client, FORM);
+
+      client.respondError(form.id, -32603, 'no');
+
+      await client.answerTo(running);
+
+      expect(client.said(sessionId)).toContain('Elicitation answer: cancel');
+    }));
+
+  test('a link accepted passes its completion on', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'link');
+      const link = await asked(client, FORM);
+
+      expect(link.params).toMatchObject({ mode: 'url', sessionId });
+
+      client.respond(link.id, { action: 'accept' });
+
+      await client.answerTo(running);
+      await client.until(
+        (message) =>
+          message.method === 'elicitation/complete' &&
+          message.params?.elicitationId === link.params?.elicitationId,
+      );
+    }));
+
+  test('one scoped to a request is cancelled, never asked', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'requestform'));
+
+      expect(client.messages.some((m) => m.method === FORM)).toBe(false);
+      expect(client.said(sessionId)).toContain('Elicitation answer: cancel');
+    }));
+
+  test('a cancel withdraws a form upstream', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'form');
+      const form = await asked(client, FORM);
+
+      client.notify('session/cancel', { sessionId });
+
+      await client.until(
+        (message) =>
+          message.method === '$/cancel_request' &&
+          message.params?.requestId === form.id,
+      );
+      await client.answerTo(running);
+    }));
+});
+
+describe('a plan ask', () => {
+  for (const [scenario, flags, choice, heard] of [
+    ['cursorplan', [], 'accepted', 'accepted'],
+    ['cursorplan', [], 'kept', 'rejected'],
+    ['grokplan', [], 'accepted', 'approved'],
+    ['grokplan', [], 'left', 'abandoned'],
+  ] as const) {
+    test(`${scenario}: ${choice} reaches the agent in its own words`, () =>
+      onAcp(flags, async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, scenario);
+        const ask = await asked(client, PERMISSION);
+
+        expect(ask.params?.options).toContainEqual(
+          expect.objectContaining({ optionId: 'accepted', kind: 'allow_once' }),
+        );
+
+        client.respond(ask.id, selected(choice));
+
+        await client.answerTo(running);
+
+        expect(client.said(sessionId)).toContain('Plan answer:');
+        expect(client.said(sessionId).toLowerCase()).toContain(heard);
+      }));
+  }
+
+  for (const [name, answer] of [
+    ['a cancel', { outcome: { outcome: 'cancelled' } }],
+    ['an unknown id', selected('yes-please')],
+  ] as const) {
+    test(`${name} is never a yes`, () =>
+      onAcp([], async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'cursorplan');
+        const ask = await asked(client, PERMISSION);
+
+        client.respond(ask.id, answer);
+
+        await client.answerTo(running);
+
+        expect(client.said(sessionId).toLowerCase()).not.toContain('accepted');
+      }));
+  }
+
+  test('an error is never a yes', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'cursorplan');
+      const ask = await asked(client, PERMISSION);
+
+      client.respondError(ask.id, -32603, 'no');
+
+      await client.answerTo(running);
+
+      expect(client.said(sessionId).toLowerCase()).not.toContain('accepted');
+    }));
+});
+
 describe('the way out', () => {
   test('EOF idle: exit 0', () =>
     onAcp([], async ({ newSession, eof, exits }) => {
@@ -699,6 +1004,36 @@ describe('the way out', () => {
       await eof();
 
       expect(exits).toEqual([{ code: 0 }]);
+    }));
+
+  test('EOF with an ask open: no answer, the agent hears cancelled', () =>
+    onAcp([], async ({ client, newSession, prompt, eof, exits }) => {
+      const sessionId = await newSession();
+
+      prompt(sessionId, 'permission');
+
+      await asked(client, PERMISSION);
+      await eof();
+
+      expect(exits).toEqual([{ code: 0 }]);
+    }));
+
+  test('a signal with an ask open withdraws it, then the prompt is cancelled', () =>
+    onAcp([], async ({ client, newSession, prompt, run }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      await run.leave({ kind: 'signal', signal: 'SIGTERM' });
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'cancelled',
+      );
+      await client.until(
+        (message) =>
+          message.method === '$/cancel_request' &&
+          message.params?.requestId === ask.id,
+      );
     }));
 
   test('a signal in a turn: cancelled first, then the signal', () =>

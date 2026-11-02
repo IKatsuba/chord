@@ -6,6 +6,7 @@
 import type {
   ClientCapabilities,
   ContentBlock,
+  CreateElicitationResponse,
   PermissionOption,
   RequestPermissionRequest,
   RequestPermissionResponse,
@@ -21,6 +22,7 @@ import {
   modesOf,
   optionsOf,
 } from './agent_state.ts';
+import type { ElicitationReply } from './elicitations.ts';
 import { FILLED } from './enrich.ts';
 import { modelConfigId } from './models.ts';
 import { modeConfigId } from './modes.ts';
@@ -477,6 +479,20 @@ export function permissionAnswerOf(
     options.some((option) => option.optionId === outcome.optionId)
     ? { optionId: outcome.optionId }
     : 'reject';
+}
+
+/**
+ * The client's answer to a form or a link, passed on as it came: an error (none)
+ * or a word ACP does not have is `cancel`.
+ */
+export function elicitationReplyOf(
+  response: CreateElicitationResponse | undefined,
+): ElicitationReply {
+  return response?.action === 'accept' ||
+    response?.action === 'decline' ||
+    response?.action === 'cancel'
+    ? (response as ElicitationReply)
+    : { action: 'cancel' };
 }
 
 /** A client's prompt as `Conversation.send` takes it. */

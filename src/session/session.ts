@@ -1,5 +1,6 @@
 import type {
   AvailableCommand,
+  CompleteElicitationNotification,
   ContentBlock,
   McpServer,
   PromptResponse,
@@ -100,6 +101,8 @@ export interface OpenSessionOptions {
    * agent that would refuse it never sees it.
    */
   chordServer?: McpServer;
+  /** The agent says a link it asked for has been followed. */
+  onElicitationComplete?: (params: CompleteElicitationNotification) => void;
   /**
    * Gives up on a session still starting: the open rejects with the signal's
    * reason once the agent is stopped.
@@ -405,6 +408,17 @@ export async function openSession(
   };
 
   const onTraffic = (traffic: Traffic) => {
+    // The tap keeps notifications from the SDK: this is the one place to hear it.
+    if (
+      traffic.from === 'agent' &&
+      'method' in traffic.message &&
+      traffic.message.method === 'elicitation/complete'
+    ) {
+      options.onElicitationComplete?.(
+        traffic.message.params as CompleteElicitationNotification,
+      );
+    }
+
     const notification =
       traffic.from === 'agent' ? updateIn(traffic.message) : undefined;
 

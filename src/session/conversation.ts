@@ -2598,6 +2598,16 @@ export class Conversation {
     });
   }
 
+  /** A permission waiting, as the agent asked it, for one who passes it on. */
+  permissionRequest(id: string): PendingPermission | undefined {
+    return this.#permissions.get(id)?.request;
+  }
+
+  /** A form or link waiting, as the agent asked it, for one who passes it on. */
+  elicitationRequest(id: string): PendingElicitation | undefined {
+    return this.#elicitations.get(id)?.request;
+  }
+
   #withdrawAsks(): void {
     for (const withdraw of [...this.#asks]) {
       withdraw();

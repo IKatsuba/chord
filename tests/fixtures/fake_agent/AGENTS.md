@@ -22,7 +22,7 @@
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`),
-  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`),
+  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`, `requestform`),
   `guardian.ts` (`guardian`, `guardiangated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
@@ -112,6 +112,7 @@
   plays that scenario; `flood` sends 64 MiB of chunks as fast as they are taken,
   for a client that stopped reading, until a cancel or its client's going;
   `ignorescancel` holds its turn through a cancel until its client goes, or 30 s;
+  `requestform` asks a form scoped to a request of its own and to no session;
   `--session-id <id>` (`CHORD_FAKE_SESSION_ID`) answers every `session/new`
   with that id, as an agent with per-process counters does;
   `--config-in-responses` (`CHORD_FAKE_CONFIG_IN_RESPONSES=1`) says a change of

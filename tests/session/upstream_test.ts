@@ -14,6 +14,7 @@ import {
   configChange,
   configOptionsOf,
   configSetter,
+  elicitationReplyOf,
   mapUpdate,
   messageChunk,
   permissionAnswerOf,
@@ -523,6 +524,27 @@ describe("a permission's answer", () => {
       permissionAnswerOf(options, { outcome: { outcome: 'cancelled' } }),
     ).toBe('reject');
     expect(permissionAnswerOf(options, undefined)).toBe('reject');
+  });
+});
+
+describe("a form's answer", () => {
+  test("each of ACP's words passes as it came", () => {
+    const accept = { action: 'accept', content: { name: 'x' } };
+
+    expect(elicitationReplyOf(accept)).toEqual(accept as never);
+    expect(elicitationReplyOf({ action: 'decline' })).toEqual({
+      action: 'decline',
+    });
+    expect(elicitationReplyOf({ action: 'cancel' })).toEqual({
+      action: 'cancel',
+    });
+  });
+
+  test('an error, or any other word, is cancel', () => {
+    expect(elicitationReplyOf(undefined)).toEqual({ action: 'cancel' });
+    expect(elicitationReplyOf({ action: 'maybe' })).toEqual({
+      action: 'cancel',
+    });
   });
 });
 

@@ -6,12 +6,14 @@
 import {
   type AgentConnection,
   type ClientCapabilities,
+  type CreateElicitationResponse,
   type JsonRpcId,
   type McpServer,
   MessageTooLargeError,
   ndJsonStream,
   type NewSessionResponse,
   RequestError,
+  type RequestPermissionResponse,
   type SessionNotification,
   type SessionUpdate,
   type Usage,
@@ -51,9 +53,14 @@ import {
   childOf,
   configChange,
   configSetter,
+  elicitationReplyOf,
   mapUpdate,
   messageChunk,
+  permissionAnswerOf,
+  planAnswerOf,
+  planPermission,
   promptOf,
+  upstreamIdOf,
   type UpstreamSession,
   upstreamSession,
 } from './session/upstream.ts';
@@ -102,7 +109,8 @@ interface Entry {
   upstream?: UpstreamSession;
   /** Whether the client has its id: what comes before waits for that. */
   live: boolean;
-  held: { update: SessionUpdate; subagentId?: string }[];
+  /** What goes up once the client has its id. */
+  held: (() => void)[];
   turns: Turns;
   opening?:
     | {
@@ -128,6 +136,8 @@ export function runAcp(options: AcpOptions): AcpRun {
   const sessions = new Map<string, Entry>();
   /** Every session not closed yet, those still starting and those gone too. */
   const entries = new Set<Entry>();
+  /** Each ask out with the client, by chord's id for it; its withdrawal. */
+  const asks = new Map<string, AbortController>();
   /** Each `session/prompt` not yet answered. */
   const answers = new Map<
     JsonRpcId,
@@ -162,10 +172,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     subagentId?: string,
   ): void => {
     if (entry.upstream === undefined || !entry.live) {
-      entry.held.push({
-        update,
-        ...(subagentId === undefined ? {} : { subagentId }),
-      });
+      entry.held.push(() => relay(entry, update, subagentId));
 
       return;
     }
@@ -198,6 +205,125 @@ export function runAcp(options: AcpOptions): AcpRun {
     if (changed.notification !== undefined) {
       send(changed.notification);
     }
+  };
+
+  /**
+   * One request to the client, settled once. A late answer, after its ask was
+   * withdrawn, finds nothing to settle; an error is no answer, whatever the ask
+   * makes of that. Nothing is settled when the connection went: the session's
+   * close tells the agent `cancelled`.
+   */
+  const ask = <Answer>(
+    id: string,
+    method: string,
+    params: object,
+    settle: (answer: Answer | undefined) => void,
+  ): void => {
+    const withdrawal = new AbortController();
+
+    asks.set(id, withdrawal);
+    connection.client
+      .request<Answer, object>(method, params, {
+        cancellationSignal: withdrawal.signal,
+      })
+      .then(
+        (answer) => {
+          if (asks.delete(id)) {
+            settle(answer);
+          }
+        },
+        (error: unknown) => {
+          if (!connection.signal.aborted && asks.delete(id)) {
+            say(
+              `chord: the client answered ${method} with an error: ${
+                error instanceof Error ? error.message : String(error)
+              }`,
+            );
+            settle(undefined);
+          }
+        },
+      );
+  };
+
+  const withdrawn = (id: string): void => {
+    asks.get(id)?.abort();
+    asks.delete(id);
+  };
+
+  /** Runs once the client has the session's id; at once when it has. */
+  const once = (entry: Entry, go: () => void): void => {
+    if (entry.live) {
+      go();
+    } else {
+      entry.held.push(go);
+    }
+  };
+
+  const askPermission = (entry: Entry, id: string): void => {
+    const { conversation, upstream } = entry;
+    const request = conversation.permissionRequest(id);
+
+    if (request === undefined || upstream === undefined) {
+      return;
+    }
+
+    // It can name no session that client knows, and must not wait unseen.
+    if (request.sessionId !== upstream.agentId && !capabilities?.subagents) {
+      say(
+        `chord: refused a subagent's permission: the client takes no subagents`,
+      );
+      conversation.reject(id);
+
+      return;
+    }
+
+    ask<RequestPermissionResponse>(
+      id,
+      'session/request_permission',
+      {
+        sessionId: upstreamIdOf(upstream, request.sessionId),
+        toolCall: request.toolCall,
+        options: request.options,
+      },
+      (response) => {
+        const answer = permissionAnswerOf(request.options, response);
+
+        if (answer === 'reject') {
+          conversation.reject(id);
+        } else {
+          conversation.choose(id, answer.optionId);
+        }
+      },
+    );
+  };
+
+  const askElicitation = (entry: Entry, id: string): void => {
+    const { conversation, upstream } = entry;
+    const request = conversation.elicitationRequest(id);
+
+    if (request === undefined || upstream === undefined) {
+      return;
+    }
+
+    const { sessionId } = request;
+
+    // One scoped to a request names none of the client's; a subagent's, none
+    // that client knows.
+    if (
+      sessionId === undefined ||
+      (sessionId !== upstream.agentId && !capabilities?.subagents)
+    ) {
+      conversation.answer(id, { action: 'cancel' });
+
+      return;
+    }
+
+    ask<CreateElicitationResponse>(
+      id,
+      'elicitation/create',
+      { ...request.raw, sessionId: upstreamIdOf(upstream, sessionId) },
+      (response) => conversation.answer(id, elicitationReplyOf(response)),
+    );
   };
 
   /** What chord carries on past: stderr always, and `notice` for who takes it. */
@@ -334,8 +460,8 @@ export function runAcp(options: AcpOptions): AcpRun {
     void wire.expect(opening.requestId).then(() => {
       entry.live = true;
 
-      for (const { update, subagentId } of entry.held.splice(0)) {
-        relay(entry, update, subagentId);
+      for (const release of entry.held.splice(0)) {
+        release();
       }
 
       tellConfig(entry);
@@ -419,6 +545,38 @@ export function runAcp(options: AcpOptions): AcpRun {
         }
 
         break;
+      case 'permission_requested':
+        once(entry, () => askPermission(entry, event.permission.id));
+
+        break;
+      case 'elicitation_requested':
+        once(entry, () => askElicitation(entry, event.elicitation.id));
+
+        break;
+      case 'plan_requested':
+        once(entry, () => {
+          const { plan } = event;
+
+          ask<RequestPermissionResponse>(
+            plan.id,
+            'session/request_permission',
+            planPermission(entry.upstream?.upstreamId ?? '', plan),
+            (response) =>
+              entry.conversation.answerPlan(
+                plan.id,
+                planAnswerOf(plan, response),
+              ),
+          );
+        });
+
+        break;
+      case 'permission_settled':
+      case 'elicitation_settled':
+      case 'plan_settled':
+        // The client's own answer has left the table already.
+        withdrawn(event.id);
+
+        break;
       case 'connected':
         connected(entry, event.sessionId);
 
@@ -476,6 +634,11 @@ export function runAcp(options: AcpOptions): AcpRun {
               ? {}
               : { agentCommand: options.agentCommand }),
             mcpServers: servers,
+            onElicitationComplete: (params) => {
+              connection.client
+                .notify('elicitation/complete', params)
+                .catch(() => {});
+            },
             ...(place.noMcpServers === true ? { noMcpServers: true } : {}),
           }),
         (event) => heard(entry, event),
@@ -539,6 +702,10 @@ export function runAcp(options: AcpOptions): AcpRun {
 
   const leaving = createLeaving({
     answer: () => {
+      for (const id of [...asks.keys()]) {
+        withdrawn(id);
+      }
+
       for (const entry of [...entries]) {
         for (const requestId of entry.turns.bound.values()) {
           void wire.expect(requestId);

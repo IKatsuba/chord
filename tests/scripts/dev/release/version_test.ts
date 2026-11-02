@@ -268,3 +268,53 @@ describe('tester: CHD-412 version boundaries', () => {
     }
   });
 });
+
+describe('tester: CHD-577 version boundaries', () => {
+  test.each(['next', 'beta'])(
+    '%s increments minor, patch and fix from npm stable across counter digits',
+    (channel) => {
+      for (const [bump, base] of [
+        ['minor', '2.10.0'],
+        ['patch', '2.9.9'],
+        ['fix', '2.9.9'],
+      ]) {
+        expect(releaseVersion('2.9.8', bump, channel, () => '2.9.8')).toBe(
+          `${base}-${channel}.0`,
+        );
+        expect(
+          releaseVersion(`${base}-${channel}.9`, bump, channel, () => '2.9.8'),
+        ).toBe(`${base}-${channel}.10`);
+      }
+    },
+  );
+
+  test('a newer npm stable selects a new base and restarts the counter', () => {
+    expect(
+      releaseVersion('1.0.0-next.12', 'major', 'next', () => '1.0.0'),
+    ).toBe('2.0.0-next.0');
+  });
+
+  test('explicit bases and resume do not depend on registry availability', () => {
+    const unavailable = () => {
+      throw new Error('registry unavailable');
+    };
+
+    expect(releaseVersion('1.0.0-beta.9', '1.0.0', 'beta', unavailable)).toBe(
+      '1.0.0-beta.10',
+    );
+    expect(releaseVersion('1.0.0-beta.9', undefined, 'beta', unavailable)).toBe(
+      '1.0.0-beta.9',
+    );
+    expect(() =>
+      releaseVersion('1.0.0-beta.9', 'major', 'beta', unavailable),
+    ).toThrow('registry unavailable');
+  });
+
+  test('a malformed current label cannot become a channel release', () => {
+    for (const current of ['1.0.0-next', '1.0.0-next.one', '1.0.0-latest.0']) {
+      expect(() => releaseVersion(current, '2.0.0', 'next')).toThrow(
+        VersionError,
+      );
+    }
+  });
+});

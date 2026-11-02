@@ -69,3 +69,24 @@ describe('checkChannel', () => {
     expect(() => checkChannel(name)).toThrow(why);
   });
 });
+
+describe('tester: CHD-577 channel boundaries', () => {
+  test.each([' next', 'next ', 'next\n', 'next_1', 'next@1', 'next..1'])(
+    'refuses a channel with whitespace or tag punctuation: %p',
+    (channel) => {
+      expect(() => checkChannel(channel)).toThrow(VersionError);
+    },
+  );
+
+  test.each(['1.0.0-next.-1', '1.0.0-next.1a', '1.0.0-next.0.extra'])(
+    'refuses a malformed channel counter: %s',
+    (version) => {
+      expect(() => channelOf(version)).toThrow(VersionError);
+    },
+  );
+
+  test('a digit or hyphen in the channel stays part of its tag', () => {
+    expect(channelOf('2.0.0-rc2.10')).toBe('rc2');
+    expect(channelOf('2.0.0-release-candidate.10')).toBe('release-candidate');
+  });
+});

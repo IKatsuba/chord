@@ -61,6 +61,14 @@ export class AcpClient {
       // A pipe the other end broke ends the reading as its end would.
     }
 
+    // What came with no line end is on the wire all the same: a test that
+    // parses every line must see it.
+    held += decoder.decode();
+
+    if (held !== '') {
+      this.lines.push(held);
+    }
+
     this.#open = false;
   }
 

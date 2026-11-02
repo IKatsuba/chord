@@ -98,6 +98,45 @@ describe('the raw client', () => {
     await until(() => client.closed);
   });
 
+  const heardFrom = async (chunks: readonly Uint8Array[]) => {
+    const client = new AcpClient(
+      () => {},
+      (async function* () {
+        await Promise.resolve();
+
+        yield* chunks;
+      })(),
+    );
+
+    await until(() => client.closed);
+
+    return client;
+  };
+
+  const bytes = (text: string) => new TextEncoder().encode(text);
+
+  test('keeps what came with no line end, malformed or not', async () => {
+    const malformed = await heardFrom([bytes('{}\ngarbage')]);
+    const valid = await heardFrom([bytes('{}\n{"id":1}')]);
+
+    expect(malformed.lines).toEqual(['{}', 'garbage']);
+    expect(() => malformed.messages).toThrow();
+    expect(valid.lines).toEqual(['{}', '{"id":1}']);
+  });
+
+  test('a character split across chunks arrives whole', async () => {
+    const word = bytes('"é"\n');
+    const client = await heardFrom([word.slice(0, 2), word.slice(2)]);
+
+    expect(client.lines).toEqual(['"é"']);
+  });
+
+  test('a split character cut off at the end still leaves a line', async () => {
+    const client = await heardFrom([bytes('é').slice(0, 1)]);
+
+    expect(client.lines).toEqual(['\uFFFD']);
+  });
+
   test('plays a whole turn against the fake agent', () =>
     inDirectory(async (cwd) => {
       const { client, stdin, group } = onFake();

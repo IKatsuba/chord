@@ -259,3 +259,89 @@ describe('the tag chord upgrade follows', () => {
     expect(await command.getLatestVersion()).toBe('1.0.0-beta.1');
   });
 });
+
+describe('tester: CHD-577 upgrade channel boundaries', () => {
+  const realFetch = globalThis.fetch;
+  const document = {
+    'dist-tags': {
+      latest: '0.67.0',
+      next: '1.0.0-next.10',
+      beta: '1.0.0-beta.3',
+    },
+    versions: { '0.67.0': {}, '1.0.0-next.10': {}, '1.0.0-beta.3': {} },
+  };
+  const provider = (running: string) =>
+    new ManagerProvider('bun', {}, undefined, undefined, running);
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  test('simultaneous builds keep their tags when registry answers arrive in reverse order', async () => {
+    const pending: ((response: Response) => void)[] = [];
+
+    globalThis.fetch = (() =>
+      new Promise<Response>((resolve) => {
+        pending.push(resolve);
+      })) as unknown as typeof fetch;
+
+    const reads = ['0.66.0', '1.0.0-next.9', '1.0.0-beta.2'].map((running) =>
+      provider(running).resolveVersion('chord', 'latest'),
+    );
+
+    expect(pending).toHaveLength(3);
+
+    for (const answer of pending.reverse()) {
+      answer(Response.json(document));
+    }
+
+    expect(await Promise.all(reads)).toEqual([
+      '0.67.0',
+      '1.0.0-next.10',
+      '1.0.0-beta.3',
+    ]);
+  });
+
+  test('a rejected registry read makes one request and never falls back', async () => {
+    let requests = 0;
+
+    globalThis.fetch = (() => {
+      requests++;
+
+      return Promise.reject(new Error('fixture connection lost'));
+    }) as unknown as typeof fetch;
+
+    await expect(
+      provider('1.0.0-next.9').resolveVersion('chord', 'latest'),
+    ).rejects.toThrow('fixture connection lost');
+    expect(requests).toBe(1);
+  });
+
+  test('each manager receives the exact channel version resolved from the registry', async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(Response.json(document))) as unknown as typeof fetch;
+
+    for (const manager of ['npm', 'bun', 'pnpm', 'yarn'] as const) {
+      const ran: string[][] = [];
+      const selected = new ManagerProvider(
+        manager,
+        {},
+        undefined,
+        (argv) => {
+          ran.push([...argv]);
+
+          return Promise.resolve();
+        },
+        '1.0.0-beta.2',
+      );
+
+      selected.setLogger({ log() {}, info() {}, warn() {}, error() {} });
+
+      const to = await selected.resolveVersion('chord', 'latest');
+
+      await selected.upgrade({ name: 'chord', from: '1.0.0-beta.2', to });
+
+      expect(ran).toEqual([installArgv(manager, '1.0.0-beta.3')]);
+    }
+  });
+});

@@ -22,7 +22,8 @@
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`),
-  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`, `requestform`, `strangerform`),
+  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`, `requestform`,
+  `strangerform`),
   `guardian.ts` (`guardian`, `guardiangated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
@@ -51,8 +52,7 @@
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`, `flood`,
-  `ignorescancel`). Beside it, what the
-  scenarios read too:
+  `ignorescancel`). Beside it, what the scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
   `sessions.ts` each session's directory, MCP servers, model, mode and
@@ -75,7 +75,7 @@
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
   `permission`,
-  `permissionsteer`,
+  `permissionsteer`, `permissionmeta`, `strangerask`,
   `callchildtwo`, `agentnames`, `agentmentions`, `agenttitled`, `agentother`,
   `agentstitled`, `agentsquiet`,
   `agentsheldgated`, `agentclear`, `agentlate`, `agentclearonly`, `latesay`,
@@ -93,7 +93,8 @@
   `cancels`, `error`, `flood`, `ignorescancel`, `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
-  `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
+  `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
+  `strangerform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
   `codexsubagents`, `codexsubagentstop`, `claudesubagents`,
@@ -117,8 +118,8 @@
   `strangerask` and `strangerform` ask under a session it never announced;
   `--session-id <id>` (`CHORD_FAKE_SESSION_ID`) answers every `session/new`
   with that id, as an agent with per-process counters does;
-  `--config-in-responses` (`CHORD_FAKE_CONFIG_IN_RESPONSES=1`) says a change of
-  configuration only in the answer to it, never in an update;
+  `--config-in-responses` (`CHORD_FAKE_CONFIG_IN_RESPONSES=1`) suppresses
+  `session/set_mode`'s config update; its answer stays empty;
   `markdownwrap` sends a reply whose heading,
   three-deep nested list, quote and paragraph wrap at 80 columns, with a
   two-digit marker, task items, and a soft and a hard line break

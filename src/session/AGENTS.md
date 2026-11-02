@@ -2,7 +2,7 @@
 
 These rules also cover `src/acp/`.
 
-- Every session's traffic runs through the enricher chain (`enrich.ts`, `enrichers.ts`) on the transport's relay; state, record, window and `-p` read only what it leaves.
+- Every session's traffic runs through the enricher chain (`enrich.ts`, `enrichers.ts`) on the transport's relay; state, record, window, `-p` and `acp` read only what it leaves.
 - Enrichers are pure, with ACP's shape on both sides; name what chord filled under `_meta`'s `chord/filled`.
 - `transcript/` is a pure reducer, one module per kind of update.
 - Session records (`record.ts`) are a stored format: older records must still
@@ -17,8 +17,8 @@ These rules also cover `src/acp/`.
 - Clear replaces the agent session, not the child's identity. Old calls and
   task reports lose delivery authority immediately. The next surviving prompt
   carries any team part exactly once; a withdrawn prompt does not spend it.
-- The window's sessions are recorded; `-p`'s are not.
-- This layer is below the interface and shared with `-p`: nothing here or in `src/acp/` imports from `src/ui/`.
+- The window's and `acp`'s sessions are recorded; `-p`'s are not.
+- This layer is shared with `-p` and `acp`: nothing here or in `src/acp/` imports from `src/ui/`.
 - `get_budgets` returns per-call provider windows or unavailable reasons;
   missing values stay null. `readAt` is the call time, not provider freshness.
   Omitted runtime filters read Claude and Codex; empty filters read none.

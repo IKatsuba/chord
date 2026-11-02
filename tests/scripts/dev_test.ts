@@ -551,6 +551,36 @@ describe('release [version]', () => {
   });
 });
 
+describe('release --channel', () => {
+  test('passes on the name, the release judges it', async () => {
+    for (const name of ['next', 'latest', 'Next']) {
+      const [call] = await parsed(['release', 'major', '--channel', name]);
+
+      expect(call?.[2]).toMatchObject({ channel: name });
+      expect(call?.[3]).toBe('major');
+    }
+  });
+
+  test('takes no version', async () => {
+    const [call] = await parsed(['release', '--channel', 'next']);
+
+    expect(call?.[2]).toMatchObject({ channel: 'next' });
+    expect(call?.[3]).toBeUndefined();
+  });
+
+  test('is absent without it', async () => {
+    const [call] = await parsed(['release', 'major']);
+
+    expect(call?.[2]).not.toHaveProperty('channel');
+  });
+
+  test('needs a name', async () => {
+    await expect(parsed(['release', '--channel'])).rejects.toThrow(
+      ValidationError,
+    );
+  });
+});
+
 describe('tester: release parsing boundaries', () => {
   test('conflicts are refused with the arguments in either order', async () => {
     for (const pair of [
@@ -643,4 +673,34 @@ test('CHD-531 release help discloses mandatory authentication and dry-run effect
   ]) {
     expect(help).toContain(text);
   }
+});
+
+describe('tester: CHD-577 channel argument boundaries', () => {
+  test('channel before the version and an equals value preserve the release selection', async () => {
+    for (const argv of [
+      ['release', '--channel', 'beta', '1.0.0', '--only', 'compile,check'],
+      ['release', '1.0.0', '--channel=beta', '--only', 'compile,check'],
+    ]) {
+      const [call] = await parsed(argv);
+
+      expect(call?.slice(1)).toEqual([
+        ['check', 'compile'],
+        { channel: 'beta', only: ['compile', 'check'] },
+        '1.0.0',
+      ]);
+    }
+  });
+
+  test('a channel does not allow publish in a dry run', async () => {
+    await expect(
+      parsed([
+        'release',
+        '--channel',
+        'next',
+        '--dry-run',
+        '--only',
+        'publish',
+      ]),
+    ).rejects.toThrow(ValidationError);
+  });
 });

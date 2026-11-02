@@ -747,7 +747,10 @@ cli
     );
   });
 
-cli.command('upgrade', upgradeCommand(realpathSync(execPath()), process.env));
+cli.command(
+  'upgrade',
+  upgradeCommand(realpathSync(execPath()), process.env, manifest.version),
+);
 
 /**
  * The window's one clipboard service, OpenTUI's: the system clipboard

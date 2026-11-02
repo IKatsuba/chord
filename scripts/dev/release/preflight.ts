@@ -1,12 +1,14 @@
 /**
  * Eligibility guards before authentication or release work: a clean tree,
  * a new version only once package.json's is published, an unpublished
- * version or a stopped publish to resume; publishing also
- * requires main level with origin and no version tag. Registry reads and
- * the existing fetch may use the network, but these guards do not log in.
+ * version or a stopped publish to resume; publishing also requires the
+ * version's branch, main or its channel's, level with origin and no version
+ * tag. Registry reads and the existing fetch may use the network, but these
+ * guards do not log in.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { channelOf } from '../../../src/channel.ts';
 import { die, PLATFORMS, published, type Release, run, said } from './lib.ts';
 import { ghReady } from './source.ts';
 
@@ -83,7 +85,7 @@ export function preflight(
   }
 
   if (publish) {
-    onMain(release);
+    onBranch(release, channelOf(version));
     notTagged(release, version);
     ghReady(release);
   }
@@ -112,13 +114,21 @@ export function packageVersion(release: Release): string {
   return version;
 }
 
-/** main checked out, and the same commit as origin's once fetched. */
-function onMain(release: Release): void {
+/**
+ * The branch of `channel`, or main for a stable version, checked out, and the
+ * same commit as origin's once fetched.
+ */
+function onBranch(release: Release, channel: string | null): void {
+  const wanted = channel ?? 'main';
   const branch = run(release, 'git', ['symbolic-ref', '--short', 'HEAD']);
 
-  if (branch.status !== 0 || said(branch.stdout) !== 'main') {
+  if (branch.status !== 0 || said(branch.stdout) !== wanted) {
+    const head = said(branch.stdout) || said(branch.stderr);
+
     die(
-      `a release that publishes runs from main; HEAD is ${said(branch.stdout) || said(branch.stderr)}`,
+      channel === null
+        ? `a release that publishes runs from main; HEAD is ${head}`
+        : `a release on channel ${channel} publishes only from branch ${channel}; HEAD is ${head}`,
     );
   }
 
@@ -128,16 +138,16 @@ function onMain(release: Release): void {
     die(`git fetch origin failed: ${said(fetched.stderr)}`);
   }
 
-  const head = said(run(release, 'git', ['rev-parse', 'main']).stdout);
-  const origin = run(release, 'git', ['rev-parse', 'origin/main']);
+  const head = said(run(release, 'git', ['rev-parse', wanted]).stdout);
+  const origin = run(release, 'git', ['rev-parse', `origin/${wanted}`]);
 
   if (origin.status !== 0) {
-    die(`git rev-parse origin/main failed: ${said(origin.stderr)}`);
+    die(`git rev-parse origin/${wanted} failed: ${said(origin.stderr)}`);
   }
 
   if (said(origin.stdout) !== head) {
     die(
-      `main is not origin/main: main is ${head}, origin/main is ${said(origin.stdout)}`,
+      `${wanted} is not origin/${wanted}: ${wanted} is ${head}, origin/${wanted} is ${said(origin.stdout)}`,
     );
   }
 }

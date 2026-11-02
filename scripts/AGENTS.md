@@ -6,15 +6,21 @@
   are native Bun commands.
 - `bun dev release [version|major|minor|patch|fix]` is the owner's
   (`docs/decisions.md`, "Releasing"); nobody else publishes. Give it the
-  version instead of editing package.json's by hand. It needs an arm64 Mac
-  when `natives`, `sign` or `notarise` is selected. A dry run still submits
-  to Apple unless `--skip notarise` is passed.
+  version instead of editing package.json's by hand. `--channel <name>` makes
+  `<base>-<channel>.<n>`; bumps count from npm's latest stable. If package.json
+  holds that base on that channel, its number goes up; otherwise it starts at 0.
+  Labelled arguments are refused; a stable bump from a pre-release needs an
+  exact version instead. With no version, it finishes package.json's release;
+  `--channel` then requires that version already on that channel.
+  It needs an arm64 Mac when `natives`, `sign` or `notarise` is selected.
+  A dry run still submits to Apple unless `--skip notarise` is passed.
 - A new release version needs `compile`. Before any stage it is committed
-  alone as `chore: chord v<version>` and pushed to main when publishing.
+  alone as `chore: chord v<version>`. Publishing requires the channel's branch,
+  or main for a stable release, level with origin, and pushes it there.
   A failed push drops it; a later failure keeps it on origin. A dry run or
   run without publish drops its local commit, on failure and SIGINT,
   SIGTERM or SIGHUP too. SIGKILL may leave it: `git reset --keep HEAD~1`.
-  Rerun with no version, or the same one, to release package.json's version.
+  Rerun with no version to release package.json's version.
 - Release stages live in `dev/release/`. Select them with `--skip`, `--only`,
   `--from` and `--to`; preflight always runs. Selecting `publish` requires
   installed, signed-in `gh`, checked with `gh auth status` among the guards.
@@ -29,11 +35,14 @@
   and checks their sums against OpenTUI's native package `FFMPEG-SOURCE.md`.
   Failed downloads or mismatches stop the release; dry runs need the network
   too. Publishing, including resume, rechecks the archives before npm;
-  `--skip pack` needs copies from an earlier pack. After pushing the tag,
-  publish runs `gh release create v<version> --draft` with the archives
-  attached. The owner writes the notes and publishes the draft. A failed
-  draft leaves the version on npm and tagged; finish with the printed `gh`
-  command, since rerunning cannot create it.
+  `--skip pack` needs copies from an earlier pack. Every channel package
+  publishes with `--tag <channel>`, leaving latest unchanged; a channel dry
+  run prints its stages and each package's npm publish arguments.
+  After pushing the tag, publish runs
+  `gh release create v<version> --draft` with the archives
+  attached, adding `--prerelease` for a channel. The owner writes the notes
+  and publishes the draft. A failed draft leaves the version on npm and
+  tagged; finish with the printed `gh` command, since rerunning cannot create it.
 - `dev/compile.ts` uses `Bun.build` with a plugin resolving OpenTUI's
   `react/jsx-dev-runtime` imports to `dev/jsx_dev_runtime.ts` on React's
   production runtime. Its `buildOptions` also builds the boundary test.

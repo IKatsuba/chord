@@ -8,9 +8,13 @@ import { spawn } from 'node:child_process';
 import { UpgradeCommand } from '@cliffy/command/upgrade';
 import type { ProviderUpgradeOptions, Versions } from '@cliffy/upgrade';
 import { NpmProvider } from '@cliffy/upgrade/provider/npm';
+import { channelOf } from './channel.ts';
 
 /** The published package a person installs. */
 export const PACKAGE = '@chorded/chord';
+
+/** Where NpmProvider reads a package's document, private to it. */
+const REGISTRY = 'https://registry.npmjs.org/';
 
 /** A package manager chord can upgrade itself through. */
 export type Manager = 'npm' | 'bun' | 'pnpm' | 'yarn';
@@ -116,6 +120,8 @@ export class ManagerProvider extends NpmProvider {
      */
     private readonly unidentified?: string,
     private readonly run: typeof runManager = runManager,
+    /** The running chord's version, whose channel `latest` then follows. */
+    private readonly running?: string,
   ) {
     super({ package: PACKAGE });
 
@@ -135,7 +141,14 @@ export class ManagerProvider extends NpmProvider {
 
   override async getVersions(name: string): Promise<Versions> {
     try {
-      return await super.getVersions(name);
+      // Asked here and not at the start, so a version channelOf refuses, in a
+      // build from a package.json edited by hand, only stops an upgrade.
+      const channel =
+        this.running === undefined ? null : channelOf(this.running);
+
+      return channel === null
+        ? await super.getVersions(name)
+        : await channelVersions(channel);
     } catch (error) {
       throw new Error(
         `chord could not read the versions of ${PACKAGE} from the npm registry: ${
@@ -179,6 +192,31 @@ export class ManagerProvider extends NpmProvider {
   }
 }
 
+/**
+ * The package's versions, with `latest` the tag of `channel`: NpmProvider reads
+ * only npm's own `latest`, which a channel's build never follows, not even
+ * when the channel has no tag.
+ */
+async function channelVersions(channel: string): Promise<Versions> {
+  const response = await fetch(new URL(PACKAGE, REGISTRY));
+
+  if (!response.ok) {
+    throw new Error(`the registry answered ${response.status}`);
+  }
+
+  const { 'dist-tags': tags, versions } = (await response.json()) as {
+    'dist-tags': Record<string, string | undefined>;
+    versions: Record<string, unknown>;
+  };
+  const latest = tags[channel];
+
+  if (latest === undefined) {
+    throw new Error(`it has no tag ${channel}, the channel this chord is on`);
+  }
+
+  return { latest, versions: Object.keys(versions).reverse() };
+}
+
 function unidentifiedText(path: string, version: string): string {
   const lines = (['npm', 'bun', 'pnpm', 'yarn'] as const).map((manager) =>
     installArgv(manager, version).join(' '),
@@ -190,14 +228,17 @@ function unidentifiedText(path: string, version: string): string {
 /**
  * cliffy's command over the provider of the manager that installed the
  * chord at `execPath` (its real path), or npm's, which refuses, when none
- * is identified: cliffy needs one.
+ * is identified: cliffy needs one. `version` is the running chord's, so a
+ * channel's build follows its channel and a stable build npm's latest.
  */
-export function upgradeCommand(execPath: string, env: Env) {
+export function upgradeCommand(execPath: string, env: Env, version: string) {
   const manager = detectManager(execPath);
   const provider = new ManagerProvider(
     manager ?? 'npm',
     env,
     manager === null ? execPath : undefined,
+    runManager,
+    version,
   );
 
   // standalone: false sends cliffy to the provider's upgrade rather than its

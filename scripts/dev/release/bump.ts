@@ -2,14 +2,15 @@
  * The commit a release given a new version makes before any stage
  * (CHD-412): package.json's version written and committed alone, so every
  * stage, which reads package.json, builds and packs that version. A run
- * that publishes pushes it to origin's main, and drops it if the push
- * fails; any other run drops it at the end, leaving the branch as it found
- * it. Until it is pushed or dropped, Ctrl+C, SIGTERM and SIGHUP drop it
- * too; SIGKILL cannot be caught, and leaves it.
+ * that publishes pushes it to origin's main, or its channel's branch, and
+ * drops it if the push fails; any other run drops it at the end, leaving the
+ * branch as it found it. Until it is pushed or dropped, Ctrl+C, SIGTERM and
+ * SIGHUP drop it too; SIGKILL cannot be caught, and leaves it.
  */
 import process from 'node:process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { channelOf } from '../../../src/channel.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 
@@ -115,18 +116,22 @@ export function holdVersion(release: Release, head: string): Held {
   };
 }
 
-/** main pushed to origin, the version commit `held` with it. */
+/**
+ * The version's branch, main or its channel's, pushed to origin, the version
+ * commit `held` with it.
+ */
 export function pushVersion(
   release: Release,
   version: string,
   held: Held,
 ): void {
-  const pushed = run(release, 'git', ['push', '-q', 'origin', 'main']);
+  const branch = channelOf(version) ?? 'main';
+  const pushed = run(release, 'git', ['push', '-q', 'origin', branch]);
 
   if (pushed.status !== 0) {
     held.drop();
     die(
-      `git push origin main failed, so chore: chord v${version} is dropped: ${said(pushed.stderr)}`,
+      `git push origin ${branch} failed, so chore: chord v${version} is dropped: ${said(pushed.stderr)}`,
     );
   }
 

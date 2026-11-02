@@ -13,6 +13,7 @@
  */
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { channelOf } from '../../../src/channel.ts';
 import {
   die,
   npm,
@@ -31,6 +32,27 @@ import { checkSum } from './sums.ts';
 /** Where the packed tarballs and their SHA256SUMS are. */
 export function tarballs(release: Release): string {
   return join(release.root, 'dist', 'release', 'tgz');
+}
+
+/** The tarball of `name` at `version`, where pack leaves it. */
+export function tarball(
+  release: Release,
+  name: Package,
+  version: string,
+): string {
+  return join(tarballs(release), `chorded-${name}-${version}.tgz`);
+}
+
+/**
+ * npm's arguments to publish `file` at `version`. The tag comes from the
+ * version and nowhere else, as npm moves latest for a publish with no tag: a
+ * pre-release cannot reach here without its channel's.
+ */
+export function publishArguments(version: string, file: string): string[] {
+  const channel = channelOf(version);
+  const args = ['publish', '--access', 'public', file];
+
+  return channel === null ? args : [...args, '--tag', channel];
 }
 
 export interface PublishOptions {
@@ -59,15 +81,13 @@ export async function publish(
       return;
     }
 
-    const tarball = join(tarballs(release), `chorded-${name}-${version}.tgz`);
+    const file = tarball(release, name, version);
 
-    if (!existsSync(tarball)) {
-      die(
-        `no ${tarball} to publish; nothing of this run is left to resume from`,
-      );
+    if (!existsSync(file)) {
+      die(`no ${file} to publish; nothing of this run is left to resume from`);
     }
 
-    checkSum(tarball);
+    checkSum(file);
 
     if (!asked) {
       if (!release.tty) {
@@ -83,12 +103,12 @@ export async function publish(
       asked = true;
     }
 
-    const sent = npm(release, ['publish', '--access', 'public', tarball], {
+    const sent = npm(release, publishArguments(version, file), {
       stdio: 'inherit',
     });
 
     if (sent.status !== 0) {
-      die(`npm publish of ${tarball} failed`);
+      die(`npm publish of ${file} failed`);
     }
   };
 

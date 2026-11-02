@@ -1,9 +1,10 @@
-import { expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   detectManager,
   installArgv,
   ManagerProvider,
   type Manager,
+  upgradeCommand,
 } from '../src/upgrade.ts';
 
 const BIN = 'node_modules/@chorded/chord-darwin-arm64/bin/chord';
@@ -144,4 +145,203 @@ test('latest is resolved to an exact version for the manager', async () => {
 
   expect(await provider.resolveVersion('chord', 'latest')).toBe('0.56.0');
   expect(await provider.resolveVersion('chord', '0.55.0')).toBe('0.55.0');
+});
+
+describe('the tag chord upgrade follows', () => {
+  const DOCUMENT = {
+    'dist-tags': {
+      latest: '0.67.0',
+      next: '1.0.0-next.4',
+      beta: '1.0.0-beta.1',
+    },
+    versions: {
+      '0.67.0': {},
+      '1.0.0-beta.1': {},
+      '1.0.0-next.4': {},
+    },
+  };
+  const realFetch = globalThis.fetch;
+  let asked: string[];
+
+  function registry(answer: () => Response): void {
+    globalThis.fetch = ((url: URL | string) => {
+      asked.push(String(url));
+
+      return Promise.resolve(answer());
+    }) as typeof fetch;
+  }
+
+  const provider = (running?: string) =>
+    new ManagerProvider('bun', {}, undefined, undefined, running);
+
+  beforeEach(() => {
+    asked = [];
+
+    registry(() => Response.json(DOCUMENT));
+  });
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  test.each([
+    ['0.66.0', '0.67.0'],
+    ['1.0.0', '0.67.0'],
+    ['1.0.0-next.3', '1.0.0-next.4'],
+    ['1.0.0-next.4', '1.0.0-next.4'],
+    ['1.0.0-beta.0', '1.0.0-beta.1'],
+  ])('a build of %s follows %s', async (running, latest) => {
+    expect((await provider(running).getVersions('chord')).latest).toBe(latest);
+    expect(await provider(running).resolveVersion('chord', 'latest')).toBe(
+      latest,
+    );
+    expect(new Set(asked)).toStrictEqual(
+      new Set(['https://registry.npmjs.org/@chorded/chord']),
+    );
+  });
+
+  test('a channel lists every version, as a stable build does', async () => {
+    const channel = await provider('1.0.0-next.3').getVersions('chord');
+    const stable = await provider('0.66.0').getVersions('chord');
+
+    expect(channel.versions).toStrictEqual(stable.versions);
+    expect(channel.versions).toStrictEqual([
+      '1.0.0-next.4',
+      '1.0.0-beta.1',
+      '0.67.0',
+    ]);
+  });
+
+  test('a provider told no version follows latest', async () => {
+    expect((await provider().getVersions('chord')).latest).toBe('0.67.0');
+  });
+
+  test('a channel with no tag fails naming it, and never falls back to latest', async () => {
+    await expect(
+      provider('1.0.0-rc.0').resolveVersion('chord', 'latest'),
+    ).rejects.toThrow(
+      'chord could not read the versions of @chorded/chord from the npm registry: it has no tag rc, the channel this chord is on',
+    );
+  });
+
+  test('a failed read on a channel says so', async () => {
+    registry(() => new Response('', { status: 503 }));
+
+    await expect(provider('1.0.0-next.3').getVersions('chord')).rejects.toThrow(
+      'chord could not read the versions of @chorded/chord from the npm registry: the registry answered 503',
+    );
+  });
+
+  test('a version named is taken as it is, on any build', async () => {
+    expect(
+      await provider('1.0.0-next.3').resolveVersion('chord', '0.67.0'),
+    ).toBe('0.67.0');
+    expect(asked).toStrictEqual([]);
+  });
+
+  test('a version no channel can have stops the upgrade, not the command', async () => {
+    expect(() =>
+      upgradeCommand('/var/u/.local/bin/chord', {}, '1.0.0-next'),
+    ).not.toThrow();
+    await expect(provider('1.0.0-next').getVersions('chord')).rejects.toThrow(
+      'a pre-release is written <x.y.z>-<channel>.<n>',
+    );
+    expect(asked).toStrictEqual([]);
+  });
+
+  test('upgradeCommand gives the provider the running version', async () => {
+    const command = upgradeCommand(
+      '/var/u/.bun/install/global/node_modules/@chorded/chord-darwin-arm64/bin/chord',
+      {},
+      '1.0.0-beta.0',
+    );
+
+    expect(await command.getLatestVersion()).toBe('1.0.0-beta.1');
+  });
+});
+
+describe('tester: CHD-577 upgrade channel boundaries', () => {
+  const realFetch = globalThis.fetch;
+  const document = {
+    'dist-tags': {
+      latest: '0.67.0',
+      next: '1.0.0-next.10',
+      beta: '1.0.0-beta.3',
+    },
+    versions: { '0.67.0': {}, '1.0.0-next.10': {}, '1.0.0-beta.3': {} },
+  };
+  const provider = (running: string) =>
+    new ManagerProvider('bun', {}, undefined, undefined, running);
+
+  afterEach(() => {
+    globalThis.fetch = realFetch;
+  });
+
+  test('simultaneous builds keep their tags when registry answers arrive in reverse order', async () => {
+    const pending: ((response: Response) => void)[] = [];
+
+    globalThis.fetch = (() =>
+      new Promise<Response>((resolve) => {
+        pending.push(resolve);
+      })) as unknown as typeof fetch;
+
+    const reads = ['0.66.0', '1.0.0-next.9', '1.0.0-beta.2'].map((running) =>
+      provider(running).resolveVersion('chord', 'latest'),
+    );
+
+    expect(pending).toHaveLength(3);
+
+    for (const answer of pending.reverse()) {
+      answer(Response.json(document));
+    }
+
+    expect(await Promise.all(reads)).toEqual([
+      '0.67.0',
+      '1.0.0-next.10',
+      '1.0.0-beta.3',
+    ]);
+  });
+
+  test('a rejected registry read makes one request and never falls back', async () => {
+    let requests = 0;
+
+    globalThis.fetch = (() => {
+      requests++;
+
+      return Promise.reject(new Error('fixture connection lost'));
+    }) as unknown as typeof fetch;
+
+    await expect(
+      provider('1.0.0-next.9').resolveVersion('chord', 'latest'),
+    ).rejects.toThrow('fixture connection lost');
+    expect(requests).toBe(1);
+  });
+
+  test('each manager receives the exact channel version resolved from the registry', async () => {
+    globalThis.fetch = (() =>
+      Promise.resolve(Response.json(document))) as unknown as typeof fetch;
+
+    for (const manager of ['npm', 'bun', 'pnpm', 'yarn'] as const) {
+      const ran: string[][] = [];
+      const selected = new ManagerProvider(
+        manager,
+        {},
+        undefined,
+        (argv) => {
+          ran.push([...argv]);
+
+          return Promise.resolve();
+        },
+        '1.0.0-beta.2',
+      );
+
+      selected.setLogger({ log() {}, info() {}, warn() {}, error() {} });
+
+      const to = await selected.resolveVersion('chord', 'latest');
+
+      await selected.upgrade({ name: 'chord', from: '1.0.0-beta.2', to });
+
+      expect(ran).toEqual([installArgv(manager, '1.0.0-beta.3')]);
+    }
+  });
 });

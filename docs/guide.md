@@ -32,9 +32,13 @@ The npm package is a small shim around a prebuilt standalone binary for your
 platform (macOS and Linux; arm64 and x64). There is no Node build of chord.
 The macOS binaries are signed and notarised.
 
-`chord upgrade` installs the latest version through the package manager
-that installed chord (npm, bun, pnpm or yarn); `chord upgrade --version
-<version>` installs that one, and `chord upgrade -l` lists them.
+`chord upgrade` follows npm's `latest` tag on a stable build or the build's
+channel tag on a pre-release, through the package manager that installed it
+(npm, bun, pnpm or yarn). Install a channel with
+`npm install -g @chorded/chord@next`. `chord upgrade --version <version>`
+installs that version; `chord upgrade -l` lists versions. A missing channel
+tag fails naming the channel, including with `--version` or `-l`;
+`chord upgrade --force --version <version>` bypasses that check.
 
 Or build from source with [Bun](https://bun.sh) 1.4.4 or newer:
 
@@ -1425,18 +1429,28 @@ or `bun dev chord -- --help`).
 `bun dev test` reports the tests' status. `tests/timings.json` only places
 files: Bun uses it to balance shards and start each worker's slowest files
 first; an unlisted file takes the median. No refresh is required.
-CI runs `static` (`bun quality --static`), three `tests` shards
+On pull requests and pushes to `main` and `next`, CI runs `static`
+(`bun quality --static`), three `tests` shards
 (`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
 passes only when all of them succeed.
 
 The owner's `bun dev release [version|major|minor|patch|fix]` releases
 package.json's version when none is given. An exact version must equal it
 or be above it, in canonical `X.Y.Z` form with no prefix or build metadata.
-`fix` means `patch`. Pre-releases are refused, including a version argument
-when package.json's current version is a pre-release. Give the command a
-version or bump instead of editing package.json's version by hand.
-A different version or bump is refused while package.json's version is not
-on npm; `bun dev release` without a version finishes that release.
+`fix` means `patch`. Add `--channel <name>` for `<base>-<channel>.<n>`.
+A channel bump counts from npm's latest stable version. If package.json
+already holds that base on that channel, its number goes up; otherwise it
+starts at 0. From stable 0.67.0, `major --channel next` gives
+1.0.0-next.0, then 1.0.0-next.1; `1.0.0 --channel next` gives the same.
+Channel names start with a lowercase letter, then use lowercase letters,
+digits or hyphens; `latest`, `main` and semver ranges such as `x` or `v1`
+are refused. A labelled version argument is refused; use `--channel`.
+A stable bump from a pre-release is refused: name the version, such as
+`1.0.0` over `1.0.0-next.5`. Give the command a version or bump instead of
+editing package.json's version by hand. A different version or bump is
+refused while package.json's version is not on npm; `bun dev release`
+without a version finishes it, including a channel release. `--channel`
+without a version requires package.json already on that channel.
 
 The release runs `install`, `check` (`bun quality`), `natives`, `compile`, `sign`,
 `selftest`, `notarise`, `pack` and `publish` in order. `--skip` and `--only`
@@ -1448,13 +1462,15 @@ the selected stages. `--package` selects one package to publish.
 `curl` to download FFmpeg and zlib source archives into
 `dist/release/source/`, checking their SHA-256 sums against OpenTUI's native
 package `FFMPEG-SOURCE.md`. A failed download or mismatch stops the release.
-This stage needs the network even in a dry run.
+This stage needs the network even in a dry run. A channel dry run also
+prints its stages and each package's npm publish arguments.
 
-Preflight checks a clean tree and the version. Publishing also needs `main`
-equal to `origin/main`, no `v<version>` tag, and `gh` installed and signed
-in, checked with `gh auth status` when `publish` is selected. After these
-guards, every run requires successful `npm whoami`, including dry runs and runs
-without `publish`; stage selection cannot skip authentication. Success
+Preflight checks a clean tree and the version. Publishing needs the channel's
+branch, or `main` for a stable release, equal to its origin branch, no
+`v<version>` tag, and `gh` installed and signed in, checked with
+`gh auth status` when `publish` is selected. After these guards, every run
+requires successful `npm whoami`, including dry runs and runs without
+`publish`; stage selection cannot skip authentication. Success
 needs no terminal. On failure, stdin and stdout must both be terminals:
 the release runs plain `npm login` once in that terminal, then requires a
 successful `npm whoami` recheck. Without those terminals, or if login fails,
@@ -1463,10 +1479,10 @@ release work. npm may open a browser and save credentials or registry
 settings, even during a dry run.
 
 A new version is then written into package.json and committed alone as
-`chore: chord v<version>` before any stage. A publishing run pushes main
-first. If the push fails, it drops the local commit and stops; a later
-failure leaves the pushed commit on origin. Rerun with no version, or the
-same one, to release package.json's version without another commit.
+`chore: chord v<version>` before any stage. A publishing run pushes that
+branch first. If the push fails, it drops the local commit and stops; a later
+failure leaves the pushed commit on origin. Rerun with no version to
+release package.json's version without another commit.
 
 A dry run or a run without `publish` makes the version commit locally and
 drops it at the end, on failure too. SIGINT, SIGTERM and SIGHUP also drop
@@ -1480,13 +1496,16 @@ tarballs without rebuilding; a dry run or a run without `publish` refuses
 that resume. Each tarball must match its recorded SHA-256 sum. Before npm
 publishing, including on resume, the source archives must still match
 `FFMPEG-SOURCE.md`; missing or changed archives stop the release.
-`--skip pack` with `publish` needs archives from an earlier pack. The main
-package waits for all four platform packages on npm, then all five must
-answer before the annotated version tag is pushed to origin. Then
-`gh release create v<version> --draft` attaches the archives to a draft
-GitHub release. The owner fills in its notes and publishes it. If creating
-the draft fails, the version is already on npm and tagged; the release
-prints the exact `gh` command to finish by hand. Rerunning cannot create
+`--skip pack` with `publish` needs archives from an earlier pack. Every
+package on a channel publishes with `--tag <channel>`, leaving npm's
+`latest` unchanged. The main package waits for all four platform packages
+on npm, then all five must answer before the annotated version tag is
+pushed to origin. `gh release create v<version> --draft` attaches the
+archives to a draft
+GitHub release, adding `--prerelease` for a channel. The owner fills in its
+notes and publishes it. If creating the draft fails, the version is already
+on npm and tagged; the release prints the exact `gh` command to finish by
+hand. Rerunning cannot create
 that draft. Publishing needs the owner at a terminal: npm gets the terminal
 for each authorisation and the CLI waits. See `bun dev release --help`.
 

@@ -28,6 +28,7 @@ import {
 import {
   andList,
   createAgentsHost,
+  type LaunchGuard,
   type SelectedRun,
 } from '../../session/agents_host.ts';
 import { closeOnForcedExit } from '../../session/leaving.ts';
@@ -42,12 +43,6 @@ import {
   teamRefusal,
   type TeamRun,
 } from '../../session/team_command.ts';
-import { signInNote } from '../../session/sign_in.ts';
-import {
-  failureNote,
-  sentence,
-  stepWords,
-} from '../../session/start_failure.ts';
 import type { ChordServer } from '../../server/server.ts';
 import type {
   Caller,
@@ -57,18 +52,13 @@ import type {
   OpenArgs,
   RunTeamAnswer,
   RunTeamArgs,
-  SpawnAnswer,
-  SpawnArgs,
   WindowView,
 } from '../../server/tools.ts';
 import { settingsBoxClaim } from '../../server/tools.ts';
 import { teamDirs, teamPart } from '../../teams.ts';
-import { TaskAgent, taskName } from '../../session/tasks.ts';
 import type {
   ChordCall,
-  MessageFrom,
   TeamAgentShown,
-  TeamPart,
   TeamShown,
 } from '../../session/transcript/types.ts';
 import { FileRecording } from '../../session/record.ts';
@@ -92,7 +82,6 @@ import {
   type Child,
   childName,
   isLead,
-  MAX_CHILDREN,
   membersOf,
   messageRecipients,
   namedChild,
@@ -481,649 +470,6 @@ export function useSessions(
     );
 
     return conversation;
-  };
-
-  /** Each task agent's own conversation, by its id, while it runs. */
-  const children = useRef(new Map<string, Conversation>());
-
-  /**
-   * Why a child of `args.agent` cannot start from `parent` of main, `key`, with
-   * what is offered; none when it may: a parent closing, a runtime chord
-   * cannot start there, or a model it is known to lack.
-   */
-  const startRefusal = async (
-    key: number,
-    parent: Conversation | undefined,
-    args: OpenArgs,
-    kind: string,
-    name = args.name?.trim() || args.agent,
-  ): Promise<string | undefined> => {
-    const named = kind === 'agent' ? agentNameProblem(name) : undefined;
-
-    if (named !== undefined) {
-      return `An agent name ${named}`;
-    }
-
-    const startup = runtimeNames.includes(args.agent)
-      ? place.startupOf(args.agent)
-      : undefined;
-
-    if (parent?.session === undefined) {
-      return `This session is closing; no ${kind} can start from it`;
-    }
-
-    if (startup === undefined) {
-      return `No agent named ${args.agent}; chord knows ${runtimeNames.join(
-        ', ',
-      )}`;
-    }
-
-    if (startup.refused !== undefined) {
-      return startup.refused;
-    }
-
-    const known = await view.offer(args.agent, false, key);
-
-    if (
-      args.model !== undefined &&
-      known !== undefined &&
-      !('error' in known) &&
-      known.models.length > 0 &&
-      !known.models.some((model) => model.id === args.model)
-    ) {
-      return `${args.agent} offers no model ${args.model}; it offers ${known.models
-        .map((model) => model.id)
-        .join(', ')}`;
-    }
-
-    if (
-      args.mode !== undefined &&
-      known !== undefined &&
-      !('error' in known) &&
-      (known.modes?.length ?? 0) > 0 &&
-      !known.modes!.some((mode) => mode.id === args.mode)
-    ) {
-      return `${args.agent} has no mode ${args.mode} · ${known
-        .modes!.map((mode) => mode.id)
-        .join(', ')}`;
-    }
-
-    return undefined;
-  };
-
-  /**
-   * A child's own conversation, a session of `args.agent` where main, `key`,
-   * works, on the model asked for or not at all, with chord's server given
-   * it as `caller`, whose tools its role gives. Its record names
-   * `parent`, it as `name`, a task's id, which its parent's record keeps
-   * the task's block under, a long-lived one's, which its parent's record
-   * names it by, and a lead's `team`.
-   */
-  const childConversation = (
-    key: number,
-    parent: Conversation | undefined,
-    args: OpenArgs,
-    name: string,
-    caller: Caller,
-    asked: string,
-    emit: (event: ConversationEvent) => void,
-    team?: string,
-    fork?: string,
-  ) => {
-    const { cwd, mcpServers, startupOf } = place;
-    const startup = startupOf(args.agent) ?? {};
-    let releaseCurrentCaller = () => {};
-
-    // A fork forks once; a clear opens it afresh, from nothing (CHD-476).
-    let forking = fork;
-
-    const conversation = new Conversation(
-      (signal) => {
-        if (startup.refused !== undefined) {
-          throw new Error(startup.refused);
-        }
-
-        let live = true;
-        const launch = {
-          valid: () => live,
-          signal: () => conversation.launchSignal,
-        };
-        const admitted = server?.admit({ ...caller, launch });
-
-        releaseCurrentCaller();
-
-        // A cleared or closing session's calls stop now, not once its
-        // process has gone (CHD-476).
-        releaseCurrentCaller = () => {
-          live = false;
-
-          if (admitted !== undefined) {
-            server?.revoke(admitted.token);
-          }
-        };
-
-        const options = {
-          agent: args.agent,
-          cwd,
-          signal,
-          ...(startup.agentCommand === undefined
-            ? {}
-            : { agentCommand: startup.agentCommand }),
-          ...(mcpServers.length === 0
-            ? {}
-            : { mcpServers: mcpServers.map(({ server }) => server) }),
-          ...(admitted === undefined ? {} : { chordServer: admitted.server }),
-          ...(startup.mcpServers === false ? { noMcpServers: true } : {}),
-          ...(forking === undefined ? {} : { fork: forking }),
-        };
-
-        forking = undefined;
-
-        const revoke = () => {
-          live = false;
-
-          if (admitted !== undefined) {
-            server?.revoke(admitted.token);
-          }
-        };
-
-        return open(options).then(
-          (session: Session) => {
-            void session.exited.finally(revoke);
-
-            return session;
-          },
-          (error: unknown) => {
-            revoke();
-
-            throw error;
-          },
-        );
-      },
-      (event) => {
-        if (event.type === 'cleared' || event.type === 'closing') {
-          releaseCurrentCaller();
-        }
-
-        watchNotice(
-          caller.task ?? caller.agent ?? `child:${key}`,
-          args.agent,
-          event,
-        );
-        emit(event);
-      },
-      Date.now,
-      // The model asked for, which the child runs on or not at all, and the
-      // mode a team file set, likewise, or else the settings' one.
-      {
-        ...(args.mode !== undefined
-          ? { mode: { id: args.mode, from: asked, required: true } }
-          : startup.starting?.mode === undefined
-            ? {}
-            : { mode: startup.starting.mode }),
-        ...(args.model === undefined
-          ? {}
-          : {
-              model: { id: args.model, from: asked, required: true },
-            }),
-        // Never required: a refusal leaves it on the runtime's own.
-        ...(args.effort === undefined
-          ? {}
-          : { effort: { id: args.effort, from: asked } }),
-      },
-      new FileRecording(stateDir ?? chordStateDir(), () => {}, Date.now, {
-        parent: () => parent?.session?.id,
-        name,
-        ...(caller.task === undefined ? {} : { task: caller.task }),
-        ...(caller.agent === undefined ? {} : { id: caller.agent }),
-        ...(team === undefined ? {} : { team }),
-      }),
-    );
-
-    return conversation;
-  };
-
-  /**
-   * Waits on a child's start when it was asked for an effort: the answer
-   * says the effort it is on and, when it was refused, why, as the
-   * transcript does. `settle` takes each event the child reports; `started`
-   * settles once it is up, failed or closing, nothing else being known then.
-   */
-  const effortStart = (
-    args: OpenArgs,
-    child: () => Conversation | undefined,
-  ) => {
-    const { promise, resolve } = Promise.withResolvers<void>();
-
-    return {
-      settle: (event: ConversationEvent) => {
-        if (
-          event.type === 'connected' ||
-          event.type === 'connect_failed' ||
-          event.type === 'closing'
-        ) {
-          resolve();
-        }
-      },
-      /** For a child that never started. */
-      never: resolve,
-      started: async (): Promise<EffortStarted> => {
-        if (args.effort === undefined) {
-          return {};
-        }
-
-        await promise;
-
-        const conversation = child();
-        const effort = conversation?.session?.efforts()?.current;
-        const note = conversation?.effortRefused;
-
-        return {
-          ...(effort === undefined ? {} : { effort }),
-          ...(note === undefined ? {} : { note }),
-        };
-      },
-    };
-  };
-
-  /**
-   * Starts a task agent for the caller, main or a long-lived child of it: a
-   * session of `agent` where main works, with no row of
-   * its own, drawn in the caller's turn and closed with it. Refused as
-   * `startRefusal` says.
-   */
-  const spawn = async (from: Caller, args: SpawnArgs): Promise<SpawnAnswer> => {
-    const { key } = from;
-    const parent = callerConversation(key, from.agent);
-    const session = parent?.session;
-    const refused = await startRefusal(key, parent, args, 'task');
-
-    // Its session let go while it waited: no task starts in the next one.
-    if (stale(from) || parent?.session !== session) {
-      return STALE;
-    }
-
-    if (parent === undefined || refused !== undefined) {
-      return { error: refused ?? 'This session has closed' };
-    }
-
-    const id = crypto.randomUUID();
-    const name = taskName(args.name, args.prompt);
-    const task = new TaskAgent(
-      {
-        id,
-        name,
-        runtime: args.agent,
-        prompt: args.prompt,
-        ...(args.model === undefined ? {} : { model: args.model }),
-      },
-      parent.taskParent(id),
-      Date.now,
-    );
-    const caller: Caller = {
-      role: 'child',
-      key,
-      task: id,
-      ...(from.agent === undefined ? {} : { by: from.agent }),
-      window: view,
-    };
-    const effort = effortStart(args, () => child);
-    const child = childConversation(
-      key,
-      parent,
-      args,
-      name,
-      caller,
-      'asked by spawn_task',
-      (event) => {
-        task.heard(event);
-        effort.settle(event);
-
-        if (!task.running) {
-          children.current.delete(id);
-        }
-      },
-    );
-
-    children.current.set(id, child);
-
-    parent.adopt(task, child);
-
-    const started = await effort.started();
-
-    // Its block says the effort it started on, as it says the model.
-    if (started.effort !== undefined) {
-      task.startedOn(started.effort);
-    }
-
-    return {
-      id,
-      name,
-      agent: args.agent,
-      ...(args.model === undefined ? {} : { model: args.model }),
-      ...started,
-    };
-  };
-
-  interface LaunchGuard {
-    readonly signal: AbortSignal;
-    readonly valid: () => boolean;
-    committed: boolean;
-  }
-
-  const captureLaunch = (key: number, caller?: Caller): LaunchGuard => {
-    const parent = conversationAt(key);
-    const session = parent?.session;
-    const signal = AbortSignal.any([
-      ...(parent === undefined ? [] : [parent.launchSignal]),
-      ...(caller?.signal === undefined ? [] : [caller.signal]),
-      ...(caller?.launch === undefined ? [] : [caller.launch.signal()]),
-    ]);
-
-    return {
-      signal,
-      committed: false,
-      valid: () =>
-        !signal.aborted &&
-        session !== undefined &&
-        conversationAt(key) === parent &&
-        parent?.session === session &&
-        caller?.launch?.valid() !== false,
-    };
-  };
-
-  /** How a long-lived child opens, besides its runtime, model and prompt. */
-  interface Opening {
-    readonly launch?: LaunchGuard;
-    readonly id?: string;
-    readonly checkStarted?: (conversation: Conversation) => string | undefined;
-    readonly refused?: (reason: string) => void;
-    readonly name: string;
-    /** The conversation it answers to: main's, or its lead's. */
-    readonly parent: () => Conversation | undefined;
-    /** Who its first prompt is a message from. */
-    readonly from: MessageFrom;
-    /** The team it is of, by its file's name, and a member's lead's id. */
-    readonly team?: { readonly name: string; readonly lead?: string };
-    /** The team part that goes ahead of its first prompt. */
-    readonly part?: TeamPart;
-    /** Where its model and mode were asked for, as a refusal says it. */
-    readonly asked: string;
-    /**
-     * Opened by the person's `/new`: no first prompt, the person's own in
-     * its view being its first (Q187).
-     */
-    readonly idle?: true;
-  }
-
-  /**
-   * Opens a long-lived agent of main, `key`, in the list of agents under
-   * the prompt, its first prompt `opening.from`'s
-   * message; chord's id for it, which its parent quotes, as answered, and
-   * where an effort asked for left it, once it has started.
-   */
-  const startChild = (
-    key: number,
-    args: OpenArgs,
-    opening: Opening,
-  ): {
-    opened: Exclude<OpenAnswer, { readonly error: string }>;
-    started: Promise<EffortStarted>;
-    validated: Promise<string | undefined>;
-  } => {
-    // Eight hex digits: the parent quotes it, and so does the person's close.
-    const id = opening.id ?? crypto.randomUUID().slice(0, 8);
-    const { name, team } = opening;
-    const caller: Caller = {
-      role: 'child',
-      key,
-      agent: id,
-      ...(team === undefined
-        ? {}
-        : { team: team.lead === undefined ? 'lead' : 'member' }),
-      window: view,
-    };
-    const childKey = sessions.agents.nextKey;
-
-    early.set(
-      childKey,
-      opening.idle ? [] : [[opening.from, args.prompt, opening.part]],
-    );
-    // Its state is there before its first event, which may come at once.
-    dispatch({ type: 'agent_opened', key: childKey });
-
-    if (opening.part !== undefined) {
-      parts.set(childKey, opening.part);
-    }
-
-    const effort = effortStart(args, () => conversationAt(childKey));
-    const validation = Promise.withResolvers<string | undefined>();
-    let primaryRefusal: string | undefined;
-    const refuse = (reason: string) => {
-      // Closing is a consequence, not a replacement for the actionable cause.
-      if (primaryRefusal !== undefined) {
-        return;
-      }
-
-      primaryRefusal = reason;
-
-      opening.refused?.(reason);
-      validation.resolve(reason);
-    };
-
-    const cancelLaunch = () => {
-      if (opening.launch?.valid() === false) {
-        refuse(
-          'Cancelled before its first job; the attempted agent is closing.',
-        );
-        dropChild(childKey);
-      }
-    };
-
-    const placed = sessions.openChild(
-      {
-        id,
-        name,
-        runtime: args.agent,
-        openedAt: Date.now(),
-        ...(args.model === undefined ? {} : { model: args.model }),
-        ...(args.mode === undefined ? {} : { mode: args.mode }),
-        ...(team === undefined ? {} : { team: team.name }),
-        ...(team?.lead === undefined ? {} : { lead: team.lead }),
-      },
-      (emit, own) =>
-        childConversation(
-          key,
-          opening.parent(),
-          args,
-          name,
-          caller,
-          opening.asked,
-          (event) => {
-            emit(event);
-            tellEnded(key, own, event);
-            effort.settle(event);
-
-            if (event.type === 'closing' || event.type === 'disconnected') {
-              if (!opening.launch?.committed) {
-                refuse(
-                  event.type === 'closing' || opening.launch?.valid() === false
-                    ? 'Cancelled before its first job; the attempted agent is closing.'
-                    : 'Startup ended before the first job; the attempted agent is closing.',
-                );
-              }
-
-              opening.launch?.signal.removeEventListener('abort', cancelLaunch);
-            }
-
-            if (clearedHeard(own, event)) {
-              return;
-            }
-
-            if (event.type === 'connected' || event.type === 'connect_failed') {
-              const held = early.get(own) ?? [];
-
-              early.delete(own);
-
-              // After the event is drawn, so the first turn comes after it.
-              queueMicrotask(() => {
-                opening.launch?.signal.removeEventListener(
-                  'abort',
-                  cancelLaunch,
-                );
-
-                const child = agentOf(sessions.agents, own)?.child;
-
-                if (opening.launch?.valid() === false) {
-                  refuse(
-                    'Cancelled before its first job; the attempted agent is closing.',
-                  );
-                  dropChild(own);
-
-                  return;
-                }
-
-                if (event.type === 'connected') {
-                  const invalid =
-                    child === undefined
-                      ? 'The attempted agent closed before its first job.'
-                      : opening.checkStarted?.(child.conversation);
-
-                  if (invalid !== undefined) {
-                    refuse(invalid);
-                    dropChild(own);
-
-                    return;
-                  }
-
-                  if (opening.launch?.valid() === false) {
-                    refuse(
-                      'Cancelled before its first job; the attempted agent is closing.',
-                    );
-                    dropChild(own);
-
-                    return;
-                  }
-
-                  // The first prompt starts its first turn; the messages
-                  // sent while it started go into that turn.
-                  for (const [index, [from, text, part]] of held.entries()) {
-                    if (index === 0) {
-                      if (child !== undefined && opening.launch !== undefined) {
-                        opening.launch.committed = true;
-                      }
-
-                      child?.conversation.deliver(from, text, part);
-                    } else {
-                      child?.conversation.tell(from, text);
-                    }
-                  }
-
-                  validation.resolve(undefined);
-                } else if (child !== undefined) {
-                  refuse(
-                    'Initialization failed before the first job; the attempted agent is closing.',
-                  );
-
-                  if (opening.checkStarted !== undefined) {
-                    dropChild(own);
-
-                    return;
-                  }
-
-                  parentOf(child)?.deliver(
-                    { name: 'chord' },
-                    `${child.name} (${child.runtime}) did not start: ` +
-                      `${sentence(stepWords(event.message, event.failure))}${failureNote(
-                        child.runtime,
-                        event.failure,
-                      )}${
-                        event.signIn === undefined
-                          ? ''
-                          : signInNote(child.runtime, event.signIn)
-                      } It takes no messages; open_agent starts another.`,
-                  );
-                }
-              });
-            }
-          },
-          team?.lead === undefined ? team?.name : undefined,
-        ),
-    );
-
-    if (placed === undefined) {
-      effort.never();
-      refuse(
-        'The attempted agent could not be opened; no first job was delivered.',
-      );
-    } else {
-      opening.launch?.signal.addEventListener('abort', cancelLaunch, {
-        once: true,
-      });
-      cancelLaunch();
-    }
-
-    return {
-      opened: {
-        id,
-        name,
-        agent: args.agent,
-        ...(args.model === undefined ? {} : { model: args.model }),
-        ...(args.mode === undefined ? {} : { mode: args.mode }),
-      },
-      started: effort.started(),
-      validated: validation.promise,
-    };
-  };
-
-  /** Why main, `key`, cannot open another child of its own, if it cannot. */
-  const fullRefusal = (key: number): string | undefined => {
-    const agents = ownedBy(sessions.agents, key);
-
-    return agents === undefined
-      ? 'This session has closed'
-      : ownChildren(agents).length >= MAX_CHILDREN
-        ? `This session has ${MAX_CHILDREN} agents open; close_agent one first`
-        : undefined;
-  };
-
-  /**
-   * Opens a long-lived agent for main, `key`: a session of `agent` where
-   * main works, its first prompt the parent's message.
-   * Refused as `startRefusal` says, and past `MAX_CHILDREN`.
-   */
-  const openAgent = async (
-    key: number,
-    args: OpenArgs,
-    caller?: Caller,
-  ): Promise<OpenAnswer> => {
-    const session = conversationAt(key)?.session;
-    const refused =
-      (await startRefusal(key, conversationAt(key), args, 'agent')) ??
-      fullRefusal(key);
-
-    // Its session let go while it waited: what it asked goes nowhere.
-    if (
-      (caller !== undefined && stale(caller)) ||
-      conversationAt(key)?.session !== session
-    ) {
-      return STALE;
-    }
-
-    const agents = ownedBy(sessions.agents, key);
-
-    if (agents === undefined || refused !== undefined) {
-      return { error: refused ?? 'This session has closed' };
-    }
-
-    const { opened, started } = startChild(key, args, {
-      name: childName(agents, args.name, args.agent),
-      parent: () => conversationAt(key),
-      from: MAIN,
-      asked: 'asked by open_agent',
-    });
-
-    return { ...opened, ...(await started) };
   };
 
   const selectedCapabilities = async (
@@ -1690,6 +1036,10 @@ export function useSessions(
         runtimes: runtimeNames,
         home,
         configHome,
+        stateDir,
+        open,
+        server,
+        view: () => view,
         conversation: conversationOf,
       },
       {
@@ -1713,6 +1063,7 @@ export function useSessions(
           }
         },
         stateOf: (key) => stateOf(key),
+        watched: watchNotice,
         queueBack: (key, typed) => {
           const now = stateOf(key);
 
@@ -1751,11 +1102,8 @@ export function useSessions(
     shownTeamFile,
     teamPlaces,
     policyNow,
-    early,
-    parts,
     runs,
     parentOf,
-    tellEnded,
     keepSpend,
     retiredKey,
     dropChild,
@@ -1766,16 +1114,17 @@ export function useSessions(
     clearByPerson,
     clearAgent,
     message,
+    children,
+    startRefusal,
+    childConversation,
+    stale,
+    STALE,
+    spawn,
+    captureLaunch,
+    startChild,
+    fullRefusal,
+    openAgent,
   } = agentsHost;
-  /**
-   * Whether `caller` speaks for a session already let go, cleared or
-   * closing: what it asks reaches no one (CHD-476).
-   */
-  const stale = (caller: Caller) => caller.launch?.valid() === false;
-  const STALE = {
-    error: 'Your session was cleared or closed; nothing more goes from it',
-  } as const;
-
   // The window's, as `view` is made anew with each draw.
   const settingsBox = useRef(settingsBoxClaim());
 
@@ -1925,14 +1274,14 @@ export function useSessions(
       }
 
       return caller.task !== undefined
-        ? children.current.get(caller.task)?.served(call)
+        ? children.get(caller.task)?.served(call)
         : caller.agent !== undefined
           ? childOf(caller.key, caller.agent)?.conversation.served(call)
           : conversationAt(caller.key)?.served(call);
     },
     servedLater: (caller) => {
       const { task } = caller;
-      const child = task === undefined ? undefined : children.current.get(task);
+      const child = task === undefined ? undefined : children.get(task);
       const parent = callerConversation(caller.key, caller.by);
       const agent = task === undefined ? undefined : parent?.task(task);
 

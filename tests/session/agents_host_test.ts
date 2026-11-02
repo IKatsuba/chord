@@ -2,10 +2,12 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import assert from 'node:assert';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   createAgentsHost,
   type AgentsEvent,
+  type AgentsHostOptions,
   type AgentsPort,
   type FoldedSession,
 } from '../../src/session/agents_host.ts';
@@ -15,6 +17,9 @@ import {
 } from '../../src/session/conversation.ts';
 import type { Place } from '../../src/session/place.ts';
 import type { Caller, WindowView } from '../../src/server/tools.ts';
+import { openSession } from '../../src/session/session.ts';
+import { MAX_CHILDREN } from '../../src/session/window_agents.ts';
+import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { heldSession, until } from './conversation_fake.ts';
 
 const HOST = fileURLToPath(
@@ -51,6 +56,10 @@ async function packagesReached(file: string): Promise<Set<string>> {
   return packages;
 }
 
+/** A held session the host can ask for all it offers. */
+const held = () =>
+  Object.assign(heldSession().session, { efforts: () => undefined });
+
 let dir: string;
 
 beforeEach(async () => {
@@ -62,7 +71,11 @@ afterEach(async () => {
 });
 
 /** A host on held sessions, its place a fresh directory, and what it told. */
-function hosted(place: Partial<Place> = {}, port: Partial<AgentsPort> = {}) {
+function hosted(
+  place: Partial<Place> = {},
+  port: Partial<AgentsPort> = {},
+  options: Partial<AgentsHostOptions> = {},
+) {
   const heard: [number, ConversationEvent][] = [];
   const told: AgentsEvent[] = [];
   const host = createAgentsHost(
@@ -77,8 +90,13 @@ function hosted(place: Partial<Place> = {}, port: Partial<AgentsPort> = {}) {
       runtimes: ['fake'],
       home: undefined,
       configHome: undefined,
+      stateDir: join(dir, 'state'),
+      open: () => Promise.resolve(held()),
+      server: undefined,
+      view: () => ({ offer: host.offer }) as WindowView,
+      ...options,
       conversation: (_, emit) =>
-        new Conversation(() => Promise.resolve(heldSession().session), emit),
+        new Conversation(() => Promise.resolve(held()), emit),
     },
     {
       heard: (key, event) => heard.push([key, event]),
@@ -96,8 +114,9 @@ function hosted(place: Partial<Place> = {}, port: Partial<AgentsPort> = {}) {
 async function withMain(
   place: Partial<Place> = {},
   port: Partial<AgentsPort> = {},
+  options: Partial<AgentsHostOptions> = {},
 ) {
-  const made = hosted(place, port);
+  const made = hosted(place, port, options);
   const key = made.host.sessions.start('fake')!;
 
   await until(() => made.heard.some(([, event]) => event.type === 'connected'));
@@ -108,8 +127,7 @@ async function withMain(
   ) =>
     made.host.sessions.openChild(
       { id, name: id, runtime: 'fake', openedAt: 1, ...info },
-      (emit) =>
-        new Conversation(() => Promise.resolve(heldSession().session), emit),
+      (emit) => new Conversation(() => Promise.resolve(held()), emit),
     )!;
 
   return { ...made, key, open };
@@ -638,6 +656,166 @@ describe('closing and clearing by a tool', () => {
       "The person cleared one's context (fake, id one)",
     );
 
+    await host.sessions.closeAll();
+  });
+});
+
+describe('opening a child', () => {
+  const onFake = {
+    place: {
+      startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+    },
+    options: { open: openSession },
+  };
+  const prompt = { agent: 'fake', prompt: 'hello' };
+
+  test('an unknown runtime, a bad name and a closed parent are refused', async () => {
+    const { host, key } = await withMain();
+    const parent = host.conversationAt(key);
+
+    expect(
+      await host.startRefusal(
+        key,
+        parent,
+        { agent: 'other', prompt: '' },
+        'agent',
+      ),
+    ).toBe('No agent named other; chord knows fake');
+    expect(
+      await host.startRefusal(
+        key,
+        parent,
+        { ...prompt, name: 'a\nb' },
+        'agent',
+      ),
+    ).toStartWith('An agent name ');
+    expect(await host.startRefusal(key, undefined, prompt, 'task')).toBe(
+      'This session is closing; no task can start from it',
+    );
+    expect(await host.openAgent(99, prompt)).toEqual({
+      error: 'This session is closing; no agent can start from it',
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a caller already let go opens nothing', async () => {
+    const { host, key, told } = await withMain();
+    const stale: Caller = {
+      role: 'person',
+      key,
+      window: {} as WindowView,
+      launch: {
+        valid: () => false,
+        signal: () => new AbortController().signal,
+      },
+    };
+
+    expect(host.stale(stale)).toBe(true);
+    expect(await host.openAgent(key, prompt, stale)).toEqual(host.STALE);
+    expect(told).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('its state is told before its first event, and its first prompt runs', async () => {
+    const before: number[] = [];
+    const { host, key, heard } = await withMain(
+      onFake.place,
+      {
+        told: (event) => {
+          if (event.type === 'agent_opened') {
+            before.push(heard.filter(([at]) => at === event.key).length);
+          }
+        },
+      },
+      onFake.options,
+    );
+    const opened = await host.openAgent(key, { ...prompt, name: 'one' });
+
+    assert(!('error' in opened));
+
+    const child = host.childOf(key, opened.id)!;
+
+    expect(opened).toMatchObject({ name: 'one', agent: 'fake' });
+    expect(before).toEqual([0]);
+
+    await until(() =>
+      heard.some(([at, event]) => at === child.key && event.type === 'result'),
+    );
+
+    expect(host.early.has(child.key)).toBe(false);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a launch cancelled before its first job is refused and dropped', async () => {
+    const { host, key, heard } = await withMain(
+      onFake.place,
+      {},
+      onFake.options,
+    );
+    const stop = new AbortController();
+    const refusals: string[] = [];
+    const launch = host.captureLaunch(key, {
+      role: 'person',
+      key,
+      window: {} as WindowView,
+      signal: stop.signal,
+    });
+
+    expect(launch.valid()).toBe(true);
+
+    const { validated } = host.startChild(key, prompt, {
+      name: 'one',
+      parent: () => host.conversationAt(key),
+      from: host.MAIN,
+      asked: 'a test',
+      launch,
+      refused: (reason) => refusals.push(reason),
+    });
+
+    stop.abort();
+
+    expect(launch.valid()).toBe(false);
+    expect(await validated).toBe(
+      'Cancelled before its first job; the attempted agent is closing.',
+    );
+    expect(refusals).toHaveLength(1);
+    expect(host.childOf(key, 'one')).toBeUndefined();
+    expect(heard.filter(([, event]) => event.type === 'result')).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('a full session refuses another', async () => {
+    const { host, key, open } = await withMain();
+
+    for (let index = 0; index < MAX_CHILDREN; index++) {
+      open(`child-${index}`);
+    }
+
+    expect(host.fullRefusal(key)).toBe(
+      `This session has ${MAX_CHILDREN} agents open; close_agent one first`,
+    );
+    expect(host.fullRefusal(99)).toBe('This session has closed');
+
+    await host.sessions.closeAll();
+  });
+
+  test('a task runs under its parent and goes once it ends', async () => {
+    const { host, key } = await withMain(onFake.place, {}, onFake.options);
+    const answer = await host.spawn(
+      { role: 'person', key, window: {} as WindowView },
+      prompt,
+    );
+
+    assert(!('error' in answer));
+
+    expect(host.children.has(answer.id)).toBe(true);
+    expect(host.conversationAt(key)!.task(answer.id)?.running).toBe(true);
+
+    await until(() => !host.children.has(answer.id));
     await host.sessions.closeAll();
   });
 });

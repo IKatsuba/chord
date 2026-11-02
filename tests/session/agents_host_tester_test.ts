@@ -6,6 +6,7 @@ import {
   createAgentsHost,
   type AgentsEvent,
 } from '../../src/session/agents_host.ts';
+import type { WindowView } from '../../src/server/tools.ts';
 import {
   Conversation,
   type ConversationEvent,
@@ -29,6 +30,10 @@ describe('CHD-580 layer 1 tester: independent closing sessions', () => {
         runtimes: ['fake'],
         home: undefined,
         configHome: undefined,
+        stateDir: undefined,
+        open: () => Promise.resolve(heldSession().session),
+        server: undefined,
+        view: () => ({}) as WindowView,
         conversation: (_, emit) =>
           new Conversation(() => Promise.resolve(heldSession().session), emit),
       },
@@ -80,6 +85,10 @@ describe('CHD-580 layer 1 tester: independent closing sessions', () => {
           runtimes: ['fake'],
           home: undefined,
           configHome: undefined,
+          stateDir: undefined,
+          open: () => Promise.resolve(heldSession().session),
+          server: undefined,
+          view: () => ({}) as WindowView,
           conversation: (_, emit) =>
             new Conversation(
               () => Promise.resolve(heldSession().session),

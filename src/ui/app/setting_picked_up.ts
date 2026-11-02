@@ -1,19 +1,14 @@
 /**
- * What a saved setting changes in the running window. Nothing watches the
- * file and sessions keep what they were started with, so a saved `theme`,
- * `editorMode` or `offeredAgents` takes the same state change its command
- * makes, a removed one falling to what an absent key gives; every other key
- * waits for the next start, or is read when it is needed.
+ * A saved setting's change as the window takes it: the same state change the
+ * setting's command makes.
  */
 import type { ListedAgent } from '../../agents.ts';
-import type { EditorMode, SettingChange } from '../../settings.ts';
+import type { SettingPickedUp } from '../../session/setting_picked_up.ts';
 import { agentItems } from '../prompt/commands.ts';
-import type { ThemeSetting } from '../theme/theme.ts';
 import type { AppAction } from './state.ts';
 
-export function settingPickedUp(
-  [key, ...deeper]: readonly string[],
-  change: SettingChange,
+export function settingActions(
+  picked: SettingPickedUp | undefined,
   {
     runtimes,
     listed,
@@ -22,27 +17,19 @@ export function settingPickedUp(
     readonly listed: readonly ListedAgent[];
   },
 ): readonly AppAction[] {
-  const value = 'set' in change ? change.set : undefined;
-
-  if (deeper.length > 0) {
-    return [];
-  }
-
-  switch (key) {
+  switch (picked?.key) {
     case 'theme':
-      return [
-        { type: 'theme_chosen', theme: (value as ThemeSetting) ?? 'auto' },
-      ];
+      return [{ type: 'theme_chosen', theme: picked.theme }];
     case 'editorMode':
-      return [{ type: 'vim_toggled', on: (value as EditorMode) === 'vim' }];
+      return [{ type: 'vim_toggled', on: picked.vim }];
     case 'offeredAgents':
       return [
         {
           type: 'agents_offered',
-          agents: agentItems(runtimes, listed, value as string[] | undefined),
+          agents: agentItems(runtimes, listed, picked.offered),
         },
       ];
-    default:
+    case undefined:
       return [];
   }
 }

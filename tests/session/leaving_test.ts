@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import process from 'node:process';
 import { type GroupProcess, spawnGroup } from '../../src/platform/process.ts';
 import {
+  closeOnForcedExit,
+  closeOwned,
   createLeaving,
   type LeaveExit,
   type LeaveOptions,
@@ -356,5 +358,43 @@ describe('CHD-574 tester: shutdown failure boundaries', () => {
       'chord: not settled at the deadline: connection, first host, second host',
     ]);
     expect(exits).toEqual([{ code: 1 }]);
+  });
+});
+
+describe('what a forced exit closes', () => {
+  test('each close asked for and not forgotten starts once, and is no longer owned', async () => {
+    const closed: string[] = [];
+
+    closeOnForcedExit(() => {
+      closed.push('kept');
+
+      return Promise.resolve();
+    });
+
+    closeOnForcedExit(() => {
+      closed.push('forgotten');
+
+      return Promise.resolve();
+    })();
+
+    const closing = closeOwned();
+
+    expect(closed).toEqual(['kept']);
+    expect(closing).toHaveLength(1);
+    await Promise.all(closing);
+    expect(closeOwned()).toEqual([]);
+    expect(closed).toEqual(['kept']);
+  });
+
+  test('a close that fails rejects only its own promise', async () => {
+    closeOnForcedExit(() => Promise.reject(new Error('did not exit')));
+    closeOnForcedExit(() => Promise.resolve());
+
+    const settled = await Promise.allSettled(closeOwned());
+
+    expect(settled.map(({ status }) => status)).toEqual([
+      'rejected',
+      'fulfilled',
+    ]);
   });
 });

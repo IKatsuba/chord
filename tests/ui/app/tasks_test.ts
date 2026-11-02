@@ -1,11 +1,11 @@
 /** What the window says of a session's task agents and messages. */
 import { expect, test } from 'bun:test';
+import { busyOf } from '../../../src/session/busy.ts';
 import {
   emptyTranscript,
   type Entry,
   type Transcript,
 } from '../../../src/session/transcript/types.ts';
-import { busyOf } from '../../../src/ui/app/closing.ts';
 import { chordLine, chordRow } from '../../../src/ui/pickers/mcp.ts';
 import { queueRows, restoredDraft } from '../../../src/ui/prompt/queue.ts';
 import {

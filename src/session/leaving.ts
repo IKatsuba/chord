@@ -1,6 +1,7 @@
 /**
  * One way out of a process that runs agents with no window, once, whatever
- * starts it, inside one deadline.
+ * starts it, inside one deadline; and what a crash or a signal waits to close
+ * in a process with one, whose window leaves by its own way.
  */
 import { settledWithin } from '../acp/process.ts';
 import { killSpawnedGroups, type SignalName } from '../platform/process.ts';
@@ -188,4 +189,33 @@ function exitOf(reason: LeaveReason, unclean: boolean): LeaveExit {
   }
 
   return { code: reason.kind === 'eof' && !unclean ? 0 : 1 };
+}
+
+/** What chord owns that a crash or a signal waits to close, as a quit does. */
+const owned = new Set<() => Promise<void>>();
+
+/**
+ * Has a crash or a signal wait for `close` before chord exits, until the
+ * returned function is called: the agents a quit closes and reaps would
+ * otherwise outlive chord, a hung one never getting its SIGKILL. `close`
+ * must settle within its own bounds, as the exit waits for nothing else.
+ */
+export function closeOnForcedExit(close: () => Promise<void>): () => void {
+  const entry = () => close();
+
+  owned.add(entry);
+
+  return () => void owned.delete(entry);
+}
+
+/**
+ * Starts all that is owned, which is then no longer owned, and gives each
+ * close's promise for whoever is leaving to wait for.
+ */
+export function closeOwned(): readonly Promise<void>[] {
+  const closing = [...owned].map(async (close) => await close());
+
+  owned.clear();
+
+  return closing;
 }

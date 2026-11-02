@@ -9,6 +9,7 @@ import {
   type CodePickAction,
   reduceCodePick,
 } from '../transcript/code_pick.ts';
+import { askedInput, mine } from '../../session/busy.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
 import { inBatch } from '../../session/transcript/entries.ts';
 import {
@@ -57,7 +58,6 @@ import {
   reduceBackground,
 } from '../background/state.ts';
 import {
-  askedInput,
   askedPlan,
   asksPerson,
   asksWithKeys,
@@ -92,7 +92,7 @@ import {
   runningShell,
 } from '../prompt/state.ts';
 import { type Cursor, endOf, textareaDoes } from '../prompt/prompt.ts';
-import { mine, sendable, started } from '../prompt/queue.ts';
+import { sendable, started } from '../prompt/queue.ts';
 import type { Search } from '../prompt/search.ts';
 import { vimKeyNames, vimTakes, vimTakesCharacter } from '../prompt/vim.ts';
 import { backfilled, firstMounted, heldMount } from '../transcript/mount.ts';

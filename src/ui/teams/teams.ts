@@ -1,13 +1,13 @@
 /**
- * `/team`, kept out of the window: which form was typed, the words chord
- * hands main and says under the command, the teams picker's rows, and
- * `/team show`'s table of a running team. Nothing here reads a file or a
- * session; the window gathers what each needs.
+ * `/team`, kept out of the window: the words chord hands main, the teams
+ * picker's rows, and `/team show`'s table of a running team. Nothing here
+ * reads a file or a session; the window gathers what each needs.
  */
 import { Table } from '@cliffy/table';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { formatElapsed } from '../../session/elapsed.ts';
+import type { ListedTeam, TeamWords } from '../../session/team_command.ts';
 import type {
   MessageFrom,
   TeamAgentShown,
@@ -18,70 +18,12 @@ import { GLYPHS } from '../agents/glyphs.ts';
 import type { PickerChoice } from '../pickers/picker.ts';
 import { messageHeader } from '../transcript/message.ts';
 
-/** What `/team` was asked, by the words after it. */
-export type TeamCommand =
-  | { readonly form: 'list' }
-  | { readonly form: 'new'; readonly words: string }
-  | { readonly form: 'show'; readonly name: string }
-  | { readonly form: 'run'; readonly name: string; readonly job: string }
-  | { readonly form: 'stop'; readonly name: string }
-  /** Words `/team` cannot read, and what it says of them. */
-  | { readonly form: 'refused'; readonly problem: string };
-
-/**
- * `/team`'s words read: the form, then a team's name, then the rest, which
- * is a new team's description or a job. `stop` takes a run's
- * name whole, as a second run is `bugfix 2`.
- */
-export function teamCommand(args: string): TeamCommand {
-  const [, form = '', rest = ''] =
-    /^(\S*)\s*([\s\S]*)$/.exec(args.trim()) ?? [];
-  const [, name = '', words = ''] = /^(\S*)\s*([\s\S]*)$/.exec(rest) ?? [];
-  const which = 'Which team? /team lists them';
-
-  switch (form) {
-    case '':
-    case 'list':
-      return { form: 'list' };
-    case 'new':
-      return rest === ''
-        ? {
-            form: 'refused',
-            problem: '/team new takes a few words about the work the team does',
-          }
-        : { form: 'new', words: rest };
-    case 'show':
-      return name === ''
-        ? { form: 'refused', problem: which }
-        : { form: 'show', name };
-    case 'run':
-      return name === ''
-        ? { form: 'refused', problem: which }
-        : words === ''
-          ? {
-              form: 'refused',
-              problem: `/team run ${name} takes the job after the name`,
-            }
-          : { form: 'run', name, job: words };
-    case 'stop':
-      return rest === ''
-        ? {
-            form: 'refused',
-            problem: 'Which run? The list under the prompt names them',
-          }
-        : { form: 'stop', name: rest.replaceAll(/\s+/g, ' ') };
-    default:
-      return {
-        form: 'refused',
-        problem: `/team has no ${form}; it takes list, new, show, run or stop`,
-      };
-  }
-}
-
-/** `a, b and c`. */
-export function andList(names: readonly string[]): string {
-  return new Intl.ListFormat('en', { type: 'conjunction' }).format(names);
-}
+/** What `/team` says of runs, in the window's words. */
+export const TEAM_WORDS: TeamWords = {
+  whichRun: 'Which run? The list under the prompt names them',
+  closedLead: '/resume lists it',
+  closedRun: '/resume lists them',
+};
 
 /**
  * What main gets for `/team new <words>`: the words, after one line that
@@ -97,45 +39,6 @@ export function newTeamPrompt(words: string): string {
   );
 }
 
-/**
- * What chord tells main, ahead of its next turn, of a run the person
- * started with `/team run`, which main took no part in.
- */
-export function ranNote(team: string, lead: string, job: string): string {
-  return (
-    `The person handed team ${team} this job: "${job}". Its lead is ` +
-    `@${lead} and reports to you; send_message reaches it.`
-  );
-}
-
-/**
- * Why `/team run` or `/team show` found no team by `name`, or a file that
- * is not one.
- */
-export function teamRefusal(
-  name: string,
-  found: ListedTeam | undefined,
-): string | undefined {
-  if (found === undefined) {
-    return `No team named ${name} · /team lists them`;
-  }
-
-  return 'problem' in found
-    ? `${found.shown} is not a team chord can run:\n${found.problem}`
-    : undefined;
-}
-
-/**
- * What `/team stop` says of the run it closed: its lead, and the members
- * open with it.
- */
-export function stoppedLine(run: string, members: readonly string[]): string {
-  return members.length === 0
-    ? `Stopped ${run}: its lead is closed · /resume lists it`
-    : `Stopped ${run}: ${andList(['its lead', ...members])} are closed · ` +
-        '/resume lists them';
-}
-
 /** A team's runs open in the window, as the picker and `/team show` read them. */
 export interface TeamRun {
   readonly id?: string;
@@ -146,9 +49,6 @@ export interface TeamRun {
   /** When its lead opened, on chord's clock. */
   readonly since: number;
 }
-
-/** A team file as the picker lists it, its path as the window shows it. */
-export type ListedTeam = FoundTeam & { readonly shown: string };
 
 /** What `/team`'s picker and names read: the teams, the runs, the two places. */
 export interface TeamListing {

@@ -2,11 +2,8 @@
  * What the agent asks the person, as the window holds it: the form being
  * filled in, and whether a permission, a form or a link waits on them.
  */
-import type {
-  ElicitationWait,
-  PlanAsk,
-  Transcript,
-} from '../../session/transcript/types.ts';
+import { askedInput } from '../../session/busy.ts';
+import type { PlanAsk, Transcript } from '../../session/transcript/types.ts';
 import { askedPermission } from './permission.ts';
 import { hintKey, type Keymap } from '../shortcuts/bindings.ts';
 import type { FormState } from './form.ts';
@@ -161,19 +158,6 @@ export function shownPermission(transcript: Transcript) {
   return askedPlan(transcript) === undefined
     ? askedPermission(transcript.turn)
     : undefined;
-}
-
-/**
- * The form or link on screen: the oldest the turn asks for, once no
- * permission is asked, as that prompt answers first.
- */
-export function askedInput(
-  transcript: Transcript,
-): ElicitationWait | undefined {
-  return transcript.turn.status === 'awaiting_permission' ||
-    (transcript.planAsks ?? []).some((ask) => ask.answer === undefined)
-    ? undefined
-    : transcript.asking[0];
 }
 
 /**

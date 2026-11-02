@@ -5,7 +5,6 @@
  * them.
  */
 import type { ReadLimits } from '../../session/resource_access.ts';
-import type { TeamSelection } from '../../session/budgets.ts';
 import {
   confirmSelectionRole,
   recordedSelection,
@@ -20,19 +19,27 @@ import {
 import type { TeamSelectionPolicy } from '../../settings.ts';
 import { agentNameProblem } from '../../agent_name.ts';
 import { type Dispatch, useEffect, useRef, useState } from 'react';
-import { closeOnForcedExit, useApp } from './renderer.tsx';
+import { useApp } from './renderer.tsx';
 import { relative, resolve } from 'node:path';
-import type { DefinedServer, Ignored } from '../../mcp.ts';
 import type { Wait } from '../../notify.ts';
+import { busyOf, mine } from '../../session/busy.ts';
 import { withContext } from '../../session/context.ts';
 import {
   Conversation,
   type ConversationEvent,
   type OpenSession,
-  type Starting,
 } from '../../session/conversation.ts';
+import { closeOnForcedExit } from '../../session/leaving.ts';
 import { OpenAgents } from '../../session/open_agents.ts';
+import type { Place } from '../../session/place.ts';
 import type { Session } from '../../session/session.ts';
+import { settingPickedUp } from '../../session/setting_picked_up.ts';
+import {
+  type ListedTeam,
+  ranNote,
+  stoppedLine,
+  teamRefusal,
+} from '../../session/team_command.ts';
 import { signInNote } from '../../session/sign_in.ts';
 import {
   failureNote,
@@ -112,7 +119,7 @@ import { subagentPath } from '../../session/subagents.ts';
 import { askerParts } from '../dialogs/asker.ts';
 import type { ListedAgent } from '../../agents.ts';
 import { homePath } from '../../settings.ts';
-import { settingPickedUp } from './setting_picked_up.ts';
+import { settingActions } from './setting_picked_up.ts';
 import type { AgentOption } from '../../session/config.ts';
 import {
   DIMCODE_NOTICE,
@@ -127,7 +134,7 @@ import { modelToAsk, valueToAsk } from '../pickers/picker.ts';
 import { attachmentsOf, imagesIn, type PastedImage } from '../prompt/images.ts';
 import { mentionsIn } from '../prompt/mentions.ts';
 import { type Cursor, endOf, START } from '../prompt/prompt.ts';
-import { mine, restoredDraft } from '../prompt/queue.ts';
+import { restoredDraft } from '../prompt/queue.ts';
 import { heldContext } from '../prompt/state.ts';
 import { vimReset } from '../prompt/vim.ts';
 import { hintKey } from '../shortcuts/bindings.ts';
@@ -136,7 +143,6 @@ import { askedPermission } from '../dialogs/permission.ts';
 import { heldBack } from '../dialogs/state.ts';
 import {
   agentCloseArmedLine,
-  busyOf,
   ctrlCArmedLine,
   teamCloseArmedLine,
 } from './closing.ts';
@@ -169,12 +175,9 @@ import {
 } from '../background/view.ts';
 import {
   headlineText,
-  type ListedTeam,
   messageHeadline,
-  ranNote,
-  stoppedLine,
+  TEAM_WORDS,
   type TeamListing,
-  teamRefusal,
   type TeamRun,
 } from '../teams/teams.ts';
 import {
@@ -198,43 +201,6 @@ import {
 /** `a, b and c`. */
 function andList(names: readonly string[]): string {
   return new Intl.ListFormat('en', { type: 'conjunction' }).format(names);
-}
-
-/** How a session of one agent starts: its command, and its model and mode. */
-export interface SessionStart {
-  /** Replaces the registry's command for the agent. */
-  readonly agentCommand?: string | string[] | undefined;
-  /**
-   * Why the agent is not started at all, as said to the person: its command
-   * was refused (CHD-466). Nothing starts on chord's own command instead.
-   */
-  readonly refused?: string | undefined;
-  readonly starting?: Starting | undefined;
-  /**
-   * `false` where the agent takes no MCP servers at all, as its setting or
-   * chord's own table says (CHD-441).
-   */
-  readonly mcpServers?: false | undefined;
-}
-
-/**
- * Where the window's sessions work, and what that directory's files give them:
- * a session resumed from another directory takes that directory's project
- * settings and MCP servers, as had chord been started there.
- */
-export interface Place {
-  readonly teamSelection?: TeamSelection;
-  readonly selectionPolicy?: () => Promise<TeamSelectionPolicy>;
-  readonly cwd: string;
-  /**
-   * How a session of each agent starts there; none for an agent chord
-   * cannot start.
-   */
-  readonly startupOf: (agent: string) => SessionStart | undefined;
-  /** The MCP servers each session there gets, which `/mcp` lists. */
-  readonly mcpServers: readonly DefinedServer[];
-  /** What the files there defined that chord did not pass. */
-  readonly mcpIgnored: readonly Ignored[];
 }
 
 export interface SessionsOptions {
@@ -2687,7 +2653,7 @@ export function useSessions(
     teamPlaces: (caller, name) => teamPlaces(caller.key, name),
     claimSettingsBox: settingsBox.current,
     settingSaved: (path, change) => {
-      for (const action of settingPickedUp(path, change, {
+      for (const action of settingActions(settingPickedUp(path, change), {
         runtimes: runtimeNames,
         listed: listedAgents,
       })) {
@@ -3401,6 +3367,7 @@ export function useSessions(
       text: stoppedLine(
         lead.name,
         membersOf(agents, lead.id).map((each) => each.name),
+        TEAM_WORDS,
       ),
       failed: false,
     });

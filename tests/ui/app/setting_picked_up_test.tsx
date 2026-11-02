@@ -2,7 +2,9 @@ import { describe, expect, test } from 'bun:test';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { serveChord } from '../../../src/server/server.ts';
-import { settingPickedUp } from '../../../src/ui/app/setting_picked_up.ts';
+import { settingPickedUp as pickedUp } from '../../../src/session/setting_picked_up.ts';
+import type { SettingChange } from '../../../src/settings.ts';
+import { settingActions } from '../../../src/ui/app/setting_picked_up.ts';
 import type { WindowedState } from '../../../src/ui/app/state.ts';
 import { agentItems } from '../../../src/ui/prompt/commands.ts';
 import { send, until, withWindow } from './render.tsx';
@@ -12,6 +14,11 @@ const listed = [
   { name: 'codex', title: 'Codex', start: 'ready', runner: undefined },
 ] as never;
 const place = { runtimes: ['claude', 'codex'], listed };
+const settingPickedUp = (
+  path: readonly string[],
+  change: SettingChange,
+  where: typeof place,
+) => settingActions(pickedUp(path, change), where);
 
 describe('settingPickedUp', () => {
   test("a theme takes the theme command's change, a removed one the default", () => {

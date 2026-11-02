@@ -166,8 +166,13 @@ const promptOf = (sessionId: string, text: string) => ({
   prompt: [{ type: 'text', text }],
 });
 
-/** Every line on stdout is the protocol. */
-function parses(client: AcpClient): void {
+/**
+ * Every line on stdout is the protocol, read to its end: an exit can come
+ * ahead of the pipe's last bytes.
+ */
+async function parses(client: AcpClient): Promise<void> {
+  await until(() => client.closed);
+
   for (const line of client.lines) {
     expect(() => JSON.parse(line) as unknown).not.toThrow();
   }
@@ -198,7 +203,7 @@ describe('how it ends', () => {
     expect(await chord.ended).toEqual({ code: 0, signal: null });
 
     await until(() => !alive(group));
-    parses(chord.client);
+    await parses(chord.client);
   }, 40_000);
 
   test('eof with an ask: exit 0, the turn in the record, no answer', async () => {
@@ -219,6 +224,7 @@ describe('how it ends', () => {
     expect(await chord.ended).toEqual({ code: 0, signal: null });
 
     await until(() => !alive(group));
+    await parses(chord.client);
 
     expect(
       chord.client.messages.some(
@@ -267,7 +273,7 @@ describe('how it ends', () => {
       expect(await chord.ended).toEqual({ code: null, signal });
 
       await until(() => !alive(group));
-      parses(chord.client);
+      await parses(chord.client);
     }, 40_000);
   }
 
@@ -399,7 +405,7 @@ describe('how it ends', () => {
     expect(chord.stderr()).toContain('a bug of chord');
 
     await until(() => !alive(group));
-    parses(chord.client);
+    await parses(chord.client);
   }, 40_000);
 });
 

@@ -22,6 +22,7 @@ import { type Dispatch, useEffect, useRef, useState } from 'react';
 import { closeOnForcedExit, useApp } from './renderer.tsx';
 import { relative, resolve } from 'node:path';
 import type { Wait } from '../../notify.ts';
+import { busyOf, mine } from '../../session/busy.ts';
 import { withContext } from '../../session/context.ts';
 import {
   Conversation,
@@ -125,7 +126,7 @@ import { modelToAsk, valueToAsk } from '../pickers/picker.ts';
 import { attachmentsOf, imagesIn, type PastedImage } from '../prompt/images.ts';
 import { mentionsIn } from '../prompt/mentions.ts';
 import { type Cursor, endOf, START } from '../prompt/prompt.ts';
-import { mine, restoredDraft } from '../prompt/queue.ts';
+import { restoredDraft } from '../prompt/queue.ts';
 import { heldContext } from '../prompt/state.ts';
 import { vimReset } from '../prompt/vim.ts';
 import { hintKey } from '../shortcuts/bindings.ts';
@@ -134,7 +135,6 @@ import { askedPermission } from '../dialogs/permission.ts';
 import { heldBack } from '../dialogs/state.ts';
 import {
   agentCloseArmedLine,
-  busyOf,
   ctrlCArmedLine,
   teamCloseArmedLine,
 } from './closing.ts';

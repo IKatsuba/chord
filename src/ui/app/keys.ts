@@ -34,7 +34,8 @@ import {
   START,
   typedTakenBack,
 } from '../prompt/prompt.ts';
-import { mine, restoredDraft } from '../prompt/queue.ts';
+import { mine } from '../../session/busy.ts';
+import { restoredDraft } from '../prompt/queue.ts';
 import {
   editedQuery,
   emptySearch,

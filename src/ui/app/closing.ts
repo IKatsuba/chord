@@ -1,71 +1,8 @@
 /**
- * Closing an agent of the session's and quitting: what makes an agent busy,
- * so that closing it asks for a second press, and the status line's words
- * while that press is waited for.
+ * Closing an agent of the session's and quitting: the status line's words
+ * while the second press is waited for.
  */
-import { askedInput } from '../dialogs/state.ts';
-import { mine } from '../prompt/queue.ts';
-import type { SessionState } from './state.ts';
-
-/**
- * Why a session is busy, the most pressing reason first: a person is asked
- * for something, prompts wait behind the turn, task agents it started run,
- * or the turn or a bash-mode command runs. The tasks come before the turn
- * as they say more: closing would stop them too.
- */
-export type Busy =
-  | { readonly kind: 'permission' }
-  | { readonly kind: 'input' }
-  | { readonly kind: 'queued'; readonly count: number }
-  | { readonly kind: 'tasks'; readonly count: number }
-  | { readonly kind: 'working' };
-
-/** How many task agents the session started are still running. */
-export function runningTasks(transcript: SessionState['transcript']): number {
-  return transcript.entries.filter(
-    (entry) =>
-      entry.kind === 'subagent' &&
-      entry.subagent.task !== undefined &&
-      entry.subagent.state === 'running',
-  ).length;
-}
-
-/** Why closing `session` would cut something short; none while it is idle. */
-export function busyOf(
-  session: Pick<SessionState, 'transcript' | 'queue'>,
-): Busy | undefined {
-  const { transcript, queue } = session;
-
-  if (transcript.turn.status === 'awaiting_permission') {
-    return { kind: 'permission' };
-  }
-
-  if (askedInput(transcript) !== undefined) {
-    return { kind: 'input' };
-  }
-
-  // The person's own; a message queued goes with the work that sent it.
-  const prompts = mine(queue).length;
-
-  if (prompts > 0) {
-    return { kind: 'queued', count: prompts };
-  }
-
-  const tasks = runningTasks(transcript);
-
-  if (tasks > 0) {
-    return { kind: 'tasks', count: tasks };
-  }
-
-  // A bash-mode command the session ran is its work as much as a turn is.
-  const commandRuns = transcript.entries.some(
-    (entry) => entry.kind === 'shell' && entry.run.running,
-  );
-
-  return transcript.turn.status === 'idle' && !commandRuns
-    ? undefined
-    : { kind: 'working' };
-}
+import type { Busy } from '../../session/busy.ts';
 
 /** What the agent is doing, after its name. */
 function doing(busy: Busy): string {

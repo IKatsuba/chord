@@ -24,6 +24,7 @@ import {
 } from '../../images.ts';
 import { type LinkOpener, openLink } from '../../links.ts';
 import type { Notifications } from '../../notify.ts';
+import { askedInput } from '../../session/busy.ts';
 import type { OpenSession, Starting } from '../../session/conversation.ts';
 import type { SessionStart } from '../../session/place.ts';
 import { openSession } from '../../session/session.ts';
@@ -102,7 +103,6 @@ import {
   type WindowedState,
 } from './state.ts';
 import {
-  askedInput,
   askedPlan,
   betweenAsked,
   shownPermission,

@@ -5,13 +5,12 @@
  * which sends each once the turn ahead has ended; this is what the window
  * knows of them.
  */
-import type { MessageFrom } from '../../session/transcript/types.ts';
+import { mine, type QueuedFrom } from '../../session/busy.ts';
 import { queuedMessage } from '../transcript/message.ts';
 import type { PastedImage } from './images.ts';
 
 /** A prompt held behind the turn in flight, by the turn it will be. */
-export interface Queued {
-  readonly turnId: string;
+export interface Queued extends QueuedFrom {
   readonly text: string;
   /**
    * The held shell runs that went with it, by id: an interrupt that takes it
@@ -20,11 +19,6 @@ export interface Queued {
   readonly held?: readonly string[];
   /** The images that went with it, back in the draft if it comes back. */
   readonly images?: readonly PastedImage[];
-  /**
-   * Set on a message from another agent, or chord, which is not the
-   * person's: an interrupt never puts it in the draft.
-   */
-  readonly from?: MessageFrom;
   /**
    * A message waiting for the person's answer to go into the running turn,
    * rather than for the turn's end.
@@ -35,16 +29,6 @@ export interface Queued {
    * it goes into the turn (CHD-423).
    */
   readonly afterCalls?: true;
-  /**
-   * The person's steer out with the agent, unanswered for a while: Esc
-   * leaves it, as it is no longer in the window's hands (CHD-378).
-   */
-  readonly steering?: true;
-  /**
-   * The person's message Tab sent into the running turn, not yet answered:
-   * Esc leaves it, though its row reads as queued for a while (CHD-535).
-   */
-  readonly taken?: true;
 }
 
 export type QueueRow =
@@ -83,16 +67,6 @@ export function restoredDraft(queue: readonly Queued[], draft: string): string {
   return [...mine(queue).map(({ text }) => text), draft]
     .filter((text) => text !== '')
     .join('\n');
-}
-
-/** The person's own prompts among `queue`, which Esc takes back. */
-export function mine(queue: readonly Queued[]): readonly Queued[] {
-  return queue.filter(
-    (queued) =>
-      queued.from === undefined &&
-      queued.steering === undefined &&
-      queued.taken === undefined,
-  );
 }
 
 /**

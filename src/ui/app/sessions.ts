@@ -33,6 +33,12 @@ import { OpenAgents } from '../../session/open_agents.ts';
 import type { Place } from '../../session/place.ts';
 import type { Session } from '../../session/session.ts';
 import { settingPickedUp } from '../../session/setting_picked_up.ts';
+import {
+  type ListedTeam,
+  ranNote,
+  stoppedLine,
+  teamRefusal,
+} from '../../session/team_command.ts';
 import { signInNote } from '../../session/sign_in.ts';
 import {
   failureNote,
@@ -168,12 +174,9 @@ import {
 } from '../background/view.ts';
 import {
   headlineText,
-  type ListedTeam,
   messageHeadline,
-  ranNote,
-  stoppedLine,
+  TEAM_WORDS,
   type TeamListing,
-  teamRefusal,
   type TeamRun,
 } from '../teams/teams.ts';
 import {
@@ -3363,6 +3366,7 @@ export function useSessions(
       text: stoppedLine(
         lead.name,
         membersOf(agents, lead.id).map((each) => each.name),
+        TEAM_WORDS,
       ),
       failed: false,
     });

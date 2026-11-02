@@ -22,8 +22,8 @@ import {
   useHintKey,
 } from '../app/context.ts';
 import { usePress } from '../app/input.ts';
+import type { ListedTeam } from '../../session/team_command.ts';
 import {
-  type ListedTeam,
   NO_TEAMS,
   teamChoices,
   type TeamListing,

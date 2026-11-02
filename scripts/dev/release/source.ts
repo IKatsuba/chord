@@ -16,6 +16,7 @@ import { basename, join } from 'node:path';
 import { loadedNative } from '../compile.ts';
 import { TARGETS } from '../../targets.ts';
 import { quote } from 'shell-quote';
+import { channelOf } from '../../../src/channel.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { sha256 } from './sums.ts';
 
@@ -160,8 +161,10 @@ export function ghReady(release: Release): void {
 
 /**
  * A draft GitHub release of the tag with the archives attached. Never more
- * than a draft: the owner writes the notes and publishes it. By then npm has
- * the version and origin the tag, so a failure says how to finish by hand.
+ * than a draft: the owner writes the notes and publishes it. A channel's is
+ * marked a pre-release, so it cannot become the repository's latest release.
+ * By then npm has the version and origin the tag, so a failure says how to
+ * finish by hand.
  */
 export function draftRelease(
   release: Release,
@@ -174,6 +177,7 @@ export function draftRelease(
     'create',
     tag,
     '--draft',
+    ...(channelOf(version) === null ? [] : ['--prerelease']),
     '--verify-tag',
     '--title',
     `chord ${tag}`,

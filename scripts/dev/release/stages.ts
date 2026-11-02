@@ -17,6 +17,7 @@ import {
   identity,
   npm,
   type Package,
+  PACKAGES,
   type Release,
   run,
   said,
@@ -24,7 +25,7 @@ import {
 import { notarise, PROFILE } from './notarise.ts';
 import { pack } from './pack.ts';
 import { packageVersion, preflight } from './preflight.ts';
-import { publish, tarballs } from './publish.ts';
+import { publish, publishArguments, tarball, tarballs } from './publish.ts';
 import { selftest } from './selftest.ts';
 import { type ReleaseOptions, type Stage } from './select.ts';
 import { sign } from './sign.ts';
@@ -151,6 +152,18 @@ export async function runRelease(
     }
 
     if (dryRun) {
+      // A channel's run shows what would publish, so a dry run from its
+      // branch proves the tags before the owner's first real publish.
+      if (channelOf(version) !== null) {
+        release.out(`dry run: ran ${stages.join(', ')}`);
+
+        for (const name of PACKAGES) {
+          release.out(
+            `dry run: npm ${publishArguments(version, tarball(release, name, version)).join(' ')}`,
+          );
+        }
+      }
+
       release.out(
         has('pack')
           ? `dry run: @chorded/chord ${version} is packed in ${tarballs(release)}, not published`

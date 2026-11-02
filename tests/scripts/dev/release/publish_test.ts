@@ -11,15 +11,20 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { VersionError } from '../../../../src/channel.ts';
 import {
   type Package,
+  PACKAGES,
   PLATFORMS,
   type Release,
   ReleaseError,
 } from '../../../../scripts/dev/release/lib.ts';
 import { authenticate } from '../../../../scripts/dev/release/authenticate.ts';
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
-import { publish } from '../../../../scripts/dev/release/publish.ts';
+import {
+  publish,
+  publishArguments,
+} from '../../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import { parse } from 'shell-quote';
 import {
@@ -73,7 +78,7 @@ view)
 publish)
 	file=$(basename "$4")
 	name=\${file#chorded-}
-	touch "$state/published/\${name%-*.tgz}"
+	touch "$state/published/\${name%%-[0-9]*}"
 	;;
 esac
 `;
@@ -920,5 +925,140 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
     expect(preflight(context(), { dryRun: true, publish: false }).mode).toBe(
       'fresh',
     );
+  });
+});
+
+describe('publishArguments', () => {
+  const FILE = '/dist/chorded-chord-1.0.0.tgz';
+
+  test('a stable version has no tag', () => {
+    expect(publishArguments('1.0.0', FILE)).toStrictEqual([
+      'publish',
+      '--access',
+      'public',
+      FILE,
+    ]);
+  });
+
+  test.each([
+    ['1.0.0-next.0', 'next'],
+    ['1.0.0-next.12', 'next'],
+    ['1.0.0-beta.0', 'beta'],
+  ])('%s has tag %s', (version, channel) => {
+    expect(publishArguments(version, FILE)).toStrictEqual([
+      'publish',
+      '--access',
+      'public',
+      FILE,
+      '--tag',
+      channel,
+    ]);
+  });
+
+  test.each(['1.0.0-next', '1.0.0-latest.0', '1.0.0-next.01'])(
+    '%s has no arguments at all',
+    (version) => {
+      expect(() => publishArguments(version, FILE)).toThrow(VersionError);
+    },
+  );
+});
+
+describe.each(['next', 'beta'])('publishing on %s', (channel) => {
+  const version = `10.0.0-${channel}.2`;
+  const file = (name: string) =>
+    join(repo, 'dist', 'release', 'tgz', `chorded-${name}-${version}.tgz`);
+  const sent = (name: string) =>
+    `publish --access public ${file(name)} --tag ${channel}`;
+  const publishes = () =>
+    lines('npm.log').filter((line) => line.startsWith('publish'));
+
+  beforeEach(() => {
+    git(repo, 'checkout', '-q', '-b', channel);
+    writeFileSync(
+      join(repo, 'package.json'),
+      JSON.stringify({ name: '@chorded/chord', version }),
+    );
+    git(repo, 'commit', '-q', '-am', `chore: chord v${version}`);
+    git(repo, 'push', '-q', 'origin', channel);
+
+    const files = PACKAGES.map((name) => `chorded-${name}-${version}.tgz`);
+
+    for (const name of files) {
+      writeFileSync(join(repo, 'dist', 'release', 'tgz', name), name);
+    }
+
+    recordSums(join(repo, 'dist', 'release', 'tgz'), files);
+  });
+
+  function nothingOnNpm(): void {
+    rmSync(join(state, 'published', 'chord-darwin-arm64'));
+  }
+
+  test('every package carries the tag, in publish order', async () => {
+    nothingOnNpm();
+
+    expect(await release()).toBeTrue();
+    expect(publishes()).toStrictEqual(PACKAGES.map(sent));
+  });
+
+  test('a resumed publish carries it too', async () => {
+    expect(await release()).toBeTrue();
+    expect(publishes()).toStrictEqual(
+      PACKAGES.filter((name) => name !== 'chord-darwin-arm64').map(sent),
+    );
+  });
+
+  test.each(PLATFORMS)('--package %s carries it', async (name) => {
+    nothingOnNpm();
+
+    expect(await release(name)).toBeFalse();
+    expect(publishes()).toStrictEqual([sent(name)]);
+  });
+
+  test('--package chord carries it', async () => {
+    for (const name of PLATFORMS) {
+      publishedAlready(name);
+    }
+
+    expect(await release('chord')).toBeTrue();
+    expect(publishes()).toStrictEqual([sent('chord')]);
+  });
+
+  test('the draft is marked a pre-release', async () => {
+    await release();
+
+    const [draft] = lines('gh.log').filter((line) =>
+      line.startsWith('release '),
+    );
+
+    expect(draft).toStartWith(
+      `release create v${version} --draft --prerelease --verify-tag --title`,
+    );
+  });
+
+  test('the command printed for a failed draft is marked too', async () => {
+    writeFileSync(join(state, 'gh-fails'), '');
+
+    expect(await died(() => release())).toContain(
+      `gh release create v${version} --draft --prerelease --verify-tag`,
+    );
+  });
+});
+
+describe('publishing a stable version', () => {
+  test('every package has no tag, and the draft no mark', async () => {
+    rmSync(join(state, 'published', 'chord-darwin-arm64'));
+
+    await release();
+
+    expect(
+      lines('npm.log').filter((line) => line.startsWith('publish')),
+    ).toStrictEqual(
+      PACKAGES.map(
+        (name) =>
+          `publish --access public ${join(repo, 'dist', 'release', 'tgz', `chorded-${name}-${VERSION}.tgz`)}`,
+      ),
+    );
+    expect(lines('gh.log').join('\n')).not.toContain('--prerelease');
   });
 });

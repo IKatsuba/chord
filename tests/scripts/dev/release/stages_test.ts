@@ -1064,6 +1064,71 @@ if [ "$1" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
     expect(read(at.root, 'rev-parse', 'HEAD')).toBe(head);
   });
 
+  describe('a dry run', () => {
+    const tgz = (name: string, version: string) =>
+      join(at.root, 'dist', 'release', 'tgz', `chorded-${name}-${version}.tgz`);
+
+    function shown(): string[] {
+      return at.out.filter((line) => line.startsWith('dry run: '));
+    }
+
+    test.each(['next', 'beta'])(
+      'on %s shows the stages and every package with its tag, in publish order',
+      async (channel) => {
+        const version = `10.0.0-${channel}.0`;
+        const options = {
+          channel,
+          dryRun: true,
+          only: ['install', 'compile'] as const,
+        };
+
+        onBranch(channel);
+        at.fake('file', `echo "$1: ${Object.values(KINDS).join(' ')}"\n`);
+
+        const head = read(at.root, 'rev-parse', 'HEAD');
+
+        await runRelease(
+          context(),
+          selectStages(options),
+          options,
+          MAC,
+          'major',
+        );
+
+        expect(shown()).toStrictEqual([
+          'dry run: ran install, compile',
+          ...[...PLATFORMS, 'chord'].map(
+            (name) =>
+              `dry run: npm publish --access public ${tgz(name, version)} --tag ${channel}`,
+          ),
+          `dry run: @chorded/chord ${version}, ran install, compile; not published`,
+        ]);
+        expect(read(at.root, 'rev-parse', 'HEAD')).toBe(head);
+      },
+    );
+
+    test("of package.json's version shows the same without --channel", async () => {
+      onBranch('next', NEXT);
+
+      await released({ dryRun: true, only: ['install'] });
+
+      expect(shown()).toContain(
+        `dry run: npm publish --access public ${tgz('chord', NEXT)} --tag next`,
+      );
+      expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
+    });
+
+    test('of a stable version says what it said', async () => {
+      rmSync(join(at.place, 'published', `chord@${VERSION}`));
+
+      await released({ dryRun: true, only: ['install'] });
+
+      expect(shown()).toStrictEqual([
+        `dry run: @chorded/chord ${VERSION}, ran install; not published`,
+      ]);
+    });
+  });
+
   describe('a stopped publish', () => {
     beforeEach(() => {
       onBranch('next', NEXT);

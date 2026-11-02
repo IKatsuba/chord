@@ -533,3 +533,150 @@ describe('the command', () => {
     expect(stderr.startsWith('chord: ')).toBe(true);
   });
 });
+
+describe('CHD-574 tester: real client loss and several live agents', () => {
+  test('SIGKILL of the actual client closes chord and flushes its record', async () => {
+    const dir = await scratch();
+    const pidFile = join(dir, 'agent.pid');
+    const fixture = fileURLToPath(
+      new URL('./fixtures/acp_client.ts', import.meta.url),
+    );
+    const command = quote([execPath(), AGENT, pidFile]);
+    const driver = spawn(
+      execPath(),
+      [
+        '-e',
+        `
+import { spawn } from 'node:child_process';
+import process from 'node:process';
+import { AcpClient } from ${JSON.stringify(fixture)};
+const child = spawn(process.execPath, ${JSON.stringify([MAIN, 'acp', 'fake', '--agent-command', command])}, {
+  cwd: ${JSON.stringify(dir)}, stdio: ['pipe', 'pipe', 'ignore']
+});
+process.stdout.write(String(child.pid) + '\\n');
+const client = new AcpClient(line => child.stdin.write(line), child.stdout);
+await client.request('initialize', { protocolVersion: 1, clientCapabilities: {} });
+const opened = await client.request('session/new', { cwd: ${JSON.stringify(dir)}, mcpServers: [] });
+client.send('session/prompt', { sessionId: opened.result.sessionId, prompt: [{ type: 'text', text: 'permission' }] });
+await client.until(message => message.method === 'session/request_permission');
+process.stdout.write('ready\\n');
+setInterval(() => {}, 1000);
+`,
+      ],
+      {
+        stdio: ['ignore', 'pipe', 'ignore'],
+        env: {
+          ...process.env,
+          XDG_STATE_HOME: join(dir, 'state'),
+          XDG_CONFIG_HOME: join(dir, 'config'),
+        },
+      },
+    );
+
+    chords.push(driver);
+
+    let status = '';
+    let chordPid = 0;
+    let group = 0;
+
+    driver.stdout?.setEncoding('utf8').on('data', (chunk: string) => {
+      status += chunk;
+      chordPid = Number(status.split('\n')[0]);
+    });
+
+    const exited = new Promise((resolve) => driver.once('exit', resolve));
+
+    try {
+      await until(() => status.includes('ready\n'), 20_000);
+
+      group = Number(await readFile(pidFile, 'utf8'));
+
+      expect(group).toBeGreaterThan(0);
+      driver.kill('SIGKILL');
+
+      await exited;
+      await until(() => {
+        try {
+          process.kill(chordPid, 0);
+
+          return false;
+        } catch {
+          return true;
+        }
+      }, 20_000);
+      await until(() => !alive(group));
+
+      const records = await readRecords(join(dir, 'state', 'chord'));
+
+      expect(records).toHaveLength(1);
+      expect(await readFile(records[0]?.path ?? '', 'utf8')).toContain(
+        '"permission"',
+      );
+    } finally {
+      driver.kill('SIGKILL');
+
+      for (const pid of [chordPid, -group]) {
+        if (pid === 0) {
+          continue;
+        }
+
+        try {
+          process.kill(pid, 'SIGKILL');
+        } catch {
+          // Already reaped, as the assertions require on the clean path.
+        }
+      }
+    }
+  }, 60_000);
+
+  test('one signal settles both sessions once and stops both process groups', async () => {
+    const chord = await start();
+    const first = await chord.newSession();
+    const firstGroup = await chord.group();
+    const second = await chord.client.request('session/new', {
+      cwd: chord.dir,
+      mcpServers: [],
+    });
+    const secondId = second.result?.sessionId;
+
+    assert(typeof secondId === 'string');
+    expect(secondId).toBe(`${first}~2`);
+
+    const secondGroup = await chord.group();
+
+    expect(secondGroup).not.toBe(firstGroup);
+
+    const requests = [first, secondId].map((sessionId) =>
+      chord.client.send('session/prompt', promptOf(sessionId, 'permission')),
+    );
+
+    for (const sessionId of [first, secondId]) {
+      await chord.client.until(
+        (message) =>
+          message.method === 'session/request_permission' &&
+          message.params?.sessionId === sessionId,
+      );
+    }
+
+    chord.child.kill('SIGTERM');
+
+    for (const id of requests) {
+      expect((await chord.client.answerTo(id)).result?.stopReason).toBe(
+        'cancelled',
+      );
+    }
+
+    expect(await chord.ended).toEqual({ code: null, signal: 'SIGTERM' });
+
+    await until(() => !alive(firstGroup) && !alive(secondGroup));
+    await parses(chord.client);
+
+    for (const id of requests) {
+      expect(
+        chord.client.messages.filter(
+          (message) => message.id === id && message.method === undefined,
+        ),
+      ).toHaveLength(1);
+    }
+  }, 40_000);
+});

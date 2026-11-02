@@ -1,15 +1,13 @@
 /**
- * The window's agents, driven through `OpenAgents`: main and each child
- * opened with a conversation of its own whose events go into the reducer
- * under its key, picked, closed, resumed and quit, and the prompts sent to
- * them.
+ * The window's agents, on `agents_host.ts`: what the host says of main and
+ * each child goes into the reducer under its key; here they are picked, closed
+ * by the person, resumed and quit, and the prompts are sent to them.
  */
 import type { ReadLimits } from '../../session/resource_access.ts';
-import { recordedSelection } from '../../session/team_selection.ts';
 import { agentNameProblem } from '../../agent_name.ts';
 import { type Dispatch, useEffect, useRef, useState } from 'react';
 import { useApp } from './renderer.tsx';
-import { relative, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import type { Wait } from '../../notify.ts';
 import { busyOf, mine } from '../../session/busy.ts';
 import { withContext } from '../../session/context.ts';
@@ -18,21 +16,11 @@ import {
   type ConversationEvent,
   type OpenSession,
 } from '../../session/conversation.ts';
-import { andList, createAgentsHost } from '../../session/agents_host.ts';
+import { createAgentsHost } from '../../session/agents_host.ts';
 import { closeOnForcedExit } from '../../session/leaving.ts';
 import type { Place } from '../../session/place.ts';
-import {
-  type ListedTeam,
-  ranNote,
-  stoppedLine,
-  type TeamListing,
-  teamRefusal,
-  type TeamRun,
-} from '../../session/team_command.ts';
 import type { ChordServer } from '../../server/server.ts';
-import { teamDirs } from '../../teams.ts';
 import type {
-  ChordCall,
   TeamAgentShown,
   TeamShown,
 } from '../../session/transcript/types.ts';
@@ -55,11 +43,9 @@ import {
   messageRecipients,
   namedChild,
   notifiedName,
-  ownChildren,
   pickedChild,
   ownedBy,
   shownKey,
-  type StartedAgents,
 } from '../../session/window_agents.ts';
 import { subagentPath } from '../../session/subagents.ts';
 import { askerParts } from '../dialogs/asker.ts';
@@ -409,22 +395,18 @@ export function useSessions(
     conversationAt,
     front,
     closeRuntimes,
-    teamsAt,
-    shownTeamFile,
-    runs,
-    parentOf,
     keepSpend,
     retiredKey,
     dropChild,
+    closeByPerson,
+    listTeams,
+    runTyped,
+    newTyped: newTypedIn,
+    stopTyped: stopTypedIn,
+    showTyped: showTeam,
     clearedHeard,
-    MAIN,
     clearByPerson,
-    startRefusal,
     childConversation,
-    captureLaunch,
-    startChild,
-    fullRefusal,
-    runTeamAt,
   } = agentsHost;
 
   useEffect(() => {
@@ -701,201 +683,6 @@ export function useSessions(
   };
 
   /**
-   * Closes `child`, a lead with its members, as the person asked, and tells
-   * its parent, so it is not left waiting on a child that will never
-   * answer; the members closed with it, by name.
-   */
-  const closeByPerson = (child: Child<Conversation>): string[] => {
-    const agents = front();
-    const members =
-      agents !== undefined && isLead(child) ? membersOf(agents, child.id) : [];
-    const parent = parentOf(child);
-
-    dropChild(child.key);
-    parent?.agentClosed(child.id);
-    redraw();
-
-    const model =
-      conversationAt(child.key)?.session?.models()?.current ?? child.model;
-    const described = `${[child.runtime, model]
-      .filter((part) => part !== undefined)
-      .join(' · ')}, id ${child.id}`;
-
-    parent?.deliver(
-      { name: 'chord' },
-      isLead(child)
-        ? `The person closed team ${child.name}: its lead (${described})${
-            members.length === 0
-              ? ''
-              : ` and its members ${andList(members.map((each) => each.name))}`
-          }. It takes no more messages; run_team starts it again.`
-        : `The person closed ${child.name} (${described}). It takes no ` +
-            `more messages; open_agent ${
-              child.lead === undefined ? 'starts another' : 'opens it again'
-            }.`,
-    );
-
-    return members.map((each) => each.name);
-  };
-
-  /** The runs open in `agents`, a lead each, in the order they started. */
-  const runsIn = (agents: StartedAgents<Conversation>): TeamRun[] =>
-    ownChildren(agents).flatMap((child) =>
-      isLead(child) && child.team !== undefined
-        ? [
-            {
-              team: child.team,
-              name: child.name,
-              since: child.openedAt,
-              id: child.id,
-            },
-          ]
-        : [],
-    );
-
-  /**
-   * `/team`'s picker and its names: the team files where the window
-   * works, read now, the runs open in it, and the two directories as the
-   * window shows them; none once main has closed.
-   */
-  const listTeams = async (): Promise<TeamListing | undefined> => {
-    const agents = front();
-
-    if (agents === undefined) {
-      return undefined;
-    }
-
-    const { cwd } = place;
-    const dirs = teamDirs({ configHome, cwd });
-
-    return {
-      teams: await teamsAt(agents.main.key),
-      runs: runsIn(agents),
-      dirs: {
-        project: relative(cwd, dirs.project),
-        ...(dirs.user === undefined ? {} : { user: homePath(dirs.user, home) }),
-      },
-    };
-  };
-
-  /** The team file `name` where the window works, read now. */
-  const teamNamed = async (name: string): Promise<ListedTeam | undefined> => {
-    const agents = front();
-
-    return agents === undefined
-      ? undefined
-      : (await teamsAt(agents.main.key)).find((each) => each.name === name);
-  };
-
-  /**
-   * `/team run`: the run `run_team` starts, for `main`, with
-   * the person's words as the job, drawn as its call is; main, which took
-   * no part, hears of it ahead of its next prompt.
-   */
-  const runTyped = async (name: string, job: string): Promise<TeamShown> => {
-    const agents = front();
-    const launch = captureLaunch(agents?.main.key ?? -1);
-    const refused = teamRefusal(name, await teamNamed(name));
-
-    if (agents === undefined || refused !== undefined) {
-      return {
-        kind: 'said',
-        text: refused ?? 'This session has closed',
-        failed: true,
-      };
-    }
-
-    const answer = await runTeamAt(
-      agents.main.key,
-      { team: name, job },
-      '/team lists them',
-      launch,
-    );
-
-    if ('error' in answer) {
-      return { kind: 'said', text: answer.error, failed: true };
-    }
-
-    // Drawn at once, not after the lead's start: the list says the effort
-    // it is on, and its transcript a refusal.
-    const call: ChordCall = {
-      tool: 'run_team',
-      input: { team: name, job },
-      answer: answer.ran,
-    };
-
-    conversationAt(agents.main.key)?.aside(
-      { name: 'chord' },
-      ranNote(name, answer.ran.name, job),
-    );
-    conversationAt(agents.main.key)?.ranTyped(call);
-
-    return { kind: 'ran', call };
-  };
-
-  /**
-   * `/new`: an agent opened for main as `open_agent` opens one, of `named`
-   * or of main's runtime (Q188), on what `open_agent` gives with none named
-   * (Q189), and idle until the person's first prompt in its view (Q187). The
-   * view goes to it at once; main hears of it ahead of its next prompt, the
-   * call drawn as its own; or why not, if it was refused as `open_agent` is.
-   */
-  const newTyped = async (named: string): Promise<TeamShown> => {
-    const main = sessions.agents.main;
-    const said = (text: string): TeamShown => ({
-      kind: 'said',
-      text,
-      failed: true,
-    });
-
-    if (main === undefined) {
-      return said('This session has closed');
-    }
-
-    const args = { agent: named === '' ? main.agent : named, prompt: '' };
-    const refused =
-      (await startRefusal(main.key, conversationAt(main.key), args, 'agent')) ??
-      fullRefusal(main.key);
-    const agents = ownedBy(sessions.agents, main.key);
-
-    if (agents === undefined || refused !== undefined) {
-      return said(refused ?? 'This session has closed');
-    }
-
-    const { opened, started } = startChild(main.key, args, {
-      name: childName(agents, undefined, args.agent),
-      parent: () => conversationAt(main.key),
-      from: MAIN,
-      asked: 'asked by /new',
-      idle: true,
-    });
-    const child = sessions.agents.children.find(
-      (each) => each.id === opened.id,
-    );
-
-    if (child !== undefined) {
-      sessions.pick(child.key);
-      showFront();
-    }
-
-    conversationAt(main.key)?.aside(
-      { name: 'chord' },
-      `The person opened @${opened.name} (${opened.agent}) with /new; it ` +
-        'has no prompt yet. It reports to you, and send_message reaches it.',
-    );
-
-    const call: ChordCall = {
-      tool: 'open_agent',
-      input: { agent: args.agent, typed: '/new' },
-      answer: { ...opened, ...(await started) },
-    };
-
-    conversationAt(main.key)?.ranTyped(call);
-
-    return { kind: 'ran', call };
-  };
-
-  /**
    * `/fork`: the agent on screen, main or a fork, forked into a new agent of
    * its runtime beside main, of no one, in a process of its own, picked once
    * it is up (CHD-101). Its name and the key of the agent it was forked
@@ -1032,103 +819,18 @@ export function useSessions(
   };
 
   /**
-   * `/team stop`: the run `name` closed with its members, at
-   * once, as the person typed it on purpose; `show` hears what it did
-   * before main is told, as for `x`, so the command's line comes first.
-   */
-  const stopTyped = (name: string, show: (shown: TeamShown) => void) => {
-    const agents = front();
-    const lead =
-      agents === undefined
-        ? undefined
-        : ownChildren(agents).find(
-            (child) => isLead(child) && child.name === name,
-          );
-
-    if (agents === undefined || lead === undefined) {
-      return show({
-        kind: 'said',
-        text:
-          `No run named ${name} is open · the list under the prompt ` +
-          'names them',
-        failed: true,
-      });
-    }
-
-    show({
-      kind: 'said',
-      text: stoppedLine(
-        lead.name,
-        membersOf(agents, lead.id).map((each) => each.name),
-        TEAM_WORDS,
-      ),
-      failed: false,
-    });
-    closeByPerson(lead);
-  };
-
-  /**
-   * `/team show`: team `name` as its file has it; while it runs in the
-   * window, its first run as it stands now, each of the file's agents
-   * with its state and latest headline, the file as the run read it.
+   * `/team show`: the team as the host has it; while it runs in the window,
+   * each of the file's agents with its state and latest headline.
    */
   const showTyped = async (name: string): Promise<TeamShown> => {
-    const agents = front();
-    const running =
-      agents === undefined
-        ? undefined
-        : ownChildren(agents).find(
-            (child) =>
-              isLead(child) && (child.id === name || child.name === name),
-          );
-    const associated = running === undefined ? undefined : runs.get(running.id);
+    const shown = await showTeam(name);
 
-    if (associated === undefined && agents !== undefined) {
-      const transcript = stateOf(agents.main.key)?.transcript;
-      const calls = [
-        ...(transcript?.served ?? []),
-        ...(transcript?.entries.flatMap((entry) =>
-          entry.kind === 'tool' && entry.call.chord !== undefined
-            ? [entry.call.chord]
-            : [],
-        ) ?? []),
-      ];
-      const call = calls.findLast(
-        (call) => recordedSelection(call)?.runId === name,
-      );
-
-      if (call !== undefined) {
-        return { kind: 'receipt', call };
-      }
+    if (shown.kind !== 'running') {
+      return shown;
     }
 
-    const found =
-      associated === undefined
-        ? await teamNamed(name)
-        : { ...associated, shown: shownTeamFile(agents!.main.key, associated) };
-    const refused = teamRefusal(name, found);
-
-    if (agents === undefined || found === undefined || !('team' in found)) {
-      return {
-        kind: 'said',
-        text: refused ?? 'This session has closed',
-        failed: true,
-      };
-    }
-
-    const lead = ownChildren(agents).find(
-      (child) =>
-        isLead(child) &&
-        (child.team === name || child.id === name || child.name === name),
-    );
-    const run = lead === undefined ? undefined : runs.get(lead.id);
-
-    if (lead === undefined || run === undefined) {
-      return { kind: 'show', name, file: found.shown, team: found.team };
-    }
-
+    const { file, lead, run, members } = shown;
     const now = Date.now();
-    const members = membersOf(agents, lead.id);
     const shownAgent = (
       agent: string,
       child: Child<Conversation> | undefined,
@@ -1181,7 +883,7 @@ export function useSessions(
     return {
       kind: 'show',
       name,
-      file: found.shown,
+      file,
       team: run.team,
       running: {
         name: lead.name,
@@ -1849,9 +1551,10 @@ export function useSessions(
     frontKey: () => front()?.main.key,
     listTeams,
     runTyped,
-    newTyped,
+    newTyped: (named: string) => newTypedIn(named, showFront),
     forkTyped,
-    stopTyped,
+    stopTyped: (name: string, show: (shown: TeamShown) => void) =>
+      stopTypedIn(name, show, TEAM_WORDS),
     showTyped,
     sendToMain,
     clearFront,

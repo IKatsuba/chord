@@ -1151,3 +1151,222 @@ describe("what chord's server reads", () => {
     expect(host.view.claimSettingsBox()).toBeDefined();
   });
 });
+
+describe('the typed commands', () => {
+  const onFake = {
+    place: {
+      startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+    },
+    options: { open: openSession },
+  };
+  const words = {
+    whichRun: 'which',
+    closedLead: 'lead words',
+    closedRun: 'run words',
+  };
+  const crew = `---
+description: A crew
+lead:
+  agent: fake
+members:
+  - name: coder
+    role: Code
+    agent: fake
+    instructions: Code it.
+---
+Lead it.
+`;
+  const saved = async (text = crew) => {
+    const teams = join(dir, '.chord', 'teams');
+
+    await mkdir(teams, { recursive: true });
+    await writeFile(join(teams, 'bugfix.md'), text);
+  };
+
+  const said = (text: string) => ({
+    kind: 'said' as const,
+    text,
+    failed: true,
+  });
+
+  test('/team lists the files, the runs and both directories', async () => {
+    const { host, open } = await withMain();
+
+    await saved();
+    open('bugfix', { team: 'bugfix' });
+
+    const listing = await host.listTeams();
+
+    expect(listing?.teams.map(({ name }) => name)).toEqual(['bugfix']);
+    expect(listing?.runs).toMatchObject([{ team: 'bugfix', name: 'bugfix' }]);
+    expect(listing?.dirs).toEqual({ project: join('.chord', 'teams') });
+
+    await host.sessions.closeAll();
+
+    expect(await host.listTeams()).toBeUndefined();
+  });
+
+  test('/team run refuses an unknown team and starts a known one', async () => {
+    const { host, key } = await withMain(onFake.place, {}, onFake.options);
+
+    expect(await host.runTyped('who', 'job')).toEqual(
+      said('No team named who · /team lists them'),
+    );
+
+    await saved();
+
+    const shown = await host.runTyped('bugfix', 'Fix it.');
+
+    expect(shown).toMatchObject({
+      kind: 'ran',
+      call: { tool: 'run_team', input: { team: 'bugfix', job: 'Fix it.' } },
+    });
+    expect(host.childOf(key, 'bugfix')?.team).toBe('bugfix');
+
+    await host.sessions.closeAll();
+  });
+
+  test('/new picks the agent opened, shows it, and sends it nothing', async () => {
+    const shows: number[] = [];
+    const { host, key } = await withMain(onFake.place, {}, onFake.options);
+    const shown = await host.newTyped('', () =>
+      shows.push(host.sessions.agents.picked),
+    );
+
+    expect(shown).toMatchObject({
+      kind: 'ran',
+      call: { tool: 'open_agent', input: { agent: 'fake', typed: '/new' } },
+    });
+
+    const [child] = host.front()!.children;
+
+    expect(shows).toEqual([child!.key]);
+    expect(host.sessions.agents.picked).toBe(child!.key);
+    expect(host.sessions.agents.main!.key).toBe(key);
+    expect(host.early.get(child!.key) ?? []).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('/new refused says why and shows nothing', async () => {
+    const shows: number[] = [];
+    const { host } = await withMain();
+
+    expect(await host.newTyped('other', () => shows.push(1))).toEqual(
+      said('No agent named other; chord knows fake'),
+    );
+    expect(shows).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+
+  test("/team stop says what it did before main is told, in the host's words", async () => {
+    const order: string[] = [];
+    const { host, key, open } = await withMain();
+
+    open('bugfix', { team: 'bugfix' });
+    open('coder', { team: 'bugfix', lead: 'bugfix' });
+
+    host.conversationAt(key)!.deliver = (_, text) => {
+      order.push(`main: ${text.split(':')[0]}`);
+
+      return 'sent';
+    };
+
+    host.stopTyped(
+      'bugfix',
+      (shown) => order.push(`shown: ${shown.kind}`),
+      words,
+    );
+
+    expect(order).toEqual([
+      'shown: said',
+      'main: The person closed team bugfix',
+    ]);
+    expect(host.childOf(key, 'bugfix')).toBeUndefined();
+    expect(host.childOf(key, 'coder')).toBeUndefined();
+
+    const stopped: unknown[] = [];
+
+    host.stopTyped('bugfix', (shown) => stopped.push(shown), words);
+
+    expect(stopped).toEqual([
+      said(
+        'No run named bugfix is open · the list under the prompt names them',
+      ),
+    ]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('closing by the person redraws between closing and telling', async () => {
+    const order: string[] = [];
+    const { host, key, open } = await withMain(
+      {},
+      { redraw: () => order.push('redraw') },
+    );
+
+    open('one');
+
+    host.conversationAt(key)!.deliver = (_, text) => {
+      order.push(text);
+
+      return 'sent';
+    };
+
+    host.conversationAt(key)!.agentClosed = () => {
+      order.push('closed');
+    };
+
+    expect(host.closeByPerson(host.childOf(key, 'one')!)).toEqual([]);
+    expect(order).toEqual([
+      'closed',
+      'redraw',
+      'The person closed one (fake, id one). It takes no more messages; open_agent starts another.',
+    ]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('/team show reads the file, a run as it was read, or says why not', async () => {
+    const { host, key, open } = await withMain(
+      onFake.place,
+      {},
+      onFake.options,
+    );
+
+    expect(await host.showTyped('who')).toEqual(
+      said('No team named who · /team lists them'),
+    );
+
+    await saved();
+
+    expect(await host.showTyped('bugfix')).toMatchObject({
+      kind: 'show',
+      name: 'bugfix',
+      file: join('.chord', 'teams', 'bugfix.md'),
+    });
+
+    const answer = await host.runTeamAt(
+      key,
+      { team: 'bugfix', job: 'Fix it.' },
+      'lists',
+    );
+
+    assert(!('error' in answer));
+
+    open('coder', { team: 'bugfix', lead: answer.ran.id });
+
+    // The running file wins over what was saved since.
+    await saved('not a team');
+
+    const shown = await host.showTyped('bugfix');
+
+    assert(shown.kind === 'running');
+    expect(shown.lead.id).toBe(answer.ran.id);
+    expect(shown.run.job).toBe('Fix it.');
+    expect(shown.members.map(({ name }) => name)).toEqual(['coder']);
+
+    await host.sessions.closeAll();
+  });
+});

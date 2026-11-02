@@ -17,6 +17,8 @@ export interface PendingPermission {
   readonly sessionId: string;
   readonly toolCall: ToolCallUpdate;
   readonly options: readonly PermissionOption[];
+  /** The agent's request as it came, for one who passes it on whole. */
+  readonly raw: RequestPermissionRequest;
   /**
    * Aborts when the request stops mattering — the turn was cancelled or the
    * session closed — so the interface takes the prompt off the screen.
@@ -131,6 +133,7 @@ export class PermissionBridge {
         sessionId: request.sessionId,
         toolCall: request.toolCall,
         options: request.options,
+        raw: request,
         signal,
         resolve: (optionId) => {
           if (!request.options.some((option) => option.optionId === optionId)) {

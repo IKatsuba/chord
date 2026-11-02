@@ -229,6 +229,18 @@ export const PERMISSIONS = {
     ]);
   },
 
+  // A request carrying metadata of its own and on its call, as an adapter's may.
+  async permissionmeta(turn) {
+    const answer = await turn.client.request('session/request_permission', {
+      sessionId: turn.sessionId,
+      toolCall: { toolCallId: turn.callId('write'), _meta: { 'fake/call': 1 } },
+      options: [{ optionId: 'deny', name: 'Deny', kind: 'reject_once' }],
+      _meta: { 'fake/asked': 1 },
+    });
+
+    return answer.outcome.outcome === 'cancelled' ? 'cancelled' : 'end_turn';
+  },
+
   // As `permission`, its next step after the write waiting for a message
   // steered in, as the model's next step waits for the tool's result.
   async permissionsteer(turn) {

@@ -110,6 +110,7 @@ test('closing the bridge cancels every waiting request', async () => {
 
 function pending(toolCall: PendingPermission['toolCall']): PendingPermission {
   return {
+    raw: {} as unknown as PendingPermission['raw'],
     id: 'p',
     sessionId: 's',
     toolCall,

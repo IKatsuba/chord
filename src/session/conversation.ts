@@ -2572,11 +2572,17 @@ export class Conversation {
         this.#release();
       };
 
+      const toolCall = { toolCallId: wait.toolCallId ?? id };
       const request: PendingPermission = {
         id,
         sessionId: session.id,
-        toolCall: { toolCallId: wait.toolCallId ?? id },
+        toolCall,
         options: wait.options,
+        raw: {
+          sessionId: session.id,
+          toolCall,
+          options: [...wait.options],
+        },
         signal,
         resolve: finish,
         reject: () =>

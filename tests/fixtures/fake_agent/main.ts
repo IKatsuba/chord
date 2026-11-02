@@ -483,6 +483,7 @@ const SCENARIOS = [
   'flood',
   'ignorescancel',
   'requestform',
+  'permissionmeta',
   'subagent',
   'subagentupdate',
   'codexsubagents',

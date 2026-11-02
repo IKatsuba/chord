@@ -735,6 +735,22 @@ describe('permissions', () => {
       expect(client.said(sessionId)).toContain('Permission: allow');
     }));
 
+  test('_meta goes as it is, on the request and on its call', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permissionmeta');
+      const ask = await asked(client, PERMISSION);
+
+      expect(ask.params?._meta).toEqual({ 'fake/asked': 1 });
+      expect(ask.params?.toolCall).toMatchObject({
+        _meta: { 'fake/call': 1 },
+      });
+
+      client.respond(ask.id, selected('deny'));
+
+      await client.answerTo(running);
+    }));
+
   test('an error answer is a refusal, with a line on stderr', () =>
     onAcp([], async ({ client, newSession, prompt, lines }) => {
       const sessionId = await newSession();

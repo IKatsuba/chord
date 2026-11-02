@@ -324,6 +324,7 @@ export async function steeringStub(everyTurn = false) {
     for (const listener of permissions) {
       listener({
         id,
+        raw: {} as unknown as PendingPermission['raw'],
         sessionId: 'held',
         toolCall: { toolCallId: id, title: 'Write notes.txt' },
         options: [{ optionId: 'allow', name: 'Allow', kind: 'allow_once' }],

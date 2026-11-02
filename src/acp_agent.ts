@@ -280,11 +280,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     ask<RequestPermissionResponse>(
       id,
       'session/request_permission',
-      {
-        sessionId: upstreamIdOf(upstream, request.sessionId),
-        toolCall: request.toolCall,
-        options: request.options,
-      },
+      { ...request.raw, sessionId: upstreamIdOf(upstream, request.sessionId) },
       (response) => {
         const answer = permissionAnswerOf(request.options, response);
 

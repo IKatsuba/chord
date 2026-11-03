@@ -8,10 +8,13 @@ import type {
 import type { AgentState } from '../../src/session/agent_state.ts';
 import type { PlanWait } from '../../src/session/transcript/types.ts';
 import {
+  agentStateOf,
+  agentUpdate,
   aliasFor,
   answeredConfig,
   asksIn,
   childOf,
+  childSession,
   configChange,
   configOptionsOf,
   configSetter,
@@ -211,6 +214,150 @@ describe('what an ask may name', () => {
     expect(asksIn(session, 'other')).toBe(false);
     expect(asksIn(session, 's1~2')).toBe(false);
     expect(asksIn(session, 'toString')).toBe(false);
+  });
+});
+
+describe("a long-lived child's session", () => {
+  const child = childSession('agent-c', 's1/c1');
+  const chunk: SessionUpdate = {
+    sessionUpdate: 'agent_message_chunk',
+    content: { type: 'text', text: 'hi' },
+  };
+
+  test('goes under its composite id, for a client that takes subagents', () => {
+    expect(mapUpdate(child, ALL, chunk).notification).toEqual({
+      sessionId: 's1/c1',
+      update: chunk,
+    });
+  });
+
+  test("all of it is a child's traffic, so none goes to one that does not", () => {
+    expect(mapUpdate(child, NONE, chunk).notification).toBeUndefined();
+    expect(mapUpdate(upstreamSession('s1'), NONE, chunk).notification).toEqual({
+      sessionId: 's1',
+      update: chunk,
+    });
+  });
+
+  test('its own subagent nests under it, and its ask may name it', () => {
+    const { session, notification } = mapUpdate(child, ALL, {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'inner',
+    });
+
+    expect(notification?.sessionId).toBe('s1/c1');
+    expect(notification?.update).toMatchObject({ sessionId: 's1/c1/inner' });
+    expect(childOf(session, 's1/c1/inner')).toBe('inner');
+    expect(asksIn(session, 'inner')).toBe(true);
+  });
+});
+
+describe('a task of chord', () => {
+  test('says it can be cancelled, as chord stops it', () => {
+    const { notification } = mapUpdate(upstreamSession('s1'), ALL, {
+      sessionUpdate: 'subagent_update',
+      sessionId: 't1',
+      state: { state: 'running' },
+      _meta: { 'chord/task': { name: 'a task' } },
+    });
+
+    expect(notification?.update).toMatchObject({
+      sessionId: 's1/t1',
+      capabilities: { cancel: {} },
+    });
+  });
+
+  test("an agent's own subagent keeps what it said of that", () => {
+    const { notification } = mapUpdate(upstreamSession('s1'), ALL, {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'c',
+    });
+
+    expect(notification?.update).not.toHaveProperty('capabilities');
+  });
+});
+
+describe('what chord says of a long-lived child', () => {
+  const report = {
+    parent: 's1/lead',
+    upstreamId: 's1/lead/tester',
+    title: 'tester',
+    state: { state: 'running' as const },
+    runtime: 'codex',
+    model: 'gpt',
+    effort: undefined,
+    team: 'bugfix',
+    role: 'member' as const,
+  };
+
+  test('goes on its immediate parent, its detail in _meta, nothing undefined', () => {
+    expect(agentUpdate(ALL, report)).toEqual({
+      sessionId: 's1/lead',
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 's1/lead/tester',
+        title: 'tester',
+        state: { state: 'running' },
+        capabilities: { cancel: {} },
+        _meta: {
+          'chord/agent': {
+            runtime: 'codex',
+            model: 'gpt',
+            team: 'bugfix',
+            role: 'member',
+          },
+        },
+      },
+    });
+  });
+
+  test('one closed says so, with nothing left to cancel', () => {
+    const update = agentUpdate(ALL, { ...report, closed: true })?.update;
+
+    expect(update).not.toHaveProperty('capabilities');
+    expect(update).toMatchObject({
+      _meta: { 'chord/agent': { closed: true } },
+    });
+  });
+
+  test('a client that takes no subagents hears nothing', () => {
+    expect(agentUpdate(NONE, report)).toBeUndefined();
+  });
+
+  const fold = (over: object) => ({
+    queue: [],
+    transcript: {
+      entries: [],
+      plan: [],
+      commands: [],
+      turn: { status: 'idle' },
+      asking: [],
+      ...over,
+    } as never,
+  });
+
+  test('its state is what is folded of it', () => {
+    expect(agentStateOf(fold({}))).toEqual({ state: 'idle' });
+    expect(agentStateOf(fold({}), 'end_turn')).toEqual({
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    expect(agentStateOf(fold({ turn: { status: 'working' } }))).toEqual({
+      state: 'running',
+    });
+    expect(
+      agentStateOf(fold({ turn: { status: 'awaiting_permission' } })),
+    ).toEqual({ state: 'requires_action' });
+    expect(
+      agentStateOf(
+        fold({ turn: { status: 'working' }, asking: [{ id: 'form' }] }),
+      ),
+    ).toEqual({ state: 'requires_action' });
+    expect(
+      agentStateOf(
+        fold({ turn: { status: 'working' }, planAsks: [{ wait: {} }] }),
+      ),
+    ).toEqual({ state: 'requires_action' });
   });
 });
 

@@ -14,6 +14,7 @@ import type {
   SessionNotification,
   SessionUpdate,
   StateUpdate,
+  StopReason,
 } from '@agentclientprotocol/sdk/unstable';
 import type { ResourceLink } from '../files.ts';
 import {
@@ -22,11 +23,14 @@ import {
   modesOf,
   optionsOf,
 } from './agent_state.ts';
+import type { FoldedSession } from './agents_host.ts';
+import { busyOf } from './busy.ts';
 import type { ElicitationReply } from './elicitations.ts';
 import { FILLED } from './enrich.ts';
 import { modelConfigId } from './models.ts';
 import { modeConfigId } from './modes.ts';
 import type { Attachment } from './session.ts';
+import { TASK_META } from './transcript/subagents.ts';
 import type { MessageFrom, PlanAnswer, PlanWait } from './transcript/types.ts';
 
 /** The `_meta` key on a turn's words that no client prompt began. */
@@ -110,6 +114,8 @@ export interface UpstreamSession {
   /** Each subagent by the agent's id, under `<main>/<child>`. */
   readonly children: ReadonlyMap<string, string>;
   readonly configSent?: readonly SessionConfigOption[];
+  /** A long-lived child's: all it says is a child's traffic to the client. */
+  readonly nested?: true;
 }
 
 export function upstreamSession(
@@ -117,6 +123,14 @@ export function upstreamSession(
   upstreamId: string = agentId,
 ): UpstreamSession {
   return { agentId, upstreamId, children: new Map() };
+}
+
+/** A long-lived child's session, under its composite id. */
+export function childSession(
+  agentId: string,
+  upstreamId: string,
+): UpstreamSession {
+  return { ...upstreamSession(agentId, upstreamId), nested: true };
 }
 
 /**
@@ -211,7 +225,13 @@ export function mapUpdate(
         }
       : session;
 
-  if (!reaches(capabilities, kind, subagentId !== undefined)) {
+  if (
+    !reaches(
+      capabilities,
+      kind,
+      session.nested === true || subagentId !== undefined,
+    )
+  ) {
     return { session: grown };
   }
 
@@ -232,6 +252,10 @@ function rewritten(
       return acpStateWords({
         ...update,
         sessionId: upstreamIdOf(session, update.sessionId),
+        // chord's own task: chord stops it, whatever its runtime offers.
+        ...(update._meta?.[TASK_META] === undefined
+          ? {}
+          : { capabilities: { cancel: {} } }),
       });
     case 'session_message': {
       const { senderSessionId: sender, recipientSessionId: recipient } = update;
@@ -249,6 +273,74 @@ function rewritten(
     default:
       return update;
   }
+}
+
+/** What chord says of a long-lived child, as no agent's update does. */
+export interface AgentReport {
+  /** Its immediate parent's id: main's, or its lead's. */
+  readonly parent: string;
+  readonly upstreamId: string;
+  readonly title: string;
+  readonly state: StateUpdate;
+  readonly runtime: string;
+  readonly model?: string | undefined;
+  readonly effort?: string | undefined;
+  readonly team?: string | undefined;
+  readonly role?: 'lead' | 'member' | undefined;
+  /** Its process went on its own. */
+  readonly gone?: string | undefined;
+  /** Why it did not start. */
+  readonly failed?: string | undefined;
+  readonly closed?: true | undefined;
+}
+
+/** A child's state as ACP words it, from what is folded of it. */
+export function agentStateOf(
+  fold: FoldedSession,
+  stopReason?: StopReason,
+): StateUpdate {
+  const asks =
+    fold.transcript.planAsks?.some((ask) => ask.answer === undefined) === true;
+  const busy = busyOf(fold);
+
+  if (asks || busy?.kind === 'permission' || busy?.kind === 'input') {
+    return { state: 'requires_action' };
+  }
+
+  return busy !== undefined
+    ? { state: 'running' }
+    : { state: 'idle', ...(stopReason === undefined ? {} : { stopReason }) };
+}
+
+/**
+ * A long-lived child's `subagent_update`, on its immediate parent. chord makes
+ * it, so no record holds it; one closed has nothing left to cancel.
+ */
+export function agentUpdate(
+  capabilities: ClientCapabilities,
+  report: AgentReport,
+): SessionNotification | undefined {
+  if (!reaches(capabilities, 'subagent_update', false)) {
+    return undefined;
+  }
+
+  const { parent, upstreamId, title, state, ...agent } = report;
+
+  return {
+    sessionId: parent,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: upstreamId,
+      title,
+      state,
+      ...(report.closed === true ? {} : { capabilities: { cancel: {} } }),
+      _meta: {
+        [AGENT]: Object.fromEntries(
+          Object.entries(agent).filter(([, value]) => value !== undefined),
+        ),
+      },
+    },
+  };
 }
 
 /**

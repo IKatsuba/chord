@@ -263,6 +263,8 @@ export function runAcp(options: AcpOptions): AcpRun {
       reject(error: unknown): void;
     }
   >();
+  /** Each command still at its work, none of which any turn answers. */
+  const commands = new Map<JsonRpcId, (answer: PromptResponse) => void>();
   let capabilities: ClientCapabilities | undefined;
   let starts = 0;
   // One client asks for every session, so one `settings` box among them.
@@ -1404,6 +1406,34 @@ export function runAcp(options: AcpOptions): AcpRun {
     return { stopReason: 'end_turn' };
   };
 
+  /** Answered by its work, or once by the way out, whichever comes first. */
+  const commanding = (
+    entry: Entry,
+    requestId: JsonRpcId,
+    name: ChordCommand['name'],
+    work: Promise<CommandSaid>,
+  ): Promise<PromptResponse> => {
+    const { promise, resolve, reject } =
+      Promise.withResolvers<PromptResponse>();
+
+    commands.set(requestId, resolve);
+
+    void work.then(
+      (said) => {
+        if (commands.delete(requestId)) {
+          resolve(commandAnswered(entry, name, said));
+        }
+      },
+      (error: unknown) => {
+        if (commands.delete(requestId)) {
+          reject(error);
+        }
+      },
+    );
+
+    return promise;
+  };
+
   const CLOSED: CommandSaid = {
     text: 'This session has closed',
     failed: true,
@@ -1532,6 +1562,13 @@ export function runAcp(options: AcpOptions): AcpRun {
         withdrawn(id);
       }
 
+      for (const [requestId, answer] of commands) {
+        void wire.expect(requestId);
+        answer({ stopReason: 'cancelled' });
+      }
+
+      commands.clear();
+
       for (const entry of [...entries]) {
         for (const requestId of entry.turns.bound.values()) {
           void wire.expect(requestId);
@@ -1656,23 +1693,22 @@ export function runAcp(options: AcpOptions): AcpRun {
         }
 
         if (command?.name === 'new') {
-          return entry.host
-            .newTyped(command.args, () => {})
-            .then((shown) =>
-              commandAnswered(
-                entry,
-                'new',
+          return commanding(
+            entry,
+            requestId,
+            'new',
+            entry.host
+              .newTyped(command.args, () => {})
+              .then((shown) =>
                 saidOf(shown, '', ({ name, agent: runtime, note }) =>
                   openedText(name, runtime, note),
                 ),
               ),
-            );
+          );
         }
 
         if (asked !== undefined && asked.form !== 'new') {
-          return teamSaid(entry, asked).then((said) =>
-            commandAnswered(entry, 'team', said),
-          );
+          return commanding(entry, requestId, 'team', teamSaid(entry, asked));
         }
 
         const session = entry.conversation.session;

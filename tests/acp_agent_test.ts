@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert';
+import { spawnSync } from 'node:child_process';
 import {
   copyFile,
   mkdir,
@@ -2866,6 +2867,49 @@ describe("chord's commands", () => {
       server(),
     ),
   );
+
+  test('a signal while a command is at its work: cancelled once, no chunk after', async () => {
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession, run, exits }) => {
+        const sessionId = await newSession();
+
+        // Reading a team file that is a pipe holds `/team` until it is written.
+        const held = join(cwd, '.chord', 'teams', 'held.md');
+
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+
+        expect(spawnSync('mkfifo', [held]).status).toBe(0);
+
+        const id = client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: '/team' }],
+        });
+
+        // Requests start in order: answered, this one has reached its read.
+        await client.request('session/list', {});
+
+        void run.leave({ kind: 'signal', signal: 'SIGTERM' });
+
+        expect((await client.answerTo(id)).result?.stopReason).toBe(
+          'cancelled',
+        );
+
+        await until(() => exits.length > 0, 20_000);
+
+        // Its work ends now, with its request answered.
+        await writeFile(held, '---\n');
+
+        expect(
+          client.messages.filter(
+            (message) => message.id === id && message.method === undefined,
+          ),
+        ).toHaveLength(1);
+        expect(client.said(sessionId)).toBe('');
+      },
+      server(),
+    );
+  });
 
   test("/new opens an idle child, on main's runtime with none named", () =>
     onAcp(

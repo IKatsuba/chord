@@ -21,6 +21,7 @@ import {
   FileRecording,
   lastTotal,
   readPast,
+  promptLine,
   recordActions,
   type RecordEntry,
   runPasts,
@@ -2918,5 +2919,55 @@ describe("Claude's session messages in a record (CHD-561)", () => {
         announced,
       ]),
     ).toStrictEqual(['tool', 'block']);
+  });
+});
+
+describe("chord's aside ahead of a prompt", () => {
+  const aside = (text: string) => `<message from="chord">\n${text}\n</message>`;
+  const replayedPrompt = (prompt: string) =>
+    recordActions([
+      { type: 'prompt', turnId: 't', at: 1, prompt, images: 0 },
+    ] as never).find((action) => action.type === 'prompt') as
+      { text: string; from?: unknown } | undefined;
+
+  test("is not the person's words, one or several", () => {
+    expect(replayedPrompt(`${aside('A run.')}\n\nhello`)?.text).toBe('hello');
+    expect(
+      replayedPrompt(`${aside('A run.')}\n\n${aside('Another.')}\n\nhello`)
+        ?.text,
+    ).toBe('hello');
+  });
+
+  test('a message from chord alone is still a message', () => {
+    expect(replayedPrompt(aside('Your child ended.'))).toMatchObject({
+      text: 'Your child ended.',
+      from: { name: 'chord' },
+    });
+  });
+
+  test('another sender ahead of a prompt stays as it was', () => {
+    const prompt = '<message from="task">\nDone.\n</message>\n\nhello';
+
+    expect(replayedPrompt(prompt)?.text).toBe(prompt);
+  });
+
+  test('shell output after it still reads as shell output', () => {
+    const replayed = recordActions([
+      {
+        type: 'prompt',
+        turnId: 't',
+        at: 1,
+        prompt: `${aside('A run.')}\n\nhello`,
+        images: 0,
+      },
+    ] as never);
+
+    expect(replayed.some((action) => action.type === 'shell_replayed')).toBe(
+      false,
+    );
+  });
+
+  test("the title a list shows is the person's", () => {
+    expect(promptLine(`${aside('A run.')}\n\nhello there`)).toBe('hello there');
   });
 });

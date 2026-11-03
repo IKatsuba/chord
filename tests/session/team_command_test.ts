@@ -12,6 +12,7 @@ const WORDS: TeamWords = {
   whichRun: 'which run, host?',
   closedLead: 'the host has it',
   closedRun: 'the host has them',
+  noRun: 'the host names them',
 };
 
 test('/team reads its form, then a name, then the rest', () => {

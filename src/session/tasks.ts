@@ -98,6 +98,17 @@ const TEAM =
 const WRAPPED =
   /^<message from="([^"]*)"(?: monitor="([^"]*)")?>\n([\s\S]*)\n<\/message>$/;
 
+const CHORD_ASIDES = /^(?:<message from="chord">\n[\s\S]*?\n<\/message>\n\n)+/;
+
+/**
+ * A person's prompt as they wrote it, without what `aside` put ahead of it for
+ * the agent. Only for one that is no message itself, whose text could hold
+ * anything.
+ */
+export function withoutChordAsides(prompt: string): string {
+  return prompt.replace(CHORD_ASIDES, '');
+}
+
 /**
  * A prompt that is a wrapped message, read back into who sent it and what
  * was said, with the team part that went ahead of it, as a record keeps it;

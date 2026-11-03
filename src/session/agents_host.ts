@@ -2770,9 +2770,7 @@ export function createAgentsHost(
     if (agents === undefined || lead === undefined) {
       return show({
         kind: 'said',
-        text:
-          `No run named ${name} is open · the list under the prompt ` +
-          'names them',
+        text: `No run named ${name} is open · ${words.noRun}`,
         failed: true,
       });
     }

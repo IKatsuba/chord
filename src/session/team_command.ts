@@ -3,6 +3,7 @@
  * here reads a file or a session; the host gathers what each needs.
  */
 import type { FoundTeam } from '../teams.ts';
+import { formatElapsed } from './elapsed.ts';
 
 /** What only the host can say, as it names where the host shows things. */
 export interface TeamWords {
@@ -12,6 +13,8 @@ export interface TeamWords {
   readonly closedLead: string;
   /** Ends what `/team stop` says of a lead and members: where to find them. */
   readonly closedRun: string;
+  /** Ends what `/team stop` says of no such run: where runs are named. */
+  readonly noRun: string;
 }
 
 /** A team file as the picker lists it, its path as the window shows it. */
@@ -141,4 +144,41 @@ export function stoppedLine(
     ? `Stopped ${run}: its lead is closed · ${words.closedLead}`
     : `Stopped ${run}: ${andList(['its lead', ...members])} are closed · ` +
         words.closedRun;
+}
+
+/** What chord says with no team saved. */
+export const NO_TEAMS =
+  'No teams yet. /team new and a few words about the work makes one.';
+
+/** The lead's role, which the file has no line for. */
+export const LEAD_ROLE =
+  'Splits the job, says who edits which files, reports to main';
+
+/**
+ * What main gets for `/team new <words>`: the words, after one line that
+ * names the tool which makes a team, so the agent proposes one rather than
+ * answers in prose.
+ */
+export function newTeamPrompt(words: string): string {
+  return (
+    'The person asks for a team of agents through /team new: work ' +
+    "out the team for what they describe below, then call chord's " +
+    "propose_team with it (list_agents gives each runtime's models and " +
+    `modes).\n\n${words}`
+  );
+}
+
+/** Where teams are saved, whole. */
+export function teamsSaved(dirs: {
+  readonly project: string;
+  readonly user?: string | undefined;
+}): string {
+  return dirs.user === undefined
+    ? `Saved for this project in ${dirs.project}.`
+    : `Saved for this project in ${dirs.project}, and for every project in ${dirs.user}.`;
+}
+
+/** The first unit of an elapsed time: `41s`, `6m`. */
+export function briefly(ms: number): string {
+  return formatElapsed(ms).split(' ')[0]!;
 }

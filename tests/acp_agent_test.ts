@@ -27,7 +27,7 @@ import {
   type RecordEntry,
 } from '../src/session/record.ts';
 import { openSession, type Session } from '../src/session/session.ts';
-import { readRecords } from '../src/session/sessions.ts';
+import { earlierSessions, readRecords } from '../src/session/sessions.ts';
 import {
   type AcpClient,
   clientOverStreams,
@@ -2733,6 +2733,456 @@ describe('children', () => {
             runtimes: ['fake', 'dimcode'],
           }),
       },
+    ));
+});
+
+describe("chord's commands", () => {
+  const server = () => ({ server: serveChord() });
+  const withTeam = async (cwd: string) => {
+    await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+    await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'bugfix.md'));
+  };
+
+  /** What a command said, as its one marked chunk, then its answer. */
+  const ran = async (client: AcpClient, sessionId: string, text: string) => {
+    const before = client.updates(sessionId).length;
+    const answer = await client.answerTo(
+      client.send('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text }],
+      }),
+    );
+    const said = client
+      .updates(sessionId)
+      .slice(before)
+      .find(
+        (update) =>
+          update._meta !== undefined &&
+          'chord/command' in (update._meta as object),
+      );
+
+    return {
+      answer,
+      text: (said?.content as { text?: string } | undefined)?.text,
+      meta: (said?._meta as Record<string, unknown> | undefined)?.[
+        'chord/command'
+      ],
+    };
+  };
+
+  test('/team lists, and nothing of it reaches the agent or the record', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, stateDir }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const { answer, text, meta } = await ran(client, sessionId, '/team');
+
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(answer.result?.usage).toBeUndefined();
+        expect(meta).toEqual({ name: 'team', failed: false });
+        expect(text).toContain('Teams:\n\n- bugfix · 3 agents · fake');
+        expect(text).toContain('No run is open.');
+        expect(kinds(client, sessionId)).not.toContain('user_message_chunk');
+
+        const { sessions } = (await client.request('session/list', {}))
+          .result as { sessions: unknown[] };
+
+        expect(sessions).toEqual([]);
+        expect(stateDir).not.toBe('');
+      },
+      server(),
+    ));
+
+  test('/team show of a team, then of its run; a run and its stop', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        expect(
+          (await ran(client, sessionId, '/team show bugfix')).text,
+        ).toContain('bugfix · .chord/teams/bugfix.md\n\nFixes a bug');
+
+        const started = await ran(
+          client,
+          sessionId,
+          '/team run bugfix fix the quote',
+        );
+
+        expect(started.text).toBe(
+          'Team bugfix started. Its lead is bugfix; /team stop bugfix ends it.',
+        );
+        expect(started.meta).toEqual({ name: 'team', failed: false });
+
+        const shown = await ran(client, sessionId, '/team show bugfix');
+
+        expect(shown.text).toContain('on "fix the quote"');
+        expect(shown.text).toContain('- lead (bugfix) · open · fake');
+
+        expect((await ran(client, sessionId, '/team')).text).toContain(
+          'Runs open:\n\n- bugfix · team bugfix · working',
+        );
+
+        const stopped = await ran(client, sessionId, '/team stop bugfix');
+
+        expect(stopped.text).toContain('Stopped bugfix:');
+        // Its members may or may not have opened by now.
+        expect(stopped.text).toMatch(
+          /chord with (its|each) agent's name and -r lists (it|them)$/,
+        );
+        expect((await ran(client, sessionId, '/team stop bugfix')).text).toBe(
+          'No run named bugfix is open · /team lists them',
+        );
+      },
+      server(),
+    ));
+
+  test.each([
+    ['/team run bugfix', '/team run bugfix takes the job after the name'],
+    ['/team run', 'Which team? /team lists them'],
+    ['/team run nope a job', 'No team named nope · /team lists them'],
+    ['/team stop', 'Which run? /team lists them'],
+    ['/team show', 'Which team? /team lists them'],
+    ['/team nope', '/team has no nope; it takes list, new, show, run or stop'],
+    ['/new nope', 'No agent named nope; chord knows fake'],
+  ])('%s is refused in a chunk, not an error', (typed, words) =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const { answer, text, meta } = await ran(client, sessionId, typed);
+
+        expect(answer.error).toBeUndefined();
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(text).toBe(words);
+        expect(meta).toMatchObject({ failed: true });
+      },
+      server(),
+    ),
+  );
+
+  test("/new opens an idle child, on main's runtime with none named", () =>
+    onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+        const { text, meta } = await ran(client, sessionId, '/new');
+
+        expect(text).toBe(
+          "Opened fake (fake). It is idle, with no prompt yet; main's send_message starts it, so ask main to send it the work.",
+        );
+        expect(meta).toEqual({ name: 'new', failed: false });
+      },
+      server(),
+    ));
+
+  test("/team new is a turn of the agent's, its preamble ahead", () =>
+    onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+        const running = client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: '/team new fixes bugs' }],
+        });
+
+        await asked(client, PERMISSION);
+
+        client.notify('session/cancel', { sessionId });
+
+        await client.answerTo(running);
+      },
+      {
+        ...server(),
+        // What the fake proposes runs on these; nothing here starts them.
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            runtimes: ['fake', 'claude', 'codex'],
+          }),
+      },
+    ));
+
+  test('a command beside an image is refused, and nothing runs', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const answer = await client.answerTo(
+          client.send('session/prompt', {
+            sessionId,
+            prompt: [
+              { type: 'text', text: '/team run bugfix fix it' },
+              { type: 'image', data: 'x', mimeType: 'image/png' },
+            ],
+          }),
+        );
+
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(client.said(sessionId)).toBe(
+          '/team takes text alone, and this prompt had other blocks beside it. Nothing ran; send the command by itself.',
+        );
+        expect(
+          client
+            .updates(sessionId)
+            .some((update) => update.sessionUpdate === 'subagent_update'),
+        ).toBe(false);
+      },
+      server(),
+    ));
+
+  test('another slash command still goes to the agent as typed', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, '/greet'));
+
+        expect(client.said(sessionId)).not.toBe('');
+      },
+      server(),
+    ));
+
+  test('a command overtakes a queued prompt, and its note reaches the next send', () =>
+    onAcp(
+      ['--echo-messages'],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'slow');
+        const queued = prompt(sessionId, 'text');
+        const { answer } = await ran(client, sessionId, '/team');
+
+        // Answered with the first turn and the queued one both unanswered.
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(
+          client.messages.some(
+            (message) => message.id === running && message.method === undefined,
+          ),
+        ).toBe(false);
+
+        await client.answerTo(running);
+        await client.answerTo(queued);
+      },
+      server(),
+    ));
+
+  test("a session/cancel aborts a run still starting; a run's reply already went", async () => {
+    const lead = { started: false };
+    const gateDir = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, cwd, newSession }) => {
+          await withTeam(cwd);
+
+          const sessionId = await newSession();
+          const { text } = await ran(
+            client,
+            sessionId,
+            '/team run bugfix fix it',
+          );
+
+          expect(text).toContain('Team bugfix started.');
+
+          client.notify('session/cancel', { sessionId });
+
+          // Its lead was still starting: it goes, and no run is left.
+          await until(() =>
+            client
+              .updates(sessionId)
+              .some(
+                (update) =>
+                  update.sessionUpdate === 'subagent_update' &&
+                  (update._meta as Record<string, { closed?: boolean }>)?.[
+                    'chord/agent'
+                  ]?.closed === true,
+              ),
+          );
+
+          expect((await ran(client, sessionId, '/team')).text).toContain(
+            'No run is open.',
+          );
+        },
+        {
+          ...server(),
+          place: () =>
+            Promise.resolve({
+              ...fakePlace(),
+              startupOf: (name: string) => ({
+                agentCommand:
+                  name === 'fake' && !lead.started
+                    ? fakeAgentCommand()
+                    : gatedCommand(
+                        join(gateDir, 'release'),
+                        fakeAgentCommand(),
+                      ),
+              }),
+            }),
+          open: (options) => {
+            const opening = openSession(options);
+
+            lead.started = true;
+
+            return opening;
+          },
+        },
+      );
+    } finally {
+      await writeFile(join(gateDir, 'release'), '');
+      await rm(gateDir, { recursive: true, force: true });
+    }
+  });
+
+  test('a session/cancel while the team is read: no run started', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const running = client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: '/team run bugfix fix it' }],
+        });
+
+        client.notify('session/cancel', { sessionId });
+
+        expect((await client.answerTo(running)).result?.stopReason).toBe(
+          'end_turn',
+        );
+        expect(client.said(sessionId)).toBe(
+          'This launch was cancelled; no run started.',
+        );
+      },
+      server(),
+    ));
+
+  test("session/load of a run's records: main's runtime opens, another's is refused", () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, stateDir }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await writeFile(
+          join(cwd, '.chord', 'teams', 'bugfix.md'),
+          (await readFile(BUGFIX, 'utf8'))
+            .replace(/(- name: tester[\s\S]*?agent: )fake/, '$1codex')
+            .replace(
+              /(- name: tester[\s\S]*?model: )fake-small/,
+              '$1fake-large',
+            ),
+        );
+
+        const sessionId = await newSession();
+
+        await ran(client, sessionId, '/team run bugfix fix it');
+        await until(
+          () =>
+            client.messages.some(
+              (message) =>
+                (message.params?.update as { title?: string } | undefined)
+                  ?.title === 'tester',
+            ),
+          20_000,
+        );
+
+        const ask = await asked(client, PERMISSION);
+
+        client.respond(ask.id, selected('deny'));
+
+        await ran(client, sessionId, '/team stop bugfix');
+
+        const records = await readRecords(stateDir);
+        const load = (name: string) =>
+          client.request('session/load', {
+            sessionId: records.find((each) => each.name === name)?.sessionId,
+            cwd,
+            mcpServers: [],
+          });
+
+        // On main's runtime it opens; on another, it is that agent's to open.
+        expect((await load('bugfix')).error).toBeUndefined();
+        expect((await load('tester')).error?.message).toContain(
+          'belongs to another agent (codex)',
+        );
+
+        // What the stop words send a person to: that agent's list.
+        expect(
+          earlierSessions(records, { agent: 'codex', cwd }).map(
+            ({ resume }) => resume.name,
+          ),
+        ).toContain('tester');
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({ ...fakePlace(), runtimes: ['fake', 'codex'] }),
+      },
+    ));
+
+  test('a session whose only act is /team run is unlisted; a later prompt shows no note on load', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt, stateDir }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await ran(client, sessionId, '/team run bugfix fix it');
+
+        // Its lead has a record of its own, which is not this session's.
+        const listed = async () =>
+          (
+            (await client.request('session/list', {})).result as {
+              sessions: { sessionId: string; title: string }[];
+            }
+          ).sessions.filter((each) => each.sessionId === sessionId);
+
+        expect(await listed()).toEqual([]);
+
+        await client.answerTo(prompt(sessionId, 'text'));
+        await recorded(stateDir, sessionId, 'result');
+        await client.request('session/close', { sessionId });
+
+        expect((await listed()).map(({ title }) => title)).toEqual(['text']);
+
+        const seen = client.messages.length;
+
+        await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        const said = client.messages.slice(seen).flatMap((message) => {
+          const update = message.params?.update as
+            | {
+                sessionUpdate?: string;
+                content?: { text?: string };
+              }
+            | undefined;
+
+          return update?.sessionUpdate === 'user_message_chunk'
+            ? [update.content?.text]
+            : [];
+        });
+
+        expect(said).toContain('text');
+        expect(said.join('\n')).not.toContain('message from');
+        expect(said.join('\n')).not.toContain('/team');
+      },
+      server(),
     ));
 });
 

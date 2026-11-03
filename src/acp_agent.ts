@@ -14,6 +14,7 @@ import {
   MessageTooLargeError,
   ndJsonStream,
   type NewSessionResponse,
+  type PromptResponse,
   RequestError,
   type RequestPermissionResponse,
   type ResumeSessionRequest,
@@ -60,6 +61,24 @@ import {
 } from './session/sessions.ts';
 import { signInLines, type SignIn } from './session/sign_in.ts';
 import {
+  newTeamPrompt,
+  teamCommand,
+  type TeamCommand,
+} from './session/team_command.ts';
+import { recordedSelection } from './session/team_selection.ts';
+import {
+  ACP_TEAM_WORDS,
+  commandChunk,
+  type CommandSaid,
+  notAloneRefusal,
+  openedText,
+  runText,
+  selectedRunRefusal,
+  startedText,
+  teamsText,
+  teamText,
+} from './session/upstream_commands.ts';
+import {
   failureLines,
   type StartFailure,
   stepWords,
@@ -72,7 +91,9 @@ import {
   answeredConfig,
   asksIn,
   childOf,
+  type ChordCommand,
   childSession,
+  commandOf,
   commandsIfNone,
   configChange,
   configSetter,
@@ -90,6 +111,7 @@ import {
 import type {
   LeftOpen,
   PlanWait,
+  TeamShown,
   TurnResult,
 } from './session/transcript/types.ts';
 import { agentOf, isLead } from './session/window_agents.ts';
@@ -1368,6 +1390,133 @@ export function runAcp(options: AcpOptions): AcpRun {
     return false;
   };
 
+  /**
+   * What a command came to, as one chunk ahead of its answer: not an error, as
+   * nothing failed at the protocol's level, and no turn of the agent's.
+   */
+  const commandAnswered = (
+    entry: Entry,
+    name: ChordCommand['name'],
+    { text, failed }: CommandSaid,
+  ): PromptResponse => {
+    send(commandChunk(entry.upstream?.upstreamId ?? '', name, text, failed));
+
+    return { stopReason: 'end_turn' };
+  };
+
+  const CLOSED: CommandSaid = {
+    text: 'This session has closed',
+    failed: true,
+  };
+
+  /** What a command's form said of a run, a team or an agent, as text. */
+  const saidOf = (
+    shown: TeamShown,
+    typed: string,
+    made: (answer: {
+      readonly name: string;
+      readonly agent: string;
+      readonly note?: string;
+    }) => string,
+  ): CommandSaid => {
+    switch (shown.kind) {
+      case 'said':
+        return { text: shown.text, failed: shown.failed };
+      case 'ran':
+        return {
+          text: made(
+            shown.call.answer as {
+              name: string;
+              agent: string;
+              note?: string;
+            },
+          ),
+          failed: false,
+        };
+      case 'show':
+        return {
+          text: teamText(shown.name, shown.file, shown.team),
+          failed: false,
+        };
+      case 'receipt':
+        return {
+          text: selectedRunRefusal(
+            typed,
+            recordedSelection(shown.call)?.runId ?? typed,
+          ),
+          failed: true,
+        };
+      default:
+        return CLOSED;
+    }
+  };
+
+  /** `/team`'s forms but `new`, which is a turn of the agent's. */
+  const teamSaid = async (
+    { host }: Entry,
+    asked: Exclude<TeamCommand, { readonly form: 'new' }>,
+  ): Promise<CommandSaid> => {
+    switch (asked.form) {
+      case 'refused':
+        return { text: asked.problem, failed: true };
+      case 'list': {
+        const listing = await host.listTeams();
+
+        return listing === undefined
+          ? CLOSED
+          : { text: teamsText(listing, Date.now()), failed: false };
+      }
+      case 'show':
+        return saidOf(
+          await host.showTyped(asked.name, ({ file, lead, run, members }) =>
+            run.selected === undefined
+              ? {
+                  kind: 'said',
+                  text: runText({
+                    name: lead.name,
+                    file,
+                    team: run.team,
+                    job: run.job,
+                    since: lead.openedAt,
+                    open: members.map(({ name }) => name),
+                    now: Date.now(),
+                  }),
+                  failed: false,
+                }
+              : {
+                  kind: 'said',
+                  text: selectedRunRefusal(
+                    asked.name,
+                    run.selected.receipt.runId,
+                  ),
+                  failed: true,
+                },
+          ),
+          asked.name,
+          () => '',
+        );
+      case 'run':
+        return saidOf(
+          await host.runTyped(asked.name, asked.job),
+          asked.name,
+          ({ name, note }) => startedText(asked.name, name, note),
+        );
+      case 'stop': {
+        let said = CLOSED;
+
+        host.stopTyped(
+          asked.name,
+          (shown) => {
+            said = saidOf(shown, asked.name, () => '');
+          },
+          ACP_TEAM_WORDS,
+        );
+
+        return said;
+      }
+    }
+  };
+
   /** A set's refusal as that request's error, the agent's words kept. */
   const refusal = (error: unknown): RequestError =>
     error instanceof RequestError
@@ -1491,6 +1640,41 @@ export function runAcp(options: AcpOptions): AcpRun {
         }
 
         const entry = named(params.sessionId);
+        const command = commandOf(params.prompt);
+        const asked =
+          command?.name === 'team'
+            ? teamCommand(command.args, ACP_TEAM_WORDS)
+            : undefined;
+
+        if (command !== undefined && !command.alone) {
+          return Promise.resolve(
+            commandAnswered(entry, command.name, {
+              text: notAloneRefusal(command.name),
+              failed: true,
+            }),
+          );
+        }
+
+        if (command?.name === 'new') {
+          return entry.host
+            .newTyped(command.args, () => {})
+            .then((shown) =>
+              commandAnswered(
+                entry,
+                'new',
+                saidOf(shown, '', ({ name, agent: runtime, note }) =>
+                  openedText(name, runtime, note),
+                ),
+              ),
+            );
+        }
+
+        if (asked !== undefined && asked.form !== 'new') {
+          return teamSaid(entry, asked).then((said) =>
+            commandAnswered(entry, 'team', said),
+          );
+        }
+
         const session = entry.conversation.session;
         const parsed = promptOf(
           params.prompt,
@@ -1528,7 +1712,7 @@ export function runAcp(options: AcpOptions): AcpRun {
         if (
           !entry.conversation.send(
             parsed.text,
-            parsed.text,
+            asked?.form === 'new' ? newTeamPrompt(asked.words) : parsed.text,
             parsed.attachments,
             [],
             { turnId, links: parsed.links },

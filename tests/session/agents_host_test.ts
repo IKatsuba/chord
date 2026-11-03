@@ -1220,6 +1220,7 @@ describe('the typed commands', () => {
     whichRun: 'which',
     closedLead: 'lead words',
     closedRun: 'run words',
+    noRun: 'the list under the prompt names them',
   };
   const crew = `---
 description: A crew

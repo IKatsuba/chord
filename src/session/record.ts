@@ -16,7 +16,7 @@ import type { PastAction, Session } from './session.ts';
 import { monitorsPast } from './monitors.ts';
 import { guardianReview } from './guardian_review.ts';
 import { withoutSecrets } from './questions.ts';
-import { unwrapMessage } from './tasks.ts';
+import { unwrapMessage, withoutChordAsides } from './tasks.ts';
 import { TASK_META } from './transcript/subagents.ts';
 import type {
   ChordCall,
@@ -692,7 +692,7 @@ export function recordActions(
           break;
         }
 
-        const { runs, text } = splitContext(entry.prompt);
+        const { runs, text } = splitContext(withoutChordAsides(entry.prompt));
 
         actions.push(
           ...runs.map((run, index): TranscriptAction => ({
@@ -999,7 +999,7 @@ export function promptLine(prompt: string): string {
     return message.text.replaceAll(/\s+/g, ' ').trim();
   }
 
-  const { runs, text } = splitContext(prompt);
+  const { runs, text } = splitContext(withoutChordAsides(prompt));
   const typed = text.trim() === '' && runs[0] ? `!${runs[0].command}` : text;
 
   return typed.replaceAll(/\s+/g, ' ').trim();

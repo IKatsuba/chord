@@ -8013,3 +8013,43 @@ in clean worktrees, alternating between branch trees and `origin/next`
 top head: 6/20), against 1 of 20 on `origin/next`. Source reading found no
 window-side branch change on that path. The difference remains unexplained;
 its cause was not searched further.
+
+## 2026-11-03 — CHD-575: the extension contract
+
+Six methods share four version-1 keys in `initialize`'s
+`_meta["chord/acp"].extensions`: `session/state`, `session/steer`, `agents`
+and `monitors`. Clients declare the same map under
+`clientCapabilities._meta["chord/acp"]`. Versions change only for breaks;
+chord branches on none yet, beyond the existing drop-only capability check.
+The SDK's extension handlers and Zod schemas fit; no protocol helper or
+record change is needed. The public reference is in
+[the guide](guide.md#extensions).
+
+Main's state includes `requires_action` for a task's ask: main's turn waits
+on it. Children keep their state on `subagent_update`. Origins remain
+`client`, `message` and `agent`, omitted on idle. No state or monitor
+notification follows a close.
+
+A steer targets its own queued entry and carries text, links and supported
+images. `sent` means into a running turn; otherwise `queued` starts its
+own unbound client-origin turn with no echo. A refused steer returns to
+the queue; a refused send or gone session is -32002. Child send answers
+`sent` when idle or `queued` when busy. Unknown, closed or failed-start
+children, tasks and adapter subagents are -32002; starting or clearing
+children are -32603. Close works on failed-start children and returns the
+names closed, including a lead's members.
+
+Monitor notifications carry the running and ended objects whole,
+including their last event when present; children's use composite ids.
+Stop is limited to the named session's monitors and returns `id`,
+`description`, `events` and `ran_ms`; unknown ids are -32002. Malformed
+params or unsupported prompt content are -32602; requests during shutdown
+are -32603. Load and resume return `chord/left_open` metadata for recorded
+children left open, without restarting them.
+
+## 2026-11-03 — CHD-575: extension notifications are unconditional
+
+All `_chord` notifications, including children's monitor snapshots, go to
+every client regardless of declarations. The drop-only capability check
+applies to ordinary `session/update` traffic. This clarifies the extension
+contract above; that check does not gate extension notifications.

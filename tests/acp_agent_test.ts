@@ -27,7 +27,11 @@ import {
   recordActions,
   type RecordEntry,
 } from '../src/session/record.ts';
-import { openSession, type Session } from '../src/session/session.ts';
+import {
+  openSession,
+  type OpenSessionOptions,
+  type Session,
+} from '../src/session/session.ts';
 import { earlierSessions, readRecords } from '../src/session/sessions.ts';
 import {
   type AcpClient,
@@ -180,7 +184,12 @@ describe('initialize', () => {
           _meta: {
             'chord/acp': {
               version: 1,
-              extensions: {},
+              extensions: {
+                'session/state': 1,
+                'session/steer': 1,
+                agents: 1,
+                monitors: 1,
+              },
               agent: { name: 'fake' },
             },
           },
@@ -3267,6 +3276,729 @@ describe("chord's commands", () => {
       },
       server(),
     ));
+});
+
+describe('the session state (CHD-575)', () => {
+  /** What `_chord/session/state` said of `sessionId`, in order. */
+  const states = (client: AcpClient, sessionId: string) =>
+    client.messages.flatMap((message) => {
+      if (
+        message.method !== '_chord/session/state' ||
+        message.params?.sessionId !== sessionId
+      ) {
+        return [];
+      }
+
+      const state: Record<string, unknown> = { ...message.params };
+
+      delete state['sessionId'];
+
+      return [state];
+    });
+
+  test("a client's turn runs as the client's, then idle", () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'text'));
+      await until(() => states(client, sessionId).length === 2);
+
+      expect(states(client, sessionId)).toEqual([
+        { state: 'running', origin: 'client' },
+        { state: 'idle' },
+      ]);
+    }));
+
+  test('an ask requires action until it is answered', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      expect(states(client, sessionId).at(-1)).toEqual({
+        state: 'requires_action',
+        origin: 'client',
+      });
+
+      client.respond(ask.id, selected('allow'));
+      await client.answerTo(running);
+      await until(() => states(client, sessionId).at(-1)?.['state'] === 'idle');
+
+      expect(states(client, sessionId)).toEqual([
+        { state: 'running', origin: 'client' },
+        { state: 'requires_action', origin: 'client' },
+        { state: 'running', origin: 'client' },
+        { state: 'idle' },
+      ]);
+    }));
+
+  test('closed with an ask open, nothing more is said of it', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+
+      await asked(client, PERMISSION);
+
+      const said = states(client, sessionId).length;
+
+      await client.request('session/close', { sessionId });
+      await client.answerTo(running);
+
+      expect(states(client, sessionId)).toHaveLength(said);
+      expect(states(client, sessionId).at(-1)).toEqual({
+        state: 'requires_action',
+        origin: 'client',
+      });
+    }));
+
+  test("a monitor's turn, which no client began, runs as a message", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'monitor'));
+        await until(
+          () =>
+            states(client, sessionId).some(
+              (state) => state['origin'] === 'message',
+            ),
+          20_000,
+        );
+
+        expect(states(client, sessionId).slice(0, 3)).toEqual([
+          { state: 'running', origin: 'client' },
+          { state: 'idle' },
+          { state: 'running', origin: 'message' },
+        ]);
+      },
+      { server: serveChord() },
+    ));
+
+  test('a load says nothing: nothing runs on it', () =>
+    onAcp([], async ({ client, cwd, stateDir, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'text'));
+      await recorded(stateDir, sessionId, 'result');
+      await client.request('session/close', { sessionId });
+
+      const seen = client.messages.length;
+
+      await client.request('session/load', { sessionId, cwd, mcpServers: [] });
+
+      expect(
+        client.messages
+          .slice(seen)
+          .some((message) => message.method === '_chord/session/state'),
+      ).toBe(false);
+    }));
+});
+
+describe('a steer (CHD-575)', () => {
+  const STEER = '_chord/session/steer';
+  const steer = (client: AcpClient, sessionId: string, text: string) =>
+    client.request(STEER, {
+      sessionId,
+      prompt: [{ type: 'text', text }],
+    });
+  /** What the client was told someone said in `sessionId`. */
+  const toldWords = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .flatMap((update) =>
+        update['sessionUpdate'] === 'user_message_chunk'
+          ? [(update['content'] as { text?: string }).text]
+          : [],
+      );
+
+  test('it takes its own entry into the running turn, not the prompt queued ahead', () =>
+    onAcp(['--steering', 'claude'], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'texttillsteered');
+
+      await until(() => client.said(sessionId).includes('came in chunks'));
+
+      const queued = prompt(sessionId, 'text');
+
+      expect((await steer(client, sessionId, 'Mine.')).result).toEqual({
+        delivery: 'sent',
+      });
+      // The steer ended the running turn; the prompt ahead of it ran as its
+      // own and answers on its own end.
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'end_turn',
+      );
+      expect((await client.answerTo(queued)).result?.stopReason).toBe(
+        'end_turn',
+      );
+      expect(toldWords(client, sessionId)).not.toContain('Mine.');
+    }));
+
+  test('with no turn running it starts one, queued, the client’s, its words not told back', () =>
+    onAcp(['--steering', 'claude'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect((await steer(client, sessionId, 'text')).result).toEqual({
+        delivery: 'queued',
+      });
+      await until(() =>
+        client.messages.some(
+          (message) =>
+            message.method === '_chord/session/state' &&
+            message.params?.['state'] === 'idle',
+        ),
+      );
+
+      expect(
+        client.messages
+          .filter((message) => message.method === '_chord/session/state')
+          .map((message) => message.params?.['origin']),
+      ).toEqual(['client', undefined]);
+      expect(client.said(sessionId)).toContain('came in chunks');
+      expect(toldWords(client, sessionId)).toEqual([]);
+    }));
+
+  test('on an agent that takes no steering it waits queued', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'long');
+
+      await until(() => client.said(sessionId) !== '');
+
+      expect((await steer(client, sessionId, 'text')).result).toEqual({
+        delivery: 'queued',
+      });
+
+      client.notify('session/cancel', { sessionId });
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'cancelled',
+      );
+    }));
+
+  test('an unknown session is -32002, a prompt that does not read -32602', () =>
+    onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect((await steer(client, 'nobody', 'text')).error?.code).toBe(-32002);
+      expect(
+        (await client.request(STEER, { sessionId, prompt: [{ type: 'text' }] }))
+          .error?.code,
+      ).toBe(-32602);
+      expect(
+        (
+          await client.request(STEER, {
+            sessionId,
+            prompt: [{ type: 'audio', data: '', mimeType: 'audio/wav' }],
+          })
+        ).error?.code,
+      ).toBe(-32602);
+    }));
+
+  test('advertised', () =>
+    onAcp([], async ({ client }) => {
+      expect(
+        (
+          (await client.answerTo(1)).result?._meta as Record<
+            string,
+            { extensions: object }
+          >
+        )['chord/acp']?.extensions,
+      ).toMatchObject({ 'session/steer': 1 });
+    }));
+});
+
+describe('agents/send and agents/close (CHD-575)', () => {
+  const SEND = '_chord/agents/send';
+  const CLOSE = '_chord/agents/close';
+  const server = () => ({ server: serveChord() });
+  const send = (client: AcpClient, sessionId: string, text: string) =>
+    client.request(SEND, { sessionId, prompt: [{ type: 'text', text }] });
+
+  /** Each long-lived child chord announced, by its title, as last told. */
+  const children = (client: AcpClient) =>
+    new Map(
+      client.messages.flatMap((message) => {
+        const update = message.params?.update as
+          | {
+              sessionUpdate?: string;
+              sessionId?: string;
+              title?: string;
+              state?: { state: string };
+              _meta?: Record<string, { role?: string }>;
+            }
+          | undefined;
+        const agent = update?._meta?.['chord/agent'];
+
+        return message.method === 'session/update' &&
+          update?.sessionUpdate === 'subagent_update' &&
+          agent !== undefined
+          ? [
+              [
+                update.title!,
+                { id: update.sessionId!, state: update.state?.state },
+              ],
+            ]
+          : [];
+      }),
+    );
+  const childNamed = async (client: AcpClient, title: string) => {
+    await until(() => children(client).has(title), 20_000);
+
+    return children(client).get(title)!.id;
+  };
+
+  /** The first child announced: its title and its id. */
+  const firstChild = async (client: AcpClient) => {
+    await until(() => children(client).size > 0, 20_000);
+
+    const [first] = children(client);
+
+    assert(first !== undefined);
+
+    return { title: first[0], id: first[1].id };
+  };
+
+  /** Starts after the first `plain` go through only once `gate` exists. */
+  const gatedAfter = (plain: number, gate: string) => {
+    let opened = 0;
+
+    return {
+      ...server(),
+      place: () =>
+        Promise.resolve({
+          ...fakePlace(),
+          startupOf: () => ({
+            agentCommand:
+              opened < plain
+                ? fakeAgentCommand()
+                : gatedCommand(gate, fakeAgentCommand()),
+          }),
+        }),
+      open: (options: OpenSessionOptions) => {
+        opened += 1;
+
+        return openSession(options);
+      },
+    };
+  };
+
+  test("a child's prompt is sent, or queued behind its turn; closed, it is -32002", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agenttitled'));
+
+        const { title, id: parser } = await firstChild(client);
+
+        // Its first turn over, as chord reads it: idle is said of it while
+        // it starts too.
+        await until(
+          () =>
+            client.said(parser).includes('came in chunks') &&
+            children(client).get(title)?.state === 'idle',
+          20_000,
+        );
+
+        const said = client.said(parser).length;
+
+        expect((await send(client, parser, 'long')).result).toEqual({
+          delivery: 'sent',
+        });
+        await until(() => client.said(parser).length > said);
+        expect((await send(client, parser, 'text')).result).toEqual({
+          delivery: 'queued',
+        });
+
+        expect(
+          (await client.request(CLOSE, { sessionId: parser })).result,
+        ).toEqual({ closed: [title] });
+        expect((await send(client, parser, 'text')).error?.code).toBe(-32002);
+        expect(
+          (await client.request(CLOSE, { sessionId: parser })).error?.code,
+        ).toBe(-32002);
+      },
+      server(),
+    ));
+
+  test('main, a typo, or a task is no child of these: -32002', () =>
+    onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+
+        for (const id of [sessionId, `${sessionId}/nobody`, 'nobody']) {
+          expect((await send(client, id, 'text')).error?.code).toBe(-32002);
+          expect(
+            (await client.request(CLOSE, { sessionId: id })).error?.code,
+          ).toBe(-32002);
+        }
+      },
+      server(),
+    ));
+
+  test('a lead closes with its members, each by name', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'bugfix.md'));
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, '/team run bugfix fix it'));
+
+        const lead = await childNamed(client, 'bugfix');
+
+        await childNamed(client, 'tester');
+        await childNamed(client, 'coder');
+
+        const { result } = await client.request(CLOSE, { sessionId: lead });
+        const closed = (result as { closed: string[] }).closed;
+
+        expect(closed[0]).toBe('bugfix');
+        expect(closed.slice(1).toSorted()).toEqual(['coder', 'tester']);
+      },
+      server(),
+    ));
+
+  test('a child whose start failed is -32002, and still closes', () => {
+    let opens = 0;
+
+    return onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentcost'));
+
+        const parser = await childNamed(client, 'parser');
+
+        await until(
+          () =>
+            client.messages.some(
+              (message) =>
+                String(JSON.stringify(message.params?.update)).includes(
+                  '"failed":',
+                ) &&
+                (message.params?.update as { sessionId?: string }).sessionId ===
+                  parser,
+            ),
+          20_000,
+        );
+
+        expect((await send(client, parser, 'text')).error?.code).toBe(-32002);
+        expect(
+          (await client.request(CLOSE, { sessionId: parser })).result,
+        ).toEqual({ closed: ['parser'] });
+      },
+      {
+        ...server(),
+        open: (options) => {
+          opens += 1;
+
+          return openSession(
+            opens === 2
+              ? { ...options, agentCommand: ['chord-missing-fixture-command'] }
+              : options,
+          );
+        },
+      },
+    );
+  });
+
+  test('a child still starting is not sent to: -32603, nothing held', async () => {
+    const gates = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
+    const gate = join(gates, 'release');
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+
+          await client.answerTo(prompt(sessionId, '/new'));
+
+          const { title, id: child } = await firstChild(client);
+          const { error } = await send(client, child, 'text');
+
+          expect(error?.code).toBe(-32603);
+          expect(error?.message).toBe(
+            `${title} is starting; send once its subagent_update says idle`,
+          );
+        },
+        gatedAfter(1, gate),
+      );
+    } finally {
+      await writeFile(gate, '');
+      await rm(gates, { recursive: true, force: true });
+    }
+  });
+
+  test('a child being cleared is not sent to: -32603, nothing held', async () => {
+    const gates = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
+    const gate = join(gates, 'release');
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+
+          // parser works on until it is stopped, which the clear does.
+          await client.answerTo(prompt(sessionId, 'agentcost'));
+
+          const parser = await childNamed(client, 'parser');
+          const clearing = prompt(sessionId, 'agentclearonly');
+
+          await until(
+            () =>
+              JSON.stringify(client.updates(sessionId)).includes('clear_agent'),
+            20_000,
+          );
+
+          // The call reaches chord a moment after the agent says it makes it:
+          // asked again, a little apart, until the clear has begun.
+          let error: WireMessage['error'];
+
+          for (
+            const deadline = performance.now() + 20_000;
+            error?.message.includes('cleared') !== true &&
+            performance.now() < deadline;
+          ) {
+            error = (await send(client, parser, 'text')).error;
+
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+
+          expect(error?.message).toBe(
+            'parser is being cleared; send once its subagent_update says idle',
+          );
+
+          await writeFile(gate, '');
+
+          expect((await client.answerTo(clearing)).result?.stopReason).toBe(
+            'end_turn',
+          );
+        },
+        gatedAfter(2, gate),
+      );
+    } finally {
+      await writeFile(gate, '');
+      await rm(gates, { recursive: true, force: true });
+    }
+  });
+
+  test('advertised', () =>
+    onAcp([], async ({ client }) => {
+      expect(
+        (
+          (await client.answerTo(1)).result?._meta as Record<
+            string,
+            { extensions: object }
+          >
+        )['chord/acp']?.extensions,
+      ).toMatchObject({ agents: 1 });
+    }));
+});
+
+describe('monitors/changed and monitors/stop (CHD-575)', () => {
+  const STOP = '_chord/monitors/stop';
+  const server = () => ({ server: serveChord() });
+
+  interface Changed {
+    readonly running: { id: string; description: string; events: number }[];
+    readonly ended: { id: string; end: { kind: string }; endedAt: number }[];
+  }
+
+  /** What `_chord/monitors/changed` said of `sessionId`, in order. */
+  const changes = (client: AcpClient, sessionId: string): Changed[] =>
+    client.messages.flatMap((message) =>
+      message.method === '_chord/monitors/changed' &&
+      message.params?.sessionId === sessionId
+        ? [message.params as unknown as Changed]
+        : [],
+    );
+
+  test("main's monitor: told as it runs, stopped by its id, told ended", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'monitors'));
+        await until(
+          () => changes(client, sessionId).at(-1)?.running.length === 2,
+          20_000,
+        );
+
+        expect(changes(client, sessionId).at(-1)?.running).toMatchObject([
+          {
+            id: 'm1',
+            description: 'dev server errors',
+            command: expect.any(String) as string,
+            startedAt: expect.any(Number) as number,
+            timeoutMs: expect.any(Number) as number,
+            events: expect.any(Number) as number,
+          },
+          { id: 'm2', description: 'CI run 4812', events: 0 },
+        ]);
+
+        const { result } = await client.request(STOP, {
+          sessionId,
+          id: 'm2',
+        });
+
+        expect(result).toEqual({
+          id: 'm2',
+          description: 'CI run 4812',
+          events: 0,
+          ran_ms: expect.any(Number) as number,
+        });
+        await until(() =>
+          changes(client, sessionId).some(({ ended }) =>
+            ended.some((each) => each.id === 'm2'),
+          ),
+        );
+
+        const last = changes(client, sessionId).at(-1)!;
+
+        expect(last.running.map(({ id }) => id)).toEqual(['m1']);
+        expect(last.ended).toMatchObject([
+          { id: 'm2', end: { kind: 'stopped' }, endedAt: expect.any(Number) },
+        ]);
+
+        const again = await client.request(STOP, { sessionId, id: 'm2' });
+
+        expect(again.error?.code).toBe(-32002);
+        expect(
+          (await client.request(STOP, { sessionId, id: 'm9' })).error?.code,
+        ).toBe(-32002);
+        expect(
+          (await client.request(STOP, { sessionId: 'nobody', id: 'm1' })).error
+            ?.code,
+        ).toBe(-32002);
+      },
+      server(),
+    ));
+
+  test("a child's monitors are under its composite id, and stop there", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'monitorchild'));
+
+        const child = () =>
+          client.messages
+            .filter(
+              (message) =>
+                message.method === '_chord/monitors/changed' &&
+                message.params?.sessionId !== sessionId,
+            )
+            .at(-1);
+
+        await until(() => child() !== undefined, 20_000);
+
+        const parser = String(child()!.params?.sessionId);
+
+        expect(parser.startsWith(`${sessionId}/`)).toBe(true);
+        expect(changes(client, parser).at(-1)?.running).toMatchObject([
+          { id: 'm1', description: 'parser tests' },
+        ]);
+
+        const { result } = await client.request(STOP, {
+          sessionId: parser,
+          id: 'm1',
+        });
+
+        expect(result).toMatchObject({ id: 'm1', description: 'parser tests' });
+        await until(() => changes(client, parser).at(-1)?.running.length === 0);
+        // Main's own m1 runs on.
+        expect(
+          changes(client, sessionId)
+            .at(-1)
+            ?.running.map(({ id }) => id),
+        ).toEqual(['m1']);
+      },
+      server(),
+    ));
+
+  test('advertised', () =>
+    onAcp([], async ({ client }) => {
+      expect(
+        (
+          (await client.answerTo(1)).result?._meta as Record<
+            string,
+            { extensions: object }
+          >
+        )['chord/acp']?.extensions,
+      ).toMatchObject({ monitors: 1 });
+    }));
+});
+
+describe('a client that knows no extension (CHD-575)', () => {
+  /**
+   * What chord sent of its own accord, by method; sorted, as the session's
+   * updates and its state go each on its own way.
+   */
+  const told = (client: AcpClient) =>
+    client.messages
+      .flatMap((message) =>
+        message.method === undefined ? [] : [message.method],
+      )
+      .toSorted();
+
+  test('works as a plain ACP client: the same traffic as one that declares them, nothing to answer', async () => {
+    const runs: string[][] = [];
+
+    for (const capabilities of [
+      {},
+      {
+        _meta: {
+          'chord/acp': {
+            extensions: { 'session/state': 1, agents: 1, monitors: 1 },
+          },
+        },
+      },
+    ]) {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+
+          expect(
+            (await client.answerTo(prompt(sessionId, 'text'))).result
+              ?.stopReason,
+          ).toBe('end_turn');
+          await until(() =>
+            client.messages.some(
+              (message) =>
+                message.method === '_chord/session/state' &&
+                message.params?.['state'] === 'idle',
+            ),
+          );
+
+          // Notifications alone: nothing of chord's waits on an answer.
+          for (const message of client.messages) {
+            if (message.method?.startsWith('_chord/') === true) {
+              expect(message.id).toBeUndefined();
+            }
+          }
+
+          runs.push(told(client));
+        },
+        { capabilities },
+      );
+    }
+
+    expect(runs[0]).toEqual(runs[1]!);
+    expect(runs[0]).toContain('_chord/session/state');
+  });
 });
 
 describe('the way out', () => {

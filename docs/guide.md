@@ -618,8 +618,9 @@ client-supplied `acp` transport is refused with -32602.
 Models, modes and efforts share `configOptions`; names and values belong
 to the agent. Boolean options are absent and boolean sets are refused.
 There is no `session/set_model` method: use the model config option.
-`authenticate`, `session/fork`, `session/delete`, steering and chord's
-extensions are not served; unsupported requests get -32601.
+`authenticate`, `session/fork`, `session/delete` and `_session/steering`
+are not served; unsupported requests get -32601. Use chord's steering
+extension below.
 
 Prompts take text, resource links and images where the agent supports
 them. `initialize` advertises images; the session answer's
@@ -695,7 +696,7 @@ agent as typed.
 | `/team run <name> <job>` | Starts a saved team and answers once started |
 | `/team stop <run>` | Closes the run's lead and members |
 | `/team new <words>` | Sends a normal turn asking main to propose a team |
-| `/new [agent]` | Opens an idle child; ask main to send it work with `send_message` |
+| `/new [agent]` | Opens an idle child; send work with `_chord/agents/send` or ask main to use `send_message` |
 
 Commands take a single text block; other blocks beside one are refused.
 Except `/team new`, they run immediately, even during a turn, and return
@@ -723,11 +724,76 @@ When main's agent dies, `chord acp` closes all its children: nothing may
 keep running that the client can no longer name. The window keeps them,
 since its person can still reach them.
 
-Extensions remain CHD-575: `initialize` reports an empty `extensions`
-map in `_meta["chord/acp"]`. `_meta` keys are informational and unversioned;
-they do not establish an extension contract. For example, `chord/filled`
-marks chord's estimates, and `chord/held_back` explains withheld MCP
-servers.
+### Extensions
+
+`initialize` advertises `_meta["chord/acp"]` with `version: 1` and four
+`extensions` keys, each `1`: `session/state`, `session/steer`, `agents`
+(send and close), and `monitors` (changed and stop). A client declares the
+same map in `clientCapabilities._meta["chord/acp"].extensions`. Versions
+change only for a breaking change. chord branches on none of these
+versions yet: all `_chord` notifications, including children's monitor
+snapshots, go to every client regardless of declarations. The drop-only
+check above applies to ordinary `session/update` traffic. `_meta` keys
+outside this contract remain informational and unversioned: `chord/filled` marks estimates and
+`chord/held_back` explains withheld MCP servers.
+
+**`_chord/session/state`** is a notification with `sessionId`, `state`
+(`running`, `idle` or `requires_action`) and, when a turn is running,
+`origin`: `client` for a client prompt or queued steer, `message` for a
+message that starts a turn, or `agent` for work the agent starts itself.
+Idle has no origin. Changes report main's state; children keep theirs on
+`subagent_update`. Main's permissions, forms and plan asks make it
+`requires_action`, including a task's ask that main's turn waits on.
+No state notifications follow a close.
+
+**`_chord/session/steer`** takes `{ sessionId, prompt }`, where `sessionId`
+is main's upstream id and `prompt` is an ACP content-block array. It
+steers its own entry, even with other prompts queued ahead. The result is
+`{ delivery: "sent" }` only when sent into a running turn; otherwise
+`{ delivery: "queued" }`. A queued steer runs as its own turn with no
+request waiting for its result, `origin: "client"` and no echo of its
+words. Resource links and supported images travel with the text. A
+refused steer returns to the queue; a refused send or gone session is
+-32002.
+
+**`_chord/agents/send`** takes `{ sessionId, prompt }` for a long-lived
+child's composite id, with the same content blocks. It answers
+`{ delivery: "sent" }` when idle or `{ delivery: "queued" }` when busy;
+follow the turn through `subagent_update`. Unknown, closed or failed-start
+children, chord tasks and adapter subagents are -32002. A child still
+starting or being cleared is -32603; send again after its update says
+idle.
+
+**`_chord/agents/close`** takes `{ sessionId }` for a long-lived child and
+returns `{ closed: ["name", ...] }`: the names it closed, including a
+lead's members. It also closes a child whose start failed. Unknown or
+already closed children, tasks and adapter subagents are -32002.
+
+**`_chord/monitors/changed`** is a notification with `sessionId`, `running`
+and `ended`. Both arrays carry whole monitor objects: `id`, `description`,
+`command`, `startedAt`, `timeoutMs`, `events` and optional `lastEvent`
+(`{ lines, at }`). Ended objects also carry `end` and `endedAt`. `end` is
+`{ kind: "exit", code }`, `{ kind: "signal", signal }`,
+`{ kind: "timed_out", timeoutMs }`, `{ kind: "stopped" }` or
+`{ kind: "flooded", by: "lines" | "bytes" }`. `startedAt`, `endedAt` and
+`at` are epoch milliseconds; `timeoutMs` is a duration in milliseconds.
+`events` counts delivered batches. A child's monitors use its composite
+session id; notifications stop on close.
+
+**`_chord/monitors/stop`** takes `{ sessionId, id }` for a monitor owned by
+main or the named long-lived child. It returns
+`{ id, description, events, ran_ms }`, with elapsed milliseconds in
+`ran_ms`. Unknown sessions or monitor ids are -32002; it cannot stop
+another session's monitor.
+
+Malformed extension parameters and unsupported prompt blocks or images
+are -32602. Requests while chord is shutting down are -32603.
+
+`session/load` and `session/resume` may return `_meta["chord/left_open"]`,
+an array of children left open in the record, each with `name`, `runtime`
+and optional `team` and `agents` (the run's agent count). They are not
+restarted. Tasks' recorded work replays on load; long-lived children's
+work does not.
 
 Updates after a prompt's answer go immediately. Turns nobody prompted
 can send work and asks with no client prompt pending. A client that

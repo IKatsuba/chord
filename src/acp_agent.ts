@@ -29,6 +29,7 @@ import { seeingWrites } from './acp/stdio.ts';
 import {
   NO_TURNS,
   reduceTurns,
+  sessionStateOf,
   type TurnInput,
   turnOf,
   type Turns,
@@ -118,6 +119,17 @@ import { agentOf, isLead } from './session/window_agents.ts';
 
 /** The `_meta` key chord says its own of ACP under. */
 const ACP_META = 'chord/acp';
+
+/** The extensions this chord has, each at its version, as `initialize` says. */
+const EXTENSIONS = {
+  'session/state': 1,
+  'session/steer': 1,
+  agents: 1,
+  monitors: 1,
+} as const;
+
+/** What `_chord/session/state` last said, or would have: none says idle. */
+const IDLE = JSON.stringify({ state: 'idle' });
 
 /**
  * What a person who ran it by hand reads on stderr; only a stdin that is a
@@ -224,6 +236,13 @@ interface Entry {
   /** While the conversation replays the session's past, which is no news. */
   replaying: boolean;
   turns: Turns;
+  /** What `_chord/session/state` last said of it, so only a change goes. */
+  stateSent: string;
+  /**
+   * Closed by the client, or by the way out: no state goes after, as what its
+   * close settles is no news, and its asks may still read open as it goes.
+   */
+  closed?: true;
   opening?:
     | {
         readonly requestId: JsonRpcId;
@@ -330,6 +349,58 @@ export function runAcp(options: AcpOptions): AcpRun {
     if (mapped.notification !== undefined) {
       send(mapped.notification);
     }
+  };
+
+  /**
+   * Main's state, if it changed: its turn by who began it, and its own asks
+   * from what its fold has open. A child's is on its `subagent_update`.
+   */
+  const tellState = (entry: Entry): void => {
+    if (
+      entry.upstream === undefined ||
+      !entry.live ||
+      entry.key === undefined ||
+      entry.closed
+    ) {
+      return;
+    }
+
+    const asking =
+      agentStateOf(entry.folds.get(entry.key) ?? NO_FOLD).state ===
+      'requires_action';
+    const state = sessionStateOf(entry.turns, asking);
+    const said = JSON.stringify(state);
+
+    if (said === entry.stateSent) {
+      return;
+    }
+
+    entry.stateSent = said;
+
+    connection.client
+      .notify('_chord/session/state', {
+        sessionId: entry.upstream.upstreamId,
+        ...state,
+      })
+      .catch(() => {
+        // The connection went; the way out has it from there.
+      });
+  };
+
+  /** A session's monitors, as its `monitors` event has them, whole. */
+  const tellMonitors = (
+    sessionId: string,
+    event: Extract<ConversationEvent, { type: 'monitors' }>,
+  ): void => {
+    connection.client
+      .notify('_chord/monitors/changed', {
+        sessionId,
+        running: event.monitors,
+        ended: event.ended,
+      })
+      .catch(() => {
+        // The connection went; the way out has it from there.
+      });
   };
 
   const tellConfig = (entry: Entry): void => {
@@ -661,6 +732,10 @@ export function runAcp(options: AcpOptions): AcpRun {
 
     entry.turns = turns;
 
+    if (input.type === 'closing') {
+      entry.closed = true;
+    }
+
     for (const send of sends) {
       switch (send.type) {
         case 'answer': {
@@ -755,6 +830,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       }
 
       tellConfig(entry);
+      tellState(entry);
     };
 
     const answered = wire.expect(opening.requestId);
@@ -949,9 +1025,20 @@ export function runAcp(options: AcpOptions): AcpRun {
         warn(entry, event.message);
 
         break;
+      case 'monitors':
+        // Its close stops them: no news to a client that closed it.
+        once(entry, () => {
+          if (entry.upstream !== undefined && entry.closed !== true) {
+            tellMonitors(entry.upstream.upstreamId, event);
+          }
+        });
+
+        break;
       default:
         break;
     }
+
+    tellState(entry);
   };
 
   /** A long-lived child's event, as the client hears of it. */
@@ -1072,6 +1159,10 @@ export function runAcp(options: AcpOptions): AcpRun {
         whenUp(() => once(entry, () => askPlan(asker(), event.plan)));
 
         break;
+      case 'monitors':
+        whenUp(() => tellMonitors(route.upstreamId, event));
+
+        break;
       case 'permission_settled':
       case 'elicitation_settled':
       case 'plan_settled':
@@ -1181,6 +1272,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       live: false,
       held: [],
       turns: NO_TURNS,
+      stateSent: IDLE,
       gone: false,
       noticed: false,
       replaying: false,
@@ -1346,6 +1438,28 @@ export function runAcp(options: AcpOptions): AcpRun {
     }
 
     return entry;
+  };
+
+  /**
+   * The long-lived child the client names `sessionId`, open and not gone;
+   * a task, an adapter's subagent or a closed child is no such child.
+   */
+  const childNamed = (sessionId: string) => {
+    for (const entry of sessions.values()) {
+      for (const [key, route] of entry.routes) {
+        const child = agentOf(entry.host.sessions.agents, key)?.child;
+
+        if (
+          route.upstreamId === sessionId &&
+          route.gone === undefined &&
+          child !== undefined
+        ) {
+          return { entry, key, child, route };
+        }
+      }
+    }
+
+    throw RequestError.sessionNotFound(sessionId);
   };
 
   /**
@@ -1643,7 +1757,11 @@ export function runAcp(options: AcpOptions): AcpRun {
             sessionCapabilities: { list: {}, resume: {}, close: {} },
           },
           _meta: {
-            [ACP_META]: { version: 1, extensions: {}, agent: { name: agent } },
+            [ACP_META]: {
+              version: 1,
+              extensions: EXTENSIONS,
+              agent: { name: agent },
+            },
           },
         };
       },
@@ -1849,6 +1967,128 @@ export function runAcp(options: AcpOptions): AcpRun {
         await closeEntry(entry);
 
         return {};
+      },
+      sendAgent: ({ params }) => {
+        refuseIfClosing();
+
+        const { entry, key, child, route } = childNamed(params.sessionId);
+        const { conversation } = child;
+
+        // Its start failed: nothing will take the words until it is cleared.
+        if (route.failed !== undefined) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        // As in the window, nothing is held for a child not up: the person
+        // sends again once it is.
+        if (entry.host.clearing.has(key)) {
+          throw new RequestError(
+            -32603,
+            `${child.name} is being cleared; send once its subagent_update says idle`,
+          );
+        }
+
+        if (conversation.session === undefined) {
+          throw new RequestError(
+            -32603,
+            `${child.name} is starting; send once its subagent_update says idle`,
+          );
+        }
+
+        const parsed = promptOf(
+          params.prompt,
+          child.runtime,
+          conversation.session.takesImages(),
+        );
+
+        if ('refused' in parsed) {
+          throw RequestError.invalidParams(undefined, parsed.refused);
+        }
+
+        const busy =
+          agentStateOf(entry.folds.get(key) ?? NO_FOLD).state !== 'idle';
+
+        if (
+          !conversation.send(parsed.text, parsed.text, parsed.attachments, [], {
+            links: parsed.links,
+          })
+        ) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        return { delivery: busy ? 'queued' : 'sent' };
+      },
+      stopMonitor: ({ params }) => {
+        refuseIfClosing();
+
+        const main = sessions.get(params.sessionId);
+        const { entry, agent } =
+          main === undefined
+            ? (({ entry, child }) => ({ entry, agent: child.id }))(
+                childNamed(params.sessionId),
+              )
+            : { entry: main, agent: undefined };
+
+        if (entry.key === undefined) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        const stopped = entry.host.stopMonitor(entry.key, agent, params.id);
+
+        if ('error' in stopped) {
+          throw new RequestError(-32002, stopped.error);
+        }
+
+        return stopped;
+      },
+      closeAgent: ({ params }) => {
+        refuseIfClosing();
+
+        const { entry, child } = childNamed(params.sessionId);
+
+        return { closed: [child.name, ...entry.host.closeByPerson(child)] };
+      },
+      steer: ({ params }) => {
+        refuseIfClosing();
+
+        const entry = named(params.sessionId);
+        const parsed = promptOf(
+          params.prompt,
+          agent,
+          entry.conversation.session?.takesImages() === true,
+        );
+
+        if ('refused' in parsed) {
+          throw RequestError.invalidParams(undefined, parsed.refused);
+        }
+
+        const turnId = crypto.randomUUID();
+
+        // Before `send`, which emits before it returns: a turn of its own is
+        // then the client's, and its words are not told back.
+        step(entry, { type: 'steered', turnId });
+
+        if (
+          !entry.conversation.send(
+            parsed.text,
+            parsed.text,
+            parsed.attachments,
+            [],
+            { turnId, links: parsed.links },
+          )
+        ) {
+          step(entry, { type: 'unbind', turnId });
+
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        // Its own entry, not the oldest: another request may be queued ahead.
+        return {
+          delivery:
+            entry.conversation.steerQueued(turnId) === 'sent'
+              ? 'sent'
+              : 'queued',
+        };
       },
     },
     wire.stream,

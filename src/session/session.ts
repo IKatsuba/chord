@@ -266,13 +266,15 @@ export interface Session {
    * Puts a prompt into the turn the agent is running, its blocks as
    * `prompt` sends a turn's, asking an agent with none running to do
    * nothing with it; rejects when the request fails. `went` hears the
-   * links found for the mentions as it goes (CHD-378).
+   * links found for the mentions as it goes (CHD-378), then `links` as
+   * given, which go after them, as `prompt` sends them.
    */
   steer(
     text: string,
     attachments?: readonly Attachment[],
     mentions?: readonly string[],
     went?: (links: readonly ResourceLink[]) => void,
+    links?: readonly ResourceLink[],
   ): Promise<SteerOutcome>;
   /**
    * chord's own MCP server as the agent was given it, under the name it went
@@ -719,9 +721,10 @@ export async function openSession(
       Boolean(connection.init.agentCapabilities?.sessionCapabilities?.fork),
     cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     startsOwnCycles: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
-    steer: async (text, attachments = [], mentions = [], went) => {
-      const links =
+    steer: async (text, attachments = [], mentions = [], went, given = []) => {
+      const found =
         mentions.length === 0 ? [] : await mentionLinks(mentions, cwd);
+      const links = [...found, ...given];
 
       went?.(links);
 

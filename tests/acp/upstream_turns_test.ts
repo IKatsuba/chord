@@ -3,6 +3,7 @@ import type { JsonRpcId } from '@agentclientprotocol/sdk/unstable';
 import {
   NO_TURNS,
   reduceTurns,
+  sessionStateOf,
   turnOf,
   type TurnInput,
   type Turns,
@@ -349,6 +350,82 @@ describe('interleavings', () => {
 
     expect(turnOf(turns, 1)).toBe('a');
     expect(turnOf(turns, '1')).toBe('b');
+  });
+});
+
+describe('a turn the client steered (CHD-575)', () => {
+  const steered = (turnId: string): TurnInput => ({ type: 'steered', turnId });
+
+  test("run as its own turn it is the client's, answers nothing and is not told back", () => {
+    const { turns, sends } = play(steered('s'), prompt('s', 'mine'));
+
+    expect(turns.running).toEqual({ turnId: 's', origin: 'client' });
+    expect(turns.steered).toBeUndefined();
+    expect(sends).toEqual([]);
+    expect(play(steered('s'), prompt('s'), result('s')).sends).toEqual([]);
+  });
+
+  test('taken into a running turn it changes nothing and is not told back', () => {
+    const { turns, sends } = play(bind(1, 'a'), prompt('a'), steered('s'), {
+      type: 'prompt',
+      turnId: 's',
+      text: 'mine',
+      into: 'a',
+    });
+
+    expect(turns.running).toEqual({ turnId: 'a', origin: 'client' });
+    expect(turns.steered).toBeUndefined();
+    expect(sends).toEqual([]);
+  });
+
+  test('a send refused or a queue withdrawn leaves nothing steered', () => {
+    expect(
+      play(steered('s'), { type: 'unbind', turnId: 's' }).turns.steered,
+    ).toBeUndefined();
+    expect(
+      play(steered('s'), { type: 'queue_withdrawn', turnIds: ['s'] }).turns
+        .steered,
+    ).toBeUndefined();
+  });
+
+  test("another's prompt is still a message", () => {
+    expect(play(steered('s'), message('m', 'report')).sends).toEqual([
+      { type: 'message', text: 'report', from: LEAD },
+    ]);
+  });
+});
+
+describe('the session state (CHD-575)', () => {
+  test('running by who began it, idle with no turn, and no origin then', () => {
+    expect(
+      sessionStateOf(play(bind(1, 'a'), prompt('a')).turns, false),
+    ).toEqual({ state: 'running', origin: 'client' });
+    expect(sessionStateOf(play(message('m')).turns, false)).toEqual({
+      state: 'running',
+      origin: 'message',
+    });
+    expect(
+      sessionStateOf(play({ type: 'cycle_started', turnId: 'c' }).turns, false),
+    ).toEqual({ state: 'running', origin: 'agent' });
+    expect(
+      sessionStateOf(play(bind(1, 'a'), prompt('a'), result('a')).turns, false),
+    ).toEqual({ state: 'idle' });
+    expect(
+      sessionStateOf(
+        play(bind(1, 'a'), prompt('a'), { type: 'disconnected' }).turns,
+        false,
+      ),
+    ).toEqual({ state: 'idle' });
+  });
+
+  test('an open ask requires action, with the running origin if a turn runs', () => {
+    expect(sessionStateOf(play(message('m')).turns, true)).toEqual({
+      state: 'requires_action',
+      origin: 'message',
+    });
+    expect(sessionStateOf(NO_TURNS, true)).toEqual({
+      state: 'requires_action',
+    });
   });
 });
 

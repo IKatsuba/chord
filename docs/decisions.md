@@ -8046,3 +8046,10 @@ Stop is limited to the named session's monitors and returns `id`,
 params or unsupported prompt content are -32602; requests during shutdown
 are -32603. Load and resume return `chord/left_open` metadata for recorded
 children left open, without restarting them.
+
+## 2026-11-03 — CHD-575: extension notifications are unconditional
+
+All `_chord` notifications, including children's monitor snapshots, go to
+every client regardless of declarations. The drop-only capability check
+applies to ordinary `session/update` traffic. This clarifies the extension
+contract above; that check does not gate extension notifications.

@@ -731,9 +731,10 @@ since its person can still reach them.
 (send and close), and `monitors` (changed and stop). A client declares the
 same map in `clientCapabilities._meta["chord/acp"].extensions`. Versions
 change only for a breaking change. chord branches on none of these
-versions yet: notifications go to every client, subject to the drop-only
-check above for child traffic. `_meta` keys outside this contract remain
-informational and unversioned: `chord/filled` marks estimates and
+versions yet: all `_chord` notifications, including children's monitor
+snapshots, go to every client regardless of declarations. The drop-only
+check above applies to ordinary `session/update` traffic. `_meta` keys
+outside this contract remain informational and unversioned: `chord/filled` marks estimates and
 `chord/held_back` explains withheld MCP servers.
 
 **`_chord/session/state`** is a notification with `sessionId`, `state`

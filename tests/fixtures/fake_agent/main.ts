@@ -311,6 +311,7 @@ import {
   ECHO_MESSAGES,
   SAID,
   STEP_MS,
+  CONFIG_DELAY_MS,
   TITLE_AT_START,
   TOKENS_ONLY,
 } from './options.ts';
@@ -1450,6 +1451,10 @@ const connection = acp
   .onRequest('session/set_config_option', async ({ params }) => {
     if (HANG === 'config') {
       await never();
+    }
+
+    if (CONFIG_DELAY_MS > 0) {
+      await new Promise((resolve) => setTimeout(resolve, CONFIG_DELAY_MS));
     }
 
     const value = String(params.value);

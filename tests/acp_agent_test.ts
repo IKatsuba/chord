@@ -2427,7 +2427,7 @@ describe('children', () => {
 
   test('what a child says before it is up goes up after, under its composite id', () =>
     onAcp(
-      [],
+      ['--config-delay', '300'],
       async ({ client, cwd, newSession, prompt }) => {
         await withTeam(cwd);
 
@@ -2435,8 +2435,8 @@ describe('children', () => {
 
         await client.answerTo(prompt(sessionId, 'team'));
 
-        // A member's model and mode are set before `connected`, while the
-        // fake's commands are already on their way.
+        // A member's model and mode are set before `connected`, and its
+        // commands come while they are.
         const { sessionId: composite } = await reported(client, 'tester');
 
         await until(

@@ -205,6 +205,15 @@ export const BYPASS_MODE =
   ARGS.includes('--bypass-mode') || process.env.CHORD_FAKE_BYPASS_MODE === '1';
 
 /**
+ * How long a config change takes to answer, `--config-delay <ms>` or
+ * `CHORD_FAKE_CONFIG_DELAY`: what it says just after its session opens then
+ * comes while chord still sets it up, ahead of `connected`.
+ */
+export const CONFIG_DELAY_MS = Number(
+  valueOf('--config-delay', 'CHORD_FAKE_CONFIG_DELAY') ?? 0,
+);
+
+/**
  * A person's words for scenarios' names, with `--said <json>` or
  * `CHORD_FAKE_SAID`, `{ "<scenario>": "<words>" }`: a child is opened on
  * the words, and a prompt that is the words plays the scenario, so a

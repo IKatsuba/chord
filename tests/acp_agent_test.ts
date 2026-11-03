@@ -180,7 +180,7 @@ describe('initialize', () => {
           _meta: {
             'chord/acp': {
               version: 1,
-              extensions: {},
+              extensions: { 'session/state': 1 },
               agent: { name: 'fake' },
             },
           },
@@ -3267,6 +3267,104 @@ describe("chord's commands", () => {
       },
       server(),
     ));
+});
+
+describe('the session state (CHD-575)', () => {
+  /** What `_chord/session/state` said of `sessionId`, in order. */
+  const states = (client: AcpClient, sessionId: string) =>
+    client.messages.flatMap((message) => {
+      if (
+        message.method !== '_chord/session/state' ||
+        message.params?.sessionId !== sessionId
+      ) {
+        return [];
+      }
+
+      const state: Record<string, unknown> = { ...message.params };
+
+      delete state['sessionId'];
+
+      return [state];
+    });
+
+  test("a client's turn runs as the client's, then idle", () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'text'));
+      await until(() => states(client, sessionId).length === 2);
+
+      expect(states(client, sessionId)).toEqual([
+        { state: 'running', origin: 'client' },
+        { state: 'idle' },
+      ]);
+    }));
+
+  test('an ask requires action until it is answered', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      expect(states(client, sessionId).at(-1)).toEqual({
+        state: 'requires_action',
+        origin: 'client',
+      });
+
+      client.respond(ask.id, selected('allow'));
+      await client.answerTo(running);
+      await until(() => states(client, sessionId).at(-1)?.['state'] === 'idle');
+
+      expect(states(client, sessionId)).toEqual([
+        { state: 'running', origin: 'client' },
+        { state: 'requires_action', origin: 'client' },
+        { state: 'running', origin: 'client' },
+        { state: 'idle' },
+      ]);
+    }));
+
+  test("a monitor's turn, which no client began, runs as a message", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'monitor'));
+        await until(
+          () =>
+            states(client, sessionId).some(
+              (state) => state['origin'] === 'message',
+            ),
+          20_000,
+        );
+
+        expect(states(client, sessionId).slice(0, 3)).toEqual([
+          { state: 'running', origin: 'client' },
+          { state: 'idle' },
+          { state: 'running', origin: 'message' },
+        ]);
+      },
+      { server: serveChord() },
+    ));
+
+  test('a load says nothing: nothing runs on it', () =>
+    onAcp([], async ({ client, cwd, stateDir, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'text'));
+      await recorded(stateDir, sessionId, 'result');
+      await client.request('session/close', { sessionId });
+
+      const seen = client.messages.length;
+
+      await client.request('session/load', { sessionId, cwd, mcpServers: [] });
+
+      expect(
+        client.messages
+          .slice(seen)
+          .some((message) => message.method === '_chord/session/state'),
+      ).toBe(false);
+    }));
 });
 
 describe('the way out', () => {

@@ -29,6 +29,7 @@ import { seeingWrites } from './acp/stdio.ts';
 import {
   NO_TURNS,
   reduceTurns,
+  sessionStateOf,
   type TurnInput,
   turnOf,
   type Turns,
@@ -118,6 +119,12 @@ import { agentOf, isLead } from './session/window_agents.ts';
 
 /** The `_meta` key chord says its own of ACP under. */
 const ACP_META = 'chord/acp';
+
+/** The extensions this chord has, each at its version, as `initialize` says. */
+const EXTENSIONS = { 'session/state': 1 } as const;
+
+/** What `_chord/session/state` last said, or would have: none says idle. */
+const IDLE = JSON.stringify({ state: 'idle' });
 
 /**
  * What a person who ran it by hand reads on stderr; only a stdin that is a
@@ -224,6 +231,8 @@ interface Entry {
   /** While the conversation replays the session's past, which is no news. */
   replaying: boolean;
   turns: Turns;
+  /** What `_chord/session/state` last said of it, so only a change goes. */
+  stateSent: string;
   opening?:
     | {
         readonly requestId: JsonRpcId;
@@ -330,6 +339,41 @@ export function runAcp(options: AcpOptions): AcpRun {
     if (mapped.notification !== undefined) {
       send(mapped.notification);
     }
+  };
+
+  /**
+   * Main's state, if it changed: its turn by who began it, and its own asks
+   * from what its fold has open. A child's is on its `subagent_update`.
+   */
+  const tellState = (entry: Entry): void => {
+    if (
+      entry.upstream === undefined ||
+      !entry.live ||
+      entry.key === undefined
+    ) {
+      return;
+    }
+
+    const asking =
+      agentStateOf(entry.folds.get(entry.key) ?? NO_FOLD).state ===
+      'requires_action';
+    const state = sessionStateOf(entry.turns, asking);
+    const said = JSON.stringify(state);
+
+    if (said === entry.stateSent) {
+      return;
+    }
+
+    entry.stateSent = said;
+
+    connection.client
+      .notify('_chord/session/state', {
+        sessionId: entry.upstream.upstreamId,
+        ...state,
+      })
+      .catch(() => {
+        // The connection went; the way out has it from there.
+      });
   };
 
   const tellConfig = (entry: Entry): void => {
@@ -755,6 +799,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       }
 
       tellConfig(entry);
+      tellState(entry);
     };
 
     const answered = wire.expect(opening.requestId);
@@ -952,6 +997,8 @@ export function runAcp(options: AcpOptions): AcpRun {
       default:
         break;
     }
+
+    tellState(entry);
   };
 
   /** A long-lived child's event, as the client hears of it. */
@@ -1181,6 +1228,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       live: false,
       held: [],
       turns: NO_TURNS,
+      stateSent: IDLE,
       gone: false,
       noticed: false,
       replaying: false,
@@ -1643,7 +1691,11 @@ export function runAcp(options: AcpOptions): AcpRun {
             sessionCapabilities: { list: {}, resume: {}, close: {} },
           },
           _meta: {
-            [ACP_META]: { version: 1, extensions: {}, agent: { name: agent } },
+            [ACP_META]: {
+              version: 1,
+              extensions: EXTENSIONS,
+              agent: { name: agent },
+            },
           },
         };
       },

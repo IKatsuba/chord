@@ -98,15 +98,34 @@ const TEAM =
 const WRAPPED =
   /^<message from="([^"]*)"(?: monitor="([^"]*)")?>\n([\s\S]*)\n<\/message>$/;
 
-const CHORD_ASIDES = /^(?:<message from="chord">\n[\s\S]*?\n<\/message>\n\n)+/;
+const AHEAD =
+  /^<message from="([^"]*)"(?: monitor="[^"]*")?>\n[\s\S]*?\n<\/message>\n\n/;
 
 /**
- * A person's prompt as they wrote it, without what `aside` put ahead of it for
- * the agent. Only for one that is no message itself, whose text could hold
- * anything.
+ * A prompt without what `aside` put ahead of it for the agent, among all that
+ * went ahead of it: a task's note stays, as any other sender's words do. Only
+ * for one that is no message itself, whose text could hold anything.
  */
 export function withoutChordAsides(prompt: string): string {
-  return prompt.replace(CHORD_ASIDES, '');
+  let kept = '';
+  let rest = prompt;
+
+  for (let ahead = AHEAD.exec(rest); ahead !== null; ahead = AHEAD.exec(rest)) {
+    kept += ahead[1] === 'chord' ? '' : ahead[0];
+    rest = rest.slice(ahead[0].length);
+  }
+
+  return kept + rest;
+}
+
+/**
+ * A prompt with nothing of the person's in it, only what `aside` put ahead, as
+ * the lone message it then reads as: its first, if several.
+ */
+export function onlyChordAside(prompt: string): string | undefined {
+  return withoutChordAsides(prompt) === ''
+    ? /^<message from="chord">\n[\s\S]*?\n<\/message>/.exec(prompt)?.[0]
+    : undefined;
 }
 
 /**

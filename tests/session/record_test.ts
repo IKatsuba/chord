@@ -2945,8 +2945,38 @@ describe("chord's aside ahead of a prompt", () => {
     });
   });
 
-  test('another sender ahead of a prompt stays as it was', () => {
-    const prompt = '<message from="task">\nDone.\n</message>\n\nhello';
+  test('a prompt that is only an aside reads as that message, not as nothing', () => {
+    const prompt = `${aside('A run.')}\n\n`;
+
+    expect(replayedPrompt(prompt)).toMatchObject({
+      text: 'A run.',
+      from: { name: 'chord' },
+    });
+    expect(promptLine(prompt)).toBe('A run.');
+    expect(
+      replayedPrompt(`${aside('A run.')}\n\n${aside('Another.')}\n\n`)?.text,
+    ).toBe('A run.');
+  });
+
+  const TASK = '<message from="tester · fake">\nStopped.\n</message>';
+
+  test("goes after a task's too; the task's stays, on either side of it", () => {
+    expect(
+      replayedPrompt(`${TASK}\n\n${aside('A run.')}\n\nmy words`)?.text,
+    ).toBe(`${TASK}\n\nmy words`);
+    expect(
+      replayedPrompt(`${aside('A run.')}\n\n${TASK}\n\nmy words`)?.text,
+    ).toBe(`${TASK}\n\nmy words`);
+  });
+
+  test("a task's alone ahead of a prompt stays, as it did", () => {
+    const prompt = `${TASK}\n\nmy words`;
+
+    expect(replayedPrompt(prompt)?.text).toBe(prompt);
+  });
+
+  test("a person's paste under another sender's name stays", () => {
+    const prompt = '<message from="someone">\nPasted.\n</message>\n\nmy words';
 
     expect(replayedPrompt(prompt)?.text).toBe(prompt);
   });

@@ -16,7 +16,7 @@ import type { PastAction, Session } from './session.ts';
 import { monitorsPast } from './monitors.ts';
 import { guardianReview } from './guardian_review.ts';
 import { withoutSecrets } from './questions.ts';
-import { unwrapMessage, withoutChordAsides } from './tasks.ts';
+import { onlyChordAside, unwrapMessage, withoutChordAsides } from './tasks.ts';
 import { TASK_META } from './transcript/subagents.ts';
 import type {
   ChordCall,
@@ -653,7 +653,9 @@ export function recordActions(
     switch (entry.type) {
       case 'prompt': {
         const turnId = id(entry.turnId);
-        const message = unwrapMessage(entry.prompt);
+        const message = unwrapMessage(
+          onlyChordAside(entry.prompt) ?? entry.prompt,
+        );
 
         // It went into the turn running then, which goes on past it.
         if (entry.into !== undefined && message !== undefined) {
@@ -993,7 +995,7 @@ export function historyEntries(actions: readonly PastAction[]): RecordEntry[] {
  * output reads as its first command, as bash mode shows it.
  */
 export function promptLine(prompt: string): string {
-  const message = unwrapMessage(prompt);
+  const message = unwrapMessage(onlyChordAside(prompt) ?? prompt);
 
   if (message !== undefined) {
     return message.text.replaceAll(/\s+/g, ' ').trim();

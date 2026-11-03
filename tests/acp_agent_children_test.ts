@@ -1,10 +1,11 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert';
+import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { runAcp } from '../src/acp_agent.ts';
+import { type AcpRun, runAcp } from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
 import { serveChord } from '../src/server/server.ts';
 import type { LeaveExit } from '../src/session/leaving.ts';
@@ -60,8 +61,10 @@ async function withChildren(
     client: AcpClient,
     newSession: () => Promise<string>,
     lines: readonly string[],
+    context: { cwd: string; run: AcpRun; exits: readonly LeaveExit[] },
   ) => Promise<void>,
   open: (options: OpenSessionOptions) => Promise<Session> = openSession,
+  exitCode = 0,
 ): Promise<void> {
   const cwd = await mkdtemp(join(tmpdir(), 'chord-children-tester-'));
   const { client, input, output, end } = clientOverStreams();
@@ -69,7 +72,7 @@ async function withChildren(
   const pids: number[] = [];
   const lines: string[] = [];
 
-  runAcp({
+  const run = runAcp({
     input,
     output,
     stderr: (line) => lines.push(line),
@@ -116,6 +119,7 @@ async function withChildren(
         return answer.result.sessionId;
       },
       lines,
+      { cwd, run, exits },
     );
   } finally {
     end();
@@ -124,7 +128,7 @@ async function withChildren(
       await until(() => exits.length > 0, 20_000);
       await until(() => !pids.some(groupAlive));
 
-      expect(exits).toEqual([{ code: 0 }]);
+      expect(exits).toEqual([{ code: exitCode }]);
     } finally {
       // Rescue only after observing cleanup; it cannot turn a leak green.
       killSpawnedGroups();
@@ -140,6 +144,39 @@ const prompt = (client: AcpClient, sessionId: string, text: string) =>
   });
 
 describe('CHD-581 tester: children across session boundaries', () => {
+  test('a crash cancels a command blocked reading teams, and exits uncleanly', () =>
+    withChildren(
+      async (client, newSession, _lines, { cwd, run, exits }) => {
+        const main = await newSession();
+        const pipe = join(cwd, '.chord', 'teams', 'held.md');
+
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+
+        expect(spawnSync('mkfifo', [pipe]).status).toBe(0);
+
+        const command = prompt(client, main, '/team');
+
+        await client.request('session/list', {});
+        void run.leave({ kind: 'crash' });
+
+        expect((await client.answerTo(command)).result?.stopReason).toBe(
+          'cancelled',
+        );
+
+        await until(() => exits.length > 0);
+        await writeFile(pipe, '---\n');
+
+        expect(
+          client.messages.filter(
+            (message) => message.id === command && message.method === undefined,
+          ),
+        ).toHaveLength(1);
+        expect(client.said(main)).toBe('');
+      },
+      openSession,
+      1,
+    ));
+
   test('a task of a child cannot ask as that child, while a genuine main ask still works', async () => {
     await withChildren(
       async (client, newSession, lines) => {

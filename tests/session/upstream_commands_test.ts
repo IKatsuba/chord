@@ -208,6 +208,18 @@ describe('a file that tries to make rows of its own', () => {
     expect(running).toContain('Tests - another · fake row');
   });
 
+  test.each(['\v', '\f', '\u0085', '\u2028', '\u2029'])(
+    'any line separator goes too: %j',
+    (separator) => {
+      const text = teamText('bugfix', 'a.md', {
+        ...TEAM,
+        description: `Fixes${separator}- fake · row`,
+      } as Team);
+
+      expect(text).toContain('\n\nFixes - fake · row\n\n');
+    },
+  );
+
   test('stays one row in /team list, a broken file too', () => {
     const text = teamsText(
       {

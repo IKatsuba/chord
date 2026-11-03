@@ -51,7 +51,8 @@ export function commandChunk(
  * What a file says, on one line: a repo's file must not make rows or blocks of
  * its own in what chord says. A client treats it as untrusted, as an agent's.
  */
-const oneLine = (text: string) => text.replaceAll(/\s*[\r\n]+\s*/g, ' ').trim();
+const oneLine = (text: string) =>
+  text.replaceAll(/\s*[\n\v\f\r\u0085\u2028\u2029]+\s*/g, ' ').trim();
 
 const joined = (parts: readonly (string | undefined)[]) =>
   parts

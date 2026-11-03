@@ -3045,6 +3045,45 @@ describe("chord's commands", () => {
     }
   });
 
+  test('/team show of a selected run is refused, open or by its id once closed', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'fixture.md'));
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'budgetawareteam'));
+
+        const open = await ran(client, sessionId, '/team show fixture');
+        const [, runId] =
+          /then \/team show (\S+) there$/.exec(open.text ?? '') ?? [];
+
+        expect(open.text).toStartWith(
+          "fixture is a selected run, and only chord's window shows its receipt: chord -r with this session's id",
+        );
+        expect(open.meta).toEqual({ name: 'team', failed: true });
+        expect(runId).toBeString();
+
+        await ran(client, sessionId, '/team stop fixture');
+
+        const closed = await ran(client, sessionId, `/team show ${runId}`);
+
+        expect(closed.text).toBe(
+          `${runId} is a selected run, and only chord's window shows its receipt: chord -r with this session's id, then /team show ${runId} there`,
+        );
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            teamSelection: { intent: 'balanced' as const },
+          }),
+      },
+    ));
+
   test('a session/cancel while the team is read: no run started', () =>
     onAcp(
       [],

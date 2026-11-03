@@ -21,6 +21,11 @@ export interface Turns {
    * to come, and it answers then, unlike a prompt that was queued.
    */
   readonly lost?: string;
+  /**
+   * Turns a client steered, which answer no request: when one runs as its
+   * own turn it is the client's, and its words are not told back.
+   */
+  readonly steered?: ReadonlySet<string>;
 }
 
 export const NO_TURNS: Turns = { bound: new Map() };
@@ -34,6 +39,8 @@ export type TurnInput =
     }
   /** `send` refused it, so no turn of it will ever be heard of. */
   | { readonly type: 'unbind'; readonly turnId: string }
+  /** A turn `_chord/session/steer` sends, before it is sent. */
+  | { readonly type: 'steered'; readonly turnId: string }
   | {
       readonly type: 'prompt';
       readonly turnId: string;
@@ -91,6 +98,18 @@ export function turnOf(turns: Turns, requestId: JsonRpcId): string | undefined {
   return undefined;
 }
 
+/** `turns` with none of `turnIds` steered. */
+function unsteered(turns: Turns, turnIds: Iterable<string>): Turns {
+  const { steered, ...rest } = turns;
+  const left = new Set(steered);
+
+  for (const turnId of turnIds) {
+    left.delete(turnId);
+  }
+
+  return left.size === 0 ? rest : { ...rest, steered: left };
+}
+
 function without(
   bound: ReadonlyMap<string, JsonRpcId>,
   turnIds: Iterable<string>,
@@ -116,10 +135,36 @@ export function reduceTurns(turns: Turns, input: TurnInput): TurnStep {
       };
     case 'unbind':
       return {
-        turns: { ...turns, bound: without(turns.bound, [input.turnId]) },
+        turns: unsteered(
+          { ...turns, bound: without(turns.bound, [input.turnId]) },
+          [input.turnId],
+        ),
+        sends: [],
+      };
+    case 'steered':
+      return {
+        turns: {
+          ...turns,
+          steered: new Set(turns.steered).add(input.turnId),
+        },
         sends: [],
       };
     case 'prompt': {
+      if (turns.steered?.has(input.turnId) === true) {
+        const left = unsteered(turns, [input.turnId]);
+
+        return {
+          turns:
+            input.into === undefined
+              ? {
+                  ...left,
+                  running: { turnId: input.turnId, origin: 'client' },
+                }
+              : left,
+          sends: [],
+        };
+      }
+
       const message: TurnSend = {
         type: 'message',
         text: input.text,
@@ -148,7 +193,7 @@ export function reduceTurns(turns: Turns, input: TurnInput): TurnStep {
           };
     }
     case 'result': {
-      const { running, lost, ...rest } = turns;
+      const { running, lost, ...rest } = unsteered(turns, [input.turnId]);
       const requestId = turns.bound.get(input.turnId);
       const left: Turns = {
         ...rest,
@@ -171,7 +216,10 @@ export function reduceTurns(turns: Turns, input: TurnInput): TurnStep {
       const turnIds = input.turnIds ?? [];
 
       return {
-        turns: { ...turns, bound: without(turns.bound, turnIds) },
+        turns: unsteered(
+          { ...turns, bound: without(turns.bound, turnIds) },
+          turnIds,
+        ),
         sends: turnIds.flatMap((turnId): TurnSend[] => {
           const requestId = turns.bound.get(turnId);
 
@@ -220,4 +268,31 @@ export function reduceTurns(turns: Turns, input: TurnInput): TurnStep {
         })),
       };
   }
+}
+
+/** What `_chord/session/state` says of a session. */
+export type SessionState =
+  | {
+      readonly state: 'running' | 'requires_action';
+      readonly origin?: TurnOrigin;
+    }
+  | { readonly state: 'idle' };
+
+/**
+ * Main's state, from the turn running and whether an ask of its own is open:
+ * the table's rows, read after each step, so only a change need go.
+ */
+export function sessionStateOf(turns: Turns, asking: boolean): SessionState {
+  const origin = turns.running?.origin;
+
+  if (asking) {
+    return {
+      state: 'requires_action',
+      ...(origin === undefined ? {} : { origin }),
+    };
+  }
+
+  return origin === undefined
+    ? { state: 'idle' }
+    : { state: 'running', origin };
 }

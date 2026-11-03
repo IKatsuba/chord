@@ -311,7 +311,9 @@ import {
   ECHO_MESSAGES,
   SAID,
   STEP_MS,
+  ALSO_COMMANDS,
   CONFIG_DELAY_MS,
+  NO_COMMANDS,
   TITLE_AT_START,
   TOKENS_ONLY,
 } from './options.ts';
@@ -979,6 +981,10 @@ function sessionModes(): { modes?: acp.SessionModeState } {
 
 /** Sends the commands just after the reply, as Claude's adapter does. */
 function advertiseCommands(client: Client, sessionId: string): void {
+  if (NO_COMMANDS) {
+    return;
+  }
+
   setTimeout(
     () =>
       void client
@@ -986,7 +992,13 @@ function advertiseCommands(client: Client, sessionId: string): void {
           sessionId,
           update: {
             sessionUpdate: 'available_commands_update',
-            availableCommands: FAKE_COMMANDS,
+            availableCommands: [
+              ...FAKE_COMMANDS,
+              ...ALSO_COMMANDS.map((name) => ({
+                name,
+                description: "The agent's own",
+              })),
+            ],
           },
         })
         .catch(() => {}),

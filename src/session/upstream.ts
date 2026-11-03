@@ -4,6 +4,7 @@
  * differently shaped.
  */
 import type {
+  AvailableCommand,
   ClientCapabilities,
   ContentBlock,
   CreateElicitationResponse,
@@ -116,6 +117,78 @@ export interface UpstreamSession {
   readonly configSent?: readonly SessionConfigOption[];
   /** A long-lived child's: all it says is a child's traffic to the client. */
   readonly nested?: true;
+  /** Whether the client has chord's commands, with or without the agent's. */
+  readonly commandsSent?: true;
+}
+
+/** The two names that are chord's in `chord acp`; all else goes as typed. */
+export const CHORD_COMMANDS: readonly AvailableCommand[] = [
+  {
+    name: 'team',
+    description: 'Show and run teams of agents',
+    input: {
+      hint: 'list | run <name> <job> | show <name> | stop <run> | new <words>',
+    },
+  },
+  {
+    name: 'new',
+    description: 'Open a new agent beside main',
+    input: { hint: '<agent>' },
+  },
+];
+
+/** A prompt that is one of chord's commands: its name and the words after it. */
+export interface ChordCommand {
+  readonly name: 'team' | 'new';
+  readonly args: string;
+  /** Whether the prompt has nothing but this block. */
+  readonly alone: boolean;
+}
+
+/** The command a prompt's first text block is, if it is one of chord's. */
+export function commandOf(
+  blocks: readonly ContentBlock[],
+): ChordCommand | undefined {
+  const first = blocks.find((block) => block.type === 'text');
+  const [, name, args = ''] =
+    first === undefined
+      ? []
+      : (/^\/(\S+)(?:\s+([\s\S]*))?$/.exec(first.text.trim()) ?? []);
+
+  return name === 'team' || name === 'new'
+    ? { name, args, alone: blocks.length === 1 }
+    : undefined;
+}
+
+/**
+ * The agent's list with chord's: a name both offer is chord's alone, as chord's
+ * is the one that runs.
+ */
+function withChordCommands(
+  agent: readonly AvailableCommand[],
+): AvailableCommand[] {
+  const ours = new Set(CHORD_COMMANDS.map(({ name }) => name));
+
+  return [...CHORD_COMMANDS, ...agent.filter(({ name }) => !ours.has(name))];
+}
+
+/** chord's commands for an agent that has said none yet; once. */
+export function commandsIfNone(session: UpstreamSession): {
+  readonly session: UpstreamSession;
+  readonly notification?: SessionNotification;
+} {
+  return session.commandsSent === true
+    ? { session }
+    : {
+        session: { ...session, commandsSent: true },
+        notification: {
+          sessionId: session.upstreamId,
+          update: {
+            sessionUpdate: 'available_commands_update',
+            availableCommands: withChordCommands([]),
+          },
+        },
+      };
 }
 
 export function upstreamSession(
@@ -236,6 +309,25 @@ export function mapUpdate(
   }
 
   const sessionId = upstreamIdOf(grown, subagentId ?? grown.agentId);
+
+  // Rewritten here, as the state and the record keep the agent's own list; a
+  // child's is its own, and takes neither of chord's.
+  if (
+    kind === 'available_commands_update' &&
+    subagentId === undefined &&
+    session.nested !== true
+  ) {
+    return {
+      session: { ...grown, commandsSent: true },
+      notification: {
+        sessionId,
+        update: {
+          ...update,
+          availableCommands: withChordCommands(update.availableCommands),
+        },
+      },
+    };
+  }
 
   return {
     session: grown,

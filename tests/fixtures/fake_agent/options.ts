@@ -204,6 +204,20 @@ export const AUTO_MODE =
 export const BYPASS_MODE =
   ARGS.includes('--bypass-mode') || process.env.CHORD_FAKE_BYPASS_MODE === '1';
 
+/** Whether it advertises no slash commands, `--no-commands`. */
+export const NO_COMMANDS =
+  ARGS.includes('--no-commands') || process.env.CHORD_FAKE_NO_COMMANDS === '1';
+
+/**
+ * Commands it offers beside its own, by name, `--also-commands <list>` or
+ * `CHORD_FAKE_ALSO_COMMANDS`: names chord may have too.
+ */
+export const ALSO_COMMANDS = (
+  valueOf('--also-commands', 'CHORD_FAKE_ALSO_COMMANDS') ?? ''
+)
+  .split(',')
+  .filter((name) => name !== '');
+
 /**
  * How long a config change takes to answer, `--config-delay <ms>` or
  * `CHORD_FAKE_CONFIG_DELAY`: what it says just after its session opens then

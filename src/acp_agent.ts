@@ -73,6 +73,7 @@ import {
   asksIn,
   childOf,
   childSession,
+  commandsIfNone,
   configChange,
   configSetter,
   elicitationReplyOf,
@@ -730,6 +731,17 @@ export function runAcp(options: AcpOptions): AcpRun {
       }
 
       tellConfig(entry);
+
+      // An agent that sends no list still shows chord's.
+      if (entry.upstream !== undefined) {
+        const { session: told, notification } = commandsIfNone(entry.upstream);
+
+        entry.upstream = told;
+
+        if (notification !== undefined) {
+          send(notification);
+        }
+      }
     };
 
     // The client asked for this id: its past goes ahead of the answer. A new

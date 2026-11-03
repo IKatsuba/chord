@@ -2044,6 +2044,59 @@ describe("chord's server", () => {
     ));
 });
 
+describe("chord's commands in the list", () => {
+  const listed = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .filter((update) => update.sessionUpdate === 'available_commands_update')
+      .map((update) =>
+        (update.availableCommands as { name: string }[]).map(
+          ({ name }) => name,
+        ),
+      );
+
+  test("join the agent's, once it sends its own", () =>
+    onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      await until(() =>
+        listed(client, sessionId).some((names) => names.includes('greet')),
+      );
+
+      expect(listed(client, sessionId).at(-1)).toEqual([
+        'team',
+        'new',
+        'greet',
+        'echo',
+      ]);
+    }));
+
+  test('go to an agent that sends none, once the answer is written', () =>
+    onAcp(['--no-commands'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      await until(() => listed(client, sessionId).length > 0);
+
+      expect(listed(client, sessionId)).toEqual([['team', 'new']]);
+    }));
+
+  test("a name both offer is chord's alone", () =>
+    onAcp(['--also-commands', 'new,team'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      await until(() =>
+        listed(client, sessionId).some((names) => names.includes('greet')),
+      );
+
+      expect(listed(client, sessionId).at(-1)).toEqual([
+        'team',
+        'new',
+        'greet',
+        'echo',
+      ]);
+    }));
+});
+
 describe('children', () => {
   interface Report {
     readonly on: string;

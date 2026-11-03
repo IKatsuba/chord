@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert';
 import { existsSync } from 'node:fs';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { runAcp } from '../src/acp_agent.ts';
@@ -56,18 +56,23 @@ function groupAlive(pid: number): boolean {
 }
 
 async function withChildren(
-  body: (client: AcpClient, newSession: () => Promise<string>) => Promise<void>,
+  body: (
+    client: AcpClient,
+    newSession: () => Promise<string>,
+    lines: readonly string[],
+  ) => Promise<void>,
   open: (options: OpenSessionOptions) => Promise<Session> = openSession,
 ): Promise<void> {
   const cwd = await mkdtemp(join(tmpdir(), 'chord-children-tester-'));
   const { client, input, output, end } = clientOverStreams();
   const exits: LeaveExit[] = [];
   const pids: number[] = [];
+  const lines: string[] = [];
 
   runAcp({
     input,
     output,
-    stderr: () => {},
+    stderr: (line) => lines.push(line),
     exit: (how) => exits.push(how),
     agent: 'fake',
     version: '1.2.3',
@@ -97,17 +102,21 @@ async function withChildren(
       protocolVersion: 1,
       clientCapabilities: { subagents: {} },
     });
-    await body(client, async () => {
-      const answer = await client.request('session/new', {
-        cwd,
-        mcpServers: [],
-      });
+    await body(
+      client,
+      async () => {
+        const answer = await client.request('session/new', {
+          cwd,
+          mcpServers: [],
+        });
 
-      expect(answer.error).toBeUndefined();
-      assert(typeof answer.result?.sessionId === 'string');
+        expect(answer.error).toBeUndefined();
+        assert(typeof answer.result?.sessionId === 'string');
 
-      return answer.result.sessionId;
-    });
+        return answer.result.sessionId;
+      },
+      lines,
+    );
   } finally {
     end();
 
@@ -131,6 +140,58 @@ const prompt = (client: AcpClient, sessionId: string, text: string) =>
   });
 
 describe('CHD-581 tester: children across session boundaries', () => {
+  test('a task of a child cannot ask as that child, while a genuine main ask still works', async () => {
+    await withChildren(
+      async (client, newSession, lines) => {
+        const main = await newSession();
+
+        await client.answerTo(prompt(client, main, 'team'));
+        await until(() => lines.some((line) => line.includes('does not know')));
+
+        expect(
+          client.messages.some(
+            (message) => message.method === 'session/request_permission',
+          ),
+        ).toBe(false);
+
+        const other = await newSession();
+        const turn = prompt(client, other, 'permission');
+        const ask = await client.until(
+          (message) =>
+            message.method === 'session/request_permission' &&
+            message.params?.sessionId === other,
+        );
+
+        client.respond(ask.id!, {
+          outcome: { outcome: 'selected', optionId: 'allow' },
+        });
+
+        expect((await client.answerTo(turn)).result?.stopReason).toBe(
+          'end_turn',
+        );
+        expect(client.said(other)).toContain('Permission: allow');
+      },
+      async (options) => {
+        await mkdir(join(options.cwd, '.chord', 'teams'), { recursive: true });
+        await writeFile(
+          join(options.cwd, '.chord', 'teams', 'bugfix.md'),
+          await readFile(
+            new URL('./fixtures/teams/fake/bugfix.md', import.meta.url),
+          ),
+        );
+
+        return openSession({
+          ...options,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--tester-plays',
+            'taskaskas',
+          ),
+        });
+      },
+    );
+  });
+
   test('closing one main leaves the other same-named child running and cancellable', () =>
     withChildren(async (client, newSession) => {
       const first = await newSession();

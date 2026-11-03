@@ -3323,6 +3323,25 @@ describe('the session state (CHD-575)', () => {
       ]);
     }));
 
+  test('closed with an ask open, nothing more is said of it', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+
+      await asked(client, PERMISSION);
+
+      const said = states(client, sessionId).length;
+
+      await client.request('session/close', { sessionId });
+      await client.answerTo(running);
+
+      expect(states(client, sessionId)).toHaveLength(said);
+      expect(states(client, sessionId).at(-1)).toEqual({
+        state: 'requires_action',
+        origin: 'client',
+      });
+    }));
+
   test("a monitor's turn, which no client began, runs as a message", () =>
     onAcp(
       [],

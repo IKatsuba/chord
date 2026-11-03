@@ -233,6 +233,11 @@ interface Entry {
   turns: Turns;
   /** What `_chord/session/state` last said of it, so only a change goes. */
   stateSent: string;
+  /**
+   * Closed by the client, or by the way out: no state goes after, as what its
+   * close settles is no news, and its asks may still read open as it goes.
+   */
+  closed?: true;
   opening?:
     | {
         readonly requestId: JsonRpcId;
@@ -349,7 +354,8 @@ export function runAcp(options: AcpOptions): AcpRun {
     if (
       entry.upstream === undefined ||
       !entry.live ||
-      entry.key === undefined
+      entry.key === undefined ||
+      entry.closed
     ) {
       return;
     }
@@ -704,6 +710,10 @@ export function runAcp(options: AcpOptions): AcpRun {
     const { turns, sends } = reduceTurns(entry.turns, input);
 
     entry.turns = turns;
+
+    if (input.type === 'closing') {
+      entry.closed = true;
+    }
 
     for (const send of sends) {
       switch (send.type) {

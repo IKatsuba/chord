@@ -1,11 +1,20 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import {
   NO_TURNS,
   reduceTurns,
   sessionStateOf,
   type TurnInput,
 } from '../src/acp/upstream_turns.ts';
+import { runAcp } from '../src/acp_agent.ts';
+import { killSpawnedGroups } from '../src/platform/process.ts';
+import { serveChord } from '../src/server/server.ts';
+import { openSession } from '../src/session/session.ts';
+import { type AcpClient, clientOverStreams } from './fixtures/acp_client.ts';
+import { fakeAgentCommand } from './fixtures/fake.ts';
 import {
   ended,
   onFake,
@@ -13,6 +22,78 @@ import {
   saidIn,
   until,
 } from './session/conversation_fake.ts';
+
+/** Runs the existing raw ACP client against chord and the scripted agent. */
+async function withExtensionWire(
+  flags: readonly string[],
+  capabilities: object,
+  body: (client: AcpClient, newSession: () => Promise<string>) => Promise<void>,
+) {
+  const cwd = await mkdtemp(join(tmpdir(), 'chord-extension-wire-'));
+  const { client, input, output, end } = clientOverStreams();
+  let exited = false;
+
+  runAcp({
+    input,
+    output,
+    stderr: () => {},
+    exit: () => {
+      exited = true;
+    },
+    agent: 'fake',
+    version: '1.2.3',
+    stateDir: join(cwd, 'state'),
+    open: openSession,
+    server: serveChord(),
+    place: () =>
+      Promise.resolve({
+        cwd,
+        startupOf: () => ({
+          agentCommand: fakeAgentCommand(undefined, ...flags),
+        }),
+        mcpServers: [],
+        mcpIgnored: [],
+        runtimes: ['fake'],
+      }),
+  });
+
+  try {
+    await client.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: capabilities,
+    });
+    await body(client, async () => {
+      const response = await client.request('session/new', {
+        cwd,
+        mcpServers: [],
+      });
+
+      expect(response.error).toBeUndefined();
+      assert(typeof response.result?.sessionId === 'string');
+
+      return response.result.sessionId;
+    });
+  } finally {
+    end();
+    await until(() => exited, 20_000);
+    await until(() => killSpawnedGroups().length === 0);
+    await rm(cwd, { recursive: true, force: true });
+  }
+}
+
+const wirePrompt = (client: AcpClient, sessionId: string, text: string) =>
+  client.send('session/prompt', {
+    sessionId,
+    prompt: [{ type: 'text', text }],
+  });
+
+const wireStates = (client: AcpClient, sessionId: string) =>
+  client.messages.flatMap((message) =>
+    message.method === '_chord/session/state' &&
+    message.params?.sessionId === sessionId
+      ? [{ state: message.params.state, origin: message.params.origin }]
+      : [],
+  );
 
 describe('CHD-575 U1 tester: named queue ownership', () => {
   test('a refused middle entry returns between the older and newer entries exactly once', async () => {
@@ -271,4 +352,115 @@ describe('CHD-575 U2 tester: independent steered turn lifetimes', () => {
     expect(closed.sends).toEqual([{ type: 'cancelled', requestId: 'request' }]);
     expect(marked.turns.steered).toEqual(new Set(['mine']));
   });
+});
+
+describe('CHD-575 U3 tester: state on the wire', () => {
+  test.each(['omitted', 'declared'] as const)(
+    'separate sessions deduplicate state, declared extensions=%s',
+    (declared) =>
+      withExtensionWire(
+        [],
+        declared === 'declared'
+          ? { _meta: { 'chord/acp': { extensions: { 'session/state': 1 } } } }
+          : {},
+        async (client, newSession) => {
+          const first = await newSession();
+          const second = await newSession();
+          const running = wirePrompt(client, first, 'slow');
+
+          await until(() => client.said(first).includes('Working'));
+          await client.answerTo(wirePrompt(client, second, 'text'));
+          await until(() => wireStates(client, second).length === 2);
+          expect(wireStates(client, first)).toEqual([
+            { state: 'running', origin: 'client' },
+          ]);
+          expect(wireStates(client, second)).toEqual([
+            { state: 'running', origin: 'client' },
+            { state: 'idle', origin: undefined },
+          ]);
+          client.notify('session/cancel', { sessionId: first });
+          await client.answerTo(running);
+          await until(() => wireStates(client, first).length === 2);
+          expect(wireStates(client, first).at(-1)).toEqual({
+            state: 'idle',
+            origin: undefined,
+          });
+          await client.request('session/close', { sessionId: first });
+          await client.answerTo(wirePrompt(client, second, 'text'));
+          expect(wireStates(client, first)).toHaveLength(2);
+        },
+      ),
+  );
+
+  for (const [flags, scenario] of [
+    [['--adapter', 'claude'], 'claudecycle'],
+    [[], 'codebuddycycle'],
+  ] as const) {
+    test(`${scenario} reports an autonomous cycle as agent origin`, () =>
+      withExtensionWire(flags, {}, async (client, newSession) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(wirePrompt(client, sessionId, scenario));
+        await until(() => wireStates(client, sessionId).length === 4);
+        expect(wireStates(client, sessionId)).toEqual([
+          { state: 'running', origin: 'client' },
+          { state: 'idle', origin: undefined },
+          { state: 'running', origin: 'agent' },
+          { state: 'idle', origin: undefined },
+        ]);
+      }));
+  }
+
+  test('an exiting main reports idle without waiting for an explicit close', () =>
+    withExtensionWire([], {}, async (client, newSession) => {
+      const sessionId = await newSession();
+      const response = await client.answerTo(
+        wirePrompt(client, sessionId, 'crash'),
+      );
+
+      expect(response.error).toBeDefined();
+      await until(() => wireStates(client, sessionId).length === 2);
+      expect(wireStates(client, sessionId)).toEqual([
+        { state: 'running', origin: 'client' },
+        { state: 'idle', origin: undefined },
+      ]);
+    }));
+
+  test('a child permission requires action only on the child subagent update', () =>
+    withExtensionWire([], { subagents: {} }, async (client, newSession) => {
+      const sessionId = await newSession();
+      const running = wirePrompt(client, sessionId, 'agentsquiet');
+      const ask = await client.until(
+        (message) => message.method === 'session/request_permission',
+      );
+      const childId = String(ask.params?.sessionId);
+
+      assert(ask.id !== undefined && ask.id !== null);
+      expect(childId.startsWith(`${sessionId}/`)).toBe(true);
+      await until(() =>
+        client
+          .updates(sessionId)
+          .some(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              update.sessionId === childId &&
+              (update.state as { state?: string }).state === 'requires_action',
+          ),
+      );
+      expect(wireStates(client, childId)).toEqual([]);
+      expect(
+        wireStates(client, sessionId).some(
+          ({ state }) => state === 'requires_action',
+        ),
+      ).toBe(false);
+      client.respond(ask.id, {
+        outcome: { outcome: 'selected', optionId: 'allow' },
+      });
+      await client.answerTo(running);
+      expect(
+        wireStates(client, sessionId).some(
+          ({ state }) => state === 'requires_action',
+        ),
+      ).toBe(false);
+    }));
 });

@@ -7996,3 +7996,20 @@ arbitrary personal text. A person's exact leading chord-message wrapper is
 indistinguishable and is omitted from resumed display and titles too; the raw
 record retains it. No record format changes. Extensions remain CHD-575;
 `extensions` is empty and `chord/agent` is informational, unversioned metadata.
+
+## 2026-11-03 — CHD-581 / CHD-583: wait for the window before stopping
+
+CI on the top layer twice failed `CHD-561 tester: standard Codex subagents in
+the window > x works after an early refusal once the cancel capability arrives`.
+The test pressed `x` when the session subscriber heard of the capability,
+before the window's state had it. `src/ui/app/sessions.ts` refused again;
+`src/ui/background/view.ts`'s `stopNowOffered` then cleared the refusal,
+leaving `x to stop` with nothing stopped. The test now waits for the window,
+as its sibling does. This closes CHD-583.
+
+Kept as a starting point for any later window slowdown: running the file alone
+in clean worktrees, alternating between branch trees and `origin/next`
+`6503b648`, failed 11 of 54 runs on this branch (layer heads: 1/8, 1/8, 3/18;
+top head: 6/20), against 1 of 20 on `origin/next`. Source reading found no
+window-side branch change on that path. The difference remains unexplained;
+its cause was not searched further.

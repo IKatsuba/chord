@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import process from 'node:process';
 import {
   NO_TURNS,
   reduceTurns,
@@ -29,6 +30,7 @@ async function withExtensionWire(
   capabilities: object,
   body: (client: AcpClient, newSession: () => Promise<string>) => Promise<void>,
   watch: (session: Session) => Session = (session) => session,
+  opening: typeof openSession = openSession,
 ) {
   const cwd = await mkdtemp(join(tmpdir(), 'chord-extension-wire-'));
   const { client, input, output, end } = clientOverStreams();
@@ -43,8 +45,10 @@ async function withExtensionWire(
     },
     agent: 'fake',
     version: '1.2.3',
+    home: cwd,
+    configHome: join(cwd, 'config'),
     stateDir: join(cwd, 'state'),
-    open: async (options) => watch(await openSession(options)),
+    open: async (options) => watch(await opening(options)),
     server: serveChord(),
     place: () =>
       Promise.resolve({
@@ -95,6 +99,32 @@ const wireStates = (client: AcpClient, sessionId: string) =>
       ? [{ state: message.params.state, origin: message.params.origin }]
       : [],
   );
+
+const wireChildren = (client: AcpClient, parent: string) => {
+  const children = new Map<
+    string,
+    { id: string; title: string; state: string; agent: Record<string, unknown> }
+  >();
+
+  for (const update of client.updates(parent)) {
+    const agent = (
+      update._meta as Record<string, Record<string, unknown>> | undefined
+    )?.['chord/agent'];
+
+    if (update.sessionUpdate === 'subagent_update' && agent !== undefined) {
+      const id = String(update.sessionId);
+
+      children.set(id, {
+        id,
+        title: String(update.title),
+        state: String((update.state as { state: string }).state),
+        agent,
+      });
+    }
+  }
+
+  return [...children.values()];
+};
 
 describe('CHD-575 U1 tester: named queue ownership', () => {
   test('a refused middle entry returns between the older and newer entries exactly once', async () => {
@@ -644,6 +674,207 @@ describe('CHD-575 U4 tester: steering delivery on the wire', () => {
         };
 
         return session;
+      },
+    );
+  });
+});
+
+describe('CHD-575 U5 tester: child control boundaries', () => {
+  const send = (client: AcpClient, sessionId: string, text = 'text') =>
+    client.request('_chord/agents/send', {
+      sessionId,
+      prompt: [{ type: 'text', text }],
+    });
+  const close = (client: AcpClient, sessionId: string) =>
+    client.request('_chord/agents/close', { sessionId });
+
+  test('same-named children stay separate, content reaches the selected child, and close stops its process', async () => {
+    const opened: Session[] = [];
+
+    await withExtensionWire(
+      [],
+      { subagents: {} },
+      async (client, newSession) => {
+        const first = await newSession();
+
+        await client.answerTo(wirePrompt(client, first, 'agenttitled'));
+        await until(() =>
+          wireChildren(client, first).some(
+            (child) =>
+              child.state === 'idle' &&
+              client.said(child.id).includes('came in chunks'),
+          ),
+        );
+
+        const firstChild = wireChildren(client, first)[0];
+        const pids = [...(opened.at(-1)?.agentPids ?? [])];
+
+        assert(firstChild && pids.length > 0);
+
+        const second = await newSession();
+
+        await client.answerTo(wirePrompt(client, second, 'agenttitled'));
+        await until(() =>
+          wireChildren(client, second).some(
+            (child) =>
+              child.state === 'idle' &&
+              client.said(child.id).includes('came in chunks'),
+          ),
+        );
+
+        const secondChild = wireChildren(client, second)[0];
+
+        assert(secondChild);
+        expect(secondChild.title).toBe(firstChild.title);
+        expect(secondChild.id).not.toBe(firstChild.id);
+        expect((await close(client, firstChild.id)).result).toEqual({
+          closed: [firstChild.title],
+        });
+
+        for (const pid of pids) {
+          await until(() => {
+            try {
+              process.kill(pid, 0);
+
+              return false;
+            } catch {
+              return true;
+            }
+          });
+        }
+
+        const content = await client.request('_chord/agents/send', {
+          sessionId: secondChild.id,
+          prompt: [
+            { type: 'text', text: 'text' },
+            { type: 'image', mimeType: 'image/png', data: 'aGVsbG8=' },
+            {
+              type: 'resource_link',
+              name: 'child.ts',
+              uri: 'file:///tmp/chord-extension-child.ts',
+              _meta: { source: 'child-test' },
+            },
+          ],
+        });
+
+        expect(content.result).toEqual({ delivery: 'sent' });
+        await until(() =>
+          client.said(secondChild.id).includes('Received a link: child.ts'),
+        );
+        expect(client.said(secondChild.id)).toContain(
+          'Received an image: image/png, 5 bytes',
+        );
+        expect(client.said(firstChild.id)).not.toContain(
+          'Received a link: child.ts',
+        );
+        expect((await send(client, firstChild.id)).error?.code).toBe(-32002);
+        expect((await close(client, firstChild.id)).error?.code).toBe(-32002);
+        expect((await close(client, secondChild.id)).result).toEqual({
+          closed: [secondChild.title],
+        });
+      },
+      (session) => {
+        opened.push(session);
+
+        return session;
+      },
+    );
+  });
+
+  test('an actual task id is refused by both long-lived child methods', () =>
+    withExtensionWire([], { subagents: {} }, async (client, newSession) => {
+      const main = await newSession();
+
+      await client.answerTo(wirePrompt(client, main, 'tasklong'));
+      await until(() =>
+        client
+          .updates(main)
+          .some((update) => update.sessionUpdate === 'subagent_update'),
+      );
+
+      const task = client
+        .updates(main)
+        .find((update) => update.sessionUpdate === 'subagent_update');
+
+      assert(typeof task?.sessionId === 'string');
+      expect((await send(client, task.sessionId)).error?.code).toBe(-32002);
+      expect((await close(client, task.sessionId)).error?.code).toBe(-32002);
+      client.notify('session/cancel', { sessionId: task.sessionId });
+    }));
+
+  test('an actual adapter subagent id is refused without cancelling its ask', () =>
+    withExtensionWire([], { subagents: {} }, async (client, newSession) => {
+      const main = await newSession();
+      const running = wirePrompt(client, main, 'subagent');
+      const ask = await client.until(
+        (message) => message.method === 'session/request_permission',
+      );
+      const child = String(ask.params?.sessionId);
+
+      assert(ask.id !== undefined && ask.id !== null);
+      expect(child.startsWith(`${main}/`)).toBe(true);
+      expect((await send(client, child)).error?.code).toBe(-32002);
+      expect((await close(client, child)).error?.code).toBe(-32002);
+      client.respond(ask.id, {
+        outcome: { outcome: 'selected', optionId: 'allow' },
+      });
+      client.notify('session/cancel', { sessionId: main });
+      await client.answerTo(running);
+    }));
+
+  test('an exited child is not an addressable child for either method', () =>
+    withExtensionWire([], { subagents: {} }, async (client, newSession) => {
+      const main = await newSession();
+
+      await client.answerTo(wirePrompt(client, main, 'agentexit'));
+      await until(() =>
+        wireChildren(client, main).some(
+          (child) => child.agent['gone'] === 'exited',
+        ),
+      );
+
+      const child = wireChildren(client, main).find(
+        (child) => child.agent['gone'] === 'exited',
+      );
+
+      assert(child);
+      expect((await send(client, child.id)).error?.code).toBe(-32002);
+      expect((await close(client, child.id)).error?.code).toBe(-32002);
+    }));
+
+  test('a failed child start is explicitly unavailable rather than still starting', async () => {
+    let opened = 0;
+
+    await withExtensionWire(
+      [],
+      { subagents: {} },
+      async (client, newSession) => {
+        const main = await newSession();
+
+        await client.answerTo(wirePrompt(client, main, 'agentcost'));
+        await until(() =>
+          wireChildren(client, main).some(
+            (child) => typeof child.agent['failed'] === 'string',
+          ),
+        );
+
+        const child = wireChildren(client, main).find(
+          (child) => typeof child.agent['failed'] === 'string',
+        );
+
+        assert(child);
+        expect((await send(client, child.id)).error?.code).toBe(-32002);
+        expect((await close(client, child.id)).error?.code).toBe(-32002);
+      },
+      (session) => session,
+      (options) => {
+        opened += 1;
+
+        return openSession(
+          opened === 2
+            ? { ...options, agentCommand: ['chord-missing-fixture-command'] }
+            : options,
+        );
       },
     );
   });

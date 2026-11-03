@@ -390,7 +390,9 @@ export function runAcp(options: AcpOptions): AcpRun {
     // by the task's id.
     const named = subagentId ?? request.sessionId;
 
-    if (!asksIn(upstream, named)) {
+    // A session's own ask names no subagent, so one that names the session is
+    // a task's agent passing itself off as it.
+    if (!asksIn(upstream, named) || subagentId === upstream.agentId) {
       say(`chord: refused a permission for a session it does not know`);
       conversation.reject(id);
 

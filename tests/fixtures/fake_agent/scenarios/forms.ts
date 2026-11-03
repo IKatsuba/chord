@@ -18,7 +18,7 @@ import { GATE_RELEASE, gateOpened } from './agents.ts';
  * Asks the client for input and says what came back: the action, and an
  * accepted form's content as one line of JSON.
  */
-async function elicit(
+export async function elicit(
   turn: Turn,
   request: acp.CreateElicitationRequest,
 ): Promise<acp.StopReason> {

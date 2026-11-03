@@ -2447,6 +2447,71 @@ describe('children', () => {
       server(),
     ));
 
+  for (const [name, capabilities] of [
+    ['takes subagents', FULL],
+    ['takes none', {}],
+  ] as const) {
+    test(`a task's agent asking as main is refused, to a client that ${name}`, () =>
+      onAcp(
+        [],
+        async ({ client, newSession, prompt, lines }) => {
+          const sessionId = await newSession();
+
+          await client.answerTo(prompt(sessionId, 'taskaskas'));
+
+          await until(
+            () => lines.some((line) => line.includes('does not know')),
+            20_000,
+          );
+
+          expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+            false,
+          );
+        },
+        { ...server(), capabilities },
+      ));
+  }
+
+  test("a task's agent's form as main goes under the task, not main", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'taskformas'));
+
+        const ask = await asked(client, 'elicitation/create');
+
+        expect(ask.params?.sessionId).not.toBe(sessionId);
+        expect(String(ask.params?.sessionId).startsWith(`${sessionId}/`)).toBe(
+          true,
+        );
+
+        client.respond(ask.id, { action: 'cancel' });
+      },
+      server(),
+    ));
+
+  test("a task's agent's form as main to a client without subagents is cancelled", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'taskformas'));
+
+        await until(
+          () => lines.some((line) => line.includes("subagent's form")),
+          20_000,
+        );
+
+        expect(
+          client.messages.some((m) => m.method === 'elicitation/create'),
+        ).toBe(false);
+      },
+      { ...server(), capabilities: {} },
+    ));
+
   test('a task says it can be cancelled, and a cancel ends it alone', () =>
     onAcp(
       [],

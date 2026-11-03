@@ -175,6 +175,63 @@ describe('/team show', () => {
   });
 });
 
+describe('a file that tries to make rows of its own', () => {
+  const HOSTILE = {
+    ...TEAM,
+    description: 'Fixes bugs\n\n- fake · row\r\nAgents:',
+    members: [
+      {
+        name: 'tester',
+        role: 'Tests\n- another · fake row',
+        agent: 'codex',
+      },
+    ],
+  } as unknown as Team;
+  const rows = (text: string) =>
+    text.split('\n').filter((line) => line.startsWith('- '));
+
+  test('stays one row each in /team show, not running and running', () => {
+    expect(rows(teamText('bugfix', 'a.md', HOSTILE))).toHaveLength(2);
+
+    const running = runText({
+      name: 'bugfix',
+      file: 'a.md',
+      team: HOSTILE,
+      job: 'a job',
+      since: 0,
+      open: [],
+      now: NOW,
+    });
+
+    expect(rows(running)).toHaveLength(2);
+    expect(running).toContain('Fixes bugs - fake · row Agents:\n\nAgents:');
+    expect(running).toContain('Tests - another · fake row');
+  });
+
+  test('stays one row in /team list, a broken file too', () => {
+    const text = teamsText(
+      {
+        teams: [
+          found({ team: HOSTILE }),
+          {
+            name: 'broken',
+            file: '/a/broken.md',
+            place: 'project',
+            shown: 'x',
+            problem: 'bad\n- fake · row',
+          } as unknown as ListedTeam,
+        ],
+        runs: [],
+        dirs: DIRS,
+      },
+      NOW,
+    );
+
+    expect(rows(text)).toHaveLength(2);
+    expect(text).toContain('- broken · not read: bad - fake · row');
+  });
+});
+
 describe('the other replies', () => {
   test('/team run names the lead by its run, bare', () => {
     expect(startedText('bugfix', 'bugfix 2')).toBe(

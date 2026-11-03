@@ -47,12 +47,20 @@ export function commandChunk(
   };
 }
 
+/**
+ * What a file says, on one line: a repo's file must not make rows or blocks of
+ * its own in what chord says. A client treats it as untrusted, as an agent's.
+ */
+const oneLine = (text: string) => text.replaceAll(/\s*[\r\n]+\s*/g, ' ').trim();
+
 const joined = (parts: readonly (string | undefined)[]) =>
-  parts.filter((part) => part !== undefined).join(' · ');
+  parts
+    .flatMap((part) => (part === undefined ? [] : [oneLine(part)]))
+    .join(' · ');
 
 function teamRow(found: ListedTeam, runs: readonly TeamRun[], now: number) {
   if ('problem' in found) {
-    return `- ${found.name} · not read: ${found.problem}`;
+    return `- ${joined([found.name, `not read: ${found.problem}`])}`;
   }
 
   const { team } = found;
@@ -118,8 +126,8 @@ const agentParts = ({ agent, model, effort, mode }: Defined) => [
 /** `/team show` of a team not running. */
 export function teamText(name: string, file: string, team: Team): string {
   return [
-    `${name} · ${file}`,
-    team.description,
+    joined([name, file]),
+    oneLine(team.description),
     `Agents:\n\n${[
       `- ${joined(['lead', ...agentParts(team.lead), LEAD_ROLE])}`,
       ...team.members.map(
@@ -151,7 +159,7 @@ export function runText({
 }): string {
   return [
     `${name} · ${file} · working ${briefly(now - since)} on "${job.replaceAll(/\s+/g, ' ').trim()}"`,
-    team.description,
+    oneLine(team.description),
     `Agents:\n\n${[
       `- ${joined([`lead (${name})`, 'open', ...agentParts(team.lead), LEAD_ROLE])}`,
       ...team.members.map(

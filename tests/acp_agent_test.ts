@@ -180,7 +180,7 @@ describe('initialize', () => {
           _meta: {
             'chord/acp': {
               version: 1,
-              extensions: { 'session/state': 1 },
+              extensions: { 'session/state': 1, 'session/steer': 1 },
               agent: { name: 'fake' },
             },
           },
@@ -3383,6 +3383,120 @@ describe('the session state (CHD-575)', () => {
           .slice(seen)
           .some((message) => message.method === '_chord/session/state'),
       ).toBe(false);
+    }));
+});
+
+describe('a steer (CHD-575)', () => {
+  const STEER = '_chord/session/steer';
+  const steer = (client: AcpClient, sessionId: string, text: string) =>
+    client.request(STEER, {
+      sessionId,
+      prompt: [{ type: 'text', text }],
+    });
+  /** What the client was told someone said in `sessionId`. */
+  const toldWords = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .flatMap((update) =>
+        update['sessionUpdate'] === 'user_message_chunk'
+          ? [(update['content'] as { text?: string }).text]
+          : [],
+      );
+
+  test('it takes its own entry into the running turn, not the prompt queued ahead', () =>
+    onAcp(['--steering', 'claude'], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'texttillsteered');
+
+      await until(() => client.said(sessionId).includes('came in chunks'));
+
+      const queued = prompt(sessionId, 'text');
+
+      expect((await steer(client, sessionId, 'Mine.')).result).toEqual({
+        delivery: 'sent',
+      });
+      // The steer ended the running turn; the prompt ahead of it ran as its
+      // own and answers on its own end.
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'end_turn',
+      );
+      expect((await client.answerTo(queued)).result?.stopReason).toBe(
+        'end_turn',
+      );
+      expect(toldWords(client, sessionId)).not.toContain('Mine.');
+    }));
+
+  test('with no turn running it starts one, queued, the client’s, its words not told back', () =>
+    onAcp(['--steering', 'claude'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect((await steer(client, sessionId, 'text')).result).toEqual({
+        delivery: 'queued',
+      });
+      await until(() =>
+        client.messages.some(
+          (message) =>
+            message.method === '_chord/session/state' &&
+            message.params?.['state'] === 'idle',
+        ),
+      );
+
+      expect(
+        client.messages
+          .filter((message) => message.method === '_chord/session/state')
+          .map((message) => message.params?.['origin']),
+      ).toEqual(['client', undefined]);
+      expect(client.said(sessionId)).toContain('came in chunks');
+      expect(toldWords(client, sessionId)).toEqual([]);
+    }));
+
+  test('on an agent that takes no steering it waits queued', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'long');
+
+      await until(() => client.said(sessionId) !== '');
+
+      expect((await steer(client, sessionId, 'text')).result).toEqual({
+        delivery: 'queued',
+      });
+
+      client.notify('session/cancel', { sessionId });
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'cancelled',
+      );
+    }));
+
+  test('an unknown session is -32002, a prompt that does not read -32602', () =>
+    onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect((await steer(client, 'nobody', 'text')).error?.code).toBe(-32002);
+      expect(
+        (await client.request(STEER, { sessionId, prompt: [{ type: 'text' }] }))
+          .error?.code,
+      ).toBe(-32602);
+      expect(
+        (
+          await client.request(STEER, {
+            sessionId,
+            prompt: [{ type: 'audio', data: '', mimeType: 'audio/wav' }],
+          })
+        ).error?.code,
+      ).toBe(-32602);
+    }));
+
+  test('advertised', () =>
+    onAcp([], async ({ client }) => {
+      expect(
+        (
+          (await client.answerTo(1)).result?._meta as Record<
+            string,
+            { extensions: object }
+          >
+        )['chord/acp']?.extensions,
+      ).toMatchObject({ 'session/steer': 1 });
     }));
 });
 

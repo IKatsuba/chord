@@ -9,6 +9,7 @@ import {
   type CancelNotification,
   type CloseSessionRequest,
   type CloseSessionResponse,
+  type ContentBlock,
   type InitializeRequest,
   type InitializeResponse,
   type ListSessionsRequest,
@@ -27,6 +28,45 @@ import {
   type SetSessionModeResponse,
   type Stream,
 } from '@agentclientprotocol/sdk/unstable';
+import { z } from '@zod/zod';
+
+/**
+ * A prompt's blocks in chord's own requests, read as far as `promptOf` needs:
+ * the kinds it takes whole, any other only by its kind, which it refuses.
+ * The SDK parses its own methods' params but exports no schema for ours.
+ */
+const BLOCKS = z
+  .array(
+    z.union([
+      z.looseObject({ type: z.literal('text'), text: z.string() }),
+      z.looseObject({
+        type: z.literal('image'),
+        data: z.string(),
+        mimeType: z.string(),
+      }),
+      z.looseObject({
+        type: z.literal('resource_link'),
+        uri: z.string(),
+        name: z.string(),
+      }),
+      z.looseObject({
+        type: z
+          .string()
+          .refine((type) => !['text', 'image', 'resource_link'].includes(type)),
+      }),
+    ]),
+  )
+  .transform((blocks) => blocks as unknown as ContentBlock[]);
+
+const STEER = z.object({ sessionId: z.string(), prompt: BLOCKS });
+
+/** `_chord/session/steer`: words for the running turn of a session. */
+export type SteerRequest = z.infer<typeof STEER>;
+
+/** How words a client sent went: into a running turn, or to wait for one. */
+export interface Delivered {
+  readonly delivery: 'sent' | 'queued';
+}
 
 /** What a request hands on beside its params. */
 export type AcpRequest<Params> = Pick<
@@ -57,6 +97,7 @@ export interface AcpHandlers {
   close(
     request: AcpRequest<CloseSessionRequest>,
   ): Promise<CloseSessionResponse>;
+  steer(request: AcpRequest<SteerRequest>): Delivered;
 }
 
 export function connectAgentApp(
@@ -76,5 +117,8 @@ export function connectAgentApp(
     )
     .onRequest('session/set_mode', (request) => handlers.setMode(request))
     .onRequest('session/close', (request) => handlers.close(request))
+    .onRequest('_chord/session/steer', STEER, (request) =>
+      handlers.steer(request),
+    )
     .connect(stream);
 }

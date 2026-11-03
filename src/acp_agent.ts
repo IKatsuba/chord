@@ -121,7 +121,7 @@ import { agentOf, isLead } from './session/window_agents.ts';
 const ACP_META = 'chord/acp';
 
 /** The extensions this chord has, each at its version, as `initialize` says. */
-const EXTENSIONS = { 'session/state': 1 } as const;
+const EXTENSIONS = { 'session/state': 1, 'session/steer': 1 } as const;
 
 /** What `_chord/session/state` last said, or would have: none says idle. */
 const IDLE = JSON.stringify({ state: 'idle' });
@@ -1911,6 +1911,48 @@ export function runAcp(options: AcpOptions): AcpRun {
         await closeEntry(entry);
 
         return {};
+      },
+      steer: ({ params }) => {
+        refuseIfClosing();
+
+        const entry = named(params.sessionId);
+        const parsed = promptOf(
+          params.prompt,
+          agent,
+          entry.conversation.session?.takesImages() === true,
+        );
+
+        if ('refused' in parsed) {
+          throw RequestError.invalidParams(undefined, parsed.refused);
+        }
+
+        const turnId = crypto.randomUUID();
+
+        // Before `send`, which emits before it returns: a turn of its own is
+        // then the client's, and its words are not told back.
+        step(entry, { type: 'steered', turnId });
+
+        if (
+          !entry.conversation.send(
+            parsed.text,
+            parsed.text,
+            parsed.attachments,
+            [],
+            { turnId, links: parsed.links },
+          )
+        ) {
+          step(entry, { type: 'unbind', turnId });
+
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        // Its own entry, not the oldest: another request may be queued ahead.
+        return {
+          delivery:
+            entry.conversation.steerQueued(turnId) === 'sent'
+              ? 'sent'
+              : 'queued',
+        };
       },
     },
     wire.stream,

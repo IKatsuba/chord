@@ -3941,6 +3941,66 @@ describe('monitors/changed and monitors/stop (CHD-575)', () => {
     }));
 });
 
+describe('a client that knows no extension (CHD-575)', () => {
+  /**
+   * What chord sent of its own accord, by method; sorted, as the session's
+   * updates and its state go each on its own way.
+   */
+  const told = (client: AcpClient) =>
+    client.messages
+      .flatMap((message) =>
+        message.method === undefined ? [] : [message.method],
+      )
+      .toSorted();
+
+  test('works as a plain ACP client: the same traffic as one that declares them, nothing to answer', async () => {
+    const runs: string[][] = [];
+
+    for (const capabilities of [
+      {},
+      {
+        _meta: {
+          'chord/acp': {
+            extensions: { 'session/state': 1, agents: 1, monitors: 1 },
+          },
+        },
+      },
+    ]) {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+
+          expect(
+            (await client.answerTo(prompt(sessionId, 'text'))).result
+              ?.stopReason,
+          ).toBe('end_turn');
+          await until(() =>
+            client.messages.some(
+              (message) =>
+                message.method === '_chord/session/state' &&
+                message.params?.['state'] === 'idle',
+            ),
+          );
+
+          // Notifications alone: nothing of chord's waits on an answer.
+          for (const message of client.messages) {
+            if (message.method?.startsWith('_chord/') === true) {
+              expect(message.id).toBeUndefined();
+            }
+          }
+
+          runs.push(told(client));
+        },
+        { capabilities },
+      );
+    }
+
+    expect(runs[0]).toEqual(runs[1]!);
+    expect(runs[0]).toContain('_chord/session/state');
+  });
+});
+
 describe('the way out', () => {
   test('EOF idle: exit 0', () =>
     onAcp([], async ({ newSession, eof, exits }) => {

@@ -7962,10 +7962,12 @@ include `mode` alongside runtime, model, effort, team, role, gone, failed and
 closed: reported state only, with no permission policy. Chord's own asks carry
 a title and content. Refusal stays per place: without `subagents`, child traffic
 is dropped and each child's permission, form or plan ask is refused with a
-stderr line. Tools and commands remain available. A task claiming its parent's
-session id is refused; another announced subagent of that session or a sibling's
-id can still be claimed. An agent announcing a subagent under a child's id can
-mislead about state only, without gaining control of that child.
+stderr line. Tools and commands remain available. A task's permission claiming
+its parent's session id is refused; its form is routed under the task's id and
+forwarded to a client declaring `subagents`. A permission can still claim another
+announced subagent of that session or a sibling's id. An agent announcing a
+subagent under a child's id can mislead about state only, without gaining
+control of that child.
 
 Only `/team` and `/new` are chord's, and chord's wins a shared name. Their list
 is merged on the way out, including replay and agents that announce none;
@@ -7989,7 +7991,8 @@ window keeps them, as its person can still reach them.
 
 Commands add no record entry of their own. A leading chord aside is removed
 from the person's words on resume, in the picker and on `session/load`; an
-aside alone reads as a chord message. A task's aside stays, as it can hold
-arbitrary text and hiding a person's own words is worse. No record format
-changes. Extensions remain CHD-575; `extensions` is empty and `chord/agent`
-is informational, unversioned metadata.
+aside alone reads as a chord message. A task's aside stays to avoid hiding
+arbitrary personal text. A person's exact leading chord-message wrapper is
+indistinguishable and is omitted from resumed display and titles too; the raw
+record retains it. No record format changes. Extensions remain CHD-575;
+`extensions` is empty and `chord/agent` is informational, unversioned metadata.

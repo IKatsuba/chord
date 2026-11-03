@@ -652,8 +652,10 @@ returns a duplicate live id, the new session gets an upstream-only alias
 such as `s1~2`. Aliases are not listed or reloadable; they do not fix
 collisions in that agent's recorded ids. A leading chord aside is omitted
 from the person's words in `-r`, `/resume`'s list and `session/load`.
-A task's aside stays: it can contain arbitrary text, and hiding the
-person's own words would be worse.
+A task's aside stays to avoid hiding arbitrary personal text. A person's
+exact leading `<message from="chord">\n...\n</message>\n\n` is
+indistinguishable from chord's aside and is omitted from resumed display
+and titles too; the raw record retains it.
 
 ### What is not sent
 

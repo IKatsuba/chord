@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { copyFile, mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -14,6 +14,7 @@ import { runAcp } from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
 import { serveChord } from '../src/server/server.ts';
 import { openSession, type Session } from '../src/session/session.ts';
+import type { EndedMonitor, RunningMonitor } from '../src/session/monitors.ts';
 import { type AcpClient, clientOverStreams } from './fixtures/acp_client.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import {
@@ -28,7 +29,11 @@ import {
 async function withExtensionWire(
   flags: readonly string[],
   capabilities: object,
-  body: (client: AcpClient, newSession: () => Promise<string>) => Promise<void>,
+  body: (
+    client: AcpClient,
+    newSession: () => Promise<string>,
+    cwd: string,
+  ) => Promise<void>,
   watch: (session: Session) => Session = (session) => session,
   opening: typeof openSession = openSession,
 ) {
@@ -67,17 +72,21 @@ async function withExtensionWire(
       protocolVersion: 1,
       clientCapabilities: capabilities,
     });
-    await body(client, async () => {
-      const response = await client.request('session/new', {
-        cwd,
-        mcpServers: [],
-      });
+    await body(
+      client,
+      async () => {
+        const response = await client.request('session/new', {
+          cwd,
+          mcpServers: [],
+        });
 
-      expect(response.error).toBeUndefined();
-      assert(typeof response.result?.sessionId === 'string');
+        expect(response.error).toBeUndefined();
+        assert(typeof response.result?.sessionId === 'string');
 
-      return response.result.sessionId;
-    });
+        return response.result.sessionId;
+      },
+      cwd,
+    );
   } finally {
     end();
     await until(() => exited, 20_000);
@@ -125,6 +134,19 @@ const wireChildren = (client: AcpClient, parent: string) => {
 
   return [...children.values()];
 };
+
+const wireMonitors = (client: AcpClient, sessionId: string) =>
+  client.messages.flatMap((message) =>
+    message.method === '_chord/monitors/changed' &&
+    message.params?.sessionId === sessionId
+      ? [
+          message.params as unknown as {
+            running: RunningMonitor[];
+            ended: EndedMonitor[];
+          },
+        ]
+      : [],
+  );
 
 describe('CHD-575 U1 tester: named queue ownership', () => {
   test('a refused middle entry returns between the older and newer entries exactly once', async () => {
@@ -880,4 +902,201 @@ describe('CHD-575 U5 tester: child control boundaries', () => {
       },
     );
   });
+});
+
+describe('CHD-575 U6 tester: monitor ownership and lifetime', () => {
+  const stop = (client: AcpClient, sessionId: string, id: string) =>
+    client.request('_chord/monitors/stop', { sessionId, id });
+
+  test('identical monitor ids in separate sessions retain complete stop and ended metadata', () =>
+    withExtensionWire([], {}, async (client, newSession) => {
+      const first = await newSession();
+      const second = await newSession();
+
+      await client.answerTo(wirePrompt(client, first, 'monitors'));
+      await client.answerTo(wirePrompt(client, second, 'monitors'));
+      await until(
+        () =>
+          wireMonitors(client, first).at(-1)?.running.length === 2 &&
+          wireMonitors(client, second).at(-1)?.running.length === 2,
+      );
+
+      const before = wireMonitors(client, first)
+        .at(-1)!
+        .running.find((monitor) => monitor.id === 'm2');
+
+      assert(before);
+
+      const stopped = await stop(client, first, 'm2');
+
+      expect(stopped.result).toEqual({
+        id: 'm2',
+        description: before.description,
+        events: before.events,
+        ran_ms: expect.any(Number),
+      });
+      await until(
+        () =>
+          wireMonitors(client, first)
+            .at(-1)
+            ?.ended.some((monitor) => monitor.id === 'm2') === true,
+      );
+
+      const ended = wireMonitors(client, first)
+        .at(-1)!
+        .ended.find((monitor) => monitor.id === 'm2');
+
+      expect(ended).toEqual({
+        ...before,
+        end: { kind: 'stopped' },
+        endedAt: expect.any(Number),
+      });
+      expect(
+        wireMonitors(client, second)
+          .at(-1)
+          ?.running.map(({ id }) => id),
+      ).toEqual(['m1', 'm2']);
+      expect((await stop(client, first, 'm2')).error?.code).toBe(-32002);
+      expect((await stop(client, second, 'm2')).result?.id).toBe('m2');
+      await client.request('session/close', { sessionId: first });
+      expect((await stop(client, first, 'm1')).error?.code).toBe(-32002);
+    }));
+
+  test('natural exit preserves the command, timing, event and exit metadata', () =>
+    withExtensionWire([], {}, async (client, newSession) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(wirePrompt(client, sessionId, 'monitorexit'));
+      await until(
+        () => wireMonitors(client, sessionId).at(-1)?.ended.length === 1,
+      );
+
+      const ended = wireMonitors(client, sessionId).at(-1)!.ended[0];
+
+      assert(ended);
+      expect(ended.endedAt).toBeGreaterThanOrEqual(ended.startedAt);
+      expect(ended).toMatchObject({
+        id: 'm1',
+        description: 'CI run 4812',
+        command: expect.stringContaining('exit 1'),
+        startedAt: expect.any(Number),
+        timeoutMs: expect.any(Number),
+        events: 0,
+        end: { kind: 'exit', code: 1 },
+        endedAt: expect.any(Number),
+        lastEvent: {
+          at: expect.any(Number),
+          lines: expect.arrayContaining([
+            'Run 4812 (ci.yml) failed: 1 of 3 jobs failed',
+          ]),
+        },
+      });
+      expect((await stop(client, sessionId, 'm1')).error?.code).toBe(-32002);
+    }));
+
+  test('a nested team member owns its monitor independently of main and lead', () =>
+    withExtensionWire(
+      ['--tester-plays', 'childmonitor'],
+      { subagents: {} },
+      async (client, newSession, cwd) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await copyFile(
+          new URL('./fixtures/teams/fake/bugfix.md', import.meta.url),
+          join(cwd, '.chord', 'teams', 'bugfix.md'),
+        );
+
+        const main = await newSession();
+
+        await client.answerTo(
+          wirePrompt(client, main, '/team run bugfix monitor the tests'),
+        );
+        await until(() =>
+          wireChildren(client, main).some(
+            (child) => child.agent['role'] === 'lead',
+          ),
+        );
+
+        const lead = wireChildren(client, main).find(
+          (child) => child.agent['role'] === 'lead',
+        );
+
+        assert(lead);
+        await until(() =>
+          wireChildren(client, lead.id).some(
+            (child) => child.title === 'tester',
+          ),
+        );
+
+        const tester = wireChildren(client, lead.id).find(
+          (child) => child.title === 'tester',
+        );
+
+        assert(tester);
+        await until(
+          () => wireMonitors(client, tester.id).at(-1)?.running.length === 1,
+        );
+        expect((await stop(client, main, 'm1')).error?.code).toBe(-32002);
+        expect((await stop(client, lead.id, 'm1')).error?.code).toBe(-32002);
+        expect((await stop(client, tester.id, 'm1')).result).toMatchObject({
+          id: 'm1',
+          description: 'parser tests',
+        });
+        await client.request('_chord/agents/close', { sessionId: lead.id });
+        expect((await stop(client, tester.id, 'm1')).error?.code).toBe(-32002);
+      },
+    ));
+
+  test('clearing a child revokes its old monitor under the retained composite id', () =>
+    withExtensionWire([], { subagents: {} }, async (client, newSession) => {
+      const main = await newSession();
+
+      await client.answerTo(wirePrompt(client, main, 'monitorchild'));
+      await until(() =>
+        wireChildren(client, main).some(
+          (child) =>
+            wireMonitors(client, child.id).at(-1)?.running.length === 1,
+        ),
+      );
+
+      const child = wireChildren(client, main).find(
+        (child) => child.title === 'parser',
+      );
+
+      assert(child);
+      await client.answerTo(wirePrompt(client, main, 'agentclearonly'));
+      await until(() =>
+        wireChildren(client, main).some(
+          (each) => each.id === child.id && each.state === 'idle',
+        ),
+      );
+      expect((await stop(client, child.id, 'm1')).error?.code).toBe(-32002);
+      expect((await stop(client, main, 'm1')).result?.id).toBe('m1');
+    }));
+
+  test('session load replays no monitor notifications or running monitor processes', () =>
+    withExtensionWire([], {}, async (client, newSession, cwd) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(wirePrompt(client, sessionId, 'monitors'));
+      await until(
+        () => wireMonitors(client, sessionId).at(-1)?.running.length === 2,
+      );
+      await client.request('session/close', { sessionId });
+
+      const seen = client.messages.length;
+      const loaded = await client.request('session/load', {
+        sessionId,
+        cwd,
+        mcpServers: [],
+      });
+
+      expect(loaded.error).toBeUndefined();
+      await client.request('session/list', {});
+      expect(
+        client.messages
+          .slice(seen)
+          .filter((message) => message.method === '_chord/monitors/changed'),
+      ).toEqual([]);
+      expect((await stop(client, sessionId, 'm1')).error?.code).toBe(-32002);
+    }));
 });

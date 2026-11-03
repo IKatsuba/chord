@@ -127,6 +127,8 @@ export interface AgentsHostOptions {
    * named, and children take the settings' only.
    */
   readonly mainServers?: readonly McpServer[];
+  /** One claim among hosts that ask one person; none is this host's own. */
+  readonly settingsBox?: ReturnType<typeof settingsBoxClaim>;
 }
 
 /** What the host reads of a session from its driver's fold. */
@@ -271,6 +273,7 @@ export function createAgentsHost(
     resources,
     resume,
     mainServers,
+    settingsBox = settingsBoxClaim(),
   }: AgentsHostOptions,
   port: AgentsPort,
 ) {
@@ -2370,9 +2373,6 @@ export function createAgentsHost(
 
     return conversation;
   };
-
-  // The host's one place for a `settings` change waiting on the person.
-  const settingsBox = settingsBoxClaim();
 
   /** What chord's MCP server reads of the host, when a session calls. */
   const view: WindowView = {

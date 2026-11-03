@@ -1,8 +1,16 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import {
   type AcpOptions,
   type AcpPlace,
@@ -10,6 +18,7 @@ import {
   runAcp,
 } from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
+import { serveChord } from '../src/server/server.ts';
 import type { LeaveExit } from '../src/session/leaving.ts';
 import {
   parseRecord,
@@ -1748,6 +1757,189 @@ describe('sessions and records', () => {
           opened.push(session);
 
           return session;
+        },
+      },
+    );
+  });
+});
+
+describe("chord's server", () => {
+  const BUGFIX = fileURLToPath(
+    new URL('./fixtures/teams/fake/bugfix.md', import.meta.url),
+  );
+  const server = () => ({ server: serveChord() });
+
+  test("main gets it last, renamed past a client's of its name", () =>
+    onAcp(
+      [],
+      async ({ client, cwd, prompt }) => {
+        const { result } = await client.request('session/new', {
+          cwd,
+          mcpServers: [{ name: 'chord', command: 'x', args: [], env: [] }],
+        });
+        const sessionId = result?.sessionId as string;
+
+        await client.answerTo(prompt(sessionId, 'mcp'));
+
+        const said = client.said(sessionId);
+
+        expect(said.indexOf('"chord"')).toBeGreaterThan(-1);
+        expect(said.indexOf('"chord-2"')).toBeGreaterThan(
+          said.indexOf('"chord"'),
+        );
+      },
+      server(),
+    ));
+
+  test("mcpServers: false holds back the client's and its own, and says so", () =>
+    onAcp(
+      [],
+      async ({ client, cwd, prompt, lines }) => {
+        const { result } = await client.request('session/new', {
+          cwd,
+          mcpServers: [{ name: 'theirs', command: 'x', args: [], env: [] }],
+        });
+        const sessionId = result?.sessionId as string;
+        const held = (result?._meta as Record<string, { server: string }[]>)[
+          'chord/held_back'
+        ];
+
+        expect(held?.map((each) => each.server)).toEqual(['theirs', 'chord']);
+
+        await client.answerTo(prompt(sessionId, 'mcp'));
+
+        expect(client.said(sessionId)).not.toContain('theirs');
+        expect(lines.some((line) => line.includes('not passed'))).toBe(true);
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            startupOf: () => ({
+              agentCommand: fakeAgentCommand(),
+              mcpServers: false as const,
+            }),
+          }),
+      },
+    ));
+
+  test("a second session's token sees only its own children", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const first = await newSession();
+        const second = await newSession();
+
+        await client.answerTo(prompt(first, 'agentsquiet'));
+        await client.answerTo(prompt(first, 'chordtools'));
+        await client.answerTo(prompt(second, 'chordtools'));
+
+        expect(client.said(first)).toContain('parser');
+        expect(client.said(second)).toContain('list_sessions');
+        expect(client.said(second)).not.toContain('parser');
+      },
+      server(),
+    ));
+
+  test("a child's ask is refused on stderr and its traffic stays down", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentsquiet'));
+
+        await until(() =>
+          lines.some((line) => line.includes("child agent's permission")),
+        );
+
+        expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+          false,
+        );
+        expect(
+          client.messages
+            .filter((message) => message.method === 'session/update')
+            .every((message) => message.params?.sessionId === sessionId),
+        ).toBe(true);
+      },
+      server(),
+    ));
+
+  test("one settings box among sessions: a second is refused while the first's waits", async () => {
+    const home = await mkdtemp(join(tmpdir(), 'chord-acp-home-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const first = await newSession();
+          const second = await newSession();
+          const asking = prompt(first, 'settingstheme');
+          const ask = await asked(client, PERMISSION);
+
+          await client.answerTo(prompt(second, 'settingstheme'));
+
+          expect(JSON.stringify(client.updates(second))).toContain(
+            'Another settings change is waiting',
+          );
+
+          client.respond(ask.id, selected('no'));
+
+          await client.answerTo(asking);
+        },
+        { ...server(), configHome: home },
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test('a team and a task, closed with session/close, leave no group', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'bugfix.md'));
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'teamtask'));
+        await client.request('session/close', { sessionId });
+
+        await until(() => killSpawnedGroups().length === 0);
+      },
+      server(),
+    ));
+
+  test('the way out closes the server and the readers', async () => {
+    const closed: string[] = [];
+    const served = serveChord();
+
+    await onAcp(
+      [],
+      async ({ newSession, eof }) => {
+        await newSession();
+        await eof();
+
+        expect(closed.toSorted()).toEqual(['readers', 'server']);
+      },
+      {
+        server: {
+          ...served,
+          close: () => {
+            closed.push('server');
+
+            return served.close();
+          },
+        },
+        resources: {
+          read: () => Promise.resolve([]) as never,
+          close: () => {
+            closed.push('readers');
+
+            return Promise.resolve();
+          },
         },
       },
     );

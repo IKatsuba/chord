@@ -505,17 +505,7 @@ export const cli = chordCommand().action(async (options, named) => {
   let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = startServices.serveChord();
-  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
-  const resources = startServices.createResources({
-    collectors,
-    ...(collectors === 'fixture'
-      ? {
-          fixtureCase: resourceFixtureCase(
-            process.env['CHORD_FAKE_RESOURCE_CASE'],
-          ),
-        }
-      : {}),
-  });
+  const resources = startServices.createResources(resourceOptions());
 
   let closingResources: Promise<void> | undefined;
   const closeResources = () =>
@@ -676,6 +666,22 @@ cli.command(
   upgradeCommand(realpathSync(execPath()), process.env, manifest.version),
 );
 
+/** Which collectors read the providers' limits, by the environment. */
+function resourceOptions() {
+  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
+
+  return {
+    collectors,
+    ...(collectors === 'fixture'
+      ? {
+          fixtureCase: resourceFixtureCase(
+            process.env['CHORD_FAKE_RESOURCE_CASE'],
+          ),
+        }
+      : {}),
+  };
+}
+
 /** `chord acp`: `runAcp` on this process's own streams and signals. */
 async function serveAcp(
   flags: {
@@ -760,6 +766,7 @@ async function serveAcp(
     void run.leave({ kind: 'crash' });
   };
 
+  const resources = createResources(resourceOptions());
   const run = runAcp({
     input: Readable.toWeb(
       process.stdin,
@@ -776,6 +783,18 @@ async function serveAcp(
       process.kill(process.pid, how.signal);
     },
     agent,
+    home,
+    configHome: xdgConfig,
+    server: serveChord(),
+    resources: {
+      read: resources.read,
+      close: () =>
+        resources.close().then((warnings) => {
+          for (const warning of warnings) {
+            say(warning);
+          }
+        }),
+    },
     version: manifest.version,
     stateDir: chordStateDir(),
     open: openSession,

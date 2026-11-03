@@ -33,6 +33,8 @@ import {
 } from './acp/upstream_turns.ts';
 import { transportOf } from './mcp.ts';
 import { DIMCODE_WORDS, dimcodeAtRisk } from './notices.ts';
+import type { ChordServer } from './server/server.ts';
+import { settingsBoxClaim } from './server/tools.ts';
 import { createAgentsHost, type FoldedSession } from './session/agents_host.ts';
 import type {
   Conversation,
@@ -45,6 +47,7 @@ import {
   type LeaveStep,
 } from './session/leaving.ts';
 import type { Place } from './session/place.ts';
+import type { ReadLimits } from './session/resource_access.ts';
 import type { OpenSessionOptions, Session } from './session/session.ts';
 import {
   earlierSessions,
@@ -112,6 +115,16 @@ export interface AcpOptions {
   readonly stateDir: string;
   open(options: OpenSessionOptions): Promise<Session>;
   place(cwd: string): Promise<AcpPlace>;
+  readonly home?: string | undefined;
+  /** The user's config directory, whose `chord/teams/` every session reads. */
+  readonly configHome?: string | undefined;
+  /** chord's own MCP server, shared by every session; none gives no tools. */
+  readonly server?: ChordServer;
+  /** The providers' limits, shared by every session, which the way out closes. */
+  readonly resources?: {
+    readonly read: ReadLimits;
+    close(): Promise<void>;
+  };
   readonly leaveMs?: number;
   readonly drainMs?: number;
 }
@@ -127,6 +140,8 @@ interface Entry {
   readonly host: ReturnType<typeof createAgentsHost>;
   /** Main's, kept: the host lets go of it as soon as it closes. */
   readonly conversation: Conversation;
+  /** Main's key in its host. */
+  readonly key: number | undefined;
   /** Its name on stderr, for a way out it holds up. */
   readonly name: string;
   /** None until it is up. */
@@ -186,6 +201,8 @@ export function runAcp(options: AcpOptions): AcpRun {
   >();
   let capabilities: ClientCapabilities | undefined;
   let starts = 0;
+  // One client asks for every session, so one `settings` box among them.
+  const settingsBox = settingsBoxClaim();
 
   const say = (line: string) => options.stderr(line);
   const send = (notification: SessionNotification) => {
@@ -317,7 +334,15 @@ export function runAcp(options: AcpOptions): AcpRun {
     const { conversation, upstream } = entry;
     const request = conversation.permissionRequest(id);
 
-    if (request === undefined || upstream === undefined) {
+    if (upstream === undefined) {
+      return;
+    }
+
+    // A task's: it holds its own, and must not wait unseen.
+    if (request === undefined) {
+      say(`chord: refused a task's permission`);
+      conversation.reject(id);
+
       return;
     }
 
@@ -358,7 +383,14 @@ export function runAcp(options: AcpOptions): AcpRun {
     const { conversation, upstream } = entry;
     const request = conversation.elicitationRequest(id);
 
-    if (request === undefined || upstream === undefined) {
+    if (upstream === undefined) {
+      return;
+    }
+
+    // A task's: it holds its own, and must not wait unseen.
+    if (request === undefined) {
+      conversation.answer(id, { action: 'cancel' });
+
       return;
     }
 
@@ -700,6 +732,36 @@ export function runAcp(options: AcpOptions): AcpRun {
     }
   };
 
+  /**
+   * A long-lived child's event. Nothing of it goes up yet, and what it asks is
+   * refused, as it could wait unseen.
+   */
+  const childHeard = (
+    entry: Entry,
+    key: number,
+    event: ConversationEvent,
+  ): void => {
+    const child = entry.host.conversationAt(key);
+
+    switch (event.type) {
+      case 'permission_requested':
+        say(`chord: refused a child agent's permission`);
+        child?.reject(event.permission.id);
+
+        break;
+      case 'elicitation_requested':
+        child?.answer(event.elicitation.id, { action: 'cancel' });
+
+        break;
+      case 'plan_requested':
+        child?.answerPlan(event.plan.id, { type: 'cancelled' });
+
+        break;
+      default:
+        break;
+    }
+  };
+
   const openEntry = (
     place: AcpPlace,
     cwd: string,
@@ -713,8 +775,8 @@ export function runAcp(options: AcpOptions): AcpRun {
       {
         place: { ...place, cwd },
         runtimes: place.runtimes,
-        home: undefined,
-        configHome: undefined,
+        home: options.home,
+        configHome: options.configHome,
         stateDir: options.stateDir,
         open: (opening) =>
           options.open({
@@ -725,14 +787,21 @@ export function runAcp(options: AcpOptions): AcpRun {
                 .catch(() => {});
             },
           }),
-        server: undefined,
+        server: options.server,
+        resources: options.resources?.read,
         resume: resume?.from,
         mainServers: servers,
+        settingsBox,
       },
       {
         heard: (key, event) => {
           folds.set(key, foldEvent(folds.get(key), event));
-          heard(entry, event);
+
+          if (key === entry.key) {
+            heard(entry, event);
+          } else {
+            childHeard(entry, key, event);
+          }
         },
         replayed: (_key, replay) => {
           entry.replaying = true;
@@ -745,7 +814,11 @@ export function runAcp(options: AcpOptions): AcpRun {
         },
         // A close takes main out of the host first: what it still says, a
         // cancelled turn's end and its asks withdrawn, is told as ever.
-        closingHeard: (_key, event) => heard(entry, event),
+        closingHeard: (key, event) => {
+          if (key === entry.key) {
+            heard(entry, event);
+          }
+        },
         told: (event) => {
           if (event.type === 'session_closed') {
             folds.delete(event.key);
@@ -755,10 +828,11 @@ export function runAcp(options: AcpOptions): AcpRun {
       },
     );
 
-    host.sessions.start(agent);
+    const key = host.sessions.start(agent);
 
     const entry: Entry = {
       host,
+      key,
       conversation: host.sessions.agents.main!.conversation,
       name: `session ${starts}`,
       live: false,
@@ -968,10 +1042,20 @@ export function runAcp(options: AcpOptions): AcpRun {
       connection.close();
     },
     get steps(): readonly LeaveStep[] {
-      return [...entries].map((entry) => ({
-        name: entry.upstream?.upstreamId ?? entry.name,
-        run: () => closeEntry(entry),
-      }));
+      const { server, resources } = options;
+
+      return [
+        ...[...entries].map((entry) => ({
+          name: entry.upstream?.upstreamId ?? entry.name,
+          run: () => closeEntry(entry),
+        })),
+        ...(server === undefined
+          ? []
+          : [{ name: "chord's server", run: () => server.close() }]),
+        ...(resources === undefined
+          ? []
+          : [{ name: 'resource readers', run: () => resources.close() }]),
+      ];
     },
     stderr: say,
     exit: options.exit,

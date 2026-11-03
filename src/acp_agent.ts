@@ -123,7 +123,8 @@ export interface AcpOptions {
   /** The providers' limits, shared by every session, which the way out closes. */
   readonly resources?: {
     readonly read: ReadLimits;
-    close(): Promise<void>;
+    /** What it could not clean up, which makes the way out unclean. */
+    close(): Promise<readonly string[]>;
   };
   readonly leaveMs?: number;
   readonly drainMs?: number;
@@ -1054,7 +1055,18 @@ export function runAcp(options: AcpOptions): AcpRun {
           : [{ name: "chord's server", run: () => server.close() }]),
         ...(resources === undefined
           ? []
-          : [{ name: 'resource readers', run: () => resources.close() }]),
+          : [
+              {
+                name: 'resource readers',
+                run: async () => {
+                  const warnings = await resources.close();
+
+                  if (warnings.length > 0) {
+                    throw new Error(warnings.join('; '));
+                  }
+                },
+              },
+            ]),
       ];
     },
     stderr: say,

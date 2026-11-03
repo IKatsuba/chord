@@ -766,7 +766,6 @@ async function serveAcp(
     void run.leave({ kind: 'crash' });
   };
 
-  const resources = createResources(resourceOptions());
   const run = runAcp({
     input: Readable.toWeb(
       process.stdin,
@@ -786,15 +785,7 @@ async function serveAcp(
     home,
     configHome: xdgConfig,
     server: serveChord(),
-    resources: {
-      read: resources.read,
-      close: () =>
-        resources.close().then((warnings) => {
-          for (const warning of warnings) {
-            say(warning);
-          }
-        }),
-    },
+    resources: createResources(resourceOptions()),
     version: manifest.version,
     stateDir: chordStateDir(),
     open: openSession,

@@ -10,6 +10,7 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import {
   type AcpOptions,
@@ -1895,8 +1896,18 @@ describe("chord's server", () => {
     }
   });
 
-  test('a team and a task, closed with session/close, leave no group', () =>
-    onAcp(
+  test('a team and a task, closed with session/close, leave no group', async () => {
+    const pids: number[] = [];
+    // Signal 0 only: a kill here would hide what the close left behind.
+    const alive = (pid: number) => {
+      try {
+        return process.kill(-pid, 0);
+      } catch {
+        return false;
+      }
+    };
+
+    await onAcp(
       [],
       async ({ client, cwd, newSession, prompt }) => {
         await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
@@ -1905,12 +1916,27 @@ describe("chord's server", () => {
         const sessionId = await newSession();
 
         await client.answerTo(prompt(sessionId, 'teamtask'));
+        // Main, the task, the lead and its two members.
+        await until(() => pids.length >= 5, 20_000);
+
+        expect(pids.some(alive)).toBe(true);
+
         await client.request('session/close', { sessionId });
 
-        await until(() => killSpawnedGroups().length === 0);
+        await until(() => !pids.some(alive));
       },
-      server(),
-    ));
+      {
+        ...server(),
+        open: async (options) => {
+          const session = await openSession(options);
+
+          pids.push(...session.agentPids);
+
+          return session;
+        },
+      },
+    );
+  });
 
   test('the way out closes the server and the readers', async () => {
     const closed: string[] = [];
@@ -1938,12 +1964,30 @@ describe("chord's server", () => {
           close: () => {
             closed.push('readers');
 
-            return Promise.resolve();
+            return Promise.resolve([]);
           },
         },
       },
     );
   });
+
+  test('a reader that could not clean up makes EOF exit 1, and says why', () =>
+    onAcp(
+      [],
+      async ({ newSession, eof, exits, lines }) => {
+        await newSession();
+        await eof();
+
+        expect(exits).toEqual([{ code: 1 }]);
+        expect(lines.join('\n')).toContain('a provider left a process');
+      },
+      {
+        resources: {
+          read: () => Promise.resolve([]) as never,
+          close: () => Promise.resolve(['a provider left a process']),
+        },
+      },
+    ));
 });
 
 describe('the way out', () => {

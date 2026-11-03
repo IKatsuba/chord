@@ -2080,6 +2080,31 @@ describe("chord's commands in the list", () => {
       expect(listed(client, sessionId)).toEqual([['team', 'new']]);
     }));
 
+  test('go after a load answer too, its past ahead of it', () =>
+    onAcp(['--no-commands'], async ({ client, cwd }) => {
+      const sessionId = '11111111-2222-4333-8444-555555555555';
+      const id = client.send('session/load', {
+        sessionId,
+        cwd,
+        mcpServers: [],
+      });
+
+      expect((await client.answerTo(id)).error).toBeUndefined();
+
+      await until(() => listed(client, sessionId).length > 0);
+
+      const answer = client.messages.findIndex(
+        (message) => message.id === id && message.method === undefined,
+      );
+      const commands = client.messages.findIndex(
+        (message) =>
+          (message.params?.update as { sessionUpdate?: string } | undefined)
+            ?.sessionUpdate === 'available_commands_update',
+      );
+
+      expect(commands).toBeGreaterThan(answer);
+    }));
+
   test("a name both offer is chord's alone", () =>
     onAcp(['--also-commands', 'new,team'], async ({ client, newSession }) => {
       const sessionId = await newSession();

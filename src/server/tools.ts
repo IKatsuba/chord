@@ -62,6 +62,7 @@ import {
   proposalShape,
   saveTeam,
   type Team,
+  teamText,
 } from '../teams.ts';
 
 /**
@@ -536,6 +537,7 @@ export async function proposeTeam(
     caller,
     {
       title: `Team(${name})`,
+      detail: teamText(team),
       options:
         saved === undefined
           ? [
@@ -654,6 +656,14 @@ export function settingsBoxClaim(): () => (() => void) | undefined {
 const SETTINGS_BOX_HELD =
   'Another settings change is waiting on the person; nothing was asked or saved. Ask again once they have answered';
 
+/** A change in words: its file and its values, as the answer gives them. */
+function settingDetail({ file, before, after }: SettingsChanged): string {
+  const value = (held: unknown) =>
+    held === undefined ? 'not set' : JSON.stringify(held);
+
+  return `In ${file}: ${value(before)} becomes ${value(after)}.`;
+}
+
 /** The settings box's choices, by their ids. */
 const SETTING = { yes: 'yes', no: 'no' } as const;
 
@@ -701,6 +711,7 @@ export async function changeSetting(
       caller,
       {
         title: `Settings(${shownKey})`,
+        detail: settingDetail(answer),
         options: [
           {
             optionId: SETTING.yes,

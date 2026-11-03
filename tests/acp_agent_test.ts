@@ -1896,6 +1896,82 @@ describe("chord's server", () => {
     }
   });
 
+  test("chord's own asks say what they are about: a setting's change", async () => {
+    const home = await mkdtemp(join(tmpdir(), 'chord-acp-home-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+          const asking = prompt(sessionId, 'settingstheme');
+          const ask = await asked(client, PERMISSION);
+          const toolCall = ask.params?.toolCall as {
+            title?: string;
+            content?: { content: { text: string } }[];
+          };
+
+          expect(toolCall.title).toBe('Settings(theme)');
+          expect(toolCall.content?.[0]?.content.text).toContain('"light"');
+
+          client.respond(ask.id, selected('no'));
+
+          await client.answerTo(asking);
+        },
+        { ...server(), configHome: home },
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("chord's own asks say what they are about: a team's whole file", async () => {
+    const home = await mkdtemp(join(tmpdir(), 'chord-acp-home-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+          const asking = prompt(sessionId, 'propose');
+          const ask = await asked(client, PERMISSION);
+          const toolCall = ask.params?.toolCall as {
+            title?: string;
+            content?: { content: { text: string } }[];
+          };
+          const options = ask.params?.options as {
+            optionId: string;
+            kind: string;
+          }[];
+
+          expect(toolCall.title).toBe('Team(bugfix)');
+          expect(toolCall.content?.[0]?.content.text).toContain('lead:');
+
+          client.respond(
+            ask.id,
+            selected(
+              options.find(({ kind }) => kind === 'reject_once')!.optionId,
+            ),
+          );
+
+          await client.answerTo(asking);
+        },
+        {
+          ...server(),
+          configHome: home,
+          // What the fake proposes runs on these; nothing here starts them.
+          place: () =>
+            Promise.resolve({
+              ...fakePlace(),
+              runtimes: ['fake', 'claude', 'codex'],
+            }),
+        },
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
   test('a team and a task, closed with session/close, leave no group', async () => {
     const pids: number[] = [];
     // Signal 0 only: a kill here would hide what the close left behind.

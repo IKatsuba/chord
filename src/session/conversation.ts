@@ -2572,7 +2572,21 @@ export class Conversation {
         this.#release();
       };
 
-      const toolCall = { toolCallId: wait.toolCallId ?? id };
+      // What a client is asked to agree to, which it can see nowhere else.
+      const toolCall = {
+        toolCallId: wait.toolCallId ?? id,
+        ...(wait.title === undefined ? {} : { title: wait.title }),
+        ...(wait.detail === undefined
+          ? {}
+          : {
+              content: [
+                {
+                  type: 'content' as const,
+                  content: { type: 'text' as const, text: wait.detail },
+                },
+              ],
+            }),
+      };
       const request: PendingPermission = {
         id,
         sessionId: session.id,

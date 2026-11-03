@@ -64,7 +64,7 @@ Done when chord is the interface its authors open by default.
 | Transcript / verbose view                 | ctrl+o                              | client                                       |
 | Reverse history search                    | ctrl+r                              | client                                       |
 | Headless one-shot                         | `-p "prompt"`, `--output-format json`, `--effort`, `--permission-mode`, `--dangerously-skip-permissions` | ACP, one session, `session/set_config_option` |
-| `chord acp` sessions, children and teams (CHD-574, CHD-576, CHD-581, CHD-575, done) | — | ACP v1 on stdin and stdout; children, teams, chord tools and commands; state, steering, child send/close and monitor extensions |
+| `chord acp` sessions, children and teams (CHD-574, CHD-576, CHD-581, CHD-575, done) | — | ACP v1 on stdin and stdout; children, teams, chord tools and commands; state, steering, child send/close and monitor extensions; [client reference](guide.md#chord-acp) (CHD-582); child startup cleanup remains open (CHD-589) |
 | Syntax highlighting in code and diffs     | yes                                 | client                                       |
 | Session config options (effort, etc.)     | `/config`, effort                   | ACP `session/set_config_option`              |
 | Usage and cost                            | `/cost`, `/context`                 | ACP `session/prompt`'s `usage`, `usage_update`; enricher: a cost from the tokens and a window from the model, marked as chord's estimate |

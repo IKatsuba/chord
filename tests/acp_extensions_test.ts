@@ -842,7 +842,7 @@ describe('CHD-575 U5 tester: child control boundaries', () => {
       expect((await close(client, child.id)).error?.code).toBe(-32002);
     }));
 
-  test('a failed child start is explicitly unavailable rather than still starting', async () => {
+  test('a failed child start refuses prompts but remains closable', async () => {
     let opened = 0;
 
     await withExtensionWire(
@@ -864,7 +864,9 @@ describe('CHD-575 U5 tester: child control boundaries', () => {
 
         assert(child);
         expect((await send(client, child.id)).error?.code).toBe(-32002);
-        expect((await close(client, child.id)).error?.code).toBe(-32002);
+        expect((await close(client, child.id)).result).toEqual({
+          closed: [child.title],
+        });
       },
       (session) => session,
       (options) => {

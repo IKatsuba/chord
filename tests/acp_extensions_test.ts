@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import {
+  NO_TURNS,
+  reduceTurns,
+  sessionStateOf,
+  type TurnInput,
+} from '../src/acp/upstream_turns.ts';
+import {
   ended,
   onFake,
   promptsIn,
@@ -147,4 +153,122 @@ describe('CHD-575 U1 tester: named queue ownership', () => {
         await ended(secondEvents, 1);
       });
     }));
+});
+
+describe('CHD-575 U2 tester: independent steered turn lifetimes', () => {
+  test('consuming one steered id leaves another queued id client-owned without echo', () => {
+    const first = reduceTurns(NO_TURNS, { type: 'steered', turnId: 'first' });
+    const both = reduceTurns(first.turns, {
+      type: 'steered',
+      turnId: 'second',
+    });
+    const played = reduceTurns(both.turns, {
+      type: 'prompt',
+      turnId: 'first',
+      text: 'First words.',
+      into: 'running',
+    });
+
+    expect(played.sends).toEqual([]);
+    expect(played.turns.steered).toEqual(new Set(['second']));
+    expect(both.turns.steered).toEqual(new Set(['first', 'second']));
+
+    const next = reduceTurns(played.turns, {
+      type: 'prompt',
+      turnId: 'second',
+      text: 'Second words.',
+    });
+
+    expect(next.sends).toEqual([]);
+    expect(next.turns.steered).toBeUndefined();
+    expect(sessionStateOf(next.turns, false)).toEqual({
+      state: 'running',
+      origin: 'client',
+    });
+  });
+
+  test('disconnect preserves a queued steered id until it plays without echo', () => {
+    const marked = reduceTurns(NO_TURNS, { type: 'steered', turnId: 'mine' });
+    const gone = reduceTurns(marked.turns, { type: 'disconnected' });
+
+    expect(gone.sends).toEqual([]);
+    expect(sessionStateOf(gone.turns, true)).toEqual({
+      state: 'requires_action',
+    });
+
+    const played = reduceTurns(gone.turns, {
+      type: 'prompt',
+      turnId: 'mine',
+      text: 'Queued words.',
+    });
+
+    expect(played.sends).toEqual([]);
+    expect(sessionStateOf(played.turns, true)).toEqual({
+      state: 'requires_action',
+      origin: 'client',
+    });
+    expect(played.turns.steered).toBeUndefined();
+  });
+
+  test('a late result of a steered turn preserves a newer agent-originated turn', () => {
+    const marked = reduceTurns(NO_TURNS, { type: 'steered', turnId: 'old' });
+    const running = reduceTurns(marked.turns, {
+      type: 'cycle_started',
+      turnId: 'new',
+    });
+    const late = reduceTurns(running.turns, {
+      type: 'result',
+      turnId: 'old',
+      result: { status: 'cancelled', stopReason: 'cancelled' },
+    });
+
+    expect(late.sends).toEqual([]);
+    expect(late.turns.steered).toBeUndefined();
+    expect(late.turns.running).toEqual({ turnId: 'new', origin: 'agent' });
+    expect(sessionStateOf(late.turns, false)).toEqual({
+      state: 'running',
+      origin: 'agent',
+    });
+  });
+
+  test.each(['unbind', 'result', 'queue_withdrawn'] as const)(
+    '%s removes only the named steered id and leaves other sessions untouched',
+    (kind) => {
+      const marked = reduceTurns(NO_TURNS, { type: 'steered', turnId: 'a' });
+      const both = reduceTurns(marked.turns, {
+        type: 'steered',
+        turnId: 'b',
+      });
+      const input: TurnInput =
+        kind === 'queue_withdrawn'
+          ? { type: kind, turnIds: ['a'] }
+          : kind === 'result'
+            ? {
+                type: kind,
+                turnId: 'a',
+                result: { status: 'completed', stopReason: 'end_turn' },
+              }
+            : { type: kind, turnId: 'a' };
+      const cleaned = reduceTurns(both.turns, input);
+
+      expect(cleaned.sends).toEqual([]);
+      expect(cleaned.turns.steered).toEqual(new Set(['b']));
+      expect(marked.turns.steered).toEqual(new Set(['a']));
+      expect(NO_TURNS.steered).toBeUndefined();
+    },
+  );
+
+  test('closing clears pending steers without adding request answers', () => {
+    const marked = reduceTurns(NO_TURNS, { type: 'steered', turnId: 'mine' });
+    const bound = reduceTurns(marked.turns, {
+      type: 'bind',
+      requestId: 'request',
+      turnId: 'ordinary',
+    });
+    const closed = reduceTurns(bound.turns, { type: 'closing' });
+
+    expect(closed.turns).toEqual(NO_TURNS);
+    expect(closed.sends).toEqual([{ type: 'cancelled', requestId: 'request' }]);
+    expect(marked.turns.steered).toEqual(new Set(['mine']));
+  });
 });

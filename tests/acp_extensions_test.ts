@@ -12,7 +12,7 @@ import {
 import { runAcp } from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
 import { serveChord } from '../src/server/server.ts';
-import { openSession } from '../src/session/session.ts';
+import { openSession, type Session } from '../src/session/session.ts';
 import { type AcpClient, clientOverStreams } from './fixtures/acp_client.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import {
@@ -28,6 +28,7 @@ async function withExtensionWire(
   flags: readonly string[],
   capabilities: object,
   body: (client: AcpClient, newSession: () => Promise<string>) => Promise<void>,
+  watch: (session: Session) => Session = (session) => session,
 ) {
   const cwd = await mkdtemp(join(tmpdir(), 'chord-extension-wire-'));
   const { client, input, output, end } = clientOverStreams();
@@ -43,7 +44,7 @@ async function withExtensionWire(
     agent: 'fake',
     version: '1.2.3',
     stateDir: join(cwd, 'state'),
-    open: openSession,
+    open: async (options) => watch(await openSession(options)),
     server: serveChord(),
     place: () =>
       Promise.resolve({
@@ -463,4 +464,187 @@ describe('CHD-575 U3 tester: state on the wire', () => {
         ),
       ).toBe(false);
     }));
+});
+
+describe('CHD-575 U4 tester: steering delivery on the wire', () => {
+  const steer = (client: AcpClient, sessionId: string, text: string) =>
+    client.send('_chord/session/steer', {
+      sessionId,
+      prompt: [{ type: 'text', text }],
+    });
+  const echoes = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .filter((update) => update.sessionUpdate === 'user_message_chunk');
+
+  test('a steer refused after cancellation runs as its own client turn and answers only once', () =>
+    withExtensionWire(
+      ['--steering', 'claude', '--steer-late'],
+      {},
+      async (client, newSession) => {
+        const sessionId = await newSession();
+        const running = wirePrompt(client, sessionId, 'texttillsteeredheld');
+
+        await until(() => client.said(sessionId).includes('came in chunks'));
+
+        const request = steer(client, sessionId, 'text');
+
+        expect((await client.answerTo(request)).result).toEqual({
+          delivery: 'sent',
+        });
+        client.notify('session/cancel', { sessionId });
+        expect((await client.answerTo(running)).result?.stopReason).toBe(
+          'cancelled',
+        );
+        await until(() => wireStates(client, sessionId).length === 4);
+        expect(wireStates(client, sessionId)).toEqual([
+          { state: 'running', origin: 'client' },
+          { state: 'idle', origin: undefined },
+          { state: 'running', origin: 'client' },
+          { state: 'idle', origin: undefined },
+        ]);
+        expect(echoes(client, sessionId)).toEqual([]);
+        expect(
+          client.messages.filter(
+            (message) => message.id === request && message.method === undefined,
+          ),
+        ).toHaveLength(1);
+      },
+    ));
+
+  test('a held ask delays its named steer until the permission is answered', async () => {
+    const steers: Parameters<Session['steer']>[] = [];
+
+    await withExtensionWire(
+      ['--steering', 'claude'],
+      {},
+      async (client, newSession) => {
+        const sessionId = await newSession();
+        const running = wirePrompt(client, sessionId, 'permissionsteer');
+        const ask = await client.until(
+          (message) => message.method === 'session/request_permission',
+        );
+
+        assert(ask.id !== undefined && ask.id !== null);
+
+        const request = steer(client, sessionId, 'After permission.');
+
+        expect((await client.answerTo(request)).result).toEqual({
+          delivery: 'sent',
+        });
+        expect(wireStates(client, sessionId).at(-1)).toEqual({
+          state: 'requires_action',
+          origin: 'client',
+        });
+        expect(steers).toHaveLength(0);
+        client.respond(ask.id, {
+          outcome: { outcome: 'selected', optionId: 'allow' },
+        });
+        await client.answerTo(running);
+        expect(steers).toHaveLength(1);
+        expect(steers[0]?.[0]).toBe('After permission.');
+        expect(echoes(client, sessionId)).toEqual([]);
+        expect(
+          client.messages.filter((message) => message.id === request),
+        ).toHaveLength(1);
+      },
+      (session) => {
+        const original = session.steer.bind(session);
+
+        session.steer = (...args) => {
+          steers.push(args);
+
+          return original(...args);
+        };
+
+        return session;
+      },
+    );
+  });
+
+  test('a running turn receives both the image and the resource link in a steer', () =>
+    withExtensionWire(
+      ['--steering', 'claude'],
+      {},
+      async (client, newSession) => {
+        const sessionId = await newSession();
+        const running = wirePrompt(client, sessionId, 'slow');
+
+        await until(() => client.said(sessionId).includes('Working'));
+
+        const response = await client.request('_chord/session/steer', {
+          sessionId,
+          prompt: [
+            { type: 'text', text: 'Read these blocks.' },
+            { type: 'image', mimeType: 'image/png', data: 'aGVsbG8=' },
+            {
+              type: 'resource_link',
+              uri: 'file:///tmp/chord-extension-link.ts',
+              name: 'linked.ts',
+              mimeType: 'text/typescript',
+              _meta: { source: 'extension-test' },
+            },
+          ],
+        });
+
+        expect(response.result).toEqual({ delivery: 'sent' });
+        await until(() => client.said(sessionId).includes('Received an image'));
+        expect(client.said(sessionId)).toContain(
+          'Received an image: image/png, 5 bytes',
+        );
+        expect(client.said(sessionId)).toContain(
+          'Received a link: linked.ts, file:///tmp/chord-extension-link.ts',
+        );
+        client.notify('session/cancel', { sessionId });
+        await client.answerTo(running);
+      },
+    ));
+
+  test('an idle steer retains resource link metadata in the prompt that actually runs', async () => {
+    const prompts: Parameters<Session['prompt']>[] = [];
+    const link = {
+      type: 'resource_link',
+      uri: 'file:///tmp/chord-extension-link.ts',
+      name: 'linked.ts',
+      mimeType: 'text/typescript',
+      description: 'A link supplied by the client.',
+      _meta: { source: 'extension-test' },
+    } as const;
+
+    await withExtensionWire(
+      [],
+      {},
+      async (client, newSession) => {
+        const sessionId = await newSession();
+        const request = client.send('_chord/session/steer', {
+          sessionId,
+          prompt: [{ type: 'text', text: 'text' }, link],
+        });
+
+        expect((await client.answerTo(request)).result).toEqual({
+          delivery: 'queued',
+        });
+        await until(() => wireStates(client, sessionId).length === 2);
+        expect(prompts).toHaveLength(1);
+        expect(prompts[0]?.[3]).toEqual([link]);
+        expect(echoes(client, sessionId)).toEqual([]);
+        await client.request('session/close', { sessionId });
+        expect(
+          (await client.answerTo(steer(client, sessionId, 'closed'))).error
+            ?.code,
+        ).toBe(-32002);
+      },
+      (session) => {
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          prompts.push(args);
+
+          return prompt(...args);
+        };
+
+        return session;
+      },
+    );
+  });
 });

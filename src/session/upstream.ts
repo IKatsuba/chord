@@ -285,6 +285,8 @@ export interface AgentReport {
   readonly runtime: string;
   readonly model?: string | undefined;
   readonly effort?: string | undefined;
+  /** The mode it is in, reported only: chord sets no policy on it. */
+  readonly mode?: string | undefined;
   readonly team?: string | undefined;
   readonly role?: 'lead' | 'member' | undefined;
   /** Its process went on its own. */

@@ -8,8 +8,9 @@
  */
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import type { ConversationEvent } from './conversation.ts';
-import type { ElicitationReply } from './elicitations.ts';
+import type { ElicitationReply, PendingElicitation } from './elicitations.ts';
 import { endWord } from './monitors.ts';
+import type { PendingPermission } from './permissions.ts';
 import { reduceTranscript } from './transcript/reducer.ts';
 import {
   TASK_META,
@@ -259,6 +260,9 @@ export interface TaskSession {
   reject(id: string): void;
   answer(id: string, response: ElicitationReply): void;
   close(): Promise<void>;
+  /** An ask of its own, as its agent asked it, for one who passes it on. */
+  permissionRequest?(id: string): PendingPermission | undefined;
+  elicitationRequest?(id: string): PendingElicitation | undefined;
 }
 
 /** What starts a task: who it is, and what it was asked. */
@@ -464,6 +468,14 @@ export class TaskAgent {
 
   answer(id: string, response: ElicitationReply): void {
     this.#session?.answer(id, response);
+  }
+
+  permissionRequest(id: string): PendingPermission | undefined {
+    return this.#session?.permissionRequest?.(id);
+  }
+
+  elicitationRequest(id: string): PendingElicitation | undefined {
+    return this.#session?.elicitationRequest?.(id);
   }
 
   /**

@@ -1764,10 +1764,20 @@ describe('sessions and records', () => {
   });
 });
 
+const BUGFIX = fileURLToPath(
+  new URL('./fixtures/teams/fake/bugfix.md', import.meta.url),
+);
+
+// Signal 0 only: a kill here would hide what a close left behind.
+const groupAlive = (pid: number) => {
+  try {
+    return process.kill(-pid, 0);
+  } catch {
+    return false;
+  }
+};
+
 describe("chord's server", () => {
-  const BUGFIX = fileURLToPath(
-    new URL('./fixtures/teams/fake/bugfix.md', import.meta.url),
-  );
   const server = () => ({ server: serveChord() });
 
   test("main gets it last, renamed past a client's of its name", () =>
@@ -1839,30 +1849,6 @@ describe("chord's server", () => {
         expect(client.said(first)).toContain('parser');
         expect(client.said(second)).toContain('list_sessions');
         expect(client.said(second)).not.toContain('parser');
-      },
-      server(),
-    ));
-
-  test("a child's ask is refused on stderr and its traffic stays down", () =>
-    onAcp(
-      [],
-      async ({ client, newSession, prompt, lines }) => {
-        const sessionId = await newSession();
-
-        await client.answerTo(prompt(sessionId, 'agentsquiet'));
-
-        await until(() =>
-          lines.some((line) => line.includes("child agent's permission")),
-        );
-
-        expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
-          false,
-        );
-        expect(
-          client.messages
-            .filter((message) => message.method === 'session/update')
-            .every((message) => message.params?.sessionId === sessionId),
-        ).toBe(true);
       },
       server(),
     ));
@@ -1974,14 +1960,6 @@ describe("chord's server", () => {
 
   test('a team and a task, closed with session/close, leave no group', async () => {
     const pids: number[] = [];
-    // Signal 0 only: a kill here would hide what the close left behind.
-    const alive = (pid: number) => {
-      try {
-        return process.kill(-pid, 0);
-      } catch {
-        return false;
-      }
-    };
 
     await onAcp(
       [],
@@ -1995,11 +1973,11 @@ describe("chord's server", () => {
         // Main, the task, the lead and its two members.
         await until(() => pids.length >= 5, 20_000);
 
-        expect(pids.some(alive)).toBe(true);
+        expect(pids.some(groupAlive)).toBe(true);
 
         await client.request('session/close', { sessionId });
 
-        await until(() => !pids.some(alive));
+        await until(() => !pids.some(groupAlive));
       },
       {
         ...server(),
@@ -2062,6 +2040,455 @@ describe("chord's server", () => {
           read: () => Promise.resolve([]) as never,
           close: () => Promise.resolve(['a provider left a process']),
         },
+      },
+    ));
+});
+
+describe('children', () => {
+  interface Report {
+    readonly on: string;
+    readonly sessionId: string;
+    readonly title: string;
+    readonly state: { state: string; stopReason?: string };
+    readonly capabilities?: object;
+    readonly agent: Record<string, unknown>;
+  }
+
+  /** What chord said of each long-lived child, in order. */
+  const reports = (client: AcpClient): Report[] =>
+    client.messages.flatMap((message) => {
+      const update = message.params?.update as
+        | (Omit<Report, 'on' | 'agent'> & {
+            sessionUpdate: string;
+            _meta?: Record<string, Record<string, unknown>>;
+          })
+        | undefined;
+      const agent = update?._meta?.['chord/agent'];
+
+      return message.method === 'session/update' &&
+        update?.sessionUpdate === 'subagent_update' &&
+        agent?.['runtime'] !== undefined
+        ? [{ ...update, on: String(message.params?.sessionId), agent }]
+        : [];
+    });
+
+  const reportOf = (client: AcpClient, title: string) =>
+    reports(client).findLast((report) => report.title === title);
+  const reported = async (
+    client: AcpClient,
+    title: string,
+    holds: (report: Report) => boolean = () => true,
+  ) => {
+    await until(() => {
+      const report = reportOf(client, title);
+
+      return report !== undefined && holds(report);
+    }, 20_000);
+
+    return reportOf(client, title)!;
+  };
+
+  const withTeam = async (cwd: string, text?: string) => {
+    await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+    await writeFile(
+      join(cwd, '.chord', 'teams', 'bugfix.md'),
+      text ?? (await readFile(BUGFIX, 'utf8')),
+    );
+  };
+
+  const server = () => ({ server: serveChord() });
+  const allowing = (ask: { params?: Record<string, unknown> }) =>
+    selected(
+      (ask.params?.options as { optionId: string; kind: string }[]).find(
+        ({ kind }) => kind === 'allow_once',
+      )!.optionId,
+    );
+
+  test('a child is announced on main, its ask and its words under its composite id', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'agentsquiet');
+        const ask = await asked(client, PERMISSION);
+        const composite = String(ask.params?.sessionId);
+
+        expect(composite.startsWith(`${sessionId}/`)).toBe(true);
+
+        const docs = await reported(client, 'docs');
+
+        expect(docs).toMatchObject({
+          on: sessionId,
+          sessionId: composite,
+          capabilities: { cancel: {} },
+          agent: { runtime: 'fake' },
+        });
+
+        await reported(
+          client,
+          'docs',
+          ({ state }) => state.state === 'requires_action',
+        );
+
+        client.respond(ask.id, allowing(ask));
+
+        await client.answerTo(running);
+        await until(() => client.said(composite) !== '', 20_000);
+      },
+      server(),
+    ));
+
+  test('a client without subagents: an ask refused on stderr, nothing of a child', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentsquiet'));
+
+        await until(() =>
+          lines.some((line) => line.includes("subagent's permission")),
+        );
+
+        expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+          false,
+        );
+        expect(
+          client.messages
+            .filter((message) => message.method === 'session/update')
+            .every((message) => message.params?.sessionId === sessionId),
+        ).toBe(true);
+        expect(reports(client)).toEqual([]);
+      },
+      { ...server(), capabilities: {} },
+    ));
+
+  test("a child's plan to a client without subagents is refused, never a yes", () =>
+    onAcp(
+      ['--tester-plays', 'cursorplan'],
+      async ({ client, cwd, newSession, prompt, lines }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        await until(
+          () => lines.some((line) => line.includes("subagent's plan")),
+          20_000,
+        );
+
+        expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+          false,
+        );
+      },
+      { ...server(), capabilities: {} },
+    ));
+
+  test('a team: a member nests under its lead, its ask there; close leaves no group', async () => {
+    const pids: number[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        const lead = await reported(client, 'bugfix');
+        const tester = await reported(client, 'tester');
+
+        expect(lead).toMatchObject({
+          on: sessionId,
+          agent: { team: 'bugfix', role: 'lead', runtime: 'fake' },
+        });
+        expect(tester.on).toBe(lead.sessionId);
+        expect(tester.sessionId.startsWith(`${lead.sessionId}/`)).toBe(true);
+        expect(tester.agent).toMatchObject({
+          role: 'member',
+          model: 'fake-small',
+          mode: 'acceptEdits',
+        });
+
+        const ask = await asked(client, PERMISSION);
+
+        expect(ask.params?.sessionId).toBe(tester.sessionId);
+
+        client.respond(ask.id, allowing(ask));
+
+        await until(() => pids.length >= 3, 20_000);
+
+        expect(pids.some(groupAlive)).toBe(true);
+
+        await client.request('session/close', { sessionId });
+
+        await until(() => !pids.some(groupAlive));
+        await reported(
+          client,
+          'bugfix',
+          ({ agent }) => agent['closed'] === true,
+        );
+      },
+      {
+        ...server(),
+        open: async (options) => {
+          const session = await openSession(options);
+
+          pids.push(...session.agentPids);
+
+          return session;
+        },
+      },
+    );
+  });
+
+  test('a child in bypassPermissions says so, reported only', () =>
+    onAcp(
+      ['--bypass-mode'],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(
+          cwd,
+          (await readFile(BUGFIX, 'utf8')).replace(
+            'mode: default',
+            'mode: bypassPermissions',
+          ),
+        );
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        await reported(
+          client,
+          'bugfix',
+          ({ agent }) => agent['mode'] === 'bypassPermissions',
+        );
+      },
+      server(),
+    ));
+
+  test("a child's mode moved goes up with the next report", () =>
+    onAcp(
+      ['--tester-plays', 'status'],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        await reported(
+          client,
+          'tester',
+          ({ agent }) => agent['mode'] === 'plan',
+        );
+      },
+      server(),
+    ));
+
+  test('a cancel of a long-lived child stops its turn; it stays open', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentcost'));
+
+        const { sessionId: composite } = await reported(
+          client,
+          'parser',
+          ({ state }) => state.state === 'running',
+        );
+
+        client.notify('session/cancel', { sessionId: composite });
+
+        const stopped = await reported(
+          client,
+          'parser',
+          ({ state }) => state.state === 'idle',
+        );
+
+        expect(stopped.state.stopReason).toBe('cancelled');
+        expect(stopped.agent['closed']).toBeUndefined();
+      },
+      server(),
+    ));
+
+  test('close_agent says closed, with nothing left to cancel', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentcost'));
+        await client.answerTo(prompt(sessionId, 'agentclose'));
+
+        const closed = await reported(
+          client,
+          'parser',
+          ({ agent }) => agent['closed'] === true,
+        );
+
+        expect(closed.capabilities).toBeUndefined();
+      },
+      server(),
+    ));
+
+  test("a task's permission goes under its composite id; its answer reaches it", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'taskstays');
+        const ask = await asked(client, PERMISSION);
+
+        expect(String(ask.params?.sessionId).startsWith(`${sessionId}/`)).toBe(
+          true,
+        );
+
+        client.respond(ask.id, allowing(ask));
+        client.notify('session/cancel', { sessionId });
+
+        await client.answerTo(running);
+      },
+      server(),
+    ));
+
+  test("a task's form (taskask) goes under its composite id, and is answered", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'taskask');
+        const ask = await asked(client, 'elicitation/create');
+
+        expect(String(ask.params?.sessionId).startsWith(`${sessionId}/`)).toBe(
+          true,
+        );
+
+        client.respond(ask.id, { action: 'cancel' });
+
+        await client.answerTo(running);
+      },
+      server(),
+    ));
+
+  test('a task says it can be cancelled, and a cancel ends it alone', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const tasks = () =>
+          client
+            .updates(sessionId)
+            .filter((update) => update.sessionUpdate === 'subagent_update');
+
+        await client.answerTo(prompt(sessionId, 'tasklong'));
+        await until(() => tasks().length > 0, 20_000);
+
+        const [started] = tasks();
+
+        expect(started?.capabilities).toEqual({ cancel: {} });
+
+        client.notify('session/cancel', {
+          sessionId: started?.sessionId as string,
+        });
+
+        await until(() =>
+          tasks().some(
+            (update) =>
+              (update.state as { stopReason?: string }).stopReason ===
+              'cancelled',
+          ),
+        );
+      },
+      server(),
+    ));
+
+  for (const method of ['session/resume', 'session/load']) {
+    test(`main's agent dying closes its children; ${method} names them`, async () => {
+      const opened: Session[] = [];
+      const pids: number[] = [];
+
+      await onAcp(
+        [],
+        async ({ client, cwd, newSession, prompt, stateDir }) => {
+          const sessionId = await newSession();
+
+          await client.answerTo(prompt(sessionId, 'agentcost'));
+          await reported(
+            client,
+            'parser',
+            ({ state }) => state.state === 'running',
+          );
+          await recorded(stateDir, sessionId, 'result');
+
+          const [pid] = opened[0]!.agentPids;
+
+          process.kill(pid!, 'SIGKILL');
+
+          await reported(
+            client,
+            'parser',
+            ({ agent }) => agent['closed'] === true,
+          );
+          await until(() => !pids.some(groupAlive));
+
+          const { result, error } = await client.request(method, {
+            sessionId,
+            cwd,
+            mcpServers: [],
+          });
+
+          expect(error).toBeUndefined();
+          expect(
+            (result?._meta as Record<string, unknown>)['chord/left_open'],
+          ).toEqual([expect.objectContaining({ name: 'parser' })]);
+        },
+        {
+          ...server(),
+          open: async (options) => {
+            const session = await openSession(options);
+
+            opened.push(session);
+            pids.push(...session.agentPids);
+
+            return session;
+          },
+        },
+      );
+    });
+  }
+
+  test("dimcode's notice covers a child, once", () =>
+    onAcp(
+      ['--dimcode-permission', 'full-access', '--child-runtime', 'dimcode'],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentother'));
+
+        await until(() => kinds(client, sessionId).includes('notice'), 20_000);
+
+        expect(
+          kinds(client, sessionId).filter((kind) => kind === 'notice'),
+        ).toHaveLength(1);
+        expect(lines.length).toBeGreaterThan(0);
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace([
+              '--dimcode-permission',
+              'full-access',
+              '--child-runtime',
+              'dimcode',
+            ]),
+            runtimes: ['fake', 'dimcode'],
+          }),
       },
     ));
 });

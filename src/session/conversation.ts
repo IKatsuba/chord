@@ -2620,12 +2620,18 @@ export class Conversation {
 
   /** A permission waiting, as the agent asked it, for one who passes it on. */
   permissionRequest(id: string): PendingPermission | undefined {
-    return this.#permissions.get(id)?.request;
+    return (
+      this.#permissions.get(id)?.request ??
+      this.#foreign.get(id)?.permissionRequest(id)
+    );
   }
 
   /** A form or link waiting, as the agent asked it, for one who passes it on. */
   elicitationRequest(id: string): PendingElicitation | undefined {
-    return this.#elicitations.get(id)?.request;
+    return (
+      this.#elicitations.get(id)?.request ??
+      this.#foreign.get(id)?.elicitationRequest(id)
+    );
   }
 
   #withdrawAsks(): void {

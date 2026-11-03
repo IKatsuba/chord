@@ -19,10 +19,11 @@ import {
   type ResumeSessionRequest,
   type SessionNotification,
   type SessionUpdate,
+  type StopReason,
   type Usage,
 } from '@agentclientprotocol/sdk/unstable';
 import { type AcpRequest, connectAgentApp } from './acp/agent_app.ts';
-import { foldEvent } from './acp/host_fold.ts';
+import { foldEvent, NO_FOLD } from './acp/host_fold.ts';
 import { seeingWrites } from './acp/stdio.ts';
 import {
   NO_TURNS,
@@ -40,6 +41,7 @@ import type {
   Conversation,
   ConversationEvent,
 } from './session/conversation.ts';
+import type { AgentOption } from './session/config.ts';
 import {
   createLeaving,
   type LeaveExit,
@@ -63,10 +65,14 @@ import {
   stepWords,
 } from './session/start_failure.ts';
 import {
+  type AgentReport,
+  agentStateOf,
+  agentUpdate,
   aliasFor,
   answeredConfig,
   asksIn,
   childOf,
+  childSession,
   configChange,
   configSetter,
   elicitationReplyOf,
@@ -80,7 +86,12 @@ import {
   type UpstreamSession,
   upstreamSession,
 } from './session/upstream.ts';
-import type { TurnResult } from './session/transcript/types.ts';
+import type {
+  LeftOpen,
+  PlanWait,
+  TurnResult,
+} from './session/transcript/types.ts';
+import { agentOf, isLead } from './session/window_agents.ts';
 
 /** The `_meta` key chord says its own of ACP under. */
 const ACP_META = 'chord/acp';
@@ -136,6 +147,27 @@ export interface AcpRun {
   leave(reason: LeaveReason): Promise<void>;
 }
 
+/** A long-lived child of a session, as the client knows it. */
+interface ChildRoute {
+  /** Its immediate parent's id: main's, or its lead's. */
+  readonly parent: string;
+  readonly upstreamId: string;
+  /** None until it is up. */
+  upstream?: UpstreamSession;
+  stopReason?: StopReason;
+  gone?: string;
+  failed?: string;
+  /** What was last said of it, and how, so only a change goes up. */
+  told?: AgentReport;
+  sent?: string;
+}
+
+/** Whoever an ask comes from: main, or a long-lived child. */
+interface Asker {
+  readonly conversation: Conversation;
+  readonly upstream?: UpstreamSession | undefined;
+}
+
 /** A session this process holds, from its start until its agent is gone. */
 interface Entry {
   readonly host: ReturnType<typeof createAgentsHost>;
@@ -143,6 +175,12 @@ interface Entry {
   readonly conversation: Conversation;
   /** Main's key in its host. */
   readonly key: number | undefined;
+  /** What the host reads back of each of its sessions. */
+  readonly folds: Map<number, FoldedSession>;
+  /** Its long-lived children, by their keys. */
+  readonly routes: Map<number, ChildRoute>;
+  /** Who was left open when the session was left, for its answer to name. */
+  leftOpen?: readonly LeftOpen[];
   /** Its name on stderr, for a way out it holds up. */
   readonly name: string;
   /** None until it is up. */
@@ -216,6 +254,10 @@ export function runAcp(options: AcpOptions): AcpRun {
 
   const closeEntry = (entry: Entry): Promise<void> => {
     entry.host.closeRuntimes();
+
+    for (const key of [...entry.routes.keys()]) {
+      tellClosed(entry, key);
+    }
 
     entry.closing ??= entry.host.sessions
       .closeAll()
@@ -331,23 +373,22 @@ export function runAcp(options: AcpOptions): AcpRun {
     }
   };
 
-  const askPermission = (entry: Entry, id: string): void => {
-    const { conversation, upstream } = entry;
+  const askPermission = (
+    { conversation, upstream }: Asker,
+    id: string,
+    subagentId: string | undefined,
+  ): void => {
     const request = conversation.permissionRequest(id);
 
-    if (upstream === undefined) {
+    if (request === undefined || upstream === undefined) {
       return;
     }
 
-    // A task's: it holds its own, and must not wait unseen.
-    if (request === undefined) {
-      say(`chord: refused a task's permission`);
-      conversation.reject(id);
+    // A task's own agent asks under its own session, which the client knows
+    // by the task's id.
+    const named = subagentId ?? request.sessionId;
 
-      return;
-    }
-
-    if (!asksIn(upstream, request.sessionId)) {
+    if (!asksIn(upstream, named)) {
       say(`chord: refused a permission for a session it does not know`);
       conversation.reject(id);
 
@@ -355,7 +396,10 @@ export function runAcp(options: AcpOptions): AcpRun {
     }
 
     // It can name no session that client knows, and must not wait unseen.
-    if (request.sessionId !== upstream.agentId && !capabilities?.subagents) {
+    if (
+      (upstream.nested === true || named !== upstream.agentId) &&
+      !capabilities?.subagents
+    ) {
       say(
         `chord: refused a subagent's permission: the client takes no subagents`,
       );
@@ -367,7 +411,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     ask<RequestPermissionResponse>(
       id,
       'session/request_permission',
-      { ...request.raw, sessionId: upstreamIdOf(upstream, request.sessionId) },
+      { ...request.raw, sessionId: upstreamIdOf(upstream, named) },
       (response) => {
         const answer = permissionAnswerOf(request.options, response);
 
@@ -380,29 +424,29 @@ export function runAcp(options: AcpOptions): AcpRun {
     );
   };
 
-  const askElicitation = (entry: Entry, id: string): void => {
-    const { conversation, upstream } = entry;
+  const askElicitation = (
+    { conversation, upstream }: Asker,
+    id: string,
+    subagentId: string | undefined,
+  ): void => {
     const request = conversation.elicitationRequest(id);
 
-    if (upstream === undefined) {
+    if (request === undefined || upstream === undefined) {
       return;
     }
 
-    // A task's: it holds its own, and must not wait unseen.
-    if (request === undefined) {
-      conversation.answer(id, { action: 'cancel' });
-
-      return;
-    }
-
-    const { sessionId } = request;
+    const sessionId =
+      request.sessionId === undefined
+        ? undefined
+        : (subagentId ?? request.sessionId);
 
     // One scoped to a request names none of the client's; a subagent's, none
     // that client knows.
     if (
       sessionId === undefined ||
       !asksIn(upstream, sessionId) ||
-      (sessionId !== upstream.agentId && !capabilities?.subagents)
+      ((upstream.nested === true || sessionId !== upstream.agentId) &&
+        !capabilities?.subagents)
     ) {
       conversation.answer(id, { action: 'cancel' });
 
@@ -417,6 +461,118 @@ export function runAcp(options: AcpOptions): AcpRun {
     );
   };
 
+  const askPlan = ({ conversation, upstream }: Asker, plan: PlanWait): void => {
+    // It can name no session that client knows, and is never a yes.
+    if (upstream?.nested === true && !capabilities?.subagents) {
+      say(`chord: refused a subagent's plan: the client takes no subagents`);
+      conversation.answerPlan(plan.id, { type: 'cancelled' });
+
+      return;
+    }
+
+    ask<RequestPermissionResponse>(
+      plan.id,
+      'session/request_permission',
+      planPermission(upstream?.upstreamId ?? '', plan),
+      (response) =>
+        conversation.answerPlan(plan.id, planAnswerOf(plan, response)),
+    );
+  };
+
+  /** A child as the client knows it, once it is placed in its host. */
+  const routeOf = (entry: Entry, key: number): ChildRoute | undefined => {
+    const had = entry.routes.get(key);
+
+    if (had !== undefined) {
+      return had;
+    }
+
+    const { agents } = entry.host.sessions;
+    const child = agentOf(agents, key)?.child;
+    const main = entry.upstream?.upstreamId;
+
+    if (child === undefined || main === undefined) {
+      return undefined;
+    }
+
+    const lead = agents.children.find((each) => each.id === child.lead);
+    const parent =
+      lead === undefined
+        ? main
+        : (routeOf(entry, lead.key)?.upstreamId ?? main);
+    const route: ChildRoute = {
+      parent,
+      upstreamId: `${parent}/${child.id}`,
+    };
+
+    entry.routes.set(key, route);
+
+    return route;
+  };
+
+  /** What chord says of a child, if it has changed. */
+  const report = (entry: Entry, key: number): void => {
+    const route = routeOf(entry, key);
+    const child = agentOf(entry.host.sessions.agents, key)?.child;
+
+    if (route === undefined || child === undefined) {
+      return;
+    }
+
+    const session = child.conversation.session;
+
+    route.told = {
+      parent: route.parent,
+      upstreamId: route.upstreamId,
+      title: child.name,
+      state:
+        route.gone === undefined
+          ? agentStateOf(entry.folds.get(key) ?? NO_FOLD, route.stopReason)
+          : { state: 'unknown' },
+      runtime: child.runtime,
+      model: session?.models()?.current ?? child.model,
+      effort: session?.efforts()?.current,
+      mode: session?.modes()?.current ?? child.mode,
+      team: child.team,
+      role: isLead(child)
+        ? 'lead'
+        : child.lead === undefined
+          ? undefined
+          : 'member',
+      gone: route.gone,
+      failed: route.failed,
+    };
+
+    const notification = agentUpdate(capabilities ?? {}, route.told);
+    const said = JSON.stringify(notification);
+
+    if (notification !== undefined && said !== route.sent) {
+      route.sent = said;
+
+      send(notification);
+    }
+  };
+
+  /** A child gone: said once, under what was last said of it. */
+  const tellClosed = (entry: Entry, key: number): void => {
+    const told = entry.routes.get(key)?.told;
+
+    entry.routes.delete(key);
+
+    if (told === undefined) {
+      return;
+    }
+
+    const notification = agentUpdate(capabilities ?? {}, {
+      ...told,
+      closed: true,
+    });
+
+    if (notification !== undefined) {
+      send(notification);
+    }
+  };
+
   /** What chord carries on past: stderr always, and `notice` for who takes it. */
   const warn = (entry: Entry, message: string): void => {
     say(`chord: ${message}`);
@@ -427,13 +583,16 @@ export function runAcp(options: AcpOptions): AcpRun {
     });
   };
 
-  const tellDimcode = (entry: Entry): void => {
-    const session = entry.conversation.session;
-
+  /** dimcode's notice, once a session's, if `runtime` has it at risk. */
+  const tellDimcode = (
+    entry: Entry,
+    runtime: string,
+    options: readonly AgentOption[] | undefined,
+  ): void => {
     if (
       entry.noticed ||
-      session === undefined ||
-      !dimcodeAtRisk(agent, session.options())
+      options === undefined ||
+      !dimcodeAtRisk(runtime, options)
     ) {
       return;
     }
@@ -587,6 +746,9 @@ export function runAcp(options: AcpOptions): AcpRun {
         ...(session === undefined || session.heldBack.length === 0
           ? {}
           : { 'chord/held_back': session.heldBack }),
+        ...(entry.leftOpen === undefined
+          ? {}
+          : { 'chord/left_open': entry.leftOpen }),
       },
     });
 
@@ -594,12 +756,16 @@ export function runAcp(options: AcpOptions): AcpRun {
       release();
     }
 
-    tellDimcode(entry);
+    tellDimcode(entry, agent, entry.conversation.session?.options());
   };
 
   const heard = (entry: Entry, event: ConversationEvent): void => {
     if (entry.replaying) {
       entry.past?.push(event);
+
+      if (event.type === 'left_open') {
+        entry.leftOpen = event.agents;
+      }
 
       return;
     }
@@ -617,7 +783,7 @@ export function runAcp(options: AcpOptions): AcpRun {
         break;
       case 'options':
         tellConfig(entry);
-        tellDimcode(entry);
+        tellDimcode(entry, agent, entry.conversation.session?.options());
 
         break;
       case 'prompt':
@@ -669,28 +835,27 @@ export function runAcp(options: AcpOptions): AcpRun {
 
         break;
       case 'permission_requested':
-        once(entry, () => askPermission(entry, event.permission.id));
+        once(entry, () =>
+          askPermission(
+            entry,
+            event.permission.id,
+            event.permission.subagentId,
+          ),
+        );
 
         break;
       case 'elicitation_requested':
-        once(entry, () => askElicitation(entry, event.elicitation.id));
+        once(entry, () =>
+          askElicitation(
+            entry,
+            event.elicitation.id,
+            event.elicitation.subagentId,
+          ),
+        );
 
         break;
       case 'plan_requested':
-        once(entry, () => {
-          const { plan } = event;
-
-          ask<RequestPermissionResponse>(
-            plan.id,
-            'session/request_permission',
-            planPermission(entry.upstream?.upstreamId ?? '', plan),
-            (response) =>
-              entry.conversation.answerPlan(
-                plan.id,
-                planAnswerOf(plan, response),
-              ),
-          );
-        });
+        once(entry, () => askPlan(entry, event.plan));
 
         break;
       case 'permission_settled':
@@ -733,34 +898,111 @@ export function runAcp(options: AcpOptions): AcpRun {
     }
   };
 
-  /**
-   * A long-lived child's event. Nothing of it goes up yet, and what it asks is
-   * refused, as it could wait unseen.
-   */
+  /** A long-lived child's event, as the client hears of it. */
   const childHeard = (
     entry: Entry,
     key: number,
     event: ConversationEvent,
   ): void => {
+    const route = routeOf(entry, key);
     const child = entry.host.conversationAt(key);
 
+    if (route === undefined || child === undefined) {
+      return;
+    }
+
+    const asker = (): Asker => ({
+      conversation: child,
+      upstream: route.upstream,
+    });
+    const up = (update: SessionUpdate, subagentId?: string) => {
+      if (route.upstream === undefined) {
+        return;
+      }
+
+      const mapped = mapUpdate(
+        route.upstream,
+        capabilities ?? {},
+        update,
+        subagentId,
+      );
+
+      route.upstream = mapped.session;
+
+      if (mapped.notification !== undefined) {
+        send(mapped.notification);
+      }
+    };
+
     switch (event.type) {
+      case 'connected':
+        route.upstream = childSession(event.sessionId, route.upstreamId);
+
+        break;
+      case 'cleared':
+        delete route.upstream;
+        delete route.stopReason;
+
+        break;
+      case 'connect_failed':
+        route.failed = event.message;
+
+        break;
+      case 'disconnected':
+        route.gone = 'exited';
+
+        break;
+      case 'update':
+        up(event.update, event.subagentId);
+
+        break;
+      case 'prompt':
+        delete route.stopReason;
+
+        up(messageChunk(route.upstreamId, event.text, event.from).update);
+
+        break;
+      case 'result':
+        if (event.result.status !== 'failed') {
+          route.stopReason = event.result.stopReason as StopReason;
+        }
+
+        break;
       case 'permission_requested':
-        say(`chord: refused a child agent's permission`);
-        child?.reject(event.permission.id);
+        once(entry, () =>
+          askPermission(
+            asker(),
+            event.permission.id,
+            event.permission.subagentId,
+          ),
+        );
 
         break;
       case 'elicitation_requested':
-        child?.answer(event.elicitation.id, { action: 'cancel' });
+        once(entry, () =>
+          askElicitation(
+            asker(),
+            event.elicitation.id,
+            event.elicitation.subagentId,
+          ),
+        );
 
         break;
       case 'plan_requested':
-        child?.answerPlan(event.plan.id, { type: 'cancelled' });
+        once(entry, () => askPlan(asker(), event.plan));
+
+        break;
+      case 'permission_settled':
+      case 'elicitation_settled':
+      case 'plan_settled':
+        withdrawn(event.id);
 
         break;
       default:
         break;
     }
+
+    report(entry, key);
   };
 
   const openEntry = (
@@ -818,14 +1060,32 @@ export function runAcp(options: AcpOptions): AcpRun {
         closingHeard: (key, event) => {
           if (key === entry.key) {
             heard(entry, event);
+          } else if (
+            // A child told closed has nothing more to say; what it asked
+            // is still out with the client until it is withdrawn.
+            event.type === 'permission_settled' ||
+            event.type === 'elicitation_settled' ||
+            event.type === 'plan_settled'
+          ) {
+            withdrawn(event.id);
           }
         },
         told: (event) => {
-          if (event.type === 'session_closed') {
+          if (event.type === 'agent_opened') {
+            // Placed in the host only once the call that told this returns.
+            queueMicrotask(() => report(entry, event.key));
+          } else if (event.type === 'session_closed') {
+            tellClosed(entry, event.key);
             folds.delete(event.key);
           }
         },
         stateOf: (key) => folds.get(key),
+        // Main's goes by `heard`, which has its options as they stand.
+        watched: (id, runtime, event) => {
+          if (event.type === 'options' && id !== `main:${entry.key}`) {
+            tellDimcode(entry, runtime, event.options);
+          }
+        },
       },
     );
 
@@ -834,6 +1094,8 @@ export function runAcp(options: AcpOptions): AcpRun {
     const entry: Entry = {
       host,
       key,
+      folds,
+      routes: new Map(),
       conversation: host.sessions.agents.main!.conversation,
       name: `session ${starts}`,
       live: false,
@@ -1004,6 +1266,50 @@ export function runAcp(options: AcpOptions): AcpRun {
     }
 
     return entry;
+  };
+
+  /**
+   * A cancel of a child of `entry`, if `sessionId` names one: a long-lived one's
+   * turn stops and it stays open, a task of chord's ends, and an agent's own
+   * subagent is stopped by its agent.
+   */
+  const cancelledIn = (entry: Entry, sessionId: string): boolean => {
+    const askers: Asker[] = [entry];
+
+    for (const [key, route] of entry.routes) {
+      const child = entry.host.conversationAt(key);
+
+      if (route.upstreamId === sessionId) {
+        child?.interrupt();
+
+        return true;
+      }
+
+      if (child !== undefined) {
+        askers.push({ conversation: child, upstream: route.upstream });
+      }
+    }
+
+    for (const { conversation, upstream } of askers) {
+      const id =
+        upstream === undefined ? undefined : childOf(upstream, sessionId);
+
+      if (id !== undefined) {
+        const task = conversation.task(id);
+
+        if (task === undefined) {
+          void conversation.stopSubagent(id).catch(() => {
+            // The subagent may have ended before the stop landed.
+          });
+        } else {
+          task.cancel('x');
+        }
+
+        return true;
+      }
+    }
+
+    return false;
   };
 
   /** A set's refusal as that request's error, the agent's words kept. */
@@ -1190,16 +1496,7 @@ export function runAcp(options: AcpOptions): AcpRun {
         }
 
         for (const each of sessions.values()) {
-          const child =
-            each.upstream === undefined
-              ? undefined
-              : childOf(each.upstream, sessionId);
-
-          if (child !== undefined) {
-            void each.conversation.stopSubagent(child).catch(() => {
-              // The subagent may have ended before the stop landed.
-            });
-
+          if (cancelledIn(each, sessionId)) {
             return;
           }
         }

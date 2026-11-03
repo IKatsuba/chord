@@ -198,6 +198,13 @@ export const AUTO_MODE =
   ARGS.includes('--auto-mode') || process.env.CHORD_FAKE_AUTO_MODE === '1';
 
 /**
+ * Whether it also offers Claude's `bypassPermissions` mode, `--bypass-mode`
+ * or `CHORD_FAKE_BYPASS_MODE=1`, for a team file that asks for it.
+ */
+export const BYPASS_MODE =
+  ARGS.includes('--bypass-mode') || process.env.CHORD_FAKE_BYPASS_MODE === '1';
+
+/**
  * A person's words for scenarios' names, with `--said <json>` or
  * `CHORD_FAKE_SAID`, `{ "<scenario>": "<words>" }`: a child is opened on
  * the words, and a prompt that is the words plays the scenario, so a

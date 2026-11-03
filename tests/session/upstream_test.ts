@@ -286,6 +286,7 @@ describe('what chord says of a long-lived child', () => {
     runtime: 'codex',
     model: 'gpt',
     effort: undefined,
+    mode: 'bypassPermissions',
     team: 'bugfix',
     role: 'member' as const,
   };
@@ -303,6 +304,7 @@ describe('what chord says of a long-lived child', () => {
           'chord/agent': {
             runtime: 'codex',
             model: 'gpt',
+            mode: 'bypassPermissions',
             team: 'bugfix',
             role: 'member',
           },

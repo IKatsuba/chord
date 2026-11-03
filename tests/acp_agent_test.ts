@@ -2316,6 +2316,36 @@ describe('children', () => {
       server(),
     ));
 
+  test('a child cleared after it died reports afresh, under the same id', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentexit'));
+
+        const dead = await reported(
+          client,
+          'parser',
+          ({ agent }) => agent['gone'] === 'exited',
+        );
+
+        expect(dead.state.state).toBe('unknown');
+
+        await client.answerTo(prompt(sessionId, 'agentclearonly'));
+
+        const fresh = await reported(
+          client,
+          'parser',
+          ({ agent, state }) =>
+            agent['gone'] === undefined && state.state === 'idle',
+        );
+
+        expect(fresh.sessionId).toBe(dead.sessionId);
+      },
+      server(),
+    ));
+
   test('close_agent says closed, with nothing left to cancel', () =>
     onAcp(
       [],
@@ -2371,6 +2401,48 @@ describe('children', () => {
         client.respond(ask.id, { action: 'cancel' });
 
         await client.answerTo(running);
+      },
+      server(),
+    ));
+
+  test("a task's form to a client without subagents is cancelled, on stderr", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'taskask'));
+
+        await until(
+          () => lines.some((line) => line.includes("subagent's form")),
+          20_000,
+        );
+
+        expect(
+          client.messages.some((m) => m.method === 'elicitation/create'),
+        ).toBe(false);
+      },
+      { ...server(), capabilities: {} },
+    ));
+
+  test('what a child says before it is up goes up after, under its composite id', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        // A member's model and mode are set before `connected`, while the
+        // fake's commands are already on their way.
+        const { sessionId: composite } = await reported(client, 'tester');
+
+        await until(
+          () => kinds(client, composite).includes('available_commands_update'),
+          20_000,
+        );
       },
       server(),
     ));

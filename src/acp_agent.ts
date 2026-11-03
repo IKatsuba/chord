@@ -154,6 +154,8 @@ interface ChildRoute {
   readonly upstreamId: string;
   /** None until it is up. */
   upstream?: UpstreamSession;
+  /** What it said or asked before that, which goes up in order then. */
+  held: (() => void)[];
   stopReason?: StopReason;
   gone?: string;
   failed?: string;
@@ -440,14 +442,19 @@ export function runAcp(options: AcpOptions): AcpRun {
         ? undefined
         : (subagentId ?? request.sessionId);
 
-    // One scoped to a request names none of the client's; a subagent's, none
-    // that client knows.
+    // One scoped to a request names none of the client's.
+    if (sessionId === undefined || !asksIn(upstream, sessionId)) {
+      conversation.answer(id, { action: 'cancel' });
+
+      return;
+    }
+
+    // A subagent's names none that client knows, and must not wait unseen.
     if (
-      sessionId === undefined ||
-      !asksIn(upstream, sessionId) ||
-      ((upstream.nested === true || sessionId !== upstream.agentId) &&
-        !capabilities?.subagents)
+      (upstream.nested === true || sessionId !== upstream.agentId) &&
+      !capabilities?.subagents
     ) {
+      say(`chord: refused a subagent's form: the client takes no subagents`);
       conversation.answer(id, { action: 'cancel' });
 
       return;
@@ -503,6 +510,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     const route: ChildRoute = {
       parent,
       upstreamId: `${parent}/${child.id}`,
+      held: [],
     };
 
     entry.routes.set(key, route);
@@ -915,6 +923,15 @@ export function runAcp(options: AcpOptions): AcpRun {
       conversation: child,
       upstream: route.upstream,
     });
+    // A session's subscribers hear what it buffered ahead of `connected`.
+    const whenUp = (go: () => void) => {
+      if (route.upstream === undefined) {
+        route.held.push(go);
+      } else {
+        go();
+      }
+    };
+
     const up = (update: SessionUpdate, subagentId?: string) => {
       if (route.upstream === undefined) {
         return;
@@ -938,10 +955,19 @@ export function runAcp(options: AcpOptions): AcpRun {
       case 'connected':
         route.upstream = childSession(event.sessionId, route.upstreamId);
 
+        for (const go of route.held.splice(0)) {
+          go();
+        }
+
         break;
+      // A fresh session under the same identity: nothing of the last holds.
       case 'cleared':
         delete route.upstream;
         delete route.stopReason;
+        delete route.gone;
+        delete route.failed;
+
+        route.held = [];
 
         break;
       case 'connect_failed':
@@ -953,13 +979,15 @@ export function runAcp(options: AcpOptions): AcpRun {
 
         break;
       case 'update':
-        up(event.update, event.subagentId);
+        whenUp(() => up(event.update, event.subagentId));
 
         break;
       case 'prompt':
         delete route.stopReason;
 
-        up(messageChunk(route.upstreamId, event.text, event.from).update);
+        whenUp(() =>
+          up(messageChunk(route.upstreamId, event.text, event.from).update),
+        );
 
         break;
       case 'result':
@@ -969,27 +997,31 @@ export function runAcp(options: AcpOptions): AcpRun {
 
         break;
       case 'permission_requested':
-        once(entry, () =>
-          askPermission(
-            asker(),
-            event.permission.id,
-            event.permission.subagentId,
+        whenUp(() =>
+          once(entry, () =>
+            askPermission(
+              asker(),
+              event.permission.id,
+              event.permission.subagentId,
+            ),
           ),
         );
 
         break;
       case 'elicitation_requested':
-        once(entry, () =>
-          askElicitation(
-            asker(),
-            event.elicitation.id,
-            event.elicitation.subagentId,
+        whenUp(() =>
+          once(entry, () =>
+            askElicitation(
+              asker(),
+              event.elicitation.id,
+              event.elicitation.subagentId,
+            ),
           ),
         );
 
         break;
       case 'plan_requested':
-        once(entry, () => askPlan(asker(), event.plan));
+        whenUp(() => once(entry, () => askPlan(asker(), event.plan)));
 
         break;
       case 'permission_settled':

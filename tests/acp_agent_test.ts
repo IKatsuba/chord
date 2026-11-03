@@ -3660,6 +3660,51 @@ describe('agents/send and agents/close (CHD-575)', () => {
       server(),
     ));
 
+  test('a child whose start failed is -32002, and still closes', () => {
+    let opens = 0;
+
+    return onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentcost'));
+
+        const parser = await childNamed(client, 'parser');
+
+        await until(
+          () =>
+            client.messages.some(
+              (message) =>
+                String(JSON.stringify(message.params?.update)).includes(
+                  '"failed":',
+                ) &&
+                (message.params?.update as { sessionId?: string }).sessionId ===
+                  parser,
+            ),
+          20_000,
+        );
+
+        expect((await send(client, parser, 'text')).error?.code).toBe(-32002);
+        expect(
+          (await client.request(CLOSE, { sessionId: parser })).result,
+        ).toEqual({ closed: ['parser'] });
+      },
+      {
+        ...server(),
+        open: (options) => {
+          opens += 1;
+
+          return openSession(
+            opens === 2
+              ? { ...options, agentCommand: ['chord-missing-fixture-command'] }
+              : options,
+          );
+        },
+      },
+    );
+  });
+
   test('a child still starting is not sent to: -32603, nothing held', async () => {
     const gates = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
     const gate = join(gates, 'release');

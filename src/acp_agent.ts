@@ -1424,7 +1424,7 @@ export function runAcp(options: AcpOptions): AcpRun {
           route.gone === undefined &&
           child !== undefined
         ) {
-          return { entry, key, child };
+          return { entry, key, child, route };
         }
       }
     }
@@ -1941,8 +1941,13 @@ export function runAcp(options: AcpOptions): AcpRun {
       sendAgent: ({ params }) => {
         refuseIfClosing();
 
-        const { entry, key, child } = childNamed(params.sessionId);
+        const { entry, key, child, route } = childNamed(params.sessionId);
         const { conversation } = child;
+
+        // Its start failed: nothing will take the words until it is cleared.
+        if (route.failed !== undefined) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
 
         // As in the window, nothing is held for a child not up: the person
         // sends again once it is.

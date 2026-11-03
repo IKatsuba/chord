@@ -1,0 +1,40 @@
+
+
+
+                                ▀▀▄
+                                ▀▀▀▀▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗
+                                ▀▀▀▀▀▀▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗
+                                 ▀▀▀▀▀▀▀▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║
+                                 ▄▀▀▀▀▀▀▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║
+                                ▀▀▀▀▀▀▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝
+                                ▀▀▀▀▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝
+                                ▀▀▀
+
+                                          One terminal for every coding agent.
+                                  v0.67.0 · fake · /tmp/chord-qa.designer-581-u7b/proj
+
+                  ╭──────────────────────────────────────────────────────────────────────────────────╮
+                  │ Resume a session                                                                 │
+                  │ Pick one of fake's earlier sessions to open.                                     │
+                  │                                                                                  │
+                  │ ❯   1.  just now  first line of mine second line of mine                         │
+                  │     2.  just now  a plain prompt, with no aside                                  │
+                  │     3.  just now  <message from="tester · fake"> The person stopped this task    │
+                  │                   before it reported. </message>                                 │
+                  │     4.  just now  <message from="tester · fake"> The person stopped this task    │
+                  │                   before it reported. </message> my words after chord then task  │
+                  │     5.  just now  <message from="tester · fake"> The person stopped this task    │
+                  │                   before it reported. </message> my words after task then chord  │
+                  │     6.  just now  On it. tester is writing a failing test in                     │
+                  │                   tests/parse/tokenize_test.ts; coder waits for it and will edit │
+                  │                   src/parse/tokenize.ts only. I will report when the test fails  │
+                  │                   for the bug's own reason.                                      │
+                  │   ↓ 7.  just now  two asides then my words                                       │
+                  │     … +5 more                                                                    │
+                  │                                                                                  │
+                  │ Enter to resume · Ctrl+a for all directories · Esc to quit                       │
+                  ╰──────────────────────────────────────────────────────────────────────────────────╯
+
+
+
+

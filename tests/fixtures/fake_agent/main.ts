@@ -311,6 +311,9 @@ import {
   ECHO_MESSAGES,
   SAID,
   STEP_MS,
+  ALSO_COMMANDS,
+  CONFIG_DELAY_MS,
+  NO_COMMANDS,
   TITLE_AT_START,
   TOKENS_ONLY,
 } from './options.ts';
@@ -318,7 +321,8 @@ import { COMPACTION } from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
-import { FORMS } from './scenarios/forms.ts';
+import { FORM_SCHEMA } from '../forms.ts';
+import { elicit, FORMS } from './scenarios/forms.ts';
 import { FX } from './scenarios/fx.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
@@ -470,6 +474,8 @@ const SCENARIOS = [
   'askcodexwait',
   'taskask',
   'taskaskstays',
+  'taskaskas',
+  'taskformas',
   'mode',
   'effort',
   'late',
@@ -772,6 +778,34 @@ async function playCommand(
     return 'end_turn';
   }
 
+  // `askas <id>` and `formas <id>` ask under a session of another agent's, as
+  // a task's agent that knew its parent's id could.
+  const passing = /^(ask|form)as (\S+)$/.exec(text);
+
+  if (passing?.[1] === 'form') {
+    return await elicit(turn, {
+      sessionId: passing[2]!,
+      mode: 'form',
+      message: 'Passing as another session',
+      requestedSchema: FORM_SCHEMA,
+    });
+  }
+
+  if (passing?.[1] === 'ask') {
+    const answer = await turn.client.request('session/request_permission', {
+      sessionId: passing[2]!,
+      toolCall: { toolCallId: turn.callId('write') },
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+
+    await turn.say(`Answered: ${JSON.stringify(answer.outcome)}`);
+
+    return 'end_turn';
+  }
+
   const [, name, rest = ''] = /^\/(\S+)\s*(.*)$/s.exec(text) ?? [];
 
   switch (name) {
@@ -947,6 +981,10 @@ function sessionModes(): { modes?: acp.SessionModeState } {
 
 /** Sends the commands just after the reply, as Claude's adapter does. */
 function advertiseCommands(client: Client, sessionId: string): void {
+  if (NO_COMMANDS) {
+    return;
+  }
+
   setTimeout(
     () =>
       void client
@@ -954,7 +992,13 @@ function advertiseCommands(client: Client, sessionId: string): void {
           sessionId,
           update: {
             sessionUpdate: 'available_commands_update',
-            availableCommands: FAKE_COMMANDS,
+            availableCommands: [
+              ...FAKE_COMMANDS,
+              ...ALSO_COMMANDS.map((name) => ({
+                name,
+                description: "The agent's own",
+              })),
+            ],
           },
         })
         .catch(() => {}),
@@ -1450,6 +1494,10 @@ const connection = acp
   .onRequest('session/set_config_option', async ({ params }) => {
     if (HANG === 'config') {
       await never();
+    }
+
+    if (CONFIG_DELAY_MS > 0) {
+      await new Promise((resolve) => setTimeout(resolve, CONFIG_DELAY_MS));
     }
 
     const value = String(params.value);

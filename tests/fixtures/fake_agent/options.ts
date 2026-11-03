@@ -198,6 +198,36 @@ export const AUTO_MODE =
   ARGS.includes('--auto-mode') || process.env.CHORD_FAKE_AUTO_MODE === '1';
 
 /**
+ * Whether it also offers Claude's `bypassPermissions` mode, `--bypass-mode`
+ * or `CHORD_FAKE_BYPASS_MODE=1`, for a team file that asks for it.
+ */
+export const BYPASS_MODE =
+  ARGS.includes('--bypass-mode') || process.env.CHORD_FAKE_BYPASS_MODE === '1';
+
+/** Whether it advertises no slash commands, `--no-commands`. */
+export const NO_COMMANDS =
+  ARGS.includes('--no-commands') || process.env.CHORD_FAKE_NO_COMMANDS === '1';
+
+/**
+ * Commands it offers beside its own, by name, `--also-commands <list>` or
+ * `CHORD_FAKE_ALSO_COMMANDS`: names chord may have too.
+ */
+export const ALSO_COMMANDS = (
+  valueOf('--also-commands', 'CHORD_FAKE_ALSO_COMMANDS') ?? ''
+)
+  .split(',')
+  .filter((name) => name !== '');
+
+/**
+ * How long a config change takes to answer, `--config-delay <ms>` or
+ * `CHORD_FAKE_CONFIG_DELAY`: what it says just after its session opens then
+ * comes while chord still sets it up, ahead of `connected`.
+ */
+export const CONFIG_DELAY_MS = Number(
+  valueOf('--config-delay', 'CHORD_FAKE_CONFIG_DELAY') ?? 0,
+);
+
+/**
  * A person's words for scenarios' names, with `--said <json>` or
  * `CHORD_FAKE_SAID`, `{ "<scenario>": "<words>" }`: a child is opened on
  * the words, and a prompt that is the words plays the scenario, so a

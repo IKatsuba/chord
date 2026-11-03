@@ -770,6 +770,7 @@ describe('the settings tool writes (CHD-568)', () => {
     expect(asked).toStrictEqual([
       {
         title: 'Settings(theme)',
+        detail: `In ${shownFile}: not set becomes "light".`,
         options: [
           {
             optionId: 'yes',

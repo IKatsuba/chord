@@ -10,6 +10,7 @@ import {
   DIMCODE_PERMISSION,
   NO_CONFIG,
   AUTO_MODE,
+  BYPASS_MODE,
   NO_MODES,
   TOKENS_ONLY,
   UNPRICED_MODEL,
@@ -36,6 +37,7 @@ export const AVAILABLE_MODES: acp.SessionMode[] = [
   { id: 'acceptEdits', name: 'Accept edits' },
   { id: 'plan', name: 'Plan' },
   ...(AUTO_MODE ? [{ id: 'auto', name: 'Auto' }] : []),
+  ...(BYPASS_MODE ? [{ id: 'bypassPermissions', name: 'Bypass' }] : []),
 ];
 
 /** Each session's mode. */

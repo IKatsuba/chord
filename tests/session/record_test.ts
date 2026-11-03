@@ -21,6 +21,7 @@ import {
   FileRecording,
   lastTotal,
   readPast,
+  promptLine,
   recordActions,
   type RecordEntry,
   runPasts,
@@ -2918,5 +2919,85 @@ describe("Claude's session messages in a record (CHD-561)", () => {
         announced,
       ]),
     ).toStrictEqual(['tool', 'block']);
+  });
+});
+
+describe("chord's aside ahead of a prompt", () => {
+  const aside = (text: string) => `<message from="chord">\n${text}\n</message>`;
+  const replayedPrompt = (prompt: string) =>
+    recordActions([
+      { type: 'prompt', turnId: 't', at: 1, prompt, images: 0 },
+    ] as never).find((action) => action.type === 'prompt') as
+      { text: string; from?: unknown } | undefined;
+
+  test("is not the person's words, one or several", () => {
+    expect(replayedPrompt(`${aside('A run.')}\n\nhello`)?.text).toBe('hello');
+    expect(
+      replayedPrompt(`${aside('A run.')}\n\n${aside('Another.')}\n\nhello`)
+        ?.text,
+    ).toBe('hello');
+  });
+
+  test('a message from chord alone is still a message', () => {
+    expect(replayedPrompt(aside('Your child ended.'))).toMatchObject({
+      text: 'Your child ended.',
+      from: { name: 'chord' },
+    });
+  });
+
+  test('a prompt that is only an aside reads as that message, not as nothing', () => {
+    const prompt = `${aside('A run.')}\n\n`;
+
+    expect(replayedPrompt(prompt)).toMatchObject({
+      text: 'A run.',
+      from: { name: 'chord' },
+    });
+    expect(promptLine(prompt)).toBe('A run.');
+    expect(
+      replayedPrompt(`${aside('A run.')}\n\n${aside('Another.')}\n\n`)?.text,
+    ).toBe('A run.');
+  });
+
+  const TASK = '<message from="tester · fake">\nStopped.\n</message>';
+
+  test("goes after a task's too; the task's stays, on either side of it", () => {
+    expect(
+      replayedPrompt(`${TASK}\n\n${aside('A run.')}\n\nmy words`)?.text,
+    ).toBe(`${TASK}\n\nmy words`);
+    expect(
+      replayedPrompt(`${aside('A run.')}\n\n${TASK}\n\nmy words`)?.text,
+    ).toBe(`${TASK}\n\nmy words`);
+  });
+
+  test("a task's alone ahead of a prompt stays, as it did", () => {
+    const prompt = `${TASK}\n\nmy words`;
+
+    expect(replayedPrompt(prompt)?.text).toBe(prompt);
+  });
+
+  test("a person's paste under another sender's name stays", () => {
+    const prompt = '<message from="someone">\nPasted.\n</message>\n\nmy words';
+
+    expect(replayedPrompt(prompt)?.text).toBe(prompt);
+  });
+
+  test('shell output after it still reads as shell output', () => {
+    const replayed = recordActions([
+      {
+        type: 'prompt',
+        turnId: 't',
+        at: 1,
+        prompt: `${aside('A run.')}\n\nhello`,
+        images: 0,
+      },
+    ] as never);
+
+    expect(replayed.some((action) => action.type === 'shell_replayed')).toBe(
+      false,
+    );
+  });
+
+  test("the title a list shows is the person's", () => {
+    expect(promptLine(`${aside('A run.')}\n\nhello there`)).toBe('hello there');
   });
 });

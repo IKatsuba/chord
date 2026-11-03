@@ -116,6 +116,11 @@ describe('CHD-561 tester: standard Codex subagents in the window', () => {
             await window.press('x');
             await window.shows('this agent offers no stop');
             await until('the child offers cancellation', () => offered);
+            await until(
+              'the false refusal clears',
+              () => !window.frame().includes('this agent offers no stop'),
+            );
+            expect(window.frame()).toContain('x to stop');
             await window.press('x');
             await window.shows('It stopped, and the turn goes on.');
             expect(window.frame()).not.toContain('Interrupted by user');

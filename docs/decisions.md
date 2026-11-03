@@ -7945,3 +7945,71 @@ on each render, captured `replayed` fills the first render's Map, and
 `heard` reads the latest render's. After a re-render, replay events go one
 by one and `in_session_past` is not sent. By source reading, `/resume` in a
 running window hits this; it is not confirmed by a run.
+
+## 2026-11-03 — CHD-581: children, teams and commands over ACP
+
+Each upstream session owns an `AgentsHost` and a synchronous transcript store
+for `stateOf`; the window keeps its render-timed `allNow`. Hosts share chord's
+MCP server, resource readers and settings-box claim. Main takes the client's
+MCP servers over settings; children take settings' only. The existing SDK,
+host, reducer and command parser fit; no replacement protocol helper is added.
+The design's 400-line estimate became about 700 added lines in the ACP driver.
+The per-session and per-child transcript fold adds unmeasured memory use.
+
+Children use composite ids, looked up rather than parsed, and
+`subagent_update` on their immediate parent. The owner's `chord/agent` fields
+include `mode` alongside runtime, model, effort, team, role, gone, failed and
+closed: reported state only, with no permission policy. Chord's own asks carry
+a title and content. Refusal stays per place: without `subagents`, child traffic
+is dropped and each child's permission, form or plan ask is refused with a
+stderr line. Tools and commands remain available. A task's permission claiming
+its parent's session id is refused; its form is routed under the task's id and
+forwarded to a client declaring `subagents`. A permission can still claim another
+announced subagent of that session or a sibling's id. An agent announcing a
+subagent under a child's id can mislead about state only, without gaining
+control of that child.
+
+Only `/team` and `/new` are chord's, and chord's wins a shared name. Their list
+is merged on the way out, including replay and agents that announce none;
+records keep the agent's list. Commands run immediately, even during a turn,
+and return text marked `chord/command` then `end_turn`; refusals use the same
+shape. `/team new` alone is an agent turn. `/new` opens an idle child, reached
+now through main's `send_message`. Selected-run receipts require the window.
+Command text may quote repository files; a client treats it as untrusted agent
+text. Each file-sourced field stays on one line, not rows supplied by a file.
+The lead is named by its run, without the design's `@lead-1`.
+
+A run answers once started, with no prompt pending for its work, asks or
+reports. A lead's report starts a main turn that costs money. Cancellation
+routes by kind: interrupt a long-lived child's turn, end a chord task, or ask
+an adapter to stop its subagent. `session/cancel` aborts a run still starting
+but does not stop a running one; `/team stop` does. `$/cancel_request` does not
+cancel a command in flight. Shutdown answers a command still at work once,
+without emitting its late result. For main's death the owner chose option (a),
+close all children: nothing may run that the client can no longer name. The
+window keeps them, as its person can still reach them.
+
+Commands add no record entry of their own. A leading chord aside is removed
+from the person's words on resume, in the picker and on `session/load`; an
+aside alone reads as a chord message. A task's aside stays to avoid hiding
+arbitrary personal text. A person's exact leading chord-message wrapper is
+indistinguishable and is omitted from resumed display and titles too; the raw
+record retains it. No record format changes. Extensions remain CHD-575;
+`extensions` is empty and `chord/agent` is informational, unversioned metadata.
+
+## 2026-11-03 — CHD-581 / CHD-583: wait for the window before stopping
+
+CI on the top layer twice failed `CHD-561 tester: standard Codex subagents in
+the window > x works after an early refusal once the cancel capability arrives`.
+The test pressed `x` when the session subscriber heard of the capability,
+before the window's state had it. `src/ui/app/sessions.ts` refused again;
+`src/ui/background/view.ts`'s `stopNowOffered` then cleared the refusal,
+leaving `x to stop` with nothing stopped. The test now waits for the window,
+as its sibling does. This closes CHD-583.
+
+Kept as a starting point for any later window slowdown: running the file alone
+in clean worktrees, alternating between branch trees and `origin/next`
+`6503b648`, failed 11 of 54 runs on this branch (layer heads: 1/8, 1/8, 3/18;
+top head: 6/20), against 1 of 20 on `origin/next`. Source reading found no
+window-side branch change on that path. The difference remains unexplained;
+its cause was not searched further.

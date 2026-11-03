@@ -1,10 +1,26 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert';
-import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { type AcpOptions, type AcpRun, runAcp } from '../src/acp_agent.ts';
+import process from 'node:process';
+import { fileURLToPath } from 'node:url';
+import {
+  type AcpOptions,
+  type AcpPlace,
+  type AcpRun,
+  runAcp,
+} from '../src/acp_agent.ts';
 import { killSpawnedGroups } from '../src/platform/process.ts';
+import { serveChord } from '../src/server/server.ts';
 import type { LeaveExit } from '../src/session/leaving.ts';
 import {
   parseRecord,
@@ -12,7 +28,7 @@ import {
   type RecordEntry,
 } from '../src/session/record.ts';
 import { openSession, type Session } from '../src/session/session.ts';
-import { readRecords } from '../src/session/sessions.ts';
+import { earlierSessions, readRecords } from '../src/session/sessions.ts';
 import {
   type AcpClient,
   clientOverStreams,
@@ -43,6 +59,20 @@ interface Acp {
   prompt(sessionId: string, text: string): number;
 }
 
+/** A directory that starts the fake on `flags`, with `servers` of its own. */
+function fakePlace(
+  flags: readonly string[] = [],
+  servers: AcpPlace['mcpServers'][number]['server'][] = [],
+): AcpPlace {
+  return {
+    cwd: '',
+    startupOf: () => ({ agentCommand: fakeAgentCommand(undefined, ...flags) }),
+    mcpServers: servers.map((server) => ({ server, from: 'a test' })),
+    mcpIgnored: [],
+    runtimes: ['fake'],
+  };
+}
+
 async function onAcp(
   flags: readonly string[],
   body: (acp: Acp) => Promise<void>,
@@ -70,11 +100,10 @@ async function onAcp(
     stderr: (line) => lines.push(line),
     exit: (how) => exits.push(how),
     agent: 'fake',
-    agentCommand: fakeAgentCommand(undefined, ...flags),
     version: '1.2.3',
     stateDir,
     open: openSession,
-    place: () => Promise.resolve({ mcpServers: [] }),
+    place: () => Promise.resolve(fakePlace(flags)),
     ...over,
   });
 
@@ -528,12 +557,15 @@ describe('one surface', () => {
       },
       {
         place: () =>
-          Promise.resolve({
-            mcpServers: [
-              { name: 'both', command: 'mine', args: [], env: [] },
-              { name: 'ours', command: 'ours', args: [], env: [] },
-            ],
-          }),
+          Promise.resolve(
+            fakePlace(
+              [],
+              [
+                { name: 'both', command: 'mine', args: [], env: [] },
+                { name: 'ours', command: 'ours', args: [], env: [] },
+              ],
+            ),
+          ),
         open: (options) => {
           if (seen.length === 0) {
             seen.push(options.mcpServers);
@@ -612,6 +644,47 @@ describe('starts that fail', () => {
     );
   });
 
+  test("a command its directory's files refuse is -32603 in their words, nothing started", async () => {
+    let opens = 0;
+    let refuses = true;
+
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        const { error } = await client.request('session/new', {
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(error?.code).toBe(-32603);
+        expect(error?.message).toBe('fake: refused by a file');
+        expect(opens).toBe(0);
+
+        refuses = false;
+
+        // Nothing was left behind, and the process goes on.
+        expect(await newSession()).not.toBe('');
+        expect(opens).toBe(1);
+      },
+      {
+        place: () =>
+          Promise.resolve(
+            refuses
+              ? {
+                  ...fakePlace(),
+                  startupOf: () => ({ refused: 'fake: refused by a file' }),
+                }
+              : fakePlace(),
+          ),
+        open: (options) => {
+          opens += 1;
+
+          return openSession(options);
+        },
+      },
+    );
+  });
+
   test('a login is -32000, its ways in the data', () =>
     onAcp(['--auth-required', 'methods'], async ({ client, cwd }) => {
       const { error } = await client.request('session/new', {
@@ -626,7 +699,7 @@ describe('starts that fail', () => {
     }));
 
   test('a cancel while the place is read starts no agent', async () => {
-    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    const reading = Promise.withResolvers<AcpPlace>();
     let asked = false;
     let opens = 0;
 
@@ -641,7 +714,7 @@ describe('starts that fail', () => {
 
         await client.request('session/list', {});
 
-        reading.resolve({ mcpServers: [] });
+        reading.resolve(fakePlace());
 
         expect((await client.answerTo(id)).error?.code).toBe(-32800);
         expect(client.messages.filter((m) => m.id === id)).toHaveLength(1);
@@ -683,10 +756,16 @@ describe('starts that fail', () => {
         expect((await client.answerTo(id)).error?.code).toBe(-32800);
       },
       {
-        agentCommand: gatedCommand(
-          join(gateDir, 'release'),
-          fakeAgentCommand(),
-        ),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            startupOf: () => ({
+              agentCommand: gatedCommand(
+                join(gateDir, 'release'),
+                fakeAgentCommand(),
+              ),
+            }),
+          }),
       },
     );
 
@@ -835,6 +914,25 @@ describe('permissions', () => {
         (await client.answerTo(prompt(sessionId, 'text'))).result?.stopReason,
       ).toBe('end_turn');
       expect(client.said(sessionId)).not.toContain('Permission: allow');
+    }));
+
+  test('a close withdraws it upstream, heard as main closes', () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+      const running = prompt(sessionId, 'permission');
+      const ask = await asked(client, PERMISSION);
+
+      await client.request('session/close', { sessionId });
+
+      await client.until(
+        (message) =>
+          message.method === '$/cancel_request' &&
+          message.params?.requestId === ask.id,
+      );
+
+      expect((await client.answerTo(running)).result?.stopReason).toBe(
+        'cancelled',
+      );
     }));
 
   test('a duplicate answer changes nothing', () =>
@@ -1351,7 +1449,7 @@ describe('sessions and records', () => {
   ]) {
     test(`${first} then ${second} of one id at once: one opens it, the other is -32602`, async () => {
       const made: { sessionId?: string } = {};
-      const reading = Promise.withResolvers<{ mcpServers: [] }>();
+      const reading = Promise.withResolvers<AcpPlace>();
       let opens = 0;
 
       await onAcp(
@@ -1363,7 +1461,7 @@ describe('sessions and records', () => {
 
           expect(loser.error?.code).toBe(-32602);
 
-          reading.resolve({ mcpServers: [] });
+          reading.resolve(fakePlace());
 
           expect((await client.answerTo(winner)).error).toBeUndefined();
           expect(opens).toBe(1);
@@ -1394,7 +1492,7 @@ describe('sessions and records', () => {
 
   test('a reopen cancelled gives its id back', async () => {
     const made: { sessionId?: string } = {};
-    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    const reading = Promise.withResolvers<AcpPlace>();
     let places = 0;
 
     await onAcp(
@@ -1409,7 +1507,7 @@ describe('sessions and records', () => {
 
         await client.request('session/list', {});
 
-        reading.resolve({ mcpServers: [] });
+        reading.resolve(fakePlace());
 
         expect((await client.answerTo(load)).error?.code).toBe(-32800);
         expect(
@@ -1420,9 +1518,7 @@ describe('sessions and records', () => {
         place: () => {
           places += 1;
 
-          return places === 1
-            ? reading.promise
-            : Promise.resolve({ mcpServers: [] });
+          return places === 1 ? reading.promise : Promise.resolve(fakePlace());
         },
         state: async (stateDir, cwd) => {
           made.sessionId = await recordSession({
@@ -1438,7 +1534,7 @@ describe('sessions and records', () => {
 
   test('a new session answered with an id being reopened takes an alias', async () => {
     const SHAPED = '11111111-2222-4333-8444-555555555555';
-    const reading = Promise.withResolvers<{ mcpServers: [] }>();
+    const reading = Promise.withResolvers<AcpPlace>();
     let places = 0;
 
     await onAcp(
@@ -1454,7 +1550,7 @@ describe('sessions and records', () => {
 
         expect(await newSession()).toBe(`${SHAPED}~2`);
 
-        reading.resolve({ mcpServers: [] });
+        reading.resolve(fakePlace(['--session-id', SHAPED]));
 
         expect((await client.answerTo(load)).error).toBeUndefined();
       },
@@ -1464,7 +1560,7 @@ describe('sessions and records', () => {
 
           return places === 1
             ? reading.promise
-            : Promise.resolve({ mcpServers: [] });
+            : Promise.resolve(fakePlace(['--session-id', SHAPED]));
         },
       },
     );
@@ -1667,6 +1763,1510 @@ describe('sessions and records', () => {
       },
     );
   });
+});
+
+const BUGFIX = fileURLToPath(
+  new URL('./fixtures/teams/fake/bugfix.md', import.meta.url),
+);
+
+// Signal 0 only: a kill here would hide what a close left behind.
+const groupAlive = (pid: number) => {
+  try {
+    return process.kill(-pid, 0);
+  } catch {
+    return false;
+  }
+};
+
+describe("chord's server", () => {
+  const server = () => ({ server: serveChord() });
+
+  test("main gets it last, renamed past a client's of its name", () =>
+    onAcp(
+      [],
+      async ({ client, cwd, prompt }) => {
+        const { result } = await client.request('session/new', {
+          cwd,
+          mcpServers: [{ name: 'chord', command: 'x', args: [], env: [] }],
+        });
+        const sessionId = result?.sessionId as string;
+
+        await client.answerTo(prompt(sessionId, 'mcp'));
+
+        const said = client.said(sessionId);
+
+        expect(said.indexOf('"chord"')).toBeGreaterThan(-1);
+        expect(said.indexOf('"chord-2"')).toBeGreaterThan(
+          said.indexOf('"chord"'),
+        );
+      },
+      server(),
+    ));
+
+  test("mcpServers: false holds back the client's and its own, and says so", () =>
+    onAcp(
+      [],
+      async ({ client, cwd, prompt, lines }) => {
+        const { result } = await client.request('session/new', {
+          cwd,
+          mcpServers: [{ name: 'theirs', command: 'x', args: [], env: [] }],
+        });
+        const sessionId = result?.sessionId as string;
+        const held = (result?._meta as Record<string, { server: string }[]>)[
+          'chord/held_back'
+        ];
+
+        expect(held?.map((each) => each.server)).toEqual(['theirs', 'chord']);
+
+        await client.answerTo(prompt(sessionId, 'mcp'));
+
+        expect(client.said(sessionId)).not.toContain('theirs');
+        expect(lines.some((line) => line.includes('not passed'))).toBe(true);
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            startupOf: () => ({
+              agentCommand: fakeAgentCommand(),
+              mcpServers: false as const,
+            }),
+          }),
+      },
+    ));
+
+  test("a second session's token sees only its own children", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const first = await newSession();
+        const second = await newSession();
+
+        await client.answerTo(prompt(first, 'agentsquiet'));
+        await client.answerTo(prompt(first, 'chordtools'));
+        await client.answerTo(prompt(second, 'chordtools'));
+
+        expect(client.said(first)).toContain('parser');
+        expect(client.said(second)).toContain('list_sessions');
+        expect(client.said(second)).not.toContain('parser');
+      },
+      server(),
+    ));
+
+  test("one settings box among sessions: a second is refused while the first's waits", async () => {
+    const home = await mkdtemp(join(tmpdir(), 'chord-acp-home-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const first = await newSession();
+          const second = await newSession();
+          const asking = prompt(first, 'settingstheme');
+          const ask = await asked(client, PERMISSION);
+
+          await client.answerTo(prompt(second, 'settingstheme'));
+
+          expect(JSON.stringify(client.updates(second))).toContain(
+            'Another settings change is waiting',
+          );
+
+          client.respond(ask.id, selected('no'));
+
+          await client.answerTo(asking);
+        },
+        { ...server(), configHome: home },
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("chord's own asks say what they are about: a setting's change", async () => {
+    const home = await mkdtemp(join(tmpdir(), 'chord-acp-home-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+          const asking = prompt(sessionId, 'settingstheme');
+          const ask = await asked(client, PERMISSION);
+          const toolCall = ask.params?.toolCall as {
+            title?: string;
+            content?: { content: { text: string } }[];
+          };
+
+          expect(toolCall.title).toBe('Settings(theme)');
+          expect(toolCall.content?.[0]?.content.text).toContain('"light"');
+
+          client.respond(ask.id, selected('no'));
+
+          await client.answerTo(asking);
+        },
+        { ...server(), configHome: home },
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test("chord's own asks say what they are about: a team's whole file", async () => {
+    const home = await mkdtemp(join(tmpdir(), 'chord-acp-home-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+          const asking = prompt(sessionId, 'propose');
+          const ask = await asked(client, PERMISSION);
+          const toolCall = ask.params?.toolCall as {
+            title?: string;
+            content?: { content: { text: string } }[];
+          };
+          const options = ask.params?.options as {
+            optionId: string;
+            kind: string;
+          }[];
+
+          expect(toolCall.title).toBe('Team(bugfix)');
+          expect(toolCall.content?.[0]?.content.text).toContain('lead:');
+
+          client.respond(
+            ask.id,
+            selected(
+              options.find(({ kind }) => kind === 'reject_once')!.optionId,
+            ),
+          );
+
+          await client.answerTo(asking);
+        },
+        {
+          ...server(),
+          configHome: home,
+          // What the fake proposes runs on these; nothing here starts them.
+          place: () =>
+            Promise.resolve({
+              ...fakePlace(),
+              runtimes: ['fake', 'claude', 'codex'],
+            }),
+        },
+      );
+    } finally {
+      await rm(home, { recursive: true, force: true });
+    }
+  });
+
+  test('a team and a task, closed with session/close, leave no group', async () => {
+    const pids: number[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'bugfix.md'));
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'teamtask'));
+        // Main, the task, the lead and its two members.
+        await until(() => pids.length >= 5, 20_000);
+
+        expect(pids.some(groupAlive)).toBe(true);
+
+        await client.request('session/close', { sessionId });
+
+        await until(() => !pids.some(groupAlive));
+      },
+      {
+        ...server(),
+        open: async (options) => {
+          const session = await openSession(options);
+
+          pids.push(...session.agentPids);
+
+          return session;
+        },
+      },
+    );
+  });
+
+  test('the way out closes the server and the readers', async () => {
+    const closed: string[] = [];
+    const served = serveChord();
+
+    await onAcp(
+      [],
+      async ({ newSession, eof }) => {
+        await newSession();
+        await eof();
+
+        expect(closed.toSorted()).toEqual(['readers', 'server']);
+      },
+      {
+        server: {
+          ...served,
+          close: () => {
+            closed.push('server');
+
+            return served.close();
+          },
+        },
+        resources: {
+          read: () => Promise.resolve([]) as never,
+          close: () => {
+            closed.push('readers');
+
+            return Promise.resolve([]);
+          },
+        },
+      },
+    );
+  });
+
+  test('a reader that could not clean up makes EOF exit 1, and says why', () =>
+    onAcp(
+      [],
+      async ({ newSession, eof, exits, lines }) => {
+        await newSession();
+        await eof();
+
+        expect(exits).toEqual([{ code: 1 }]);
+        expect(lines.join('\n')).toContain('a provider left a process');
+      },
+      {
+        resources: {
+          read: () => Promise.resolve([]) as never,
+          close: () => Promise.resolve(['a provider left a process']),
+        },
+      },
+    ));
+});
+
+describe("chord's commands in the list", () => {
+  const listed = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .filter((update) => update.sessionUpdate === 'available_commands_update')
+      .map((update) =>
+        (update.availableCommands as { name: string }[]).map(
+          ({ name }) => name,
+        ),
+      );
+
+  test("join the agent's, once it sends its own", () =>
+    onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      await until(() =>
+        listed(client, sessionId).some((names) => names.includes('greet')),
+      );
+
+      expect(listed(client, sessionId).at(-1)).toEqual([
+        'team',
+        'new',
+        'greet',
+        'echo',
+      ]);
+    }));
+
+  test('go to an agent that sends none, once the answer is written', () =>
+    onAcp(['--no-commands'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      await until(() => listed(client, sessionId).length > 0);
+
+      expect(listed(client, sessionId)).toEqual([['team', 'new']]);
+    }));
+
+  test("an agent whose list came ahead of its answer gets no list of chord's alone", () =>
+    onAcp(
+      ['--config-delay', '300'],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+
+        await until(() => listed(client, sessionId).length > 0);
+
+        expect(listed(client, sessionId)).toEqual([
+          ['team', 'new', 'greet', 'echo'],
+        ]);
+      },
+      {
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(['--config-delay', '300']),
+            startupOf: () => ({
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--config-delay',
+                '300',
+              ),
+              starting: { mode: { id: 'plan', from: 'a test' } },
+            }),
+          }),
+      },
+    ));
+
+  test('go after a load answer too, its past ahead of it', () =>
+    onAcp(['--no-commands'], async ({ client, cwd }) => {
+      const sessionId = '11111111-2222-4333-8444-555555555555';
+      const id = client.send('session/load', {
+        sessionId,
+        cwd,
+        mcpServers: [],
+      });
+
+      expect((await client.answerTo(id)).error).toBeUndefined();
+
+      await until(() => listed(client, sessionId).length > 0);
+
+      const answer = client.messages.findIndex(
+        (message) => message.id === id && message.method === undefined,
+      );
+      const commands = client.messages.findIndex(
+        (message) =>
+          (message.params?.update as { sessionUpdate?: string } | undefined)
+            ?.sessionUpdate === 'available_commands_update',
+      );
+
+      expect(commands).toBeGreaterThan(answer);
+    }));
+
+  test("a name both offer is chord's alone", () =>
+    onAcp(['--also-commands', 'new,team'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      await until(() =>
+        listed(client, sessionId).some((names) => names.includes('greet')),
+      );
+
+      expect(listed(client, sessionId).at(-1)).toEqual([
+        'team',
+        'new',
+        'greet',
+        'echo',
+      ]);
+    }));
+});
+
+describe('children', () => {
+  interface Report {
+    readonly on: string;
+    readonly sessionId: string;
+    readonly title: string;
+    readonly state: { state: string; stopReason?: string };
+    readonly capabilities?: object;
+    readonly agent: Record<string, unknown>;
+  }
+
+  /** What chord said of each long-lived child, in order. */
+  const reports = (client: AcpClient): Report[] =>
+    client.messages.flatMap((message) => {
+      const update = message.params?.update as
+        | (Omit<Report, 'on' | 'agent'> & {
+            sessionUpdate: string;
+            _meta?: Record<string, Record<string, unknown>>;
+          })
+        | undefined;
+      const agent = update?._meta?.['chord/agent'];
+
+      return message.method === 'session/update' &&
+        update?.sessionUpdate === 'subagent_update' &&
+        agent?.['runtime'] !== undefined
+        ? [{ ...update, on: String(message.params?.sessionId), agent }]
+        : [];
+    });
+
+  const reportOf = (client: AcpClient, title: string) =>
+    reports(client).findLast((report) => report.title === title);
+  const reported = async (
+    client: AcpClient,
+    title: string,
+    holds: (report: Report) => boolean = () => true,
+  ) => {
+    await until(() => {
+      const report = reportOf(client, title);
+
+      return report !== undefined && holds(report);
+    }, 20_000);
+
+    return reportOf(client, title)!;
+  };
+
+  const withTeam = async (cwd: string, text?: string) => {
+    await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+    await writeFile(
+      join(cwd, '.chord', 'teams', 'bugfix.md'),
+      text ?? (await readFile(BUGFIX, 'utf8')),
+    );
+  };
+
+  const server = () => ({ server: serveChord() });
+  const allowing = (ask: { params?: Record<string, unknown> }) =>
+    selected(
+      (ask.params?.options as { optionId: string; kind: string }[]).find(
+        ({ kind }) => kind === 'allow_once',
+      )!.optionId,
+    );
+
+  test('a child is announced on main, its ask and its words under its composite id', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'agentsquiet');
+        const ask = await asked(client, PERMISSION);
+        const composite = String(ask.params?.sessionId);
+
+        expect(composite.startsWith(`${sessionId}/`)).toBe(true);
+
+        const docs = await reported(client, 'docs');
+
+        expect(docs).toMatchObject({
+          on: sessionId,
+          sessionId: composite,
+          capabilities: { cancel: {} },
+          agent: { runtime: 'fake' },
+        });
+
+        await reported(
+          client,
+          'docs',
+          ({ state }) => state.state === 'requires_action',
+        );
+
+        client.respond(ask.id, allowing(ask));
+
+        await client.answerTo(running);
+        await until(() => client.said(composite) !== '', 20_000);
+      },
+      server(),
+    ));
+
+  test('a client without subagents: an ask refused on stderr, nothing of a child', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentsquiet'));
+
+        await until(() =>
+          lines.some((line) => line.includes("subagent's permission")),
+        );
+
+        expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+          false,
+        );
+        expect(
+          client.messages
+            .filter((message) => message.method === 'session/update')
+            .every((message) => message.params?.sessionId === sessionId),
+        ).toBe(true);
+        expect(reports(client)).toEqual([]);
+      },
+      { ...server(), capabilities: {} },
+    ));
+
+  test("a child's plan to a client without subagents is refused, never a yes", () =>
+    onAcp(
+      ['--tester-plays', 'cursorplan'],
+      async ({ client, cwd, newSession, prompt, lines }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        await until(
+          () => lines.some((line) => line.includes("subagent's plan")),
+          20_000,
+        );
+
+        expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+          false,
+        );
+      },
+      { ...server(), capabilities: {} },
+    ));
+
+  test('a team: a member nests under its lead, its ask there; close leaves no group', async () => {
+    const pids: number[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        const lead = await reported(client, 'bugfix');
+        const tester = await reported(client, 'tester');
+
+        expect(lead).toMatchObject({
+          on: sessionId,
+          agent: { team: 'bugfix', role: 'lead', runtime: 'fake' },
+        });
+        expect(tester.on).toBe(lead.sessionId);
+        expect(tester.sessionId.startsWith(`${lead.sessionId}/`)).toBe(true);
+        expect(tester.agent).toMatchObject({
+          role: 'member',
+          model: 'fake-small',
+          mode: 'acceptEdits',
+        });
+
+        const ask = await asked(client, PERMISSION);
+
+        expect(ask.params?.sessionId).toBe(tester.sessionId);
+
+        client.respond(ask.id, allowing(ask));
+
+        await until(() => pids.length >= 3, 20_000);
+
+        expect(pids.some(groupAlive)).toBe(true);
+
+        await client.request('session/close', { sessionId });
+
+        await until(() => !pids.some(groupAlive));
+        await reported(
+          client,
+          'bugfix',
+          ({ agent }) => agent['closed'] === true,
+        );
+      },
+      {
+        ...server(),
+        open: async (options) => {
+          const session = await openSession(options);
+
+          pids.push(...session.agentPids);
+
+          return session;
+        },
+      },
+    );
+  });
+
+  test('a child in bypassPermissions says so, reported only', () =>
+    onAcp(
+      ['--bypass-mode'],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(
+          cwd,
+          (await readFile(BUGFIX, 'utf8')).replace(
+            'mode: default',
+            'mode: bypassPermissions',
+          ),
+        );
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        await reported(
+          client,
+          'bugfix',
+          ({ agent }) => agent['mode'] === 'bypassPermissions',
+        );
+      },
+      server(),
+    ));
+
+  test("a child's mode moved goes up with the next report", () =>
+    onAcp(
+      ['--tester-plays', 'status'],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        await reported(
+          client,
+          'tester',
+          ({ agent }) => agent['mode'] === 'plan',
+        );
+      },
+      server(),
+    ));
+
+  test('a cancel of a long-lived child stops its turn; it stays open', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentcost'));
+
+        const { sessionId: composite } = await reported(
+          client,
+          'parser',
+          ({ state }) => state.state === 'running',
+        );
+
+        client.notify('session/cancel', { sessionId: composite });
+
+        const stopped = await reported(
+          client,
+          'parser',
+          ({ state }) => state.state === 'idle',
+        );
+
+        expect(stopped.state.stopReason).toBe('cancelled');
+        expect(stopped.agent['closed']).toBeUndefined();
+      },
+      server(),
+    ));
+
+  test('a child cleared after it died reports afresh, under the same id', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentexit'));
+
+        const dead = await reported(
+          client,
+          'parser',
+          ({ agent }) => agent['gone'] === 'exited',
+        );
+
+        expect(dead.state.state).toBe('unknown');
+
+        await client.answerTo(prompt(sessionId, 'agentclearonly'));
+
+        const fresh = await reported(
+          client,
+          'parser',
+          ({ agent, state }) =>
+            agent['gone'] === undefined && state.state === 'idle',
+        );
+
+        expect(fresh.sessionId).toBe(dead.sessionId);
+      },
+      server(),
+    ));
+
+  test('close_agent says closed, with nothing left to cancel', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentcost'));
+        await client.answerTo(prompt(sessionId, 'agentclose'));
+
+        const closed = await reported(
+          client,
+          'parser',
+          ({ agent }) => agent['closed'] === true,
+        );
+
+        expect(closed.capabilities).toBeUndefined();
+      },
+      server(),
+    ));
+
+  test("a task's permission goes under its composite id; its answer reaches it", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'taskstays');
+        const ask = await asked(client, PERMISSION);
+
+        expect(String(ask.params?.sessionId).startsWith(`${sessionId}/`)).toBe(
+          true,
+        );
+
+        client.respond(ask.id, allowing(ask));
+        client.notify('session/cancel', { sessionId });
+
+        await client.answerTo(running);
+      },
+      server(),
+    ));
+
+  test("a task's form (taskask) goes under its composite id, and is answered", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'taskask');
+        const ask = await asked(client, 'elicitation/create');
+
+        expect(String(ask.params?.sessionId).startsWith(`${sessionId}/`)).toBe(
+          true,
+        );
+
+        client.respond(ask.id, { action: 'cancel' });
+
+        await client.answerTo(running);
+      },
+      server(),
+    ));
+
+  test("a task's form to a client without subagents is cancelled, on stderr", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'taskask'));
+
+        await until(
+          () => lines.some((line) => line.includes("subagent's form")),
+          20_000,
+        );
+
+        expect(
+          client.messages.some((m) => m.method === 'elicitation/create'),
+        ).toBe(false);
+      },
+      { ...server(), capabilities: {} },
+    ));
+
+  test('what a child says before it is up goes up after, under its composite id', () =>
+    onAcp(
+      ['--config-delay', '300'],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'team'));
+
+        // A member's model and mode are set before `connected`, and its
+        // commands come while they are.
+        const { sessionId: composite } = await reported(client, 'tester');
+
+        await until(
+          () => kinds(client, composite).includes('available_commands_update'),
+          20_000,
+        );
+      },
+      server(),
+    ));
+
+  for (const [name, capabilities] of [
+    ['takes subagents', FULL],
+    ['takes none', {}],
+  ] as const) {
+    test(`a task's agent asking as main is refused, to a client that ${name}`, () =>
+      onAcp(
+        [],
+        async ({ client, newSession, prompt, lines }) => {
+          const sessionId = await newSession();
+
+          await client.answerTo(prompt(sessionId, 'taskaskas'));
+
+          await until(
+            () => lines.some((line) => line.includes('does not know')),
+            20_000,
+          );
+
+          expect(client.messages.some((m) => m.method === PERMISSION)).toBe(
+            false,
+          );
+        },
+        { ...server(), capabilities },
+      ));
+  }
+
+  test("a task's agent's form as main goes under the task, not main", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'taskformas'));
+
+        const ask = await asked(client, 'elicitation/create');
+
+        expect(ask.params?.sessionId).not.toBe(sessionId);
+        expect(String(ask.params?.sessionId).startsWith(`${sessionId}/`)).toBe(
+          true,
+        );
+
+        client.respond(ask.id, { action: 'cancel' });
+      },
+      server(),
+    ));
+
+  test("a task's agent's form as main to a client without subagents is cancelled", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'taskformas'));
+
+        await until(
+          () => lines.some((line) => line.includes("subagent's form")),
+          20_000,
+        );
+
+        expect(
+          client.messages.some((m) => m.method === 'elicitation/create'),
+        ).toBe(false);
+      },
+      { ...server(), capabilities: {} },
+    ));
+
+  test('a task says it can be cancelled, and a cancel ends it alone', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const tasks = () =>
+          client
+            .updates(sessionId)
+            .filter((update) => update.sessionUpdate === 'subagent_update');
+
+        await client.answerTo(prompt(sessionId, 'tasklong'));
+        await until(() => tasks().length > 0, 20_000);
+
+        const [started] = tasks();
+
+        expect(started?.capabilities).toEqual({ cancel: {} });
+
+        client.notify('session/cancel', {
+          sessionId: started?.sessionId as string,
+        });
+
+        await until(() =>
+          tasks().some(
+            (update) =>
+              (update.state as { stopReason?: string }).stopReason ===
+              'cancelled',
+          ),
+        );
+      },
+      server(),
+    ));
+
+  for (const method of ['session/resume', 'session/load']) {
+    test(`main's agent dying closes its children; ${method} names them`, async () => {
+      const opened: Session[] = [];
+      const pids: number[] = [];
+
+      await onAcp(
+        [],
+        async ({ client, cwd, newSession, prompt, stateDir }) => {
+          const sessionId = await newSession();
+
+          await client.answerTo(prompt(sessionId, 'agentcost'));
+          await reported(
+            client,
+            'parser',
+            ({ state }) => state.state === 'running',
+          );
+          await recorded(stateDir, sessionId, 'result');
+
+          const [pid] = opened[0]!.agentPids;
+
+          process.kill(pid!, 'SIGKILL');
+
+          await reported(
+            client,
+            'parser',
+            ({ agent }) => agent['closed'] === true,
+          );
+          await until(() => !pids.some(groupAlive));
+
+          const { result, error } = await client.request(method, {
+            sessionId,
+            cwd,
+            mcpServers: [],
+          });
+
+          expect(error).toBeUndefined();
+          expect(
+            (result?._meta as Record<string, unknown>)['chord/left_open'],
+          ).toEqual([expect.objectContaining({ name: 'parser' })]);
+        },
+        {
+          ...server(),
+          open: async (options) => {
+            const session = await openSession(options);
+
+            opened.push(session);
+            pids.push(...session.agentPids);
+
+            return session;
+          },
+        },
+      );
+    });
+  }
+
+  test("dimcode's notice covers a child, once", () =>
+    onAcp(
+      ['--dimcode-permission', 'full-access', '--child-runtime', 'dimcode'],
+      async ({ client, newSession, prompt, lines }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agentother'));
+
+        await until(() => kinds(client, sessionId).includes('notice'), 20_000);
+
+        expect(
+          kinds(client, sessionId).filter((kind) => kind === 'notice'),
+        ).toHaveLength(1);
+        expect(lines.length).toBeGreaterThan(0);
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace([
+              '--dimcode-permission',
+              'full-access',
+              '--child-runtime',
+              'dimcode',
+            ]),
+            runtimes: ['fake', 'dimcode'],
+          }),
+      },
+    ));
+});
+
+describe("chord's commands", () => {
+  const server = () => ({ server: serveChord() });
+  const withTeam = async (cwd: string) => {
+    await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+    await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'bugfix.md'));
+  };
+
+  /** What a command said, as its one marked chunk, then its answer. */
+  const ran = async (client: AcpClient, sessionId: string, text: string) => {
+    const before = client.updates(sessionId).length;
+    const answer = await client.answerTo(
+      client.send('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text }],
+      }),
+    );
+    const said = client
+      .updates(sessionId)
+      .slice(before)
+      .find(
+        (update) =>
+          update._meta !== undefined &&
+          'chord/command' in (update._meta as object),
+      );
+
+    return {
+      answer,
+      text: (said?.content as { text?: string } | undefined)?.text,
+      meta: (said?._meta as Record<string, unknown> | undefined)?.[
+        'chord/command'
+      ],
+    };
+  };
+
+  test('/team lists, and nothing of it reaches the agent or the record', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, stateDir }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const { answer, text, meta } = await ran(client, sessionId, '/team');
+
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(answer.result?.usage).toBeUndefined();
+        expect(meta).toEqual({ name: 'team', failed: false });
+        expect(text).toContain('Teams:\n\n- bugfix · 3 agents · fake');
+        expect(text).toContain('No run is open.');
+        expect(kinds(client, sessionId)).not.toContain('user_message_chunk');
+
+        const { sessions } = (await client.request('session/list', {}))
+          .result as { sessions: unknown[] };
+
+        expect(sessions).toEqual([]);
+        expect(stateDir).not.toBe('');
+      },
+      server(),
+    ));
+
+  test('/team show of a team, then of its run; a run and its stop', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        expect(
+          (await ran(client, sessionId, '/team show bugfix')).text,
+        ).toContain('bugfix · .chord/teams/bugfix.md\n\nFixes a bug');
+
+        const started = await ran(
+          client,
+          sessionId,
+          '/team run bugfix fix the quote',
+        );
+
+        expect(started.text).toBe(
+          'Team bugfix started. Its lead is bugfix; /team stop bugfix ends it.',
+        );
+        expect(started.meta).toEqual({ name: 'team', failed: false });
+
+        const shown = await ran(client, sessionId, '/team show bugfix');
+
+        expect(shown.text).toContain('on "fix the quote"');
+        expect(shown.text).toContain('- lead (bugfix) · open · fake');
+
+        expect((await ran(client, sessionId, '/team')).text).toContain(
+          'Runs open:\n\n- bugfix · team bugfix · working',
+        );
+
+        const stopped = await ran(client, sessionId, '/team stop bugfix');
+
+        expect(stopped.text).toContain('Stopped bugfix:');
+        // Its members may or may not have opened by now.
+        expect(stopped.text).toMatch(
+          /chord with (its|each) agent's name and -r lists (it|them)$/,
+        );
+        expect((await ran(client, sessionId, '/team stop bugfix')).text).toBe(
+          'No run named bugfix is open · /team lists them',
+        );
+      },
+      server(),
+    ));
+
+  test.each([
+    ['/team run bugfix', '/team run bugfix takes the job after the name'],
+    ['/team run', 'Which team? /team lists them'],
+    ['/team run nope a job', 'No team named nope · /team lists them'],
+    ['/team stop', 'Which run? /team lists them'],
+    ['/team show', 'Which team? /team lists them'],
+    ['/team nope', '/team has no nope; it takes list, new, show, run or stop'],
+    ['/new nope', 'No agent named nope; chord knows fake'],
+  ])('%s is refused in a chunk, not an error', (typed, words) =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const { answer, text, meta } = await ran(client, sessionId, typed);
+
+        expect(answer.error).toBeUndefined();
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(text).toBe(words);
+        expect(meta).toMatchObject({ failed: true });
+      },
+      server(),
+    ),
+  );
+
+  test('a signal while a command is at its work: cancelled once, no chunk after', async () => {
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession, run, exits }) => {
+        const sessionId = await newSession();
+
+        // Reading a team file that is a pipe holds `/team` until it is written.
+        const held = join(cwd, '.chord', 'teams', 'held.md');
+
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+
+        expect(spawnSync('mkfifo', [held]).status).toBe(0);
+
+        const id = client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: '/team' }],
+        });
+
+        // Requests start in order: answered, this one has reached its read.
+        await client.request('session/list', {});
+
+        void run.leave({ kind: 'signal', signal: 'SIGTERM' });
+
+        expect((await client.answerTo(id)).result?.stopReason).toBe(
+          'cancelled',
+        );
+
+        await until(() => exits.length > 0, 20_000);
+
+        // Its work ends now, with its request answered.
+        await writeFile(held, '---\n');
+
+        expect(
+          client.messages.filter(
+            (message) => message.id === id && message.method === undefined,
+          ),
+        ).toHaveLength(1);
+        expect(client.said(sessionId)).toBe('');
+      },
+      server(),
+    );
+  });
+
+  test("/new opens an idle child, on main's runtime with none named", () =>
+    onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+        const { text, meta } = await ran(client, sessionId, '/new');
+
+        expect(text).toBe(
+          "Opened fake (fake). It is idle, with no prompt yet; main's send_message starts it, so ask main to send it the work.",
+        );
+        expect(meta).toEqual({ name: 'new', failed: false });
+      },
+      server(),
+    ));
+
+  test("/team new is a turn of the agent's, its preamble ahead", () =>
+    onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+        const running = client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: '/team new fixes bugs' }],
+        });
+
+        await asked(client, PERMISSION);
+
+        client.notify('session/cancel', { sessionId });
+
+        await client.answerTo(running);
+      },
+      {
+        ...server(),
+        // What the fake proposes runs on these; nothing here starts them.
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            runtimes: ['fake', 'claude', 'codex'],
+          }),
+      },
+    ));
+
+  test('a command beside an image is refused, and nothing runs', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const answer = await client.answerTo(
+          client.send('session/prompt', {
+            sessionId,
+            prompt: [
+              { type: 'text', text: '/team run bugfix fix it' },
+              { type: 'image', data: 'x', mimeType: 'image/png' },
+            ],
+          }),
+        );
+
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(client.said(sessionId)).toBe(
+          '/team takes text alone, and this prompt had other blocks beside it. Nothing ran; send the command by itself.',
+        );
+        expect(
+          client
+            .updates(sessionId)
+            .some((update) => update.sessionUpdate === 'subagent_update'),
+        ).toBe(false);
+      },
+      server(),
+    ));
+
+  test('another slash command still goes to the agent as typed', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, '/greet'));
+
+        expect(client.said(sessionId)).not.toBe('');
+      },
+      server(),
+    ));
+
+  test('a command overtakes a queued prompt, and its note reaches the next send', () =>
+    onAcp(
+      ['--echo-messages'],
+      async ({ client, cwd, newSession, prompt }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'slow');
+        const queued = prompt(sessionId, 'text');
+        const { answer } = await ran(client, sessionId, '/team');
+
+        // Answered with the first turn and the queued one both unanswered.
+        expect(answer.result?.stopReason).toBe('end_turn');
+        expect(
+          client.messages.some(
+            (message) => message.id === running && message.method === undefined,
+          ),
+        ).toBe(false);
+
+        await client.answerTo(running);
+        await client.answerTo(queued);
+      },
+      server(),
+    ));
+
+  test("a session/cancel aborts a run still starting; a run's reply already went", async () => {
+    const lead = { started: false };
+    const gateDir = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, cwd, newSession }) => {
+          await withTeam(cwd);
+
+          const sessionId = await newSession();
+          const { text } = await ran(
+            client,
+            sessionId,
+            '/team run bugfix fix it',
+          );
+
+          expect(text).toContain('Team bugfix started.');
+
+          client.notify('session/cancel', { sessionId });
+
+          // Its lead was still starting: it goes, and no run is left.
+          await until(() =>
+            client
+              .updates(sessionId)
+              .some(
+                (update) =>
+                  update.sessionUpdate === 'subagent_update' &&
+                  (update._meta as Record<string, { closed?: boolean }>)?.[
+                    'chord/agent'
+                  ]?.closed === true,
+              ),
+          );
+
+          expect((await ran(client, sessionId, '/team')).text).toContain(
+            'No run is open.',
+          );
+        },
+        {
+          ...server(),
+          place: () =>
+            Promise.resolve({
+              ...fakePlace(),
+              startupOf: (name: string) => ({
+                agentCommand:
+                  name === 'fake' && !lead.started
+                    ? fakeAgentCommand()
+                    : gatedCommand(
+                        join(gateDir, 'release'),
+                        fakeAgentCommand(),
+                      ),
+              }),
+            }),
+          open: (options) => {
+            const opening = openSession(options);
+
+            lead.started = true;
+
+            return opening;
+          },
+        },
+      );
+    } finally {
+      await writeFile(join(gateDir, 'release'), '');
+      await rm(gateDir, { recursive: true, force: true });
+    }
+  });
+
+  test('/team show of a selected run is refused, open or by its id once closed', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'fixture.md'));
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'budgetawareteam'));
+
+        const open = await ran(client, sessionId, '/team show fixture');
+        const [, runId] =
+          /then \/team show (\S+) there$/.exec(open.text ?? '') ?? [];
+
+        expect(open.text).toStartWith(
+          "fixture is a selected run, and only chord's window shows its receipt: chord -r with this session's id",
+        );
+        expect(open.meta).toEqual({ name: 'team', failed: true });
+        expect(runId).toBeString();
+
+        await ran(client, sessionId, '/team stop fixture');
+
+        const closed = await ran(client, sessionId, `/team show ${runId}`);
+
+        expect(closed.text).toBe(
+          `${runId} is a selected run, and only chord's window shows its receipt: chord -r with this session's id, then /team show ${runId} there`,
+        );
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(),
+            teamSelection: { intent: 'balanced' as const },
+          }),
+      },
+    ));
+
+  test('a session/cancel while the team is read: no run started', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+        const running = client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: '/team run bugfix fix it' }],
+        });
+
+        client.notify('session/cancel', { sessionId });
+
+        expect((await client.answerTo(running)).result?.stopReason).toBe(
+          'end_turn',
+        );
+        expect(client.said(sessionId)).toBe(
+          'This launch was cancelled; no run started.',
+        );
+      },
+      server(),
+    ));
+
+  test("session/load of a run's records: main's runtime opens, another's is refused", () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, stateDir }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await writeFile(
+          join(cwd, '.chord', 'teams', 'bugfix.md'),
+          (await readFile(BUGFIX, 'utf8'))
+            .replace(/(- name: tester[\s\S]*?agent: )fake/, '$1codex')
+            .replace(
+              /(- name: tester[\s\S]*?model: )fake-small/,
+              '$1fake-large',
+            ),
+        );
+
+        const sessionId = await newSession();
+
+        await ran(client, sessionId, '/team run bugfix fix it');
+        await until(
+          () =>
+            client.messages.some(
+              (message) =>
+                (message.params?.update as { title?: string } | undefined)
+                  ?.title === 'tester',
+            ),
+          20_000,
+        );
+
+        const ask = await asked(client, PERMISSION);
+
+        client.respond(ask.id, selected('deny'));
+
+        await ran(client, sessionId, '/team stop bugfix');
+
+        const records = await readRecords(stateDir);
+        const load = (name: string) =>
+          client.request('session/load', {
+            sessionId: records.find((each) => each.name === name)?.sessionId,
+            cwd,
+            mcpServers: [],
+          });
+
+        // On main's runtime it opens; on another, it is that agent's to open.
+        expect((await load('bugfix')).error).toBeUndefined();
+        expect((await load('tester')).error?.message).toContain(
+          'belongs to another agent (codex)',
+        );
+
+        // What the stop words send a person to: that agent's list.
+        expect(
+          earlierSessions(records, { agent: 'codex', cwd }).map(
+            ({ resume }) => resume.name,
+          ),
+        ).toContain('tester');
+      },
+      {
+        ...server(),
+        place: () =>
+          Promise.resolve({ ...fakePlace(), runtimes: ['fake', 'codex'] }),
+      },
+    ));
+
+  test('a session whose only act is /team run is unlisted; a later prompt shows no note on load', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt, stateDir }) => {
+        await withTeam(cwd);
+
+        const sessionId = await newSession();
+
+        await ran(client, sessionId, '/team run bugfix fix it');
+
+        // Its lead has a record of its own, which is not this session's.
+        const listed = async () =>
+          (
+            (await client.request('session/list', {})).result as {
+              sessions: { sessionId: string; title: string }[];
+            }
+          ).sessions.filter((each) => each.sessionId === sessionId);
+
+        expect(await listed()).toEqual([]);
+
+        await client.answerTo(prompt(sessionId, 'text'));
+        await recorded(stateDir, sessionId, 'result');
+        await client.request('session/close', { sessionId });
+
+        expect((await listed()).map(({ title }) => title)).toEqual(['text']);
+
+        const seen = client.messages.length;
+
+        await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        const said = client.messages.slice(seen).flatMap((message) => {
+          const update = message.params?.update as
+            | {
+                sessionUpdate?: string;
+                content?: { text?: string };
+              }
+            | undefined;
+
+          return update?.sessionUpdate === 'user_message_chunk'
+            ? [update.content?.text]
+            : [];
+        });
+
+        expect(said).toContain('text');
+        expect(said.join('\n')).not.toContain('message from');
+        expect(said.join('\n')).not.toContain('/team');
+      },
+      server(),
+    ));
 });
 
 describe('the way out', () => {

@@ -2572,7 +2572,21 @@ export class Conversation {
         this.#release();
       };
 
-      const toolCall = { toolCallId: wait.toolCallId ?? id };
+      // What a client is asked to agree to, which it can see nowhere else.
+      const toolCall = {
+        toolCallId: wait.toolCallId ?? id,
+        ...(wait.title === undefined ? {} : { title: wait.title }),
+        ...(wait.detail === undefined
+          ? {}
+          : {
+              content: [
+                {
+                  type: 'content' as const,
+                  content: { type: 'text' as const, text: wait.detail },
+                },
+              ],
+            }),
+      };
       const request: PendingPermission = {
         id,
         sessionId: session.id,
@@ -2606,12 +2620,18 @@ export class Conversation {
 
   /** A permission waiting, as the agent asked it, for one who passes it on. */
   permissionRequest(id: string): PendingPermission | undefined {
-    return this.#permissions.get(id)?.request;
+    return (
+      this.#permissions.get(id)?.request ??
+      this.#foreign.get(id)?.permissionRequest(id)
+    );
   }
 
   /** A form or link waiting, as the agent asked it, for one who passes it on. */
   elicitationRequest(id: string): PendingElicitation | undefined {
-    return this.#elicitations.get(id)?.request;
+    return (
+      this.#elicitations.get(id)?.request ??
+      this.#foreign.get(id)?.elicitationRequest(id)
+    );
   }
 
   #withdrawAsks(): void {

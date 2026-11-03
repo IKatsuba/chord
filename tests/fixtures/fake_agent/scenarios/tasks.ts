@@ -206,7 +206,34 @@ async function taskChild(turn: Turn, hold: boolean): Promise<acp.StopReason> {
   return 'end_turn';
 }
 
+/** Starts a task that asks under its parent's session, by `word`. */
+const taskPassingAsParent =
+  (word: 'askas' | 'formas'): Play =>
+  async (turn) => {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'spawn_task', {
+        agent: 'fake',
+        prompt: `${word} ${turn.sessionId}`,
+        name: 'Pass as the parent',
+      });
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  };
+
 export const TASKS = {
+  taskaskas: taskPassingAsParent('askas'),
+  taskformas: taskPassingAsParent('formas'),
   // As tasklong, under a name taller than the background frame (CHD-430).
   async tasktallname(turn) {
     const client = await chordClient(turn);

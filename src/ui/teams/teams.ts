@@ -6,11 +6,14 @@
 import { Table } from '@cliffy/table';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
-import { formatElapsed } from '../../session/elapsed.ts';
-import type {
-  ListedTeam,
-  TeamRun,
-  TeamWords,
+import {
+  briefly,
+  type ListedTeam,
+  NO_TEAMS,
+  newTeamPrompt,
+  type TeamRun,
+  teamsSaved,
+  type TeamWords,
 } from '../../session/team_command.ts';
 import type {
   MessageFrom,
@@ -22,26 +25,15 @@ import { GLYPHS } from '../agents/glyphs.ts';
 import type { PickerChoice } from '../pickers/picker.ts';
 import { messageHeader } from '../transcript/message.ts';
 
+export { NO_TEAMS, newTeamPrompt };
+
 /** What `/team` says of runs, in the window's words. */
 export const TEAM_WORDS: TeamWords = {
   whichRun: 'Which run? The list under the prompt names them',
   closedLead: '/resume lists it',
   closedRun: '/resume lists them',
+  noRun: 'the list under the prompt names them',
 };
-
-/**
- * What main gets for `/team new <words>`: the words, after one line that
- * names the tool which makes a team, so the agent proposes one rather than
- * answers in prose.
- */
-export function newTeamPrompt(words: string): string {
-  return (
-    'The person asks for a team of agents through /team new: work ' +
-    "out the team for what they describe below, then call chord's " +
-    "propose_team with it (list_agents gives each runtime's models and " +
-    `modes).\n\n${words}`
-  );
-}
 
 /** A call's headline as one line: `Edit(src/a.ts)`, `→ to @coder`. */
 export function headlineText({
@@ -70,11 +62,6 @@ export function messageHeadline(from: MessageFrom): string {
   const { word, name, rest } = messageHeader(from);
 
   return `← ${word}${name}${rest}`;
-}
-
-/** The first unit of an elapsed time: `41s`, `6m`. */
-function briefly(ms: number): string {
-  return formatElapsed(ms).split(' ')[0]!;
 }
 
 /** `✻ working 6m` for one run, `✻ 2 runs` for more, nothing for none. */
@@ -204,13 +191,9 @@ export function teamsWhere(
   dirs: { readonly project: string; readonly user?: string | undefined },
   columns: number,
 ): string {
-  if (dirs.user === undefined) {
-    return `Saved for this project in ${dirs.project}.`;
-  }
-
-  return columns < NARROW
+  return dirs.user !== undefined && columns < NARROW
     ? `For this project in ${dirs.project}, for every project in ${dirs.user}.`
-    : `Saved for this project in ${dirs.project}, and for every project in ${dirs.user}.`;
+    : teamsSaved(dirs);
 }
 
 /**
@@ -240,10 +223,6 @@ export function teamsHint(
     ? ['Enter to hand it a job']
     : ['Enter to hand it a job', '/team show <name>'];
 }
-
-/** What the picker says with no team saved. */
-export const NO_TEAMS =
-  'No teams yet. /team new and a few words about the work makes one.';
 
 /**
  * What Enter on a team puts in the draft: a run's start. A broken file has

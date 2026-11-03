@@ -1,0 +1,24 @@
+        resumed · just now · On it. tester...st fails for the bug's own reason.
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts;
+      coder waits for it and will edit src/parse/tokenize.ts only. I will
+      report when the test fails for the bug's own reason.
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯   1.  just now  first line of mine second line of mine                     │
+│     2.  just now  a plain prompt, with no aside                              │
+│     3.  just now  <message from="tester · fake"> The person stopped this     │
+│                   task before it reported. </message>                        │
+│   ↓ 4.  just now  <message from="tester · fake"> The person stopped this     │
+│     … +7 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

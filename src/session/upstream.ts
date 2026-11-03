@@ -4,6 +4,7 @@
  * differently shaped.
  */
 import type {
+  AvailableCommand,
   ClientCapabilities,
   ContentBlock,
   CreateElicitationResponse,
@@ -14,6 +15,7 @@ import type {
   SessionNotification,
   SessionUpdate,
   StateUpdate,
+  StopReason,
 } from '@agentclientprotocol/sdk/unstable';
 import type { ResourceLink } from '../files.ts';
 import {
@@ -22,11 +24,14 @@ import {
   modesOf,
   optionsOf,
 } from './agent_state.ts';
+import type { FoldedSession } from './agents_host.ts';
+import { busyOf } from './busy.ts';
 import type { ElicitationReply } from './elicitations.ts';
 import { FILLED } from './enrich.ts';
 import { modelConfigId } from './models.ts';
 import { modeConfigId } from './modes.ts';
 import type { Attachment } from './session.ts';
+import { TASK_META } from './transcript/subagents.ts';
 import type { MessageFrom, PlanAnswer, PlanWait } from './transcript/types.ts';
 
 /** The `_meta` key on a turn's words that no client prompt began. */
@@ -110,6 +115,80 @@ export interface UpstreamSession {
   /** Each subagent by the agent's id, under `<main>/<child>`. */
   readonly children: ReadonlyMap<string, string>;
   readonly configSent?: readonly SessionConfigOption[];
+  /** A long-lived child's: all it says is a child's traffic to the client. */
+  readonly nested?: true;
+  /** Whether the client has chord's commands, with or without the agent's. */
+  readonly commandsSent?: true;
+}
+
+/** The two names that are chord's in `chord acp`; all else goes as typed. */
+export const CHORD_COMMANDS: readonly AvailableCommand[] = [
+  {
+    name: 'team',
+    description: 'Show and run teams of agents',
+    input: {
+      hint: 'list | run <name> <job> | show <name> | stop <run> | new <words>',
+    },
+  },
+  {
+    name: 'new',
+    description: 'Open a new agent beside main',
+    input: { hint: '<agent>' },
+  },
+];
+
+/** A prompt that is one of chord's commands: its name and the words after it. */
+export interface ChordCommand {
+  readonly name: 'team' | 'new';
+  readonly args: string;
+  /** Whether the prompt has nothing but this block. */
+  readonly alone: boolean;
+}
+
+/** The command a prompt's first text block is, if it is one of chord's. */
+export function commandOf(
+  blocks: readonly ContentBlock[],
+): ChordCommand | undefined {
+  const first = blocks.find((block) => block.type === 'text');
+  const [, name, args = ''] =
+    first === undefined
+      ? []
+      : (/^\/(\S+)(?:\s+([\s\S]*))?$/.exec(first.text.trim()) ?? []);
+
+  return name === 'team' || name === 'new'
+    ? { name, args, alone: blocks.length === 1 }
+    : undefined;
+}
+
+/**
+ * The agent's list with chord's: a name both offer is chord's alone, as chord's
+ * is the one that runs.
+ */
+function withChordCommands(
+  agent: readonly AvailableCommand[],
+): AvailableCommand[] {
+  const ours = new Set(CHORD_COMMANDS.map(({ name }) => name));
+
+  return [...CHORD_COMMANDS, ...agent.filter(({ name }) => !ours.has(name))];
+}
+
+/** chord's commands for an agent that has said none yet; once. */
+export function commandsIfNone(session: UpstreamSession): {
+  readonly session: UpstreamSession;
+  readonly notification?: SessionNotification;
+} {
+  return session.commandsSent === true
+    ? { session }
+    : {
+        session: { ...session, commandsSent: true },
+        notification: {
+          sessionId: session.upstreamId,
+          update: {
+            sessionUpdate: 'available_commands_update',
+            availableCommands: withChordCommands([]),
+          },
+        },
+      };
 }
 
 export function upstreamSession(
@@ -117,6 +196,14 @@ export function upstreamSession(
   upstreamId: string = agentId,
 ): UpstreamSession {
   return { agentId, upstreamId, children: new Map() };
+}
+
+/** A long-lived child's session, under its composite id. */
+export function childSession(
+  agentId: string,
+  upstreamId: string,
+): UpstreamSession {
+  return { ...upstreamSession(agentId, upstreamId), nested: true };
 }
 
 /**
@@ -211,11 +298,36 @@ export function mapUpdate(
         }
       : session;
 
-  if (!reaches(capabilities, kind, subagentId !== undefined)) {
+  if (
+    !reaches(
+      capabilities,
+      kind,
+      session.nested === true || subagentId !== undefined,
+    )
+  ) {
     return { session: grown };
   }
 
   const sessionId = upstreamIdOf(grown, subagentId ?? grown.agentId);
+
+  // Rewritten here, as the state and the record keep the agent's own list; a
+  // child's is its own, and takes neither of chord's.
+  if (
+    kind === 'available_commands_update' &&
+    subagentId === undefined &&
+    session.nested !== true
+  ) {
+    return {
+      session: { ...grown, commandsSent: true },
+      notification: {
+        sessionId,
+        update: {
+          ...update,
+          availableCommands: withChordCommands(update.availableCommands),
+        },
+      },
+    };
+  }
 
   return {
     session: grown,
@@ -232,6 +344,10 @@ function rewritten(
       return acpStateWords({
         ...update,
         sessionId: upstreamIdOf(session, update.sessionId),
+        // chord's own task: chord stops it, whatever its runtime offers.
+        ...(update._meta?.[TASK_META] === undefined
+          ? {}
+          : { capabilities: { cancel: {} } }),
       });
     case 'session_message': {
       const { senderSessionId: sender, recipientSessionId: recipient } = update;
@@ -249,6 +365,76 @@ function rewritten(
     default:
       return update;
   }
+}
+
+/** What chord says of a long-lived child, as no agent's update does. */
+export interface AgentReport {
+  /** Its immediate parent's id: main's, or its lead's. */
+  readonly parent: string;
+  readonly upstreamId: string;
+  readonly title: string;
+  readonly state: StateUpdate;
+  readonly runtime: string;
+  readonly model?: string | undefined;
+  readonly effort?: string | undefined;
+  /** The mode it is in, reported only: chord sets no policy on it. */
+  readonly mode?: string | undefined;
+  readonly team?: string | undefined;
+  readonly role?: 'lead' | 'member' | undefined;
+  /** Its process went on its own. */
+  readonly gone?: string | undefined;
+  /** Why it did not start. */
+  readonly failed?: string | undefined;
+  readonly closed?: true | undefined;
+}
+
+/** A child's state as ACP words it, from what is folded of it. */
+export function agentStateOf(
+  fold: FoldedSession,
+  stopReason?: StopReason,
+): StateUpdate {
+  const asks =
+    fold.transcript.planAsks?.some((ask) => ask.answer === undefined) === true;
+  const busy = busyOf(fold);
+
+  if (asks || busy?.kind === 'permission' || busy?.kind === 'input') {
+    return { state: 'requires_action' };
+  }
+
+  return busy !== undefined
+    ? { state: 'running' }
+    : { state: 'idle', ...(stopReason === undefined ? {} : { stopReason }) };
+}
+
+/**
+ * A long-lived child's `subagent_update`, on its immediate parent. chord makes
+ * it, so no record holds it; one closed has nothing left to cancel.
+ */
+export function agentUpdate(
+  capabilities: ClientCapabilities,
+  report: AgentReport,
+): SessionNotification | undefined {
+  if (!reaches(capabilities, 'subagent_update', false)) {
+    return undefined;
+  }
+
+  const { parent, upstreamId, title, state, ...agent } = report;
+
+  return {
+    sessionId: parent,
+    update: {
+      sessionUpdate: 'subagent_update',
+      sessionId: upstreamId,
+      title,
+      state,
+      ...(report.closed === true ? {} : { capabilities: { cancel: {} } }),
+      _meta: {
+        [AGENT]: Object.fromEntries(
+          Object.entries(agent).filter(([, value]) => value !== undefined),
+        ),
+      },
+    },
+  };
 }
 
 /**

@@ -48,7 +48,8 @@
   (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
   `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktitled`,
   `tasktillsteered`,
-  `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`),
+  `taskask`, `taskaskstays`, `taskaskas`, `taskformas`, `taskstayshold`,
+  `taskchildhold`),
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`, `flood`,
@@ -146,6 +147,9 @@
   MCP note, with arguments first empty, then whole; `codexmcpnote` plays
   the same note as Codex sends it, with server, tool and arguments wrapped
   in `rawInput`;
+  `askas <id>` asks permission as the named session and `formas <id>`
+  asks a form as it; `taskaskas` and `taskformas` spawn a task that claims
+  its parent's session id, to check refusal of impersonation;
   `form` asks for a form with a field of each kind and
   `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
   `askclaudeone`, `askcodex`, `askdroid`, `askopencode` and `askdimcode`
@@ -413,7 +417,9 @@
   session offers two models, `Fake Large with a 1M context window` (in use
   until switched) and `Fake Small`, and three modes, `default`, `acceptEdits`
   and `plan`, and an effort, `low`, `medium` (until set) or `high`, through
-  config options; `--no-config` or `CHORD_FAKE_NO_CONFIG=1` leaves the effort
+  config options; `--config-delay <ms>` (`CHORD_FAKE_CONFIG_DELAY`)
+  delays `session/set_config_option` replies for startup ordering tests.
+  `--no-config` or `CHORD_FAKE_NO_CONFIG=1` leaves the effort
   out and `--refuse-config` or `CHORD_FAKE_REFUSE_CONFIG=1` refuses every
   change to it; `--no-modes` or `CHORD_FAKE_NO_MODES=1` offers no modes and
   refuses `session/set_mode`.
@@ -448,7 +454,10 @@
   reply text to any other. Every session
   advertises two slash commands, `greet` and `echo`
   (`tests/fixtures/commands.ts`), just after `session/new`, as Claude's
-  adapter does; a prompt starting with one plays it. `verbatim <text>`
+  adapter does; `--no-commands` (`CHORD_FAKE_NO_COMMANDS=1`) suppresses
+  announcements, and `--also-commands <list>` (`CHORD_FAKE_ALSO_COMMANDS`)
+  adds comma-separated names to check conflicts with chord's commands.
+  A prompt starting with `greet` or `echo` plays it. `verbatim <text>`
   answers with the text as a JSON string, escaping every C0, DEL and C1
   character as `\uXXXX`. Shell output sent ahead of a prompt gets a
   `Received` line naming each command and its first line of output, and
@@ -498,7 +507,9 @@
   `--fork-model <id>` (`CHORD_FAKE_FORK_MODEL`) puts the fork on that model,
   standing in for its source's, which a process of its own cannot read.
   `--auto-mode` (`CHORD_FAKE_AUTO_MODE=1`) adds an `auto` mode to the three
-  it offers, for the screenshots' Codex member; the default list leaves it out.
+  it offers, for the screenshots' Codex member; `--bypass-mode`
+  (`CHORD_FAKE_BYPASS_MODE=1`) adds `bypassPermissions` for team files
+  requesting it. Neither is in the default list.
   `CHORD_FAKE_REFUSE_FORK=1` refuses the advertised method;
   `CHORD_FAKE_HANG_FORK=1` leaves it unanswered. These fixtures prove transport
   and lifecycle behavior, not live cross-process context inheritance.

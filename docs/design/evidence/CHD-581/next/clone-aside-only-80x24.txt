@@ -1,0 +1,24 @@
+ ▄▀▀▀   /tmp/chord-qa.designer-581-next/proj
+ ▀▀     ? for shortcuts · /help
+        resumed · just now · <message from...end_message reaches it. </message>
+
+ › <message from="chord">
+   The person handed team bugfix this job: "fix the quote". Its lead is @bugfix
+   and reports to you; send_message reaches it.
+   </message>
+
+
+
+ ⏺ Received the message from bugfix · fake.
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ⏺ team bugfix (1 agent) was open when this session was left and is not
+   reopened · /resume lists them · /team run bugfix starts the team again
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -505,17 +505,7 @@ export const cli = chordCommand().action(async (options, named) => {
   let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = startServices.serveChord();
-  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
-  const resources = startServices.createResources({
-    collectors,
-    ...(collectors === 'fixture'
-      ? {
-          fixtureCase: resourceFixtureCase(
-            process.env['CHORD_FAKE_RESOURCE_CASE'],
-          ),
-        }
-      : {}),
-  });
+  const resources = startServices.createResources(resourceOptions());
 
   let closingResources: Promise<void> | undefined;
   const closeResources = () =>
@@ -676,6 +666,22 @@ cli.command(
   upgradeCommand(realpathSync(execPath()), process.env, manifest.version),
 );
 
+/** Which collectors read the providers' limits, by the environment. */
+function resourceOptions() {
+  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
+
+  return {
+    collectors,
+    ...(collectors === 'fixture'
+      ? {
+          fixtureCase: resourceFixtureCase(
+            process.env['CHORD_FAKE_RESOURCE_CASE'],
+          ),
+        }
+      : {}),
+  };
+}
+
 /** `chord acp`: `runAcp` on this process's own streams and signals. */
 async function serveAcp(
   flags: {
@@ -732,6 +738,14 @@ async function serveAcp(
     );
   }
 
+  const invokedAs = {
+    agent,
+    ...(agentCommand === undefined ? {} : { agentCommand }),
+  };
+  const startup = { configHome: xdgConfig, home, invokedAs, flags: asked };
+  // Each said once, however many sessions' directories read the user's file.
+  const problems = [...loaded.problems];
+
   for (const line of byHandNote(process.stdin.isTTY === true)) {
     say(line);
   }
@@ -768,41 +782,35 @@ async function serveAcp(
       process.kill(process.pid, how.signal);
     },
     agent,
-    ...(agentCommand === undefined ? {} : { agentCommand }),
+    home,
+    configHome: xdgConfig,
+    server: serveChord(),
+    resources: createResources(resourceOptions()),
     version: manifest.version,
     stateDir: chordStateDir(),
     open: openSession,
     place: async (cwd) => {
-      const there = cwd === here ? loaded : await settingsAt(cwd);
-      const mcp = await loadMcpServers({ layers: there.layers, cwd });
+      const read = await readPlace(cwd, {
+        ...startup,
+        loadedAt: here,
+        loaded,
+        problems,
+        report: (found) => {
+          for (const problem of found) {
+            say(problemLine(problem));
+          }
 
-      for (const problem of [
-        ...(cwd === here ? [] : there.problems),
-        ...mcp.problems,
-      ]) {
-        say(problemLine(problem));
-      }
-
-      const found = resolveStartup(
-        { ...asked, agent },
-        there.layers,
-        DEFAULT_AGENT,
-      );
-      const starting = (value: Sourced | undefined) =>
-        value === undefined
-          ? undefined
-          : { id: value.id, from: setWhere(value.from, { cwd, home }) };
+          return Promise.resolve();
+        },
+      });
 
       return {
-        mcpServers: mcp.servers.map(({ server }) => server),
-        ...(takesMcpServers(agent, found.mcpServers)
-          ? {}
-          : { noMcpServers: true }),
-        starting: {
-          model: starting(found.model),
-          effort: starting(found.effort),
-          mode: starting(found.permissionMode),
-        },
+        ...placeOf(read, startup),
+        runtimes: knownAgents(
+          invokedAs,
+          read.layers,
+          listAgents().map(({ name }) => name),
+        ),
       };
     },
   });

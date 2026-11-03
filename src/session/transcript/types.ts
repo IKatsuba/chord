@@ -736,6 +736,11 @@ export interface PermissionWait {
   /** The agent's own options, in the agent's order. */
   readonly options: readonly PermissionOption[];
   /**
+   * What chord's own question is about, in words: for who is asked through
+   * another client and sees no box drawn beside the call.
+   */
+  readonly detail?: string;
+  /**
    * chord's own question rather than the agent's: `propose_team`'s save box,
    * whose answer is drawn on the call, so it leaves no record of its own.
    */

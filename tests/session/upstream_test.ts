@@ -8,10 +8,15 @@ import type {
 import type { AgentState } from '../../src/session/agent_state.ts';
 import type { PlanWait } from '../../src/session/transcript/types.ts';
 import {
+  agentStateOf,
+  agentUpdate,
   aliasFor,
   answeredConfig,
   asksIn,
   childOf,
+  childSession,
+  commandOf,
+  commandsIfNone,
   configChange,
   configOptionsOf,
   configSetter,
@@ -211,6 +216,246 @@ describe('what an ask may name', () => {
     expect(asksIn(session, 'other')).toBe(false);
     expect(asksIn(session, 's1~2')).toBe(false);
     expect(asksIn(session, 'toString')).toBe(false);
+  });
+});
+
+describe("a long-lived child's session", () => {
+  const child = childSession('agent-c', 's1/c1');
+  const chunk: SessionUpdate = {
+    sessionUpdate: 'agent_message_chunk',
+    content: { type: 'text', text: 'hi' },
+  };
+
+  test('goes under its composite id, for a client that takes subagents', () => {
+    expect(mapUpdate(child, ALL, chunk).notification).toEqual({
+      sessionId: 's1/c1',
+      update: chunk,
+    });
+  });
+
+  test("all of it is a child's traffic, so none goes to one that does not", () => {
+    expect(mapUpdate(child, NONE, chunk).notification).toBeUndefined();
+    expect(mapUpdate(upstreamSession('s1'), NONE, chunk).notification).toEqual({
+      sessionId: 's1',
+      update: chunk,
+    });
+  });
+
+  test('its own subagent nests under it, and its ask may name it', () => {
+    const { session, notification } = mapUpdate(child, ALL, {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'inner',
+    });
+
+    expect(notification?.sessionId).toBe('s1/c1');
+    expect(notification?.update).toMatchObject({ sessionId: 's1/c1/inner' });
+    expect(childOf(session, 's1/c1/inner')).toBe('inner');
+    expect(asksIn(session, 'inner')).toBe(true);
+  });
+});
+
+describe('a task of chord', () => {
+  test('says it can be cancelled, as chord stops it', () => {
+    const { notification } = mapUpdate(upstreamSession('s1'), ALL, {
+      sessionUpdate: 'subagent_update',
+      sessionId: 't1',
+      state: { state: 'running' },
+      _meta: { 'chord/task': { name: 'a task' } },
+    });
+
+    expect(notification?.update).toMatchObject({
+      sessionId: 's1/t1',
+      capabilities: { cancel: {} },
+    });
+  });
+
+  test("an agent's own subagent keeps what it said of that", () => {
+    const { notification } = mapUpdate(upstreamSession('s1'), ALL, {
+      sessionUpdate: 'subagent_update',
+      sessionId: 'c',
+    });
+
+    expect(notification?.update).not.toHaveProperty('capabilities');
+  });
+});
+
+describe('what chord says of a long-lived child', () => {
+  const report = {
+    parent: 's1/lead',
+    upstreamId: 's1/lead/tester',
+    title: 'tester',
+    state: { state: 'running' as const },
+    runtime: 'codex',
+    model: 'gpt',
+    effort: undefined,
+    mode: 'bypassPermissions',
+    team: 'bugfix',
+    role: 'member' as const,
+  };
+
+  test('goes on its immediate parent, its detail in _meta, nothing undefined', () => {
+    expect(agentUpdate(ALL, report)).toEqual({
+      sessionId: 's1/lead',
+      update: {
+        sessionUpdate: 'subagent_update',
+        sessionId: 's1/lead/tester',
+        title: 'tester',
+        state: { state: 'running' },
+        capabilities: { cancel: {} },
+        _meta: {
+          'chord/agent': {
+            runtime: 'codex',
+            model: 'gpt',
+            mode: 'bypassPermissions',
+            team: 'bugfix',
+            role: 'member',
+          },
+        },
+      },
+    });
+  });
+
+  test('one closed says so, with nothing left to cancel', () => {
+    const update = agentUpdate(ALL, { ...report, closed: true })?.update;
+
+    expect(update).not.toHaveProperty('capabilities');
+    expect(update).toMatchObject({
+      _meta: { 'chord/agent': { closed: true } },
+    });
+  });
+
+  test('a client that takes no subagents hears nothing', () => {
+    expect(agentUpdate(NONE, report)).toBeUndefined();
+  });
+
+  const fold = (over: object) => ({
+    queue: [],
+    transcript: {
+      entries: [],
+      plan: [],
+      commands: [],
+      turn: { status: 'idle' },
+      asking: [],
+      ...over,
+    } as never,
+  });
+
+  test('its state is what is folded of it', () => {
+    expect(agentStateOf(fold({}))).toEqual({ state: 'idle' });
+    expect(agentStateOf(fold({}), 'end_turn')).toEqual({
+      state: 'idle',
+      stopReason: 'end_turn',
+    });
+    expect(agentStateOf(fold({ turn: { status: 'working' } }))).toEqual({
+      state: 'running',
+    });
+    expect(
+      agentStateOf(fold({ turn: { status: 'awaiting_permission' } })),
+    ).toEqual({ state: 'requires_action' });
+    expect(
+      agentStateOf(
+        fold({ turn: { status: 'working' }, asking: [{ id: 'form' }] }),
+      ),
+    ).toEqual({ state: 'requires_action' });
+    expect(
+      agentStateOf(
+        fold({ turn: { status: 'working' }, planAsks: [{ wait: {} }] }),
+      ),
+    ).toEqual({ state: 'requires_action' });
+  });
+});
+
+describe("chord's commands", () => {
+  const names = (notification: unknown) =>
+    (
+      notification as {
+        update: { availableCommands: { name: string }[] };
+      }
+    ).update.availableCommands.map(({ name }) => name);
+  const list = (...commands: string[]): SessionUpdate => ({
+    sessionUpdate: 'available_commands_update',
+    availableCommands: commands.map((name) => ({ name, description: name })),
+  });
+
+  test("join the agent ones, a name both offer being chord's alone", () => {
+    const { session, notification } = mapUpdate(
+      upstreamSession('s1'),
+      NONE,
+      list('greet', 'new'),
+    );
+
+    expect(names(notification)).toEqual(['team', 'new', 'greet']);
+    expect(
+      (
+        notification?.update as unknown as {
+          availableCommands: { description: string }[];
+        }
+      ).availableCommands[1]?.description,
+    ).toBe('Open a new agent beside main');
+    expect(session.commandsSent).toBe(true);
+  });
+
+  test('survive a later list, which replaces the agent part', () => {
+    const { session } = mapUpdate(upstreamSession('s1'), NONE, list('a'));
+    const later = mapUpdate(session, NONE, list('b'));
+
+    expect(names(later.notification)).toEqual(['team', 'new', 'b']);
+  });
+
+  test("a child's list is its own", () => {
+    const { notification } = mapUpdate(
+      childSession('c', 's1/c'),
+      ALL,
+      list('greet'),
+    );
+
+    expect(names(notification)).toEqual(['greet']);
+  });
+
+  test('an agent that sends none gets them once; one that did, not again', () => {
+    const { session, notification } = commandsIfNone(upstreamSession('s1'));
+
+    expect(names(notification)).toEqual(['team', 'new']);
+    expect(commandsIfNone(session).notification).toBeUndefined();
+
+    const sent = mapUpdate(upstreamSession('s1'), NONE, list('a')).session;
+
+    expect(commandsIfNone(sent).notification).toBeUndefined();
+  });
+
+  const text = (words: string): ContentBlock => ({ type: 'text', text: words });
+
+  test.each([
+    ['/team', { name: 'team', args: '', alone: true }],
+    ['/team list', { name: 'team', args: 'list', alone: true }],
+    [
+      '/team run bugfix fix\nit',
+      { name: 'team', args: 'run bugfix fix\nit', alone: true },
+    ],
+    ['/new codex', { name: 'new', args: 'codex', alone: true }],
+    ['  /new  ', { name: 'new', args: '', alone: true }],
+  ])("%j is chord's", (words, command) => {
+    expect(commandOf([text(words)])).toEqual(command as never);
+  });
+
+  test.each(['/greet', '/teams', 'team', 'say /team', '/'])(
+    '%j goes to the agent',
+    (words) => {
+      expect(commandOf([text(words)])).toBeUndefined();
+    },
+  );
+
+  test('other blocks beside it say so; only the first text is read', () => {
+    const image: ContentBlock = {
+      type: 'image',
+      data: 'x',
+      mimeType: 'image/png',
+    };
+
+    expect(commandOf([image, text('/team')])?.alone).toBe(false);
+    expect(commandOf([text('/team'), text('more')])?.alone).toBe(false);
+    expect(commandOf([text('hello'), text('/team')])).toBeUndefined();
+    expect(commandOf([image])).toBeUndefined();
   });
 });
 

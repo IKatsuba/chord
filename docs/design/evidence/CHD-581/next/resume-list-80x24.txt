@@ -1,0 +1,24 @@
+      report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › <message from="chord">
+   The person handed team bugfix this job: "fix the quote". Its lead is @bugfix
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯   1. just now  <message from="chord"> The person handed team bugfix this   │
+│                  job: "fix the quote". Its lead is @bugfix and reports to    │
+│                  you; send_message reaches it. </message> first line of mine │
+│                  second line of mine                                         │
+│   ↓ 2. just now  a plain prompt, with no aside                               │
+│     … +7 more                                                                │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

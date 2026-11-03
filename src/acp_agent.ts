@@ -125,6 +125,7 @@ const EXTENSIONS = {
   'session/state': 1,
   'session/steer': 1,
   agents: 1,
+  monitors: 1,
 } as const;
 
 /** What `_chord/session/state` last said, or would have: none says idle. */
@@ -380,6 +381,22 @@ export function runAcp(options: AcpOptions): AcpRun {
       .notify('_chord/session/state', {
         sessionId: entry.upstream.upstreamId,
         ...state,
+      })
+      .catch(() => {
+        // The connection went; the way out has it from there.
+      });
+  };
+
+  /** A session's monitors, as its `monitors` event has them, whole. */
+  const tellMonitors = (
+    sessionId: string,
+    event: Extract<ConversationEvent, { type: 'monitors' }>,
+  ): void => {
+    connection.client
+      .notify('_chord/monitors/changed', {
+        sessionId,
+        running: event.monitors,
+        ended: event.ended,
       })
       .catch(() => {
         // The connection went; the way out has it from there.
@@ -1008,6 +1025,15 @@ export function runAcp(options: AcpOptions): AcpRun {
         warn(entry, event.message);
 
         break;
+      case 'monitors':
+        // Its close stops them: no news to a client that closed it.
+        once(entry, () => {
+          if (entry.upstream !== undefined && entry.closed !== true) {
+            tellMonitors(entry.upstream.upstreamId, event);
+          }
+        });
+
+        break;
       default:
         break;
     }
@@ -1131,6 +1157,10 @@ export function runAcp(options: AcpOptions): AcpRun {
         break;
       case 'plan_requested':
         whenUp(() => once(entry, () => askPlan(asker(), event.plan)));
+
+        break;
+      case 'monitors':
+        whenUp(() => tellMonitors(route.upstreamId, event));
 
         break;
       case 'permission_settled':
@@ -1987,6 +2017,29 @@ export function runAcp(options: AcpOptions): AcpRun {
         }
 
         return { delivery: busy ? 'queued' : 'sent' };
+      },
+      stopMonitor: ({ params }) => {
+        refuseIfClosing();
+
+        const main = sessions.get(params.sessionId);
+        const { entry, agent } =
+          main === undefined
+            ? (({ entry, child }) => ({ entry, agent: child.id }))(
+                childNamed(params.sessionId),
+              )
+            : { entry: main, agent: undefined };
+
+        if (entry.key === undefined) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        const stopped = entry.host.stopMonitor(entry.key, agent, params.id);
+
+        if ('error' in stopped) {
+          throw new RequestError(-32002, stopped.error);
+        }
+
+        return stopped;
       },
       closeAgent: ({ params }) => {
         refuseIfClosing();

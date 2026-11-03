@@ -184,7 +184,12 @@ describe('initialize', () => {
           _meta: {
             'chord/acp': {
               version: 1,
-              extensions: { 'session/state': 1, 'session/steer': 1, agents: 1 },
+              extensions: {
+                'session/state': 1,
+                'session/steer': 1,
+                agents: 1,
+                monitors: 1,
+              },
               agent: { name: 'fake' },
             },
           },
@@ -3797,6 +3802,142 @@ describe('agents/send and agents/close (CHD-575)', () => {
           >
         )['chord/acp']?.extensions,
       ).toMatchObject({ agents: 1 });
+    }));
+});
+
+describe('monitors/changed and monitors/stop (CHD-575)', () => {
+  const STOP = '_chord/monitors/stop';
+  const server = () => ({ server: serveChord() });
+
+  interface Changed {
+    readonly running: { id: string; description: string; events: number }[];
+    readonly ended: { id: string; end: { kind: string }; endedAt: number }[];
+  }
+
+  /** What `_chord/monitors/changed` said of `sessionId`, in order. */
+  const changes = (client: AcpClient, sessionId: string): Changed[] =>
+    client.messages.flatMap((message) =>
+      message.method === '_chord/monitors/changed' &&
+      message.params?.sessionId === sessionId
+        ? [message.params as unknown as Changed]
+        : [],
+    );
+
+  test("main's monitor: told as it runs, stopped by its id, told ended", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'monitors'));
+        await until(
+          () => changes(client, sessionId).at(-1)?.running.length === 2,
+          20_000,
+        );
+
+        expect(changes(client, sessionId).at(-1)?.running).toMatchObject([
+          {
+            id: 'm1',
+            description: 'dev server errors',
+            command: expect.any(String) as string,
+            startedAt: expect.any(Number) as number,
+            timeoutMs: expect.any(Number) as number,
+            events: expect.any(Number) as number,
+          },
+          { id: 'm2', description: 'CI run 4812', events: 0 },
+        ]);
+
+        const { result } = await client.request(STOP, {
+          sessionId,
+          id: 'm2',
+        });
+
+        expect(result).toEqual({
+          id: 'm2',
+          description: 'CI run 4812',
+          events: 0,
+          ran_ms: expect.any(Number) as number,
+        });
+        await until(() =>
+          changes(client, sessionId).some(({ ended }) =>
+            ended.some((each) => each.id === 'm2'),
+          ),
+        );
+
+        const last = changes(client, sessionId).at(-1)!;
+
+        expect(last.running.map(({ id }) => id)).toEqual(['m1']);
+        expect(last.ended).toMatchObject([
+          { id: 'm2', end: { kind: 'stopped' }, endedAt: expect.any(Number) },
+        ]);
+
+        const again = await client.request(STOP, { sessionId, id: 'm2' });
+
+        expect(again.error?.code).toBe(-32002);
+        expect(
+          (await client.request(STOP, { sessionId, id: 'm9' })).error?.code,
+        ).toBe(-32002);
+        expect(
+          (await client.request(STOP, { sessionId: 'nobody', id: 'm1' })).error
+            ?.code,
+        ).toBe(-32002);
+      },
+      server(),
+    ));
+
+  test("a child's monitors are under its composite id, and stop there", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'monitorchild'));
+
+        const child = () =>
+          client.messages
+            .filter(
+              (message) =>
+                message.method === '_chord/monitors/changed' &&
+                message.params?.sessionId !== sessionId,
+            )
+            .at(-1);
+
+        await until(() => child() !== undefined, 20_000);
+
+        const parser = String(child()!.params?.sessionId);
+
+        expect(parser.startsWith(`${sessionId}/`)).toBe(true);
+        expect(changes(client, parser).at(-1)?.running).toMatchObject([
+          { id: 'm1', description: 'parser tests' },
+        ]);
+
+        const { result } = await client.request(STOP, {
+          sessionId: parser,
+          id: 'm1',
+        });
+
+        expect(result).toMatchObject({ id: 'm1', description: 'parser tests' });
+        await until(() => changes(client, parser).at(-1)?.running.length === 0);
+        // Main's own m1 runs on.
+        expect(
+          changes(client, sessionId)
+            .at(-1)
+            ?.running.map(({ id }) => id),
+        ).toEqual(['m1']);
+      },
+      server(),
+    ));
+
+  test('advertised', () =>
+    onAcp([], async ({ client }) => {
+      expect(
+        (
+          (await client.answerTo(1)).result?._meta as Record<
+            string,
+            { extensions: object }
+          >
+        )['chord/acp']?.extensions,
+      ).toMatchObject({ monitors: 1 });
     }));
 });
 

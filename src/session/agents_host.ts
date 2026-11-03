@@ -331,6 +331,13 @@ export function createAgentsHost(
 
   const closeRuntimes = () => runtimesMade?.close();
 
+  /**
+   * Stops monitor `id` of main `key`, or of its long-lived child `agent`,
+   * as `stop_monitor` would for that session: only its own.
+   */
+  const stopMonitor = (key: number, agent: string | undefined, id: string) =>
+    stopMonitorIn(sessions.agents, { key, agent }, id);
+
   /** What `runtime` offers, as `list_agents` and a child's start read it. */
   const offer: WindowView['offer'] = (runtime, probe) => {
     const refused = place.startupOf(runtime)?.refused;
@@ -2872,6 +2879,7 @@ export function createAgentsHost(
     ownChild,
     callerConversation,
     closeRuntimes,
+    stopMonitor,
     offer,
     teamsAt,
     shownTeamFile,

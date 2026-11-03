@@ -29,6 +29,7 @@ import {
   type Stream,
 } from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
+import type { MonitorStopped } from '../session/conversation.ts';
 
 /**
  * A prompt's blocks in chord's own requests, read as far as `promptOf` needs:
@@ -78,6 +79,11 @@ export interface AgentsClosed {
   readonly closed: readonly string[];
 }
 
+const MONITOR_STOP = z.object({ sessionId: z.string(), id: z.string() });
+
+/** `_chord/monitors/stop`: a session's own monitor `id` stopped. */
+export type MonitorStopRequest = z.infer<typeof MONITOR_STOP>;
+
 /** How words a client sent went: into a running turn, or to wait for one. */
 export interface Delivered {
   readonly delivery: 'sent' | 'queued';
@@ -115,6 +121,7 @@ export interface AcpHandlers {
   steer(request: AcpRequest<SteerRequest>): Delivered;
   sendAgent(request: AcpRequest<AgentSendRequest>): Delivered;
   closeAgent(request: AcpRequest<AgentCloseRequest>): AgentsClosed;
+  stopMonitor(request: AcpRequest<MonitorStopRequest>): MonitorStopped;
 }
 
 export function connectAgentApp(
@@ -142,6 +149,9 @@ export function connectAgentApp(
     )
     .onRequest('_chord/agents/close', CLOSE, (request) =>
       handlers.closeAgent(request),
+    )
+    .onRequest('_chord/monitors/stop', MONITOR_STOP, (request) =>
+      handlers.stopMonitor(request),
     )
     .connect(stream);
 }

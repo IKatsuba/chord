@@ -736,8 +736,8 @@ export function runAcp(options: AcpOptions): AcpRun {
     const answered = wire.expect(opening.requestId);
 
     // An agent that sends no list still shows chord's, once its session is
-    // answered, whichever way it opened.
-    void answered.then(() => {
+    // answered and what it held has gone, whichever way it opened.
+    const tellCommands = () => {
       if (entry.upstream !== undefined) {
         const { session: told, notification } = commandsIfNone(entry.upstream);
 
@@ -747,13 +747,18 @@ export function runAcp(options: AcpOptions): AcpRun {
           send(notification);
         }
       }
-    });
+    };
 
     // The client asked for this id: its past goes ahead of the answer. A new
     // id goes first, as nothing of the session can be placed without it.
     if (entry.past === undefined) {
-      void answered.then(release);
+      void answered.then(() => {
+        release();
+        tellCommands();
+      });
     } else {
+      void answered.then(tellCommands);
+
       entry.live = true;
 
       for (const event of entry.past.splice(0)) {

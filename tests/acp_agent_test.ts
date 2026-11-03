@@ -2080,6 +2080,34 @@ describe("chord's commands in the list", () => {
       expect(listed(client, sessionId)).toEqual([['team', 'new']]);
     }));
 
+  test("an agent whose list came ahead of its answer gets no list of chord's alone", () =>
+    onAcp(
+      ['--config-delay', '300'],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+
+        await until(() => listed(client, sessionId).length > 0);
+
+        expect(listed(client, sessionId)).toEqual([
+          ['team', 'new', 'greet', 'echo'],
+        ]);
+      },
+      {
+        place: () =>
+          Promise.resolve({
+            ...fakePlace(['--config-delay', '300']),
+            startupOf: () => ({
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--config-delay',
+                '300',
+              ),
+              starting: { mode: { id: 'plan', from: 'a test' } },
+            }),
+          }),
+      },
+    ));
+
   test('go after a load answer too, its past ahead of it', () =>
     onAcp(['--no-commands'], async ({ client, cwd }) => {
       const sessionId = '11111111-2222-4333-8444-555555555555';

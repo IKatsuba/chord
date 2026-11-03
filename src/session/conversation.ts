@@ -1455,6 +1455,7 @@ export class Conversation {
           next.attachments,
           next.mentions,
           (found) => (links = found),
+          next.links,
         );
         // Never into a session /clear opened since, or once closing.
         const outgoing = () =>

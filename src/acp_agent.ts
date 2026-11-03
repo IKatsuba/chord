@@ -732,6 +732,7 @@ export function runAcp(options: AcpOptions): AcpRun {
 
       tellConfig(entry);
     };
+
     const answered = wire.expect(opening.requestId);
 
     // An agent that sends no list still shows chord's, once its session is

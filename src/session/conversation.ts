@@ -1174,9 +1174,11 @@ export class Conversation {
    * copy. Refused, it goes back to the top of the queue; `unsteerable` on an
    * agent that takes no steering, the queue untouched; `none` with no turn
    * to go into or no message of the person's waiting in the queue.
-   * Undefined before the session is up and once closing.
+   * Undefined before the session is up and once closing. `turnId` takes
+   * that entry instead of the oldest: an ACP client steers what it sent,
+   * not what another request queued ahead of it.
    */
-  steerQueued(): 'sent' | 'unsteerable' | 'none' | undefined {
+  steerQueued(turnId?: string): 'sent' | 'unsteerable' | 'none' | undefined {
     const session = this.#session;
 
     if (!session || this.#closing) {
@@ -1184,7 +1186,10 @@ export class Conversation {
     }
 
     const index = this.#queued.findIndex(
-      (queued) => queued.from === undefined && !queued.afterAnswer,
+      (queued) =>
+        queued.from === undefined &&
+        !queued.afterAnswer &&
+        (turnId === undefined || queued.turnId === turnId),
     );
 
     if (index === -1 || !this.#turn) {

@@ -2245,6 +2245,51 @@ describe("the person's oldest queued message sent into the running turn (CHD-535
     ));
 });
 
+describe('a queued message steered by its own turn (CHD-575)', () => {
+  test('the named entry goes in, the older ones stay queued in their order', () =>
+    onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('slow');
+      await until(() => saidIn(events).startsWith('Working'));
+      conversation.send('Older.');
+      conversation.send('Mine.', 'Mine.', [], [], { turnId: 'mine' });
+
+      expect(conversation.steerQueued('mine')).toStrictEqual('sent');
+      await until(() => promptsIn(events).length === 2);
+
+      expect(promptsIn(events)).toStrictEqual([
+        ['slow', undefined],
+        ['Mine.', firstTurn(events)],
+      ]);
+      expect(conversation.steerQueued('mine')).toStrictEqual('none');
+      conversation.interrupt();
+      await ended(events, 1);
+      expect(promptsIn(events)).toHaveLength(2);
+    }));
+
+  test('none for a turn not queued, and unsteerable on an agent that takes no steering', async () => {
+    await onFake(['--steering', 'claude'], async (conversation, events) => {
+      conversation.send('slow');
+      await until(() => saidIn(events).startsWith('Working'));
+      conversation.send('Queued.');
+
+      expect(conversation.steerQueued('elsewhere')).toStrictEqual('none');
+      conversation.interrupt();
+      await ended(events, 1);
+    });
+
+    await onFake([], async (conversation, events) => {
+      conversation.send('slow');
+      await until(() => saidIn(events).startsWith('Working'));
+      conversation.send('Mine.', 'Mine.', [], [], { turnId: 'mine' });
+
+      expect(conversation.steerQueued('mine')).toStrictEqual('unsteerable');
+      expect(promptsIn(events)).toStrictEqual([['slow', undefined]]);
+      conversation.interrupt();
+      await ended(events, 1);
+    });
+  });
+});
+
 describe('CHD-535 U1 tester: queued steering boundaries', () => {
   const queueRows = (events: readonly ConversationEvent[], text: string) =>
     events.flatMap((event) =>

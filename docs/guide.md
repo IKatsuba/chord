@@ -610,8 +610,8 @@ client-supplied `acp` transport is refused with -32602.
 | `session/resume`            | Reopens a chord record without replay                                                                                                |
 | `session/close`             | Stops the session; keeps its record                                                                                                  |
 | `session/prompt`            | Sends a prompt; answers when that prompt's turn ends; further prompts queue                                                          |
-| `session/cancel`            | Notification: requests interruption and withdraws queued client prompts; also requests a named adapter subagent stop where supported |
-| `$/cancel_request`          | Requests cancellation of only the named request; a queued prompt is removed without interrupting another                             |
+| `session/cancel`            | Notification: interrupts and withdraws queued client prompts on main or a child; cancels a chord task or requests an adapter subagent stop |
+| `$/cancel_request`          | Cancels only the named request; removes a queued prompt; does not cancel a chord command in flight                             |
 | `session/set_config_option` | Sets a select option and returns all `configOptions`                                                                                 |
 | `session/set_mode`          | Sets the permission mode for clients using this method                                                                               |
 
@@ -628,7 +628,8 @@ images, audio and embedded resources are refused with -32602.
 
 chord sends `session/update`, calls `session/request_permission` for
 permissions and plan approvals, and relays `elicitation/create` and
-`elicitation/complete`. Permissions have no timeout; errors and unknown
+`elicitation/complete`. chord's own asks carry a title and content
+describing the choice. Permissions have no timeout; errors and unknown
 choices refuse them. `--permission-mode` is a starting value, and there is
 no `--dangerously-skip-permissions` here. An unanswered ask waits until
 answered or cancelled. A plan answer cannot carry the window's note on
@@ -649,7 +650,10 @@ Sessions use the window's records and can reopen in either interface.
 other processes can still open and write the same record. If an agent
 returns a duplicate live id, the new session gets an upstream-only alias
 such as `s1~2`. Aliases are not listed or reloadable; they do not fix
-collisions in that agent's recorded ids.
+collisions in that agent's recorded ids. A leading chord aside is omitted
+from the person's words in `-r`, `/resume`'s list and `session/load`.
+A task's aside stays: it can contain arbitrary text, and hiding the
+person's own words would be worse.
 
 ### What is not sent
 
@@ -670,12 +674,54 @@ a subagent's permission is refused with a stderr diagnostic and its
 elicitation is cancelled. Other session-scoped elicitations are relayed
 regardless of declared elicitation capabilities.
 
-chord's child agents, teams and monitors are not available yet; the
-adapter's own subagent traffic does pass under the check above. Slash
-commands go to the agent as typed. `/team` keeps that meaning until
-1.0.0-next.2, when chord will handle it as its own team command.
+### Children, teams and commands
 
-There are no extensions yet: `initialize` reports an empty `extensions`
+chord's MCP tools let main open children, run teams and start tasks and
+monitors, as in the window. Children take settings' MCP servers, not the
+client's. A client without `subagents` still has these tools and commands:
+child traffic is dropped, and a child's permission, form or plan ask is
+refused with a stderr line rather than waiting unseen.
+
+chord adds `/team` and `/new` to the command list even if the agent sends
+none. On a name both offer, chord's wins. All other commands go to the
+agent as typed.
+
+| Command | Does |
+| --- | --- |
+| `/team`, `/team list` | Lists saved teams and open runs |
+| `/team show <name>` | Shows a team's file, description and agents; an open run's job, lead and open members; selected-run receipts require the window |
+| `/team run <name> <job>` | Starts a saved team and answers once started |
+| `/team stop <run>` | Closes the run's lead and members |
+| `/team new <words>` | Sends a normal turn asking main to propose a team |
+| `/new [agent]` | Opens an idle child; ask main to send it work with `send_message` |
+
+Commands take a single text block; other blocks beside one are refused.
+Except `/team new`, they run immediately, even during a turn, and return
+one text chunk marked `_meta["chord/command"]` with `name` and `failed`,
+then `end_turn`. Their text can quote repository files: clients must
+treat it as untrusted, as they do agent text. Commands add no transcript
+entry of their own; a session that only runs a team can remain unlisted.
+
+Children appear as `subagent_update` on their immediate parent. Their ids
+are composite: `<main>/<child>`, then `<main>/<child>/<subagent>` for a
+child's subagent. Treat them as opaque ids. `_meta["chord/agent"]` reports
+`runtime`, `model`, `effort`, `mode`, `team`, `role`, `gone`, `failed` and
+`closed` where known. `mode` reports the child's mode; it sets no policy.
+`session/cancel` on a long-lived child interrupts its turn and leaves it
+open; on a chord task it ends the task; on an adapter subagent it requests
+its supported stop.
+
+A run leaves no prompt pending. Its work, asks and reports may follow
+its answer; a lead's report starts a main turn that costs money. A run
+has no defined end. `session/cancel` aborts a run still starting but does
+not stop a running one: use `/team stop`. `$/cancel_request` does not
+cancel a command already in flight.
+
+When main's agent dies, `chord acp` closes all its children: nothing may
+keep running that the client can no longer name. The window keeps them,
+since its person can still reach them.
+
+Extensions remain CHD-575: `initialize` reports an empty `extensions`
 map in `_meta["chord/acp"]`. `_meta` keys are informational and unversioned;
 they do not establish an extension contract. For example, `chord/filled`
 marks chord's estimates, and `chord/held_back` explains withheld MCP
@@ -690,6 +736,11 @@ for silence nor changes the agent's cycle to fit the client.
 
 ### Limits and the way out
 
+- A task's agent can name another announced subagent of the same session
+  or claim a sibling's id. An agent announcing a subagent under a child's
+  id can mislead about state, but gains no control of that child.
+- The transcript fold kept per session and child adds memory use that has
+  not been measured.
 - A client that stops reading stdout while staying connected can hold
   unbounded output in memory and keep agents running until chord is killed.
   There is no blocked-write timeout or output limit.

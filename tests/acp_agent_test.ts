@@ -27,7 +27,11 @@ import {
   recordActions,
   type RecordEntry,
 } from '../src/session/record.ts';
-import { openSession, type Session } from '../src/session/session.ts';
+import {
+  openSession,
+  type OpenSessionOptions,
+  type Session,
+} from '../src/session/session.ts';
 import { earlierSessions, readRecords } from '../src/session/sessions.ts';
 import {
   type AcpClient,
@@ -180,7 +184,7 @@ describe('initialize', () => {
           _meta: {
             'chord/acp': {
               version: 1,
-              extensions: { 'session/state': 1, 'session/steer': 1 },
+              extensions: { 'session/state': 1, 'session/steer': 1, agents: 1 },
               agent: { name: 'fake' },
             },
           },
@@ -3497,6 +3501,257 @@ describe('a steer (CHD-575)', () => {
           >
         )['chord/acp']?.extensions,
       ).toMatchObject({ 'session/steer': 1 });
+    }));
+});
+
+describe('agents/send and agents/close (CHD-575)', () => {
+  const SEND = '_chord/agents/send';
+  const CLOSE = '_chord/agents/close';
+  const server = () => ({ server: serveChord() });
+  const send = (client: AcpClient, sessionId: string, text: string) =>
+    client.request(SEND, { sessionId, prompt: [{ type: 'text', text }] });
+
+  /** Each long-lived child chord announced, by its title, as last told. */
+  const children = (client: AcpClient) =>
+    new Map(
+      client.messages.flatMap((message) => {
+        const update = message.params?.update as
+          | {
+              sessionUpdate?: string;
+              sessionId?: string;
+              title?: string;
+              state?: { state: string };
+              _meta?: Record<string, { role?: string }>;
+            }
+          | undefined;
+        const agent = update?._meta?.['chord/agent'];
+
+        return message.method === 'session/update' &&
+          update?.sessionUpdate === 'subagent_update' &&
+          agent !== undefined
+          ? [
+              [
+                update.title!,
+                { id: update.sessionId!, state: update.state?.state },
+              ],
+            ]
+          : [];
+      }),
+    );
+  const childNamed = async (client: AcpClient, title: string) => {
+    await until(() => children(client).has(title), 20_000);
+
+    return children(client).get(title)!.id;
+  };
+
+  /** The first child announced: its title and its id. */
+  const firstChild = async (client: AcpClient) => {
+    await until(() => children(client).size > 0, 20_000);
+
+    const [first] = children(client);
+
+    assert(first !== undefined);
+
+    return { title: first[0], id: first[1].id };
+  };
+
+  /** Starts after the first `plain` go through only once `gate` exists. */
+  const gatedAfter = (plain: number, gate: string) => {
+    let opened = 0;
+
+    return {
+      ...server(),
+      place: () =>
+        Promise.resolve({
+          ...fakePlace(),
+          startupOf: () => ({
+            agentCommand:
+              opened < plain
+                ? fakeAgentCommand()
+                : gatedCommand(gate, fakeAgentCommand()),
+          }),
+        }),
+      open: (options: OpenSessionOptions) => {
+        opened += 1;
+
+        return openSession(options);
+      },
+    };
+  };
+
+  test("a child's prompt is sent, or queued behind its turn; closed, it is -32002", () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'agenttitled'));
+
+        const { title, id: parser } = await firstChild(client);
+
+        // Its first turn over, as chord reads it: idle is said of it while
+        // it starts too.
+        await until(
+          () =>
+            client.said(parser).includes('came in chunks') &&
+            children(client).get(title)?.state === 'idle',
+          20_000,
+        );
+
+        const said = client.said(parser).length;
+
+        expect((await send(client, parser, 'long')).result).toEqual({
+          delivery: 'sent',
+        });
+        await until(() => client.said(parser).length > said);
+        expect((await send(client, parser, 'text')).result).toEqual({
+          delivery: 'queued',
+        });
+
+        expect(
+          (await client.request(CLOSE, { sessionId: parser })).result,
+        ).toEqual({ closed: [title] });
+        expect((await send(client, parser, 'text')).error?.code).toBe(-32002);
+        expect(
+          (await client.request(CLOSE, { sessionId: parser })).error?.code,
+        ).toBe(-32002);
+      },
+      server(),
+    ));
+
+  test('main, a typo, or a task is no child of these: -32002', () =>
+    onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+
+        for (const id of [sessionId, `${sessionId}/nobody`, 'nobody']) {
+          expect((await send(client, id, 'text')).error?.code).toBe(-32002);
+          expect(
+            (await client.request(CLOSE, { sessionId: id })).error?.code,
+          ).toBe(-32002);
+        }
+      },
+      server(),
+    ));
+
+  test('a lead closes with its members, each by name', () =>
+    onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt }) => {
+        await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+        await copyFile(BUGFIX, join(cwd, '.chord', 'teams', 'bugfix.md'));
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, '/team run bugfix fix it'));
+
+        const lead = await childNamed(client, 'bugfix');
+
+        await childNamed(client, 'tester');
+        await childNamed(client, 'coder');
+
+        const { result } = await client.request(CLOSE, { sessionId: lead });
+        const closed = (result as { closed: string[] }).closed;
+
+        expect(closed[0]).toBe('bugfix');
+        expect(closed.slice(1).toSorted()).toEqual(['coder', 'tester']);
+      },
+      server(),
+    ));
+
+  test('a child still starting is not sent to: -32603, nothing held', async () => {
+    const gates = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
+    const gate = join(gates, 'release');
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+
+          await client.answerTo(prompt(sessionId, '/new'));
+
+          const { title, id: child } = await firstChild(client);
+          const { error } = await send(client, child, 'text');
+
+          expect(error?.code).toBe(-32603);
+          expect(error?.message).toBe(
+            `${title} is starting; send once its subagent_update says idle`,
+          );
+        },
+        gatedAfter(1, gate),
+      );
+    } finally {
+      await writeFile(gate, '');
+      await rm(gates, { recursive: true, force: true });
+    }
+  });
+
+  test('a child being cleared is not sent to: -32603, nothing held', async () => {
+    const gates = await mkdtemp(join(tmpdir(), 'chord-acp-gate-'));
+    const gate = join(gates, 'release');
+
+    try {
+      await onAcp(
+        [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+
+          // parser works on until it is stopped, which the clear does.
+          await client.answerTo(prompt(sessionId, 'agentcost'));
+
+          const parser = await childNamed(client, 'parser');
+          const clearing = prompt(sessionId, 'agentclearonly');
+
+          await until(
+            () =>
+              JSON.stringify(client.updates(sessionId)).includes('clear_agent'),
+            20_000,
+          );
+
+          // The call reaches chord a moment after the agent says it makes it:
+          // asked again, a little apart, until the clear has begun.
+          let error: WireMessage['error'];
+
+          for (
+            const deadline = performance.now() + 20_000;
+            error?.message.includes('cleared') !== true &&
+            performance.now() < deadline;
+          ) {
+            error = (await send(client, parser, 'text')).error;
+
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+
+          expect(error?.message).toBe(
+            'parser is being cleared; send once its subagent_update says idle',
+          );
+
+          await writeFile(gate, '');
+
+          expect((await client.answerTo(clearing)).result?.stopReason).toBe(
+            'end_turn',
+          );
+        },
+        gatedAfter(2, gate),
+      );
+    } finally {
+      await writeFile(gate, '');
+      await rm(gates, { recursive: true, force: true });
+    }
+  });
+
+  test('advertised', () =>
+    onAcp([], async ({ client }) => {
+      expect(
+        (
+          (await client.answerTo(1)).result?._meta as Record<
+            string,
+            { extensions: object }
+          >
+        )['chord/acp']?.extensions,
+      ).toMatchObject({ agents: 1 });
     }));
 });
 

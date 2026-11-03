@@ -63,6 +63,21 @@ const STEER = z.object({ sessionId: z.string(), prompt: BLOCKS });
 /** `_chord/session/steer`: words for the running turn of a session. */
 export type SteerRequest = z.infer<typeof STEER>;
 
+const SEND = z.object({ sessionId: z.string(), prompt: BLOCKS });
+
+/** `_chord/agents/send`: the person's prompt to a long-lived child. */
+export type AgentSendRequest = z.infer<typeof SEND>;
+
+const CLOSE = z.object({ sessionId: z.string() });
+
+/** `_chord/agents/close`: a long-lived child closed, a lead with its members. */
+export type AgentCloseRequest = z.infer<typeof CLOSE>;
+
+/** Who `_chord/agents/close` closed, by name. */
+export interface AgentsClosed {
+  readonly closed: readonly string[];
+}
+
 /** How words a client sent went: into a running turn, or to wait for one. */
 export interface Delivered {
   readonly delivery: 'sent' | 'queued';
@@ -98,6 +113,8 @@ export interface AcpHandlers {
     request: AcpRequest<CloseSessionRequest>,
   ): Promise<CloseSessionResponse>;
   steer(request: AcpRequest<SteerRequest>): Delivered;
+  sendAgent(request: AcpRequest<AgentSendRequest>): Delivered;
+  closeAgent(request: AcpRequest<AgentCloseRequest>): AgentsClosed;
 }
 
 export function connectAgentApp(
@@ -119,6 +136,12 @@ export function connectAgentApp(
     .onRequest('session/close', (request) => handlers.close(request))
     .onRequest('_chord/session/steer', STEER, (request) =>
       handlers.steer(request),
+    )
+    .onRequest('_chord/agents/send', SEND, (request) =>
+      handlers.sendAgent(request),
+    )
+    .onRequest('_chord/agents/close', CLOSE, (request) =>
+      handlers.closeAgent(request),
     )
     .connect(stream);
 }

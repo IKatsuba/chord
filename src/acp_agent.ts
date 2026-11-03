@@ -121,7 +121,11 @@ import { agentOf, isLead } from './session/window_agents.ts';
 const ACP_META = 'chord/acp';
 
 /** The extensions this chord has, each at its version, as `initialize` says. */
-const EXTENSIONS = { 'session/state': 1, 'session/steer': 1 } as const;
+const EXTENSIONS = {
+  'session/state': 1,
+  'session/steer': 1,
+  agents: 1,
+} as const;
 
 /** What `_chord/session/state` last said, or would have: none says idle. */
 const IDLE = JSON.stringify({ state: 'idle' });
@@ -1407,6 +1411,28 @@ export function runAcp(options: AcpOptions): AcpRun {
   };
 
   /**
+   * The long-lived child the client names `sessionId`, open and not gone;
+   * a task, an adapter's subagent or a closed child is no such child.
+   */
+  const childNamed = (sessionId: string) => {
+    for (const entry of sessions.values()) {
+      for (const [key, route] of entry.routes) {
+        const child = agentOf(entry.host.sessions.agents, key)?.child;
+
+        if (
+          route.upstreamId === sessionId &&
+          route.gone === undefined &&
+          child !== undefined
+        ) {
+          return { entry, key, child };
+        }
+      }
+    }
+
+    throw RequestError.sessionNotFound(sessionId);
+  };
+
+  /**
    * A cancel of a child of `entry`, if `sessionId` names one: a long-lived one's
    * turn stops and it stays open, a task of chord's ends, and an agent's own
    * subagent is stopped by its agent.
@@ -1911,6 +1937,58 @@ export function runAcp(options: AcpOptions): AcpRun {
         await closeEntry(entry);
 
         return {};
+      },
+      sendAgent: ({ params }) => {
+        refuseIfClosing();
+
+        const { entry, key, child } = childNamed(params.sessionId);
+        const { conversation } = child;
+
+        // As in the window, nothing is held for a child not up: the person
+        // sends again once it is.
+        if (entry.host.clearing.has(key)) {
+          throw new RequestError(
+            -32603,
+            `${child.name} is being cleared; send once its subagent_update says idle`,
+          );
+        }
+
+        if (conversation.session === undefined) {
+          throw new RequestError(
+            -32603,
+            `${child.name} is starting; send once its subagent_update says idle`,
+          );
+        }
+
+        const parsed = promptOf(
+          params.prompt,
+          child.runtime,
+          conversation.session.takesImages(),
+        );
+
+        if ('refused' in parsed) {
+          throw RequestError.invalidParams(undefined, parsed.refused);
+        }
+
+        const busy =
+          agentStateOf(entry.folds.get(key) ?? NO_FOLD).state !== 'idle';
+
+        if (
+          !conversation.send(parsed.text, parsed.text, parsed.attachments, [], {
+            links: parsed.links,
+          })
+        ) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        return { delivery: busy ? 'queued' : 'sent' };
+      },
+      closeAgent: ({ params }) => {
+        refuseIfClosing();
+
+        const { entry, child } = childNamed(params.sessionId);
+
+        return { closed: [child.name, ...entry.host.closeByPerson(child)] };
       },
       steer: ({ params }) => {
         refuseIfClosing();

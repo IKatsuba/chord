@@ -172,7 +172,7 @@ const DARK: Palette = {
   success: '#4eba65',
   // Lighter than the accent, so a name never sinks into the border.
   agents: ['#6cb6ff', '#c49cff', '#56d4dd', '#7ccf7f', '#e8c95a', '#f59ac6'],
-  mark: { stops: ['#89f5b3', '#47e7a5', '#15c7a2'], tone: 'greenBright' },
+  mark: { stops: ['#d2ffe4', '#3fdc9c', '#0a7470'], tone: 'greenBright' },
   // Claude Code's slate, `48;5;66`.
   selection: SLATE,
   code: { terminal: DARK_CODE, tint: DARK_CODE },

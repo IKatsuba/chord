@@ -39,11 +39,11 @@ test('the mark is the gradient at 256 colours and more, one tone at 16, and none
 
   expect(markColour(dark, 3)).toStrictEqual({
     level: 'truecolor',
-    stops: ['#89f5b3', '#47e7a5', '#15c7a2'],
+    stops: ['#d2ffe4', '#3fdc9c', '#0a7470'],
   });
   expect(markColour(dark, 2)).toStrictEqual({
     level: '256',
-    stops: ['#89f5b3', '#47e7a5', '#15c7a2'],
+    stops: ['#d2ffe4', '#3fdc9c', '#0a7470'],
   });
   expect(markColour(dark, 1)).toStrictEqual({
     level: '16',
@@ -70,7 +70,7 @@ test('light themes take the darker stops, and the 16-colour themes one tone at a
   });
   expect(markColour(PALETTES['dark-daltonized'].mark, 3)).toStrictEqual({
     level: 'truecolor',
-    stops: ['#89f5b3', '#47e7a5', '#15c7a2'],
+    stops: ['#d2ffe4', '#3fdc9c', '#0a7470'],
   });
   expect(markColour(PALETTES['dark-ansi'].mark, 3)).toStrictEqual({
     level: '16',

@@ -42,6 +42,7 @@ owner's consent.
 bun install                    # the dependencies, as bun.lock pins them
 bun dev chord [agent]           # run from source
 bun dev chord --fake            # run against the scripted test agent
+bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
 bun quality                    # types, lint, format and all tests
 bun quality --static           # types, coverage, lint, format and lint/ tests
 bun check                      # Bun's native type checker
@@ -74,7 +75,7 @@ bun dev compile --all     # every release target
 bun dev compile --install # this machine's binary into ~/.local/bin/chord
 bun dev npm               # lay out npm/ from dist/
 bun dev release [version|major|minor|patch|fix] # the owner's release
-bun dev selftest <binary> # check a binary on the fake agent, including tmux
+bun dev selftest <binary> # check -p, ACP stdio and the window on the fake agent
 bun dev registry          # refetch the ACP Registry into src/registry.ts
 bun dev mark              # rasterise scripts/mark.svg into the header mark
 bun dev screenshots       # retake docs/images/, including title pages and logos

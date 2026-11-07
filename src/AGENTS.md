@@ -9,3 +9,4 @@
   `propose_team`'s save. Selected runs freeze composition and instructions;
   later member admission rereads policy, never the saved team.
 - Read a file that may be absent through `not_found.ts`; absent means none.
+- No console calls in `session/`, `acp/` or `server/`: stdout may carry ACP.

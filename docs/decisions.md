@@ -7757,3 +7757,299 @@ What follows from those, settled in the same change:
   fails naming it and never falls back to latest. cliffy's `isOutdated` asks
   `getVersions` for `--version` and `-l` too, so those fail the same way on such
   a build.
+
+## 2026-11-02 — CHD-573: the SDK's agent side fits `chord acp`, with no protocol helper
+
+Tried under the one rule: `@agentclientprotocol/sdk` 2.2.0's `agent({ name })`, under Bun 1.4.4 and from
+`bun build --compile`, darwin arm64, in 24 scenarios over real pipes; the targets agree. Scripts and
+output are in `docs/design/evidence/CHD-573/sdk-trial/`. Linux and Windows were not run. The design is
+`docs/design/CHD-573.md`.
+
+What the trial found, none worked around: no output limit on stdio; no public place before the write
+queue that counts every class of output; a cancelled outgoing request settles nothing; `close()` does
+not flush; EOF closes the whole connection; a malformed line stops input while stdout is full; a line
+over 32 MiB closes the connection; outgoing messages are not validated. Consequence: chord answers a
+cancelled ask downstream itself, and shutdown waits on its own writes, bounded.
+
+## 2026-11-02 — CHD-573: stdout through `write`'s callback (owner, R4)
+
+- **Options:** A, a `WritableStream` over `process.stdout.write(chunk, callback)`; B, report
+  `Writable.toWeb` upstream and wait.
+- **Choice: A,** the pattern `src/acp/process.ts:240-255` already uses, pinned by a test.
+- **Why:** `Writable.toWeb(process.stdout)` under Bun delivered 65,536 of 16 MiB before `process.exit`,
+  and "finished" 256 MiB with nobody reading. `Bun.write(Bun.stdout)` blocks the event loop.
+- **Consequence:** it builds what the SDK takes and changes nothing of the SDK's. Nobody simplifies it.
+
+## 2026-11-02 — CHD-573: the design targets a client that declares `subagents` and chord's extensions (owner)
+
+- **Options:** protect a client that declares nothing, with refusals, gates and text fallbacks; or
+  target one that declares them, as private extensions on ACP are the normal way.
+- **Choice: the second.** Everything is forwarded to every client (U1). A client that declares less
+  gets what plain ACP carries, and the guide says so.
+- **Consequence:** no shared refusal check, no held answers, no interrupting of an agent's cycle. A
+  client that declares less may read a late chunk as the next reply, or not show a turn nobody prompted.
+
+## 2026-11-02 — CHD-573: `chord acp` shows no differences between agents (owner)
+
+chord absorbs every agent's specifics, reusing what the window does; "this agent lacks X" is decided
+inside chord. So modes, models and efforts are one `configOptions` shape, with `modes` never sent, and
+an agent with only `session/set_model` shows the same `model` option as any other (G4 B). A plan ask
+(cursor, grok) is an ordinary `session/request_permission` mapped to `answerPlan`, an unknown or error
+answer being cancelled, never a yes; the window's note on "keep planning" is its one loss.
+`docs/design/CHD-573.md` lists what cannot be absorbed, and why.
+
+## 2026-11-02 — CHD-573: four tasks over three milestones (owner, S1)
+
+- **Options:** A, four tasks in order; B, stop at plain sessions.
+- **Choice: A.** next.0: CHD-574, CHD-576. next.1: CHD-579, CHD-580. next.2: CHD-581, CHD-575, CHD-582.
+- **Why:** children and teams live in the React hook `useSessions`, so about 2800 lines leave `src/ui/`
+  first, an estimate. Task 1 touches no `src/ui/` and ships alone.
+
+## 2026-11-02 — CHD-573: one main agent per process; teams by chord's commands (owner, Q1, T4, N1, R1)
+
+- **Agent, options:** A, per process from argv, `--agent-command` or settings; B, per session by `_meta`;
+  C, a config option. **Choice: A,** extendable later. It means main: children and teams may run on
+  other runtimes.
+- **Team, options:** T1, by words only; T2, `--team`; T3, `_chord/teams/run`; T4, chord's commands in the
+  agent's list. **Choice: T4,** which the owner added. `/team run|stop|show|list|new` and `/new <agent>`,
+  in next.2. Words still work.
+- **Names:** only `team` and `new` are chord's. On a name both offer, chord's wins and the agent's leaves
+  the list. The merge is on the way out, as `foldUpdate` replaces the list whole.
+- **`/new`, options:** N1, an idle child; N2, with first words; N3, left out. **Choice: N1,** reached
+  through `_chord/agents/send`.
+- **Record, options:** R1, as the window, `session/load` shows nothing of a command; R2, an additive
+  line. **Choice: R1.** A session whose only act is `/team run` writes no record.
+- **Consequence:** the typed commands leave the hook in CHD-580, about 340 lines. A run answers once
+  started, so its work, asks and reports follow with no prompt pending.
+
+## 2026-11-02 — CHD-573: the client answers (owner, Q2, A2, G3, Q3)
+
+- **Permission, options:** A, forward with no timer; B, plus `--dangerously-skip-permissions`; C, refuse
+  as `-p`. **Choice: A.** An error answer is a refusal. `--permission-mode` is a starting value only.
+- **A child's ask without `subagents`, options:** A1a, under main's id with a chord-issued tool id; A2,
+  refuse with a stderr line; A3, no children for that client. **Choice: A2.** Under main's id a child's
+  `toolCallId` can equal one of main's, tying an allow_always to the wrong operation. With `subagents`
+  it goes under the child's composite id.
+- **Sign-in, options:** A, none, the error says what to run; B, forward `authMethods`. **Choice: A.**
+- **Filesystem and terminal, options:** A, chord's, neither declared; B, the client's, by relay; C, both.
+  **Choice: A.** Agents use their own tools on the same machine.
+
+## 2026-11-02 — CHD-573: recorded, the agent's id, ACP v1 (owner, Q4, Q5)
+
+- **Records, options:** A, recorded as the window's, with list, load and resume on them; B, not recorded,
+  forwarded; C, merged with the agent's. **Choice: A.** A session opens either way between `chord acp` and
+  `chord <agent> -r <id>`.
+- **Id, options:** A, the agent's for main; B, chord-minted with a record field. **Choice: A,** no format
+  change. A child is `<main>/<child>`, looked up and never parsed. The owner's first word was to refuse
+  a `session/new` with a live id; under the principle above such a session takes an upstream-only alias,
+  which the owner kept. `load` or `resume` of a live id is -32602.
+- **Version, options:** A, v1 from `/unstable`; B, stable v1 only; C, v1 and v2 through the router.
+  **Choice: A.** A v2-shaped client gets 1 and decides. v2 is another lifecycle, on an experimental draft.
+
+## 2026-11-02 — CHD-573: what crosses to a client (owner, V, L, G1, I1)
+
+- **What is not sent, options:** V1, literally everything; V2, one drop-only check by what the client
+  declares, live and on load. **Choice: V2,** as the schema says MUST NOT for subagent updates and notices.
+- **Late updates, options:** L1, at once; L2, hold for quiet; L3, drop. **Choice: L1.**
+- **Capabilities toward the agent, options:** F, chord's full set always; M, mirror the client's.
+  **Choice: F.** A record is the window's whichever client wrote it; the loss falls on a client that
+  declares less.
+- **Images, options:** a, `image: false` for all; b, static `true`, -32602 per call; c, a bounded probe.
+  **Choice: b,** with the true value in the session answer's `_meta`, and the window's words. A probe
+  is a snapshot that needs b's refusal anyway, and `initialize` starts no agent.
+
+## 2026-11-02 — CHD-573: the extensions (owner, Q6, G5)
+
+- **Form:** `_chord/<noun>/<verb>`; one integer per extension, a new one only for a break; chord advertises
+  in `initialize`'s `_meta["chord/acp"]`, a client declares in `clientCapabilities._meta["chord/acp"]`. The
+  alternatives were a domain prefix, one integer for all, and a version in the name.
+- **Set, options:** none; a focused set; that plus `_chord/teams/*` and an agent list. **Choice:** the
+  focused set: `_chord/session/state`, `_chord/monitors/changed`, `_chord/agents/send`, `_chord/agents/close`,
+  `_chord/monitors/stop`, and `_meta["chord/agent"]` on `subagent_update`. No agent list and no clear for now;
+  either can be added later.
+- **Steering, options:** S1, prompts only; S2, `_session/steering` where offered; S3, `_chord/session/steer` on
+  every agent. **Choice: S3,** answering `sent` or `queued`, steering its own entry. The sixth extension.
+- **Consequence:** all in CHD-575, which waits on CHD-581. The record gains nothing. next.0 advertises none.
+
+## 2026-11-02 — CHD-573: shutdown and known limits (owner, R1, R2, R3)
+
+- **The way out:** one `leave`, a 15 s deadline armed first over all of it, a 500 ms best-effort drain, then
+  SIGKILL from a new registry of every spawned group in `spawnGroup`. `Session.agentPids` holds only the
+  live main's pid.
+- **A client that stops reading, options:** a blocked-write timer, a count at chord's sends, an RSS limit,
+  no rule, an SDK issue. **Choice: no rule and no issue.** The guide lists it: a client that hangs while
+  connected holds chord's memory and running agents until it is killed.
+- **Half-closed stdin, options:** A, EOF means gone; B, hide EOF from the SDK. **Choice: A.**
+- **Sessions per process, options:** A, no cap; B, 8. **Choice: A.**
+- **Consequence, checked by trial without a rule:** with stdout full and a malformed line read, a signal
+  ends chord in 55 ms and the client's death in 11-12 ms, but stdin's EOF goes unseen while stdout is held.
+  That joins the known limit. A second observer of `process.stdin`'s `end` ended it in 11-12 ms and is not
+  built: the owner's call.
+
+## 2026-11-02 — CHD-573: children take the settings' MCP servers only
+
+- **Options:** a child takes the session's list with the client's servers, or the settings' only.
+- **Choice: the settings' only.** A client's server goes to the session it named. One argument, and it can
+  change later.
+
+## 2026-11-02 — CHD-574/576: plain ACP sessions and client responsibilities
+
+The owner kept directory settings without a trust step: each
+`session/new`'s client-supplied `cwd` loads that directory's
+`.chord/settings.json` and `.mcp.json`, which can start MCP servers and set
+a starting permission mode, as the window and `-p` read them. A client
+must choose the directory accordingly. URL-mode elicitation is relayed
+raw, without the window's HTTP/HTTPS check; the client checks its scheme.
+
+`acp` must come before its flags. `chord --agent-command … acp` opens the
+window, including OpenTUI terminal queries on stdout. Cliffy 1.3.1 takes
+an unknown flag into a free positional slot: `chord acp --nope` exits 2,
+with empty stdout and `Unknown agent "--nope"` on stderr; with
+`--agent-command`, it silently becomes the agent's name. This stays:
+changing it would require rewriting argv or guessing at a leading `-`,
+against the library rule. See [the guide](guide.md#chord-acp) for the
+client contract.
+
+## 2026-11-02 — CHD-579: keep the window's leave behaviour
+
+The window does not join `createLeaving` in CHD-579, superseding that part
+of the CHD-573 design. `createLeaving` runs once with fixed steps, a 15 s
+deadline, a sweep of spawned groups and stderr lines. The window's leave
+has no deadline, closes only what it was asked to and accepts closes
+added at any time. Joining them would change behaviour; CHD-579's
+acceptance requires no change in behaviour.
+
+`closeOnForcedExit`, its owned set and running those closes move to
+`src/session/leaving.ts`. The window's `leave`, `dieBySignal` and terminal
+stay in `src/ui/app/renderer.tsx`. chord has two ways out in one file until
+someone joins them. There is no follow-up task for now.
+
+## 2026-11-02 — CHD-580: the host below the window, with behaviour preserved
+
+`src/session/agents_host.ts` owns main, children, teams, typed commands and
+the MCP view. About 2640 lines moved against the estimate of 2800; the hook
+is 1568 lines and the host 2914. The host imports `src/server/` for runtime
+probes, MCP types and the settings-box claim, a new direction, but neither
+React nor `src/ui/`.
+
+This supersedes the CHD-573 design's redraw boundary: `closeByPerson` keeps
+its `redraw?.()`. `closeOnForcedExit`'s registration stays in the hook's
+effect. The notice watch and `clearChild`'s draft restore stay in the
+window through the port's `watched` and `queueBack` callbacks. `/team show`'s
+state, mark and headline overlay stays there too, filled synchronously by
+the host's callback at the same point it read the run.
+
+`replays`, `replayed` and `heard` stay in the hook. Its replay bug is filed
+as CHD-585, kept as it is by the no-behaviour-change rule: `replays` is new
+on each render, captured `replayed` fills the first render's Map, and
+`heard` reads the latest render's. After a re-render, replay events go one
+by one and `in_session_past` is not sent. By source reading, `/resume` in a
+running window hits this; it is not confirmed by a run.
+
+## 2026-11-03 — CHD-581: children, teams and commands over ACP
+
+Each upstream session owns an `AgentsHost` and a synchronous transcript store
+for `stateOf`; the window keeps its render-timed `allNow`. Hosts share chord's
+MCP server, resource readers and settings-box claim. Main takes the client's
+MCP servers over settings; children take settings' only. The existing SDK,
+host, reducer and command parser fit; no replacement protocol helper is added.
+The design's 400-line estimate became about 700 added lines in the ACP driver.
+The per-session and per-child transcript fold adds unmeasured memory use.
+
+Children use composite ids, looked up rather than parsed, and
+`subagent_update` on their immediate parent. The owner's `chord/agent` fields
+include `mode` alongside runtime, model, effort, team, role, gone, failed and
+closed: reported state only, with no permission policy. Chord's own asks carry
+a title and content. Refusal stays per place: without `subagents`, child traffic
+is dropped and each child's permission, form or plan ask is refused with a
+stderr line. Tools and commands remain available. A task's permission claiming
+its parent's session id is refused; its form is routed under the task's id and
+forwarded to a client declaring `subagents`. A permission can still claim another
+announced subagent of that session or a sibling's id. An agent announcing a
+subagent under a child's id can mislead about state only, without gaining
+control of that child.
+
+Only `/team` and `/new` are chord's, and chord's wins a shared name. Their list
+is merged on the way out, including replay and agents that announce none;
+records keep the agent's list. Commands run immediately, even during a turn,
+and return text marked `chord/command` then `end_turn`; refusals use the same
+shape. `/team new` alone is an agent turn. `/new` opens an idle child, reached
+now through main's `send_message`. Selected-run receipts require the window.
+Command text may quote repository files; a client treats it as untrusted agent
+text. Each file-sourced field stays on one line, not rows supplied by a file.
+The lead is named by its run, without the design's `@lead-1`.
+
+A run answers once started, with no prompt pending for its work, asks or
+reports. A lead's report starts a main turn that costs money. Cancellation
+routes by kind: interrupt a long-lived child's turn, end a chord task, or ask
+an adapter to stop its subagent. `session/cancel` aborts a run still starting
+but does not stop a running one; `/team stop` does. `$/cancel_request` does not
+cancel a command in flight. Shutdown answers a command still at work once,
+without emitting its late result. For main's death the owner chose option (a),
+close all children: nothing may run that the client can no longer name. The
+window keeps them, as its person can still reach them.
+
+Commands add no record entry of their own. A leading chord aside is removed
+from the person's words on resume, in the picker and on `session/load`; an
+aside alone reads as a chord message. A task's aside stays to avoid hiding
+arbitrary personal text. A person's exact leading chord-message wrapper is
+indistinguishable and is omitted from resumed display and titles too; the raw
+record retains it. No record format changes. Extensions remain CHD-575;
+`extensions` is empty and `chord/agent` is informational, unversioned metadata.
+
+## 2026-11-03 — CHD-581 / CHD-583: wait for the window before stopping
+
+CI on the top layer twice failed `CHD-561 tester: standard Codex subagents in
+the window > x works after an early refusal once the cancel capability arrives`.
+The test pressed `x` when the session subscriber heard of the capability,
+before the window's state had it. `src/ui/app/sessions.ts` refused again;
+`src/ui/background/view.ts`'s `stopNowOffered` then cleared the refusal,
+leaving `x to stop` with nothing stopped. The test now waits for the window,
+as its sibling does. This closes CHD-583.
+
+Kept as a starting point for any later window slowdown: running the file alone
+in clean worktrees, alternating between branch trees and `origin/next`
+`6503b648`, failed 11 of 54 runs on this branch (layer heads: 1/8, 1/8, 3/18;
+top head: 6/20), against 1 of 20 on `origin/next`. Source reading found no
+window-side branch change on that path. The difference remains unexplained;
+its cause was not searched further.
+
+## 2026-11-03 — CHD-575: the extension contract
+
+Six methods share four version-1 keys in `initialize`'s
+`_meta["chord/acp"].extensions`: `session/state`, `session/steer`, `agents`
+and `monitors`. Clients declare the same map under
+`clientCapabilities._meta["chord/acp"]`. Versions change only for breaks;
+chord branches on none yet, beyond the existing drop-only capability check.
+The SDK's extension handlers and Zod schemas fit; no protocol helper or
+record change is needed. The public reference is in
+[the guide](guide.md#extensions).
+
+Main's state includes `requires_action` for a task's ask: main's turn waits
+on it. Children keep their state on `subagent_update`. Origins remain
+`client`, `message` and `agent`, omitted on idle. No state or monitor
+notification follows a close.
+
+A steer targets its own queued entry and carries text, links and supported
+images. `sent` means into a running turn; otherwise `queued` starts its
+own unbound client-origin turn with no echo. A refused steer returns to
+the queue; a refused send or gone session is -32002. Child send answers
+`sent` when idle or `queued` when busy. Unknown, closed or failed-start
+children, tasks and adapter subagents are -32002; starting or clearing
+children are -32603. Close works on failed-start children and returns the
+names closed, including a lead's members.
+
+Monitor notifications carry the running and ended objects whole,
+including their last event when present; children's use composite ids.
+Stop is limited to the named session's monitors and returns `id`,
+`description`, `events` and `ran_ms`; unknown ids are -32002. Malformed
+params or unsupported prompt content are -32602; requests during shutdown
+are -32603. Load and resume return `chord/left_open` metadata for recorded
+children left open, without restarting them.
+
+## 2026-11-03 — CHD-575: extension notifications are unconditional
+
+All `_chord` notifications, including children's monitor snapshots, go to
+every client regardless of declarations. The drop-only capability check
+applies to ordinary `session/update` traffic. This clarifies the extension
+contract above; that check does not gate extension notifications.

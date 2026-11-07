@@ -61,7 +61,7 @@ chord -p "Explain src/main.tsx"                # the reply on stdout, then exit
 git diff | chord -p "Review this" --output-format json
 ```
 
-Each chord process runs one main session with its children. For sessions
+Each chord window runs one main session with its children. For sessions
 side by side, run chord in separate terminal panes.
 
 A new interactive start with no agent named opens a centred title page before
@@ -567,6 +567,368 @@ Forks close on quit and are not reopened automatically. `/resume` or
 `chord -r <id>` opens a fork later as a session of its own. Its record starts
 at the divider: the copied source transcript is only in the original view,
 while the agent retains the fork's conversation context.
+
+## `chord acp`
+
+`chord acp [agent]` serves ACP v1 on stdin and stdout, without a window.
+Configure an ACP client to start `chord` with arguments `["acp", "codex"]`,
+for example, and keep both pipes open while it works. Diagnostics go to
+stderr. `initialize` starts no agent; each `session/new` starts a separate
+process of the same agent. There is no session count limit.
+
+Put `acp` first, then its flags:
+
+```sh
+chord acp codex
+chord acp --agent-command "my-agent --acp" --model model-id --effort high --permission-mode plan
+```
+
+The agent comes from the argument, `--agent-command` or the startup
+settings. `--model` (`-m`), `--effort` and `--permission-mode` set starting
+values for each session. `chord --agent-command "my-agent --acp" acp`
+opens the window instead: OpenTUI's terminal queries reach stdout.
+`chord acp --nope` exits 2 with empty stdout and stderr naming `--nope`
+as an unknown agent; with `--agent-command`, it silently becomes the agent's name.
+
+A client names the directory: each `session/new`'s `cwd` loads that
+directory's `.chord/settings.json` and `.mcp.json`. These can start MCP
+servers and set a starting permission mode, with no trust step, as the
+window and `-p` read them. The agent remains the one chosen at startup.
+Client-supplied `mcpServers` override settings servers by name for that
+session; `mcpServers: false` in settings holds them back too. Stdio, HTTP
+and SSE servers are accepted, subject to the agent's capabilities; a
+client-supplied `acp` transport is refused with -32602.
+
+### Methods
+
+| Client calls chord          | Does                                                                                                                                 |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+| `initialize`                | ACP v1, agent identity and capabilities; no authentication methods                                                                   |
+| `session/new`               | Opens a session in `cwd`; answers when the agent is ready                                                                            |
+| `session/list`              | Lists this agent's chord records, optionally filtered by `cwd`, in one answer without pagination                                     |
+| `session/load`              | Reopens a chord record and replays its updates before answering                                                                      |
+| `session/resume`            | Reopens a chord record without replay                                                                                                |
+| `session/close`             | Stops the session; keeps its record                                                                                                  |
+| `session/prompt`            | Sends a prompt; answers when that prompt's turn ends; further prompts queue                                                          |
+| `session/cancel`            | Notification: interrupts and withdraws queued client prompts on main or a child; cancels a chord task or requests an adapter subagent stop |
+| `$/cancel_request`          | Cancels only the named request; removes a queued prompt; does not cancel a chord command in flight                             |
+| `session/set_config_option` | Sets a select option and returns all `configOptions`                                                                                 |
+| `session/set_mode`          | Sets the permission mode for clients using this method                                                                               |
+
+Models, modes and efforts share `configOptions`; names and values belong
+to the agent. Boolean options are absent and boolean sets are refused.
+There is no `session/set_model` method: use the model config option.
+`authenticate`, `session/fork`, `session/delete` and `_session/steering`
+are not served; unsupported requests get -32601. Use chord's steering
+extension below.
+
+Prompts take text, resource links and images where the agent supports
+them. `initialize` advertises images; the session answer's
+`_meta["chord/acp"].image` tells whether that agent takes them. Unsupported
+images, audio and embedded resources are refused with -32602.
+
+chord sends `session/update`, calls `session/request_permission` for
+permissions and plan approvals, and relays `elicitation/create` and
+`elicitation/complete`. chord's own asks carry a title and content
+describing the choice. Permissions have no timeout; errors and unknown
+choices refuse them. `--permission-mode` is a starting value, and there is
+no `--dangerously-skip-permissions` here. An unanswered ask waits until
+answered or cancelled. A plan answer cannot carry the window's note on
+"keep planning"; send that as the next prompt.
+
+A URL-mode elicitation reaches the client raw, with no HTTP/HTTPS check.
+The client must check the scheme itself, unlike the window. A request-scoped
+elicitation is cancelled because it names no request belonging to this
+client. Errors answering elicitation cancel it.
+
+Filesystem and terminal requests are not relayed to the client; agents
+use their own tools on the same machine. Sign in to the agent separately;
+a sign-in failure says what to run. Agent-specific limits on usage,
+images, MCP transports and resuming still apply.
+
+Sessions use the window's records and can reopen in either interface.
+`load` and `resume` refuse an id already open in this process with -32602;
+other processes can still open and write the same record. If an agent
+returns a duplicate live id, the new session gets an upstream-only alias
+such as `s1~2`. Aliases are not listed or reloadable; they do not fix
+collisions in that agent's recorded ids. A leading chord aside is omitted
+from the person's words in `-r`, `/resume`'s list and `session/load`.
+A task's aside stays to avoid hiding arbitrary personal text. A person's
+exact leading `<message from="chord">\n...\n</message>\n\n` is
+indistinguishable from chord's aside and is omitted from resumed display
+and titles too; the raw record retains it.
+
+### What a client receives
+
+A client declaring `subagents` can follow children, teams, tasks and their
+messages and answer their asks under composite ids. The extensions below
+report main's state and monitors and let the client steer, send to a child,
+close it or stop a monitor. Declare the other ACP capabilities below for
+their updates too.
+
+A client declaring nothing still gets main's text, thoughts, tool calls,
+ordinary `plan`, command list, configuration, session information and usage,
+plus main's permission and form asks. It can run chord's commands, but
+cannot follow child work or answer child asks. Extension notifications
+still arrive; their declarations gate neither notifications nor requests.
+
+chord uses its full capabilities toward the agent, whatever the client
+declares. One drop-only check applies to live updates and replay alike:
+
+| Update                                                                              | Client must declare  |
+| ----------------------------------------------------------------------------------- | -------------------- |
+| `subagent_update`, `session_message`, `session_message_chunk`, all subagent traffic | `subagents`          |
+| `plan_update`, `plan_removed`                                                       | `plan`               |
+| `compaction_update`, `compaction_summary_chunk`                                     | `session.compaction` |
+| `notice`                                                                            | `session.notices`    |
+| Kinds outside the ACP v1 schema                                                     | Never sent           |
+
+Dropped updates stay in the record. There is no text fallback: a client
+without `plan` can lose a Codex plan, for example. Without `subagents`,
+a child's permission, form or plan ask is refused with a stderr line.
+Other session-scoped elicitations are relayed regardless of declared
+elicitation capabilities.
+
+### Children, teams and commands
+
+chord's MCP tools let main open children, run teams and start tasks and
+monitors, as in the window. Children take settings' MCP servers, not the
+client's.
+
+chord adds `/team` and `/new` to the command list even if the agent sends
+none. On a name both offer, chord's wins. All other commands go to the
+agent as typed.
+
+| Command | Does |
+| --- | --- |
+| `/team`, `/team list` | Lists saved teams and open runs |
+| `/team show <name>` | Shows a team's file, description and agents; an open run's job, lead and open members; selected-run receipts require the window |
+| `/team run <name> <job>` | Starts a saved team and answers once started |
+| `/team stop <run>` | Closes the run's lead and members |
+| `/team new <words>` | Sends a normal turn asking main to propose a team |
+| `/new <agent>` | Opens an idle child; omitting the agent uses main's runtime; send work with `_chord/agents/send` or ask main to use `send_message` |
+
+Commands take a single text block; other blocks beside one are refused.
+Except `/team new`, they run immediately, even during a turn, and return
+one text chunk marked `_meta["chord/command"]` with `name` and `failed`,
+then `{ stopReason: "end_turn" }`, without usage or a user-message echo.
+A refusal sets `failed: true`, rather than a JSON-RPC error. Their text
+can quote repository files: clients must treat it as untrusted, as they do
+agent text. Commands add no transcript entry of their own; a session that
+only runs a team can remain unlisted.
+
+`/team list` replies with `Teams:`, one line per saved team, then
+`Runs open:`, one line per run, and the save directories. Team lines give
+name, agent count, runtimes, scope, open-run count or elapsed time, and
+description. Broken files say `not read:` and their first problem.
+Empty lists say `No teams yet. /team new and a few words about the work
+makes one.` and `No run is open.` `/team show` gives the file, description
+and agent rows: name, runtime, model, effort, mode and role, omitting unset
+values. A run adds its job, elapsed time and `open` or `not open` per agent;
+it shows no state, unseen mark or headline. A team's name finds its first
+open run; a run's id finds that run. Replies use plain text, blank lines
+between blocks and `- ` lists, with parts joined by `·`.
+
+For a saved team named `bugfix`, a second run named `bugfix 2`, and a child
+named `codex`, successful start and stop replies read:
+
+```text
+Team bugfix started. Its lead is bugfix 2; /team stop bugfix 2 ends it.
+Stopped bugfix 2: its lead is closed · chord with its agent's name and -r lists it
+Stopped bugfix 2: its lead, developer and tester are closed · chord with each agent's name and -r lists them
+Opened codex (codex). It is idle, with no prompt yet; main's send_message starts it, so ask main to send it the work.
+```
+
+An effort note, if any, follows a start reply as a separate block. A
+selected run's receipt requires the window; `/team show` refuses it:
+
+```text
+bugfix is a selected run, and only chord's window shows its receipt: chord -r with this session's id, then /team show 7f3a9c21 there
+```
+
+Names and problems in refusals reflect the request and files. Examples:
+
+```text
+Which team? /team lists them
+/team run bugfix takes the job after the name
+No team named bugfx · /team lists them
+.chord/teams/broken.md is not a team chord can run:
+description is required
+This launch was cancelled; no run started.
+Which run? /team lists them
+No run named bugfix is open · /team lists them
+/team new takes a few words about the work the team does
+/team has no edit; it takes list, new, show, run or stop
+No agent named nope; chord knows claude, codex
+This session has 8 agents open; close_agent one first
+This session has closed
+/team takes text alone, and this prompt had other blocks beside it. Nothing ran; send the command by itself.
+/new takes text alone, and this prompt had other blocks beside it. Nothing ran; send the command by itself.
+```
+
+Startup can also refuse an unavailable runtime, model or mode. Ask main to
+use its `close_agent` tool when the child limit is reached.
+
+Children appear as `subagent_update` on their immediate parent. Their ids
+are composite: `<main>/<child>`, then `<main>/<child>/<subagent>` for a
+child's subagent. Treat them as opaque ids. `_meta["chord/agent"]` reports
+`runtime`, `model`, `effort`, `mode`, `team`, `role`, `gone`, `failed` and
+`closed` where known. `mode` reports the child's mode; it sets no policy.
+`session/cancel` on a long-lived child interrupts its turn and leaves it
+open; on a chord task it ends the task; on an adapter subagent it requests
+its supported stop.
+
+A run leaves no prompt pending. Its work, asks and reports may follow
+its answer; a lead's report starts a main turn that costs money. A run
+has no defined end. `session/cancel` aborts a run still starting but does
+not stop a running one: use `/team stop`. `$/cancel_request` does not
+cancel a command already in flight.
+
+When main's agent dies, `chord acp` closes its children, subject to the
+startup limit below. The window keeps them, since its person can still
+reach them.
+
+### Extensions
+
+`initialize` advertises `_meta["chord/acp"]` with `version: 1` and four
+`extensions` keys, each `1`: `session/state`, `session/steer`, `agents`
+(send and close), and `monitors` (changed and stop). A client declares the
+same map in `clientCapabilities._meta["chord/acp"].extensions`. Versions
+change only for a breaking change. chord branches on none of these
+versions yet: all `_chord` notifications, including children's monitor
+snapshots, go to every client regardless of declarations, and extension
+requests do not require a declaration. The drop-only check above applies
+to ordinary `session/update` traffic. For example, a client can declare:
+
+```json
+{
+  "clientCapabilities": {
+    "subagents": {},
+    "_meta": {
+      "chord/acp": {
+        "extensions": {
+          "session/state": 1,
+          "session/steer": 1,
+          "agents": 1,
+          "monitors": 1
+        }
+      }
+    }
+  }
+}
+```
+
+`_meta` keys outside this contract remain informational and unversioned:
+`chord/agent` describes children, `chord/command` marks command replies,
+`chord/from` identifies message senders, `chord/filled` marks estimates
+and `chord/held_back` explains withheld MCP servers.
+
+All `sessionId` and monitor `id` parameters are strings. Notifications
+have no result or error answer.
+
+**`_chord/session/state`** is a notification with `sessionId`, `state`
+(`running`, `idle` or `requires_action`) and, when a turn is running,
+`origin`: `client` for a client prompt or queued steer, `message` for a
+message that starts a turn, or `agent` for work the agent starts itself.
+Idle has no origin. Changes report main's state; children keep theirs on
+`subagent_update`. Main's permissions, forms and plan asks make it
+`requires_action`, including a task's ask that main's turn waits on.
+No state notifications follow a close.
+
+**`_chord/session/steer`** takes `{ sessionId, prompt }`, where `sessionId`
+is main's upstream id and `prompt` is an ACP content-block array. It
+steers its own entry, even with other prompts queued ahead. The result is
+`{ delivery: "sent" }` only when sent into a running turn; otherwise
+`{ delivery: "queued" }`. A queued steer runs as its own turn with no
+request waiting for its result, `origin: "client"` and no echo of its
+words. Resource links and supported images travel with the text. A
+refused steer returns to the queue; a refused send or gone session is
+-32002.
+
+**`_chord/agents/send`** takes `{ sessionId, prompt }` for a long-lived
+child's composite id, with the same content blocks. It answers
+`{ delivery: "sent" }` when idle or `{ delivery: "queued" }` when busy;
+follow the turn through `subagent_update`. Unknown, closed or failed-start
+children, chord tasks and adapter subagents are -32002. A child still
+starting or being cleared is -32603; send again after its update says
+idle.
+
+**`_chord/agents/close`** takes `{ sessionId }` for a long-lived child and
+returns `{ closed: ["name", ...] }`: the names it closed, including a
+lead's members. It also closes a child whose start failed. Unknown or
+already closed children, tasks and adapter subagents are -32002.
+
+**`_chord/monitors/changed`** is a notification with `sessionId`, `running`
+and `ended`. Both arrays carry whole monitor objects: `id`, `description`,
+`command`, `startedAt`, `timeoutMs`, `events` and optional `lastEvent`
+(`{ lines, at }`, with `lines` an array of strings). `id`, `description`
+and `command` are strings; counts and times are numbers. Ended objects
+also carry `end` and `endedAt`. `end` is
+`{ kind: "exit", code }`, `{ kind: "signal", signal }`,
+`{ kind: "timed_out", timeoutMs }`, `{ kind: "stopped" }` or
+`{ kind: "flooded", by: "lines" | "bytes" }`; exit `code` is a number
+and `signal` a string. `startedAt`, `endedAt` and `at` are epoch
+milliseconds; `timeoutMs` is a duration in milliseconds.
+`events` counts delivered batches. A child's monitors use its composite
+session id; notifications stop on close.
+
+**`_chord/monitors/stop`** takes `{ sessionId, id }` for a monitor owned by
+main or the named long-lived child. It returns
+`{ id, description, events, ran_ms }`, with elapsed milliseconds in
+`ran_ms`. Unknown sessions or monitor ids are -32002; it cannot stop
+another session's monitor.
+
+Malformed extension parameters and unsupported prompt blocks or images
+are -32602. Unknown or closed main sessions are -32002. Requests while
+chord is shutting down are -32603. Unknown extension methods are -32601.
+
+`session/load` and `session/resume` may return `_meta["chord/left_open"]`,
+an array of children left open in the record, each with `name`, `runtime`
+and optional `team` and `agents` (the run's agent count). They are not
+restarted. Tasks' recorded work replays on load; long-lived children's
+work does not.
+
+### Limits and the way out
+
+- Updates after a prompt's answer go immediately. Turns nobody prompted
+  can send work and asks with no client prompt pending. A client declaring
+  less may read a late chunk as the next reply or omit an unasked turn.
+  An ask between turns can hold the queue until `session/cancel`; chord
+  neither holds answers for silence nor changes the agent's cycle.
+- Closing main while a child is starting may leave the child's process
+  group alive (CHD-589).
+- A task's agent can name another announced subagent of the same session
+  or claim a sibling's id. An agent announcing a subagent under a child's
+  id can mislead about state, but gains no control of that child.
+- The transcript fold kept per session and child adds memory use that has
+  not been measured.
+- A client that stops reading stdout while staying connected can hold
+  unbounded output in memory and keep agents running until chord is killed.
+  There is no blocked-write timeout or output limit.
+- A malformed line while stdout is full stops input reading while the SDK
+  waits to write its parse error. Later requests and stdin EOF stay unseen
+  until stdout is read, the output pipe breaks or chord gets a signal.
+- Half-closing stdin means the client is gone: EOF closes the whole
+  connection, so a running prompt gets no answer.
+- A line over 32 MiB closes the connection.
+- Cancellation is cooperative. If the agent ignores it, `session/prompt`
+  stays pending indefinitely, with no timer. Close the session with
+  `session/close` or shut down the connection to stop it.
+
+EOF, broken output, an oversized line, a crash, SIGINT, SIGTERM and SIGHUP
+start the same shutdown, with a 15-second deadline. On a signal or crash,
+chord attempts to cancel pending prompts and withdraw asks. It waits at
+most 500 ms for writes while closing sessions in parallel, then kills
+remaining registered process groups. The drain is best effort: queued
+output and cancellation answers can be lost if the client is not reading.
+EOF exits 0 after clean cleanup, otherwise 1; broken output, an oversized
+line or a crash exits 1. A signal ends chord by that signal after cleanup,
+even if the deadline expires.
+
+**What holds:** on every shutdown that runs, every process group chord
+spawned has stopped or has been sent SIGKILL. **What does not:** chord
+itself receiving SIGKILL, its event loop blocking synchronously, a process
+leaving its group, or a process group id being reused before cleanup.
 
 ## Settings
 

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.67.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-581-u7b/proj
+ ▀▀     ? for shortcuts · /help
+
+ › /team run bugfix fix the quote
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  fix the quote
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /team stop nope
+   ⎿  No run named nope is open · the list under the prompt names them
+
+ › /team stop
+   ⎿  Which run? The list under the prompt names them
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a to go · ? for shortcuts      Fake Large with a 1M context window · 1% used
+    main       fake · Fake Large with a 1M context window · medium         ◦ idle 8s
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ◦ idle 12s        ✓ new reply
+    ├─ tester  fake · Fake Small · medium                                  ● permission 11s  ← new message
+    └─ coder   fake · Fake Large with a 1M context window · medium         ◦ idle 11s        ✓ new reply

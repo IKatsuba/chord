@@ -66,7 +66,9 @@
  * `--silent-set-mode`, or with `CHORD_FAKE_SILENT_SET_MODE=1`, it answers
  * `session/set_mode`, and `session/set_config_option` for the mode, as
  * Codex's adapter does, with an empty answer and no update, though the mode
- * moves.
+ * moves. With `--config-in-responses`, or `CHORD_FAKE_CONFIG_IN_RESPONSES=1`,
+ * `session/set_config_option`'s answer alone says what moved. `--session-id
+ * <id>`, or `CHORD_FAKE_SESSION_ID`, is the id every `session/new` answers with.
  *
  * Besides the scenarios the window draws, three play what a transport has to
  * survive: `late` sends a chunk after answering the prompt, `twins` asks a
@@ -278,7 +280,9 @@ import {
   ARGS,
   AUTH_REQUIRED,
   HANG,
+  CONFIG_IN_RESPONSES,
   NO_CONFIG,
+  SESSION_ID,
   DIMCODE_PERMISSION,
   MCP_TRANSPORTS,
   NO_IMAGES,
@@ -307,6 +311,9 @@ import {
   ECHO_MESSAGES,
   SAID,
   STEP_MS,
+  ALSO_COMMANDS,
+  CONFIG_DELAY_MS,
+  NO_COMMANDS,
   TITLE_AT_START,
   TOKENS_ONLY,
 } from './options.ts';
@@ -314,7 +321,8 @@ import { COMPACTION } from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
-import { FORMS } from './scenarios/forms.ts';
+import { FORM_SCHEMA } from '../forms.ts';
+import { elicit, FORMS } from './scenarios/forms.ts';
 import { FX } from './scenarios/fx.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
@@ -466,6 +474,8 @@ const SCENARIOS = [
   'askcodexwait',
   'taskask',
   'taskaskstays',
+  'taskaskas',
+  'taskformas',
   'mode',
   'effort',
   'late',
@@ -476,6 +486,12 @@ const SCENARIOS = [
   'bigasktwice',
   'unknown',
   'cancels',
+  'flood',
+  'ignorescancel',
+  'requestform',
+  'permissionmeta',
+  'strangerask',
+  'strangerform',
   'subagent',
   'subagentupdate',
   'codexsubagents',
@@ -762,6 +778,34 @@ async function playCommand(
     return 'end_turn';
   }
 
+  // `askas <id>` and `formas <id>` ask under a session of another agent's, as
+  // a task's agent that knew its parent's id could.
+  const passing = /^(ask|form)as (\S+)$/.exec(text);
+
+  if (passing?.[1] === 'form') {
+    return await elicit(turn, {
+      sessionId: passing[2]!,
+      mode: 'form',
+      message: 'Passing as another session',
+      requestedSchema: FORM_SCHEMA,
+    });
+  }
+
+  if (passing?.[1] === 'ask') {
+    const answer = await turn.client.request('session/request_permission', {
+      sessionId: passing[2]!,
+      toolCall: { toolCallId: turn.callId('write') },
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+
+    await turn.say(`Answered: ${JSON.stringify(answer.outcome)}`);
+
+    return 'end_turn';
+  }
+
   const [, name, rest = ''] = /^\/(\S+)\s*(.*)$/s.exec(text) ?? [];
 
   switch (name) {
@@ -937,6 +981,10 @@ function sessionModes(): { modes?: acp.SessionModeState } {
 
 /** Sends the commands just after the reply, as Claude's adapter does. */
 function advertiseCommands(client: Client, sessionId: string): void {
+  if (NO_COMMANDS) {
+    return;
+  }
+
   setTimeout(
     () =>
       void client
@@ -944,7 +992,13 @@ function advertiseCommands(client: Client, sessionId: string): void {
           sessionId,
           update: {
             sessionUpdate: 'available_commands_update',
-            availableCommands: FAKE_COMMANDS,
+            availableCommands: [
+              ...FAKE_COMMANDS,
+              ...ALSO_COMMANDS.map((name) => ({
+                name,
+                description: "The agent's own",
+              })),
+            ],
           },
         })
         .catch(() => {}),
@@ -1269,7 +1323,7 @@ const connection = acp
     refuseSession('session/new');
     await refuseUnsigned(client, requestId);
 
-    const sessionId = crypto.randomUUID();
+    const sessionId = SESSION_ID ?? crypto.randomUUID();
 
     modes.set(sessionId, 'default');
     mcpServers.set(sessionId, params.mcpServers);
@@ -1421,7 +1475,7 @@ const connection = acp
 
     modes.set(params.sessionId, params.modeId);
 
-    if (SILENT_SET_MODE) {
+    if (SILENT_SET_MODE || CONFIG_IN_RESPONSES) {
       return {};
     }
 
@@ -1440,6 +1494,10 @@ const connection = acp
   .onRequest('session/set_config_option', async ({ params }) => {
     if (HANG === 'config') {
       await never();
+    }
+
+    if (CONFIG_DELAY_MS > 0) {
+      await new Promise((resolve) => setTimeout(resolve, CONFIG_DELAY_MS));
     }
 
     const value = String(params.value);

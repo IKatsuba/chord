@@ -5,9 +5,37 @@
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { STEP_MS } from '../options.ts';
 import { strayCancels } from '../sessions.ts';
-import { pause, type Play } from '../turn.ts';
+import { lifetime, pause, type Play } from '../turn.ts';
+
+const FLOOD_CHUNK = 64 * 1024;
+const FLOOD_BYTES = 64 * 1024 * 1024;
 
 export const MISBEHAVING = {
+  // More than any pipe holds, as fast as chord takes it, for a client that
+  // stopped reading; a cancel or the client's going ends it.
+  async flood(turn) {
+    const chunk = 'x'.repeat(FLOOD_CHUNK);
+
+    for (let sent = 0; sent < FLOOD_BYTES; sent += FLOOD_CHUNK) {
+      if (turn.signal.aborted || lifetime.signal.aborted) {
+        return 'cancelled';
+      }
+
+      await turn.say(chunk);
+    }
+
+    return 'end_turn';
+  },
+
+  // A cancel changes nothing: the prompt stays open until the client goes, or
+  // 30 s, so a test that never closes it fails rather than hangs.
+  async ignorescancel(turn) {
+    await turn.say('Holding on.');
+    await pause(lifetime.signal, 30_000).catch(() => {});
+
+    return 'end_turn';
+  },
+
   // How many cancels came with no turn playing.
   async cancels(turn) {
     await turn.say(

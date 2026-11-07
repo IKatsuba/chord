@@ -9,6 +9,7 @@ import {
   type CodePickAction,
   reduceCodePick,
 } from '../transcript/code_pick.ts';
+import { askedInput, mine } from '../../session/busy.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
 import { inBatch } from '../../session/transcript/entries.ts';
 import {
@@ -21,7 +22,7 @@ import type { EndedMonitor, RunningMonitor } from '../../session/monitors.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { SignIn } from '../../session/sign_in.ts';
 import type { StartFailure } from '../../session/start_failure.ts';
-import { addTurn, type Spent } from '../../session/usage.ts';
+import { addTurn, type KeptPlace, type Spent } from '../../session/usage.ts';
 import type { AgentOption } from '../../session/config.ts';
 import { reduceTranscript } from '../../session/transcript/reducer.ts';
 import {
@@ -57,7 +58,6 @@ import {
   reduceBackground,
 } from '../background/state.ts';
 import {
-  askedInput,
   askedPlan,
   asksPerson,
   asksWithKeys,
@@ -92,7 +92,7 @@ import {
   runningShell,
 } from '../prompt/state.ts';
 import { type Cursor, endOf, textareaDoes } from '../prompt/prompt.ts';
-import { mine, sendable, started } from '../prompt/queue.ts';
+import { sendable, started } from '../prompt/queue.ts';
 import type { Search } from '../prompt/search.ts';
 import { vimKeyNames, vimTakes, vimTakesCharacter } from '../prompt/vim.ts';
 import { backfilled, firstMounted, heldMount } from '../transcript/mount.ts';
@@ -117,11 +117,7 @@ import {
   type ViewSession,
   type ViewWindow,
 } from '../transcript/state.ts';
-import {
-  type KeptSpend,
-  sessionParts,
-  type SpendKind,
-} from '../transcript/spend.ts';
+import { type KeptSpend, sessionParts } from '../transcript/spend.ts';
 
 export type Connection =
   | { readonly status: 'starting' }
@@ -1169,16 +1165,6 @@ export interface WindowedState {
    */
   readonly closing?: Readonly<Record<number, Closing>>;
 }
-
-/** Where a closing session's spend goes, and what it is under. */
-export type KeptPlace = Omit<KeptSpend, 'part' | 'sessionId'> & {
-  readonly name: string;
-  readonly kind: SpendKind;
-  /** The agent the main session is. */
-  readonly agent?: string | undefined;
-  /** The agent a child runs on, as chord starts it. */
-  readonly runtime?: string | undefined;
-};
 
 /** A closing session, and where what it spent is kept. */
 interface Closing {

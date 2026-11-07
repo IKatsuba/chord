@@ -1,4 +1,5 @@
 import { expect, test } from 'bun:test';
+import { askedInput } from '../../../src/session/busy.ts';
 import {
   emptyTranscript,
   type PlanAsk,
@@ -6,7 +7,6 @@ import {
 } from '../../../src/session/transcript/types.ts';
 import {
   askedIds,
-  askedInput,
   askedPlan,
   asksPerson,
   shownPermission,

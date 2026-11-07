@@ -1,0 +1,24 @@
+$ bun src/main.tsx acp fake --agent-command 'bun tests/fixtures/fake_agent/main.
+ts'
+chord: acp serves ACP on stdin and stdout, for a client that starts it.
+chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` opens a window.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

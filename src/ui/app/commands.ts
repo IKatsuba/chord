@@ -7,11 +7,8 @@ import { type Dispatch, useRef } from 'react';
 import type { Conversation } from '../../session/conversation.ts';
 import type { TeamShown } from '../../session/transcript/types.ts';
 import type { EditorMode } from '../../settings.ts';
-import {
-  newTeamPrompt,
-  teamCommand,
-  type TeamListing,
-} from '../teams/teams.ts';
+import { type TeamListing, teamCommand } from '../../session/team_command.ts';
+import { newTeamPrompt, TEAM_WORDS } from '../teams/teams.ts';
 import type { ChordCommand } from '../prompt/commands.ts';
 import { report, reportFacts } from '../transcript/reports.ts';
 import { themeName, type ThemeSetting } from '../theme/theme.ts';
@@ -221,7 +218,7 @@ export function useCommands(
       });
     const said = (text: string, failed: boolean) =>
       show({ kind: 'said', text, failed });
-    const asked = teamCommand(args);
+    const asked = teamCommand(args, TEAM_WORDS);
 
     if (asked.form !== 'list' && sessions.picked() && !talked.current) {
       talked.current = true;

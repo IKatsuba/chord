@@ -137,6 +137,22 @@ function valueOf(flag: string, variable: string): string | undefined {
 export const TITLE_AT_START = valueOf('--title', 'CHORD_FAKE_TITLE');
 
 /**
+ * `--session-id <id>`, or `CHORD_FAKE_SESSION_ID`: every `session/new` answers
+ * with this id, as an agent with per-process counter ids answers two
+ * processes with one.
+ */
+export const SESSION_ID = valueOf('--session-id', 'CHORD_FAKE_SESSION_ID');
+
+/**
+ * `--config-in-responses`, or `CHORD_FAKE_CONFIG_IN_RESPONSES=1`: a change of
+ * configuration is said only in the answer that made it, no update following,
+ * and `session/set_mode`, whose answer has no place for it, says nothing.
+ */
+export const CONFIG_IN_RESPONSES =
+  ARGS.includes('--config-in-responses') ||
+  process.env.CHORD_FAKE_CONFIG_IN_RESPONSES === '1';
+
+/**
  * `--dimcode-permission <value>`, or `CHORD_FAKE_DIMCODE_PERMISSION`: every
  * session offers dimcode's `permission` config option, `read-only`,
  * `workspace-write` or `full-access`, starting at the value given (CHD-434).
@@ -180,6 +196,36 @@ export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
  */
 export const AUTO_MODE =
   ARGS.includes('--auto-mode') || process.env.CHORD_FAKE_AUTO_MODE === '1';
+
+/**
+ * Whether it also offers Claude's `bypassPermissions` mode, `--bypass-mode`
+ * or `CHORD_FAKE_BYPASS_MODE=1`, for a team file that asks for it.
+ */
+export const BYPASS_MODE =
+  ARGS.includes('--bypass-mode') || process.env.CHORD_FAKE_BYPASS_MODE === '1';
+
+/** Whether it advertises no slash commands, `--no-commands`. */
+export const NO_COMMANDS =
+  ARGS.includes('--no-commands') || process.env.CHORD_FAKE_NO_COMMANDS === '1';
+
+/**
+ * Commands it offers beside its own, by name, `--also-commands <list>` or
+ * `CHORD_FAKE_ALSO_COMMANDS`: names chord may have too.
+ */
+export const ALSO_COMMANDS = (
+  valueOf('--also-commands', 'CHORD_FAKE_ALSO_COMMANDS') ?? ''
+)
+  .split(',')
+  .filter((name) => name !== '');
+
+/**
+ * How long a config change takes to answer, `--config-delay <ms>` or
+ * `CHORD_FAKE_CONFIG_DELAY`: what it says just after its session opens then
+ * comes while chord still sets it up, ahead of `connected`.
+ */
+export const CONFIG_DELAY_MS = Number(
+  valueOf('--config-delay', 'CHORD_FAKE_CONFIG_DELAY') ?? 0,
+);
 
 /**
  * A person's words for scenarios' names, with `--said <json>` or

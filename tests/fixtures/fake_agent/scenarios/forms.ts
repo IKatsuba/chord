@@ -18,7 +18,7 @@ import { GATE_RELEASE, gateOpened } from './agents.ts';
  * Asks the client for input and says what came back: the action, and an
  * accepted form's content as one line of JSON.
  */
-async function elicit(
+export async function elicit(
   turn: Turn,
   request: acp.CreateElicitationRequest,
 ): Promise<acp.StopReason> {
@@ -240,6 +240,26 @@ export const FORMS = {
       sessionId: turn.sessionId,
       mode: 'form',
       message: 'Set up the deploy target',
+      requestedSchema: FORM_SCHEMA,
+    });
+  },
+
+  // A form scoped to a request of the agent's own and to no session.
+  async requestform(turn) {
+    return await elicit(turn, {
+      requestId: 'own-request',
+      mode: 'form',
+      message: 'Not for any session',
+      requestedSchema: FORM_SCHEMA,
+    });
+  },
+
+  // A form naming a session this agent never announced.
+  async strangerform(turn) {
+    return await elicit(turn, {
+      sessionId: 'stranger-session',
+      mode: 'form',
+      message: 'Not for this session',
       requestedSchema: FORM_SCHEMA,
     });
   },

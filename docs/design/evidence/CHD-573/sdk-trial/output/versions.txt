@@ -1,0 +1,4 @@
+bun 1.4.4
+sdk 2.2.0
+Darwin arm64
+agent binary 89572706 bytes

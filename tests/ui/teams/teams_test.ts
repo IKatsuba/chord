@@ -1,24 +1,31 @@
 import { describe, expect, test } from 'bun:test';
+import {
+  type ListedTeam,
+  ranNote,
+  stoppedLine as stopped,
+  teamCommand as command,
+  teamRefusal,
+} from '../../../src/session/team_command.ts';
 import type { TeamAgentShown } from '../../../src/session/transcript/types.ts';
 import type { Team } from '../../../src/teams.ts';
 import {
   headlineText,
-  type ListedTeam,
   messageHeadline,
   newTeamPrompt,
   pickedDraft,
-  ranNote,
   runningHeader,
   type RunningLine,
   runningTable,
   runningWords,
-  stoppedLine,
+  TEAM_WORDS,
   teamChoices,
-  teamCommand,
-  teamRefusal,
   teamsHint,
   teamsWhere,
 } from '../../../src/ui/teams/teams.ts';
+
+const teamCommand = (args: string) => command(args, TEAM_WORDS);
+const stoppedLine = (run: string, members: readonly string[]) =>
+  stopped(run, members, TEAM_WORDS);
 
 const BUGFIX: Team = {
   description: 'Fixes a bug end to end: a failing test first, then the fix.',

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.67.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-581-u7b/proj
+ ▀▀     ? for shortcuts · /help
+        resumed · 2 minutes ago · The person handed team bugfi...s @bugfix and reports to you; send_message reaches it.
+
+ ← from chord
+   ⎿  The person handed team bugfix this job: "fix the quote". Its lead is @bugfix and reports to you; send_message
+      reaches it.
+
+ ⏺ Received the message from bugfix · fake.
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ⏺ team bugfix (1 agent) was open when this session was left and is not reopened · /resume lists them · /team run
+   bugfix starts the team again
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

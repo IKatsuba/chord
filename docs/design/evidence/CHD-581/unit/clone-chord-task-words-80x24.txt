@@ -1,0 +1,24 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.designer-581-u7b/proj
+ ▀▀     ? for shortcuts · /help
+        resumed · 2 minutes ago · <message...ge> my words after chord then task
+
+ › <message from="tester · fake">
+   The person stopped this task before it reported.
+   </message>
+
+   my words after chord then task
+
+ ⏺ Received the message from bugfix · fake.
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ ⏺ team bugfix (1 agent) was open when this session was left and is not
+   reopened · /resume lists them · /team run bugfix starts the team again
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,13 +1,20 @@
 /**
- * `/team`, kept out of the window: which form was typed, the words chord
- * hands main and says under the command, the teams picker's rows, and
- * `/team show`'s table of a running team. Nothing here reads a file or a
- * session; the window gathers what each needs.
+ * `/team`, kept out of the window: the words chord hands main, the teams
+ * picker's rows, and `/team show`'s table of a running team. Nothing here
+ * reads a file or a session; the window gathers what each needs.
  */
 import { Table } from '@cliffy/table';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
-import { formatElapsed } from '../../session/elapsed.ts';
+import {
+  briefly,
+  type ListedTeam,
+  NO_TEAMS,
+  newTeamPrompt,
+  type TeamRun,
+  teamsSaved,
+  type TeamWords,
+} from '../../session/team_command.ts';
 import type {
   MessageFrom,
   TeamAgentShown,
@@ -18,144 +25,15 @@ import { GLYPHS } from '../agents/glyphs.ts';
 import type { PickerChoice } from '../pickers/picker.ts';
 import { messageHeader } from '../transcript/message.ts';
 
-/** What `/team` was asked, by the words after it. */
-export type TeamCommand =
-  | { readonly form: 'list' }
-  | { readonly form: 'new'; readonly words: string }
-  | { readonly form: 'show'; readonly name: string }
-  | { readonly form: 'run'; readonly name: string; readonly job: string }
-  | { readonly form: 'stop'; readonly name: string }
-  /** Words `/team` cannot read, and what it says of them. */
-  | { readonly form: 'refused'; readonly problem: string };
+export { NO_TEAMS, newTeamPrompt };
 
-/**
- * `/team`'s words read: the form, then a team's name, then the rest, which
- * is a new team's description or a job. `stop` takes a run's
- * name whole, as a second run is `bugfix 2`.
- */
-export function teamCommand(args: string): TeamCommand {
-  const [, form = '', rest = ''] =
-    /^(\S*)\s*([\s\S]*)$/.exec(args.trim()) ?? [];
-  const [, name = '', words = ''] = /^(\S*)\s*([\s\S]*)$/.exec(rest) ?? [];
-  const which = 'Which team? /team lists them';
-
-  switch (form) {
-    case '':
-    case 'list':
-      return { form: 'list' };
-    case 'new':
-      return rest === ''
-        ? {
-            form: 'refused',
-            problem: '/team new takes a few words about the work the team does',
-          }
-        : { form: 'new', words: rest };
-    case 'show':
-      return name === ''
-        ? { form: 'refused', problem: which }
-        : { form: 'show', name };
-    case 'run':
-      return name === ''
-        ? { form: 'refused', problem: which }
-        : words === ''
-          ? {
-              form: 'refused',
-              problem: `/team run ${name} takes the job after the name`,
-            }
-          : { form: 'run', name, job: words };
-    case 'stop':
-      return rest === ''
-        ? {
-            form: 'refused',
-            problem: 'Which run? The list under the prompt names them',
-          }
-        : { form: 'stop', name: rest.replaceAll(/\s+/g, ' ') };
-    default:
-      return {
-        form: 'refused',
-        problem: `/team has no ${form}; it takes list, new, show, run or stop`,
-      };
-  }
-}
-
-/** `a, b and c`. */
-export function andList(names: readonly string[]): string {
-  return new Intl.ListFormat('en', { type: 'conjunction' }).format(names);
-}
-
-/**
- * What main gets for `/team new <words>`: the words, after one line that
- * names the tool which makes a team, so the agent proposes one rather than
- * answers in prose.
- */
-export function newTeamPrompt(words: string): string {
-  return (
-    'The person asks for a team of agents through /team new: work ' +
-    "out the team for what they describe below, then call chord's " +
-    "propose_team with it (list_agents gives each runtime's models and " +
-    `modes).\n\n${words}`
-  );
-}
-
-/**
- * What chord tells main, ahead of its next turn, of a run the person
- * started with `/team run`, which main took no part in.
- */
-export function ranNote(team: string, lead: string, job: string): string {
-  return (
-    `The person handed team ${team} this job: "${job}". Its lead is ` +
-    `@${lead} and reports to you; send_message reaches it.`
-  );
-}
-
-/**
- * Why `/team run` or `/team show` found no team by `name`, or a file that
- * is not one.
- */
-export function teamRefusal(
-  name: string,
-  found: ListedTeam | undefined,
-): string | undefined {
-  if (found === undefined) {
-    return `No team named ${name} · /team lists them`;
-  }
-
-  return 'problem' in found
-    ? `${found.shown} is not a team chord can run:\n${found.problem}`
-    : undefined;
-}
-
-/**
- * What `/team stop` says of the run it closed: its lead, and the members
- * open with it.
- */
-export function stoppedLine(run: string, members: readonly string[]): string {
-  return members.length === 0
-    ? `Stopped ${run}: its lead is closed · /resume lists it`
-    : `Stopped ${run}: ${andList(['its lead', ...members])} are closed · ` +
-        '/resume lists them';
-}
-
-/** A team's runs open in the window, as the picker and `/team show` read them. */
-export interface TeamRun {
-  readonly id?: string;
-  /** The team's file name. */
-  readonly team: string;
-  /** The run's name, its lead's: `bugfix`, `bugfix 2`. */
-  readonly name: string;
-  /** When its lead opened, on chord's clock. */
-  readonly since: number;
-}
-
-/** A team file as the picker lists it, its path as the window shows it. */
-export type ListedTeam = FoundTeam & { readonly shown: string };
-
-/** What `/team`'s picker and names read: the teams, the runs, the two places. */
-export interface TeamListing {
-  readonly teams: readonly ListedTeam[];
-  readonly runs: readonly TeamRun[];
-  readonly dirs: { readonly project: string; readonly user?: string };
-}
+/** What `/team` says of runs, in the window's words. */
+export const TEAM_WORDS: TeamWords = {
+  whichRun: 'Which run? The list under the prompt names them',
+  closedLead: '/resume lists it',
+  closedRun: '/resume lists them',
+  noRun: 'the list under the prompt names them',
+};
 
 /** A call's headline as one line: `Edit(src/a.ts)`, `→ to @coder`. */
 export function headlineText({
@@ -184,11 +62,6 @@ export function messageHeadline(from: MessageFrom): string {
   const { word, name, rest } = messageHeader(from);
 
   return `← ${word}${name}${rest}`;
-}
-
-/** The first unit of an elapsed time: `41s`, `6m`. */
-function briefly(ms: number): string {
-  return formatElapsed(ms).split(' ')[0]!;
 }
 
 /** `✻ working 6m` for one run, `✻ 2 runs` for more, nothing for none. */
@@ -318,13 +191,9 @@ export function teamsWhere(
   dirs: { readonly project: string; readonly user?: string | undefined },
   columns: number,
 ): string {
-  if (dirs.user === undefined) {
-    return `Saved for this project in ${dirs.project}.`;
-  }
-
-  return columns < NARROW
+  return dirs.user !== undefined && columns < NARROW
     ? `For this project in ${dirs.project}, for every project in ${dirs.user}.`
-    : `Saved for this project in ${dirs.project}, and for every project in ${dirs.user}.`;
+    : teamsSaved(dirs);
 }
 
 /**
@@ -354,10 +223,6 @@ export function teamsHint(
     ? ['Enter to hand it a job']
     : ['Enter to hand it a job', '/team show <name>'];
 }
-
-/** What the picker says with no team saved. */
-export const NO_TEAMS =
-  'No teams yet. /team new and a few words about the work makes one.';
 
 /**
  * What Enter on a team puts in the draft: a run's start. A broken file has

@@ -28,6 +28,8 @@ export type ElicitationReply =
 export interface PendingElicitation {
   readonly id: string;
   readonly wait: ElicitationWait;
+  /** The agent's request as it came, for one who passes it on whole. */
+  readonly raw: CreateElicitationRequest;
   /** The session that asks: the agent's own, or one of its subagents'. */
   readonly sessionId?: string;
   /**
@@ -109,6 +111,7 @@ export class ElicitationBridge {
       const pending: PendingElicitation = {
         id,
         wait: waitOf(id, request),
+        raw: request,
         ...('sessionId' in request && typeof request.sessionId === 'string'
           ? { sessionId: request.sessionId }
           : {}),

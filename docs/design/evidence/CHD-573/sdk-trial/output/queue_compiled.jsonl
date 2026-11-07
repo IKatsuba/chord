@@ -1,0 +1,7 @@
+{"target":"compiled","case":"unique notifications, 256 MiB, nobody reads","firstRssMiB":345,"peakRssMiB":345,"lastTickMs":3022,"handlerStillAnswers":true}
+{"target":"compiled","case":"responses from a handler, 160 MiB, nobody reads","firstRssMiB":491,"peakRssMiB":491,"lastTickMs":2518,"handlerStillAnswers":true}
+{"target":"compiled","case":"the SDK own -32601, 500k requests, nobody reads","firstRssMiB":1772,"peakRssMiB":1772,"lastTickMs":4230,"handlerStillAnswers":true}
+{"target":"compiled","case":"the SDK own -32602, 100k requests, nobody reads","firstRssMiB":448,"peakRssMiB":448,"lastTickMs":2888,"handlerStillAnswers":true}
+{"target":"compiled","case":"parse errors, nobody reads: does later input still arrive","firstRssMiB":26,"peakRssMiB":27,"lastTickMs":1014,"laterInputHandled":false}
+{"target":"compiled","case":"SIGTERM while stdout is already blocked","firstRssMiB":22,"peakRssMiB":22,"lastTickMs":256,"exitMs":55,"saw":["SIGTERM","after.close","exit"]}
+{"target":"compiled","case":"stderr nobody reads, 64 MiB written unawaited","turnWentOn":true,"loopAnswersAfter":true}

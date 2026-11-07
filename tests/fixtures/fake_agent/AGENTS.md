@@ -18,11 +18,12 @@
   `mcpnote`, `codexmcpnote`),
   `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
   `bigask`, `bigasktwice`, `overlapask`, `overlapasksteer`, `mainbetween`,
-  `leftask`, `mainbetweentwice`, `bigaskleft`),
+  `leftask`, `mainbetweentwice`, `bigaskleft`, `permissionmeta`, `strangerask`),
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
   `grokplanempty`, `planheard`, `grokplanwrong`, `cursorplanlate`, `planform`),
-  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`),
+  `forms.ts` (`form`, `link`, `leftform`, `leftformgated`, `requestform`,
+  `strangerform`),
   `guardian.ts` (`guardian`, `guardiangated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
@@ -47,11 +48,12 @@
   (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
   `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktitled`,
   `tasktillsteered`,
-  `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`),
+  `taskask`, `taskaskstays`, `taskaskas`, `taskformas`, `taskstayshold`,
+  `taskchildhold`),
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
-  `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`). Beside it, what the
-  scenarios read too:
+  `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`, `flood`,
+  `ignorescancel`). Beside it, what the scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
   `sessions.ts` each session's directory, MCP servers, model, mode and
@@ -74,7 +76,7 @@
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
   `permission`,
-  `permissionsteer`,
+  `permissionsteer`, `permissionmeta`, `strangerask`,
   `callchildtwo`, `agentnames`, `agentmentions`, `agenttitled`, `agentother`,
   `agentstitled`, `agentsquiet`,
   `agentsheldgated`, `agentclear`, `agentlate`, `agentclearonly`, `latesay`,
@@ -89,9 +91,11 @@
   `compact`,
   `codexcompact`,
   `compactfail`, `status`,
-  `cancels`, `error`, `slow`, `long`, `longheld`, `costwait`, `costwaitlate`,
+  `cancels`, `error`, `flood`, `ignorescancel`, `slow`, `long`, `longheld`,
+  `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
-  `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `bigaskleft`,
+  `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
+  `strangerform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
   `codexsubagents`, `codexsubagentstop`, `claudesubagents`,
@@ -107,7 +111,17 @@
   `settingsoffered`, `settingsoverlap`, `settingsrefused`,
   `settingswithdrawn`, `settingslong`,
   `claudecycle`, `claudecyclebare`, `claudecycleask`, `codebuddycycle`)
-  plays that scenario; `markdownwrap` sends a reply whose heading,
+  plays that scenario; `flood` sends 64 MiB of chunks as fast as they are taken,
+  for a client that stopped reading, until a cancel or its client's going;
+  `ignorescancel` holds its turn through a cancel until its client goes, or 30 s;
+  `requestform` asks a form scoped to a request of its own and to no session;
+  `permissionmeta` asks with `_meta` on the request and on its call;
+  `strangerask` and `strangerform` ask under a session it never announced;
+  `--session-id <id>` (`CHORD_FAKE_SESSION_ID`) answers every `session/new`
+  with that id, as an agent with per-process counters does;
+  `--config-in-responses` (`CHORD_FAKE_CONFIG_IN_RESPONSES=1`) suppresses
+  `session/set_mode`'s config update; its answer stays empty;
+  `markdownwrap` sends a reply whose heading,
   three-deep nested list, quote and paragraph wrap at 80 columns, with a
   two-digit marker, task items, and a soft and a hard line break
   (`docs/design/CHD-396.md`); `markdowncode` sends code boxes with a long
@@ -133,6 +147,9 @@
   MCP note, with arguments first empty, then whole; `codexmcpnote` plays
   the same note as Codex sends it, with server, tool and arguments wrapped
   in `rawInput`;
+  `askas <id>` asks permission as the named session and `formas <id>`
+  asks a form as it; `taskaskas` and `taskformas` spawn a task that claims
+  its parent's session id, to check refusal of impersonation;
   `form` asks for a form with a field of each kind and
   `link` for a link to open (`tests/fixtures/forms.ts`), `askclaude`,
   `askclaudeone`, `askcodex`, `askdroid`, `askopencode` and `askdimcode`
@@ -400,7 +417,9 @@
   session offers two models, `Fake Large with a 1M context window` (in use
   until switched) and `Fake Small`, and three modes, `default`, `acceptEdits`
   and `plan`, and an effort, `low`, `medium` (until set) or `high`, through
-  config options; `--no-config` or `CHORD_FAKE_NO_CONFIG=1` leaves the effort
+  config options; `--config-delay <ms>` (`CHORD_FAKE_CONFIG_DELAY`)
+  delays `session/set_config_option` replies for startup ordering tests.
+  `--no-config` or `CHORD_FAKE_NO_CONFIG=1` leaves the effort
   out and `--refuse-config` or `CHORD_FAKE_REFUSE_CONFIG=1` refuses every
   change to it; `--no-modes` or `CHORD_FAKE_NO_MODES=1` offers no modes and
   refuses `session/set_mode`.
@@ -435,7 +454,10 @@
   reply text to any other. Every session
   advertises two slash commands, `greet` and `echo`
   (`tests/fixtures/commands.ts`), just after `session/new`, as Claude's
-  adapter does; a prompt starting with one plays it. `verbatim <text>`
+  adapter does; `--no-commands` (`CHORD_FAKE_NO_COMMANDS=1`) suppresses
+  announcements, and `--also-commands <list>` (`CHORD_FAKE_ALSO_COMMANDS`)
+  adds comma-separated names to check conflicts with chord's commands.
+  A prompt starting with `greet` or `echo` plays it. `verbatim <text>`
   answers with the text as a JSON string, escaping every C0, DEL and C1
   character as `\uXXXX`. Shell output sent ahead of a prompt gets a
   `Received` line naming each command and its first line of output, and
@@ -485,7 +507,9 @@
   `--fork-model <id>` (`CHORD_FAKE_FORK_MODEL`) puts the fork on that model,
   standing in for its source's, which a process of its own cannot read.
   `--auto-mode` (`CHORD_FAKE_AUTO_MODE=1`) adds an `auto` mode to the three
-  it offers, for the screenshots' Codex member; the default list leaves it out.
+  it offers, for the screenshots' Codex member; `--bypass-mode`
+  (`CHORD_FAKE_BYPASS_MODE=1`) adds `bypassPermissions` for team files
+  requesting it. Neither is in the default list.
   `CHORD_FAKE_REFUSE_FORK=1` refuses the advertised method;
   `CHORD_FAKE_HANG_FORK=1` leaves it unanswered. These fixtures prove transport
   and lifecycle behavior, not live cross-process context inheritance.

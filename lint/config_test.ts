@@ -92,6 +92,9 @@ const cases: [rule: string, code: string, file?: string][] = [
     'react-hooks/rules-of-hooks',
     "import { useState } from 'react';\n\nexport function f(c: boolean) {\n  if (c) {\n    useState(0);\n  }\n}\n",
   ],
+  ['no-console', "console.log('x');\n", 'session/probe.ts'],
+  ['no-console', "console.log('x');\n", 'acp/probe.ts'],
+  ['no-console', "console.log('x');\n", 'server/probe.ts'],
 ];
 
 for (const [rule, code, file = 'probe.ts'] of cases) {

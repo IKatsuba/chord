@@ -10,6 +10,7 @@
  */
 import { Cell, Table } from '@cliffy/table';
 import stringWidth from 'string-width';
+import { LEAD_ROLE } from '../../../session/team_command.ts';
 import type { ChordCall } from '../../../session/transcript/types.ts';
 import { type RowChange, type Team, teamChanges } from '../../../teams.ts';
 import { wrapLine } from '../message.ts';
@@ -22,9 +23,7 @@ const PADDING = 2;
 /** The role is cut no narrower than this before the model is cut too. */
 const MIN_ROLE = 12;
 
-/** The lead's role, which the file has no line for. */
-export const LEAD_ROLE =
-  'Splits the job, says who edits which files, reports to main';
+export { LEAD_ROLE };
 
 /** Modes that let an agent act without the person's ok, drawn as a warning. */
 const UNASKED_MODES: ReadonlySet<string> = new Set([

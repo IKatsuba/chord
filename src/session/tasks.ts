@@ -8,8 +8,9 @@
  */
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import type { ConversationEvent } from './conversation.ts';
-import type { ElicitationReply } from './elicitations.ts';
+import type { ElicitationReply, PendingElicitation } from './elicitations.ts';
 import { endWord } from './monitors.ts';
+import type { PendingPermission } from './permissions.ts';
 import { reduceTranscript } from './transcript/reducer.ts';
 import {
   TASK_META,
@@ -96,6 +97,36 @@ const TEAM =
 
 const WRAPPED =
   /^<message from="([^"]*)"(?: monitor="([^"]*)")?>\n([\s\S]*)\n<\/message>$/;
+
+const AHEAD =
+  /^<message from="([^"]*)"(?: monitor="[^"]*")?>\n[\s\S]*?\n<\/message>\n\n/;
+
+/**
+ * A prompt without what `aside` put ahead of it for the agent, among all that
+ * went ahead of it: a task's note stays, as any other sender's words do. Only
+ * for one that is no message itself, whose text could hold anything.
+ */
+export function withoutChordAsides(prompt: string): string {
+  let kept = '';
+  let rest = prompt;
+
+  for (let ahead = AHEAD.exec(rest); ahead !== null; ahead = AHEAD.exec(rest)) {
+    kept += ahead[1] === 'chord' ? '' : ahead[0];
+    rest = rest.slice(ahead[0].length);
+  }
+
+  return kept + rest;
+}
+
+/**
+ * A prompt with nothing of the person's in it, only what `aside` put ahead, as
+ * the lone message it then reads as: its first, if several.
+ */
+export function onlyChordAside(prompt: string): string | undefined {
+  return withoutChordAsides(prompt) === ''
+    ? /^<message from="chord">\n[\s\S]*?\n<\/message>/.exec(prompt)?.[0]
+    : undefined;
+}
 
 /**
  * A prompt that is a wrapped message, read back into who sent it and what
@@ -259,6 +290,9 @@ export interface TaskSession {
   reject(id: string): void;
   answer(id: string, response: ElicitationReply): void;
   close(): Promise<void>;
+  /** An ask of its own, as its agent asked it, for one who passes it on. */
+  permissionRequest?(id: string): PendingPermission | undefined;
+  elicitationRequest?(id: string): PendingElicitation | undefined;
 }
 
 /** What starts a task: who it is, and what it was asked. */
@@ -464,6 +498,14 @@ export class TaskAgent {
 
   answer(id: string, response: ElicitationReply): void {
     this.#session?.answer(id, response);
+  }
+
+  permissionRequest(id: string): PendingPermission | undefined {
+    return this.#session?.permissionRequest?.(id);
+  }
+
+  elicitationRequest(id: string): PendingElicitation | undefined {
+    return this.#session?.elicitationRequest?.(id);
   }
 
   /**

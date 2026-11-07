@@ -22,7 +22,22 @@ beforeEach(() => {
   );
   writeFileSync(
     join(at.root, 'chord'),
-    '#!/bin/bash\ncase "$1" in --version) echo 9.9.9 ;; *) echo "Hello, world." ;; esac\n',
+    `#!/bin/bash
+case "$1" in
+--version) echo 9.9.9 ;;
+acp)
+  while read -r line; do
+    case "$line" in
+    *'"initialize"'*) echo '{"id":1,"result":{}}' ;;
+    *'"session/new"'*) echo '{"id":2,"result":{"sessionId":"s"}}' ;;
+    *'"session/prompt"'*) echo '{"id":9,"method":"session/request_permission","params":{}}' ;;
+    *'"id":9'*) echo '{"id":3,"result":{"stopReason":"end_turn"}}' ;;
+    esac
+  done
+  ;;
+*) echo "Hello, world." ;;
+esac
+`,
     { mode: 0o755 },
   );
   at.fake(

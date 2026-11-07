@@ -13,12 +13,11 @@ import {
 } from '@opentui/core';
 import process from 'node:process';
 import { text as readText } from 'node:stream/consumers';
-import type { Writable } from 'node:stream';
+import { Readable, type Writable } from 'node:stream';
 import { join, resolve } from 'node:path';
 import { realpathSync } from 'node:fs';
 import {
   type Instance,
-  closeOnForcedExit,
   openTerminal,
   render,
   type Terminal,
@@ -35,6 +34,8 @@ import {
   missingCommand,
   offeredAgents,
 } from './agents.ts';
+import { outputStream } from './acp/stdio.ts';
+import { byHandNote, runAcp } from './acp_agent.ts';
 import { joinPiped, runHeadless } from './headless.ts';
 import { loadMcpServers } from './mcp.ts';
 import { terminalEnv } from './notify.ts';
@@ -57,6 +58,8 @@ import {
   resumeMessage,
   sessionById,
 } from './session/sessions.ts';
+import { closeOnForcedExit } from './session/leaving.ts';
+import { placeOf, readPlace } from './session/place.ts';
 import { openSession } from './session/session.ts';
 import { snapshotOnSignal } from './platform/heap.ts';
 import { execPath } from './platform/process.ts';
@@ -73,27 +76,22 @@ import {
   knownAgents,
   loadKeybindings,
   loadSettings,
-  readTeamSelection,
   problemLine,
   problemNote,
   refusalLine,
   resolveStartup,
-  resumedStartup,
   saveEditorMode,
   saveTheme,
   setWhere,
   shownPath,
   type Sourced,
-  startupOf,
   unknownOffered,
-  unseenProblems,
   userSettingsFile,
 } from './settings.ts';
 import { App } from './ui/app/App.tsx';
 import { chooseAgentAtStart } from './ui/app/startup_choice.ts';
 import { Start } from './ui/app/Start.tsx';
 import { COLOUR } from './ui/app/context.ts';
-import type { Place } from './ui/app/sessions.ts';
 import { keybindingsNotice } from './ui/shortcuts/bindings.ts';
 import { background, paletteOf, resolveTheme } from './ui/theme/theme.ts';
 
@@ -464,118 +462,18 @@ export const cli = chordCommand().action(async (options, named) => {
     ...(agentCommand === undefined ? {} : { agentCommand }),
   };
 
-  /**
-   * What a session working in `dir` starts with: a session resumed by id
-   * may work elsewhere, and its directory's project file and `.mcp.json`
-   * are the ones that speak for it. Each problem is said once, however
-   * many directories read the user's file.
-   */
-  const readPlace = async (dir: string) => {
-    const there =
-      dir === resolve(options.cwd)
-        ? loaded
-        : await loadSettings({
-            configHome: xdgConfig,
-            cwd: dir,
-            ...(home === undefined ? {} : { home }),
-          });
-    const mcp = await loadMcpServers({ layers: there.layers, cwd: dir });
-    const added = unseenProblems(problems, [
-      ...there.problems,
-      ...mcp.problems,
-    ]);
-
-    await report(added);
-    problems.push(...added);
-
-    return {
-      cwd: dir,
-      layers: there.layers,
-      channel: there.settings.preferredNotifChannel,
-      teamSelection: there.settings.teamSelection,
-      mcp,
-      ...resumedStartup(invokedAs, flags, there.layers),
-    };
-  };
-
+  const startup = { configHome: xdgConfig, home, invokedAs, flags };
   // The one place the window reads: the directory its session works in.
-  const read = await readPlace(cwd);
-
-  /** A directory read, as the window takes it: paths as it shows them. */
-  const placeOf = ({
-    cwd,
-    layers,
-    mcp,
-    model,
-    effort,
-    permissionMode,
-    teamSelection,
-  }: Awaited<ReturnType<typeof readPlace>>): Place => {
-    const shown = { cwd, home };
-    const starting = (value: Sourced | undefined) =>
-      value === undefined
-        ? undefined
-        : { id: value.id, from: setWhere(value.from, shown) };
-
-    return {
-      cwd,
-      selectionPolicy: () =>
-        readTeamSelection({
-          configHome: xdgConfig,
-          cwd,
-          ...(home === undefined ? {} : { home }),
-        }),
-      ...(teamSelection === undefined ? {} : { teamSelection }),
-      startupOf: (name) => {
-        const found = startupOf(
-          name,
-          {
-            ...invokedAs,
-            ...(model === undefined ? {} : { model }),
-            ...(effort === undefined ? {} : { effort }),
-            ...(permissionMode === undefined ? {} : { permissionMode }),
-          },
-          layers,
-        );
-        // The window's own agent starts as it was invoked, but this place's
-        // files may refuse its command, unless a flag gave it one.
-        const refused =
-          found.refused ??
-          (name === agent && flags.agentCommand === undefined
-            ? resolveStartup({ agent: name }, layers, name).refused
-            : undefined);
-
-        if (refused !== undefined) {
-          return { refused: refusalLine(name, refused, shown) };
-        }
-
-        return found.agentCommand === undefined && findAgent(name) === undefined
-          ? undefined
-          : {
-              agentCommand: found.agentCommand,
-              ...(takesMcpServers(name, found.mcpServers)
-                ? {}
-                : { mcpServers: false as const }),
-              starting: {
-                model: starting(found.model),
-                effort: starting(found.effort),
-                mode: starting(found.permissionMode),
-              },
-            };
-      },
-      mcpServers: mcp.servers.map((defined) => ({
-        ...defined,
-        from: shownPath(defined.from, shown),
-      })),
-      mcpIgnored: mcp.ignored.map((lost) => ({
-        ...lost,
-        from: shownPath(lost.from, shown),
-      })),
-    };
-  };
+  const read = await readPlace(cwd, {
+    ...startup,
+    loadedAt: resolve(options.cwd),
+    loaded,
+    problems,
+    report,
+  });
 
   const { model, effort, permissionMode, channel, layers } = read;
-  const first = placeOf(read);
+  const first = placeOf(read, startup);
 
   // A session resumed works in its record's directory, whose files may
   // refuse what the command line's would not.
@@ -607,17 +505,7 @@ export const cli = chordCommand().action(async (options, named) => {
   let resumable: Resumable | undefined;
   // Once for the window, before its first session opens; `-p` has gone.
   const server = startServices.serveChord();
-  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
-  const resources = startServices.createResources({
-    collectors,
-    ...(collectors === 'fixture'
-      ? {
-          fixtureCase: resourceFixtureCase(
-            process.env['CHORD_FAKE_RESOURCE_CASE'],
-          ),
-        }
-      : {}),
-  });
+  const resources = startServices.createResources(resourceOptions());
 
   let closingResources: Promise<void> | undefined;
   const closeResources = () =>
@@ -747,10 +635,193 @@ cli
     );
   });
 
+cli
+  .command(
+    'acp',
+    'Serve ACP on stdin and stdout, for a client that starts chord as its agent; draws nothing.',
+  )
+  .arguments('[agent:string]')
+  .option(
+    '--agent-command <command:string>',
+    "Start this ACP agent command instead of chord's own; [agent] only names it.",
+  )
+  .option(
+    '-m, --model <model:string>',
+    "Start each of [agent]'s sessions on this model, by its id for it.",
+  )
+  .option(
+    '--effort <effort:string>',
+    "Start each of [agent]'s sessions on this effort, by its id for it.",
+  )
+  .option(
+    '--permission-mode <mode:string>',
+    "Start each of [agent]'s sessions in this mode, by its id for it.",
+  )
+  // Cliffy prints a usage error's help on stdout, which here is the protocol.
+  .throwErrors()
+  .action(serveAcp);
+
 cli.command(
   'upgrade',
   upgradeCommand(realpathSync(execPath()), process.env, manifest.version),
 );
+
+/** Which collectors read the providers' limits, by the environment. */
+function resourceOptions() {
+  const collectors = resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']);
+
+  return {
+    collectors,
+    ...(collectors === 'fixture'
+      ? {
+          fixtureCase: resourceFixtureCase(
+            process.env['CHORD_FAKE_RESOURCE_CASE'],
+          ),
+        }
+      : {}),
+  };
+}
+
+/** `chord acp`: `runAcp` on this process's own streams and signals. */
+async function serveAcp(
+  flags: {
+    readonly agentCommand?: string | undefined;
+    readonly model?: string | undefined;
+    readonly effort?: string | undefined;
+    readonly permissionMode?: string | undefined;
+  },
+  named?: string,
+): Promise<void> {
+  const home = process.env['HOME'];
+  const say = (line: string) => {
+    try {
+      process.stderr.write(`${line}\n`);
+    } catch {
+      // A stderr gone is no reason to stop serving.
+    }
+  };
+
+  const settingsAt = (cwd: string) =>
+    loadSettings({
+      configHome: xdgConfig,
+      cwd,
+      ...(home === undefined ? {} : { home }),
+    });
+  const asked = {
+    agent: named,
+    agentCommand: flags.agentCommand,
+    model: flags.model,
+    effort: flags.effort,
+    permissionMode: flags.permissionMode,
+  };
+  const here = process.cwd();
+  const loaded = await settingsAt(here);
+
+  for (const problem of loaded.problems) {
+    say(problemLine(problem));
+  }
+
+  const { agent, agentCommand, refused } = resolveStartup(
+    asked,
+    loaded.layers,
+    DEFAULT_AGENT,
+  );
+
+  if (refused !== undefined) {
+    say(refusalLine(agent, refused, { cwd: here, home }));
+    process.exit(1);
+  }
+
+  if (agentCommand === undefined && findAgent(agent) === undefined) {
+    throw new ValidationError(
+      `Unknown agent "${agent}". \`chord agents\` lists them.`,
+    );
+  }
+
+  const invokedAs = {
+    agent,
+    ...(agentCommand === undefined ? {} : { agentCommand }),
+  };
+  const startup = { configHome: xdgConfig, home, invokedAs, flags: asked };
+  // Each said once, however many sessions' directories read the user's file.
+  const problems = [...loaded.problems];
+
+  for (const line of byHandNote(process.stdin.isTTY === true)) {
+    say(line);
+  }
+
+  // The streams' own errors say what their writes say; unheard, they end chord.
+  process.stderr.on('error', () => {});
+
+  process.stdout.on('error', () => {});
+
+  const signals = ['SIGTERM', 'SIGINT', 'SIGHUP'] as const;
+  const onSignal = (signal: NodeJS.Signals) =>
+    void run.leave({ kind: 'signal', signal });
+  const crashed = (error: unknown) => {
+    say(
+      error instanceof Error ? (error.stack ?? error.message) : String(error),
+    );
+
+    void run.leave({ kind: 'crash' });
+  };
+
+  const run = runAcp({
+    input: Readable.toWeb(
+      process.stdin,
+    ) as unknown as ReadableStream<Uint8Array>,
+    output: outputStream(process.stdout),
+    stderr: say,
+    exit: (how) => {
+      if ('code' in how) {
+        process.exit(how.code);
+      }
+
+      // Raised again with no listener left, so chord dies by it.
+      process.removeAllListeners(how.signal);
+      process.kill(process.pid, how.signal);
+    },
+    agent,
+    home,
+    configHome: xdgConfig,
+    server: serveChord(),
+    resources: createResources(resourceOptions()),
+    version: manifest.version,
+    stateDir: chordStateDir(),
+    open: openSession,
+    place: async (cwd) => {
+      const read = await readPlace(cwd, {
+        ...startup,
+        loadedAt: here,
+        loaded,
+        problems,
+        report: (found) => {
+          for (const problem of found) {
+            say(problemLine(problem));
+          }
+
+          return Promise.resolve();
+        },
+      });
+
+      return {
+        ...placeOf(read, startup),
+        runtimes: knownAgents(
+          invokedAs,
+          read.layers,
+          listAgents().map(({ name }) => name),
+        ),
+      };
+    },
+  });
+
+  for (const signal of signals) {
+    process.on(signal, onSignal);
+  }
+
+  process.on('uncaughtException', crashed);
+  process.on('unhandledRejection', crashed);
+}
 
 /**
  * The window's one clipboard service, OpenTUI's: the system clipboard
@@ -785,6 +856,16 @@ if (import.meta.main) {
   if (args[0] === RESOURCE_WORKER_FLAG) {
     await runResourceWorker(args.slice(1));
   } else {
-    await cli.parse(args);
+    try {
+      await cli.parse(args);
+    } catch (error) {
+      // Only `acp` throws its errors, as its stdout is the protocol.
+      if (!(error instanceof ValidationError)) {
+        throw error;
+      }
+
+      process.stderr.write(`chord: ${error.message}\n`);
+      process.exit(error.exitCode);
+    }
   }
 }

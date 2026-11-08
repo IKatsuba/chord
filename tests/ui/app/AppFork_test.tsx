@@ -782,7 +782,7 @@ describe('CHD-101 U2 tester: fork routing, records and ownership', () => {
                   command: quote([
                     process.execPath,
                     '-e',
-                    'require("node:fs").writeFileSync("fork-monitor.pid", String(process.pid)); setInterval(() => {}, 1000)',
+                    'const fs = require("node:fs"); fs.writeFileSync("fork-monitor.pid.pending", String(process.pid)); fs.renameSync("fork-monitor.pid.pending", "fork-monitor.pid"); setInterval(() => {}, 1000)',
                   ]),
                   description: 'fork cleanup fixture',
                 },
@@ -796,6 +796,9 @@ describe('CHD-101 U2 tester: fork routing, records and ownership', () => {
               const monitorPid = Number(
                 await readFile(join(window.dir, 'fork-monitor.pid'), 'utf8'),
               );
+
+              expect(Number.isInteger(monitorPid) && monitorPid > 0).toBe(true);
+
               const task = await client.callTool({
                 name: 'spawn_task',
                 arguments: {

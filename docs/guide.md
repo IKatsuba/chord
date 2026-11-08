@@ -784,9 +784,8 @@ has no defined end. `session/cancel` aborts a run still starting but does
 not stop a running one: use `/team stop`. `$/cancel_request` does not
 cancel a command already in flight.
 
-When main's agent dies, `chord acp` closes its children, subject to the
-startup limit below. The window keeps them, since its person can still
-reach them.
+When main's agent dies, `chord acp` closes its children. The window keeps
+them, since its person can still reach them.
 
 ### Extensions
 
@@ -895,8 +894,6 @@ work does not.
   less may read a late chunk as the next reply or omit an unasked turn.
   An ask between turns can hold the queue until `session/cancel`; chord
   neither holds answers for silence nor changes the agent's cycle.
-- Closing main while a child is starting may leave the child's process
-  group alive (CHD-589).
 - A task's agent can name another announced subagent of the same session
   or claim a sibling's id. An agent announcing a subagent under a child's
   id can mislead about state, but gains no control of that child.

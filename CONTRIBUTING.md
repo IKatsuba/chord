@@ -66,7 +66,9 @@ larger change, or open an issue first to talk it through.
 
 The README's screenshots are taken from chord itself, on the test agent, by
 `bun dev screenshots` (tmux and Chrome). Retake what a change moves and
-commit the images with it.
+commit the images with it. `bun dev social` lays the repository's social
+preview out of them into `dist/social-preview.png`; the owner uploads it in
+the repository's settings.
 
 ## Code of conduct
 

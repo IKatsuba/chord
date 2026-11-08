@@ -21,6 +21,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     registry: record('registry'),
     mark: record('mark'),
     screenshots: record('screenshots'),
+    social: record('social'),
     memory: record('memory'),
     selftest: record('selftest'),
     release: record('release'),
@@ -57,11 +58,13 @@ describe('compile', () => {
   });
 });
 
-test('npm, registry and mark take no arguments', async () => {
+test('npm, registry, mark and social take no arguments', async () => {
   expect(await parsed(['npm'])).toStrictEqual([['npm']]);
   expect(await parsed(['registry'])).toStrictEqual([['registry']]);
   expect(await parsed(['mark'])).toStrictEqual([['mark']]);
+  expect(await parsed(['social'])).toStrictEqual([['social']]);
   await expect(parsed(['mark', 'extra'])).rejects.toThrow(ValidationError);
+  await expect(parsed(['social', 'extra'])).rejects.toThrow(ValidationError);
 });
 
 test('screenshots takes the shots to retake, or none for all', async () => {
@@ -227,6 +230,7 @@ test('--help lists every command', () => {
     'registry',
     'mark',
     'screenshots',
+    'social',
     'memory',
     'selftest',
     'release',
@@ -306,6 +310,7 @@ describe('tester: migrated command boundaries', () => {
         throw failure;
       },
       screenshots: unexpected,
+      social: unexpected,
       memory: unexpected,
       selftest: unexpected,
       release: unexpected,

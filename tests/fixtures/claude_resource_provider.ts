@@ -1,7 +1,7 @@
 /** A native-compiled fake for the official SDK's documented control messages. */
 import split from 'split2';
 import process from 'node:process';
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, renameSync, writeFileSync } from 'node:fs';
 
 const scenario = process.env.CHORD_FAKE_CLAUDE_SCENARIO ?? 'normal';
 const record = process.env.CHORD_FAKE_CLAUDE_RECORD;
@@ -17,8 +17,14 @@ function usage() {
   };
 }
 
+// Published by rename: a test reading the record as soon as it exists must
+// never see it empty (CHD-589).
 if (record !== undefined) {
-  writeFileSync(record, JSON.stringify({ pid: process.pid }) + '\n');
+  writeFileSync(
+    `${record}.pending`,
+    JSON.stringify({ pid: process.pid }) + '\n',
+  );
+  renameSync(`${record}.pending`, record);
 }
 
 if (scenario === 'stubborn') {

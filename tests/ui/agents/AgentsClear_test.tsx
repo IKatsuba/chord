@@ -608,7 +608,7 @@ describe('CHD-476 U1 tester: clearing owned work without closing peers', () => {
             command: quote([
               process.execPath,
               '-e',
-              'require("node:fs").writeFileSync("clear-monitor.pid", String(process.pid)); setInterval(() => {}, 1000)',
+              'const fs = require("node:fs"); fs.writeFileSync("clear-monitor.pid.pending", String(process.pid)); fs.renameSync("clear-monitor.pid.pending", "clear-monitor.pid"); setInterval(() => {}, 1000)',
             ]),
             description: 'clear ownership fixture',
           });
@@ -621,6 +621,8 @@ describe('CHD-476 U1 tester: clearing owned work without closing peers', () => {
           const monitorPid = Number(
             await readFile(join(window.dir, 'clear-monitor.pid'), 'utf8'),
           );
+
+          expect(Number.isInteger(monitorPid) && monitorPid > 0).toBe(true);
 
           const sourcePids = [...sourceSession.agentPids];
           const taskPids = [...taskSession.agentPids];

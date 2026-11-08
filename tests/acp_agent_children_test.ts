@@ -49,6 +49,10 @@ async function reported(
 }
 
 function groupAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) {
+    throw new Error(`not a process group: ${pid}`);
+  }
+
   try {
     return process.kill(-pid, 0);
   } catch {
@@ -144,6 +148,12 @@ const prompt = (client: AcpClient, sessionId: string, text: string) =>
   });
 
 describe('CHD-581 tester: children across session boundaries', () => {
+  test('process group checks reject invalid pids before signalling', () => {
+    for (const pid of [0, Number(''), -1, 1.5, NaN, Infinity]) {
+      expect(() => groupAlive(pid)).toThrow(`not a process group: ${pid}`);
+    }
+  });
+
   test('a crash cancels a command blocked reading teams, and exits uncleanly', () =>
     withChildren(
       async (client, newSession, _lines, { cwd, run, exits }) => {
@@ -409,8 +419,9 @@ describe('CHD-581 tester: children across session boundaries', () => {
 
         await writeFile(
           wrapper,
-          `import { writeFileSync } from 'node:fs';\n` +
-            `writeFileSync(${JSON.stringify(pidFile)}, String(process.pid));\n` +
+          `import { renameSync, writeFileSync } from 'node:fs';\n` +
+            `writeFileSync(${JSON.stringify(pidFile + '.pending')}, String(process.pid));\n` +
+            `renameSync(${JSON.stringify(pidFile + '.pending')}, ${JSON.stringify(pidFile)});\n` +
             `await import(${JSON.stringify(fake)});\n`,
         );
 

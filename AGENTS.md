@@ -80,6 +80,7 @@ bun dev registry          # refetch the ACP Registry into src/registry.ts
 bun dev mark              # rasterise scripts/mark.svg into the header mark
 bun dev screenshots       # retake docs/images/, including title pages and logos
 bun dev screenshots logo  # the transparent dark and light README logos only
+bun dev social            # GitHub's social preview from docs/images into dist/
 bun dev memory            # long-run memory check; options in docs/memory.md
 ```
 

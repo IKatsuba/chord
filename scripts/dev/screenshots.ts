@@ -205,9 +205,9 @@ const LOGOS: readonly Shot[] = (['dark', 'light'] as const).map((theme) => ({
   steps: [],
 }));
 
-const ROOT = new URL('../..', import.meta.url).pathname;
-const IMAGES = join(ROOT, 'docs', 'images');
-const CHROME =
+export const ROOT = new URL('../..', import.meta.url).pathname;
+export const IMAGES = join(ROOT, 'docs', 'images');
+export const CHROME =
   process.env['CHROME'] ??
   '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
 /** The terminal's size; `proposal` is the tallest shot, and fits in this. */

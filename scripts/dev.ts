@@ -29,6 +29,7 @@ export interface DevActions {
   registry(): void | Promise<void>;
   mark(): void | Promise<void>;
   screenshots(names: readonly string[]): void | Promise<void>;
+  social(): void | Promise<void>;
   memory(options: MemoryOptions): void | Promise<void>;
   selftest(binary: string, arch: string | undefined): void | Promise<void>;
   release(
@@ -74,6 +75,7 @@ const RUN: DevActions = {
   mark: async () => (await import('./dev/mark.ts')).mark(),
   screenshots: async (names) =>
     (await import('./dev/screenshots.ts')).screenshots(names),
+  social: async () => (await import('./dev/social.ts')).social(),
   memory: async (options) => (await import('./dev/memory.ts')).memory(options),
   selftest: async (binary, arch) => {
     const { dying, release } = await import('./dev/release/lib.ts');
@@ -220,6 +222,14 @@ export function devCommand(actions: DevActions = RUN) {
           )
           .arguments('[names...:string]')
           .action((_options, ...names) => actions.screenshots(names)),
+      )
+      .command(
+        'social',
+        new Command()
+          .description(
+            "Lay out GitHub's social preview from docs/images into dist/social-preview.png.",
+          )
+          .action(() => actions.social()),
       )
       .command(
         'memory',

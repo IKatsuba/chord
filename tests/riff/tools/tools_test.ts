@@ -216,3 +216,53 @@ describe('tester: simultaneous tool sessions', () => {
     }
   });
 });
+
+describe('tester: read display belongs to its execution', () => {
+  test('concurrent ranges preserve literal line text and keep model notices out of the window', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-display-')),
+    );
+    const finder = openFinder(root);
+    const shown = new Map<string, string>();
+    const [read] = riffTools({
+      directory: root,
+      finder,
+      show: (id, text) => shown.set(id, text),
+    });
+    const run = (id: string, offset: number) =>
+      read!.execute(
+        { path: 'text.txt', offset, limit: 1 },
+        {
+          signal: new AbortController().signal,
+          executionId: id,
+          sessionId: 'display-session',
+        },
+      ) as Promise<string>;
+
+    try {
+      await writeFile(
+        join(root, 'text.txt'),
+        '42\tliteral number\n… more from line 99; literal text\nlast\n',
+      );
+
+      const [first, second] = await Promise.all([
+        run('first-range', 1),
+        run('second-range', 2),
+      ]);
+
+      expect(first).toBe(
+        '1\t42\tliteral number\n… more from line 2; read on with offset 2.',
+      );
+      expect(second).toBe(
+        '2\t… more from line 99; literal text\n… more from line 3; read on with offset 3.',
+      );
+      expect(Object.fromEntries(shown)).toEqual({
+        'first-range': '42\tliteral number',
+        'second-range': '… more from line 99; literal text',
+      });
+    } finally {
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

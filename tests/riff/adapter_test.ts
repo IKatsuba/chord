@@ -1160,6 +1160,65 @@ describe("riff's read, list and search in the session's directory", () => {
     riff = { ...riff, finished: riff.finished.catch(() => {}) };
   });
 
+  test('a cancel that fails on close still closes libfx and ends the finder', async () => {
+    const ended: string[] = [];
+
+    await open(true, {
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          // The session libfx gives, but for a cancel that fails.
+          session: (...args: Parameters<FxAgent['session']>) =>
+            Object.assign(made.session(...args), {
+              cancel: () => Promise.reject(new Error('cancel failed')),
+            }),
+          close: async () => {
+            ended.push('agent');
+            await made.close();
+          },
+        });
+      },
+      openFinder: (directory) => {
+        const finder = openFinder(directory);
+
+        return {
+          ...finder,
+          destroy: async () => {
+            await finder.destroy();
+            ended.push('finder');
+          },
+        };
+      },
+    });
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call search {"query":"hello"}');
+
+    const running = prompt(sessionId, 'hang');
+
+    await fake.hanging();
+
+    const closed = client.request('session/close', { sessionId });
+
+    // libfx's close waits on the turn the failed cancel left running; the
+    // finder does not wait with it.
+    await until(() => ended.includes('finder'));
+    expect(ended).toStrictEqual(['agent', 'finder']);
+
+    // The provider gone, the turn ends and so does the close.
+    await fake.stop();
+    expect((await closed).error).toBeDefined();
+    await running;
+
+    riff = { ...riff, finished: riff.finished.catch(() => {}) };
+  });
+
   test('a directory that is not there fails session/new', async () => {
     await open();
 

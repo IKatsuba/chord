@@ -383,11 +383,14 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const session = open;
 
     if (session !== undefined) {
-      if (session.running) {
-        await session.agent.session(session.id).cancel();
+      // A cancel that fails still leaves nothing running.
+      try {
+        if (session.running) {
+          await session.agent.session(session.id).cancel();
+        }
+      } finally {
+        await closeOpen(session);
       }
-
-      await closeOpen(session);
     }
 
     open = undefined;
@@ -529,12 +532,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   return { connection, finished: connection.closed.then(shutdown) };
 }
 
-/** Ends a libfx agent and its finder, the finder even when the agent fails to. */
+/**
+ * Ends a libfx agent and its finder together: the finder neither waits on a
+ * close that waits on a turn nor is skipped by one that fails.
+ */
 async function closeBoth(agent: FxAgent, finder: Finder): Promise<void> {
-  try {
-    await agent.close();
-  } finally {
-    await finder.destroy();
+  const [closed] = await Promise.allSettled([agent.close(), finder.destroy()]);
+
+  if (closed.status === 'rejected') {
+    throw closed.reason;
   }
 }
 

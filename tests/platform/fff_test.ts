@@ -289,3 +289,52 @@ test('compiled with its Worker as an entry point, as chord is, the finder answer
     await rm(directory, { recursive: true, force: true });
   }
 }, 120_000);
+
+describe('tester: a failed current fff Worker', () => {
+  test('rejects pending work once, starts fresh and retires every Worker', async () => {
+    const workers: HeldWorker[] = [];
+    const finder = openFinder('/project', () => {
+      const made = new HeldWorker();
+
+      workers.push(made);
+
+      return made;
+    });
+
+    const outcomes: string[] = [];
+    const pending = finder.grep('needle', {}, live()).then(
+      () => outcomes.push('resolved'),
+      (error: unknown) => {
+        outcomes.push(error instanceof Error ? error.message : String(error));
+      },
+    );
+    const failed = workers[0]!;
+
+    try {
+      failed.fail('forced failure');
+      await pending;
+
+      const next = finder.glob('*', {}, live());
+      const fresh = workers[1]!;
+      const id = fresh.requests[0]!.id;
+
+      failed.reply({ id, ok: true, value: 'stale' });
+      failed.fail('late failure');
+      fresh.reply({ id, ok: true, value: 'fresh' });
+
+      expect(await next).toBe('fresh' as never);
+      expect(workers).toHaveLength(2);
+      expect(outcomes).toEqual([
+        'fff: the search worker failed: forced failure',
+      ]);
+    } finally {
+      const destroyed = finder.destroy();
+      const current = workers.at(-1)!;
+
+      current.reply({ id: -1, ok: true, value: null });
+      await destroyed;
+    }
+
+    expect(workers.every((worker) => worker.terminated)).toBe(true);
+  });
+});

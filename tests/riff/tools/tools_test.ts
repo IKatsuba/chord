@@ -37,6 +37,7 @@ describe('how riff draws a call', () => {
       kind: 'search',
       locations: [{ path: '/p/app' }],
     });
+    expect(drawn('/p/app', 'list', { pattern: '' }).title).toBe('List .');
     expect(drawn('/p/app', 'search', { query: 'welcome' })).toEqual({
       title: 'Search welcome',
       kind: 'search',
@@ -99,6 +100,27 @@ describe("riff's tools as libfx takes them", () => {
 
   test('read resolves its path against the session directory', async () => {
     expect(await run('read', { path: 'a.txt' })).toBe('1\tneedle');
+  });
+
+  test('a read keeps its lines for the window by call, and names a path as asked', async () => {
+    const kept: [string, string][] = [];
+    const [read] = riffTools({
+      directory: root,
+      finder,
+      show: (id, text) => kept.push([id, text]),
+    });
+    const call = (input: unknown) =>
+      read!.execute(input, {
+        signal: new AbortController().signal,
+        executionId: 'call_7',
+        sessionId: 'session',
+      }) as Promise<string>;
+
+    expect(await call({ path: 'a.txt' })).toBe('1\tneedle');
+    expect(kept).toStrictEqual([['call_7', 'needle']]);
+    await expect(call({ path: 'missing.txt' })).rejects.toThrow(
+      /^missing\.txt: no such file$/,
+    );
   });
 
   test('list and search run on the session finder', async () => {

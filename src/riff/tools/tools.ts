@@ -17,6 +17,11 @@ export interface ToolSession {
   /** The session's directory, as its real path. */
   readonly directory: string;
   readonly finder: Finder;
+  /**
+   * Keeps what the window shows of a call in place of what the model reads,
+   * by the call's id; nothing kept, the window shows the model's.
+   */
+  readonly show?: (executionId: string, shown: string) => void;
 }
 
 function parsed<T>(schema: z.ZodType<T>, input: unknown): T {
@@ -33,7 +38,7 @@ function hostTool<T>(
   name: string,
   description: string,
   schema: z.ZodType<T>,
-  run: (input: T, signal: AbortSignal) => Promise<string>,
+  run: (input: T, signal: AbortSignal, executionId: string) => Promise<string>,
 ): FxAgentHostTool {
   return {
     name,
@@ -42,8 +47,8 @@ function hostTool<T>(
     idempotent: true,
     writes: false,
     // Input the schema refuses is a failed call, not a throw out of execute.
-    execute: (input: unknown, { signal }) =>
-      Promise.try(() => run(parsed(schema, input), signal)),
+    execute: (input: unknown, { signal, executionId }) =>
+      Promise.try(() => run(parsed(schema, input), signal, executionId)),
   };
 }
 
@@ -52,9 +57,14 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
   const search = searcher(session.finder);
 
   return [
-    hostTool('read', READ_DESCRIPTION, ReadInput, (input, signal) =>
-      readLines(resolveIn(session.directory, input.path), input, signal),
-    ),
+    hostTool('read', READ_DESCRIPTION, ReadInput, (input, signal, id) => {
+      const path = resolveIn(session.directory, input.path);
+
+      return readLines(path, input, signal, {
+        label: shown(session.directory, path),
+        onShown: (text) => session.show?.(id, text),
+      });
+    }),
     hostTool('list', LIST_DESCRIPTION, ListInput, (input, signal) =>
       list(session.finder, input, signal),
     ),
@@ -105,7 +115,8 @@ export function drawn(directory: string, name: string, input: unknown): Drawn {
       const listed = ListInput.safeParse(input);
 
       return {
-        title: listed.success ? `List ${listed.data.pattern}`.trim() : 'List',
+        // An empty pattern lists from the directory itself.
+        title: listed.success ? `List ${listed.data.pattern || '.'}` : 'List',
         kind: 'search',
         locations: [{ path: directory }],
       };

@@ -74,6 +74,7 @@ function lastUser(request: ChatRequest): string {
 
 export function serveFakeChat(): FakeChat {
   const requests: ChatRequest[] = [];
+  let calls = 0;
   let hung = Promise.withResolvers<void>();
   const server = Bun.serve({
     hostname: '127.0.0.1',
@@ -110,7 +111,8 @@ export function serveFakeChat(): FakeChat {
               tool_calls: [
                 {
                   index: 0,
-                  id: `call_${call[1]}`,
+                  // Unique in the server's life, as a provider's ids are.
+                  id: `call_${call[1]}_${++calls}`,
                   type: 'function',
                   function: { name: call[1], arguments: call[2] },
                 },

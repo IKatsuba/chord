@@ -35,8 +35,15 @@ function textual(mime: string): boolean {
   return mime.startsWith('text/') || mime === 'application/xml';
 }
 
-/** A point in a read where tests act, to force what happens there. */
+/** How a file is read, and a point where tests act to force what happens. */
 export interface ReadSteps {
+  /** The path as the person reads it, for messages; the real path when not given. */
+  readonly label?: string;
+  /**
+   * Takes what the window shows of the read: the lines as read, without the
+   * model's line numbers or its note on where to read on.
+   */
+  readonly onShown?: (shown: string) => void;
   /** After each line is taken from the file, with its number. */
   readonly onLine?: (line: number) => void | Promise<void>;
 }
@@ -53,7 +60,11 @@ export async function readLines(
 ): Promise<string> {
   signal.throwIfAborted();
 
-  const { real, handle, size } = await openReal(path);
+  const { real, handle, size } = await openReal(
+    path,
+    steps.label === undefined ? {} : { label: steps.label },
+  );
+  const named = steps.label ?? real;
 
   try {
     const head = new Uint8Array(Math.min(size, LIMITS.sniffBytes));
@@ -63,7 +74,7 @@ export async function readLines(
     const type = await fileTypeFromBuffer(head);
 
     if (type !== undefined && !textual(type.mime)) {
-      throw new Error(`${real}: a binary file (${type.mime}); not read`);
+      throw new Error(`${named}: a binary file (${type.mime}); not read`);
     }
 
     signal.throwIfAborted();
@@ -77,6 +88,7 @@ export async function readLines(
     });
     const lines = createInterface({ input: stream, crlfDelay: Infinity });
     const out: string[] = [];
+    const plain: string[] = [];
     let number = 0;
     let bytes = 0;
     let more: number | undefined;
@@ -111,6 +123,7 @@ export async function readLines(
         }
 
         out.push(row);
+        plain.push(cut);
 
         bytes += size;
       }
@@ -123,10 +136,17 @@ export async function readLines(
     signal.throwIfAborted();
 
     if (out.length === 0) {
-      return number === 0
-        ? `${real} is empty.`
-        : `${real} has ${number} lines; nothing at line ${first}.`;
+      const none =
+        number === 0
+          ? `${named} is empty.`
+          : `${named} has ${number} lines; nothing at line ${first}.`;
+
+      steps.onShown?.(none);
+
+      return none;
     }
+
+    steps.onShown?.(plain.join('\n'));
 
     return more === undefined
       ? out.join('\n')

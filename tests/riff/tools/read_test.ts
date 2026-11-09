@@ -56,6 +56,36 @@ describe("riff's read", () => {
     ).toBe(`${join(root, 'a.txt')} has 4 lines; nothing at line 9.`);
   });
 
+  test('the window gets the lines as read, and messages the label', async () => {
+    const shown: string[] = [];
+
+    expect(
+      await readLines(
+        join(root, 'a.txt'),
+        { path: 'a.txt', offset: 2, limit: 2 },
+        live(),
+        { label: 'a.txt', onShown: (text) => shown.push(text) },
+      ),
+    ).toBe('2\ttwo\n3\tthree\n… more from line 4; read on with offset 4.');
+    expect(
+      await readLines(
+        join(root, 'a.txt'),
+        { path: 'a.txt', offset: 9 },
+        live(),
+        { label: 'a.txt', onShown: (text) => shown.push(text) },
+      ),
+    ).toBe('a.txt has 4 lines; nothing at line 9.');
+    expect(shown).toStrictEqual([
+      'two\nthree',
+      'a.txt has 4 lines; nothing at line 9.',
+    ]);
+    await expect(
+      readLines(join(root, 'none.txt'), { path: 'none.txt' }, live(), {
+        label: 'none.txt',
+      }),
+    ).rejects.toThrow(/^none\.txt: no such file$/);
+  });
+
   test('an empty file says so', async () => {
     await writeFile(join(root, 'empty.txt'), '');
 

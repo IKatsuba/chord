@@ -1076,21 +1076,44 @@ describe("riff's read, list and search in the session's directory", () => {
 
     expect(updates).toContainEqual({
       sessionUpdate: 'tool_call',
-      toolCallId: 'call_read',
+      toolCallId: 'call_read_1',
       title: 'Read a.txt',
       kind: 'read',
       locations: [{ path: join(project, 'a.txt') }],
       status: 'pending',
       rawInput: { path: 'a.txt' },
     });
-    expect(updates).toContainEqual(
-      expect.objectContaining({
-        sessionUpdate: 'tool_call_update',
-        toolCallId: 'call_read',
-        status: 'completed',
-      }),
-    );
-    expect(client.said(sessionId)).toContain('hello');
+    // The window gets the lines as read; the model, numbered ones.
+    expect(updates).toContainEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call_read_1',
+      status: 'completed',
+      content: [{ type: 'content', content: { type: 'text', text: 'hello' } }],
+    });
+    expect(client.said(sessionId)).toBe('1\thello');
+  });
+
+  test('each call of a tool keeps its own id across turns', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call read {"path":"a.txt"}');
+    await prompt(sessionId, 'call read {"path":"a.txt","limit":1}');
+
+    expect(
+      client
+        .updates(sessionId)
+        .filter((update) => update.sessionUpdate === 'tool_call')
+        .map((update) => [update.toolCallId, update.title]),
+    ).toStrictEqual([
+      ['call_read_1', 'Read a.txt'],
+      ['call_read_2', 'Read a.txt:1-1'],
+    ]);
   });
 
   test('list and search run in the directory session/new named', async () => {

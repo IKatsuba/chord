@@ -47,8 +47,10 @@ export interface Opened {
   readonly size: number;
 }
 
-/** Points in an open where tests swap the file, to force each check. */
+/** How a file is opened, and points where tests swap it to force a check. */
 export interface OpenSteps {
+  /** The path as the person reads it, for messages; the path when not given. */
+  readonly label?: string;
   /** After the file's identity is taken, before it is opened. */
   readonly beforeOpen?: () => Promise<void>;
   /** After it is opened, before the handle is checked. */
@@ -73,20 +75,21 @@ export async function openReal(
 ): Promise<Opened> {
   let real: string;
   let before: Stats;
+  const named = steps.label ?? path;
 
   try {
     real = await realpath(path);
     before = await lstat(real);
   } catch (error) {
-    throw new Error(`${path}: ${reason(error)}`);
+    throw new Error(`${named}: ${reason(error)}`);
   }
 
   if (before.isDirectory()) {
-    throw new Error(`${real}: is a directory; list it instead`);
+    throw new Error(`${named}: is a directory; list it instead`);
   }
 
   if (!before.isFile()) {
-    throw new Error(`${real}: not a regular file`);
+    throw new Error(`${named}: not a regular file`);
   }
 
   await steps.beforeOpen?.();
@@ -95,7 +98,7 @@ export async function openReal(
     const code = (error as { code?: unknown }).code;
 
     // ELOOP: a link now stands at the last name.
-    throw new Error(`${real}: ${code === 'ELOOP' ? CHANGED : reason(error)}`);
+    throw new Error(`${named}: ${code === 'ELOOP' ? CHANGED : reason(error)}`);
   });
 
   try {
@@ -106,7 +109,7 @@ export async function openReal(
       held.dev === other.dev && held.ino === other.ino;
 
     if (!held.isFile() || !same(before) || !same(named)) {
-      throw new Error(`${real}: ${CHANGED}`);
+      throw new Error(`${named}: ${CHANGED}`);
     }
 
     return { real, handle, size: held.size };

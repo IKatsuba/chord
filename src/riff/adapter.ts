@@ -126,6 +126,8 @@ interface Open {
   used: number | undefined;
   /** Whether a turn of a prompt is running. */
   running: boolean;
+  /** What tools kept for the window of a call, by its id, until it ends. */
+  readonly shown: Map<string, string>;
 }
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
@@ -229,6 +231,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const plan: RiffPlan = 'fake';
     const config: RiffConfig = resumed?.sidecar ?? defaultConfig(plan);
     const holder: { open?: Open } = {};
+    const shown = new Map<string, string>();
     const directory = await realpath(cwd).catch(() => {
       throw RequestError.invalidParams(undefined, `no directory ${cwd}`);
     });
@@ -249,7 +252,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         },
       },
       model: config.model,
-      tools: options.tools ?? riffTools({ directory, finder }),
+      tools:
+        options.tools ??
+        riffTools({
+          directory,
+          finder,
+          show: (id, text) => shown.set(id, text),
+        }),
       hooks: {
         onEvent: (event) => {
           if (
@@ -289,6 +298,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       config: { model: config.model, effort: config.effort, mode: config.mode },
       used: undefined,
       running: false,
+      shown,
     };
 
     return holder.open;
@@ -335,7 +345,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const started = new Set<string>();
 
     for await (const event of turn) {
-      const update = updateOf(event, started, drawIn(session));
+      const update = updateOf(event, started, drawIn(session), showIn(session));
 
       if (update !== undefined) {
         await notify(client, session.id, update);
@@ -357,6 +367,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
   const drawIn = (session: Open) => (name: string, input: unknown) =>
     drawn(session.directory, name, input);
+
+  /** What a call's tool kept for the window, given once, as its call ends. */
+  const showIn = (session: Open) => (id: string) => {
+    const text = session.shown.get(id);
+
+    session.shown.delete(id);
+
+    return text;
+  };
 
   const notify = (
     client: AgentContext,
@@ -475,7 +494,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           .prompt(promptOf(params.prompt));
 
         for await (const event of turn) {
-          const update = updateOf(event, started, drawIn(session));
+          const update = updateOf(
+            event,
+            started,
+            drawIn(session),
+            showIn(session),
+          );
 
           if (update !== undefined) {
             await notify(client, session.id, update);

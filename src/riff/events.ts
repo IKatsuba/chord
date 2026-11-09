@@ -27,12 +27,14 @@ const byName = (name: string): Drawn => ({ title: name, kind: 'other' });
  * The `session/update` an event makes, or undefined for none. `started`
  * holds the calls this turn has sent, so a duplicate start is dropped: calls
  * are merged by id, never by position. `draw` gives a call its title, kind
- * and locations from the tool's own table.
+ * and locations from the tool's own table; `shown`, what a tool kept for the
+ * window of its call, sent in place of what the model read.
  */
 export function updateOf(
   event: FxSessionTurnEvent,
   started: Set<string>,
   draw: (name: string, input: unknown) => Drawn = byName,
+  shown: (id: string) => string | undefined = () => undefined,
 ): SessionUpdate | undefined {
   switch (event.type) {
     case 'text_delta':
@@ -64,22 +66,23 @@ export function updateOf(
         // start gives the whole of it.
         ...(event.input === undefined ? {} : { rawInput: event.input }),
       };
-    case 'tool_end':
+    case 'tool_end': {
+      // What the tool kept for the window, or what the model was given.
+      const content = shown(event.id) ?? event.content;
+
       return {
         sessionUpdate: 'tool_call_update',
         toolCallId: event.id,
         status: event.isError ? 'failed' : 'completed',
-        ...(event.content === undefined
+        ...(content === undefined
           ? {}
           : {
               content: [
-                {
-                  type: 'content',
-                  content: { type: 'text', text: event.content },
-                },
+                { type: 'content', content: { type: 'text', text: content } },
               ],
             }),
       };
+    }
   }
 }
 

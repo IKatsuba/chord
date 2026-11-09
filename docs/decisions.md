@@ -8285,4 +8285,21 @@ slash list and on one `?` panel line, as `/vim` is.
   `claude`, riff, or riff when `claude` is missing.
 - **Choice (the owner): `riff`** (`chord riff`, `agents.riff`; free against
   the registry, the CLI table, chord's subcommands and PATH), the default
-  stays `claude`, and riff is the picker's first row.
+  stays `claude`, and riff is the picker's first row. `agent` was rejected
+  (`chord agents` differs by a letter, the `agent` setting, Cursor's CLI of
+  that name, the word's general use), as were `builtin` and `chord`.
+
+## 2026-11-09 — CHD-485: the providers' terms (owner, Q9)
+
+libfx signs in with the Codex CLI's OpenAI client and the fx CLI's xAI
+client, and its README says the user's plan and the provider's terms apply.
+The live terms pages could not be fetched here; the owner read them
+(recorded on CHD-485, a reading, not legal advice).
+
+- **Options:** release as designed with a terms line in the sign-in box;
+  the owner decides before release; ship marked experimental.
+- **Choice (the owner): the same practice as fx and Mastra Code**
+  (mastra-ai/mastra, `mastracode/sdk/src/auth/providers/openai-codex.ts` and
+  `xai.ts`), which sign in with the same clients: no terms line in the box,
+  no experimental mark, and the guide does not quote libfx's statement, as
+  neither fx's nor Mastra's sign-in mentions terms.

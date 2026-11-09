@@ -45,7 +45,8 @@
   `settingstheme`, `settingsmodel`, `settingsremove`, `settingsagent`,
   `settingsvim`, `settingsoffered`, `settingsoverlap`, `settingsrefused`,
   `settingswithdrawn`, `settingslong`), `tasks.ts`
-  (`codexchordcalls`, `codexmodels`, `tasklong`, `taskcost`, `tasktallname`,
+  (`codexchordcalls`, `codexmodels`, `tasklong`, `taskclose`, `taskcost`,
+  `tasktallname`,
   `tasktwo`, `taskwait`, `taskbetween`, `taskstays`, `tasktitled`,
   `tasktillsteered`,
   `taskask`, `taskaskstays`, `taskaskas`, `taskformas`, `taskstayshold`,
@@ -71,7 +72,7 @@
   `longcommand`, `overlap`, `overlaptwo`, `overlapfail`, `overlapask`,
   `overlapasksteer`,
   `subagentcall`,
-  `cutcalls`, `cutcallsback`, `tasklong`, `taskcost`, `agentcost`,
+  `cutcalls`, `cutcallsback`, `tasklong`, `taskclose`, `taskcost`, `agentcost`,
   `tasktallname`, `tasktwo`,
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
@@ -223,7 +224,8 @@
   name of about 600 characters, taller than the background frame at 80x24
   (CHD-430), `taskcost` one on `costwait`, which says a cost and works on
   until stopped, and `tasktwo` two drawn as a group, then leaves the parent
-  idle; `taskwait` works for a minute without asking
+  idle; `taskclose` closes `tasklong`'s task by name with `close_agent`, or
+  says it has already ended; `taskwait` works for a minute without asking
   permission, unless stopped; `taskbetween` starts `taskchild` and ends
   its turn at once, so the task asks between its parent's turns, and
   `taskstays` keeps its turn running until it is cancelled, so the task

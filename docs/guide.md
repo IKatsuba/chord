@@ -852,10 +852,12 @@ children, chord tasks and adapter subagents are -32002. A child still
 starting or being cleared is -32603; send again after its update says
 idle.
 
-**`_chord/agents/close`** takes `{ sessionId }` for a long-lived child and
-returns `{ closed: ["name", ...] }`: the names it closed, including a
-lead's members. It also closes a child whose start failed. Unknown or
-already closed children, tasks and adapter subagents are -32002.
+**`_chord/agents/close`** takes `{ sessionId }` for a long-lived child or
+chord task and returns `{ closed: ["name", ...] }`: the names it closed,
+including a lead's members. It also closes a child whose start failed.
+A running task stops; an ended task returns `{ closed: [], ended: ["name"] }`.
+A task stop reads `stopped` and tells its parent the person stopped it.
+Unknown ids, already closed children and adapter subagents are -32002.
 
 **`_chord/monitors/changed`** is a notification with `sessionId`, `running`
 and `ended`. Both arrays carry whole monitor objects: `id`, `description`,
@@ -1220,10 +1222,15 @@ one tool, and the report its first turn ends with reach the parent as
 messages, drawn as a `←` row: a turn of the parent's, or, while one runs,
 what the task tells it goes into that turn, and the report waits behind it
 the way a prompt does. Every agent chord opens but a task has `spawn_task` and
-`list_agents`, so a long-lived child starts task agents of its own, drawn in
-its own turn and closed with it; a task starts none. Esc stops the turn's
-task agents with it, and they
-send no report; `/clear` closes them with the session it lets go. A task
+`list_agents`, so a long-lived child starts tasks of its own, drawn in its
+own turn and closed with it; a task starts none. Except from forks,
+`close_agent {to}` stops the caller's own task by the id `spawn_task` answered
+or its name, unique among that caller's running and ended tasks. It ends the
+task's process group with no report or parent note; an ended task answers
+`<name> has already ended`. Long-lived children and team members have this
+tool for their own tasks only; another agent's task is refused.
+Esc stops the turn's tasks with no report; `/clear` closes them with the
+session it lets go. A task
 asked for a model its runtime refuses fails before it starts work. Asked
 for an effort too, as `list_agents` lists them, it starts on it, and its
 block says it after the model; one the runtime does not take leaves it on
@@ -1630,7 +1637,9 @@ owner's transcript: `✓ Run tests · agent · done in 4s`,
 `stopped with x`; older records say `stopped after`. A task's `· report` or
 `· failed` message is its end line. A task stopped after its announcing
 turn ended gets a dim line instead: `■ Watch the build · task · stopped
-with x after 3s`, `stopped with esc after …` or `stopped after …`.
+with x after 3s`, `stopped with esc after …`, `stopped by <caller> after …`
+for `close_agent`, or `stopped after …`.
+The first stop keeps its words if another stop follows before the task ends.
 A monitor's end message is its line. Closing an owner removes its items.
 
 A session resumed after its agents ran draws them as they were. A subagent

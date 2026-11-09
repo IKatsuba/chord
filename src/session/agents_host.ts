@@ -10,7 +10,7 @@ import { agentNameProblem } from '../agent_name.ts';
 import type { Wait } from '../notify.ts';
 import { Runtimes, sessionProbe } from '../server/runtimes.ts';
 import type { ChordServer } from '../server/server.ts';
-import { settingsBoxClaim } from '../server/tools.ts';
+import { closesAgents, settingsBoxClaim } from '../server/tools.ts';
 import type {
   Caller,
   ClearAnswer,
@@ -52,6 +52,7 @@ import { signInNote } from './sign_in.ts';
 import { failureNote, sentence, stepWords } from './start_failure.ts';
 import { chordStateDir } from './state_dir.ts';
 import { TaskAgent, taskName } from './tasks.ts';
+import { tasksIn } from './transcript/subagents.ts';
 import {
   type ListedTeam,
   ranNote,
@@ -872,10 +873,95 @@ export function createAgentsHost(
   };
 
   /**
-   * `close_agent`: the parent closes its child `to`, a lead's with its
-   * members, and is told nothing; a lead closes one of its members.
+   * The tasks session `key` started that `to` names, by id or name: those
+   * running, and those ended, of which only their blocks are left.
+   */
+  const tasksNamed = (key: number, to: string) => {
+    const running =
+      conversationAt(key)?.tasks.filter(
+        (task) => task.id === to || task.start.name === to,
+      ) ?? [];
+    // Those of this conversation it keeps; those before a resume, only
+    // their blocks in the transcript.
+    const kept = conversationAt(key)?.endedTasks ?? new Map<string, string>();
+    const drawn = tasksIn(stateOf(key)?.transcript.entries ?? []).flatMap(
+      ({ id, state, task }) =>
+        task !== undefined && state !== 'running' && !kept.has(id)
+          ? [{ id, name: task.name }]
+          : [],
+    );
+    const ended = [
+      ...[...kept].map(([id, name]) => ({ id, name })),
+      ...drawn,
+    ].filter(
+      ({ id, name }) =>
+        !running.some((each) => each.id === id) && (id === to || name === to),
+    );
+
+    return { running, ended };
+  };
+
+  /**
+   * `close_agent` on a task the caller started with `spawn_task`, by its id
+   * or a name only one of its tasks has: a running one stopped as the
+   * person's `x` stops it, its end naming the caller; one ended said to
+   * have. None when `to` names no task of the caller's.
+   */
+  const closeTask = (caller: Caller, to: string): CloseAnswer | undefined => {
+    const child =
+      caller.agent === undefined
+        ? undefined
+        : childOf(caller.key, caller.agent);
+
+    if (caller.agent !== undefined && child === undefined) {
+      return undefined;
+    }
+
+    const { running, ended } = tasksNamed(child?.key ?? caller.key, to);
+    const found = [
+      ...running.map((task) => task.id),
+      ...ended.map((task) => task.id),
+    ];
+
+    if (found.length > 1) {
+      return {
+        error: `${found.length} of your tasks are named ${to}; close_agent one by its id: ${andList(found)}`,
+      };
+    }
+
+    const [task] = running;
+
+    if (task !== undefined) {
+      task.cancel({ agent: child?.name ?? MAIN.name });
+      port.redraw?.();
+
+      return { closed: task.start.name };
+    }
+
+    const name = ended[0]?.name;
+
+    return name === undefined ? undefined : { ended: name };
+  };
+
+  /**
+   * `close_agent`: a task the caller started, stopped; else the parent
+   * closes its child `to`, a lead's with its members, and is told nothing;
+   * a lead closes one of its members. A long-lived child or a member closes
+   * only its tasks.
    */
   const closeAgent = (caller: Caller, to: string): CloseAnswer => {
+    const task = closeTask(caller, to);
+
+    if (task !== undefined) {
+      return task;
+    }
+
+    if (!closesAgents(caller)) {
+      return {
+        error: `No task ${to} of yours; spawn_task's answer names them`,
+      };
+    }
+
     const lead =
       caller.team === 'lead' && caller.agent !== undefined
         ? childOf(caller.key, caller.agent)
@@ -2907,6 +2993,7 @@ export function createAgentsHost(
     MAIN,
     tell,
     closeAgent,
+    tasksNamed,
     clearByPerson,
     clearAgent,
     message,

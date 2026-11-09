@@ -154,6 +154,9 @@ test("a stopped task's line names its kind and the key that stopped it, dim (CHD
   expect(task({ endedAt: 3000 })).toBe(
     '■ Watch the build · task · stopped after 3s',
   );
+  expect(task({ byAgent: 'main', endedAt: 3000 })).toBe(
+    '■ Watch the build · task · stopped by main after 3s',
+  );
   expect(
     endedLine(ended({ item: 'task', end: 'stopped', byEsc: true }), 120).tone,
   ).toBe('dim');

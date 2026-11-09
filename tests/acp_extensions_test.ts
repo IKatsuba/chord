@@ -803,7 +803,7 @@ describe('CHD-575 U5 tester: child control boundaries', () => {
     );
   });
 
-  test('an actual task id is refused by both long-lived child methods', () =>
+  test('an actual task id refuses send but accepts close', () =>
     withExtensionWire([], { subagents: {} }, async (client, newSession) => {
       const main = await newSession();
 
@@ -820,8 +820,9 @@ describe('CHD-575 U5 tester: child control boundaries', () => {
 
       assert(typeof task?.sessionId === 'string');
       expect((await send(client, task.sessionId)).error?.code).toBe(-32002);
-      expect((await close(client, task.sessionId)).error?.code).toBe(-32002);
-      client.notify('session/cancel', { sessionId: task.sessionId });
+      expect((await close(client, task.sessionId)).result).toEqual({
+        closed: ['Watch the build'],
+      });
     }));
 
   test('an actual adapter subagent id is refused without cancelling its ask', () =>
@@ -1098,5 +1099,140 @@ describe('CHD-575 U6 tester: monitor ownership and lifetime', () => {
           .filter((message) => message.method === '_chord/monitors/changed'),
       ).toEqual([]);
       expect((await stop(client, sessionId, 'm1')).error?.code).toBe(-32002);
+    }));
+});
+
+describe('agents/close on a task of chord’s (CHD-590)', () => {
+  const close = (client: AcpClient, sessionId: string) =>
+    client.request('_chord/agents/close', { sessionId });
+  /** Whether the process group `pid` leads still has a process in it. */
+  const groupAlive = (pid: number) => {
+    try {
+      return process.kill(-pid, 0);
+    } catch {
+      return false;
+    }
+  };
+
+  test('stops a running task with its process group, and says one ended has', async () => {
+    const opened: Session[] = [];
+
+    await withExtensionWire(
+      [],
+      { subagents: {} },
+      async (client, newSession) => {
+        const main = await newSession();
+
+        await client.answerTo(wirePrompt(client, main, 'tasklong'));
+        await until(() =>
+          client
+            .updates(main)
+            .some((update) => update.sessionUpdate === 'subagent_update'),
+        );
+
+        const sessionId = client
+          .updates(main)
+          .find(
+            (update) => update.sessionUpdate === 'subagent_update',
+          )?.sessionId;
+
+        assert(typeof sessionId === 'string');
+        await until(() =>
+          client.said(sessionId).includes('Watching the build.'),
+        );
+
+        const pid = [...(opened.at(-1)?.agentPids ?? [])][0];
+
+        assert(pid !== undefined);
+        expect(groupAlive(pid)).toBe(true);
+        expect((await close(client, sessionId)).result).toEqual({
+          closed: ['Watch the build'],
+        });
+        await until(() => !groupAlive(pid));
+
+        const ending = client
+          .updates(main)
+          .findLast(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              update.sessionId === sessionId,
+          );
+
+        expect(ending?.state).toEqual({
+          state: 'idle',
+          stopReason: 'cancelled',
+        });
+        expect((await close(client, sessionId)).result).toEqual({
+          closed: [],
+          ended: ['Watch the build'],
+        });
+      },
+      (session) => {
+        opened.push(session);
+
+        return session;
+      },
+    );
+  });
+});
+
+describe('CHD-590 tester: closing tasks across sessions', () => {
+  test('same-named tasks keep separate wire ids and repeated closes do not stop a sibling', () =>
+    withExtensionWire([], { subagents: {} }, async (client, newSession) => {
+      const first = await newSession();
+      const second = await newSession();
+      const tasks: string[] = [];
+
+      for (const main of [first, second]) {
+        await client.answerTo(wirePrompt(client, main, 'tasklong'));
+        await until(() =>
+          client
+            .updates(main)
+            .some((update) => update.sessionUpdate === 'subagent_update'),
+        );
+
+        const task = client
+          .updates(main)
+          .find((update) => update.sessionUpdate === 'subagent_update');
+
+        assert(typeof task?.sessionId === 'string');
+        tasks.push(task.sessionId);
+        await until(() =>
+          client.said(task.sessionId as string).includes('Watching the build.'),
+        );
+      }
+
+      const [one, two] = tasks;
+
+      assert(one && two);
+      expect(one).not.toBe(two);
+      expect(
+        (await client.request('_chord/agents/close', { sessionId: one }))
+          .result,
+      ).toEqual({ closed: ['Watch the build'] });
+      await until(() =>
+        client
+          .updates(first)
+          .some(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              (update.state as { stopReason?: string }).stopReason ===
+                'cancelled',
+          ),
+      );
+      expect(
+        (await client.request('_chord/agents/close', { sessionId: one }))
+          .result,
+      ).toEqual({ closed: [], ended: ['Watch the build'] });
+      expect(
+        client
+          .updates(second)
+          .filter((update) => update.sessionUpdate === 'subagent_update')
+          .at(-1)?.state,
+      ).toEqual({ state: 'running' });
+      expect(
+        (await client.request('_chord/agents/close', { sessionId: two }))
+          .result,
+      ).toEqual({ closed: ['Watch the build'] });
     }));
 });

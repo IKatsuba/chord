@@ -23,6 +23,7 @@ import { serveChord } from '../../../src/server/server.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import {
   CTRL_O,
+  DOWN,
   ESC,
   leader,
   quitAll,
@@ -759,5 +760,66 @@ describe('CHD-373 S2 tester: fake spend reaches both task views', () => {
         }
       });
     }
+  }
+});
+
+describe('CHD-590 tester: closing tasks in the window', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`agent close and repeated close keep the caller at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasklong');
+            await window.shows('background  1 task running');
+            await send(window, 'taskclose');
+            await window.shows('stopped by main after');
+            expect(window.frame()).not.toContain('stopped with');
+            await send(window, 'taskclose');
+            await window.shows('Already ended');
+            expect(window.frame()).not.toContain('No agent Watch the build');
+            expect(window.frame()).not.toContain(
+              'The person stopped this task',
+            );
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
+
+    test(`background x keeps its words before an agent closes the ended task at ${columns} columns`, async () => {
+      const server = serveChord();
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, 'tasklong');
+            await window.shows('background  1 task running');
+            await window.press(DOWN);
+            await window.press('\r');
+            await window.shows('❯ Watch the build');
+            await window.press('x');
+            await window.shows('stopped with x after');
+            // Consume the person's ahead note before the next scripted command.
+            await send(window, 'text');
+            await window.shows('came in chunks.');
+            await send(window, 'taskclose');
+            await window.shows('Already ended');
+            expect(window.frame()).not.toContain('stopped by main');
+          },
+          { server, runtimes: ['fake'], columns, rows },
+        );
+      } finally {
+        await server.close();
+      }
+    });
   }
 });

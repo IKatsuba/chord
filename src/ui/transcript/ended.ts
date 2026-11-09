@@ -54,7 +54,9 @@ export function endedLine(entry: ItemEnded, width: number): EndedLine {
               ? ' with x'
               : entry.byEsc === true
                 ? ' with esc'
-                : ''
+                : entry.byAgent === undefined
+                  ? ''
+                  : ` by ${entry.byAgent}`
           }${after}`,
         ];
       case 'ended':

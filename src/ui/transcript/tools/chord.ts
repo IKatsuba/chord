@@ -42,6 +42,7 @@ export function chordHeadline(call: ChordCall): Headline {
     text(record(call.answer).name) ??
     text(record(call.answer).to) ??
     text(record(call.answer).closed) ??
+    text(record(call.answer).ended) ??
     text(record(call.answer).cleared);
   const named = (name: string, arg: string | undefined, note?: string) => ({
     name,
@@ -275,7 +276,7 @@ export function chordLines(call: ChordCall, expanded = false): string[] {
     case 'settings':
       return [];
     case 'close_agent':
-      return ['Closed'];
+      return [text(answer.ended) === undefined ? 'Closed' : 'Already ended'];
     // The id it keeps, and the messages to it that were dropped (CHD-476).
     case 'clear_agent':
       return [

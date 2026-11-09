@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import process from 'node:process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert';
@@ -18,7 +19,10 @@ import {
 } from '../../src/session/conversation.ts';
 import type { Place } from '../../src/session/place.ts';
 import type { Caller, WindowView } from '../../src/server/tools.ts';
-import { openSession } from '../../src/session/session.ts';
+import { openSession, type Session } from '../../src/session/session.ts';
+import { foldEvent } from '../../src/acp/host_fold.ts';
+import { findSubagent } from '../../src/session/transcript/subagents.ts';
+import { LONG_TASK_ARGS } from '../fixtures/fake_agent/scenarios/tasks.ts';
 import { MAX_CHILDREN } from '../../src/session/window_agents.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { heldSession, until } from './conversation_fake.ts';
@@ -1443,5 +1447,384 @@ Lead it.
     expect((await shown).kind).toBe('show');
 
     await host.sessions.closeAll();
+  });
+});
+
+describe('closing a task by close_agent (CHD-590)', () => {
+  /** Whether the process group `pid` leads still has a process in it. */
+  const groupAlive = (pid: number) => {
+    try {
+      return process.kill(-pid, 0);
+    } catch {
+      return false;
+    }
+  };
+
+  /** Main on the fake, its events folded, and every session it opened. */
+  async function onFake() {
+    const opened: Session[] = [];
+    const fold = (key: number) =>
+      made.heard.reduce<FoldedSession | undefined>(
+        (folded, [at, event]) =>
+          at === key ? foldEvent(folded, event) : folded,
+        undefined,
+      );
+    const made = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      { stateOf: (key) => fold(key) },
+      {
+        open: async (options) => {
+          const session = await openSession(options);
+
+          opened.push(session);
+
+          return session;
+        },
+      },
+    );
+    const person: Caller = {
+      role: 'person',
+      key: made.key,
+      window: {} as WindowView,
+    };
+    const spawn = async (by: Caller = person, name = LONG_TASK_ARGS.name) => {
+      const answer = await made.host.spawn(by, { ...LONG_TASK_ARGS, name });
+
+      assert(!('error' in answer));
+
+      return answer.id;
+    };
+
+    /** The task's own fake agent, once its job has reached it. */
+    const working = async (id: string, key = made.key) => {
+      await until(
+        () =>
+          findSubagent(fold(key)?.transcript.entries ?? [], id)?.entries.some(
+            (entry) => entry.kind === 'assistant',
+          ) === true,
+      );
+
+      const pid = [...opened.at(-1)!.agentPids][0];
+
+      assert(pid !== undefined);
+
+      return pid;
+    };
+
+    return { ...made, fold, person, spawn, working };
+  }
+
+  test('a running task stopped by its id ends with its process group, the line naming main', async () => {
+    const { host, key, fold, person, spawn, working } = await onFake();
+    const id = await spawn();
+    const pid = await working(id);
+
+    expect(groupAlive(pid)).toBe(true);
+    expect(host.closeAgent(person, id)).toEqual({ closed: 'Watch the build' });
+
+    await until(() => !groupAlive(pid));
+
+    expect(host.conversationAt(key)!.task(id)).toBeUndefined();
+    expect(
+      findSubagent(fold(key)!.transcript.entries, id)?.task?.stoppedWith,
+    ).toEqual({ agent: 'main' });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a task already ended is said to have ended, by its id or its name', async () => {
+    const { host, person, spawn, working } = await onFake();
+    const id = await spawn();
+
+    await working(id);
+
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      closed: 'Watch the build',
+    });
+    await until(() => host.conversationAt(person.key)!.task(id) === undefined);
+    expect(host.closeAgent(person, id)).toEqual({ ended: 'Watch the build' });
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      ended: 'Watch the build',
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a task ended before anything is drawn is said to have ended, not unknown', async () => {
+    // Nothing folded: the window has drawn none of the task's blocks.
+    const { host, key } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+    const person: Caller = {
+      role: 'person',
+      key,
+      window: {} as WindowView,
+    };
+    const answer = await host.spawn(person, LONG_TASK_ARGS);
+
+    assert(!('error' in answer));
+
+    // Closed while it starts, it ends there and then.
+    expect(host.closeAgent(person, answer.id)).toEqual({
+      closed: 'Watch the build',
+    });
+    expect(host.conversationAt(key)!.task(answer.id)).toBeUndefined();
+    expect(host.closeAgent(person, answer.id)).toEqual({
+      ended: 'Watch the build',
+    });
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      ended: 'Watch the build',
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a task ended before a /clear does not share its name with one after', async () => {
+    const { host, key } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+    const person: Caller = {
+      role: 'person',
+      key,
+      window: {} as WindowView,
+    };
+    const before = await host.spawn(person, LONG_TASK_ARGS);
+
+    assert(!('error' in before));
+    expect(host.closeAgent(person, before.id)).toEqual({
+      closed: 'Watch the build',
+    });
+
+    const conversation = host.conversationAt(key)!;
+    const old = conversation.session;
+
+    await conversation.clear();
+    // The fresh session up, which a task starts from.
+    await until(
+      () => conversation.session !== undefined && conversation.session !== old,
+    );
+
+    const after = await host.spawn(person, LONG_TASK_ARGS);
+
+    assert(!('error' in after));
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      closed: 'Watch the build',
+    });
+    expect(host.closeAgent(person, before.id)).toEqual({
+      error: `No agent ${before.id} is open in this session; list_sessions names them`,
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a name two of the caller’s tasks have is refused, naming their ids', async () => {
+    const { host, person, spawn } = await onFake();
+    const one = await spawn();
+    const two = await spawn();
+
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      error: `2 of your tasks are named Watch the build; close_agent one by its id: ${one} and ${two}`,
+    });
+    expect(host.conversationAt(person.key)!.task(one)?.running).toBe(true);
+    expect(host.conversationAt(person.key)!.task(two)?.running).toBe(true);
+
+    await host.sessions.closeAll();
+  });
+
+  test("a child closes only its own tasks: not another's, nor a long-lived agent", async () => {
+    const { host, key, open, person, spawn, working } = await onFake();
+
+    const helper = open('helper');
+
+    open('other');
+
+    const child: Caller = {
+      role: 'child',
+      key,
+      agent: 'helper',
+      window: {} as WindowView,
+    };
+    const mains = await spawn(person, 'Main task');
+    const own = await spawn(child, 'Own task');
+
+    await working(own, helper);
+
+    expect(host.closeAgent(child, mains)).toEqual({
+      error: `No task ${mains} of yours; spawn_task's answer names them`,
+    });
+    expect(host.closeAgent(child, 'Main task')).toEqual({
+      error: "No task Main task of yours; spawn_task's answer names them",
+    });
+    expect(host.closeAgent(child, 'other')).toEqual({
+      error: "No task other of yours; spawn_task's answer names them",
+    });
+    expect(host.closeAgent(person, own)).toEqual({
+      error: `No agent ${own} is open in this session; list_sessions names them`,
+    });
+    expect(host.conversationAt(key)!.task(mains)?.running).toBe(true);
+    expect(host.closeAgent(child, own)).toEqual({ closed: 'Own task' });
+    expect(host.closeAgent(person, 'other')).toEqual({ closed: 'other' });
+
+    await host.sessions.closeAll();
+  });
+});
+
+describe('CHD-590 tester: task ownership and ended identities', () => {
+  test('a fake team lead and member close only their own tasks, keeping their names', async () => {
+    const { host, key, heard } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+
+    try {
+      const teams = join(dir, '.chord', 'teams');
+
+      await mkdir(teams, { recursive: true });
+      await writeFile(
+        join(teams, 'bugfix.md'),
+        await readFile(
+          new URL('../fixtures/teams/fake/bugfix.md', import.meta.url),
+        ),
+      );
+
+      const run = await host.runTeamAt(
+        key,
+        { team: 'bugfix', job: 'text' },
+        'list_teams lists them',
+      );
+
+      assert(!('error' in run));
+
+      const lead: Caller = {
+        role: 'child',
+        key,
+        agent: run.ran.id,
+        team: 'lead',
+        window: host.view,
+      };
+
+      await until(
+        () => host.childOf(key, run.ran.id)?.conversation.session !== undefined,
+      );
+
+      const opened = await host.openMember(lead, {
+        member: 'coder',
+        prompt: 'text',
+      });
+
+      assert(!('error' in opened));
+
+      const member: Caller = {
+        role: 'child',
+        key,
+        agent: opened.id,
+        team: 'member',
+        window: host.view,
+      };
+
+      await until(
+        () => host.childOf(key, opened.id)?.conversation.session !== undefined,
+      );
+
+      const tasks = [];
+
+      for (const caller of [lead, member]) {
+        const task = await host.spawn(caller, LONG_TASK_ARGS);
+
+        assert(!('error' in task));
+        tasks.push(task);
+      }
+
+      const [leadTask, memberTask] = tasks;
+
+      assert(leadTask && memberTask);
+      expect(host.closeAgent(lead, memberTask.id)).toHaveProperty('error');
+      expect(host.closeAgent(member, leadTask.id)).toHaveProperty('error');
+
+      for (const [caller, task] of [
+        [lead, leadTask],
+        [member, memberTask],
+      ] as const) {
+        expect(host.closeAgent(caller, task.id)).toEqual({
+          closed: LONG_TASK_ARGS.name,
+        });
+
+        const child = host.childOf(key, caller.agent!)!;
+
+        await until(() => child.conversation.task(task.id) === undefined);
+        expect(host.closeAgent(caller, task.id)).toEqual({
+          ended: LONG_TASK_ARGS.name,
+        });
+        expect(host.closeAgent(caller, LONG_TASK_ARGS.name)).toEqual({
+          ended: LONG_TASK_ARGS.name,
+        });
+
+        const folded = heard.reduce<FoldedSession | undefined>(
+          (state, [at, event]) =>
+            at === child.key ? foldEvent(state, event) : state,
+          undefined,
+        );
+
+        expect(
+          findSubagent(folded?.transcript.entries ?? [], task.id)?.task
+            ?.stoppedWith,
+        ).toEqual({ agent: child.name });
+      }
+    } finally {
+      await host.sessions.closeAll();
+    }
+  });
+
+  test('a fork cannot be mistaken for a task or closed by its former parent', async () => {
+    const { host, key, open } = await withMain();
+    const fork = open('fork', { forkedFrom: 'main' });
+    const caller: Caller = { role: 'person', key, window: host.view };
+
+    try {
+      expect(host.closeAgent(caller, 'fork')).toHaveProperty('error');
+      expect(host.conversationAt(fork)).toBeDefined();
+    } finally {
+      await host.sessions.closeAll();
+    }
+  });
+
+  test('an ended task and a running namesake require an id, leaving the live task alone', async () => {
+    const { host, key } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+    const caller: Caller = { role: 'person', key, window: host.view };
+
+    try {
+      const ended = await host.spawn(caller, LONG_TASK_ARGS);
+
+      assert(!('error' in ended));
+      expect(host.closeAgent(caller, ended.id)).toEqual({
+        closed: LONG_TASK_ARGS.name,
+      });
+      await until(() => host.conversationAt(key)!.task(ended.id) === undefined);
+
+      const running = await host.spawn(caller, LONG_TASK_ARGS);
+
+      assert(!('error' in running));
+      expect(host.closeAgent(caller, LONG_TASK_ARGS.name)).toEqual({
+        error: `2 of your tasks are named ${LONG_TASK_ARGS.name}; close_agent one by its id: ${running.id} and ${ended.id}`,
+      });
+      expect(host.conversationAt(key)!.task(running.id)?.running).toBe(true);
+      expect(host.closeAgent(caller, ended.id)).toEqual({
+        ended: LONG_TASK_ARGS.name,
+      });
+      expect(host.closeAgent(caller, running.id)).toEqual({
+        closed: LONG_TASK_ARGS.name,
+      });
+    } finally {
+      await host.sessions.closeAll();
+    }
   });
 });

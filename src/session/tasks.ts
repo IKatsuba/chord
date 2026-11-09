@@ -23,6 +23,7 @@ import {
   type SubagentState,
   type TaskInfo,
   type TaskSpent,
+  type TaskStop,
   type TeamPart,
   type Transcript,
 } from './transcript/types.ts';
@@ -203,7 +204,7 @@ export function taskUpdate(
   state: SubagentState,
   task?: TaskInfo & { readonly prompt: string },
   spent?: TaskSpent,
-  stoppedWith?: 'x' | 'esc',
+  stoppedWith?: TaskStop,
 ): SessionUpdate {
   return {
     sessionUpdate: 'subagent_update',
@@ -319,8 +320,8 @@ export class TaskAgent {
   #ended = false;
   /** The parent cancelled it: it ends `cancelled` and sends no report. */
   #stopped = false;
-  /** The person's key that stopped it, if theirs did. */
-  #stoppedWith: 'x' | 'esc' | undefined;
+  /** The person's key that stopped it, or the agent that did, if either did. */
+  #stoppedWith: TaskStop | undefined;
   /** Its turn's tokens, as the answer to its prompt gave them. */
   #tokens: TokenUsage | undefined;
 
@@ -471,15 +472,20 @@ export class TaskAgent {
   /**
    * Stops the task's turn, as the parent's Esc does; it sends no report. One
    * still starting has no turn to stop: it ends here, so its job is never
-   * sent. `by` is the person's key that stopped it, which its end says.
+   * sent. `by` is the person's key that stopped it, or the agent that
+   * started it, which its end says.
    */
-  cancel(by?: 'x' | 'esc'): void {
+  cancel(by?: TaskStop): void {
     if (this.#ended) {
       return;
     }
 
+    // The first stop counts, a stop with no key among them.
+    if (!this.#stopped) {
+      this.#stoppedWith = by;
+    }
+
     this.#stopped = true;
-    this.#stoppedWith ??= by;
 
     if (!this.#sent) {
       return this.#end('cancelled', '');
@@ -522,10 +528,15 @@ export class TaskAgent {
     return this.#session?.close() ?? Promise.resolve();
   }
 
-  #end(state: SubagentState, text: string): void {
+  #end(how: SubagentState, text: string): void {
     if (this.#ended) {
       return;
     }
+
+    // Its agent's close stands however it ended after it, its turn's result
+    // or its agent's exit, so its line names who stopped it (CHD-590); the
+    // person's keys keep how it ended.
+    const state = typeof this.#stoppedWith === 'object' ? 'cancelled' : how;
 
     this.#ended = true;
 
@@ -543,10 +554,13 @@ export class TaskAgent {
     });
 
     if (state === 'cancelled' || this.#stopped) {
-      this.#parent.ahead(
-        this.from,
-        'The person stopped this task before it reported.',
-      );
+      // The agent that stopped it was told so by its own call's answer.
+      if (typeof this.#stoppedWith !== 'object') {
+        this.#parent.ahead(
+          this.from,
+          'The person stopped this task before it reported.',
+        );
+      }
     } else {
       this.#parent.deliver(
         { ...this.from, note: state === 'completed' ? 'report' : 'failed' },

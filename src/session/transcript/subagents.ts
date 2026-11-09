@@ -576,9 +576,18 @@ function spentOf(update: SubagentUpdate): TaskSpent | undefined {
 
 /** Who stopped a task, as its ending update says; none when it does not. */
 function stoppedOf(update: SubagentUpdate): TaskInfo['stoppedWith'] {
-  const with_ = update._meta?.[TASK_STOPPED_META];
+  const with_: unknown = update._meta?.[TASK_STOPPED_META];
 
-  return with_ === 'x' || with_ === 'esc' ? with_ : undefined;
+  if (with_ === 'x' || with_ === 'esc') {
+    return with_;
+  }
+
+  const agent =
+    typeof with_ === 'object' && with_ !== null
+      ? (with_ as Record<string, unknown>).agent
+      : undefined;
+
+  return typeof agent === 'string' ? { agent } : undefined;
 }
 
 /** The task a `subagent_update` describes, when chord sent it for one. */
@@ -748,7 +757,7 @@ export function itemEndLines(
   });
 }
 
-/** A stopped task's line: by its title, and the person's key that stopped it. */
+/** A stopped task's line: by its title, and who stopped it, if the person or its agent did. */
 function taskStopLine(
   subagent: Subagent,
   task: TaskInfo,
@@ -762,6 +771,9 @@ function taskStopLine(
     end: 'stopped',
     ...(task.stoppedWith === 'x' ? { byPerson: true as const } : {}),
     ...(task.stoppedWith === 'esc' ? { byEsc: true as const } : {}),
+    ...(typeof task.stoppedWith === 'object'
+      ? { byAgent: task.stoppedWith.agent }
+      : {}),
     ...(subagent.startedAt === undefined
       ? {}
       : { startedAt: subagent.startedAt }),
@@ -853,6 +865,13 @@ export function subagentStopping(
   });
 
   return entries === state.entries ? state : { ...state, entries };
+}
+
+/** The task agents chord started among `entries` or under them. */
+export function tasksIn(entries: readonly Entry[]): Subagent[] {
+  return itemsIn(entries)
+    .map(({ subagent }) => subagent)
+    .filter((subagent) => subagent.task !== undefined);
 }
 
 /** The subagent `id`, among `entries` or under them, at any depth. */

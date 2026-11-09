@@ -190,6 +190,9 @@ export type MonitorEnd =
   | { readonly kind: 'stopped' }
   | { readonly kind: 'flooded'; readonly by: 'lines' | 'bytes' };
 
+/** Who stopped a task: the person's key, or the agent that started it. */
+export type TaskStop = 'x' | 'esc' | { readonly agent: string };
+
 /** A task agent chord started for the session, as `spawn_task` asked. */
 export interface TaskInfo {
   /** Its `name`, or failing that its prompt's first line. */
@@ -210,10 +213,11 @@ export interface TaskInfo {
   /** What it spent, as its agent reported it, once it has ended (CHD-373). */
   readonly spent?: TaskSpent;
   /**
-   * The person stopped it: with `x` in the background view, or with `esc`
-   * on its parent's turn (CHD-482).
+   * Who stopped it: the person, with `x` in the background view or with
+   * `esc` on its parent's turn (CHD-482), or the agent that started it, by
+   * its name, with `close_agent` (CHD-590).
    */
-  readonly stoppedWith?: 'x' | 'esc';
+  readonly stoppedWith?: TaskStop;
 }
 
 /**
@@ -554,6 +558,8 @@ export type Entry =
       readonly byPerson?: true;
       /** The person's `esc` on its parent's turn stopped it (CHD-482). */
       readonly byEsc?: true;
+      /** The agent that started the task stopped it, by its name (CHD-590). */
+      readonly byAgent?: string;
       readonly startedAt?: number;
       readonly endedAt?: number;
       /** What its agent said went wrong. */

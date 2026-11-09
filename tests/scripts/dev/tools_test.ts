@@ -18,10 +18,12 @@ import { quote } from 'shell-quote';
 import {
   check,
   chord,
+  chordOnRiff,
   lint,
   qaPlace,
   type Run,
   spawn,
+  spawnServing,
   test as suite,
 } from '../../../scripts/dev/tools.ts';
 
@@ -80,6 +82,96 @@ describe('chord', () => {
         'hi',
       ],
     ]);
+  });
+});
+
+describe('chordOnRiff', () => {
+  test('serves the fake provider, runs chord on riff with it, and stops it after', async () => {
+    const order: string[] = [];
+    const ran: [readonly string[], Readonly<Record<string, string>>][] = [];
+    const status = await chordOnRiff(
+      ['-p', 'hi'],
+      (argv, env) => {
+        order.push('run');
+        ran.push([argv, env]);
+
+        return Promise.resolve(3);
+      },
+      () => {
+        order.push('serve');
+
+        return Promise.resolve({
+          url: 'http://localhost:1/v1',
+          stop: () => {
+            order.push('stop');
+
+            return Promise.resolve();
+          },
+        });
+      },
+    );
+
+    expect(status).toBe(3);
+    expect(order).toEqual(['serve', 'run', 'stop']);
+    expect(ran).toStrictEqual([
+      [
+        [
+          bun,
+          '--define',
+          'process.env.NODE_ENV:"production"',
+          '--define',
+          'process.env.CHORD_RESOURCE_FIXTURE:"true"',
+          'src/main.tsx',
+          'riff',
+          '--agent-command',
+          quote([bun, join(root, 'src', 'main.tsx'), '--riff-agent']),
+          '-p',
+          'hi',
+        ],
+        { CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1' },
+      ],
+    ]);
+  });
+
+  test('stops the provider when chord fails to start', async () => {
+    let stopped = false;
+    const failure = new Error('no such command');
+
+    await expect(
+      chordOnRiff(
+        [],
+        () => Promise.reject(failure),
+        () =>
+          Promise.resolve({
+            url: 'http://localhost:1/v1',
+            stop: () => {
+              stopped = true;
+
+              return Promise.resolve();
+            },
+          }),
+      ),
+    ).rejects.toBe(failure);
+    expect(stopped).toBe(true);
+  });
+});
+
+describe('spawnServing', () => {
+  test("answers the command's status, with the env added, while this process still runs", async () => {
+    let ticked = false;
+    const tick = setTimeout(() => (ticked = true), 10);
+    const status = await spawnServing(
+      [
+        process.execPath,
+        '-e',
+        'await Bun.sleep(100); process.exit(process.env.CHORD_X === "y" ? 5 : 1)',
+      ],
+      { CHORD_X: 'y' },
+    );
+
+    clearTimeout(tick);
+    expect(status).toBe(5);
+    expect(ticked).toBe(true);
   });
 });
 

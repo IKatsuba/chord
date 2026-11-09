@@ -42,6 +42,11 @@ export interface DevActions {
     args: readonly string[],
     fixtureResources?: boolean,
   ): void | Promise<void>;
+  /**
+   * chord on riff and its fake provider, `args` chord's after the agent:
+   * `bun dev chord --fake riff`.
+   */
+  riff(args: readonly string[]): void | Promise<void>;
   /** Makes `dir`, a capture's directory for `chord --qa`, afresh. */
   qa(dir: string): void | Promise<void>;
   test(args: readonly string[]): void | Promise<void>;
@@ -97,6 +102,9 @@ const RUN: DevActions = {
       fixtureResources,
     );
   },
+  riff: async (args) => {
+    process.exitCode = await (await import('./dev/tools.ts')).chordOnRiff(args);
+  },
   qa: async (dir) => (await import('./dev/tools.ts')).qaPlace(dir),
   test: async (args) => {
     process.exitCode = (await import('./dev/tools.ts')).test(args);
@@ -137,7 +145,7 @@ export function devCommand(actions: DevActions = RUN) {
           )
           .option(
             '--fake',
-            'On the fake agent in tests/fixtures/fake_agent/ instead of a real one.',
+            "On the fake agent in tests/fixtures/fake_agent/ instead of a real one; with riff as the agent, riff on its tests' fake provider.",
             { default: false },
           )
           .option(
@@ -149,6 +157,10 @@ export function devCommand(actions: DevActions = RUN) {
           .stopEarly()
           .example('an agent', 'bun dev chord codex')
           .example('the fake agent, one prompt', 'bun dev chord --fake -p hi')
+          .example(
+            'riff on its fake provider, a read by the prompt',
+            'bun dev chord --fake riff',
+          )
           .example("chord's own help", 'bun dev chord -- --help')
           .example(
             'a capture of the fake, in /tmp/chord-qa.tabs',
@@ -156,16 +168,23 @@ export function devCommand(actions: DevActions = RUN) {
           )
           .action(async function ({ fake, qa }, ...args) {
             const given = [...args, ...this.getLiteralArgs()];
+            // riff has no agent command to stand in for: it runs as itself,
+            // on a fake provider in place of a plan.
+            const riff = fake && given[0] === 'riff';
 
             if (qa === undefined) {
-              return actions.chord(fake, given);
+              return riff
+                ? actions.riff(given.slice(1))
+                : actions.chord(fake, given);
             }
 
             const dir = qaDir(qa);
 
             await actions.qa(dir);
 
-            return actions.chord(fake, ['-C', dir, ...given], true);
+            return riff
+              ? actions.riff(['-C', dir, ...given.slice(1)])
+              : actions.chord(fake, ['-C', dir, ...given], true);
           }),
       )
       .command(

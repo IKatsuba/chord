@@ -89,31 +89,10 @@ export function serveFakeChat(): FakeChat {
 
       requests.push(body);
 
-      if (said.includes('fail')) {
-        return Response.json(
-          { error: { message: 'the fake refuses', type: 'invalid_request' } },
-          { status: 400 },
-        );
-      }
-
       const headers = { 'content-type': 'text/event-stream' };
 
-      if (said.includes('hang')) {
-        const encoder = new TextEncoder();
-
-        return new Response(
-          new ReadableStream<Uint8Array>({
-            start(controller) {
-              controller.enqueue(
-                encoder.encode(chunk({ role: 'assistant', content: 'Wait' })),
-              );
-              hung.resolve();
-            },
-          }),
-          { headers },
-        );
-      }
-
+      // First, so a path or a query that names another scenario is only an
+      // argument.
       const call = /call (\w+) (\{.*\})/.exec(said);
 
       if (call !== null) {
@@ -141,6 +120,29 @@ export function serveFakeChat(): FakeChat {
             usage,
             'data: [DONE]\n\n',
           ].join(''),
+          { headers },
+        );
+      }
+
+      if (said.includes('fail')) {
+        return Response.json(
+          { error: { message: 'the fake refuses', type: 'invalid_request' } },
+          { status: 400 },
+        );
+      }
+
+      if (said.includes('hang')) {
+        const encoder = new TextEncoder();
+
+        return new Response(
+          new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(
+                encoder.encode(chunk({ role: 'assistant', content: 'Wait' })),
+              );
+              hung.resolve();
+            },
+          }),
           { headers },
         );
       }

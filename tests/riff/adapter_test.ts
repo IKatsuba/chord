@@ -221,7 +221,7 @@ describe('riff over an in-memory pair', () => {
     expect((await answer).result?.['stopReason']).toBe('cancelled');
   });
 
-  test('a steer with no turn running answers promptRequired', async () => {
+  test('_session/steering is not offered: chord queues the steer instead', async () => {
     await open();
 
     const sessionId = await newSession();
@@ -231,29 +231,11 @@ describe('riff over an in-memory pair', () => {
       _meta: { steering: { idleBehavior: 'promptRequired' } },
     });
 
-    expect(answer.result).toStrictEqual({ outcome: 'promptRequired' });
-    expect(fake.requests).toHaveLength(0);
-  });
-
-  test('a steer into a running turn is injected and reaches the model', async () => {
-    await open();
-
-    const sessionId = await newSession();
-    const answer = prompt(sessionId, 'hang');
-
-    await fake.hanging();
-
-    const steered = await client.request('_session/steering', {
-      sessionId,
-      prompt: [{ type: 'text', text: 'say hello instead' }],
-      _meta: { steering: { idleBehavior: 'promptRequired' } },
+    expect(answer.error?.code).toBe(-32601);
+    expect(riffInit('1.2.3')._meta).toStrictEqual({
+      steering: { supported: false },
     });
-
-    expect(steered.result).toStrictEqual({ outcome: 'injected' });
-    expect((await answer).result?.['stopReason']).toBe('end_turn');
-    expect(JSON.stringify(fake.requests.at(-1)?.messages)).toContain(
-      'say hello instead',
-    );
+    expect(fake.requests).toHaveLength(0);
   });
 
   test('a request for another session is not found', async () => {

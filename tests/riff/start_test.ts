@@ -38,7 +38,7 @@ describe('riff started by name', () => {
 
     try {
       expect(agent.init).toStrictEqual(riffInit(manifest.version));
-      expect(agent.steering).toBe(true);
+      expect(agent.steering).toBe(false);
     } finally {
       await agent.close();
     }

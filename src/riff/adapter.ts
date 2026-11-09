@@ -13,7 +13,6 @@ import {
   type SessionUpdate,
   type Stream,
 } from '@agentclientprotocol/sdk/unstable';
-import { z } from '@zod/zod';
 import {
   createFxAgent,
   type Durability,
@@ -97,24 +96,12 @@ export function riffInit(version: string): InitializeResponse {
       mcpCapabilities: { http: true, sse: true },
       sessionCapabilities: { resume: {}, close: {} },
     },
-    // At the top, where chord reads it from every agent, as Claude's and
-    // Codex's adapters send it.
-    _meta: { steering: { supported: true } },
+    // The owner's call: libfx's steer starts a turn of its own when none
+    // runs, so a steer could race the turn's end; chord sends riff's steers
+    // as queued prompts. At the top, where chord reads it from every agent.
+    _meta: { steering: { supported: false } },
   };
 }
-
-/** The `_session/steering` request, as far as riff reads it. */
-const STEER = z.object({
-  sessionId: z.string(),
-  prompt: z.array(z.looseObject({ type: z.string() })),
-  _meta: z
-    .looseObject({
-      steering: z
-        .looseObject({ idleBehavior: z.string().optional() })
-        .optional(),
-    })
-    .nullish(),
-});
 
 /** The one session a riff process serves. */
 interface Open {
@@ -352,21 +339,6 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       if (open?.id === params.sessionId) {
         await open.agent.session(open.id).cancel();
       }
-    })
-    .onRequest('_session/steering', STEER, async ({ params }) => {
-      const session = opened(params.sessionId);
-
-      // chord always asks `promptRequired`; a steer with no turn running
-      // would start one whose events no prompt reads.
-      if (!session.running) {
-        return { outcome: 'promptRequired' };
-      }
-
-      await session.agent
-        .session(session.id)
-        .steer(promptOf(params.prompt as unknown as ContentBlock[]));
-
-      return { outcome: 'injected' };
     })
     .onRequest('session/close', async ({ params }) => {
       opened(params.sessionId);

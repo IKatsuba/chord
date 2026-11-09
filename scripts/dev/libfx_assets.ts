@@ -9,12 +9,35 @@ import { createRequire } from 'node:module';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 import manifest from '../../package.json' with { type: 'json' };
-import { TARGETS, type Target } from '../targets.ts';
+import { hostTarget, TARGETS, type Target } from '../targets.ts';
 
 /** The libfx API chord's use of it was written against. */
 export const LIBFX_API_VERSION = 3;
 
 const root = new URL('../..', import.meta.url).pathname;
+
+/**
+ * Set by CI's static job, which installs every platform's packages, so the
+ * check covers all four installed; a plain `bun install` holds the host's
+ * alone, which is all a local check looks for.
+ */
+export const ALL_TARGETS_ENV = 'CHORD_LIBFX_ALL_TARGETS';
+
+/**
+ * The targets whose platform package must be installed: every one under
+ * `ALL_TARGETS_ENV`, else this machine's.
+ */
+export function installedTargets(
+  env: Record<string, string | undefined> = process.env,
+): readonly Target[] {
+  if (env[ALL_TARGETS_ENV] === '1') {
+    return TARGETS;
+  }
+
+  const host = hostTarget();
+
+  return host ? [host] : [];
+}
 
 /**
  * The platform package that holds `target`'s addon, as libfx's own table of
@@ -47,11 +70,14 @@ interface Manifest {
 /**
  * Every way the libfx installed under `project` differs from the layout the
  * build relies on, one line each naming the package and version; empty when
- * it holds. `pinned` is the version package.json pins.
+ * it holds. `pinned` is the version package.json pins. Every target's
+ * package must be listed at libfx's version; only `installed`'s must be
+ * installed with its addon.
  */
 export function libfxAssetFailures(
   project = root,
   pinned: string = manifest.dependencies.libfx,
+  installed: readonly Target[] = installedTargets(),
 ): string[] {
   const modules = join(project, 'node_modules');
   const failures: string[] = [];
@@ -81,13 +107,17 @@ export function libfxAssetFailures(
       continue;
     }
 
-    const installed = readManifest(join(modules, platform));
+    if (!installed.includes(target)) {
+      continue;
+    }
 
-    if (installed?.version !== version) {
+    const found = readManifest(join(modules, platform));
+
+    if (found?.version !== version) {
       failures.push(
-        installed === undefined
-          ? `${platform}@${version} is not installed; run bun install --os='*' --cpu='*' --libc='*'`
-          : `${platform}@${installed.version} is installed, not ${version}`,
+        found === undefined
+          ? `${platform}@${version} is not installed for ${target.bun}; CI's static job installs it with every platform's packages`
+          : `${platform}@${found.version} is installed, not ${version}`,
       );
       continue;
     }
@@ -125,9 +155,15 @@ export function libfxAssetFailures(
   return failures;
 }
 
-/** Prints the failures and exits, so `bun dev compile` stops before building. */
-export function assertLibfxAssets(project = root): void {
-  const failures = libfxAssetFailures(project);
+/**
+ * Prints the failures for the targets `bun dev compile` builds and exits, so
+ * it stops before building.
+ */
+export function assertLibfxAssets(
+  targets: readonly Target[],
+  project = root,
+): void {
+  const failures = libfxAssetFailures(project, undefined, targets);
 
   if (failures.length > 0) {
     for (const failure of failures) {

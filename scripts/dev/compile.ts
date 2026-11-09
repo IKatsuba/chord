@@ -11,7 +11,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { BuildConfig, BunPlugin } from 'bun';
 import manifest from '../../package.json' with { type: 'json' };
-import { type Target, TARGETS } from '../targets.ts';
+import { hostTarget, type Target, TARGETS } from '../targets.ts';
 import { assertLibfxAssets, libfxAddon, libfxPackage } from './libfx_assets.ts';
 
 /** `bun dev compile`'s options. */
@@ -90,13 +90,6 @@ function libfxVersion(): string {
   ) as { version: string };
 
   return libfx.version;
-}
-
-/** This machine's release target, if it is one. */
-function hostTarget(): Target | undefined {
-  return TARGETS.find(
-    (target) => target.os === process.platform && target.cpu === process.arch,
-  );
 }
 
 /**
@@ -201,7 +194,7 @@ export async function compile(args: CompileOptions): Promise<void> {
   // otherwise the host's alone, so a cross-compiled one could not read it.
   run(['install', ...EVERY_PLATFORM]);
   // A libfx layout change fails here, not in the binary it would break.
-  assertLibfxAssets();
+  assertLibfxAssets(targets);
 
   for (const target of targets) {
     const output = args.install

@@ -1,7 +1,7 @@
 // In lint/ so the static job runs it: a libfx layout change fails CI before
-// any binary is built from it. Like `bun dev compile`, it needs every
-// platform's packages installed (`bun install --os='*' --cpu='*' --libc='*'`),
-// which CI's static job does.
+// any binary is built from it. A plain `bun install` holds the host's platform
+// package alone, and that is all the installed checks look for; CI's static
+// job installs every platform and sets CHORD_LIBFX_ALL_TARGETS for all four.
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
   mkdirSync,
@@ -16,14 +16,18 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import manifest from '../package.json' with { type: 'json' };
 import {
+  ALL_TARGETS_ENV,
+  installedTargets,
   libfxAssetFailures,
   libfxPackage,
 } from '../scripts/dev/libfx_assets.ts';
-import { TARGETS } from '../scripts/targets.ts';
+import { hostTarget, TARGETS } from '../scripts/targets.ts';
 
 const modules = join(import.meta.dir, '..', 'node_modules');
 const pinned = manifest.dependencies.libfx;
 const darwinArm = libfxPackage(TARGETS[0]!);
+const host = hostTarget()!;
+const hostPackage = libfxPackage(host);
 const projects: string[] = [];
 
 /**
@@ -90,23 +94,35 @@ describe('libfx assets', () => {
 
   test('a renamed addon fails, naming the package and version', () => {
     const dir = project({
-      [darwinArm]: {
+      [hostPackage]: {
         'index.js': 'export default new URL("./fx.node", import.meta.url);\n',
         'libfx.node': null,
       },
     });
 
-    expect(libfxAssetFailures(dir, pinned)).toEqual([
-      `${darwinArm}@${pinned}'s index.js no longer names ./libfx.node`,
+    expect(libfxAssetFailures(dir, pinned, [host])).toEqual([
+      `${hostPackage}@${pinned}'s index.js no longer names ./libfx.node`,
     ]);
   });
 
-  test('a removed platform package fails', () => {
-    const dir = project({ [darwinArm]: null });
+  test('a removed platform package fails, naming how CI installs it', () => {
+    const dir = project({ [hostPackage]: null });
 
-    expect(libfxAssetFailures(dir, pinned)).toEqual([
-      `${darwinArm}@${pinned} is not installed; run bun install --os='*' --cpu='*' --libc='*'`,
+    expect(libfxAssetFailures(dir, pinned, [host])).toEqual([
+      `${hostPackage}@${pinned} is not installed for ${host.bun}; CI's static job installs it with every platform's packages`,
     ]);
+  });
+
+  test('a platform package left uninstalled passes when not checked', () => {
+    const dir = project({ [hostPackage]: null });
+
+    expect(libfxAssetFailures(dir, pinned, [])).toEqual([]);
+  });
+
+  test('every target is checked under the CI switch, the host alone without', () => {
+    expect(installedTargets({ [ALL_TARGETS_ENV]: '1' })).toEqual(TARGETS);
+    expect(installedTargets({})).toEqual([host]);
+    expect(installedTargets({ CI: 'true' })).toEqual([host]);
   });
 
   test('a platform package dropped from optionalDependencies fails', () => {
@@ -153,16 +169,16 @@ describe('libfx assets', () => {
 
   test('a platform package at another version fails', () => {
     const dir = project({
-      [darwinArm]: {
+      [hostPackage]: {
         'package.json': JSON.stringify({
-          ...manifestOf(darwinArm),
+          ...manifestOf(hostPackage),
           version: '0.0.15',
         }),
       },
     });
 
-    expect(libfxAssetFailures(dir, pinned)).toEqual([
-      `${darwinArm}@0.0.15 is installed, not ${pinned}`,
+    expect(libfxAssetFailures(dir, pinned, [host])).toEqual([
+      `${hostPackage}@0.0.15 is installed, not ${pinned}`,
     ]);
   });
 

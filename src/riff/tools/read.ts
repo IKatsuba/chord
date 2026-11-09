@@ -35,6 +35,12 @@ function textual(mime: string): boolean {
   return mime.startsWith('text/') || mime === 'application/xml';
 }
 
+/** A point in a read where tests act, to force what happens there. */
+export interface ReadSteps {
+  /** After each line is taken from the file, with its number. */
+  readonly onLine?: (line: number) => void | Promise<void>;
+}
+
 /**
  * The lines `input` asks for of the file at `path` (already resolved
  * against the session's directory), numbered as the model reads them.
@@ -43,6 +49,7 @@ export async function readLines(
   path: string,
   input: ReadInput,
   signal: AbortSignal,
+  steps: ReadSteps = {},
 ): Promise<string> {
   signal.throwIfAborted();
 
@@ -81,6 +88,9 @@ export async function readLines(
     try {
       for await (const line of lines) {
         number++;
+
+        await steps.onLine?.(number);
+        signal.throwIfAborted();
 
         if (number < first) {
           continue;

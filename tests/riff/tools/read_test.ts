@@ -239,3 +239,34 @@ describe('a real path opened', () => {
     }
   });
 });
+
+describe('a read cut by its signal', () => {
+  test('an abort between lines rejects with its reason, and the next read answers', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-abort-')),
+    );
+    const path = join(root, 'big.txt');
+
+    try {
+      await writeFile(path, 'line\n'.repeat(10_000));
+
+      const controller = new AbortController();
+      const reason = new Error('stopped');
+
+      await expect(
+        readLines(path, { path: 'big.txt' }, controller.signal, {
+          onLine: (line) => {
+            if (line === 3) {
+              controller.abort(reason);
+            }
+          },
+        }),
+      ).rejects.toBe(reason);
+      expect(
+        await readLines(path, { path: 'big.txt', limit: 1 }, live()),
+      ).toStartWith('1\tline\n');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

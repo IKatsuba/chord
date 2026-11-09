@@ -881,14 +881,21 @@ export function createAgentsHost(
       conversationAt(key)?.tasks.filter(
         (task) => task.id === to || task.start.name === to,
       ) ?? [];
-    const ended = tasksIn(stateOf(key)?.transcript.entries ?? []).flatMap(
+    // Those of this conversation it keeps; those before a resume, only
+    // their blocks in the transcript.
+    const kept = conversationAt(key)?.endedTasks ?? new Map<string, string>();
+    const drawn = tasksIn(stateOf(key)?.transcript.entries ?? []).flatMap(
       ({ id, state, task }) =>
-        task !== undefined &&
-        state !== 'running' &&
-        !running.some((each) => each.id === id) &&
-        (id === to || task.name === to)
+        task !== undefined && state !== 'running' && !kept.has(id)
           ? [{ id, name: task.name }]
           : [],
+    );
+    const ended = [
+      ...[...kept].map(([id, name]) => ({ id, name })),
+      ...drawn,
+    ].filter(
+      ({ id, name }) =>
+        !running.some((each) => each.id === id) && (id === to || name === to),
     );
 
     return { running, ended };

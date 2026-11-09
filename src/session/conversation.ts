@@ -626,6 +626,11 @@ export class Conversation {
   #betweenQuiet: AbortController | undefined;
   /** Ended task agents' closes, which the session's own close waits for. */
   readonly #endedTasks = new Set<Promise<void>>();
+  /**
+   * The names of its tasks that have ended, by their ids, so close_agent
+   * says one has ended before the window has drawn its end (CHD-590).
+   */
+  readonly #endedTaskNames = new Map<string, string>();
   readonly #replaying: (replay: () => void) => void;
   /** The session's monitors still running, by id, in start order. */
   readonly #monitors = new Map<string, Monitoring>();
@@ -2223,6 +2228,11 @@ export class Conversation {
     return [...this.#tasks.values()].filter((task) => task.running);
   }
 
+  /** The names of the session's tasks that have ended, by their ids. */
+  get endedTasks(): ReadonlyMap<string, string> {
+    return this.#endedTaskNames;
+  }
+
   /** The task agents of the session still running. */
   get runningTasks(): number {
     return [...this.#tasks.values()].filter((task) => task.running).length;
@@ -2264,6 +2274,7 @@ export class Conversation {
         }
 
         this.#forget(task);
+        this.#endedTaskNames.set(task.id, task.start.name);
 
         const closing = task.close().catch(() => {});
 

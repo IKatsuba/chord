@@ -1550,6 +1550,37 @@ describe('closing a task by close_agent (CHD-590)', () => {
     await host.sessions.closeAll();
   });
 
+  test('a task ended before anything is drawn is said to have ended, not unknown', async () => {
+    // Nothing folded: the window has drawn none of the task's blocks.
+    const { host, key } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+    const person: Caller = {
+      role: 'person',
+      key,
+      window: {} as WindowView,
+    };
+    const answer = await host.spawn(person, LONG_TASK_ARGS);
+
+    assert(!('error' in answer));
+
+    // Closed while it starts, it ends there and then.
+    expect(host.closeAgent(person, answer.id)).toEqual({
+      closed: 'Watch the build',
+    });
+    expect(host.conversationAt(key)!.task(answer.id)).toBeUndefined();
+    expect(host.closeAgent(person, answer.id)).toEqual({
+      ended: 'Watch the build',
+    });
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      ended: 'Watch the build',
+    });
+
+    await host.sessions.closeAll();
+  });
+
   test('a name two of the caller’s tasks have is refused, naming their ids', async () => {
     const { host, person, spawn } = await onFake();
     const one = await spawn();

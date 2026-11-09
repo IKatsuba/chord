@@ -5,6 +5,7 @@ import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { CLI_AGENTS, type CliAgent } from './clis.ts';
 import { REGISTRY_AGENTS, type RegistryAgent } from './registry.ts';
+import { RIFF, riffAgentStart } from './riff/start.ts';
 import { type SettingsProblem, unknownOfferedMessage } from './settings.ts';
 
 /**
@@ -129,6 +130,12 @@ export function agentStart(
 ): AgentStart {
   if (override !== undefined) {
     return { command: override, env: {} };
+  }
+
+  // Not listed until riff can sign in (CHD-604c), but tests and selftest
+  // start it by name.
+  if (name === RIFF) {
+    return riffAgentStart();
   }
 
   const agent = findAgent(name);

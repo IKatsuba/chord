@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
-  ECHOED,
+  DONE,
   type FakeChat,
   serveFakeChat,
 } from '../../../../scripts/dev/release/fake_chat.ts';
@@ -15,37 +15,24 @@ afterEach(async () => {
   await fake.stop();
 });
 
-/** The streamed answer to `messages`, as one string. */
-async function ask(messages: object[]): Promise<string> {
-  const answer = await fetch(`${fake.url}/chat/completions`, {
-    method: 'POST',
-    body: JSON.stringify({ messages }),
-  });
-
-  return answer.text();
-}
-
 describe('the fake chat server', () => {
-  test('calls echo first, then says done for its result, counting requests', async () => {
-    expect(await ask([{ role: 'user', content: 'go' }])).toContain(
-      '"name":"echo"',
-    );
-    expect(
-      await ask([
-        { role: 'user', content: 'go' },
-        { role: 'tool', content: ECHOED, tool_call_id: 'call_selftest' },
-      ]),
-    ).toContain('"content":"done"');
+  test('says done to every request, counting them', async () => {
+    for (let i = 0; i < 2; i++) {
+      const answer = await fetch(`${fake.url}/chat/completions`, {
+        method: 'POST',
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'go' }] }),
+      });
+
+      expect(await answer.text()).toContain(`"content":"${DONE}"`);
+    }
+
     expect(fake.requests()).toBe(2);
   });
 
-  test('a failed tool call never gets done', async () => {
-    const answer = await ask([
-      { role: 'user', content: 'go' },
-      { role: 'tool', content: 'Error: boom', tool_call_id: 'call_selftest' },
-    ]);
+  test('answers nothing but chat completions', async () => {
+    const answer = await fetch(`${fake.url}/models`);
 
-    expect(answer).not.toContain('"content":"done"');
-    expect(answer).toContain('echo did not run');
+    expect(answer.status).toBe(404);
+    expect(fake.requests()).toBe(0);
   });
 });

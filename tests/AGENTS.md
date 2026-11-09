@@ -29,3 +29,6 @@
 - Never reach a real model, agent or resource provider. Inject fixture resource
   access explicitly; omitted access is disabled, never an official fallback.
   Fake/QA launches use fixture collectors even if real provider CLIs exist.
+  riff uses the local fake Chat Completions provider in `fixtures/riff/`;
+  `CHORD_RIFF_FAKE_PROVIDER` sets its URL, and `CHORD_RIFF_BACKEND=wasm`
+  forces WebAssembly. Neither is a setting.

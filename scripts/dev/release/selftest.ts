@@ -3,8 +3,8 @@
  * version, -p answers, acp answers a prompt and a permission on stdio and goes
  * at EOF, and the window opens, answers a prompt and reads the
  * clipboard on ctrl+v, each of which a native library the binary could not
- * load would stop; a libfx turn on each backend and an fff grep, through
- * the hidden --riff-selftest, prove libfx and fff are in the binary. The
+ * load would stop; a riff turn on each backend, through the hidden
+ * --riff-agent, proves libfx is in the binary. The
  * window runs in a tmux of its own, on temporary state
  * and config directories. ARCH x86_64 runs it all under `arch -x86_64`
  * (Rosetta).
@@ -20,7 +20,9 @@ import {
 import { tmpdir } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join, resolve } from 'node:path';
-import { serveFakeChat } from './fake_chat.ts';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
+import { type Agent, openAgent } from '../../../src/acp/connection.ts';
+import { DONE, serveFakeChat } from './fake_chat.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 
@@ -157,13 +159,111 @@ async function acpStep(
 }
 
 /**
- * `--riff-selftest` against the fake Chat Completions server: on each
- * backend echo ran once on its input, and the turn ended `end_turn` with
- * `done`, which the server says only for echo's own result, after two model
- * requests each; native and Wasm are each the backend reported, and fff
- * finds its line. Spawned, not run synchronously, as the server answers on
- * this process's event loop.
- * Part 2 (CHD-604) replaces it with a real riff turn through --riff-agent.
+ * One riff turn through the binary's hidden `--riff-agent`, started and
+ * driven by chord's own ACP client as the window starts riff, against the
+ * fake Chat Completions server: `session/new`, one prompt, then the close,
+ * which ends stdin and must see riff exit 0. `wasm` turns the native addon
+ * off; the native leg clears it, whatever the caller's environment says.
+ */
+async function riffTurn(
+  release: Release,
+  binary: string,
+  arch: string | undefined,
+  cwd: string,
+  url: string,
+  wasm: boolean,
+): Promise<RiffTurn> {
+  let stderr = '';
+  let text = '';
+  const env = Object.fromEntries(
+    Object.entries({
+      ...release.env,
+      CHORD_RIFF_FAKE_PROVIDER: url,
+      CHORD_RIFF_BACKEND: wasm ? 'wasm' : '',
+    }).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
+  let agent: Agent;
+
+  try {
+    agent = await openAgent({
+      command: [
+        ...(arch === undefined ? [] : ['arch', `-${arch}`]),
+        binary,
+        '--riff-agent',
+      ],
+      env,
+      cwd,
+      // Long enough for an exit at EOF, which the self-test requires.
+      stop: { exitMs: 20_000, termMs: 2000, killMs: 2000 },
+      onTraffic: (traffic) => {
+        if (traffic.from === 'stderr') {
+          stderr += traffic.text;
+        } else if (traffic.from === 'agent') {
+          const { update } =
+            (traffic.message as { params?: { update?: SessionUpdate } })
+              .params ?? {};
+
+          if (
+            update?.sessionUpdate === 'agent_message_chunk' &&
+            update.content.type === 'text'
+          ) {
+            text += update.content.text;
+          }
+        }
+      },
+      onPermission: () =>
+        Promise.resolve({ outcome: { outcome: 'cancelled' } }),
+      onElicitation: () => Promise.resolve({ action: 'decline' }),
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch (error) {
+    die(
+      `${binary} --riff-agent did not start: ${String(error)}; stderr: ${stderr}`,
+    );
+  }
+
+  let stopReason: string | undefined;
+
+  try {
+    const { sessionId } = (await agent.newSession(
+      { cwd, mcpServers: [] },
+      AbortSignal.timeout(60_000),
+    )) as { sessionId: string };
+
+    ({ stopReason } = await agent.prompt(
+      { sessionId, prompt: [{ type: 'text', text: 'Say done.' }] },
+      AbortSignal.timeout(60_000),
+    ));
+  } catch (error) {
+    await agent.close().catch(() => {});
+
+    die(
+      `${binary} --riff-agent's turn failed: ${String(error)}; stderr: ${stderr}`,
+    );
+  }
+
+  await agent.close();
+
+  const exit = await agent.exited;
+
+  if (exit.code !== 0) {
+    die(
+      `${binary} --riff-agent did not leave at EOF (${exit.signal ?? exit.code}); stderr: ${stderr}`,
+    );
+  }
+
+  return {
+    backend: /^riff: backend (\S+)$/m.exec(stderr)?.[1],
+    stopReason,
+    text,
+  };
+}
+
+/**
+ * A real riff turn through `--riff-agent` on each backend: native, then
+ * with native turned off (Wasm), each reported by riff and ending
+ * `end_turn` with `done` after one model request. The binary carries no fff
+ * until riff's search tool (CHD-604b), whose turn brings the grep back.
  */
 export async function riffStep(
   release: Release,
@@ -174,99 +274,51 @@ export async function riffStep(
   const fake = serveFakeChat();
 
   try {
-    const child = spawn(
-      arch === undefined ? binary : 'arch',
-      [
-        ...(arch === undefined ? [] : [`-${arch}`, binary]),
-        '--riff-selftest',
-        fake.url,
-      ],
-      { cwd, env: release.env, stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-    let out = '';
-    let err = '';
-
-    child.stdout.setEncoding('utf8').on('data', (text: string) => {
-      out += text;
-    });
-
-    child.stderr.setEncoding('utf8').on('data', (text: string) => {
-      err += text;
-    });
-
-    const code = await Promise.race([
-      new Promise<number | null>((done) => child.once('close', done)),
-      sleep(60_000, undefined, { ref: false }).then(() => {
-        child.kill('SIGKILL');
-
-        return 'timeout' as const;
-      }),
-    ]);
-
-    if (code !== 0) {
-      die(`${binary} --riff-selftest ended ${code}; stderr: ${said(err)}`);
-    }
-
-    const report = riffReport(out);
-    const wrong = riffProblems(report, fake.requests());
+    const turns = [
+      await riffTurn(release, binary, arch, cwd, fake.url, false),
+      await riffTurn(release, binary, arch, cwd, fake.url, true),
+    ];
+    const wrong = riffProblems(turns, fake.requests());
 
     if (wrong !== undefined) {
-      die(`${binary} --riff-selftest ${wrong}: ${said(out)}`);
+      die(`${binary} --riff-agent ${wrong}: ${JSON.stringify(turns)}`);
     }
   } finally {
     await fake.stop();
   }
 }
 
-interface RiffReport {
-  turns?: {
-    backend?: string;
-    stopReason?: string;
-    text?: string;
-    echoed?: string[];
-  }[];
-  grep?: string[];
+/** What one riff turn did, as the self-test checks it. */
+export interface RiffTurn {
+  /** The backend riff said on stderr it loaded. */
+  readonly backend?: string | undefined;
+  readonly stopReason?: string | undefined;
+  readonly text?: string;
 }
 
-function riffReport(out: string): RiffReport {
-  try {
-    return JSON.parse(out) as RiffReport;
-  } catch {
-    return {};
-  }
-}
-
-/** What is wrong with the flag's report, or undefined when it all holds. */
+/** What is wrong with the two turns, or undefined when it all holds. */
 export function riffProblems(
-  report: RiffReport,
+  turns: readonly RiffTurn[],
   requests: number,
 ): string | undefined {
   const backends = ['native', 'wasm-jspi'];
 
-  if (report.turns?.length !== backends.length) {
-    return 'did not report two turns';
+  if (turns.length !== backends.length) {
+    return `ran ${turns.length} turns, not ${backends.length}`;
   }
 
-  for (const [index, turn] of report.turns.entries()) {
+  for (const [index, turn] of turns.entries()) {
     if (turn.backend !== backends[index]) {
       return `ran turn ${index + 1} on ${turn.backend}, not ${backends[index]}`;
     }
 
-    if (turn.echoed?.length !== 1 || turn.echoed[0] !== 'hi') {
-      return `ran echo ${JSON.stringify(turn.echoed)} on ${turn.backend}, not once on "hi"`;
-    }
-
-    if (turn.stopReason !== 'end_turn' || turn.text !== 'done') {
+    if (turn.stopReason !== 'end_turn' || turn.text !== DONE) {
       return `ended its ${turn.backend} turn ${turn.stopReason} with ${JSON.stringify(turn.text)}`;
     }
   }
 
-  if (requests !== 2 * backends.length) {
-    return `made ${requests} model requests, not ${2 * backends.length}`;
-  }
-
-  if (!report.grep?.some((line) => line.includes('riff selftest needle'))) {
-    return "found nothing with fff's grep";
+  if (requests !== backends.length) {
+    return `made ${requests} model requests, not ${backends.length}`;
   }
 
   return undefined;

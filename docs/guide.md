@@ -1827,14 +1827,13 @@ for the test agent), `test`, `compile` (`--all` or `--install`), `npm`,
 `bun dev compile` installs all target packages and checks the pinned libfx
 layout for each target it builds; a mismatch names the package and version
 and stops the build. Each binary embeds libfx's WebAssembly core and only
-its target's native addon, with fff's glibc library on Linux. `--all` builds
-every release target; `--install` puts this machine's binary in
-`~/.local/bin/chord`.
+its target's native addon. `--all` builds every release target; `--install`
+puts this machine's binary in `~/.local/bin/chord`.
 
 `bun dev selftest <binary>` needs tmux and checks the version, `-p`, ACP
-stdio, the window and clipboard with the fake agent. It also runs a libfx
-turn with a tool on each of the native and WebAssembly backends against a
-local fake provider, and an fff grep.
+stdio, the window and clipboard with the fake agent. It also runs a
+plain-text riff turn through ACP on native and WebAssembly against a local
+fake provider.
 
 `bun quality` runs native type and format checks, tracked-file coverage,
 ESLint and `lint/` tests, then the suite; `--static` leaves out the suite.

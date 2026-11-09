@@ -339,3 +339,174 @@ Options for the owner:
 - **c. Another library for `list`**, not tried here: a maintained walker or
   glob matcher with git's ignore semantics, case-sensitive, that survives
   `bun build --compile`. globby is already shown wrong on case.
+
+## One library for search and list
+
+Run on 2026-11-09 by runtime, after the owner ruled out two engines: one
+maintained library has to serve `search` (regex over a tree, context lines,
+limits, .gitignore) and `list` (a directory's entries, files and
+directories, git's ignore semantics, case-sensitive), reach paths outside
+the session's directory when a grant allows it, and survive
+`bun build --compile` on all four release targets from a directory with no
+`node_modules`, embedding only as the library documents. Same scratch rules
+as above: every package in its own new directory, scripts elsewhere, paths
+as arguments.
+
+### Candidates
+
+npm searched again (`ripgrep napi`, `ripgrep node binding`, `grep rust node`,
+`keywords:napi grep`, `keywords:napi walker`, `keywords:gitignore rust`,
+`ignore walk napi`, `fast file search napi`, `bun ffi grep`, `napi glob`,
+`agent tools grep glob native` and others); jsr (`grep`, `ripgrep`, `walk`,
+`glob`, `gitignore`, `search`) has nothing that walks a tree and greps it.
+Weekly downloads are npm's for the week before 2026-11-09.
+
+| Package | Version, date | Weekly | Licence | Search | List | Why in or out |
+| --- | --- | --- | --- | --- | --- | --- |
+| `@bastani/atomic-natives` (bastani-inc/atomic, 881 stars, pushed 2026-11-09; 294 versions since 2026-06) | 0.9.74, 2026-11-09 | 17.5k | MIT | `grep`: ripgrep's `grep-*` and `ignore` crates, context, `maxCount`, `offset`, `maxCountPerFile`, timeout, abort | `glob`: files, directories and symlinks, `recursive: false` for a directory's own entries | **tried, fits** |
+| `@oh-my-pi/pi-natives` | 18.18.3, 2026-11-09 | 311k | MIT | same API family | `glob`, `listWorkspace` | tried: fails in a compiled binary, see below; 110 MB addon |
+| `@gajae-code/natives` (pi-natives fork) | 0.20.0, 2026-11-08 | 2.9k | MIT | `grep` | `glob` | not tried: ships omp's `embedded-addon.js` ("See scripts/embed-native.ts"), the same build-step embedding as pi-natives; 48 MB addon |
+| other pi-natives forks (`@sayknow-cli/natives`, `@f5-sales-demo/pi-natives`, `jeopi-natives`, `@ngodeai/natives`, …) | 2026 | under 1.2k each | MIT | | | not tried: same loader, a few hundred downloads |
+| `@ff-labs/fff-bun` | 0.11.0 | 307k | MIT | yes | no, see "The list tool on fff" | out for `list` |
+| `ripgrep` (Wasm) | 0.3.1 | 38k | MIT | yes | `rg --files` lists files only, never directories | out: no directory entries, 7 to 14 s on the kernel, no load on x64 without AVX |
+| `@mcpc-tech/ripgrep-napi` | 0.0.4, 2025-08-19 | 472 | MIT | synchronous `search`, no context lines | none | out: no list, abandoned |
+| `@immich/walkrs` | 0.0.13, 2026-02-20 | 24 | AGPL-3.0 | none | walker on ripgrep's `ignore` | out: no search, AGPL |
+| `fast-find-in-files` | 2.0.1 | 7k | MIT | C++ addon, text search | none | out: no list |
+| `weavatrix-scan` | 0.5.3 | 24 | MIT | repository scanner | | out: 24 downloads, not a grep |
+| `@vscode/ripgrep` | 1.18.0 | 2.8M | MIT | `rg` executable | `rg --files`, files only | out: fails in a compiled binary (above), no directories |
+
+### What was tried
+
+**`@bastani/atomic-natives` 0.9.74**, its published README: "native `glob`,
+`grep`, and `search` operations for Atomic's built-in `find` and `search`
+tools". A standard napi-rs loader (`require('./atomic_natives.<target>.node')`
+and the `@bastani/atomic-natives-<target>` optional packages); both calls are
+async and take any directory as `path`.
+
+The fixture is the one of "The list tool on fff", copied, with every file
+holding `before`, `needle <path>`, `after`, and the symlinked directory now
+pointing at a real directory outside the tree. A second repository outside
+the tree has its own `.gitignore`. The truth for files is `git -c
+core.ignorecase=false ls-files --cached --others --exclude-standard`; for a
+directory's entries, every entry `ls -A` shows that `git check-ignore` does
+not report (so tracked files count as not ignored).
+
+| Case | git | `glob` (`hidden: true`, `includeNodeModules: true`) | `grep` |
+| --- | --- | --- | --- |
+| `.gitignore` at any level, negation, anchored `/build` | honoured | honoured | honoured |
+| `*.s` against `arch/head.S` | listed | listed; `**/*.s` finds nothing, `**/*.S` finds it | searched |
+| `.git/info/exclude` | honoured | honoured | honoured |
+| dotfiles, `node_modules/` not ignored | listed | listed (both options default off: `hidden: false`, and `node_modules` pruned unless named) | searched (`hidden` defaults on) |
+| a tracked file matching an ignore rule (`app2.log`) | listed | **left out** | **not searched** |
+| symlinked file and directory | listed as entries | listed as entries (`fileType` 3), not followed | not entered, as `rg` without `-L` |
+| empty directory | not listed (git tracks no directories) | listed | – |
+| root's `.gitignore` when the path is a subdirectory (`arch/`) | – | honoured | honoured |
+| a path outside the tree (another repository) | – | listed, its own `.gitignore` honoured | searched, its own `.gitignore` honoured |
+| no `.git` at all | – | `.gitignore` still honoured | same |
+
+A directory's own entries come from `glob({ pattern: '*', path: dir,
+recursive: false })`: for the root, `src/`, `docs/` and `arch/` the result
+equals the truth exactly except `app2.log`. `*.ts` without `recursive: false`
+matches at any depth ("simple patterns recursive by default", as its doc
+says). `\s` does not cross lines; context lines, `maxCount`, `offset`
+(with `limitReached`) and case-sensitive matching behaved as documented.
+`fileType` takes the numeric enum (1 file, 2 directory, 3 symlink), not the
+string its doc comment names.
+
+On the kernel tree its full listing equals git's 97,362 entries minus 14:
+the 13 case-colliding names this macOS checkout cannot hold and
+`Documentation/.renames.txt`, tracked but matching `.*`. The 106 symlinks are
+listed. The listing of `drivers/net` (64 entries, files and directories)
+equals the truth exactly. Both searches match native `rg`'s `path:line` sets
+exactly (21,283 and 10,582).
+
+**Compiled**, a gate entry that lists a temporary tree's root (`.gitignore`
+naming `ignored/` and `*.s`) and greps `needle\d*` with one line of context,
+built with `Bun.build({ target: 'bun', compile: { target } })` from a
+directory where `bun install --os='*' --cpu='*' --libc='*'` had put every
+platform package, then run from a directory with no `node_modules`:
+
+| Target | Result | Added to the binary |
+| --- | --- | --- |
+| bun-darwin-arm64 | passes | 18,014,592 (17.2 MiB) |
+| bun-darwin-x64 (Rosetta) | passes | 17,842,176 (17.0 MiB) |
+| bun-linux-arm64 (`debian:bookworm-slim`, OrbStack) | passes | 36,503,552 (34.8 MiB) |
+| bun-linux-x64 (`debian:bookworm-slim`, OrbStack) | passes | 37,314,560 (35.6 MiB) |
+
+Nothing was added to the build: Bun's compiler embeds the `.node` files the
+napi-rs loader `require`s, which is Bun's documented way for N-API addons.
+On Linux it embeds both the gnu and the musl addon, because the loader
+requires both; that doubles the Linux cost, and the package offers no way to
+drop one. The gnu addons need glibc 2.17 at most.
+
+**`@oh-my-pi/pi-natives`** compiled the same way (darwin-arm64) fails at
+start: "Failed to load pi_natives native addon for darwin-arm64". Its loader
+expects omp's own embed step, so it does not fit as it is.
+
+### Time, kernel tree, warm cache, Apple Silicon
+
+Each tool in a fresh process, two rounds; "first" is the first call in the
+process, "warm" the median of five more. Milliseconds, round 1 / round 2.
+
+| Call | atomic-natives first | atomic-natives warm | fff first | fff warm |
+| --- | --- | --- | --- | --- |
+| scan before the first call | none | | 124 / 113 | |
+| literal `EXPORT_SYMBOL_GPL` | 3,383 / 1,827 | 3,297 / 1,840 | 2,385 / 3,872 | 59 / 58 |
+| regex `static\s+int\s+\w+_probe\(` | 3,461 / 2,133 | 3,427 / 2,131 | 463 / 190 | 137 / 139 |
+| full listing (97,348 / 97,242 files) | 134 / 130 | 114 / 120 | 63 / 67 | 60 / 58 |
+| `drivers/net` (atomic: its 64 entries; fff: all 6,959 files under it, the nearest call) | 9 / 10 | 9 / 9 | 10 / 11 | 9 / 10 |
+
+Native `rg` took 1.4 to 1.6 s for the same searches (above). atomic-natives
+has no index, so every search walks and reads the tree again: about as fast
+as `rg`, never as fast as fff's warm index. Its calls run off the main
+thread: the longest event-loop gap was 16 ms during a 3.1 s grep and 20 ms
+during the full listing, so no `Worker` is needed. `signal` stopped a grep
+206 ms after an abort at 200 ms, `timeoutMs: 100` at 102 ms. Peak resident
+memory of the whole run: 131 MB (fff: 464 MB).
+
+### What could not be checked
+
+- Real x64 Linux hardware, musl, Windows, older glibc in a container.
+- A cold disk; the kernel benchmark on Linux or inside a compiled binary
+  (only the gate ran compiled).
+- `core.excludesFile` (a global gitignore), nested repositories and
+  submodules; `cache: true`.
+- How stable its API is: it is released with the Atomic agent almost daily
+  (0.9.72 to 0.9.74 in two days), pre-1.0, and promises nothing to outside
+  users.
+
+### Verdict
+
+**`@bastani/atomic-natives`, exact-pinned at 0.9.74, fits both tools as it
+is.** One async `grep` and one `glob` over ripgrep's crates: git's ignore
+semantics on case, `.git/info/exclude` and nested `.gitignore`, a
+directory's own entries with directories and symlinks, any path chord
+grants, context lines and limits, abort and timeout, and all four targets
+through `bun build --compile` with nothing but Bun's documented addon
+embedding. What comes with it:
+
+- It is another agent's internal addon (a PTY, tree-sitter, a task
+  supervisor ship in the same `.node`), versioned with that agent; chord
+  takes it for `grep` and `glob` only and pins it exactly.
+- It adds 17 MiB to the macOS binaries and 35 MiB to the Linux ones (both
+  libc builds); fff adds 5 to 11 MiB.
+- Searches walk the tree each time: 1.8 to 3.4 s on the kernel tree, against
+  fff's 60 to 140 ms warm; on a project tree of a few thousand files that is
+  tens of milliseconds.
+- Tracked files that match an ignore rule are neither listed nor searched,
+  as with ripgrep; empty directories are listed, which git cannot show.
+- Its defaults differ between the calls (`hidden` off for `glob`, on for
+  `grep`; `node_modules` pruned by `glob`): chord sets them explicitly.
+
+If the owner does not want another agent's addon, the options are:
+
+- **a.** Change the task to fit fff: `search` and `list` inside the
+  session's directory only, `list` with fff's semantics as "The list tool on
+  fff" describes them.
+- **b.** fff for `search` alone, with its limits stated (inside its
+  `basePath` only, `\s` crossing lines, frecency order), and `list` left
+  without a library.
+- **c.** `@oh-my-pi/pi-natives` (311k a week, the upstream of the same API)
+  only with a workaround: chord would have to reproduce omp's undocumented
+  embed step for its 110 MB addon. Named here as a workaround, not
+  recommended.

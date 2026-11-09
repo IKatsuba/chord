@@ -1724,10 +1724,10 @@ The program must be nonempty and every item a string. The last settings
 file to give a command decides; `--agent-command` overrides all.
 A name your settings files alone give a command starts as `chord <name>`.
 `chord agents` lists each name, title (`from settings` for settings-only
-names), source (`npx`, `uvx`, `own CLI · found`, `own CLI · not on PATH` or
-`settings`) and start command. A settings command replaces the built-in
-command. Commands wrap within their column on a terminal; piped output has
-one line per agent.
+names), source (`built in`, `npx`, `uvx`, `own CLI · found`,
+`own CLI · not on PATH` or `settings`) and start command. A settings command
+replaces the known command. Commands wrap within their column on a terminal;
+piped output has one line per agent.
 
 `chord agents --json` writes one object on stdout, followed by a newline.
 `-C <dir>` chooses the directory whose settings it reads, as for the table.
@@ -1740,21 +1740,24 @@ The object has these fields:
 | `agents`    | Array of agent kinds, with every field below present on each entry.                                                                                                                             |
 | `problems`  | Array of settings problems as `{file, message}`, then unknown `offeredAgents` names as `{message}` without `file`. A refused command uses its settings problem, without a second refusal entry. |
 
-| Agent field | Meaning                                                                                                                                            |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `name`      | The name used by `chord <name>` and settings.                                                                                                      |
-| `title`     | Display title, or `null` for a name only settings define.                                                                                          |
-| `via`       | `"npx"` or `"uvx"` downloads and runs a package; `"cli"` uses an installed CLI; `"settings"` uses a command from settings, which takes precedence. |
-| `found`     | For `"cli"`, whether PATH has its command (`true` or `false`); `null` otherwise.                                                                   |
-| `offered`   | Whether `offeredAgents` makes this entry available in the start screen and `/new`; always `false` when `startable` is `false`.                     |
-| `startable` | `false` when settings refuse the agent's command, preventing startup; `true` otherwise. This does not check installation, login or readiness.      |
+| Agent field | Meaning                                                                                                                                                                                |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`      | The name used by `chord <name>` and settings.                                                                                                                                          |
+| `title`     | Display title, or `null` for a name only settings define.                                                                                                                              |
+| `via`       | `"builtin"` runs chord's own agent; `"npx"` or `"uvx"` downloads and runs a package; `"cli"` uses an installed CLI; `"settings"` uses a command from settings, which takes precedence. |
+| `found`     | For `"cli"`, whether PATH has its command (`true` or `false`); `null` otherwise.                                                                                                       |
+| `offered`   | Whether `offeredAgents` makes this entry available in the start screen and `/new`; always `false` when `startable` is `false`.                                                         |
+| `startable` | `false` when settings refuse the agent's command, preventing startup; `true` otherwise. This does not check installation, login or readiness.                                          |
+
+`via` may gain values at version 1; a client treats an unfamiliar value as
+a kind it does not know.
 
 A problem's `file` is the settings file's path; `message` describes the
-problem. Offered entries come first in the start screen's order, then the rest in
-catalog order: registry agents, own-CLI agents absent from the registry,
-then settings-only names in settings order. The start command is omitted
-because it can contain environment values. stderr keeps the same problem
-lines as the table command. Making the list exits `0`, even with problems
+problem. Offered entries come first in the start screen's order, then the
+rest in catalog order: built-in agents, registry agents, own-CLI agents absent
+from the registry, then settings-only names in settings order. The start
+command is omitted because it can contain environment values. stderr keeps
+the table's problem lines. Making the list exits `0`, even with problems
 or unstartable entries. Without `--json`, the table is unchanged.
 
 If an agent does not start, chord says which request it refused or was
@@ -1825,8 +1828,12 @@ for the test agent, `--fake riff` for riff on its fake provider), `test`,
 `registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
 `selftest <binary>` and `release [version]`. `chord --qa [name]` recreates
 `/tmp/chord-qa.<name>` for captures, or `/tmp/chord-qa` without a name; an
-empty name disables it. Use `bun dev chord --fake --qa capture riff` for
-riff captures: `--fake` and `--qa` must come before `riff`.
+empty name disables it. Both `--fake` and `--qa` list riff on its fake
+provider for development: first in `Select agent` and `/new` unless
+`offeredAgents` sets their order. A settings command ranks riff with other
+settings agents in `/new`; Claude Code stays the default. Use
+`bun dev chord --fake --qa capture riff` for riff captures: both flags
+must come before `riff`.
 
 `bun dev compile` installs all target packages and checks the pinned libfx
 layout for each target it builds; a mismatch names the package and version

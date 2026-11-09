@@ -29,7 +29,7 @@ do:
 | Ask | Option 2 |
 | --- | --- |
 | read inside the directory | `Allow reads of src/greeting.ts for this session` |
-| read outside it (ask) | `Allow reads of ~/notes/todo.md for this session` |
+| read outside it (ask, and auto until part 6) | `Allow reads of ~/notes/todo.md for this session` |
 | list | `Allow every list in this directory for this session` |
 | search | `Allow every search in this directory for this session` |
 
@@ -110,28 +110,29 @@ this directory for this session`.
 
 ## A read outside the directory in auto, 80x24, the whole window
 
-Auto admits reads inside the directory with no ask; an outside read goes to
-the review, and a caution asks as CHD-485's held command does: `Allow
-once`, `Deny`, no session grant.
+Auto admits reads inside the directory with no ask. Until part 6 brings the
+safety review, a read outside it asks as ask mode does, with the same three
+options and no rationale. Part 6 replaces this box with CHD-485's held-review
+box (`Allow once`, `Deny`, the reviewer's rationale) when the review
+cautions.
 
 ```text
  › compare with my notes
 
  ⏺ Read(~/notes/todo.md)
-   ⎿  Reviewed: caution
+   ⎿  Waiting…
 
- ››› Waiting for permission… (4s · denied in 4m 56s)
+ ››› Waiting for permission… (4s)
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ Read ~/notes/todo.md                                                         │
 │                                                                              │
-│ The safety review held this: The file is outside the project and the        │
-│ request did not name it.                                                     │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Allow reads of ~/notes/todo.md for this session                         │
+│   3. Deny                                                                    │
 │                                                                              │
-│ ❯ 1. Allow once                                                              │
-│   2. Deny                                                                    │
-│                                                                              │
-│ Esc to reject · denied by itself in 5 minutes                                │
+│ Esc to reject                                                                │
 ╰──────────────────────────────────────────────────────────────────────────────╯
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -153,8 +154,7 @@ once`, `Deny`, no session grant.
 
 ## Colour roles
 
-As CHD-485: the box's border, title and `❯` `permission`; the rationale
-plain under a `warning` "The safety review held this:"; the `⎿` dim.
+As CHD-485: the box's border, title and `❯` `permission`; the `⎿` dim.
 
 ## Keys
 

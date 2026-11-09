@@ -17,8 +17,13 @@ const SCRIPTS = join(import.meta.dir, '..', '..', '..', '..', 'scripts');
 /** What a binary's --riff-selftest says when libfx and fff both work. */
 const RIFF_REPORT = JSON.stringify({
   turns: [
-    { backend: 'native', stopReason: 'end_turn', text: 'done' },
-    { backend: 'wasm-jspi', stopReason: 'end_turn', text: 'done' },
+    { backend: 'native', stopReason: 'end_turn', text: 'done', echoed: ['hi'] },
+    {
+      backend: 'wasm-jspi',
+      stopReason: 'end_turn',
+      text: 'done',
+      echoed: ['hi'],
+    },
   ],
   grep: ['needle.txt:2: chord riff selftest needle'],
 });
@@ -292,6 +297,18 @@ describe('the riff step', () => {
         4,
       ),
     ).toBe('ended its wasm-jspi turn error with "done"');
+    expect(
+      riffProblems(
+        { ...report, turns: [{ ...native!, echoed: [] }, wasm!] },
+        4,
+      ),
+    ).toBe('ran echo [] on native, not once on "hi"');
+    expect(
+      riffProblems(
+        { ...report, turns: [native!, { ...wasm!, echoed: ['hi', 'hi'] }] },
+        4,
+      ),
+    ).toBe('ran echo ["hi","hi"] on wasm-jspi, not once on "hi"');
     expect(riffProblems(report, 3)).toBe('made 3 model requests, not 4');
     expect(riffProblems({ ...report, grep: [] }, 4)).toBe(
       "found nothing with fff's grep",

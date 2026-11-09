@@ -157,10 +157,12 @@ async function acpStep(
 }
 
 /**
- * `--riff-selftest` against the fake Chat Completions server: both turns end
- * `end_turn` with `done` after two model requests each, native and Wasm are
- * each the backend reported, and fff finds its line. Spawned, not run
- * synchronously, as the server answers on this process's event loop.
+ * `--riff-selftest` against the fake Chat Completions server: on each
+ * backend echo ran once on its input, and the turn ended `end_turn` with
+ * `done`, which the server says only for echo's own result, after two model
+ * requests each; native and Wasm are each the backend reported, and fff
+ * finds its line. Spawned, not run synchronously, as the server answers on
+ * this process's event loop.
  * Part 2 (CHD-604) replaces it with a real riff turn through --riff-agent.
  */
 export async function riffStep(
@@ -217,7 +219,12 @@ export async function riffStep(
 }
 
 interface RiffReport {
-  turns?: { backend?: string; stopReason?: string; text?: string }[];
+  turns?: {
+    backend?: string;
+    stopReason?: string;
+    text?: string;
+    echoed?: string[];
+  }[];
   grep?: string[];
 }
 
@@ -243,6 +250,10 @@ export function riffProblems(
   for (const [index, turn] of report.turns.entries()) {
     if (turn.backend !== backends[index]) {
       return `ran turn ${index + 1} on ${turn.backend}, not ${backends[index]}`;
+    }
+
+    if (turn.echoed?.length !== 1 || turn.echoed[0] !== 'hi') {
+      return `ran echo ${JSON.stringify(turn.echoed)} on ${turn.backend}, not once on "hi"`;
     }
 
     if (turn.stopReason !== 'end_turn' || turn.text !== 'done') {

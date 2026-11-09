@@ -1,10 +1,15 @@
 /**
  * A fake OpenAI Chat Completions server on 127.0.0.1 for the binary's
  * `--riff-selftest` (CHD-603): a request without a tool result is answered
- * with a streamed call to `echo`, one with a tool result with the text
- * `done`, as CHD-485's gate ran a whole turn. Nothing reaches a real
- * provider.
+ * with a streamed call to `echo` with `{"text":"hi"}`, and one whose tool
+ * result is echo's own answer, `ECHOED`, with the text `done`, as CHD-485's
+ * gate ran a whole turn. Any other tool result, a failed call's error
+ * included, is answered with that result instead of `done`, so a turn whose
+ * tool did not run cannot pass. Nothing reaches a real provider.
  */
+
+/** What `echo` answers when it ran on `{"text":"hi"}`. */
+export const ECHOED = 'echo: hi';
 
 /** A running fake server. */
 export interface FakeChat {
@@ -39,7 +44,10 @@ const toolCall = [
   chunk({}, 'tool_calls'),
 ];
 
-const done = [chunk({ role: 'assistant', content: 'done' }), chunk({}, 'stop')];
+const answer = (text: string) => [
+  chunk({ role: 'assistant', content: text }),
+  chunk({}, 'stop'),
+];
 
 export function serveFakeChat(): FakeChat {
   let requests = 0;
@@ -54,14 +62,21 @@ export function serveFakeChat(): FakeChat {
       requests++;
 
       const body = (await request.json()) as {
-        messages?: { role?: string }[];
+        messages?: { role?: string; content?: unknown }[];
       };
-      const answered = body.messages?.some(
-        (message) => message.role === 'tool',
-      );
+      const result = body.messages?.find((message) => message.role === 'tool');
 
       return new Response(
-        [...(answered ? done : toolCall), 'data: [DONE]\n\n'].join(''),
+        [
+          ...(result === undefined
+            ? toolCall
+            : answer(
+                result.content === ECHOED
+                  ? 'done'
+                  : `echo did not run: ${JSON.stringify(result.content)}`,
+              )),
+          'data: [DONE]\n\n',
+        ].join(''),
         { headers: { 'content-type': 'text/event-stream' } },
       );
     },

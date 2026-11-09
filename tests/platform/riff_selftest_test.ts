@@ -7,15 +7,23 @@ import { RIFF_SELFTEST_FLAG } from '../../src/platform/riff_selftest.ts';
 
 const MAIN = fileURLToPath(new URL('../../src/main.tsx', import.meta.url));
 
-/** chord from source with `args`, its output once it has gone. */
-function chord(
+/**
+ * chord from source with `args`, its output once it has gone: killed and
+ * reaped at `deadline` ms, so a hung turn never outlives its test.
+ */
+async function chord(
   args: readonly string[],
-): Promise<{ code: number | null; out: string; err: string }> {
+  deadline = 45_000,
+): Promise<{ code: number | null; out: string; err: string; killed: boolean }> {
   const child = spawn(process.execPath, [MAIN, ...args], {
     stdio: ['ignore', 'pipe', 'pipe'],
   });
+  const closed = new Promise<number | null>((done) =>
+    child.once('close', done),
+  );
   let out = '';
   let err = '';
+  let killed = false;
 
   child.stdout.setEncoding('utf8').on('data', (text: string) => {
     out += text;
@@ -25,9 +33,22 @@ function chord(
     err += text;
   });
 
-  return new Promise((done) =>
-    child.once('close', (code) => done({ code, out, err })),
-  );
+  const timer = setTimeout(() => {
+    killed = true;
+
+    child.kill('SIGKILL');
+  }, deadline);
+
+  try {
+    return { code: await closed, out, err, killed };
+  } finally {
+    clearTimeout(timer);
+
+    if (child.exitCode === null && child.signalCode === null) {
+      child.kill('SIGKILL');
+      await closed;
+    }
+  }
 }
 
 describe('--riff-selftest', () => {
@@ -38,6 +59,7 @@ describe('--riff-selftest', () => {
       const ran = await chord([RIFF_SELFTEST_FLAG, fake.url]);
 
       expect(ran.err).toBe('');
+      expect(ran.killed).toBeFalse();
       expect(ran.code).toBe(0);
       expect(
         riffProblems(JSON.parse(ran.out) as object, fake.requests()),
@@ -46,6 +68,27 @@ describe('--riff-selftest', () => {
       await fake.stop();
     }
   }, 60_000);
+
+  test('a turn that never gets an answer is killed and reaped at its deadline', async () => {
+    // Takes requests and never answers them.
+    const silent = Bun.serve({
+      hostname: '127.0.0.1',
+      port: 0,
+      fetch: () => new Promise<Response>(() => {}),
+    });
+
+    try {
+      const ran = await chord(
+        [RIFF_SELFTEST_FLAG, `http://localhost:${silent.port}/v1`],
+        3000,
+      );
+
+      expect(ran.killed).toBeTrue();
+      expect(ran.code).toBeNull();
+    } finally {
+      await silent.stop(true);
+    }
+  }, 30_000);
 
   test('no help lists it', async () => {
     const help = await chord(['--help']);

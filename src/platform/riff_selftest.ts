@@ -33,6 +33,8 @@ export interface SelftestTurn {
   readonly backend: string;
   readonly stopReason: string;
   readonly text: string;
+  /** How many times `echo` ran, and what it was given. */
+  readonly echoed: readonly string[];
 }
 
 /** The flag's whole report, one JSON line on stdout. */
@@ -65,6 +67,7 @@ async function turn(
   backend: FxNodeBackendOptions,
 ): Promise<SelftestTurn> {
   const info = await getBackendInfo(backend);
+  const echoed: string[] = [];
   const engine = await createFxEngine({
     ...backend,
     provider: {
@@ -85,7 +88,13 @@ async function turn(
           required: ['text'],
         },
         idempotent: true,
-        execute: (input: unknown) => (input as { text: string }).text,
+        execute: (input: unknown) => {
+          const { text } = input as { text: string };
+
+          echoed.push(text);
+
+          return `echo: ${text}`;
+        },
       },
     ],
   });
@@ -102,7 +111,7 @@ async function turn(
 
     const { stopReason } = await running.result;
 
-    return { backend: info.backend, stopReason, text };
+    return { backend: info.backend, stopReason, text, echoed };
   } finally {
     await engine.close();
   }

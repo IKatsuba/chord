@@ -40,6 +40,8 @@ owner's consent.
 
 ```sh
 bun install                    # the dependencies, as bun.lock pins them
+# Before quality (including --static), install every target package:
+bun install --os='*' --cpu='*' --libc='*'
 bun dev chord [agent]           # run from source
 bun dev chord --fake            # run against the scripted test agent
 bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
@@ -66,8 +68,10 @@ CI runs `static` (`bun quality --static`), three `tests` shards
 (`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
 passes only when all of them succeed.
 
-The binary is built by Bun's compile API, Bun 1.4.4 or newer. Build,
-release and maintenance commands share `bun dev <command>` (Cliffy):
+The binary is built by Bun's compile API, Bun 1.4.4 or newer. Compilation
+installs all target packages, then checks the pinned libfx layout before
+building; a mismatch names the package and version and stops the build.
+Build, release and maintenance commands share `bun dev <command>` (Cliffy):
 
 ```sh
 bun dev compile           # this machine's binary into dist/<target>/chord
@@ -75,7 +79,7 @@ bun dev compile --all     # every release target
 bun dev compile --install # this machine's binary into ~/.local/bin/chord
 bun dev npm               # lay out npm/ from dist/
 bun dev release [version|major|minor|patch|fix] # the owner's release
-bun dev selftest <binary> # check -p, ACP stdio and the window on the fake agent
+bun dev selftest <binary> # fake-agent CLI/window, libfx backends and fff grep
 bun dev registry          # refetch the ACP Registry into src/registry.ts
 bun dev mark              # rasterise scripts/mark.svg into the header mark
 bun dev screenshots       # retake docs/images/, including title pages and logos
@@ -128,8 +132,9 @@ signal cleanup.
   `bun dev test`. Tests use `test`, `describe`, `expect` and the fake timers of
   `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
   folder holds Bun's runtime calls. The binary embeds OpenTUI's native
-  library for its target through Bun's compile API. Dependencies go in
-  `package.json`; jsr packages come from `npm.jsr.io` under their own names
+  library, libfx's target addon and WebAssembly core, and fff's target library.
+  Linux builds use glibc. Dependencies go in `package.json`; jsr packages come
+  from `npm.jsr.io` under their own names
   (`bunfig.toml`, `.npmrc`). No `node_modules` checked in.
 - **Versions are pinned for things that move.** A pre-1.0 package is
   exact-pinned (`@replit/codemirror-vim-core`); the rest use caret ranges, and

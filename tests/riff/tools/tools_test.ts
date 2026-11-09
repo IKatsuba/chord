@@ -127,3 +127,70 @@ describe("riff's tools as libfx takes them", () => {
     }
   });
 });
+
+describe('tester: simultaneous tool sessions', () => {
+  test('an abort and a search page stay in the session that owns them', async () => {
+    const roots = await Promise.all(
+      ['one', 'two'].map(async (name) => {
+        const root = await realpath(
+          await mkdtemp(join(tmpdir(), 'chord-riff-tool-session-')),
+        );
+
+        await writeFile(join(root, 'a.txt'), `${name} needle\n`);
+        await writeFile(join(root, 'b.txt'), `${name} needle\n`);
+
+        return root;
+      }),
+    );
+    const finders = roots.map((root) => openFinder(root));
+    const sessions = roots.map((directory, index) =>
+      Object.fromEntries(
+        riffTools({ directory, finder: finders[index]! }).map((tool) => [
+          tool.name,
+          tool,
+        ]),
+      ),
+    );
+    const run = (session: number, input: unknown, signal: AbortSignal) =>
+      sessions[session]!.search!.execute(input, {
+        signal,
+        executionId: 'search',
+        sessionId: `session-${session}`,
+      }) as Promise<string>;
+    const controller = new AbortController();
+    const reason = new Error('stop only session one');
+    const live = () => new AbortController().signal;
+
+    try {
+      const aborted = run(0, { query: 'needle' }, controller.signal);
+      const other = run(1, { query: 'needle' }, live());
+
+      controller.abort(reason);
+
+      await expect(aborted).rejects.toBe(reason);
+
+      const answer = await other;
+
+      expect(answer).toContain('two needle');
+      expect(answer).not.toContain('one needle');
+
+      const first = await run(0, { query: 'needle', limit: 1 }, live());
+      const page = /page "(p\d+)"/.exec(first)![1]!;
+
+      expect(first).toContain('one needle');
+      await expect(run(1, { query: 'needle', page }, live())).rejects.toThrow(
+        `no page ${page}; search again without it`,
+      );
+
+      const next = await run(0, { query: 'needle', limit: 1, page }, live());
+
+      expect(next).toContain('one needle');
+      expect(next.split(':')[0]).not.toBe(first.split(':')[0]);
+    } finally {
+      await Promise.all(finders.map((finder) => finder.destroy()));
+      await Promise.all(
+        roots.map((root) => rm(root, { recursive: true, force: true })),
+      );
+    }
+  });
+});

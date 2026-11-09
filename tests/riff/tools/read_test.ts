@@ -270,3 +270,119 @@ describe('a read cut by its signal', () => {
     }
   });
 });
+
+describe('tester: read boundaries and continuation', () => {
+  let root: string;
+
+  beforeEach(async () => {
+    root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-read-edge-')),
+    );
+  });
+
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+  });
+
+  test('a chain of relative symlinks opens the final outside file', async () => {
+    const inside = join(root, 'project');
+    const outside = join(root, 'outside');
+
+    await mkdir(inside);
+    await mkdir(outside);
+    await writeFile(join(outside, 'text.txt'), 'outside\n');
+    await symlink('../outside/text.txt', join(inside, 'second'));
+    await symlink('second', join(inside, 'first'));
+
+    const opened = await openReal(join(inside, 'first'));
+
+    try {
+      expect(opened.real).toBe(join(outside, 'text.txt'));
+    } finally {
+      await opened.handle.close();
+    }
+
+    expect(
+      await readLines(join(inside, 'first'), { path: 'first' }, live()),
+    ).toBe('1\toutside');
+  });
+
+  test('a large UTF-8 file respects byte limits and resumes at the first omitted line', async () => {
+    const path = join(root, 'large.txt');
+    const content = '界'.repeat(1000);
+
+    await writeFile(path, `${content}\n`.repeat(5000));
+
+    const answer = await readLines(
+      path,
+      { path: 'large.txt', offset: 4000, limit: 1000 },
+      live(),
+    );
+    const rows = answer.split('\n');
+    const notice = rows.pop()!;
+    const next = Number(/offset (\d+)\.$/.exec(notice)![1]);
+
+    expect(rows[0]).toBe(`4000\t${content}`);
+    expect(Buffer.byteLength(rows.join('\n'))).toBeLessThanOrEqual(
+      LIMITS.readBytes,
+    );
+    expect(next).toBe(4000 + rows.length);
+    expect(
+      await readLines(
+        path,
+        { path: 'large.txt', offset: next, limit: 1 },
+        live(),
+      ),
+    ).toBe(
+      `${next}\t${content}\n… more from line ${next + 1}; read on with offset ${next + 1}.`,
+    );
+  });
+});
+
+describe('tester: cancelling while a read skips to its offset', () => {
+  test('an external abort at a held line returns its reason and leaves the file readable', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-read-cancel-')),
+    );
+    const path = join(root, 'large.txt');
+    const reached = Promise.withResolvers<void>();
+    const resume = Promise.withResolvers<void>();
+    const controller = new AbortController();
+    const reason = new Error('cancel while skipping');
+    const seen: number[] = [];
+
+    try {
+      await writeFile(path, 'line\n'.repeat(100_000));
+
+      const reading = readLines(
+        path,
+        { path: 'large.txt', offset: 90_000, limit: 1 },
+        controller.signal,
+        {
+          onLine: (line) => {
+            seen.push(line);
+
+            if (line === 32) {
+              reached.resolve();
+
+              return resume.promise;
+            }
+          },
+        },
+      );
+
+      await reached.promise;
+      controller.abort(reason);
+      resume.resolve();
+      await expect(reading).rejects.toBe(reason);
+      expect(seen.at(-1)).toBe(32);
+      expect(seen).toHaveLength(32);
+      expect(
+        await readLines(path, { path: 'large.txt', limit: 1 }, live()),
+      ).toBe('1\tline\n… more from line 2; read on with offset 2.');
+    } finally {
+      resume.resolve();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

@@ -359,6 +359,29 @@ test("a turn that completes after its agent's close still ends stopped by it, wi
   ]);
 });
 
+test("an agent's exit after its close still ends the task stopped by it, not disconnected (CHD-590)", () => {
+  const { task, relayed, delivered, ahead } = harness();
+
+  task.heard({ type: 'connected', sessionId: 's1' });
+  task.heard({ type: 'prompt', turnId: 'r1', text: 'x', at: 1 });
+  task.cancel({ agent: 'main' });
+  task.heard({ type: 'disconnected', turnId: 'r1', at: 2 });
+
+  expect(delivered).toStrictEqual([]);
+  expect(ahead).toStrictEqual([]);
+
+  const last = relayed.at(-1);
+
+  expect(
+    last?.type === 'update' && last.update.sessionUpdate === 'subagent_update'
+      ? [last.update.state, last.update._meta]
+      : undefined,
+  ).toStrictEqual([
+    { state: 'cancelled' },
+    { 'chord/stopped': { agent: 'main' } },
+  ]);
+});
+
 test('an agent close first keeps its name when a stop with no key follows (CHD-590)', () => {
   const { task, relayed, ahead } = harness();
 
@@ -734,4 +757,89 @@ describe('CHD-373 S1 tester: fake task spend reaches the parent record', () => {
       },
     });
   });
+});
+
+describe('CHD-590 tester: a report crossing an agent close', () => {
+  test('a late failure keeps the agent stop and sends neither a failure nor a parent note', () => {
+    const { task, delivered, ahead, ended, relayed } = harness();
+
+    task.heard({ type: 'connected', sessionId: 's1' });
+    task.heard({ type: 'prompt', turnId: 'r1', text: 'taskchild', at: 1 });
+    task.cancel({ agent: 'main' });
+    task.heard({
+      type: 'result',
+      turnId: 'r1',
+      result: { status: 'failed', error: { message: 'late failure' } },
+    });
+
+    expect(delivered).toEqual([]);
+    expect(ahead).toEqual([]);
+    expect(ended).toEqual(['task-1']);
+    expect(relayed.at(-1)).toMatchObject({
+      update: {
+        state: { state: 'cancelled' },
+        _meta: { 'chord/stopped': { agent: 'main' } },
+      },
+    });
+  });
+
+  for (const closeFirst of [true, false]) {
+    test(
+      closeFirst
+        ? 'a late successful reply cannot report after close'
+        : 'a completed report is not changed by a late close',
+      () => {
+        const { task, delivered, ahead, ended, relayed } = harness();
+
+        task.heard({ type: 'connected', sessionId: 's1' });
+        task.heard({ type: 'prompt', turnId: 'r1', text: 'taskchild', at: 1 });
+        task.heard({
+          type: 'update',
+          turnId: 'r1',
+          update: {
+            sessionUpdate: 'agent_message_chunk',
+            content: {
+              type: 'text',
+              text: 'Finished before the wire drained.',
+            },
+          },
+        });
+
+        if (closeFirst) {
+          task.cancel({ agent: 'main' });
+        }
+
+        task.heard({
+          type: 'result',
+          turnId: 'r1',
+          result: { status: 'completed', stopReason: 'end_turn' },
+        });
+        task.cancel({ agent: 'main' });
+
+        expect(task.running).toBe(false);
+        expect(ended).toEqual(['task-1']);
+        expect(ahead).toEqual([]);
+        expect(delivered).toEqual(
+          closeFirst
+            ? []
+            : [
+                [
+                  { name: 'Fix it', runtime: 'fake', note: 'report' },
+                  'Finished before the wire drained.',
+                ],
+              ],
+        );
+
+        const last = relayed.at(-1);
+
+        assert(
+          last?.type === 'update' &&
+            last.update.sessionUpdate === 'subagent_update',
+        );
+        expect(last.update.state).toEqual(
+          closeFirst ? { state: 'cancelled' } : { state: 'completed' },
+        );
+      },
+    );
+  }
 });

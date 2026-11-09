@@ -1672,3 +1672,159 @@ describe('closing a task by close_agent (CHD-590)', () => {
     await host.sessions.closeAll();
   });
 });
+
+describe('CHD-590 tester: task ownership and ended identities', () => {
+  test('a fake team lead and member close only their own tasks, keeping their names', async () => {
+    const { host, key, heard } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+
+    try {
+      const teams = join(dir, '.chord', 'teams');
+
+      await mkdir(teams, { recursive: true });
+      await writeFile(
+        join(teams, 'bugfix.md'),
+        await readFile(
+          new URL('../fixtures/teams/fake/bugfix.md', import.meta.url),
+        ),
+      );
+
+      const run = await host.runTeamAt(
+        key,
+        { team: 'bugfix', job: 'text' },
+        'list_teams lists them',
+      );
+
+      assert(!('error' in run));
+
+      const lead: Caller = {
+        role: 'child',
+        key,
+        agent: run.ran.id,
+        team: 'lead',
+        window: host.view,
+      };
+
+      await until(
+        () => host.childOf(key, run.ran.id)?.conversation.session !== undefined,
+      );
+
+      const opened = await host.openMember(lead, {
+        member: 'coder',
+        prompt: 'text',
+      });
+
+      assert(!('error' in opened));
+
+      const member: Caller = {
+        role: 'child',
+        key,
+        agent: opened.id,
+        team: 'member',
+        window: host.view,
+      };
+
+      await until(
+        () => host.childOf(key, opened.id)?.conversation.session !== undefined,
+      );
+
+      const tasks = [];
+
+      for (const caller of [lead, member]) {
+        const task = await host.spawn(caller, LONG_TASK_ARGS);
+
+        assert(!('error' in task));
+        tasks.push(task);
+      }
+
+      const [leadTask, memberTask] = tasks;
+
+      assert(leadTask && memberTask);
+      expect(host.closeAgent(lead, memberTask.id)).toHaveProperty('error');
+      expect(host.closeAgent(member, leadTask.id)).toHaveProperty('error');
+
+      for (const [caller, task] of [
+        [lead, leadTask],
+        [member, memberTask],
+      ] as const) {
+        expect(host.closeAgent(caller, task.id)).toEqual({
+          closed: LONG_TASK_ARGS.name,
+        });
+
+        const child = host.childOf(key, caller.agent!)!;
+
+        await until(() => child.conversation.task(task.id) === undefined);
+        expect(host.closeAgent(caller, task.id)).toEqual({
+          ended: LONG_TASK_ARGS.name,
+        });
+        expect(host.closeAgent(caller, LONG_TASK_ARGS.name)).toEqual({
+          ended: LONG_TASK_ARGS.name,
+        });
+
+        const folded = heard.reduce<FoldedSession | undefined>(
+          (state, [at, event]) =>
+            at === child.key ? foldEvent(state, event) : state,
+          undefined,
+        );
+
+        expect(
+          findSubagent(folded?.transcript.entries ?? [], task.id)?.task
+            ?.stoppedWith,
+        ).toEqual({ agent: child.name });
+      }
+    } finally {
+      await host.sessions.closeAll();
+    }
+  });
+
+  test('a fork cannot be mistaken for a task or closed by its former parent', async () => {
+    const { host, key, open } = await withMain();
+    const fork = open('fork', { forkedFrom: 'main' });
+    const caller: Caller = { role: 'person', key, window: host.view };
+
+    try {
+      expect(host.closeAgent(caller, 'fork')).toHaveProperty('error');
+      expect(host.conversationAt(fork)).toBeDefined();
+    } finally {
+      await host.sessions.closeAll();
+    }
+  });
+
+  test('an ended task and a running namesake require an id, leaving the live task alone', async () => {
+    const { host, key } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+    const caller: Caller = { role: 'person', key, window: host.view };
+
+    try {
+      const ended = await host.spawn(caller, LONG_TASK_ARGS);
+
+      assert(!('error' in ended));
+      expect(host.closeAgent(caller, ended.id)).toEqual({
+        closed: LONG_TASK_ARGS.name,
+      });
+      await until(() => host.conversationAt(key)!.task(ended.id) === undefined);
+
+      const running = await host.spawn(caller, LONG_TASK_ARGS);
+
+      assert(!('error' in running));
+      expect(host.closeAgent(caller, LONG_TASK_ARGS.name)).toEqual({
+        error: `2 of your tasks are named ${LONG_TASK_ARGS.name}; close_agent one by its id: ${running.id} and ${ended.id}`,
+      });
+      expect(host.conversationAt(key)!.task(running.id)?.running).toBe(true);
+      expect(host.closeAgent(caller, ended.id)).toEqual({
+        ended: LONG_TASK_ARGS.name,
+      });
+      expect(host.closeAgent(caller, running.id)).toEqual({
+        closed: LONG_TASK_ARGS.name,
+      });
+    } finally {
+      await host.sessions.closeAll();
+    }
+  });
+});

@@ -3,13 +3,25 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join } from 'node:path';
-import { selftest } from '../../../../scripts/dev/release/selftest.ts';
+import {
+  riffProblems,
+  selftest,
+} from '../../../../scripts/dev/release/selftest.ts';
 import { type Scratch, scratch } from './scratch.ts';
 
 // The self-test in a process of its own, on a fake chord and a fake tmux
 // whose window never shows anything, ended by a signal while it waits.
 
 const SCRIPTS = join(import.meta.dir, '..', '..', '..', '..', 'scripts');
+
+/** What a binary's --riff-selftest says when libfx and fff both work. */
+const RIFF_REPORT = JSON.stringify({
+  turns: [
+    { backend: 'native', stopReason: 'end_turn', text: 'done' },
+    { backend: 'wasm-jspi', stopReason: 'end_turn', text: 'done' },
+  ],
+  grep: ['needle.txt:2: chord riff selftest needle'],
+});
 
 let at: Scratch;
 
@@ -34,6 +46,11 @@ acp)
     *'"id":9'*) echo '{"id":3,"result":{"stopReason":"end_turn"}}' ;;
     esac
   done
+  ;;
+--riff-selftest)
+  # Two model requests per turn, as libfx makes them, then the report.
+  ${JSON.stringify(process.execPath)} -e 'for (let i = 0; i < 4; i++) await fetch(process.argv[1] + "/chat/completions", { method: "POST", body: "{}" })' "$2"
+  echo '${RIFF_REPORT}'
   ;;
 *) echo "Hello, world." ;;
 esac
@@ -251,4 +268,34 @@ await selftest({ ...release(), root: ${JSON.stringify(at.root)} }, 'chord');`,
       }
     });
   }
+});
+
+describe('the riff step', () => {
+  const report = JSON.parse(RIFF_REPORT) as Parameters<typeof riffProblems>[0];
+
+  test('a report of both backends, done, four requests and a grep holds', () => {
+    expect(riffProblems(report, 4)).toBeUndefined();
+  });
+
+  test('each way a report falls short is named', () => {
+    const [native, wasm] = report.turns!;
+
+    expect(riffProblems({ ...report, turns: [native!] }, 4)).toBe(
+      'did not report two turns',
+    );
+    expect(riffProblems({ ...report, turns: [native!, native!] }, 4)).toBe(
+      'ran turn 2 on native, not wasm-jspi',
+    );
+    expect(
+      riffProblems(
+        { ...report, turns: [native!, { ...wasm!, stopReason: 'error' }] },
+        4,
+      ),
+    ).toBe('ended its wasm-jspi turn error with "done"');
+    expect(riffProblems(report, 3)).toBe('made 3 model requests, not 4');
+    expect(riffProblems({ ...report, grep: [] }, 4)).toBe(
+      "found nothing with fff's grep",
+    );
+    expect(riffProblems({}, 4)).toBe('did not report two turns');
+  });
 });

@@ -3,7 +3,9 @@
  * version, -p answers, acp answers a prompt and a permission on stdio and goes
  * at EOF, and the window opens, answers a prompt and reads the
  * clipboard on ctrl+v, each of which a native library the binary could not
- * load would stop. The window runs in a tmux of its own, on temporary state
+ * load would stop; a libfx turn on each backend and an fff grep, through
+ * the hidden --riff-selftest, prove libfx and fff are in the binary. The
+ * window runs in a tmux of its own, on temporary state
  * and config directories. ARCH x86_64 runs it all under `arch -x86_64`
  * (Rosetta).
  */
@@ -18,6 +20,7 @@ import {
 import { tmpdir } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join, resolve } from 'node:path';
+import { serveFakeChat } from './fake_chat.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 
@@ -153,6 +156,111 @@ async function acpStep(
   }
 }
 
+/**
+ * `--riff-selftest` against the fake Chat Completions server: both turns end
+ * `end_turn` with `done` after two model requests each, native and Wasm are
+ * each the backend reported, and fff finds its line. Spawned, not run
+ * synchronously, as the server answers on this process's event loop.
+ * Part 2 (CHD-604) replaces it with a real riff turn through --riff-agent.
+ */
+export async function riffStep(
+  release: Release,
+  binary: string,
+  arch: string | undefined,
+  cwd: string,
+): Promise<void> {
+  const fake = serveFakeChat();
+
+  try {
+    const child = spawn(
+      arch === undefined ? binary : 'arch',
+      [
+        ...(arch === undefined ? [] : [`-${arch}`, binary]),
+        '--riff-selftest',
+        fake.url,
+      ],
+      { cwd, env: release.env, stdio: ['ignore', 'pipe', 'pipe'] },
+    );
+    let out = '';
+    let err = '';
+
+    child.stdout.setEncoding('utf8').on('data', (text: string) => {
+      out += text;
+    });
+
+    child.stderr.setEncoding('utf8').on('data', (text: string) => {
+      err += text;
+    });
+
+    const code = await Promise.race([
+      new Promise<number | null>((done) => child.once('close', done)),
+      sleep(60_000, undefined, { ref: false }).then(() => {
+        child.kill('SIGKILL');
+
+        return 'timeout' as const;
+      }),
+    ]);
+
+    if (code !== 0) {
+      die(`${binary} --riff-selftest ended ${code}; stderr: ${said(err)}`);
+    }
+
+    const report = riffReport(out);
+    const wrong = riffProblems(report, fake.requests());
+
+    if (wrong !== undefined) {
+      die(`${binary} --riff-selftest ${wrong}: ${said(out)}`);
+    }
+  } finally {
+    await fake.stop();
+  }
+}
+
+interface RiffReport {
+  turns?: { backend?: string; stopReason?: string; text?: string }[];
+  grep?: string[];
+}
+
+function riffReport(out: string): RiffReport {
+  try {
+    return JSON.parse(out) as RiffReport;
+  } catch {
+    return {};
+  }
+}
+
+/** What is wrong with the flag's report, or undefined when it all holds. */
+export function riffProblems(
+  report: RiffReport,
+  requests: number,
+): string | undefined {
+  const backends = ['native', 'wasm-jspi'];
+
+  if (report.turns?.length !== backends.length) {
+    return 'did not report two turns';
+  }
+
+  for (const [index, turn] of report.turns.entries()) {
+    if (turn.backend !== backends[index]) {
+      return `ran turn ${index + 1} on ${turn.backend}, not ${backends[index]}`;
+    }
+
+    if (turn.stopReason !== 'end_turn' || turn.text !== 'done') {
+      return `ended its ${turn.backend} turn ${turn.stopReason} with ${JSON.stringify(turn.text)}`;
+    }
+  }
+
+  if (requests !== 2 * backends.length) {
+    return `made ${requests} model requests, not ${2 * backends.length}`;
+  }
+
+  if (!report.grep?.some((line) => line.includes('riff selftest needle'))) {
+    return "found nothing with fff's grep";
+  }
+
+  return undefined;
+}
+
 export async function selftest(
   release: Release,
   given: string,
@@ -281,6 +389,7 @@ export async function selftest(
     }
 
     await acpStep(inScratch, binary, arch, fake, join(scratch, 'project'));
+    await riffStep(inScratch, binary, arch, join(scratch, 'project'));
 
     tmux(
       'new-session',

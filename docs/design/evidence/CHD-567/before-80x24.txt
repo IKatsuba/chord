@@ -1,0 +1,24 @@
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.
+   0": invalid input: expected string, received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.
+   0": invalid input: expected string, received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.
+   0": invalid input: expected string, received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.
+   0": invalid input: expected string, received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.
+   0": invalid input: expected string, received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.
+   0": invalid input: expected string, received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: the file is ignored
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

@@ -4,6 +4,7 @@ import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join } from 'node:path';
 import {
+  RIFF_TOOLS,
   riffProblems,
   riffStep,
   selftest,
@@ -17,8 +18,18 @@ const SCRIPTS = join(import.meta.dir, '..', '..', '..', '..', 'scripts');
 
 /** The two turns a binary's riff runs when libfx loads on both backends. */
 const RIFF_TURNS = [
-  { backend: 'native', stopReason: 'end_turn', text: 'done' },
-  { backend: 'wasm-jspi', stopReason: 'end_turn', text: 'done' },
+  {
+    backend: 'native',
+    stopReason: 'end_turn',
+    text: 'done',
+    tools: RIFF_TOOLS,
+  },
+  {
+    backend: 'wasm-jspi',
+    stopReason: 'end_turn',
+    text: 'done',
+    tools: RIFF_TOOLS,
+  },
 ];
 
 let at: Scratch;
@@ -269,25 +280,38 @@ await selftest({ ...release(), root: ${JSON.stringify(at.root)} }, 'chord');`,
 describe('the riff step', () => {
   const [native, wasm] = RIFF_TURNS;
 
-  test('two turns, native then Wasm, done after one request each, hold', () => {
-    expect(riffProblems(RIFF_TURNS, 2)).toBeUndefined();
+  test('two turns, native then Wasm, a search and a read, done after three requests each, hold', () => {
+    expect(riffProblems(RIFF_TURNS, 6)).toBeUndefined();
   });
 
   test('each way the turns fall short is named', () => {
-    expect(riffProblems([native!], 2)).toBe('ran 1 turns, not 2');
-    expect(riffProblems([native!, native!], 2)).toBe(
+    expect(riffProblems([native!], 6)).toBe('ran 1 turns, not 2');
+    expect(riffProblems([native!, native!], 6)).toBe(
       'ran turn 2 on native, not wasm-jspi',
     );
-    expect(riffProblems([{ ...native!, backend: undefined }, wasm!], 2)).toBe(
+    expect(riffProblems([{ ...native!, backend: undefined }, wasm!], 6)).toBe(
       'ran turn 1 on undefined, not native',
     );
     expect(
-      riffProblems([native!, { ...wasm!, stopReason: 'cancelled' }], 2),
+      riffProblems([native!, { ...wasm!, stopReason: 'cancelled' }], 6),
     ).toBe('ended its wasm-jspi turn cancelled with "done"');
-    expect(riffProblems([{ ...native!, text: '' }, wasm!], 2)).toBe(
+    expect(riffProblems([{ ...native!, text: '' }, wasm!], 6)).toBe(
       'ended its native turn end_turn with ""',
     );
-    expect(riffProblems(RIFF_TURNS, 3)).toBe('made 3 model requests, not 2');
+
+    // fff's search failing in the binary, or the read refused.
+    const failed = [
+      { ...RIFF_TOOLS[0]!, status: 'failed', text: 'fff: no library' },
+      RIFF_TOOLS[1]!,
+    ];
+
+    expect(riffProblems([native!, { ...wasm!, tools: failed }], 6)).toBe(
+      `called ${JSON.stringify(failed)} on wasm-jspi, not ${JSON.stringify(RIFF_TOOLS)}`,
+    );
+    expect(riffProblems([{ ...native!, tools: [] }, wasm!], 6)).toBe(
+      `called [] on native, not ${JSON.stringify(RIFF_TOOLS)}`,
+    );
+    expect(riffProblems(RIFF_TURNS, 2)).toBe('made 2 model requests, not 6');
   });
 });
 

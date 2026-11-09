@@ -4,7 +4,12 @@ import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildOptions, withFffWorker } from '../../scripts/dev/compile.ts';
+import {
+  buildOptions,
+  fffProblem,
+  withFffWorker,
+} from '../../scripts/dev/compile.ts';
+import { hostTarget } from '../../scripts/targets.ts';
 import {
   type FffReply,
   type FffRequest,
@@ -274,9 +279,13 @@ test('compiled with its Worker as an entry point, as chord is, the finder answer
       ...buildOptions(FIXTURE, { compiled: true }),
       ...withFffWorker(FIXTURE),
       compile: { outfile: binary },
+      metafile: true,
     });
 
     expect(built.success).toBe(true);
+    expect(
+      fffProblem(Object.keys(built.metafile!.inputs), hostTarget()!),
+    ).toBeUndefined();
 
     const run = spawnSync(binary, [project], {
       cwd: directory,

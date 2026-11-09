@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import {
   DONE,
   type FakeChat,
+  NEEDLE,
+  NEEDLE_FILE,
   serveFakeChat,
 } from '../../../../scripts/dev/release/fake_chat.ts';
 
@@ -16,17 +18,28 @@ afterEach(async () => {
 });
 
 describe('the fake chat server', () => {
-  test('says done to every request, counting them', async () => {
-    for (let i = 0; i < 2; i++) {
+  test('calls search, then read, then says done, by the tool results it is given, counting requests', async () => {
+    const ask = async (results: number) => {
       const answer = await fetch(`${fake.url}/chat/completions`, {
         method: 'POST',
-        body: JSON.stringify({ messages: [{ role: 'user', content: 'go' }] }),
+        body: JSON.stringify({
+          messages: [
+            { role: 'user', content: 'go' },
+            ...Array.from({ length: results }, () => ({ role: 'tool' })),
+          ],
+        }),
       });
 
-      expect(await answer.text()).toContain(`"content":"${DONE}"`);
-    }
+      return await answer.text();
+    };
 
-    expect(fake.requests()).toBe(2);
+    const call = (name: string, args: object) =>
+      `"name":"${name}","arguments":${JSON.stringify(JSON.stringify(args))}`;
+
+    expect(await ask(0)).toContain(call('search', { query: NEEDLE }));
+    expect(await ask(1)).toContain(call('read', { path: NEEDLE_FILE }));
+    expect(await ask(2)).toContain(`"content":"${DONE}"`);
+    expect(fake.requests()).toBe(3);
   });
 
   test('answers nothing but chat completions', async () => {

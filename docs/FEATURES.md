@@ -112,8 +112,9 @@ sessions, sets the models and carries the messages on its own ACP layer.
 | Monitors                                  | Monitor tool                        | client: `monitor`, `stop_monitor`, `list_monitors`; output batches and the end reach the owner as messages; monitors, `spawn_task` tasks and Claude, Codex and Cursor subagents share a wrapped summary line under the agents list; ↓ selects it, Enter opens the background view (at most half the screen), then an item's details, `x` stops where offered; every ended item leaves the list at once, an open detail stays until left, and its end is shown in the transcript; monitors stop with the session; on resume the agent is told which were stopped and not restarted |
 
 A child gets `send_message`, to its own parent, and a long-lived one also
-`spawn_task` and `list_agents`, for task agents of its own drawn in its own
-turn and closed with it, and the monitor tools for monitors of its own; a
+`spawn_task`, `list_agents` and `close_agent` (for its own tasks), for task
+agents of its own drawn in its own turn and closed with it, and the monitor
+tools for monitors of its own; a
 task starts no agent, and a child opens no long-lived one. A long-lived
 child whose agent exits or whose turn fails is told to its parent as a
 `← chord` message. A child's permission requests go to the person, never to

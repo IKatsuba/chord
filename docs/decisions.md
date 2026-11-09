@@ -8070,3 +8070,236 @@ left items out of a list no longer refuses selection, which goes on with
 what remains. Such a problem is marked as one in a field, so the guard reads
 structure rather than the line's words. Every other `teamSelection`
 problem, and every read or parse problem, still refuses selection as before.
+
+## 2026-11-09 — CHD-485: libfx in the binary, its assets embedded by path (owner)
+
+riff, chord's own agent, runs on libfx (npm `libfx` 0.0.16, Apache-2.0).
+Under Bun 1.4.4 from source both its backends work. Inside `bun build
+--compile` neither does, on any release target: libfx names `libfx.node`
+and `fx-core.wasm` with `new URL('./…', import.meta.url)`, which Bun's
+bundler does not embed (`/$bunfs/root/libfx.node` and `fx-core.wasm`
+missing). Evidence: `docs/design/evidence/CHD-485/gate.md`.
+
+- **Options:** A, embed both files with `with { type: 'file' }` imports by
+  their path inside `node_modules` (neither package exports them) and pass
+  them through libfx's documented `nativeAddon` and `wasm` options; B, ask
+  upstream to export the assets and wait; C, ship the addon beside the
+  binary; D, no libfx.
+- **Choice (the owner): A, both assets**, the reach past the packages'
+  `exports` allowed for this. Verified on all four targets, native and
+  Wasm; on glibc 2.31 native fails and `auto` falls back to Wasm. A compile
+  plugin picks the target's one addon (a plain import or a `define` embeds
+  all four, +34 MB). libfx is exact-pinned.
+- **Consequences:** +9.8 to 11.1 MiB per binary. A libfx layout change must
+  fail the build, not the binary: the plugin's resolve fails on a missing
+  file, `scripts/dev/libfx_assets.ts` checks the packages, the Wasm magic,
+  the version and `libfxApiVersion` before compiling, and `selftest` runs a
+  turn on native and on Wasm. Upstream is not asked.
+
+## 2026-11-09 — CHD-485: riff runs as a child process speaking ACP (owner, Q1)
+
+- **Options:** A1, in-process, a direct `Agent` over libfx through the
+  enricher relay, re-implementing what `connectAgent` does around the SDK;
+  A2, in-process, ACP over an in-memory pair; B, a child process, chord
+  started on a hidden flag, ACP on stdio.
+- **Choice (the owner): B, on a hidden flag.** A fault in libfx's native
+  core, which nothing can catch, costs a session, not the window; spawn,
+  stop bounds, stderr and "agent gone" are reused; one session per process
+  keeps libfx's one-configuration-per-agent-name rule out of the way.
+- **Consequences:** a second process and module graph per riff session.
+  Credentials cross processes: the child reads the store, so memory-only
+  credentials are not supported. The adapter is an ACP agent on the SDK's
+  agent side, tested over an in-memory pair.
+
+## 2026-11-09 — CHD-485: riff's providers are ChatGPT and Grok plans (owner, Q3)
+
+- **Options:** plans only; plus AI Gateway by key; plus a custom Chat
+  Completions server; both.
+- **Choice (the owner): plans only.** libfx's custom provider is the test
+  seam for tests, `--fake` and `--qa`, never selectable. chord always passes
+  libfx an explicit provider and key, since libfx reads
+  `AI_GATEWAY_API_KEY` and `VERCEL_OIDC_TOKEN` by itself otherwise. AI
+  Gateway and a custom server are CHD-599 and CHD-600.
+
+## 2026-11-09 — CHD-485: the window signs riff in (owner)
+
+- **Options:** S1, chord's own sign-in box in the window, the agent saying
+  `-32000` when it needs one; S2, ACP `authenticate` with request-scoped
+  elicitations for the address and code; S3, ACP terminal auth.
+- **Choice (the owner): S1, for riff only.** CHD-435's "chord does not sign
+  agents in" stays for every other agent. `-p` and `chord acp` print the
+  sign-in failure.
+- **Settled with it (the owner, 2026-11-08):** sign-in goes through libfx
+  in the browser and by device code for each plan; the loopback listener
+  lives only while it waits; ChatGPT's redirect is fixed at
+  `localhost:1455`, so when 1455 is taken chord says so and offers device
+  code, with no way around the fixed redirect.
+
+## 2026-11-09 — CHD-485: Bun.secrets alone keeps riff's credentials (owner, Q4)
+
+- **Options:** C1, refuse with no store; C2, an explicit 0600 file; C3,
+  environment variables; C4, memory for the process's life.
+- **Choice (the owner): C1 only.** No credential store means no riff, with
+  words naming the missing store and how to get one. Every Bun.secrets
+  call goes through one serial queue per process, bounded at 20 s (20
+  concurrent calls wedged a process's store on macOS).
+- **Consequences, the design's:** sign-in, refresh and logout take one
+  cross-process lock (`proper-lockfile` 4.1.2, tried under Bun; an
+  in-process mutex beside it); inside the lock the store is read, never a
+  cache; writes are compare-and-set against what was read, so two processes
+  never spend one rotated refresh token and a stale write cannot undo a
+  logout.
+
+## 2026-11-09 — CHD-485: signing out of riff (owner)
+
+- **Options:** L1, other processes find out at their next refresh; L2, at
+  each prompt's start; L3, at once everywhere through a watched marker.
+- **Choice (the owner): L2,** plus the window that logs out cancels its own
+  turns and its children's at once and ends the session. A ChatGPT access
+  token lives 240 h, so L1 would let a signed-out session run for days.
+- **Revocation (the owner, G2):** libfx has none. chord revokes a Grok
+  refresh token itself at `https://auth.x.ai/oauth2/revoke` as fx does,
+  after deleting the local entry, and says when revocation failed; the
+  owner consented to this code beside libfx. ChatGPT tokens are not
+  revoked, and the confirm box says so.
+
+## 2026-11-09 — CHD-485: riff's tools are chord's own (owner)
+
+libfx turns on none of fx's tools: with host tools given, the core's only
+own tool is the provider-run `web_search`, and fx's Zig file and shell
+tools are not exposed. **Choice (the owner):** read, list, search, edit,
+write, shell, and a skill tool, in the child. `node:fs`, `diff`,
+`file-type` and `src/shell.ts` carry them. Paths are resolved at the
+effect; an approved edit whose file changed is refused.
+
+## 2026-11-09 — CHD-485: fff for search and list, inside the session's directory (owner)
+
+- **Tried for search** (`docs/design/evidence/CHD-485/search.md`), on the
+  Linux kernel tree and under `bun build --compile` on every target:
+  `@ff-labs/fff-bun` 0.11.0 fits as it is (66 to 153 ms warm; +5.2 to 10.7
+  MiB); `ripgrep` (Wasm) fits but took 7 to 14 s and fails on x64 without
+  AVX; `@vscode/ripgrep` cannot spawn its `rg` from the binary;
+  `@oh-my-pi/pi-natives` embeds only through omp's own build step; the JS
+  fallback (globby and `RegExp`) took 9.5 s and drops `.S` files on `*.s`,
+  as globby's ignore matching is case-blind.
+- **Tried for list:** fff's `glob` is not npm glob (`*` crosses `/`), lists
+  files only, reaches nothing outside its base, and its file set differs
+  from git's. `@bastani/atomic-natives` 0.9.74 fits both tools as ripgrep
+  does, outside paths included, at +17 MiB (macOS) and +35 MiB (Linux).
+- **Choice (the owner): fff for both, on its own semantics, inside the
+  session's directory only;** atomic-natives rejected for its size. `list`
+  is "files under the session directory matching fff's pattern", with
+  directories from `directorySearch`; the differences from git and ripgrep
+  are described to the model, and chord does not filter fff's output. An
+  outside path is reached only by `read`, under a grant. `grep()` is a
+  synchronous FFI call, so fff runs in a `Worker`.
+
+## 2026-11-09 — CHD-485: riff's permission modes, ask and auto (owner)
+
+- **Choice (the owner):** two modes, no full access. Ask: every call asks,
+  reads included; "for this session" covers a real path for edits and
+  writes and an exact command string for shell, never a prefix. Auto,
+  modelled on fx's: a call the admission rules do not admit is reviewed by
+  a model. shift+tab toggles them, the choice is kept per session, ask's
+  grants hold in auto, and the default is auto.
+- **The review (the owner, A1 to A5):** the reviewer is `gpt-6-luna` on a
+  ChatGPT plan and `grok-4.5` on a Grok plan, on the person's own
+  credential, through a second libfx engine (libfx exposes no review API).
+  The policy is fx's (prompt injection or malicious activity, Apache-2.0,
+  attributed) plus a caution on destructive or irreversible actions. It
+  sees fx's shape and caps. A caution, a cut review or a failed one asks
+  the person in the window, allow once or deny, with a 5-minute timeout
+  into a denial; `-p` and `chord acp` deny. One review per exact call, 64
+  per turn. A permanent review failure moves the session to ask with a
+  notice, since libfx cannot tell an unserved model ahead of time.
+- **Consequence:** each review is a request on the person's plan.
+
+## 2026-11-09 — CHD-485: shell commands auto admits, on unbash (owner, A6)
+
+- **Tried** (`docs/design/evidence/CHD-485/commands.md`): `unbash` 6.0.4
+  (ISC, pure TypeScript) with chord's port of fx v0.0.16's
+  `command_effect.zig` rules passes 218 of 218 cases, fx's CHANGELOG
+  bypasses included, from source and compiled on all four targets.
+  `shell-quote` reads `2>&1`, `\2>&1`, `2 >&1` and `'2'>&1` alike, fx's
+  0.0.16 bypass; tree-sitter-bash misplaces a redirect; `sh-syntax` brings
+  3.8 MB of Go Wasm.
+- **Choice (the owner): both of fx's lists as fx has them,** its direct
+  read-only set and its reversible list (installs, `test`, `run`, `zig
+  build`, `git fetch`). Anything else, or anything that does not parse, is
+  reviewed.
+- **How they run, options:** a port of fx's direct executor and `safe_git`
+  for the direct set; the executor without `safe_git` (git reviewed); or
+  `$SHELL -c` for all, where aliases, functions, shell options, `PATH` and a
+  repository's `core.fsmonitor` apply. **Choice (the owner): the executor
+  and `safe_git`** (Apache-2.0, attributed) for the direct read-only set;
+  the reversible list through `$SHELL -c`, as in fx.
+
+## 2026-11-09 — CHD-485: riff follows chord's treatment of every agent (owner)
+
+The owner's rule: where chord already treats agents one way, riff follows
+it, and only what has no precedent is asked. So: chord's `costFromTokens`
+writes its API-price estimate for riff, marked as chord's, as for fx; riff
+sends the standard `usage_update {used, size}` after each turn, as fx and
+Codex do, `used` the last request's tokens and `size` from riff's
+per-plan model list in source; its tool calls are drawn by the existing
+renderer from ACP kinds and titles; chord shows no provider-retry state and
+sets no retry bound, as for any agent (libfx kept retrying past 300 s in
+trials); libfx's client-version lookups to the npm registry and xAI before
+the first turn are accepted, as fx's are; `/login` and `/logout` are in the
+slash list and on one `?` panel line, as `/vim` is.
+
+## 2026-11-09 — CHD-485: riff's sessions on libfx's local store (owner, Q6)
+
+- **Options:** R1, `createFxAgent` with `local()`; R2, an engine with a
+  store chord writes; R3, a checkpoint per turn (4 MiB cap).
+- **Choice (the owner): R1,** imported statically from
+  `libfx/durable-local` (libfx's default store loads by `new URL` and fails
+  compiled), under chord's state directory, with a JSON sidecar per session
+  for provider, account, model, effort and mode. chord's record stays the
+  truth of what was shown. Cleanup is CHD-602.
+- **A turn a crashed process left open:** libfx's `resume()` runs it, and a
+  plain prompt runs it first, unseen. **Choice (the owner): T2,** `cancel()`
+  then `resume()` on every reopen, a line saying the turn was cancelled. In
+  eight crash trials this ran no request and no tool of the dead turn; it
+  follows libfx's code order but is not a contract, so a fake-crash test
+  counting requests and tool runs pins it. No upstream request.
+
+## 2026-11-09 — CHD-485: MCP, instructions and skills for riff (owner)
+
+- **MCP:** the session's servers through an `@modelcontextprotocol/sdk`
+  client and `libfx/mcp`, with prefixes chord allocates and an
+  original-name map; elicitation relayed to chord's form; chord's own MCP
+  server as for every agent, so riff can open agents and run teams.
+- **Instructions (I2):** `AGENTS.md` from the repository root down to the
+  session's directory and `~/.config/chord/AGENTS.md`, under a cap; the
+  model is told to read deeper ones. No `CLAUDE.md` (libfx's core reads
+  none itself).
+- **Skills:** on demand as fx does them, from `.agents/skills/` and
+  `~/.agents/skills/` only, names and descriptions in the instructions and
+  a skill tool of chord's own on fx's model (Apache-2.0, attributed).
+  `libfx/skills` is not used: it inlines every skill's body.
+
+## 2026-11-09 — CHD-485: the agent is named riff (owner, Q5)
+
+- **Options:** `builtin`, `chord`, a name of the owner's; the default kept
+  `claude`, riff, or riff when `claude` is missing.
+- **Choice (the owner): `riff`** (`chord riff`, `agents.riff`; free against
+  the registry, the CLI table, chord's subcommands and PATH), the default
+  stays `claude`, and riff is the picker's first row. `agent` was rejected
+  (`chord agents` differs by a letter, the `agent` setting, Cursor's CLI of
+  that name, the word's general use), as were `builtin` and `chord`.
+
+## 2026-11-09 — CHD-485: the providers' terms (owner, Q9)
+
+libfx signs in with the Codex CLI's OpenAI client and the fx CLI's xAI
+client, and its README says the user's plan and the provider's terms apply.
+The live terms pages could not be fetched here; the owner read them
+(recorded on CHD-485, a reading, not legal advice).
+
+- **Options:** release as designed with a terms line in the sign-in box;
+  the owner decides before release; ship marked experimental.
+- **Choice (the owner): the same practice as fx and Mastra Code**
+  (mastra-ai/mastra, `mastracode/sdk/src/auth/providers/openai-codex.ts` and
+  `xai.ts`), which sign in with the same clients: no terms line in the box,
+  no experimental mark, and the guide does not quote libfx's statement, as
+  neither fx's nor Mastra's sign-in mentions terms.

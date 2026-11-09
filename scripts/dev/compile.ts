@@ -22,6 +22,26 @@ export interface CompileOptions {
 
 const root = new URL('../..', import.meta.url).pathname;
 
+const MAIN = join(root, 'src', 'main.tsx');
+
+const FFF_WORKER = join(root, 'src', 'platform', 'fff_worker.ts');
+
+/**
+ * `entry` with fff's Worker (CHD-485): a binary finds a Worker's script
+ * only when it was built as one of its entry points, as Bun documents for
+ * `--compile`. Entries named flat put the Worker beside the code that starts
+ * it, so its `new URL('./fff_worker.ts', import.meta.url)` holds in the
+ * binary as from source.
+ */
+export function withFffWorker(
+  entry: string,
+): Pick<BuildConfig, 'entrypoints' | 'naming'> {
+  return {
+    entrypoints: [entry, FFF_WORKER],
+    naming: { entry: '[name].[ext]' },
+  };
+}
+
 /**
  * `bun install`'s selection of every platform's optional packages. A compile
  * build keeps every OpenTUI native import, and Bun skips the packages whose
@@ -203,10 +223,8 @@ export async function compile(args: CompileOptions): Promise<void> {
 
     // The JS API, as the command line takes no plugin.
     const built = await Bun.build({
-      ...buildOptions(join(root, 'src', 'main.tsx'), {
-        compiled: true,
-        target,
-      }),
+      ...buildOptions(MAIN, { compiled: true, target }),
+      ...withFffWorker(MAIN),
       compile: { target: target.bun, outfile: output },
     });
 

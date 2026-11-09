@@ -1,13 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getBackendInfo } from 'libfx/node';
 import manifest from '../../package.json' with { type: 'json' };
 import { buildOptions, libfxNative } from '../../scripts/dev/compile.ts';
-import { libfxPackage } from '../../scripts/dev/libfx_assets.ts';
+import { libfxAddon, libfxPackage } from '../../scripts/dev/libfx_assets.ts';
 import { type Target, TARGETS } from '../../scripts/targets.ts';
 import { libfxBackend } from '../../src/platform/libfx.ts';
 
@@ -91,6 +91,76 @@ describe('libfx backend options', () => {
       expect(buildOptions('entry.ts', { target }).define?.FFF_LIBC).toBe(
         target.os === 'linux' ? '"gnu"' : undefined,
       );
+    }
+  });
+});
+
+describe('CHD-603 U3 tester: target isolation and fallback', () => {
+  test.each(TARGETS)(
+    '$bun fails when its real platform addon is missing',
+    async (target) => {
+      const addon = libfxAddon(target);
+      const held = `${addon}.tester-held`;
+
+      await rename(addon, held);
+
+      try {
+        const built = await Bun.build({
+          ...buildOptions(FIXTURE, { compiled: true, target }),
+          throw: false,
+        });
+
+        expect(built.success).toBe(false);
+        expect(built.logs.map(String).join('\n')).toContain(
+          `${libfxPackage(target)}@${manifest.dependencies.libfx} has no libfx.node for ${target.bun}`,
+        );
+      } finally {
+        await rename(held, addon);
+      }
+    },
+  );
+
+  test.each(TARGETS)(
+    '$bun embeds only its addon in a cross-compiled fixture',
+    async (target) => {
+      const directory = await mkdtemp(join(tmpdir(), 'chord-libfx-target-'));
+
+      try {
+        const built = await Bun.build({
+          ...buildOptions(FIXTURE, { compiled: true, target }),
+          compile: { target: target.bun, outfile: join(directory, 'libfx') },
+          metafile: true,
+        });
+
+        expect(built.success).toBe(true);
+        expect(
+          Object.keys(built.metafile!.inputs).filter((input) =>
+            input.endsWith('libfx.node'),
+          ),
+        ).toEqual([
+          expect.stringContaining(`${libfxPackage(target)}/libfx.node`),
+        ]);
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+    120_000,
+  );
+
+  test('auto falls back to Wasm when an addon exists but cannot load', async () => {
+    const directory = await mkdtemp(join(tmpdir(), 'chord-libfx-broken-'));
+    const addon = join(directory, 'broken.node');
+
+    try {
+      await writeFile(addon, 'not a native addon');
+
+      const options = await libfxBackend();
+
+      expect(
+        (await getBackendInfo({ ...options, nativeAddon: addon })).backend,
+      ).toBe('wasm-jspi');
+    } finally {
+      await rm(directory, { recursive: true, force: true });
     }
   });
 });

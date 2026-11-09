@@ -40,7 +40,11 @@ export const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh'] as const;
 
 export type RiffEffort = (typeof EFFORTS)[number];
 
-/** `ask` is the only behaviour until the auto review (CHD-485 part 6). */
+/**
+ * `ask` asks before every call; `auto`, until the review of CHD-485 part 6,
+ * runs reads, lists and searches inside the session's directory and asks
+ * before a read outside it.
+ */
 export const MODES = ['ask', 'auto'] as const;
 
 export type RiffMode = (typeof MODES)[number];
@@ -56,11 +60,11 @@ export function planModels(plan: RiffPlan): readonly RiffModel[] {
   return PLAN_MODELS[plan];
 }
 
-/** A new session's: the plan's default model, `default` effort, `ask`. */
+/** A new session's: the plan's default model, `default` effort, `auto`. */
 export function defaultConfig(plan: RiffPlan): RiffConfig {
   const [first] = PLAN_MODELS[plan];
 
-  return { model: first?.id ?? '', effort: 'default', mode: 'ask' };
+  return { model: first?.id ?? '', effort: 'default', mode: 'auto' };
 }
 
 /** The model's window, or the plan default's for a model not listed. */

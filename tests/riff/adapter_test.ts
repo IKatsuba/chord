@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
 import { createFxAgent, type FxAgent } from 'libfx/node';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -12,6 +12,7 @@ import {
 } from '../../src/riff/adapter.ts';
 import { riffStore, type Sidecar } from '../../src/riff/store.ts';
 import { until } from '../session/conversation_fake.ts';
+import { openFinder } from '../../src/platform/fff.ts';
 import { libfxBackend } from '../../src/platform/libfx.ts';
 import { clientOverStreams, type AcpClient } from '../fixtures/acp_client.ts';
 import {
@@ -131,7 +132,7 @@ describe('riff over an in-memory pair', () => {
         'default',
         ['default', 'low', 'medium', 'high', 'xhigh'],
       ],
-      ['mode', 'mode', 'ask', ['ask', 'auto']],
+      ['mode', 'mode', 'auto', ['ask', 'auto']],
     ]);
   });
 
@@ -397,16 +398,16 @@ describe("riff's store and resume", () => {
       account: null,
       model: 'fake',
       effort: 'default',
-      mode: 'ask',
+      mode: 'auto',
     });
 
     await client.request('session/set_config_option', {
       sessionId,
       configId: 'mode',
-      value: 'auto',
+      value: 'ask',
     });
 
-    expect(await sidecar(sessionId)).toMatchObject({ mode: 'auto' });
+    expect(await sidecar(sessionId)).toMatchObject({ mode: 'ask' });
   });
 
   test("resume reopens on the sidecar's options, with the model's history", async () => {
@@ -722,7 +723,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
       client.request('session/set_config_option', {
         sessionId,
         configId: 'mode',
-        value: 'auto',
+        value: 'ask',
       }),
     ]);
 
@@ -733,7 +734,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
       expect(held.held.map(({ sidecar }) => sidecar.effort)).toStrictEqual([
         'low',
       ]);
-      expect(held.held[0]?.sidecar.mode).toBe('ask');
+      expect(held.held[0]?.sidecar.mode).toBe('auto');
     } finally {
       held.held.shift()?.release();
     }
@@ -743,7 +744,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
 
       expect(held.held[0]?.sidecar).toMatchObject({
         effort: 'low',
-        mode: 'auto',
+        mode: 'ask',
       });
     } finally {
       held.held.shift()?.release();
@@ -753,7 +754,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
 
     expect(await held.store.read(sessionId)).toMatchObject({
       effort: 'low',
-      mode: 'auto',
+      mode: 'ask',
     });
   });
 
@@ -1042,5 +1043,441 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
 
     expect(cancels).toBe(2);
     expect(closes).toStrictEqual(['closed']);
+  });
+});
+
+describe("riff's read, list and search in the session's directory", () => {
+  let project: string;
+
+  beforeEach(async () => {
+    project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-project-')),
+    );
+
+    await writeFile(join(project, 'a.txt'), 'hello\n');
+  });
+
+  afterEach(async () => {
+    await rm(project, { recursive: true, force: true });
+  });
+
+  test('a read is drawn by its own table and its result comes back', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call read {"path":"a.txt"}');
+
+    const updates = client.updates(sessionId);
+
+    expect(updates).toContainEqual({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call_read_1',
+      title: 'Read a.txt',
+      kind: 'read',
+      locations: [{ path: join(project, 'a.txt') }],
+      status: 'pending',
+      rawInput: { path: 'a.txt' },
+    });
+    // The window gets the lines as read; the model, numbered ones.
+    expect(updates).toContainEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call_read_1',
+      status: 'completed',
+      content: [{ type: 'content', content: { type: 'text', text: 'hello' } }],
+    });
+    expect(client.said(sessionId)).toBe('1\thello');
+  });
+
+  test('each call of a tool keeps its own id across turns', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call read {"path":"a.txt"}');
+    await prompt(sessionId, 'call read {"path":"a.txt","limit":1}');
+
+    expect(
+      client
+        .updates(sessionId)
+        .filter((update) => update.sessionUpdate === 'tool_call')
+        .map((update) => [update.toolCallId, update.title]),
+    ).toStrictEqual([
+      ['call_read_1', 'Read a.txt'],
+      ['call_read_2', 'Read a.txt:1'],
+    ]);
+  });
+
+  test('list and search run in the directory session/new named', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call search {"query":"hello"}');
+    expect(client.said(sessionId)).toContain('a.txt:1: hello');
+    expect(client.updates(sessionId)).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call',
+        title: 'Search hello',
+        kind: 'search',
+        locations: [{ path: project }],
+      }),
+    );
+  });
+
+  test("a libfx close that fails still ends the session's finder", async () => {
+    const ended: string[] = [];
+
+    await open(true, {
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          close: async () => {
+            await made.close();
+
+            throw new Error('the core would not close');
+          },
+        });
+      },
+      openFinder: (directory) => {
+        const finder = openFinder(directory);
+
+        return {
+          ...finder,
+          destroy: async () => {
+            await finder.destroy();
+            ended.push(directory);
+          },
+        };
+      },
+    });
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    // A search starts the finder's Worker, which must not outlive the close.
+    await prompt(sessionId, 'call search {"query":"hello"}');
+
+    const closed = await client.request('session/close', { sessionId });
+
+    expect(closed.error).toBeDefined();
+    expect(ended).toStrictEqual([project]);
+
+    // The failure is the close's; the connection's end has nothing more.
+    riff = { ...riff, finished: riff.finished.catch(() => {}) };
+  });
+
+  test('a cancel that fails on close still closes libfx and ends the finder', async () => {
+    const ended: string[] = [];
+
+    await open(true, {
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          // The session libfx gives, but for a cancel that fails.
+          session: (...args: Parameters<FxAgent['session']>) =>
+            Object.assign(made.session(...args), {
+              cancel: () => Promise.reject(new Error('cancel failed')),
+            }),
+          close: async () => {
+            ended.push('agent');
+            await made.close();
+          },
+        });
+      },
+      openFinder: (directory) => {
+        const finder = openFinder(directory);
+
+        return {
+          ...finder,
+          destroy: async () => {
+            await finder.destroy();
+            ended.push('finder');
+          },
+        };
+      },
+    });
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call search {"query":"hello"}');
+
+    const running = prompt(sessionId, 'hang');
+
+    await fake.hanging();
+
+    const closed = client.request('session/close', { sessionId });
+
+    // libfx's close waits on the turn the failed cancel left running; the
+    // finder does not wait with it.
+    await until(() => ended.includes('finder'));
+    expect(ended).toStrictEqual(['agent', 'finder']);
+
+    // The provider gone, the turn ends and so does the close.
+    await fake.stop();
+    expect((await closed).error).toBeDefined();
+    await running;
+
+    riff = { ...riff, finished: riff.finished.catch(() => {}) };
+  });
+
+  test('in ask, a read asks the window, and a session grant is not asked again', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'ask',
+    });
+
+    const first = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    const statuses = () =>
+      client
+        .updates(sessionId)
+        .filter((update) => update.toolCallId === 'call_read_1')
+        .map((update) => update.status);
+
+    // While the person decides, the call waits: nothing runs it yet.
+    expect(statuses()).toStrictEqual(['pending']);
+    expect(asked.params).toMatchObject({
+      sessionId,
+      toolCall: {
+        toolCallId: 'call_read_1',
+        title: 'Read a.txt',
+        kind: 'read',
+      },
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        {
+          optionId: 'allow_session',
+          name: 'Allow reads of a.txt for this session',
+          kind: 'allow_always',
+        },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+    await first;
+    expect(statuses()).toStrictEqual(['pending', 'in_progress', 'completed']);
+    await prompt(sessionId, 'call read {"path":"a.txt"}');
+
+    expect(
+      client.messages.filter(
+        (message) => message.method === 'session/request_permission',
+      ),
+    ).toHaveLength(1);
+    expect(
+      client
+        .updates(sessionId)
+        .filter(
+          (update) =>
+            update.sessionUpdate === 'tool_call_update' &&
+            update.status === 'completed',
+        ),
+    ).toHaveLength(2);
+  });
+
+  test('in auto, the default, a read inside runs unasked and one outside asks', async () => {
+    const outside = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-far-')),
+    );
+
+    try {
+      await writeFile(join(outside, 'b.txt'), 'far\n');
+      await open();
+
+      const answer = await client.request('session/new', {
+        cwd: project,
+        mcpServers: [],
+      });
+      const sessionId = answer.result?.['sessionId'] as string;
+
+      await prompt(sessionId, 'call read {"path":"a.txt"}');
+
+      const far = prompt(
+        sessionId,
+        `call read {"path":"${join(outside, 'b.txt')}"}`,
+      );
+      const asked = await client.until(
+        (message) => message.method === 'session/request_permission',
+      );
+
+      client.respond(asked.id!, {
+        outcome: { outcome: 'selected', optionId: 'deny' },
+      });
+      await far;
+
+      expect(
+        client.messages.filter(
+          (message) => message.method === 'session/request_permission',
+        ),
+      ).toHaveLength(1);
+
+      // A denied call never ran; the one inside ran as it began.
+      const statuses = (id: string) =>
+        client
+          .updates(sessionId)
+          .filter((update) => update.toolCallId === id)
+          .map((update) => update.status);
+
+      expect(statuses('call_read_2')).toStrictEqual(['pending', 'failed']);
+      expect(statuses('call_read_1')).toStrictEqual([
+        'pending',
+        'in_progress',
+        'completed',
+      ]);
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  test('a directory that is not there fails session/new', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: join(project, 'missing'),
+      mcpServers: [],
+    });
+
+    expect(answer.error?.message).toContain('no directory');
+  });
+});
+
+describe('tester: permission cancellation and reopen', () => {
+  let project: string;
+
+  beforeEach(async () => {
+    project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-permission-edge-')),
+    );
+
+    await writeFile(join(project, 'a.txt'), 'permission fixture\n');
+  });
+
+  afterEach(async () => {
+    await rm(project, { recursive: true, force: true });
+  });
+
+  async function askingSession(): Promise<string> {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'ask',
+    });
+
+    return sessionId;
+  }
+
+  test('cancelled ask ignores a late session grant and the next turn asks again', async () => {
+    const sessionId = await askingSession();
+    const first = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const cancelled = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.notify('session/cancel', { sessionId });
+    expect((await first).result?.['stopReason']).toBe('cancelled');
+    client.respond(cancelled.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+
+    const second = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const asked = await client.until(
+      (message) =>
+        message.method === 'session/request_permission' &&
+        message.id !== cancelled.id,
+    );
+
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'deny' },
+    });
+    expect((await second).result?.['stopReason']).toBe('end_turn');
+    expect(
+      client
+        .updates(sessionId)
+        .some((update) => update.status === 'in_progress'),
+    ).toBe(false);
+    expect(client.said(sessionId)).toContain('The person denied this call.');
+  });
+
+  test('a session grant is forgotten when the saved session is reopened', async () => {
+    const sessionId = await askingSession();
+    const first = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const original = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.respond(original.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+    await first;
+    end();
+    await riff.finished;
+    await open();
+
+    const resumed = await client.request('session/resume', {
+      sessionId,
+      cwd: project,
+      mcpServers: [],
+    });
+
+    expect(resumed.error).toBeUndefined();
+
+    const next = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'deny' },
+    });
+    await next;
+    expect(client.said(sessionId)).toContain('The person denied this call.');
+    expect(
+      client
+        .updates(sessionId)
+        .some((update) => update.status === 'in_progress'),
+    ).toBe(false);
   });
 });

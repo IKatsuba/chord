@@ -17,12 +17,13 @@ import {
   rmSync,
   statSync,
 } from 'node:fs';
+import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join, resolve } from 'node:path';
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { type Agent, openAgent } from '../../../src/acp/connection.ts';
-import { DONE, serveFakeChat } from './fake_chat.ts';
+import { DONE, NEEDLE, NEEDLE_FILE, serveFakeChat } from './fake_chat.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 
@@ -175,6 +176,7 @@ async function riffTurn(
 ): Promise<RiffTurn> {
   let stderr = '';
   let text = '';
+  const tools = new Map<string, RiffToolCall>();
   const env = Object.fromEntries(
     Object.entries({
       ...release.env,
@@ -208,6 +210,21 @@ async function riffTurn(
             update.content.type === 'text'
           ) {
             text += update.content.text;
+          } else if (update?.sessionUpdate === 'tool_call') {
+            tools.set(update.toolCallId, { title: update.title });
+          } else if (
+            update?.sessionUpdate === 'tool_call_update' &&
+            (update.status === 'completed' || update.status === 'failed')
+          ) {
+            const [first] = update.content ?? [];
+
+            tools.set(update.toolCallId, {
+              ...tools.get(update.toolCallId),
+              status: update.status,
+              ...(first?.type === 'content' && first.content.type === 'text'
+                ? { text: first.content.text }
+                : {}),
+            });
           }
         }
       },
@@ -256,14 +273,15 @@ async function riffTurn(
     backend: /^riff: backend (\S+)$/m.exec(stderr)?.[1],
     stopReason,
     text,
+    tools: [...tools.values()],
   };
 }
 
 /**
  * A real riff turn through `--riff-agent` on each backend: native, then
- * with native turned off (Wasm), each reported by riff and ending
- * `end_turn` with `done` after one model request. The binary carries no fff
- * until riff's search tool (CHD-604b), whose turn brings the grep back.
+ * with native turned off (Wasm), each reported by riff, searching the
+ * project for the needle with fff in its Worker, reading the file it is in,
+ * and ending `end_turn` with `done` after three model requests.
  */
 export async function riffStep(
   release: Release,
@@ -271,6 +289,9 @@ export async function riffStep(
   arch: string | undefined,
   cwd: string,
 ): Promise<void> {
+  // The needle first: a write that fails leaves no server running.
+  await writeFile(join(cwd, NEEDLE_FILE), `${NEEDLE}\n`);
+
   const fake = serveFakeChat();
 
   try {
@@ -288,12 +309,34 @@ export async function riffStep(
   }
 }
 
+/** A tool call of a riff turn, as the window would draw it. */
+export interface RiffToolCall {
+  readonly title?: string;
+  readonly status?: string;
+  /** The text the window would show under it. */
+  readonly text?: string;
+}
+
+/** The calls every turn makes, in order: fff's search, then the read. */
+export const RIFF_TOOLS: readonly RiffToolCall[] = [
+  {
+    title: `Search ${NEEDLE}`,
+    status: 'completed',
+    text: `${NEEDLE_FILE}:1: ${NEEDLE}`,
+  },
+  { title: `Read ${NEEDLE_FILE}`, status: 'completed', text: NEEDLE },
+];
+
+/** The model requests of a turn: one per call, and the answer. */
+const TURN_REQUESTS = RIFF_TOOLS.length + 1;
+
 /** What one riff turn did, as the self-test checks it. */
 export interface RiffTurn {
   /** The backend riff said on stderr it loaded. */
   readonly backend?: string | undefined;
   readonly stopReason?: string | undefined;
   readonly text?: string;
+  readonly tools?: readonly RiffToolCall[];
 }
 
 /** What is wrong with the two turns, or undefined when it all holds. */
@@ -315,10 +358,14 @@ export function riffProblems(
     if (turn.stopReason !== 'end_turn' || turn.text !== DONE) {
       return `ended its ${turn.backend} turn ${turn.stopReason} with ${JSON.stringify(turn.text)}`;
     }
+
+    if (JSON.stringify(turn.tools) !== JSON.stringify(RIFF_TOOLS)) {
+      return `called ${JSON.stringify(turn.tools)} on ${turn.backend}, not ${JSON.stringify(RIFF_TOOLS)}`;
+    }
   }
 
-  if (requests !== backends.length) {
-    return `made ${requests} model requests, not ${backends.length}`;
+  if (requests !== backends.length * TURN_REQUESTS) {
+    return `made ${requests} model requests, not ${backends.length * TURN_REQUESTS}`;
   }
 
   return undefined;

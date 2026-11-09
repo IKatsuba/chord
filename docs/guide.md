@@ -1820,19 +1820,26 @@ bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
 needs. `docs/decisions.md` records why the stack is what it is.
 
 `bun dev --help` lists runtime, test and build commands: `chord` (`--fake`
-for the test agent), `test`, `compile` (`--all` or `--install`), `npm`,
+for the test agent, `--fake riff` for riff on its fake provider), `test`,
+`compile` (`--all` or `--install`), `npm`,
 `registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
-`selftest <binary>` and `release [version]`.
+`selftest <binary>` and `release [version]`. `chord --qa [name]` recreates
+`/tmp/chord-qa.<name>` for captures, or `/tmp/chord-qa` without a name; an
+empty name disables it. Use `bun dev chord --fake --qa capture riff` for
+riff captures: `--fake` and `--qa` must come before `riff`.
 
 `bun dev compile` installs all target packages and checks the pinned libfx
 layout for each target it builds; a mismatch names the package and version
 and stops the build. Each binary embeds libfx's WebAssembly core and only
-its target's native addon. `--all` builds every release target; `--install`
-puts this machine's binary in `~/.local/bin/chord`.
+its target's native addon, plus fff's Worker and target library (gnu on
+Linux). The build checks that exactly that fff library is embedded. `--all`
+builds every release target; `--install` puts this machine's binary in
+`~/.local/bin/chord`.
 
 `bun dev selftest <binary>` needs tmux and checks the version, `-p`, ACP
 stdio, the window and clipboard with the fake agent. It also runs a
-plain-text riff turn through ACP on native and WebAssembly against a local
+riff turn through ACP on native and WebAssembly: search with fff, read
+`needle.txt`, then answer `done`, with three requests per backend to a local
 fake provider.
 
 `bun quality` runs native type and format checks, tracked-file coverage,

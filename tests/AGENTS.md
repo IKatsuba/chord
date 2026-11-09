@@ -31,4 +31,6 @@
   Fake/QA launches use fixture collectors even if real provider CLIs exist.
   riff uses the local fake Chat Completions provider in `fixtures/riff/`;
   `CHORD_RIFF_FAKE_PROVIDER` sets its URL, and `CHORD_RIFF_BACKEND=wasm`
-  forces WebAssembly. Neither is a setting.
+  forces WebAssembly. Neither is a setting. `call <tool> <json>` prompts
+  exercise a tool on the fake provider; `fixtures/riff/tree.ts` supplies
+  fff's git and non-git file-set cases.

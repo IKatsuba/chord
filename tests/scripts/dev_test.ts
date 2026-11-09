@@ -26,6 +26,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     selftest: record('selftest'),
     release: record('release'),
     chord: record('chord'),
+    riff: record('riff'),
     qa: record('qa'),
     test: record('test'),
   };
@@ -176,6 +177,22 @@ describe('chord', () => {
     ]);
   });
 
+  test('--fake with riff as the agent runs riff on its fake provider, --qa ahead of it', async () => {
+    expect(await parsed(['chord', '--fake', 'riff'])).toStrictEqual([
+      ['riff', []],
+    ]);
+    expect(
+      await parsed(['chord', '--qa', 'read', '--fake', 'riff', '-p', 'hi']),
+    ).toStrictEqual([
+      ['qa', '/tmp/chord-qa.read'],
+      ['riff', ['-C', '/tmp/chord-qa.read', '-p', 'hi']],
+    ]);
+    // Without --fake, riff is an agent name like any other.
+    expect(await parsed(['chord', 'riff'])).toStrictEqual([
+      ['chord', false, ['riff']],
+    ]);
+  });
+
   test("--fake after chord's first word is chord's", async () => {
     expect(await parsed(['chord', 'codex', '--fake'])).toStrictEqual([
       ['chord', false, ['codex', '--fake']],
@@ -315,6 +332,7 @@ describe('tester: migrated command boundaries', () => {
       selftest: unexpected,
       release: unexpected,
       chord: unexpected,
+      riff: unexpected,
       qa: unexpected,
       test: unexpected,
     };

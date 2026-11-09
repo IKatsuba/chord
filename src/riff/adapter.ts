@@ -9,9 +9,11 @@ import {
   type AgentContext,
   type ContentBlock,
   type InitializeResponse,
+  type PermissionOption,
   RequestError,
   type SessionUpdate,
   type Stream,
+  type ToolCallUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import {
   createFxAgent,
@@ -20,6 +22,8 @@ import {
   type FxNodeBackendOptions,
   type FxSessionPromptInput,
 } from 'libfx/node';
+import { realpath } from 'node:fs/promises';
+import { type Finder, openFinder } from '../platform/fff.ts';
 import {
   type HookUsage,
   stopReasonOf,
@@ -36,6 +40,8 @@ import {
   windowOf,
 } from './models.ts';
 import { RIFF } from './start.ts';
+import type { Grants } from './tools/permission.ts';
+import { drawn, riffTools } from './tools/tools.ts';
 import { type RiffStore, riffStore, type Sidecar } from './store.ts';
 
 /** What a reopened session says of a turn a dead process left open. */
@@ -67,6 +73,8 @@ export interface RiffOptions {
    * to put a close in the middle.
    */
   readonly createAgent?: typeof createFxAgent;
+  /** Makes the session's finder: fff's but in tests that watch its end. */
+  readonly openFinder?: typeof openFinder;
   /** The store: `riffStore(stateDir)` but in tests that hold its writes. */
   readonly store?: RiffStore;
 }
@@ -113,11 +121,22 @@ interface Open {
   readonly id: string;
   readonly plan: RiffPlan;
   readonly agent: FxAgent;
+  /** The session's directory, as its real path: where its tools work. */
+  readonly directory: string;
+  readonly finder: Finder;
   config: RiffConfig;
   /** The last model request's context, for `usage_update`. */
   used: number | undefined;
   /** Whether a turn of a prompt is running. */
   running: boolean;
+  /** What tools kept for the window of a call, by its id, until it ends. */
+  readonly shown: Map<string, string>;
+  /** The calls this turn has sent the window, so each is sent once. */
+  calls: Set<string>;
+  /** What the person allowed for the rest of the session, in both modes. */
+  readonly grants: Grants;
+  /** The window, while a turn runs that may ask it. */
+  client: AgentContext | undefined;
 }
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
@@ -151,10 +170,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
    * Opens the session `id` on its sidecar, or a new one on the provider's
    * defaults, and writes its sidecar.
    */
-  const start = async (resumed?: {
-    readonly id: string;
-    readonly sidecar: Sidecar;
-  }): Promise<Open> => {
+  const start = async (
+    cwd: string,
+    resumed?: {
+      readonly id: string;
+      readonly sidecar: Sidecar;
+    },
+  ): Promise<Open> => {
     // A session of a plan riff cannot run now needs a sign-in too.
     if (
       options.provider === undefined ||
@@ -172,7 +194,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
     }
 
-    opening = made(options.provider, resumed);
+    opening = made(options.provider, cwd, resumed);
 
     try {
       open = await opening;
@@ -186,14 +208,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   /** A session made and its sidecar written, or none, closed. */
   const made = async (
     provider: FakeProvider,
+    cwd: string,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
-    const session = await create(provider, resumed);
+    const session = await create(provider, cwd, resumed);
 
     try {
       await save(session);
     } catch (error) {
-      await session.agent.close();
+      await closeOpen(session);
 
       throw error;
     }
@@ -201,7 +224,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     // The connection went while the sidecar was written: nobody will close
     // the session but this.
     if (gone) {
-      await session.agent.close();
+      await closeOpen(session);
 
       throw RequestError.internalError(undefined, 'the connection closed');
     }
@@ -211,11 +234,19 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
   const create = async (
     provider: FakeProvider,
+    cwd: string,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
     const plan: RiffPlan = 'fake';
     const config: RiffConfig = resumed?.sidecar ?? defaultConfig(plan);
     const holder: { open?: Open } = {};
+    const shown = new Map<string, string>();
+    const grants: Grants = new Set();
+    const directory = await realpath(cwd).catch(() => {
+      throw RequestError.invalidParams(undefined, `no directory ${cwd}`);
+    });
+
+    const finder = (options.openFinder ?? openFinder)(directory);
     const fx = (options.createAgent ?? createFxAgent)({
       ...options.backend,
       name: RIFF,
@@ -231,7 +262,19 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         },
       },
       model: config.model,
-      ...(options.tools === undefined ? {} : { tools: options.tools }),
+      tools:
+        options.tools ??
+        riffTools({
+          directory,
+          finder,
+          show: (id, text) => shown.set(id, text),
+          announce: (id, name, input) => announce(holder.open, id, name, input),
+          begin: (id, name, input) => begin(holder.open, id, name, input),
+          mode: () => holder.open?.config.mode ?? config.mode,
+          grants,
+          ask: (toolCall, permissionOptions, signal) =>
+            ask(holder.open, toolCall, permissionOptions, signal),
+        }),
       hooks: {
         onEvent: (event) => {
           if (
@@ -249,7 +292,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     try {
       id = resumed?.id ?? (await fx.newSessionId());
     } catch (error) {
-      await fx.close();
+      await closeBoth(fx, finder);
 
       throw error;
     }
@@ -257,7 +300,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     // The connection went while the session was being made: nobody will
     // close it but this.
     if (gone) {
-      await fx.close();
+      await closeBoth(fx, finder);
 
       throw RequestError.internalError(undefined, 'the connection closed');
     }
@@ -266,9 +309,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       id,
       plan,
       agent: fx,
+      directory,
+      finder,
       config: { model: config.model, effort: config.effort, mode: config.mode },
       used: undefined,
       running: false,
+      shown,
+      calls: new Set(),
+      grants,
+      client: undefined,
     };
 
     return holder.open;
@@ -312,10 +361,16 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     }
 
     const turn = fx.resume();
-    const started = new Set<string>();
+
+    session.calls = new Set();
 
     for await (const event of turn) {
-      const update = updateOf(event, started);
+      const update = updateOf(
+        event,
+        session.calls,
+        drawIn(session),
+        showIn(session),
+      );
 
       if (update !== undefined) {
         await notify(client, session.id, update);
@@ -330,6 +385,73 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         content: { type: 'text', text: INTERRUPTED },
       });
     }
+  };
+
+  /** Ends the session's libfx agent and its finder. */
+  const closeOpen = (session: Open) => closeBoth(session.agent, session.finder);
+
+  const drawIn = (session: Open) => (name: string, input: unknown) =>
+    drawn(session.directory, name, input);
+
+  /**
+   * Sends the window a call the turn's events have not sent yet: a tool
+   * runs before libfx's start of it is read, and the first of the two sends
+   * it (CHD-485), so an ask or a running state never comes before its call.
+   */
+  const announce = async (
+    session: Open | undefined,
+    id: string,
+    name: string,
+    input: unknown,
+  ) => {
+    const client = session?.client;
+
+    if (
+      session === undefined ||
+      client === undefined ||
+      session.calls.has(id)
+    ) {
+      return;
+    }
+
+    session.calls.add(id);
+    await notify(client, session.id, {
+      sessionUpdate: 'tool_call',
+      toolCallId: id,
+      ...drawIn(session)(name, input),
+      status: 'pending',
+      rawInput: input,
+    });
+  };
+
+  /** A call's effect begins: the window hears it running. */
+  const begin = async (
+    session: Open | undefined,
+    id: string,
+    name: string,
+    input: unknown,
+  ) => {
+    const client = session?.client;
+
+    if (session === undefined || client === undefined) {
+      return;
+    }
+
+    await announce(session, id, name, input);
+    await notify(client, session.id, {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: id,
+      status: 'in_progress',
+    });
+  };
+
+  /** What a call's tool kept for the window, given once, as its call ends. */
+  const showIn = (session: Open) => (id: string) => {
+    const text = session.shown.get(id);
+
+    session.shown.delete(id);
+
+    return text;
   };
 
   const notify = (
@@ -357,11 +479,14 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const session = open;
 
     if (session !== undefined) {
-      if (session.running) {
-        await session.agent.session(session.id).cancel();
+      // A cancel that fails still leaves nothing running.
+      try {
+        if (session.running) {
+          await session.agent.session(session.id).cancel();
+        }
+      } finally {
+        await closeOpen(session);
       }
-
-      await session.agent.close();
     }
 
     open = undefined;
@@ -369,8 +494,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
   const connection = agent({ name: RIFF })
     .onRequest('initialize', () => riffInit(options.version))
-    .onRequest('session/new', async () => {
-      const session = await start();
+    .onRequest('session/new', async ({ params }) => {
+      const session = await start(params.cwd);
 
       return {
         sessionId: session.id,
@@ -384,16 +509,21 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         throw RequestError.sessionNotFound(params.sessionId);
       }
 
-      const session = await start({ id: params.sessionId, sidecar });
+      const session = await start(params.cwd, {
+        id: params.sessionId,
+        sidecar,
+      });
 
       // The reopen's turn is the session's running work: a prompt waits for
       // it, and a close cancels it.
       session.running = true;
+      session.client = client;
 
       try {
         await closeOpenTurn(session, client);
       } finally {
         session.running = false;
+        session.client = undefined;
       }
 
       return { configOptions: configOptions(session.plan, session.config) };
@@ -433,9 +563,11 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       }
 
       const { model, effort } = session.config;
-      const started = new Set<string>();
+
+      session.calls = new Set();
 
       session.running = true;
+      session.client = client;
 
       try {
         const turn = session.agent
@@ -443,7 +575,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           .prompt(promptOf(params.prompt));
 
         for await (const event of turn) {
-          const update = updateOf(event, started);
+          const update = updateOf(
+            event,
+            session.calls,
+            drawIn(session),
+            showIn(session),
+          );
 
           if (update !== undefined) {
             await notify(client, session.id, update);
@@ -482,6 +619,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         };
       } finally {
         session.running = false;
+        session.client = undefined;
       }
     })
     .onNotification('session/cancel', async ({ params }) => {
@@ -498,6 +636,46 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     .connect(stream);
 
   return { connection, finished: connection.closed.then(shutdown) };
+}
+
+/**
+ * Asks the window about a call of `session`'s running turn: the option the
+ * person chose, or undefined when the ask was cancelled, failed, or no
+ * window is there to answer.
+ */
+async function ask(
+  session: Open | undefined,
+  toolCall: ToolCallUpdate,
+  options: PermissionOption[],
+  signal: AbortSignal,
+): Promise<string | undefined> {
+  if (session?.client === undefined) {
+    return undefined;
+  }
+
+  try {
+    const { outcome } = await session.client.request(
+      'session/request_permission',
+      { sessionId: session.id, toolCall, options },
+      { cancellationSignal: signal },
+    );
+
+    return outcome.outcome === 'selected' ? outcome.optionId : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Ends a libfx agent and its finder together: the finder neither waits on a
+ * close that waits on a turn nor is skipped by one that fails.
+ */
+async function closeBoth(agent: FxAgent, finder: Finder): Promise<void> {
+  const [closed] = await Promise.allSettled([agent.close(), finder.destroy()]);
+
+  if (closed.status === 'rejected') {
+    throw closed.reason;
+  }
 }
 
 /** ACP's prompt blocks as a libfx session takes them. */

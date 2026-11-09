@@ -14,7 +14,7 @@ describe("riff's models, efforts and modes", () => {
       expect(defaultConfig(plan)).toStrictEqual({
         model: first?.id ?? '',
         effort: 'default',
-        mode: 'ask',
+        mode: 'auto',
       });
       expect(planModels(plan).every(({ window }) => window > 0)).toBe(true);
     }

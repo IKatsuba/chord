@@ -136,7 +136,7 @@ Claude Code, Codex or Gemini as you normally would.
 
 Build from source with [Bun](https://bun.sh) 1.4.4 or newer. Compilation
 installs all target packages and checks the pinned libfx layout before
-embedding its native addon and WebAssembly core:
+embedding its native addon, WebAssembly core and fff's target library:
 
 ```sh
 git clone https://github.com/IKatsuba/chord && cd chord

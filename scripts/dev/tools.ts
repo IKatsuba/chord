@@ -10,7 +10,8 @@
  * `[run] bun = true`, runs it on Bun, when `bun scripts/dev.ts` is started
  * directly (the release) as much as through `bun dev`.
  */
-import { spawnSync } from 'node:child_process';
+import { spawn as spawnChild, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import { mkdirSync, rmSync } from 'node:fs';
 import { constants } from 'node:os';
 import { join } from 'node:path';
@@ -39,6 +40,82 @@ export const spawn: Run = ([command, ...args]) => {
     ? (child.status ?? 1)
     : 128 + constants.signals[child.signal];
 };
+
+/**
+ * Runs `argv` from the root on this terminal, `env` added, to its end and
+ * answers its status as `spawn` does, leaving this process free to serve.
+ */
+export type RunServing = (
+  argv: readonly string[],
+  env: Readonly<Record<string, string>>,
+) => Promise<number>;
+
+export const spawnServing: RunServing = async ([command, ...args], env) => {
+  const child = spawnChild(command ?? '', args, {
+    cwd: root,
+    stdio: 'inherit',
+    env: { ...process.env, ...env },
+  });
+  const [status, signal] = (await once(child, 'exit')) as [
+    number | null,
+    NodeJS.Signals | null,
+  ];
+
+  return signal === null ? (status ?? 1) : 128 + constants.signals[signal];
+};
+
+/** A fake provider served while chord runs: its base URL and its stop. */
+export interface FakeProvider {
+  readonly url: string;
+  stop(): Promise<void>;
+}
+
+/** Riff's tests' fake Chat Completions server, in this process. */
+async function serveFakeProvider(): Promise<FakeProvider> {
+  const { serveFakeChat } =
+    await import('../../tests/fixtures/riff/fake_chat.ts');
+
+  return serveFakeChat();
+}
+
+/**
+ * chord from source on riff, `args` after it, with React's production build
+ * and fixture resources. riff is in no agent list yet, so it is named with
+ * its own start as the agent command, as `--fake` names the fake agent; its
+ * provider is the fake Chat Completions server of its tests, served here
+ * while chord runs, whose scenarios answer by the prompt's words
+ * (`call read {"path":"a.txt"}` calls a tool).
+ */
+export async function chordOnRiff(
+  args: readonly string[],
+  run: RunServing = spawnServing,
+  serve: () => Promise<FakeProvider> = serveFakeProvider,
+): Promise<number> {
+  const { FAKE_PROVIDER_ENV } = await import('../../src/riff/serve.ts');
+  const { riffAgentStart } = await import('../../src/riff/start.ts');
+  const { command } = riffAgentStart();
+  const provider = await serve();
+
+  try {
+    return await run(
+      [
+        process.execPath,
+        '--define',
+        'process.env.NODE_ENV:"production"',
+        '--define',
+        'process.env.CHORD_RESOURCE_FIXTURE:"true"',
+        'src/main.tsx',
+        'riff',
+        '--agent-command',
+        quote([...command]),
+        ...args,
+      ],
+      { [FAKE_PROVIDER_ENV]: provider.url },
+    );
+  } finally {
+    await provider.stop();
+  }
+}
 
 /** chord from source with React's production build, on the fake agent if `fake`. */
 export function chord(

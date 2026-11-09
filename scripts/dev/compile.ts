@@ -22,6 +22,49 @@ export interface CompileOptions {
 
 const root = new URL('../..', import.meta.url).pathname;
 
+const MAIN = join(root, 'src', 'main.tsx');
+
+const FFF_WORKER = join(root, 'src', 'platform', 'fff_worker.ts');
+
+/**
+ * `entry` with fff's Worker (CHD-485): a binary finds a Worker's script
+ * only when it was built as one of its entry points, as Bun documents for
+ * `--compile`. Entries named flat put the Worker beside the code that starts
+ * it, so its `new URL('./fff_worker.ts', import.meta.url)` holds in the
+ * binary as from source.
+ */
+export function withFffWorker(
+  entry: string,
+): Pick<BuildConfig, 'entrypoints' | 'naming'> {
+  return {
+    entrypoints: [entry, FFF_WORKER],
+    naming: { entry: '[name].[ext]' },
+  };
+}
+
+/** The fff library a binary for `target` embeds: its own, glibc's on Linux. */
+export function fffLibrary(target: Target): string {
+  return target.os === 'linux'
+    ? `@ff-labs/fff-bin-linux-${target.cpu}-gnu/libfff_c.so`
+    : `@ff-labs/fff-bin-${target.os}-${target.cpu}/libfff_c.dylib`;
+}
+
+/**
+ * Why a build's inputs do not hold `target`'s fff library and no other,
+ * or undefined when they do: search needs it in the binary (CHD-485).
+ */
+export function fffProblem(
+  inputs: readonly string[],
+  target: Target,
+): string | undefined {
+  const embedded = inputs.filter((input) => input.includes('/fff-bin-'));
+  const wanted = fffLibrary(target);
+
+  return embedded.length === 1 && embedded[0]!.endsWith(wanted)
+    ? undefined
+    : `${target.bun} embeds ${JSON.stringify(embedded)}, not ${wanted} alone`;
+}
+
 /**
  * `bun install`'s selection of every platform's optional packages. A compile
  * build keeps every OpenTUI native import, and Bun skips the packages whose
@@ -203,11 +246,10 @@ export async function compile(args: CompileOptions): Promise<void> {
 
     // The JS API, as the command line takes no plugin.
     const built = await Bun.build({
-      ...buildOptions(join(root, 'src', 'main.tsx'), {
-        compiled: true,
-        target,
-      }),
+      ...buildOptions(MAIN, { compiled: true, target }),
+      ...withFffWorker(MAIN),
       compile: { target: target.bun, outfile: output },
+      metafile: true,
     });
 
     if (!built.success) {
@@ -215,6 +257,13 @@ export async function compile(args: CompileOptions): Promise<void> {
         console.error(log);
       }
 
+      process.exit(1);
+    }
+
+    const fff = fffProblem(Object.keys(built.metafile?.inputs ?? {}), target);
+
+    if (fff !== undefined) {
+      console.error(fff);
       process.exit(1);
     }
 

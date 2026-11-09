@@ -54,6 +54,51 @@ describe("libfx's events as session/update", () => {
     });
   });
 
+  test('a call ends with what its tool kept for the window, when it kept one', () => {
+    const end = {
+      type: 'tool_end',
+      id: 'call_1',
+      name: 'read',
+      content: '1\thello',
+      isError: false,
+    } as const;
+    const text = (update: unknown) =>
+      (update as { content: { content: { text: string } }[] }).content[0]
+        ?.content.text;
+
+    expect(
+      text(updateOf(end, new Set(), undefined, (id) => `shown ${id}`)),
+    ).toBe('shown call_1');
+    expect(text(updateOf(end, new Set(), undefined, () => undefined))).toBe(
+      '1\thello',
+    );
+  });
+
+  test("a call is drawn by its tool's own table when riff gives one", () => {
+    const start = {
+      type: 'tool_start',
+      id: 'call_1',
+      name: 'read',
+      input: { path: 'a.ts' },
+    } as const;
+
+    expect(
+      updateOf(start, new Set(), (name, input) => ({
+        title: `Read ${(input as { path: string }).path}`,
+        kind: 'read',
+        locations: [{ path: '/p/a.ts' }],
+      })),
+    ).toStrictEqual({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call_1',
+      title: 'Read a.ts',
+      kind: 'read',
+      locations: [{ path: '/p/a.ts' }],
+      status: 'pending',
+      rawInput: { path: 'a.ts' },
+    });
+  });
+
   test("a truncated input's preview is not sent as the input", () => {
     expect(
       updateOf(

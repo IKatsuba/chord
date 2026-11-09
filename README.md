@@ -148,6 +148,7 @@ bun dev compile --install   # into ~/.local/bin/chord
 chord                  # choose an agent in this directory
 chord gemini -C ~/src/app
 chord agents           # agents, startup commands and own CLI availability
+chord agents --json    # versioned agent list for scripts
 chord acp codex         # serve ACP on stdin and stdout for another client
 chord --continue       # the latest session here, again
 chord --resume <id>     # a recorded session, on its own agent

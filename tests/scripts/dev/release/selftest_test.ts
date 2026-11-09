@@ -344,3 +344,28 @@ describe('tester: riff selftest backend and exit contract', () => {
     ).rejects.toThrow('did not leave at EOF (7)');
   });
 });
+
+describe('tester: done cannot hide incomplete binary tool proof', () => {
+  const [search, read] = RIFF_TOOLS;
+  const incomplete = [
+    ['unfinished search', [{ ...search, status: 'in_progress' }, read!]],
+    ['missing search output', [{ ...search, text: '' }, read!]],
+    ['wrong read output', [search!, { ...read, text: '1\twrong' }]],
+    ['reversed calls', [read!, search!]],
+    ['extra call', [search!, read!, read!]],
+  ] as const;
+
+  for (const index of [0, 1]) {
+    for (const [name, tools] of incomplete) {
+      test(`${RIFF_TURNS[index]!.backend}: ${name} fails despite done and six requests`, () => {
+        const turns = RIFF_TURNS.map((turn, at) =>
+          at === index ? { ...turn, tools } : turn,
+        );
+        const problem = riffProblems(turns, 6);
+
+        expect(problem).toContain(`on ${RIFF_TURNS[index]!.backend}`);
+        expect(problem).toContain('called ');
+      });
+    }
+  }
+});

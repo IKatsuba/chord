@@ -1375,3 +1375,109 @@ describe("riff's read, list and search in the session's directory", () => {
     expect(answer.error?.message).toContain('no directory');
   });
 });
+
+describe('tester: permission cancellation and reopen', () => {
+  let project: string;
+
+  beforeEach(async () => {
+    project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-permission-edge-')),
+    );
+
+    await writeFile(join(project, 'a.txt'), 'permission fixture\n');
+  });
+
+  afterEach(async () => {
+    await rm(project, { recursive: true, force: true });
+  });
+
+  async function askingSession(): Promise<string> {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'ask',
+    });
+
+    return sessionId;
+  }
+
+  test('cancelled ask ignores a late session grant and the next turn asks again', async () => {
+    const sessionId = await askingSession();
+    const first = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const cancelled = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.notify('session/cancel', { sessionId });
+    expect((await first).result?.['stopReason']).toBe('cancelled');
+    client.respond(cancelled.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+
+    const second = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const asked = await client.until(
+      (message) =>
+        message.method === 'session/request_permission' &&
+        message.id !== cancelled.id,
+    );
+
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'deny' },
+    });
+    expect((await second).result?.['stopReason']).toBe('end_turn');
+    expect(
+      client
+        .updates(sessionId)
+        .some((update) => update.status === 'in_progress'),
+    ).toBe(false);
+    expect(client.said(sessionId)).toContain('The person denied this call.');
+  });
+
+  test('a session grant is forgotten when the saved session is reopened', async () => {
+    const sessionId = await askingSession();
+    const first = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const original = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.respond(original.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+    await first;
+    end();
+    await riff.finished;
+    await open();
+
+    const resumed = await client.request('session/resume', {
+      sessionId,
+      cwd: project,
+      mcpServers: [],
+    });
+
+    expect(resumed.error).toBeUndefined();
+
+    const next = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'deny' },
+    });
+    await next;
+    expect(client.said(sessionId)).toContain('The person denied this call.');
+    expect(
+      client
+        .updates(sessionId)
+        .some((update) => update.status === 'in_progress'),
+    ).toBe(false);
+  });
+});

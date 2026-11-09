@@ -545,3 +545,84 @@ describe("riff's tools ask as the session's mode says", () => {
     ).rejects.toThrow('the file changed while it was opened; read it again');
   });
 });
+
+describe('tester: concurrent permission answers stay with their calls', () => {
+  test('a late grant on a cancelled ask cannot grant that file or undo another call', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-concurrent-ask-')),
+    );
+    const finder = openFinder(root);
+    const grants = new Set<string>();
+    const ready = Promise.withResolvers<void>();
+    const firstAnswer = Promise.withResolvers<string>();
+    const otherAnswer = Promise.withResolvers<string>();
+    const asked: string[] = [];
+    const began: string[] = [];
+    let mode: RiffMode = 'ask';
+    const [read] = riffTools({
+      directory: root,
+      finder,
+      grants,
+      mode: () => mode,
+      begin: (id) => {
+        began.push(id);
+      },
+      ask: (call) => {
+        asked.push(call.toolCallId);
+
+        if (asked.length === 2) {
+          ready.resolve();
+        }
+
+        return call.toolCallId === 'first'
+          ? firstAnswer.promise
+          : call.toolCallId === 'other'
+            ? otherAnswer.promise
+            : Promise.resolve(DENY);
+      },
+    });
+    const run = (id: string, path: string, signal: AbortSignal) =>
+      read!.execute(
+        { path },
+        { signal, executionId: id, sessionId: 'same-session' },
+      ) as Promise<string>;
+    const live = () => new AbortController().signal;
+    const controller = new AbortController();
+    const reason = new Error('cancel only first ask');
+
+    try {
+      await writeFile(join(root, 'first.txt'), 'first\n');
+      await writeFile(join(root, 'other.txt'), 'other\n');
+
+      const first = run('first', 'first.txt', controller.signal);
+      const other = run('other', 'other.txt', live());
+
+      await ready.promise;
+      controller.abort(reason);
+      firstAnswer.resolve(ALLOW_SESSION);
+      otherAnswer.resolve(ALLOW_SESSION);
+      await expect(first).rejects.toBe(reason);
+      expect(await other).toBe('1\tother');
+      expect([...grants]).toEqual([`read:${join(root, 'other.txt')}`]);
+      expect(began).toEqual(['other']);
+
+      mode = 'auto';
+
+      expect(await run('auto-other', 'other.txt', live())).toBe('1\tother');
+
+      mode = 'ask';
+
+      expect(await run('granted-other', 'other.txt', live())).toBe('1\tother');
+      await expect(run('retry-first', 'first.txt', live())).rejects.toThrow(
+        'The person denied this call.',
+      );
+      expect(asked.toSorted()).toEqual(['first', 'other', 'retry-first']);
+      expect(began).not.toContain('retry-first');
+    } finally {
+      firstAnswer.resolve(DENY);
+      otherAnswer.resolve(DENY);
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

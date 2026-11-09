@@ -59,8 +59,15 @@ export function startingLine(agent: string): string {
 export function chordLine(row: ChordRow, agent: string): string {
   const list = (tools: readonly string[]) =>
     new Intl.ListFormat('en-GB', { type: 'conjunction' }).format(tools);
-  // A child's send_message reaches main alone; its other tools are its own.
-  const own = row.tools.filter((tool) => tool !== 'send_message');
+  // A child's send_message reaches main alone, its close_agent only the
+  // tasks it started (CHD-590); its other tools are its own.
+  const own = row.tools.flatMap((tool) =>
+    tool === 'send_message'
+      ? []
+      : tool === 'close_agent'
+        ? ['close_agent for its own tasks']
+        : [tool],
+  );
 
   return row.passed
     ? `chord's server gives ${agent} ${

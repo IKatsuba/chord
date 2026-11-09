@@ -307,8 +307,8 @@ test("/mcp lists chord's server first, and says what it gives or why it was not 
   expect(passed.server.from).toStrictEqual('chord itself');
   expect(chordLine(child, 'parser')).toStrictEqual(
     "chord's server gives parser list_agents, get_budgets, spawn_task, " +
-      'close_agent, monitor, stop_monitor and list_monitors, and send_message ' +
-      'to main only.',
+      'close_agent for its own tasks, monitor, stop_monitor and list_monitors, ' +
+      'and send_message to main only.',
   );
   expect(chordLine(passed, 'claude')).toStrictEqual(
     "chord's server gives claude list_agents, get_budgets, list_sessions, list_teams, " +

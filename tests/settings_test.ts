@@ -22,6 +22,7 @@ import {
   problemLine,
   problemNote,
   refusalLine,
+  refusedAgents,
   readSettingsObject,
   readTeamSelection,
   resolveStartup,
@@ -2342,4 +2343,41 @@ describe('CHD-567 tester: recovered lists across files and selection', () => {
       );
     });
   }
+});
+
+describe('the agents the files leave unstartable (CHD-598)', () => {
+  const user = '/config/chord/settings.json';
+  const project = '/project/.chord/settings.json';
+  const layer = (file: string, agents: Record<string, unknown>) => {
+    const { settings, refused } = parseSettings(
+      file,
+      JSON.stringify({ agents }),
+    );
+
+    return { file, settings, ...(refused === undefined ? {} : { refused }) };
+  };
+
+  test('a refused command refuses its agent, a later good one gives it back', () => {
+    expect(
+      refusedAgents([
+        layer(user, { codex: { command: 7 }, mine: { command: 'mine' } }),
+        layer(project, { mine: { command: false } }),
+      ]),
+    ).toStrictEqual(new Set(['codex', 'mine']));
+    expect(
+      refusedAgents([
+        layer(user, { codex: { command: 7 } }),
+        layer(project, { codex: { command: 'my-codex' } }),
+      ]),
+    ).toStrictEqual(new Set());
+  });
+
+  test('a later file that gives no command leaves the refusal standing', () => {
+    expect(
+      refusedAgents([
+        layer(user, { codex: { command: 7 } }),
+        layer(project, { codex: { model: 'o3' } }),
+      ]),
+    ).toStrictEqual(new Set(['codex']));
+  });
 });

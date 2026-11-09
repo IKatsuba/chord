@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RealEnvironment, which } from '@david/which';
 import {
+  agentsJson,
   agentStart,
   agentTable,
   DEFAULT_AGENT,
@@ -592,5 +593,203 @@ describe('CHD-565 tester: offered catalog boundaries', () => {
       agents: [],
       unknown: ['cursor', 'missing', 'mine'],
     });
+  });
+});
+
+describe('CHD-598 tester: JSON catalog boundaries', () => {
+  test('repeated offered and unknown names keep first order without duplicate rows or problems', async () => {
+    const listed = await listedAgents({}, () => Promise.resolve(undefined));
+    const result = agentsJson({
+      listed,
+      offered: ['goose', 'missing-tester', 'claude', 'goose', 'missing-tester'],
+      preferred: 'missing-preference',
+      problems: [],
+      refused: new Set(['claude', 'refused-only-tester']),
+    });
+
+    expect(result.preferred).toBe('missing-preference');
+    expect(result.agents.map(({ name }) => name)).toStrictEqual([
+      'goose',
+      ...listed.filter(({ name }) => name !== 'goose').map(({ name }) => name),
+    ]);
+    expect(result.agents.filter(({ offered }) => offered)).toStrictEqual([
+      {
+        name: 'goose',
+        title: 'goose',
+        via: 'cli',
+        found: false,
+        offered: true,
+        startable: true,
+      },
+    ]);
+    expect(result.problems).toStrictEqual([
+      { message: '"offeredAgents": no agent named missing-tester, left out' },
+    ]);
+  });
+
+  test('an empty offered list leaves every catalog row present and unoffered', async () => {
+    const listed = await listedAgents({}, () => Promise.resolve(undefined));
+    const result = agentsJson({
+      listed,
+      offered: [],
+      preferred: 'claude',
+      problems: [],
+      refused: new Set(),
+    });
+
+    expect(result.agents.map(({ name }) => name)).toStrictEqual(
+      listed.map(({ name }) => name),
+    );
+    expect(result.agents.every(({ offered }) => !offered)).toBe(true);
+    expect(result.problems).toStrictEqual([]);
+  });
+});
+
+describe('chord agents --json (CHD-598)', () => {
+  const listed = [
+    { name: 'claude', title: 'Claude', start: 'npx claude', from: 'npx' },
+    { name: 'fast', title: 'Fast', start: 'uvx fast', from: 'uvx' },
+    {
+      name: 'goose',
+      title: 'goose',
+      start: 'goose acp',
+      from: 'cli',
+      found: true,
+    },
+    {
+      name: 'cursor',
+      title: 'Cursor',
+      start: 'cursor-agent acp',
+      from: 'cli',
+      found: false,
+    },
+    { name: 'codex', title: 'Codex', start: 'my-codex', from: 'settings' },
+    { name: 'mine', title: undefined, start: 'mine --acp', from: 'settings' },
+  ] as const;
+  const json = (
+    given: Partial<Parameters<typeof agentsJson>[0]> = {},
+  ): ReturnType<typeof agentsJson> =>
+    agentsJson({
+      listed,
+      offered: undefined,
+      preferred: 'claude',
+      problems: [],
+      refused: new Set(),
+      ...given,
+    });
+  const named = (name: string) =>
+    json().agents.find((agent) => agent.name === name);
+
+  test('the object carries the version, the preferred agent and every field', () => {
+    expect(json({ preferred: 'goose' })).toStrictEqual({
+      version: 1,
+      preferred: 'goose',
+      agents: [
+        {
+          name: 'claude',
+          title: 'Claude',
+          via: 'npx',
+          found: null,
+          offered: true,
+          startable: true,
+        },
+        {
+          name: 'fast',
+          title: 'Fast',
+          via: 'uvx',
+          found: null,
+          offered: true,
+          startable: true,
+        },
+        {
+          name: 'goose',
+          title: 'goose',
+          via: 'cli',
+          found: true,
+          offered: true,
+          startable: true,
+        },
+        {
+          name: 'codex',
+          title: 'Codex',
+          via: 'settings',
+          found: null,
+          offered: true,
+          startable: true,
+        },
+        {
+          name: 'mine',
+          title: null,
+          via: 'settings',
+          found: null,
+          offered: true,
+          startable: true,
+        },
+        {
+          name: 'cursor',
+          title: 'Cursor',
+          via: 'cli',
+          found: false,
+          offered: false,
+          startable: true,
+        },
+      ],
+      problems: [],
+    });
+  });
+
+  test('found is a boolean for an own CLI only', () => {
+    expect(named('goose')?.found).toBe(true);
+    expect(named('cursor')?.found).toBe(false);
+
+    for (const name of ['claude', 'fast', 'codex', 'mine']) {
+      expect(named(name)?.found).toBeNull();
+    }
+  });
+
+  test("with the setting, its names come first in its order, the rest in the catalog's", () => {
+    const agents = json({ offered: ['mine', 'cursor', 'claude'] }).agents;
+
+    expect(agents.map(({ name, offered }) => [name, offered])).toStrictEqual([
+      ['mine', true],
+      ['cursor', true],
+      ['claude', true],
+      ['fast', false],
+      ['goose', false],
+      ['codex', false],
+    ]);
+  });
+
+  test('a name the setting gives that chord lacks is a problem without a file', () => {
+    const problem = {
+      file: '/config/chord/settings.json',
+      kind: 'validation',
+      message: 'unknown key "x", ignored',
+    } as const;
+
+    expect(
+      json({ offered: ['zed', 'claude'], problems: [problem] }).problems,
+    ).toStrictEqual([
+      { file: problem.file, message: problem.message },
+      { message: '"offeredAgents": no agent named zed, left out' },
+    ]);
+  });
+
+  test('a refused command leaves its agent unstartable and not offered, with or without the setting', () => {
+    for (const offered of [undefined, ['codex', 'claude']]) {
+      const agents = json({ offered, refused: new Set(['codex']) }).agents;
+
+      expect(agents.find(({ name }) => name === 'codex')).toStrictEqual({
+        name: 'codex',
+        title: 'Codex',
+        via: 'settings',
+        found: null,
+        offered: false,
+        startable: false,
+      });
+      expect(
+        agents.filter(({ startable }) => !startable).map(({ name }) => name),
+      ).toStrictEqual(['codex']);
+    }
   });
 });

@@ -1723,11 +1723,40 @@ the program, then its arguments as written, including empty arguments.
 The program must be nonempty and every item a string. The last settings
 file to give a command decides; `--agent-command` overrides all.
 A name your settings files alone give a command starts as `chord <name>`.
-`chord agents` lists them all: each one's name and title (`from settings` for a name only they define), `npx` or `uvx` for the
-registry's, `own CLI · found` or `own CLI · not on PATH` for those that need
-their own CLI, and `settings` where a settings file's command starts it, then
-what starts it, that command in the table's or the registry's place, wrapped
-within its column on a terminal and one line per agent when piped.
+`chord agents` lists each name, title (`from settings` for settings-only
+names), source (`npx`, `uvx`, `own CLI · found`, `own CLI · not on PATH` or
+`settings`) and start command. A settings command replaces the built-in
+command. Commands wrap within their column on a terminal; piped output has
+one line per agent.
+
+`chord agents --json` writes one object on stdout, followed by a newline.
+`-C <dir>` chooses the directory whose settings it reads, as for the table.
+The object has these fields:
+
+| Field       | Meaning                                                                                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `version`   | Format version, currently `1`. Adding a field keeps version 1; removing a field or changing its meaning raises the version.                                                                     |
+| `preferred` | The `agent` setting, or `"claude"` when absent; it need not be offered or startable.                                                                                                            |
+| `agents`    | Array of agent kinds, with every field below present on each entry.                                                                                                                             |
+| `problems`  | Array of settings problems as `{file, message}`, then unknown `offeredAgents` names as `{message}` without `file`. A refused command uses its settings problem, without a second refusal entry. |
+
+| Agent field | Meaning                                                                                                                                            |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`      | The name used by `chord <name>` and settings.                                                                                                      |
+| `title`     | Display title, or `null` for a name only settings define.                                                                                          |
+| `via`       | `"npx"` or `"uvx"` downloads and runs a package; `"cli"` uses an installed CLI; `"settings"` uses a command from settings, which takes precedence. |
+| `found`     | For `"cli"`, whether PATH has its command (`true` or `false`); `null` otherwise.                                                                   |
+| `offered`   | Whether `offeredAgents` makes this entry available in the start screen and `/new`; always `false` when `startable` is `false`.                     |
+| `startable` | `false` when settings refuse the agent's command, preventing startup; `true` otherwise. This does not check installation, login or readiness.      |
+
+A problem's `file` is the settings file's path; `message` describes the
+problem. Offered entries come first in the start screen's order, then the rest in
+catalog order: registry agents, own-CLI agents absent from the registry,
+then settings-only names in settings order. The start command is omitted
+because it can contain environment values. stderr keeps the same problem
+lines as the table command. Making the list exits `0`, even with problems
+or unstartable entries. Without `--json`, the table is unchanged.
+
 If an agent does not start, chord says which request it refused or was
 answering when it exited or closed its connection, with its exit code or
 signal when known. A Registry agent's failure also names the `package@version`

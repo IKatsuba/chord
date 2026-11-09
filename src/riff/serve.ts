@@ -3,11 +3,12 @@
  * window closes its stdin.
  */
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
-import { memory } from 'libfx/node';
+
 import process from 'node:process';
 import { Readable } from 'node:stream';
 import { outputStream } from '../acp/stdio.ts';
 import { libfxBackend } from '../platform/libfx.ts';
+import { chordStateDir } from '../session/state_dir.ts';
 import { connectRiff, type FakeProvider } from './adapter.ts';
 
 /**
@@ -35,7 +36,7 @@ export async function runRiffAgent(version: string): Promise<void> {
       version,
       provider: fakeProvider(process.env),
       backend: await libfxBackend(),
-      durability: memory(),
+      stateDir: chordStateDir(),
     },
   );
 

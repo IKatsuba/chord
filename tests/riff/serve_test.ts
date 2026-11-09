@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import process from 'node:process';
 import { agentStart } from '../../src/agents.ts';
 import { openAgent } from '../../src/acp/connection.ts';
@@ -20,10 +23,11 @@ describe('chord --riff-agent', () => {
 
   test('runs a turn on the fake provider in its own process', async () => {
     const fake = serveFakeChat();
+    const state = await mkdtemp(join(tmpdir(), 'chord-riff-'));
     const said: string[] = [];
     const agent = await openAgent({
       command: agentStart('riff').command,
-      env: { [FAKE_PROVIDER_ENV]: fake.url },
+      env: { [FAKE_PROVIDER_ENV]: fake.url, XDG_STATE_HOME: state },
       cwd: process.cwd(),
       onTraffic: (traffic) => {
         if (traffic.from === 'agent') {
@@ -65,6 +69,7 @@ describe('chord --riff-agent', () => {
     } finally {
       await agent.close();
       await fake.stop();
+      await rm(state, { recursive: true, force: true });
     }
   });
 });

@@ -3,7 +3,8 @@
  * through libfx's custom provider (CHD-485, "Tests"). The last user message
  * picks the scenario: one naming `hang` streams a word and then nothing until
  * the request is dropped, `long` ends cut at the output limit, `fail` is
- * refused with a 400, `think` reasons before it answers; anything else is
+ * refused with a 400, `think` reasons before it answers, `tool` calls the
+ * host tool `mark` once and answers once it has its result; anything else is
  * answered `Hello from riff.` Every answer reports usage. Nothing reaches a
  * real provider.
  */
@@ -107,6 +108,31 @@ export function serveFakeChat(): FakeChat {
               hung.resolve();
             },
           }),
+          { headers },
+        );
+      }
+
+      if (
+        said.includes('tool') &&
+        !body.messages?.some(({ role }) => role === 'tool')
+      ) {
+        return new Response(
+          [
+            chunk({
+              role: 'assistant',
+              tool_calls: [
+                {
+                  index: 0,
+                  id: 'call_mark',
+                  type: 'function',
+                  function: { name: 'mark', arguments: '{}' },
+                },
+              ],
+            }),
+            chunk({}, 'tool_calls'),
+            usage,
+            'data: [DONE]\n\n',
+          ].join(''),
           { headers },
         );
       }

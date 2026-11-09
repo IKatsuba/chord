@@ -15,7 +15,6 @@ import {
 } from '@agentclientprotocol/sdk/unstable';
 import {
   createFxAgent,
-  type Durability,
   type FxAgent,
   type FxAgentTools,
   type FxNodeBackendOptions,
@@ -37,6 +36,10 @@ import {
   windowOf,
 } from './models.ts';
 import { RIFF } from './start.ts';
+import { riffStore, type Sidecar } from './store.ts';
+
+/** What a reopened session says of a turn a dead process left open. */
+export const INTERRUPTED = 'The interrupted turn was cancelled.';
 
 /** The fake Chat Completions server riff runs on in tests. */
 export interface FakeProvider {
@@ -52,8 +55,8 @@ export interface RiffOptions {
    */
   readonly provider: FakeProvider | undefined;
   readonly backend: FxNodeBackendOptions;
-  /** Where libfx keeps its sessions. */
-  readonly durability: Durability;
+  /** chord's state directory, where riff keeps its sessions. */
+  readonly stateDir: string;
   /**
    * Host tools, for tests constructing riff in-process alone: nothing in the
    * binary can add one.
@@ -116,6 +119,7 @@ interface Open {
 }
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
+  const store = riffStore(options.stateDir);
   let open: Open | undefined;
   // The session being created, so a second session/new and a close that
   // comes meanwhile see it; and whether the connection has gone.
@@ -130,8 +134,19 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     return open;
   };
 
-  const start = async (): Promise<Open> => {
-    if (options.provider === undefined) {
+  /**
+   * Opens the session `id` on its sidecar, or a new one on the provider's
+   * defaults, and writes its sidecar.
+   */
+  const start = async (resumed?: {
+    readonly id: string;
+    readonly sidecar: Sidecar;
+  }): Promise<Open> => {
+    // A session of a plan riff cannot run now needs a sign-in too.
+    if (
+      options.provider === undefined ||
+      (resumed !== undefined && resumed.sidecar.provider !== 'fake')
+    ) {
       throw new RequestError(-32000, 'Sign in to a plan for riff.', {
         authMethods: riffInit(options.version).authMethods,
       });
@@ -144,7 +159,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
     }
 
-    opening = create(options.provider);
+    opening = create(options.provider, resumed);
 
     try {
       open = await opening;
@@ -152,17 +167,22 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       opening = undefined;
     }
 
+    await save(open);
+
     return open;
   };
 
-  const create = async (provider: FakeProvider): Promise<Open> => {
+  const create = async (
+    provider: FakeProvider,
+    resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
+  ): Promise<Open> => {
     const plan: RiffPlan = 'fake';
-    const config = defaultConfig(plan);
+    const config: RiffConfig = resumed?.sidecar ?? defaultConfig(plan);
     const holder: { open?: Open } = {};
     const fx = (options.createAgent ?? createFxAgent)({
       ...options.backend,
       name: RIFF,
-      durability: options.durability,
+      durability: store.durability,
       provider: {
         name: 'fake',
         baseUrl: provider.baseUrl,
@@ -190,7 +210,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     let id: string;
 
     try {
-      id = await fx.newSessionId();
+      id = resumed?.id ?? (await fx.newSessionId());
     } catch (error) {
       await fx.close();
 
@@ -209,12 +229,53 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       id,
       plan,
       agent: fx,
-      config,
+      config: { model: config.model, effort: config.effort, mode: config.mode },
       used: undefined,
       running: false,
     };
 
     return holder.open;
+  };
+
+  const save = (session: Open) =>
+    store.write(session.id, {
+      provider: session.plan,
+      account: null,
+      ...session.config,
+    });
+
+  /**
+   * libfx's `resume()` runs a turn a crashed process left open, and a plain
+   * next prompt would run it first, unseen (CHD-485, T2). So every reopen
+   * cancels first and then resumes: `cancelled` with a turn id means a turn
+   * was open and is now ended, its failed calls sent and a line saying so;
+   * `idle` means none was. This follows from libfx's code order, not a
+   * documented guarantee, so a fake-crash test counts what it runs.
+   */
+  const closeOpenTurn = async (session: Open, client: AgentContext) => {
+    const fx = session.agent.session(session.id);
+
+    await fx.cancel();
+
+    const turn = fx.resume();
+    const started = new Set<string>();
+
+    for await (const event of turn) {
+      const update = updateOf(event, started);
+
+      if (update !== undefined) {
+        await notify(client, session.id, update);
+      }
+    }
+
+    const result = await turn.result;
+
+    if (result.stopReason === 'cancelled' && 'messageId' in result) {
+      await notify(client, session.id, {
+        sessionUpdate: 'agent_message_chunk',
+        content: { type: 'text', text: INTERRUPTED },
+      });
+    }
   };
 
   const notify = (
@@ -256,7 +317,20 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         configOptions: configOptions(session.plan, session.config),
       };
     })
-    .onRequest('session/set_config_option', ({ params }) => {
+    .onRequest('session/resume', async ({ params, client }) => {
+      const sidecar = await store.read(params.sessionId);
+
+      if (sidecar === undefined) {
+        throw RequestError.sessionNotFound(params.sessionId);
+      }
+
+      const session = await start({ id: params.sessionId, sidecar });
+
+      await closeOpenTurn(session, client);
+
+      return { configOptions: configOptions(session.plan, session.config) };
+    })
+    .onRequest('session/set_config_option', async ({ params }) => {
       const session = opened(params.sessionId);
       const next = setOption(
         session.plan,
@@ -273,6 +347,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       }
 
       session.config = next;
+
+      await save(session);
 
       return { configOptions: configOptions(session.plan, next) };
     })
@@ -319,6 +395,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         if (result.error?.code === 'LIBFX_MODEL_UNSUPPORTED_EFFORT') {
           session.config = { ...session.config, effort: 'default' };
 
+          await save(session);
           await notify(client, session.id, {
             sessionUpdate: 'config_option_update',
             configOptions: configOptions(session.plan, session.config),

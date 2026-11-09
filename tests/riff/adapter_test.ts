@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
-import { createFxAgent, type FxAgent, memory } from 'libfx/node';
+import { createFxAgent, type FxAgent } from 'libfx/node';
+import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { connectRiff, type Riff, riffInit } from '../../src/riff/adapter.ts';
 import { libfxBackend } from '../../src/platform/libfx.ts';
 import { clientOverStreams, type AcpClient } from '../fixtures/acp_client.ts';
@@ -15,6 +18,7 @@ let fake: FakeChat;
 let client: AcpClient;
 let riff: Riff;
 let end: () => void;
+let stateDir: string;
 
 /** riff in this process, on the fake provider or on none. */
 async function open(provider = true): Promise<void> {
@@ -26,7 +30,7 @@ async function open(provider = true): Promise<void> {
     version: '1.2.3',
     provider: provider ? { baseUrl: fake.url } : undefined,
     backend: await libfxBackend(),
-    durability: memory(),
+    stateDir,
   });
 
   await client.request('initialize', { protocolVersion: 1 });
@@ -48,14 +52,16 @@ function prompt(sessionId: string, text: string) {
   });
 }
 
-beforeEach(() => {
+beforeEach(async () => {
   fake = serveFakeChat();
+  stateDir = await mkdtemp(join(tmpdir(), 'chord-riff-'));
 });
 
 afterEach(async () => {
   end();
   await riff.finished;
   await fake.stop();
+  await rm(stateDir, { recursive: true, force: true });
 });
 
 describe('riff over an in-memory pair', () => {
@@ -316,7 +322,7 @@ describe('a connection that closes while session/new makes the session', () => {
       version: '1.2.3',
       provider: { baseUrl: fake.url },
       backend: await libfxBackend(),
-      durability: memory(),
+      stateDir,
       createAgent: (options) => {
         const made = createFxAgent(options);
 
@@ -357,5 +363,97 @@ describe('a connection that closes while session/new makes the session', () => {
     await riff.finished;
 
     expect(closes).toStrictEqual(['closed']);
+  });
+});
+
+describe("riff's store and resume", () => {
+  const sidecar = async (sessionId: string) =>
+    JSON.parse(
+      await readFile(
+        join(stateDir, 'riff', 'sidecars', `${sessionId}.json`),
+        'utf8',
+      ),
+    ) as unknown;
+
+  test('a new session writes its sidecar, and a config change rewrites it', async () => {
+    await open();
+
+    const sessionId = await newSession();
+
+    expect(sessionId).toMatch(/^wrun_/);
+    expect(await sidecar(sessionId)).toStrictEqual({
+      provider: 'fake',
+      account: null,
+      model: 'fake',
+      effort: 'default',
+      mode: 'ask',
+    });
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'auto',
+    });
+
+    expect(await sidecar(sessionId)).toMatchObject({ mode: 'auto' });
+  });
+
+  test("resume reopens on the sidecar's options, with the model's history", async () => {
+    await open();
+
+    const sessionId = await newSession();
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'auto',
+    });
+    await prompt(sessionId, 'hello');
+    end();
+    await riff.finished;
+
+    await open();
+
+    const resumed = await client.request('session/resume', {
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+    const options = resumed.result?.['configOptions'] as {
+      id: string;
+      currentValue: string;
+    }[];
+
+    expect(options.find(({ id }) => id === 'mode')?.currentValue).toBe('auto');
+    expect(client.updates(sessionId)).toStrictEqual([]);
+
+    const answer = await prompt(sessionId, 'again');
+
+    expect(answer.result?.['stopReason']).toBe('end_turn');
+    expect(JSON.stringify(fake.requests.at(-1)?.messages)).toContain('hello');
+  });
+
+  test('resume of a session riff never had is not found', async () => {
+    await open();
+
+    const answer = await client.request('session/resume', {
+      sessionId: 'wrun_none',
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+
+    expect(answer.error?.code).toBe(-32002);
+  });
+
+  test('a sidecar is read only for a session id libfx could have given', async () => {
+    await open();
+
+    const answer = await client.request('session/resume', {
+      sessionId: '../../escape',
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+
+    expect(answer.error?.code).toBe(-32002);
   });
 });

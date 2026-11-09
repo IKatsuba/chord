@@ -480,8 +480,12 @@ export class TaskAgent {
       return;
     }
 
+    // The first stop counts, a stop with no key among them.
+    if (!this.#stopped) {
+      this.#stoppedWith = by;
+    }
+
     this.#stopped = true;
-    this.#stoppedWith ??= by;
 
     if (!this.#sent) {
       return this.#end('cancelled', '');

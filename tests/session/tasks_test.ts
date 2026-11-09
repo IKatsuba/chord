@@ -308,6 +308,54 @@ test('a task its agent stopped says so on its end, and its parent is held no lin
   ).toStrictEqual({ 'chord/stopped': { agent: 'main' } });
 });
 
+test('a stop with no key first stays bare when its agent closes it after, and its line is held (CHD-590)', () => {
+  const { task, relayed, ahead } = harness();
+
+  task.heard({ type: 'connected', sessionId: 's1' });
+  task.heard({ type: 'prompt', turnId: 'r1', text: 'x', at: 1 });
+  task.cancel();
+  task.cancel({ agent: 'main' });
+  task.heard({
+    type: 'result',
+    turnId: 'r1',
+    result: { status: 'cancelled', stopReason: 'cancelled' },
+  });
+
+  expect(ahead.length).toStrictEqual(1);
+
+  const last = relayed.at(-1);
+
+  expect(
+    last?.type === 'update' && last.update.sessionUpdate === 'subagent_update'
+      ? last.update._meta
+      : undefined,
+  ).toBeUndefined();
+});
+
+test('an agent close first keeps its name when a stop with no key follows (CHD-590)', () => {
+  const { task, relayed, ahead } = harness();
+
+  task.heard({ type: 'connected', sessionId: 's1' });
+  task.heard({ type: 'prompt', turnId: 'r1', text: 'x', at: 1 });
+  task.cancel({ agent: 'main' });
+  task.cancel();
+  task.heard({
+    type: 'result',
+    turnId: 'r1',
+    result: { status: 'cancelled', stopReason: 'cancelled' },
+  });
+
+  expect(ahead).toStrictEqual([]);
+
+  const last = relayed.at(-1);
+
+  expect(
+    last?.type === 'update' && last.update.sessionUpdate === 'subagent_update'
+      ? last.update._meta
+      : undefined,
+  ).toStrictEqual({ 'chord/stopped': { agent: 'main' } });
+});
+
 test('a task the person stopped first keeps its x when its agent closes it after (CHD-590)', () => {
   const { task, relayed, ahead } = harness();
 

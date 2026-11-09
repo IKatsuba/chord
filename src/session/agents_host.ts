@@ -873,6 +873,28 @@ export function createAgentsHost(
   };
 
   /**
+   * The tasks session `key` started that `to` names, by id or name: those
+   * running, and those ended, of which only their blocks are left.
+   */
+  const tasksNamed = (key: number, to: string) => {
+    const running =
+      conversationAt(key)?.tasks.filter(
+        (task) => task.id === to || task.start.name === to,
+      ) ?? [];
+    const ended = tasksIn(stateOf(key)?.transcript.entries ?? []).flatMap(
+      ({ id, state, task }) =>
+        task !== undefined &&
+        state !== 'running' &&
+        !running.some((each) => each.id === id) &&
+        (id === to || task.name === to)
+          ? [{ id, name: task.name }]
+          : [],
+    );
+
+    return { running, ended };
+  };
+
+  /**
    * `close_agent` on a task the caller started with `spawn_task`, by its id
    * or a name only one of its tasks has: a running one stopped as the
    * person's `x` stops it, its end naming the caller; one ended said to
@@ -883,27 +905,12 @@ export function createAgentsHost(
       caller.agent === undefined
         ? undefined
         : childOf(caller.key, caller.agent);
-    const own =
-      caller.agent === undefined
-        ? conversationAt(caller.key)
-        : child?.conversation;
 
-    if (own === undefined) {
+    if (caller.agent !== undefined && child === undefined) {
       return undefined;
     }
 
-    const running = own.tasks.filter(
-      (task) => task.id === to || task.start.name === to,
-    );
-    // An ended task is let go: only its block in the transcript is left.
-    const ended = tasksIn(
-      stateOf(child?.key ?? caller.key)?.transcript.entries ?? [],
-    ).filter(
-      (task) =>
-        task.state !== 'running' &&
-        !running.some((each) => each.id === task.id) &&
-        (task.id === to || task.task?.name === to),
-    );
+    const { running, ended } = tasksNamed(child?.key ?? caller.key, to);
     const found = [
       ...running.map((task) => task.id),
       ...ended.map((task) => task.id),
@@ -924,7 +931,7 @@ export function createAgentsHost(
       return { closed: task.start.name };
     }
 
-    const name = ended[0]?.task?.name;
+    const name = ended[0]?.name;
 
     return name === undefined ? undefined : { ended: name };
   };
@@ -2979,6 +2986,7 @@ export function createAgentsHost(
     MAIN,
     tell,
     closeAgent,
+    tasksNamed,
     clearByPerson,
     clearAgent,
     message,

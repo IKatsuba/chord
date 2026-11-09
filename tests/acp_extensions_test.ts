@@ -1100,3 +1100,77 @@ describe('CHD-575 U6 tester: monitor ownership and lifetime', () => {
       expect((await stop(client, sessionId, 'm1')).error?.code).toBe(-32002);
     }));
 });
+
+describe('agents/close on a task of chord’s (CHD-590)', () => {
+  const close = (client: AcpClient, sessionId: string) =>
+    client.request('_chord/agents/close', { sessionId });
+  /** Whether the process group `pid` leads still has a process in it. */
+  const groupAlive = (pid: number) => {
+    try {
+      return process.kill(-pid, 0);
+    } catch {
+      return false;
+    }
+  };
+
+  test('stops a running task with its process group, and says one ended has', async () => {
+    const opened: Session[] = [];
+
+    await withExtensionWire(
+      [],
+      { subagents: {} },
+      async (client, newSession) => {
+        const main = await newSession();
+
+        await client.answerTo(wirePrompt(client, main, 'tasklong'));
+        await until(() =>
+          client
+            .updates(main)
+            .some((update) => update.sessionUpdate === 'subagent_update'),
+        );
+
+        const sessionId = client
+          .updates(main)
+          .find(
+            (update) => update.sessionUpdate === 'subagent_update',
+          )?.sessionId;
+
+        assert(typeof sessionId === 'string');
+        await until(() =>
+          client.said(sessionId).includes('Watching the build.'),
+        );
+
+        const pid = [...(opened.at(-1)?.agentPids ?? [])][0];
+
+        assert(pid !== undefined);
+        expect(groupAlive(pid)).toBe(true);
+        expect((await close(client, sessionId)).result).toEqual({
+          closed: ['Watch the build'],
+        });
+        await until(() => !groupAlive(pid));
+
+        const ending = client
+          .updates(main)
+          .findLast(
+            (update) =>
+              update.sessionUpdate === 'subagent_update' &&
+              update.sessionId === sessionId,
+          );
+
+        expect(ending?.state).toEqual({
+          state: 'idle',
+          stopReason: 'cancelled',
+        });
+        expect((await close(client, sessionId)).result).toEqual({
+          closed: [],
+          ended: ['Watch the build'],
+        });
+      },
+      (session) => {
+        opened.push(session);
+
+        return session;
+      },
+    );
+  });
+});

@@ -1463,6 +1463,52 @@ export function runAcp(options: AcpOptions): AcpRun {
   };
 
   /**
+   * `_chord/agents/close` on a task of chord's the client names
+   * `sessionId`: a running one stopped as a cancel with no key stops it,
+   * the person's stop with no key pressed, and one ended said to be. None
+   * when it names no task.
+   */
+  const taskClosed = (sessionId: string) => {
+    for (const entry of sessions.values()) {
+      const owners = [
+        { key: entry.key, upstream: entry.upstream },
+        ...[...entry.routes].map(([key, route]) => ({
+          key,
+          upstream: route.upstream,
+        })),
+      ];
+
+      for (const { key, upstream } of owners) {
+        const id =
+          key === undefined || upstream === undefined
+            ? undefined
+            : childOf(upstream, sessionId);
+
+        if (key === undefined || id === undefined) {
+          continue;
+        }
+
+        const { running, ended } = entry.host.tasksNamed(key, id);
+        const task = running.find((each) => each.id === id);
+
+        if (task !== undefined) {
+          task.cancel();
+
+          return { closed: [task.start.name] };
+        }
+
+        const done = ended.find((each) => each.id === id);
+
+        if (done !== undefined) {
+          return { closed: [], ended: [done.name] };
+        }
+      }
+    }
+
+    return undefined;
+  };
+
+  /**
    * A cancel of a child of `entry`, if `sessionId` names one: a long-lived one's
    * turn stops and it stays open, a task of chord's ends, and an agent's own
    * subagent is stopped by its agent.
@@ -2043,6 +2089,12 @@ export function runAcp(options: AcpOptions): AcpRun {
       },
       closeAgent: ({ params }) => {
         refuseIfClosing();
+
+        const task = taskClosed(params.sessionId);
+
+        if (task !== undefined) {
+          return task;
+        }
 
         const { entry, child } = childNamed(params.sessionId);
 

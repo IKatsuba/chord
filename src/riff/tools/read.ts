@@ -39,6 +39,8 @@ function textual(mime: string): boolean {
 export interface ReadSteps {
   /** The path as the person reads it, for messages; the real path when not given. */
   readonly label?: string;
+  /** The path is the real path a permission was asked on (`OpenSteps`). */
+  readonly exact?: boolean;
   /**
    * Takes what the window shows of the read: the lines as read, without the
    * model's line numbers or its note on where to read on.
@@ -60,10 +62,10 @@ export async function readLines(
 ): Promise<string> {
   signal.throwIfAborted();
 
-  const { real, handle, size } = await openReal(
-    path,
-    steps.label === undefined ? {} : { label: steps.label },
-  );
+  const { real, handle, size } = await openReal(path, {
+    ...(steps.label === undefined ? {} : { label: steps.label }),
+    ...(steps.exact === undefined ? {} : { exact: steps.exact }),
+  });
   const named = steps.label ?? real;
 
   try {

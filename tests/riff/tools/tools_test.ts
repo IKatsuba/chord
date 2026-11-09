@@ -1,9 +1,15 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { FxAgentHostTool } from 'libfx/node';
-import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type Finder, openFinder } from '../../../src/platform/fff.ts';
+import type { RiffMode } from '../../../src/riff/models.ts';
+import {
+  ALLOW,
+  ALLOW_SESSION,
+  DENY,
+} from '../../../src/riff/tools/permission.ts';
 import { drawn, riffTools } from '../../../src/riff/tools/tools.ts';
 
 describe('how riff draws a call', () => {
@@ -264,5 +270,188 @@ describe('tester: read display belongs to its execution', () => {
       await finder.destroy();
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("riff's tools ask as the session's mode says", () => {
+  let root: string;
+  let outside: string;
+  let finder: Finder;
+
+  beforeAll(async () => {
+    root = await realpath(await mkdtemp(join(tmpdir(), 'chord-riff-ask-')));
+    outside = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-ask-out-')),
+    );
+
+    await writeFile(join(root, 'a.txt'), 'needle\n');
+    await writeFile(join(outside, 'b.txt'), 'far\n');
+    await symlink(join(outside, 'b.txt'), join(root, 'link.txt'));
+
+    finder = openFinder(root);
+  });
+
+  afterAll(async () => {
+    await finder.destroy();
+    await rm(root, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  });
+
+  /** The tools of a session whose asks are answered by `answers`, in order. */
+  const session = (
+    mode: RiffMode,
+    answers: (string | undefined)[],
+    grants = new Set<string>(),
+  ) => {
+    const asked: { title: string; options: string[] }[] = [];
+    let current = mode;
+    const tools = Object.fromEntries(
+      riffTools({
+        directory: root,
+        finder,
+        mode: () => current,
+        grants,
+        ask: (toolCall, options) => {
+          asked.push({
+            title: toolCall.title ?? '',
+            options: options.map(({ optionId }) => optionId),
+          });
+
+          return Promise.resolve(answers.shift());
+        },
+      }).map((tool) => [tool.name, tool]),
+    );
+    const run = (name: string, input: unknown, signal?: AbortSignal) =>
+      tools[name]!.execute(input, {
+        signal: signal ?? new AbortController().signal,
+        executionId: 'call',
+        sessionId: 'session',
+      }) as Promise<string>;
+
+    return {
+      asked,
+      run,
+      grants,
+      switchTo: (next: RiffMode) => {
+        current = next;
+      },
+    };
+  };
+
+  test('in ask, every call asks with the three options, and Allow runs it', async () => {
+    const { asked, run } = session('ask', [ALLOW, ALLOW, ALLOW]);
+
+    expect(await run('read', { path: 'a.txt' })).toBe('1\tneedle');
+    expect(await run('list', { pattern: '*.txt' })).toContain('a.txt');
+    expect(await run('search', { query: 'needle' })).toBe('a.txt:1: needle');
+    expect(asked).toStrictEqual([
+      { title: 'Read a.txt', options: [ALLOW, ALLOW_SESSION, DENY] },
+      { title: 'List *.txt', options: [ALLOW, ALLOW_SESSION, DENY] },
+      { title: 'Search needle', options: [ALLOW, ALLOW_SESSION, DENY] },
+    ]);
+  });
+
+  test('Deny, or an ask nobody answers, keeps the call from running', async () => {
+    const { run } = session('ask', [DENY, undefined]);
+
+    await expect(run('read', { path: 'a.txt' })).rejects.toThrow(
+      'The person denied this call.',
+    );
+    await expect(run('read', { path: 'a.txt' })).rejects.toThrow(
+      'Nobody answered the permission ask; the call did not run.',
+    );
+  });
+
+  test('a grant for the session is not asked again, and holds after a switch to auto', async () => {
+    const { asked, run, switchTo } = session('ask', [ALLOW_SESSION]);
+    const far = join(outside, 'b.txt');
+
+    expect(await run('read', { path: far })).toBe('1\tfar');
+    expect(await run('read', { path: far, offset: 1 })).toBe('1\tfar');
+    switchTo('auto');
+    expect(await run('read', { path: far })).toBe('1\tfar');
+    expect(asked).toHaveLength(1);
+  });
+
+  test('a list grant leaves search asking', async () => {
+    const { asked, run } = session('ask', [ALLOW_SESSION, DENY]);
+
+    await run('list', { pattern: '*' });
+    await run('list', { pattern: '*.txt' });
+    await expect(run('search', { query: 'needle' })).rejects.toThrow(
+      'The person denied this call.',
+    );
+    expect(asked.map(({ title }) => title)).toStrictEqual([
+      'List *',
+      'Search needle',
+    ]);
+  });
+
+  test('in auto, reads, lists and searches inside run unasked; a read outside asks', async () => {
+    const { asked, run } = session('auto', [DENY, DENY]);
+
+    expect(await run('read', { path: 'a.txt' })).toBe('1\tneedle');
+    await run('list', { pattern: '*' });
+    await run('search', { query: 'needle' });
+    expect(asked).toStrictEqual([]);
+
+    await expect(run('read', { path: join(outside, 'b.txt') })).rejects.toThrow(
+      'The person denied this call.',
+    );
+    // A link inside that points out is outside.
+    await expect(run('read', { path: 'link.txt' })).rejects.toThrow(
+      'The person denied this call.',
+    );
+    expect(asked).toHaveLength(2);
+  });
+
+  test("an abort while the ask waits ends the call with the signal's reason", async () => {
+    const controller = new AbortController();
+    const reason = new Error('stopped');
+    const tools = riffTools({
+      directory: root,
+      finder,
+      mode: () => 'ask',
+      ask: () => {
+        controller.abort(reason);
+
+        return Promise.resolve(undefined);
+      },
+    });
+
+    await expect(
+      tools[0]!.execute(
+        { path: 'a.txt' },
+        { signal: controller.signal, executionId: 'call', sessionId: 's' },
+      ) as Promise<string>,
+    ).rejects.toBe(reason);
+  });
+
+  test('a read whose real path changed after it was allowed is refused', async () => {
+    await writeFile(join(root, 'moving.txt'), 'here\n');
+
+    const tools = riffTools({
+      directory: root,
+      finder,
+      mode: () => 'ask',
+      ask: async () => {
+        // The name the person allowed becomes a link to elsewhere.
+        await rm(join(root, 'moving.txt'));
+        await symlink(join(outside, 'b.txt'), join(root, 'moving.txt'));
+
+        return ALLOW;
+      },
+    });
+
+    await expect(
+      tools[0]!.execute(
+        { path: 'moving.txt' },
+        {
+          signal: new AbortController().signal,
+          executionId: 'call',
+          sessionId: 's',
+        },
+      ) as Promise<string>,
+    ).rejects.toThrow('the file changed while it was opened; read it again');
   });
 });

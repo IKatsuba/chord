@@ -132,7 +132,7 @@ describe('riff over an in-memory pair', () => {
         'default',
         ['default', 'low', 'medium', 'high', 'xhigh'],
       ],
-      ['mode', 'mode', 'ask', ['ask', 'auto']],
+      ['mode', 'mode', 'auto', ['ask', 'auto']],
     ]);
   });
 
@@ -398,16 +398,16 @@ describe("riff's store and resume", () => {
       account: null,
       model: 'fake',
       effort: 'default',
-      mode: 'ask',
+      mode: 'auto',
     });
 
     await client.request('session/set_config_option', {
       sessionId,
       configId: 'mode',
-      value: 'auto',
+      value: 'ask',
     });
 
-    expect(await sidecar(sessionId)).toMatchObject({ mode: 'auto' });
+    expect(await sidecar(sessionId)).toMatchObject({ mode: 'ask' });
   });
 
   test("resume reopens on the sidecar's options, with the model's history", async () => {
@@ -723,7 +723,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
       client.request('session/set_config_option', {
         sessionId,
         configId: 'mode',
-        value: 'auto',
+        value: 'ask',
       }),
     ]);
 
@@ -734,7 +734,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
       expect(held.held.map(({ sidecar }) => sidecar.effort)).toStrictEqual([
         'low',
       ]);
-      expect(held.held[0]?.sidecar.mode).toBe('ask');
+      expect(held.held[0]?.sidecar.mode).toBe('auto');
     } finally {
       held.held.shift()?.release();
     }
@@ -744,7 +744,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
 
       expect(held.held[0]?.sidecar).toMatchObject({
         effort: 'low',
-        mode: 'auto',
+        mode: 'ask',
       });
     } finally {
       held.held.shift()?.release();
@@ -754,7 +754,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
 
     expect(await held.store.read(sessionId)).toMatchObject({
       effort: 'low',
-      mode: 'auto',
+      mode: 'ask',
     });
   });
 
@@ -1240,6 +1240,112 @@ describe("riff's read, list and search in the session's directory", () => {
     await running;
 
     riff = { ...riff, finished: riff.finished.catch(() => {}) };
+  });
+
+  test('in ask, a read asks the window, and a session grant is not asked again', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'ask',
+    });
+
+    const first = prompt(sessionId, 'call read {"path":"a.txt"}');
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    expect(asked.params).toMatchObject({
+      sessionId,
+      toolCall: {
+        toolCallId: 'call_read_1',
+        title: 'Read a.txt',
+        kind: 'read',
+      },
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        {
+          optionId: 'allow_session',
+          name: 'Allow reads of a.txt for this session',
+          kind: 'allow_always',
+        },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+    await first;
+    await prompt(sessionId, 'call read {"path":"a.txt"}');
+
+    expect(
+      client.messages.filter(
+        (message) => message.method === 'session/request_permission',
+      ),
+    ).toHaveLength(1);
+    expect(
+      client
+        .updates(sessionId)
+        .filter(
+          (update) =>
+            update.sessionUpdate === 'tool_call_update' &&
+            update.status === 'completed',
+        ),
+    ).toHaveLength(2);
+  });
+
+  test('in auto, the default, a read inside runs unasked and one outside asks', async () => {
+    const outside = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-far-')),
+    );
+
+    try {
+      await writeFile(join(outside, 'b.txt'), 'far\n');
+      await open();
+
+      const answer = await client.request('session/new', {
+        cwd: project,
+        mcpServers: [],
+      });
+      const sessionId = answer.result?.['sessionId'] as string;
+
+      await prompt(sessionId, 'call read {"path":"a.txt"}');
+
+      const far = prompt(
+        sessionId,
+        `call read {"path":"${join(outside, 'b.txt')}"}`,
+      );
+      const asked = await client.until(
+        (message) => message.method === 'session/request_permission',
+      );
+
+      client.respond(asked.id!, {
+        outcome: { outcome: 'selected', optionId: 'deny' },
+      });
+      await far;
+
+      expect(
+        client.messages.filter(
+          (message) => message.method === 'session/request_permission',
+        ),
+      ).toHaveLength(1);
+      expect(client.updates(sessionId)).toContainEqual(
+        expect.objectContaining({
+          sessionUpdate: 'tool_call_update',
+          toolCallId: 'call_read_2',
+          status: 'failed',
+        }),
+      );
+    } finally {
+      await rm(outside, { recursive: true, force: true });
+    }
   });
 
   test('a directory that is not there fails session/new', async () => {

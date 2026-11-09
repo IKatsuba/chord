@@ -9,9 +9,11 @@ import {
   type AgentContext,
   type ContentBlock,
   type InitializeResponse,
+  type PermissionOption,
   RequestError,
   type SessionUpdate,
   type Stream,
+  type ToolCallUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import {
   createFxAgent,
@@ -38,6 +40,7 @@ import {
   windowOf,
 } from './models.ts';
 import { RIFF } from './start.ts';
+import type { Grants } from './tools/permission.ts';
 import { drawn, riffTools } from './tools/tools.ts';
 import { type RiffStore, riffStore, type Sidecar } from './store.ts';
 
@@ -128,6 +131,10 @@ interface Open {
   running: boolean;
   /** What tools kept for the window of a call, by its id, until it ends. */
   readonly shown: Map<string, string>;
+  /** What the person allowed for the rest of the session, in both modes. */
+  readonly grants: Grants;
+  /** The window, while a turn runs that may ask it. */
+  client: AgentContext | undefined;
 }
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
@@ -232,6 +239,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const config: RiffConfig = resumed?.sidecar ?? defaultConfig(plan);
     const holder: { open?: Open } = {};
     const shown = new Map<string, string>();
+    const grants: Grants = new Set();
     const directory = await realpath(cwd).catch(() => {
       throw RequestError.invalidParams(undefined, `no directory ${cwd}`);
     });
@@ -258,6 +266,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           directory,
           finder,
           show: (id, text) => shown.set(id, text),
+          mode: () => holder.open?.config.mode ?? config.mode,
+          grants,
+          ask: (toolCall, permissionOptions, signal) =>
+            ask(holder.open, toolCall, permissionOptions, signal),
         }),
       hooks: {
         onEvent: (event) => {
@@ -299,6 +311,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       used: undefined,
       running: false,
       shown,
+      grants,
+      client: undefined,
     };
 
     return holder.open;
@@ -440,11 +454,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       // The reopen's turn is the session's running work: a prompt waits for
       // it, and a close cancels it.
       session.running = true;
+      session.client = client;
 
       try {
         await closeOpenTurn(session, client);
       } finally {
         session.running = false;
+        session.client = undefined;
       }
 
       return { configOptions: configOptions(session.plan, session.config) };
@@ -487,6 +503,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       const started = new Set<string>();
 
       session.running = true;
+      session.client = client;
 
       try {
         const turn = session.agent
@@ -538,6 +555,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         };
       } finally {
         session.running = false;
+        session.client = undefined;
       }
     })
     .onNotification('session/cancel', async ({ params }) => {
@@ -554,6 +572,34 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     .connect(stream);
 
   return { connection, finished: connection.closed.then(shutdown) };
+}
+
+/**
+ * Asks the window about a call of `session`'s running turn: the option the
+ * person chose, or undefined when the ask was cancelled, failed, or no
+ * window is there to answer.
+ */
+async function ask(
+  session: Open | undefined,
+  toolCall: ToolCallUpdate,
+  options: PermissionOption[],
+  signal: AbortSignal,
+): Promise<string | undefined> {
+  if (session?.client === undefined) {
+    return undefined;
+  }
+
+  try {
+    const { outcome } = await session.client.request(
+      'session/request_permission',
+      { sessionId: session.id, toolCall, options },
+      { cancellationSignal: signal },
+    );
+
+    return outcome.outcome === 'selected' ? outcome.optionId : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /**

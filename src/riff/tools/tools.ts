@@ -3,12 +3,28 @@
  * drawn: a verb-first title, its ACP kind and locations (CHD-485, "Tools",
  * "The session"; CHD-604b, "The rows").
  */
+import type {
+  PermissionOption,
+  ToolCallUpdate,
+} from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
 import type { FxAgentHostTool } from 'libfx/node';
 import type { Finder } from '../../platform/fff.ts';
+import { realpath } from 'node:fs/promises';
 import type { Drawn } from '../events.ts';
+import type { RiffMode } from '../models.ts';
 import { list, LIST_DESCRIPTION, ListInput } from './list.ts';
 import { resolveIn, shown } from './paths.ts';
+import {
+  ALLOW,
+  ALLOW_SESSION,
+  asks,
+  DENY,
+  type Grants,
+  grantKey,
+  permissionOptions,
+  type Reach,
+} from './permission.ts';
 import { READ_DESCRIPTION, ReadInput, readLines } from './read.ts';
 import { SEARCH_DESCRIPTION, SearchInput, searcher } from './search.ts';
 
@@ -22,6 +38,20 @@ export interface ToolSession {
    * by the call's id; nothing kept, the window shows the model's.
    */
   readonly show?: (executionId: string, shown: string) => void;
+  /** The session's mode as it is now; `auto` when not given. */
+  readonly mode?: () => RiffMode;
+  /** What the person has allowed for the rest of the session. */
+  readonly grants?: Grants;
+  /**
+   * Asks the person about a call in the window: the option chosen, or
+   * undefined when the ask was cancelled or nobody can answer it. Without
+   * it, no one answers, and a call that asks does not run.
+   */
+  readonly ask?: (
+    toolCall: ToolCallUpdate,
+    options: PermissionOption[],
+    signal: AbortSignal,
+  ) => Promise<string | undefined>;
 }
 
 function parsed<T>(schema: z.ZodType<T>, input: unknown): T {
@@ -34,41 +64,124 @@ function parsed<T>(schema: z.ZodType<T>, input: unknown): T {
   return result.data;
 }
 
-function hostTool<T>(
+/** One of riff's tools: what a call reaches, and how it runs. */
+interface ToolSpec<T> {
+  readonly name: string;
+  readonly description: string;
+  readonly schema: z.ZodType<T>;
+  /** What the call reaches, or undefined when it reaches nothing to ask about. */
+  readonly reach: (input: T) => Promise<Reach | undefined>;
+  readonly run: (
+    input: T,
+    reach: Reach | undefined,
+    signal: AbortSignal,
+    executionId: string,
+  ) => Promise<string>;
+}
+
+/** Throws unless the call may run: granted, admitted by the mode, or allowed. */
+async function permit(
+  session: ToolSession,
+  toolCallId: string,
   name: string,
-  description: string,
-  schema: z.ZodType<T>,
-  run: (input: T, signal: AbortSignal, executionId: string) => Promise<string>,
-): FxAgentHostTool {
+  input: unknown,
+  reach: Reach | undefined,
+  signal: AbortSignal,
+): Promise<void> {
+  const { directory, grants = new Set() } = session;
+  const mode = session.mode?.() ?? 'auto';
+
+  if (reach === undefined || !asks(mode, reach, directory, grants)) {
+    return;
+  }
+
+  const chosen = await session.ask?.(
+    { toolCallId, ...drawn(directory, name, input) },
+    permissionOptions(reach, directory),
+    signal,
+  );
+
+  signal.throwIfAborted();
+
+  if (chosen === ALLOW_SESSION) {
+    grants.add(grantKey(reach, directory));
+  }
+
+  if (chosen === ALLOW || chosen === ALLOW_SESSION) {
+    return;
+  }
+
+  throw new Error(
+    chosen === DENY
+      ? 'The person denied this call.'
+      : 'Nobody answered the permission ask; the call did not run.',
+  );
+}
+
+function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
   return {
-    name,
-    description,
-    inputSchema: z.toJSONSchema(schema) as FxAgentHostTool['inputSchema'],
+    name: spec.name,
+    description: spec.description,
+    inputSchema: z.toJSONSchema(spec.schema) as FxAgentHostTool['inputSchema'],
     idempotent: true,
     writes: false,
     // Input the schema refuses is a failed call, not a throw out of execute.
     execute: (input: unknown, { signal, executionId }) =>
-      Promise.try(() => run(parsed(schema, input), signal, executionId)),
+      Promise.try(async () => {
+        const call = parsed(spec.schema, input);
+        const reach = await spec.reach(call);
+
+        await permit(session, executionId, spec.name, input, reach, signal);
+
+        return await spec.run(call, reach, signal, executionId);
+      }),
   };
 }
 
-/** read, list and search over `session`. */
+/** read, list and search over `session`, each asking as its mode says. */
 export function riffTools(session: ToolSession): FxAgentHostTool[] {
-  const search = searcher(session.finder);
+  const { directory, finder } = session;
+  const search = searcher(finder);
 
   return [
-    hostTool('read', READ_DESCRIPTION, ReadInput, (input, signal, id) => {
-      const path = resolveIn(session.directory, input.path);
+    hostTool(session, {
+      name: 'read',
+      description: READ_DESCRIPTION,
+      schema: ReadInput,
+      // A path with no real path asks nothing: the read fails on it.
+      reach: (input) =>
+        realpath(resolveIn(directory, input.path)).then(
+          (real) => ({ tool: 'read', real }) as const,
+          () => undefined,
+        ),
+      run: (input, reach, signal, id) => {
+        const path = resolveIn(directory, input.path);
+        const steps = {
+          label: shown(directory, path),
+          onShown: (text: string) => session.show?.(id, text),
+        };
 
-      return readLines(path, input, signal, {
-        label: shown(session.directory, path),
-        onShown: (text) => session.show?.(id, text),
-      });
+        // The file read is the one asked about: a path whose real path has
+        // changed since is refused.
+        return reach?.tool === 'read'
+          ? readLines(reach.real, input, signal, { ...steps, exact: true })
+          : readLines(path, input, signal, steps);
+      },
     }),
-    hostTool('list', LIST_DESCRIPTION, ListInput, (input, signal) =>
-      list(session.finder, input, signal),
-    ),
-    hostTool('search', SEARCH_DESCRIPTION, SearchInput, search),
+    hostTool(session, {
+      name: 'list',
+      description: LIST_DESCRIPTION,
+      schema: ListInput,
+      reach: () => Promise.resolve({ tool: 'list' }),
+      run: (input, _reach, signal) => list(finder, input, signal),
+    }),
+    hostTool(session, {
+      name: 'search',
+      description: SEARCH_DESCRIPTION,
+      schema: SearchInput,
+      reach: () => Promise.resolve({ tool: 'search' }),
+      run: (input, _reach, signal) => search(input, signal),
+    }),
   ];
 }
 

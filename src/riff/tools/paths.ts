@@ -51,6 +51,11 @@ export interface Opened {
 export interface OpenSteps {
   /** The path as the person reads it, for messages; the path when not given. */
   readonly label?: string;
+  /**
+   * `path` is the real path a permission was asked on: one that resolves
+   * elsewhere now is refused, as another file than the one allowed.
+   */
+  readonly exact?: boolean;
   /** After the file's identity is taken, before it is opened. */
   readonly beforeOpen?: () => Promise<void>;
   /** After it is opened, before the handle is checked. */
@@ -82,6 +87,10 @@ export async function openReal(
     before = await lstat(real);
   } catch (error) {
     throw new Error(`${named}: ${reason(error)}`);
+  }
+
+  if (steps.exact === true && real !== path) {
+    throw new Error(`${named}: ${CHANGED}`);
   }
 
   if (before.isDirectory()) {

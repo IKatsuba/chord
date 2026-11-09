@@ -396,6 +396,48 @@ describe("riff's tools ask as the session's mode says", () => {
     expect(asked).toStrictEqual([]);
   });
 
+  test('a call is announced before its ask, begins once allowed, never when denied', async () => {
+    const order: string[] = [];
+    const answers = [ALLOW, DENY];
+    const [read] = riffTools({
+      directory: root,
+      finder,
+      mode: () => 'ask',
+      ask: () => {
+        order.push('ask');
+
+        return Promise.resolve(answers.shift());
+      },
+      announce: (id) => {
+        order.push(`announce ${id}`);
+      },
+      begin: (id, name) => {
+        order.push(`begin ${name} ${id}`);
+      },
+      show: () => order.push('read'),
+    });
+    const call = (id: string) =>
+      read!.execute(
+        { path: 'a.txt' },
+        {
+          signal: new AbortController().signal,
+          executionId: id,
+          sessionId: 's',
+        },
+      ) as Promise<string>;
+
+    await call('one');
+    await expect(call('two')).rejects.toThrow('The person denied this call.');
+    expect(order).toStrictEqual([
+      'announce one',
+      'ask',
+      'begin read one',
+      'read',
+      'announce two',
+      'ask',
+    ]);
+  });
+
   test('Deny, or an ask nobody answers, keeps the call from running', async () => {
     const { run } = session('ask', [DENY, undefined]);
 

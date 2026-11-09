@@ -38,6 +38,21 @@ export interface ToolSession {
    * by the call's id; nothing kept, the window shows the model's.
    */
   readonly show?: (executionId: string, shown: string) => void;
+  /** Makes sure the window has the call, before it is asked about. */
+  readonly announce?: (
+    executionId: string,
+    name: string,
+    input: unknown,
+  ) => void | Promise<void>;
+  /**
+   * Says a call's effect begins: allowed, or admitted without an ask, and
+   * about to touch the file system. Never for a call that does not run.
+   */
+  readonly begin?: (
+    executionId: string,
+    name: string,
+    input: unknown,
+  ) => void | Promise<void>;
   /** The session's mode as it is now; `auto` when not given. */
   readonly mode?: () => RiffMode;
   /** What the person has allowed for the rest of the session. */
@@ -95,6 +110,8 @@ async function permit(
     return;
   }
 
+  await session.announce?.(toolCallId, name, input);
+
   const chosen = await session.ask?.(
     {
       toolCallId,
@@ -143,6 +160,7 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
         const reach = await spec.reach(call);
 
         await permit(session, executionId, spec.name, input, reach, signal);
+        await session.begin?.(executionId, spec.name, input);
 
         return await spec.run(call, reach, signal, executionId);
       }),

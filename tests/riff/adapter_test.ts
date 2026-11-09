@@ -1262,6 +1262,14 @@ describe("riff's read, list and search in the session's directory", () => {
       (message) => message.method === 'session/request_permission',
     );
 
+    const statuses = () =>
+      client
+        .updates(sessionId)
+        .filter((update) => update.toolCallId === 'call_read_1')
+        .map((update) => update.status);
+
+    // While the person decides, the call waits: nothing runs it yet.
+    expect(statuses()).toStrictEqual(['pending']);
     expect(asked.params).toMatchObject({
       sessionId,
       toolCall: {
@@ -1283,6 +1291,7 @@ describe("riff's read, list and search in the session's directory", () => {
       outcome: { outcome: 'selected', optionId: 'allow_session' },
     });
     await first;
+    expect(statuses()).toStrictEqual(['pending', 'in_progress', 'completed']);
     await prompt(sessionId, 'call read {"path":"a.txt"}');
 
     expect(
@@ -1336,13 +1345,20 @@ describe("riff's read, list and search in the session's directory", () => {
           (message) => message.method === 'session/request_permission',
         ),
       ).toHaveLength(1);
-      expect(client.updates(sessionId)).toContainEqual(
-        expect.objectContaining({
-          sessionUpdate: 'tool_call_update',
-          toolCallId: 'call_read_2',
-          status: 'failed',
-        }),
-      );
+
+      // A denied call never ran; the one inside ran as it began.
+      const statuses = (id: string) =>
+        client
+          .updates(sessionId)
+          .filter((update) => update.toolCallId === id)
+          .map((update) => update.status);
+
+      expect(statuses('call_read_2')).toStrictEqual(['pending', 'failed']);
+      expect(statuses('call_read_1')).toStrictEqual([
+        'pending',
+        'in_progress',
+        'completed',
+      ]);
     } finally {
       await rm(outside, { recursive: true, force: true });
     }

@@ -131,6 +131,8 @@ interface Open {
   running: boolean;
   /** What tools kept for the window of a call, by its id, until it ends. */
   readonly shown: Map<string, string>;
+  /** The calls this turn has sent the window, so each is sent once. */
+  calls: Set<string>;
   /** What the person allowed for the rest of the session, in both modes. */
   readonly grants: Grants;
   /** The window, while a turn runs that may ask it. */
@@ -266,6 +268,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           directory,
           finder,
           show: (id, text) => shown.set(id, text),
+          announce: (id, name, input) => announce(holder.open, id, name, input),
+          begin: (id, name, input) => begin(holder.open, id, name, input),
           mode: () => holder.open?.config.mode ?? config.mode,
           grants,
           ask: (toolCall, permissionOptions, signal) =>
@@ -311,6 +315,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       used: undefined,
       running: false,
       shown,
+      calls: new Set(),
       grants,
       client: undefined,
     };
@@ -356,10 +361,16 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     }
 
     const turn = fx.resume();
-    const started = new Set<string>();
+
+    session.calls = new Set();
 
     for await (const event of turn) {
-      const update = updateOf(event, started, drawIn(session), showIn(session));
+      const update = updateOf(
+        event,
+        session.calls,
+        drawIn(session),
+        showIn(session),
+      );
 
       if (update !== undefined) {
         await notify(client, session.id, update);
@@ -381,6 +392,58 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
   const drawIn = (session: Open) => (name: string, input: unknown) =>
     drawn(session.directory, name, input);
+
+  /**
+   * Sends the window a call the turn's events have not sent yet: a tool
+   * runs before libfx's start of it is read, and the first of the two sends
+   * it (CHD-485), so an ask or a running state never comes before its call.
+   */
+  const announce = async (
+    session: Open | undefined,
+    id: string,
+    name: string,
+    input: unknown,
+  ) => {
+    const client = session?.client;
+
+    if (
+      session === undefined ||
+      client === undefined ||
+      session.calls.has(id)
+    ) {
+      return;
+    }
+
+    session.calls.add(id);
+    await notify(client, session.id, {
+      sessionUpdate: 'tool_call',
+      toolCallId: id,
+      ...drawIn(session)(name, input),
+      status: 'pending',
+      rawInput: input,
+    });
+  };
+
+  /** A call's effect begins: the window hears it running. */
+  const begin = async (
+    session: Open | undefined,
+    id: string,
+    name: string,
+    input: unknown,
+  ) => {
+    const client = session?.client;
+
+    if (session === undefined || client === undefined) {
+      return;
+    }
+
+    await announce(session, id, name, input);
+    await notify(client, session.id, {
+      sessionUpdate: 'tool_call_update',
+      toolCallId: id,
+      status: 'in_progress',
+    });
+  };
 
   /** What a call's tool kept for the window, given once, as its call ends. */
   const showIn = (session: Open) => (id: string) => {
@@ -500,7 +563,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       }
 
       const { model, effort } = session.config;
-      const started = new Set<string>();
+
+      session.calls = new Set();
 
       session.running = true;
       session.client = client;
@@ -513,7 +577,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         for await (const event of turn) {
           const update = updateOf(
             event,
-            started,
+            session.calls,
             drawIn(session),
             showIn(session),
           );

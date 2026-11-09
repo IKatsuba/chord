@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import type { BuildConfig, BunPlugin } from 'bun';
 import manifest from '../../package.json' with { type: 'json' };
 import { TARGETS } from '../targets.ts';
+import { assertLibfxAssets } from './libfx_assets.ts';
 
 /** `bun dev compile`'s options. */
 export interface CompileOptions {
@@ -145,6 +146,8 @@ export async function compile(args: CompileOptions): Promise<void> {
   // A binary embeds only the clipboard addon that is installed, which is
   // otherwise the host's alone, so a cross-compiled one could not read it.
   run(['install', ...EVERY_PLATFORM]);
+  // A libfx layout change fails here, not in the binary it would break.
+  assertLibfxAssets();
 
   for (const target of targets) {
     const output = args.install

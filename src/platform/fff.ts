@@ -129,13 +129,16 @@ export function openFinder(
       }
     };
 
-    // A Worker that died takes every call in it; the next call starts anew.
+    // A Worker that failed takes every call in it; the next call starts anew.
     made.onerror = (event) => {
       event.preventDefault();
 
       if (worker !== made) {
         return;
       }
+
+      // An error need not have ended the Worker; nothing is left running.
+      retire(made);
 
       worker = undefined;
 

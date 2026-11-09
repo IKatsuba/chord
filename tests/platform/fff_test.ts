@@ -218,6 +218,22 @@ describe('the finder against its Worker, in a forced order', () => {
     expect(await other).toBe('fresh' as never);
   });
 
+  test('a failed Worker is ended with its calls, and the next call starts another', async () => {
+    const { workers, finder } = held();
+    const call = finder.grep('a', {}, live());
+
+    workers[0]!.fail('boom');
+
+    await expect(call).rejects.toThrow('fff: the search worker failed: boom');
+    expect(workers[0]!.terminated).toBe(true);
+
+    const next = finder.glob('*', {}, live());
+
+    workers[1]!.reply({ id: workers[1]!.requests[0]!.id, ok: true, value: 1 });
+
+    expect(await next).toBe(1 as never);
+  });
+
   test("destroy waits for its own answer, not a call's queued before it", async () => {
     const { workers, finder } = held();
     const call = finder.grep('a', {}, live());

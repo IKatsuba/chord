@@ -514,6 +514,7 @@ test('a long-lived child starts, stops and lists monitors of its own, each answe
         'get_budgets',
         'spawn_task',
         'send_message',
+        'close_agent',
         'monitor',
         'stop_monitor',
         'list_monitors',
@@ -608,7 +609,7 @@ test('a long-lived child starts, stops and lists monitors of its own, each answe
     }
   }));
 
-test("a team's lead opens, messages and closes members; a member only messages, by name", () =>
+test("a team's lead opens, messages and closes members; a member only messages, by name, and stops its tasks", () =>
   withServer(async (server) => {
     const told: string[] = [];
     const window: WindowView = {
@@ -664,6 +665,7 @@ test("a team's lead opens, messages and closes members; a member only messages, 
         'get_budgets',
         'spawn_task',
         'send_message',
+        'close_agent',
         'monitor',
         'stop_monitor',
         'list_monitors',
@@ -691,6 +693,76 @@ test("a team's lead opens, messages and closes members; a member only messages, 
     } finally {
       await lead.close();
       await member.close();
+    }
+  }));
+
+test('close_agent says it stops tasks: beside long-lived agents for main and a lead, alone for a child or a member (CHD-590)', () =>
+  withServer(async (server) => {
+    const closing = (to: string) =>
+      to === 'gone' ? { ended: 'Watch the build' } : { closed: to };
+    const window: WindowView = {
+      ...WINDOW,
+      close: (_caller, to) => closing(to),
+    };
+    const callers: Caller[] = [
+      { role: 'person', key: 3, window },
+      { role: 'child', key: 3, agent: 'l1', team: 'lead', window },
+      { role: 'child', key: 3, agent: 'm1', team: 'member', window },
+      { role: 'child', key: 3, agent: 'c1', window },
+    ];
+    const clients = await Promise.all(
+      callers.map((caller) => connect(server.url, server.admit(caller).token)),
+    );
+
+    try {
+      const described = await Promise.all(
+        clients.map(async (client) => {
+          const tool = (await client.listTools()).tools.find(
+            ({ name }) => name === 'close_agent',
+          );
+          const to = tool?.inputSchema.properties?.to as
+            { description?: string } | undefined;
+
+          return [tool?.description, to?.description];
+        }),
+      );
+      const both = [
+        'Closes a long-lived agent you opened, stopping what it is doing; it ' +
+          'takes no more messages. Also stops a task you started with ' +
+          'spawn_task, which then sends no report; one that has already ' +
+          'ended is said to have.',
+        'The agent, by the id open_agent answered or by its name; or the ' +
+          'task, by the id spawn_task answered or by its name',
+      ];
+      const tasks = [
+        'Stops a task you started with spawn_task, which then sends no ' +
+          'report; one that has already ended is said to have. It closes no ' +
+          'other agent.',
+        'The task, by the id spawn_task answered or by its name',
+      ];
+
+      expect(described).toStrictEqual([both, both, tasks, tasks]);
+
+      const [person] = clients;
+      const ended = await person!.callTool({
+        name: 'close_agent',
+        arguments: { to: 'gone' },
+      });
+
+      expect(ended.content).toStrictEqual([
+        { type: 'text', text: 'Watch the build has already ended' },
+      ]);
+      expect(ended.isError).toBeUndefined();
+      expect(
+        textOf(
+          await person!.callTool({
+            name: 'close_agent',
+            arguments: { to: 'Watch the build' },
+          }),
+        ),
+      ).toStrictEqual({ closed: 'Watch the build' });
+    } finally {
+      await Promise.all(clients.map((client) => client.close()));
     }
   }));
 

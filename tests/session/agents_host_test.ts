@@ -1,5 +1,6 @@
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import process from 'node:process';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import assert from 'node:assert';
@@ -18,7 +19,10 @@ import {
 } from '../../src/session/conversation.ts';
 import type { Place } from '../../src/session/place.ts';
 import type { Caller, WindowView } from '../../src/server/tools.ts';
-import { openSession } from '../../src/session/session.ts';
+import { openSession, type Session } from '../../src/session/session.ts';
+import { foldEvent } from '../../src/acp/host_fold.ts';
+import { findSubagent } from '../../src/session/transcript/subagents.ts';
+import { LONG_TASK_ARGS } from '../fixtures/fake_agent/scenarios/tasks.ts';
 import { MAX_CHILDREN } from '../../src/session/window_agents.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { heldSession, until } from './conversation_fake.ts';
@@ -1441,6 +1445,158 @@ Lead it.
     expect(filled[0]!.run.job).toBe('Fix it.');
     expect(filled[0]!.members.map(({ name }) => name)).toEqual(['coder']);
     expect((await shown).kind).toBe('show');
+
+    await host.sessions.closeAll();
+  });
+});
+
+describe('closing a task by close_agent (CHD-590)', () => {
+  /** Whether the process group `pid` leads still has a process in it. */
+  const groupAlive = (pid: number) => {
+    try {
+      return process.kill(-pid, 0);
+    } catch {
+      return false;
+    }
+  };
+
+  /** Main on the fake, its events folded, and every session it opened. */
+  async function onFake() {
+    const opened: Session[] = [];
+    const fold = (key: number) =>
+      made.heard.reduce<FoldedSession | undefined>(
+        (folded, [at, event]) =>
+          at === key ? foldEvent(folded, event) : folded,
+        undefined,
+      );
+    const made = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      { stateOf: (key) => fold(key) },
+      {
+        open: async (options) => {
+          const session = await openSession(options);
+
+          opened.push(session);
+
+          return session;
+        },
+      },
+    );
+    const person: Caller = {
+      role: 'person',
+      key: made.key,
+      window: {} as WindowView,
+    };
+    const spawn = async (by: Caller = person, name = LONG_TASK_ARGS.name) => {
+      const answer = await made.host.spawn(by, { ...LONG_TASK_ARGS, name });
+
+      assert(!('error' in answer));
+
+      return answer.id;
+    };
+
+    /** The task's own fake agent, once its job has reached it. */
+    const working = async (id: string, key = made.key) => {
+      await until(
+        () =>
+          findSubagent(fold(key)?.transcript.entries ?? [], id)?.entries.some(
+            (entry) => entry.kind === 'assistant',
+          ) === true,
+      );
+
+      const pid = [...opened.at(-1)!.agentPids][0];
+
+      assert(pid !== undefined);
+
+      return pid;
+    };
+
+    return { ...made, fold, person, spawn, working };
+  }
+
+  test('a running task stopped by its id ends with its process group, the line naming main', async () => {
+    const { host, key, fold, person, spawn, working } = await onFake();
+    const id = await spawn();
+    const pid = await working(id);
+
+    expect(groupAlive(pid)).toBe(true);
+    expect(host.closeAgent(person, id)).toEqual({ closed: 'Watch the build' });
+
+    await until(() => !groupAlive(pid));
+
+    expect(host.conversationAt(key)!.task(id)).toBeUndefined();
+    expect(
+      findSubagent(fold(key)!.transcript.entries, id)?.task?.stoppedWith,
+    ).toEqual({ agent: 'main' });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a task already ended is said to have ended, by its id or its name', async () => {
+    const { host, person, spawn, working } = await onFake();
+    const id = await spawn();
+
+    await working(id);
+
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      closed: 'Watch the build',
+    });
+    await until(() => host.conversationAt(person.key)!.task(id) === undefined);
+    expect(host.closeAgent(person, id)).toEqual({ ended: 'Watch the build' });
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      ended: 'Watch the build',
+    });
+
+    await host.sessions.closeAll();
+  });
+
+  test('a name two of the caller’s tasks have is refused, naming their ids', async () => {
+    const { host, person, spawn } = await onFake();
+    const one = await spawn();
+    const two = await spawn();
+
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      error: `2 of your tasks are named Watch the build; close_agent one by its id: ${one} and ${two}`,
+    });
+    expect(host.conversationAt(person.key)!.task(one)?.running).toBe(true);
+    expect(host.conversationAt(person.key)!.task(two)?.running).toBe(true);
+
+    await host.sessions.closeAll();
+  });
+
+  test("a child closes only its own tasks: not another's, nor a long-lived agent", async () => {
+    const { host, key, open, person, spawn, working } = await onFake();
+
+    const helper = open('helper');
+
+    open('other');
+
+    const child: Caller = {
+      role: 'child',
+      key,
+      agent: 'helper',
+      window: {} as WindowView,
+    };
+    const mains = await spawn(person, 'Main task');
+    const own = await spawn(child, 'Own task');
+
+    await working(own, helper);
+
+    expect(host.closeAgent(child, mains)).toEqual({
+      error: `No task ${mains} of yours; spawn_task's answer names them`,
+    });
+    expect(host.closeAgent(child, 'Main task')).toEqual({
+      error: "No task Main task of yours; spawn_task's answer names them",
+    });
+    expect(host.closeAgent(child, 'other')).toEqual({
+      error: "No task other of yours; spawn_task's answer names them",
+    });
+    expect(host.closeAgent(person, own)).toEqual({
+      error: `No agent ${own} is open in this session; list_sessions names them`,
+    });
+    expect(host.conversationAt(key)!.task(mains)?.running).toBe(true);
+    expect(host.closeAgent(child, own)).toEqual({ closed: 'Own task' });
+    expect(host.closeAgent(person, 'other')).toEqual({ closed: 'other' });
 
     await host.sessions.closeAll();
   });

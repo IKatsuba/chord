@@ -278,6 +278,29 @@ export const TASKS = {
     return 'end_turn';
   },
 
+  // Closes `tasklong`'s task by its name with close_agent, so its line names
+  // main as the one that stopped it; once it has ended, says so (CHD-590).
+  async taskclose(turn) {
+    const client = await chordClient(turn);
+
+    if (client === undefined) {
+      await turn.say('No chord server in this session.');
+
+      return 'end_turn';
+    }
+
+    try {
+      await callChord(turn, client, 'close_agent', {
+        to: LONG_TASK_ARGS.name,
+      });
+      await turn.say('The build is no longer watched.');
+    } finally {
+      await client.close();
+    }
+
+    return 'end_turn';
+  },
+
   // As `tasklong`, its task on `costwait`: it says a cost and works on until
   // it is stopped, to let its parent go with its spend said (CHD-373).
   async taskcost(turn) {

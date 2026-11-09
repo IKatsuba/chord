@@ -281,6 +281,33 @@ test('a task the parent stopped ends Cancelled with no report, a line held for t
   ).toStrictEqual({ state: 'cancelled' });
 });
 
+test('a task its agent stopped says so on its end, and its parent is held no line (CHD-590)', () => {
+  const { task, relayed, delivered, ahead, asked } = harness();
+
+  task.heard({ type: 'connected', sessionId: 's1' });
+  task.heard({ type: 'prompt', turnId: 'r1', text: 'x', at: 1 });
+  task.cancel({ agent: 'main' });
+  // The first stop's words stay.
+  task.cancel('x');
+  task.heard({
+    type: 'result',
+    turnId: 'r1',
+    result: { status: 'cancelled', stopReason: 'cancelled' },
+  });
+
+  expect(asked).toStrictEqual(['interrupt', 'interrupt']);
+  expect(delivered).toStrictEqual([]);
+  expect(ahead).toStrictEqual([]);
+
+  const last = relayed.at(-1);
+
+  expect(
+    last?.type === 'update' && last.update.sessionUpdate === 'subagent_update'
+      ? last.update._meta
+      : undefined,
+  ).toStrictEqual({ 'chord/stopped': { agent: 'main' } });
+});
+
 test('a task stopped while it starts ends Cancelled there, and its job is never sent', () => {
   const { task, delivered, ahead, ended, sent, asked } = harness();
 

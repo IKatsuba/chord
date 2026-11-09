@@ -2218,6 +2218,11 @@ export class Conversation {
     return this.#tasks.get(id);
   }
 
+  /** The task agents of the session still running, by their ids. */
+  get tasks(): readonly TaskAgent[] {
+    return [...this.#tasks.values()].filter((task) => task.running);
+  }
+
   /** The task agents of the session still running. */
   get runningTasks(): number {
     return [...this.#tasks.values()].filter((task) => task.running).length;

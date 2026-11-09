@@ -547,6 +547,7 @@ const SCENARIOS = [
   'taskchild',
   'taskchildhold',
   'tasklong',
+  'taskclose',
   'taskcost',
   'tasktallname',
   'tasktwo',

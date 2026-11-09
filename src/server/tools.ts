@@ -193,7 +193,18 @@ export type MessageAnswer =
 
 /** A long-lived agent closed, by its name, or why it was not. */
 export type CloseAnswer =
-  { readonly closed: string } | { readonly error: string };
+  | { readonly closed: string }
+  /** A task of the caller's that had already ended (CHD-590). */
+  | { readonly ended: string }
+  | { readonly error: string };
+
+/**
+ * Whether `close_agent` closes the caller's long-lived agents too: main's
+ * and a lead's do; a long-lived child's and a member's stop only the tasks
+ * they started (CHD-590).
+ */
+export const closesAgents = (caller: Caller): boolean =>
+  caller.role === 'person' || caller.team === 'lead';
 
 /** What `clear_agent` answers: the child cleared, once its fresh session is up. */
 export type ClearAnswer =
@@ -1271,16 +1282,35 @@ const tellAgent: Register = (server, caller) =>
 const closeAgent: Register = (server, caller) =>
   server.registerTool(
     'close_agent',
-    {
-      description:
-        'Closes a long-lived agent you opened, stopping what it ' +
-        'is doing; it takes no more messages.',
-      inputSchema: {
-        to: z
-          .string()
-          .describe('The agent, by the id open_agent answered or by its name'),
-      },
-    },
+    closesAgents(caller)
+      ? {
+          description:
+            'Closes a long-lived agent you opened, stopping what it is ' +
+            'doing; it takes no more messages. Also stops a task you ' +
+            'started with spawn_task, which then sends no report; one that ' +
+            'has already ended is said to have.',
+          inputSchema: {
+            to: z
+              .string()
+              .describe(
+                'The agent, by the id open_agent answered or by its name; ' +
+                  'or the task, by the id spawn_task answered or by its name',
+              ),
+          },
+        }
+      : {
+          description:
+            'Stops a task you started with spawn_task, which then sends no ' +
+            'report; one that has already ended is said to have. It closes ' +
+            'no other agent.',
+          inputSchema: {
+            to: z
+              .string()
+              .describe(
+                'The task, by the id spawn_task answered or by its name',
+              ),
+          },
+        },
     (input) =>
       serve(
         caller,
@@ -1289,8 +1319,18 @@ const closeAgent: Register = (server, caller) =>
         caller.fork
           ? { error: FORK_REFUSED }
           : caller.window.close(caller, input.to),
+        closedText,
       ),
   );
+
+/** `close_agent`'s answer for the model. */
+function closedText(
+  answer: Exclude<CloseAnswer, { readonly error: string }>,
+): string {
+  return 'ended' in answer
+    ? `${answer.ended} has already ended`
+    : JSON.stringify(answer, null, 2);
+}
 
 const clearAgent: Register = (server, caller) =>
   server.registerTool(
@@ -1763,8 +1803,22 @@ function toolsOf(caller: Caller): readonly Register[] {
               ...MONITORS,
             ]
           : caller.team === 'member'
-            ? [listAgents, getBudgets, spawnTask, tellTeam, ...MONITORS]
-            : [listAgents, getBudgets, spawnTask, messageParent, ...MONITORS];
+            ? [
+                listAgents,
+                getBudgets,
+                spawnTask,
+                tellTeam,
+                closeAgent,
+                ...MONITORS,
+              ]
+            : [
+                listAgents,
+                getBudgets,
+                spawnTask,
+                messageParent,
+                closeAgent,
+                ...MONITORS,
+              ];
   }
 }
 
@@ -1801,6 +1855,7 @@ export function toolNames(role: Role): readonly ChordTool[] {
         'get_budgets',
         'spawn_task',
         'send_message',
+        'close_agent',
         ...MONITOR_TOOLS,
       ];
 }

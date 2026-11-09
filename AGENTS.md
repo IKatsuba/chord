@@ -40,8 +40,6 @@ owner's consent.
 
 ```sh
 bun install                    # the dependencies, as bun.lock pins them
-# Before quality (including --static), install every target package:
-bun install --os='*' --cpu='*' --libc='*'
 bun dev chord [agent]           # run from source
 bun dev chord --fake            # run against the scripted test agent
 bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
@@ -66,11 +64,13 @@ files: Bun uses it to balance shards and start each worker's slowest files
 first; an unlisted file takes the median. No refresh is required.
 CI runs `static` (`bun quality --static`), three `tests` shards
 (`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
-passes only when all of them succeed.
+passes only when all of them succeed. The libfx layout check covers the host's
+installed package and every target's metadata locally; CI's static job installs
+all platforms and sets `CHORD_LIBFX_ALL_TARGETS=1` to check all four packages.
 
 The binary is built by Bun's compile API, Bun 1.4.4 or newer. Compilation
-installs all target packages, then checks the pinned libfx layout before
-building; a mismatch names the package and version and stops the build.
+installs all target packages, then checks the pinned libfx layout for each
+target it builds; a mismatch names the package and version and stops the build.
 Build, release and maintenance commands share `bun dev <command>` (Cliffy):
 
 ```sh

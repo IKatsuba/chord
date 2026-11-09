@@ -1825,10 +1825,11 @@ for the test agent), `test`, `compile` (`--all` or `--install`), `npm`,
 `selftest <binary>` and `release [version]`.
 
 `bun dev compile` installs all target packages and checks the pinned libfx
-layout before building; a mismatch names the package and version and stops
-the build. Each binary embeds libfx's WebAssembly core and only its target's
-native addon, with fff's glibc library on Linux. `--all` builds every release
-target; `--install` puts this machine's binary in `~/.local/bin/chord`.
+layout for each target it builds; a mismatch names the package and version
+and stops the build. Each binary embeds libfx's WebAssembly core and only
+its target's native addon, with fff's glibc library on Linux. `--all` builds
+every release target; `--install` puts this machine's binary in
+`~/.local/bin/chord`.
 
 `bun dev selftest <binary>` needs tmux and checks the version, `-p`, ACP
 stdio, the window and clipboard with the fake agent. It also runs a libfx
@@ -1837,8 +1838,10 @@ local fake provider, and an fff grep.
 
 `bun quality` runs native type and format checks, tracked-file coverage,
 ESLint and `lint/` tests, then the suite; `--static` leaves out the suite.
-First run `bun install --os='*' --cpu='*' --libc='*'`: the libfx layout check
-needs every target package.
+A plain `bun install` suffices locally: the libfx layout check covers the
+host's installed package and every target's metadata, while CI's static job
+installs all platforms and sets `CHORD_LIBFX_ALL_TARGETS=1` to check all four
+packages.
 `bun lint` runs ESLint. Arguments after `bun dev chord`, `bun dev test`
 and `bun lint` pass on as written; empty arguments need `--`
 (`bun dev test -- -t ''`), as does the tool's help (`bun lint -- --help`

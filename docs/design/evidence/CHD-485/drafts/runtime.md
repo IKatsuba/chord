@@ -12,6 +12,12 @@ injected `fetch`. No real model, provider or sign-in endpoint was reached.
 Bun.secrets trials used a throwaway service name (`chord-trial-<uuid>`), and
 everything they wrote was deleted afterwards and checked gone.
 
+Revised once after the critic's findings, as the lead accepted them (2, 3,
+4, 8, 9, 12, 13): the credential contract under the lock, sign-in in the
+window in both Q1 options, logout against refresh, retries, the permission
+contract, the listener's order, and Bun.secrets' scope. "Revision" below
+marks what changed.
+
 ## What the trials found, first
 
 These change the design more than anything else here.
@@ -48,24 +54,38 @@ These change the design more than anything else here.
    `ProviderVersionUnavailable`), then the proxy's `/v1/models` and
    `https://api.x.ai/v1/language-models`. Seen through the injected `fetch`
    in T3b and T3c. The fake must answer these too.
-5. **A persistent 5xx is retried without end.** T3: with every Codex
-   request answered 500, the turn had sent seven requests in 20 s and had
-   not ended; it ended only on `cancel()`. A 401 refreshed once through the
-   same `fetch`, called `onCredentials` with the rotated refresh token and
-   retried (`subscription.js:238-252`).
+5. **A persistent 5xx was still being retried at 300 s.** Revision: what
+   was observed, no more. T7, native: with every model request answered
+   500, a custom-provider turn sent 15 requests and a Codex-plan turn 16 in
+   300 s, at 0, 0, 1, 3, 7, 15, 31, 61, 91, … 271 s. The backoff doubles to
+   30 s and then repeats every 30 s. Neither turn ended by itself; the
+   300 s cap cancelled both (`stopReason: cancelled`). In the code read:
+   the JS edge tries each fetch twice (`engine.js:1477-1517`); fx's transport
+   loop is capped by its `retry_count` (fx `src/gateway/client.zig:678,
+   1512-1515`), but for agent-owned attempts that count is 1, and the
+   agent-level retry policy that produced T7's schedule was not found in
+   the files read. Whether it ever ends was not established. A 401
+   refreshed once through the same `fetch`, called `onCredentials` with
+   the rotated refresh token and retried (`subscription.js:238-252`; T3).
 6. **Cancellation is prompt and does not wait for host tools.** T2, native:
    `cancel()` ended a turn in at most 11 ms with `stopReason: cancelled`
    whether the model hung, the stream was mid-reply, or a tool never
    settled; `close()` in at most 6 ms. A tool that ignores its `signal` is
    simply abandoned (`engine.js:1579` races it against the abort), so its
    work goes on in chord's process unless the tool itself stops it.
-7. **Bun.secrets wedges under concurrent calls.** T4b: 2, 5 and 10
-   concurrent `set`s on one name settled (the last write won). 20 concurrent
-   `set`s: two settled, eighteen never did, and from then on every
+7. **On one macOS machine, Bun.secrets stopped settling under 20
+   concurrent calls.** Scope: macOS Keychain, Bun 1.4.4, two separate
+   processes on one machine; nothing else. T4b: 2, 5 and 10 concurrent
+   `set`s on one name settled (the last write won). 20 concurrent `set`s:
+   two settled, eighteen did not within 15 s, and every later
    `Bun.secrets` call in that process (`get`, `delete`, `set` on other
-   names) never settled within its 15 s bound, while the event loop stayed
-   free (13,068 1 ms timer ticks in 15 s). Seen twice, in two processes. A
-   fresh process then read and deleted the entries normally.
+   names) did not settle within its own 15 s either, while the event loop
+   stayed free (13,068 1 ms timer ticks in 15 s). A fresh process then read
+   and deleted the entries normally. Unverified: Linux's Secret Service, a
+   locked keychain, whether those calls would ever have settled, and where
+   the threshold lies between 10 and 20. Calls one at a time never stuck
+   (T4, T4b, every run). The design keeps the store's calls serial; it adds
+   nothing else on this evidence.
 8. **Bun's bundler cannot pick one addon per target from source alone.**
    Four per-platform modules behind `process.platform`/`process.arch`
    branches, or behind a `define`d constant, embedded all four addons
@@ -156,19 +176,27 @@ chord (window)                          chord <sub> (agent process, own group)
   `chord acp`'s), plus the addon. Measured start of the engine was ~500 ms
   to the first tool call natively (T1), Wasm ~90 ms; the process's own
   start was not measured here.
-- Sign-in, Bun.secrets and the loopback listener then live in the agent
-  process, so two windows mean two processes reading one keychain entry:
-  the cross-process lock (below) is needed either way.
+- **Revision: sign-in runs in the window, as in Q1-A** (the lead's
+  resolution, matching protocol's and interface's drafts). The window runs
+  the sign-in screens, the loopback listener and the first store write.
+  The child never signs in and never opens a listener. It reads the store,
+  writes rotations back under the lock (the credential contract below),
+  and tells the window when it could not. A child that finds no
+  credentials ends `initialize` or the turn with ACP's `authRequired`
+  (`src/session/sign_in.ts:9`), and the window offers sign-in, then starts
+  the session again.
+- Two windows, or a window and its children, are then several processes on
+  one store entry: the cross-process lock (below) is needed in both
+  options.
 - `--fake`: the window starts the subcommand with a flag that swaps in the
-  fake provider and credential store (see Tests); nothing in the window
-  changes.
+  fake provider and the fixture store (see Tests); nothing else changes.
 
 ### What is the same in both
 
 Tools, sign-in, credentials, the build and the tests below are the same
 modules; only where `createFxEngine` is called differs. Q1-B adds one
 entry (the subcommand's) and its ACP agent side; Q1-A adds one `Agent`
-implementation.
+implementation. In both, sign-in is the window's.
 
 **Runtime's view, not a recommendation for protocol's half:** isolation of
 native crashes and unchanged stop bounds favour Q1-B; one process, no
@@ -307,15 +335,63 @@ agents). `engine.js:1746-1757` also forwards a core
 `session/request_permission` to an `options.onPermission`, but that option
 is not in the types and the core sends none for host tools: not used.
 
-**Which calls ask** (Q2, the owner's): options.
+**Which calls ask** (Q2, the owner's): options. Revision: each with the
+scope of its "allow for this session" grant. A grant lives in the session's
+memory, is never written to settings, and ends with the session.
 
-- **P1.** Ask for `edit`, `write` and `shell`; never for `read`, `list`,
-  `search`. Like Claude Code's default mode.
-- **P2.** P1, plus reads outside the session's directory ask.
-- **P3.** Ask for everything; an "always for this session" answer per tool.
+- **P1.** `edit`, `write` and `shell` ask; `read`, `list` and `search`
+  never ask. Grants: for `edit`/`write`, per path (the real path, below);
+  for `shell`, the exact command string only.
+- **P2.** P1, and `read`, `list` and `search` ask when their real path is
+  outside the session's directory. Grants: an outside directory's real
+  path covers what lies under it, for reads only; edits and writes keep
+  P1's grants.
+- **P3.** Everything asks. Grants per tool ("all reads this session"),
+  except `shell`, which keeps exact-command grants, and `edit`/`write`,
+  which keep per-path grants.
 
 Recommendation: P2. Reads outside the project are how secrets leave, and
 they are rare in normal work.
+
+**Why no first-word or prefix grant for `shell`.** "Allow `git`" also
+allows `git push --force` and `git -c core.sshCommand=… fetch`; "allow
+`npm`" allows `npm publish`. Wrappers run anything: `env`, `xargs`,
+`find -exec`, `sh -c`, `bash -c`, `timeout`, `nice`. And one command
+string can hold several commands (`;`, `&&`, `|`, `$(…)`, backticks,
+redirects). If the owner wants a prefix grant anyway, the minimum is:
+parse with `shell-quote` (already a chord dependency, `src/acp/process.ts:2`);
+refuse the grant for a command with any operator, substitution or
+redirect; match whole tokens, never characters; and keep a list of
+wrappers that are never granted. Even that leaves subcommands such as
+`git push`, which is why P1 to P3 grant exact strings only.
+
+**Paths are resolved at the effect, not at the ask.** Each file tool takes
+`realpath` of its target when it runs, after the prompt, and decides
+inside/outside and grant matches on that real path. A symlink inside the
+project that points outside is outside. A path that does not exist yet
+(`write`) is judged by its parent's real path. The prompt shows the path
+as the model gave it and, when they differ, the resolved one. To narrow
+the gap between the check and the open: open the real path, `fstat` the
+handle, and compare `dev` and `ino` with a `stat` of the real path. On a
+mismatch, refuse with a tool error. What remains is a swap of a parent
+directory between `realpath` and `open`; that is acknowledged, not closed.
+
+**An edit whose file changed while the prompt waited.** `edit` and `write`
+record the target's SHA-256 (or that it is absent) when they build the
+diff shown in the prompt. They re-read the file at the effect. If it
+differs, they refuse with a tool error ("the file changed since this edit
+was proposed; read it again") and write nothing. The model re-reads and
+proposes again, and the next prompt shows the new diff. Re-asking with a
+recomputed diff was considered: it shows the person a diff the model never
+saw, so refusing is recommended.
+
+| Case | Outcome |
+| --- | --- |
+| `read` of `link → /etc/…` inside the project, P2 | asks as outside; a grant is recorded for the real directory |
+| Symlink retargeted between the prompt and the effect | judged on the new real path: outside means ask again or refuse; a `dev`/`ino` mismatch refuses |
+| `edit` approved, file changed meanwhile | refused, nothing written, tool error to the model |
+| `write` approved for a new file that appeared meanwhile | refused the same way |
+| `shell` granted `npm test`, model asks `npm test && curl …` | asks: a different string |
 
 **A stuck tool** (finding 6): every tool takes the `signal`. `shell` passes
 it to `runShell(...).stop()`; file tools check it between steps. A tool
@@ -339,6 +415,9 @@ protocol owns which servers, `src/session/servers.ts` already chooses them.
 
 All four flows (ChatGPT and Grok, browser and device code) are libfx's
 functions; chord adds the listener, the timers and the cancellation.
+Revision: all of it runs in the window, in both Q1 options. The first
+write of new credentials is the window's, under the same lock as refresh
+and logout (below).
 
 ### The loopback listener (browser)
 
@@ -350,16 +429,24 @@ functions; chord adds the listener, the timers and the cancellation.
 - ChatGPT: port 1455 (`chatgpt-sign-in.js:12`), path `/auth/callback`.
   Grok: the port and path of `signIn.redirectUri`
   (`grok-sign-in.js:36-38, 50`).
-- **Port taken.** Bind `127.0.0.1:1455`; `EADDRINUSE` means taken (T5:
-  Bun throws `code: 'EADDRINUSE'`). Then also bind `[::1]:1455`;
-  `EADDRINUSE` there is taken as well (finding 10: another listener on
-  either family can receive the browser), and an address-family error
-  (no IPv6 loopback) is ignored. Never bind `hostname: 'localhost'`. Taken
-  → the owner's words: the port is taken, device code offered.
+- **Port taken, in this order** (revision: the order and the partial
+  close):
+  1. Bind `127.0.0.1:<port>`. On `EADDRINUSE` (T5: Bun throws `code:
+     'EADDRINUSE'`): taken; nothing is open; stop.
+  2. Bind `[::1]:<port>`. On `EADDRINUSE`: `stop(true)` the `127.0.0.1`
+     listener first, then report taken (finding 10: another listener on
+     either family can receive the browser). On `EADDRNOTAVAIL` or
+     `EAFNOSUPPORT` (no IPv6 loopback): keep the IPv4 listener alone. On any
+     other error: stop the IPv4 listener, then fail with the error.
+  3. Only then show or open the address.
+
+  Never bind `hostname: 'localhost'`. Taken → the owner's words: the port
+  is taken, device code offered. Closing stops both listeners
+  synchronously, in either order: neither stop waits on the other.
 - Grok's random port (1024 to 65535) can also be taken. libfx picks it
-  (`grok-sign-in.js:37`); chord calls `startSignIn()` again, up to three
-  times, then fails with the port named. This is calling libfx again, not
-  choosing a port for it.
+  (`grok-sign-in.js:37`). chord closes whatever step 2 left open and calls
+  `startSignIn()` again, up to three times, then fails with the last port
+  named. This calls libfx's public API again; chord never chooses the port.
 - What it answers: `GET` on the callback path only; anything else 404 and
   keeps listening (a browser asks for `/favicon.ico`). The callback's whole
   URL goes to `finishSignIn(signIn, url, { signal })`. A `state` mismatch
@@ -395,7 +482,7 @@ functions; chord adds the listener, the timers and the cancellation.
 ### One sign-in at a time
 
 One sign-in per provider per process; a second request joins the one
-running. Across processes (two windows, or Q1-B's agent processes) nothing
+running. Across windows (sign-in is the window's in both Q1 options) nothing
 prevents two ChatGPT browser sign-ins: the second sees 1455 taken and is
 offered device code, which is the owner's rule.
 
@@ -424,38 +511,161 @@ as parameters, so tests give it fakes.
   JSON libfx returns (`accessToken`, `refreshToken`, `accountId`,
   `expiresAt`). One account per provider; switching account is sign out
   then sign in.
-- **One queue per process.** Every call goes through a single promise
-  chain, one at a time (finding 7: concurrency wedges the store for the
-  process). Cheap: a `set` took 27 to 347 ms, a `get` 10 to 45 ms (T4).
-- **Every call bounded,** 20 s as the owner's other project uses. A call
-  past its bound is reported and the store is marked unusable for the
-  process's life: by finding 7, a stuck call means later ones stick too,
-  so chord stops queueing behind it and says so.
+- **One queue per process** (revision: scoped to finding 7). Every call goes
+  through one promise chain, one at a time. Calls one at a time never
+  stuck in any trial. They are cheap: a `set` took 27 to 347 ms, a `get` 10
+  to 45 ms (T4).
+- **Every call bounded,** 20 s, as in the owner's other project. A bound is
+  a timeout on the caller's wait, not a cancel: Bun.secrets has no abort,
+  so the operation goes on. Revision: the rule for a late completion.
+  - The queue stays strictly serial past a timeout. A timed-out operation
+    still holds the head until it settles, and nothing behind it starts
+    first. So order holds whatever the timeouts: a late write lands
+    before the logout queued after it, and that logout's delete still wins.
+  - A **read** whose caller timed out is dropped from the queue if it has
+    not started; its caller has already been told "the credential store
+    did not answer".
+  - A **write or delete** whose caller timed out stays queued and runs in
+    order. When it lands, late, its outcome raises a notice (saved, or
+    failed). A write still goes through the compare-and-set below when it
+    runs, so a late write after a logout is refused, not resurrected.
+  - The earlier draft's "unusable for the process after any timeout" is
+    dropped. A process whose head never settles simply times out each
+    caller, and says so each time.
 - A locked keychain or a headless access prompt can block (the owner's
-  report on the board); the bound covers it. Whether a locked keychain over
-  ssh fails at once or blocks was not tried.
+  report on the board); the bound covers the caller. Unverified: a locked
+  keychain, a keychain over ssh, Linux's Secret Service with or without a
+  running service.
 - No secret service (Linux without one): the first call fails; Q4 decides
   what follows.
 
-### libfx's callbacks
+### The credential contract under the lock (revision)
 
-- `credentials({ provider })`: the process's memory copy if it has one,
-  else a bounded read.
-- `onCredentials(next)`: writes `next` to memory at once, then to the store
-  through the queue. **It catches its own write failure** and raises a
-  notice ("this sign-in could not be saved; you will sign in again next
-  time") instead of throwing: libfx awaits it inside the request
-  (`subscription.js:173-178`), and a throw there fails the turn for a
-  rotation that already happened at the provider.
-- `refreshLock({ provider }, refresh)`: a cross-process lock on the
-  provider, so two chord processes never spend one refresh token twice
-  (OpenAI rotates them, `chatgpt.js:52`; libfx re-reads `credentials()`
-  inside the lock, `subscription.js:185-196`). Library: `proper-lockfile`
-  4.1.2 (the owner's other project's choice; last published 2022; deps
-  `graceful-fs`, `retry`, `signal-exit`). Tried under Bun from source: two
-  holders took turns (0 to 303 ms, then 346 to 648 ms). Not tried inside
-  the compiled binary. The lock file goes in chord's state directory, with
-  a stale time above the refresh's own bound.
+The earlier draft let `credentials()` return the process's memory copy.
+That breaks `refreshLock`: libfx calls `credentials()` inside the lock to
+see another process's rotation (`subscription.js:183-190`). Process A
+rotates R to R2 and saves; process B takes the lock, its `credentials()`
+returns its cached R, and B spends R a second time. T8 `naive` reproduced
+it: with two independent caches, B's turns failed (`HostStreamFailed`)
+after the provider refused the spent `r0`, eight times over two rounds.
+
+Each process (a window, or a Q1-B child) holds one **credential cell** per
+provider, `src/agent/credentials.ts` over the platform store:
+
+- `cache`: the value this process last read from the store or saved to it.
+- `base`: the value the store held when this process last read it under
+  the lock, or last wrote it. A rotation's write is valid only against it.
+- `unsaved`: true when this process rotated but its write failed.
+- `account`: the `accountId` the session was opened with.
+- `lockHeld`: true while this process holds the provider's lock.
+
+**`credentials({ provider })`:**
+
+1. If the cell is signed out: throw chord's `CHORD_SIGNED_OUT`, and the
+   turn fails with it.
+2. Under the lock (`lockHeld`), or with no cache: read the store
+   (authoritatively, through the queue).
+   - Absent: sign the cell out; throw.
+   - Its `accountId` differs from `account`: sign the cell out as
+     "account changed"; throw. The session is never moved to another
+     account silently.
+   - The cell is `unsaved` and the store still holds `base`: keep the
+     cache. This process's rotation is the only live chain (the store's
+     refresh token is spent), and it retries the write now, under the
+     lock it holds.
+   - Otherwise: `cache = base = store`'s value.
+3. Outside the lock, with a cache: return the cache. A stale access token
+   meets a 401; libfx refreshes; the refresh takes the lock, and step 2
+   reads the truth (`subscription.js:238-252`).
+
+**`onCredentials(next)`** is a compare-and-set, under the lock. If this
+process already holds the lock (it is inside its own `refreshLock`), it
+writes directly: `proper-lockfile` is not reentrant, so the cell's
+`lockHeld` says when not to take it again. Otherwise it takes the lock.
+
+1. `cache = next` at once. libfx has it already; this process keeps using
+   it.
+2. Read the store.
+   - It holds `next`'s refresh token: done. Another session of this agent
+     already saved it.
+   - It holds `base`'s refresh token: write `next`; `base = next`;
+     `unsaved = false`.
+   - Absent (a logout) or another chain (a new sign-in): refuse the write;
+     sign the cell out. libfx's request in flight finishes with `next`;
+     the next `credentials()` throws.
+3. On a write failure: `unsaved = true`; a notice (path below); **no
+   throw**, since libfx awaits it inside the request
+   (`subscription.js:173-178`) and the rotation already happened at the
+   provider.
+
+**`refreshLock({ provider }, refresh)`:** take the in-process mutex, then
+the file lock (`proper-lockfile` in chord's state directory, stale time
+above the 20 s store bound plus the refresh's own request); set
+`lockHeld`; run `refresh`; clear `lockHeld`; release both. The in-process
+mutex makes `lockHeld` mean "this process", not "some async chain in it".
+
+**Sign-in** (the window's) writes under the lock unconditionally: it
+starts a new chain, and every other cell's next lock read sees the new
+value. If its account differs from theirs, those cells sign out with
+"account changed".
+
+**Proof, T8** (two independent cells, two engines, one backing store, one
+lock directory; the fake provider rotates and refuses a spent token):
+
+| Mode | Result |
+| --- | --- |
+| `naive` (cache under the lock) | B: `HostStreamFailed` both rounds; the provider refused spent `r0` eight times |
+| `cas` (the contract above), 1 h tokens | A and B: `end_turn`; one rotation (`r0 → r1`, A saved); B read `r1` under the lock and spent nothing |
+| `cas`, 1 s tokens (always due) | A and B: `end_turn` in both rounds. The provider still refused three stale tokens, and the turns recovered on libfx's retry. Cause: when the value read under the lock is itself within libfx's 5 min refresh skew (`subscription.js:13, 118-122`), libfx refreshes its own `current` rather than the value it just read (`subscription.js:185-190`). Real tokens last far longer than 5 min, so this needs two processes refreshing within one skew window of a fresh rotation. The cost is a refused refresh and a retry, not a sign-out. libfx's behaviour, not changed here |
+| `logout` (below) | logout waited for A's refresh under the lock; the store ended absent; a late write (stale base) was refused; the store stayed absent |
+
+### Logout against refresh (revision)
+
+Sign-in, refresh and logout all take the provider's lock. Ownership: any
+process may delete (logout); a process writes only by compare-and-set
+against its `base` (above). So no write after a delete can bring a sign-in
+back: T8 `logout` refused B's late write, and the store stayed absent.
+
+Logout itself: take the lock, delete the entry, release, sign this
+process's cell out, then stop this window's sessions on that provider.
+Other processes do not hear of it until they look. When they look is the
+owner's policy:
+
+- **L1. Lazily.** Each process finds out at its next lock read or write,
+  that is, its next refresh. Until then it keeps its cached access token
+  and its turns go on. T8 `logout`: A's next turn after the logout ended
+  `end_turn` with no check. This can last as long as the access token
+  does.
+- **L2. At each turn's start.** Before each prompt, the engine wrapper
+  reads the store (through the queue, outside the lock, read only). If the
+  store is absent or holds another account, the cell signs out and the
+  prompt fails with `CHORD_SIGNED_OUT`: in Q1-A as a sign-in state on
+  screen, in Q1-B as `authRequired`. Cost: one store read per prompt
+  (10 to 45 ms on macOS, T4). T8: the turn-start check reported "signed
+  out" right after the logout. A turn already running finishes.
+- **L3. At once, everywhere.** The window that logs out tells the other
+  processes. Its own children are reachable over ACP (a session cancel,
+  then `authRequired`); other windows share nothing to signal through but
+  the store and the lock directory, so it would need a watch on a marker
+  file there. It does not revoke the tokens at the provider: libfx has no
+  revoke call.
+
+Recommendation: L2, plus an immediate cancel of the turns in the window
+that logged out and in its own children (part of L3, with no new
+channel). A turn running in another window finishes; its next prompt is
+refused.
+
+### The notice path from a child (Q1-B)
+
+A child's `onCredentials` write failure, or a cell signing out, must reach
+the window. Proposed: a chord extension notification from the child,
+`_chord/credentials` with `{ provider, state: 'unsaved' | 'saved' |
+'signed_out' | 'account_changed' }`, handled by the window's connection
+(`src/acp/connection.ts`'s `acp.client` app) and shown as a notice. A
+signed-out cell also fails its next prompt with `authRequired`, so even a
+missed notification ends where sign-in is offered. The method's name and
+shape are protocol's (CHD-575's extension rules). In Q1-A the cell calls
+the window's notice function directly.
 
 ### Q4: beyond Bun.secrets, and with no credential store
 
@@ -465,19 +675,29 @@ Options, the owner's:
   words name the missing secret service. Safest, and what the owner's other
   project does unless given a file.
 - **C2. An explicit 0600 file,** only when the person names it (a setting
-  or flag), never chosen silently. chord writes it with `mode: 0o600` and
-  refuses to read one that is group- or world-readable. Refresh rotation
-  writes it back; the cross-process lock covers it too.
+  or flag), never chosen silently. chord writes it with `mode: 0o600`,
+  atomically (temporary file and rename), and refuses to read one that is
+  group- or world-readable. The same cell contract and lock cover it.
 - **C3. Environment variables only.** A refresh token in the environment
   cannot be written back after rotation, so the next process fails once
   OpenAI rotates it. Workable only for Grok if xAI does not rotate, which
   was not checked.
 - **C4. Memory for the process's life.** Sign in every start; nothing on
-  disk. Works headless; a long session's rotations are kept in memory.
+  disk.
+
+The complete path for each Q1 × Q4 combination (revision):
+
+| | Q1-A (in-process) | Q1-B (child process) |
+| --- | --- | --- |
+| C1 Bun.secrets | Window signs in, writes the keychain under the lock; its cell reads and writes it. Notices direct | Window signs in, writes the keychain. Each child's cell reads it (bounded, queued) and writes rotations by CAS under the lock. Notices by `_chord/credentials` |
+| C2 0600 file | As C1, over the file | As C1, over the file; children read the path the window gives them on start (an argument, never the contents) |
+| C3 environment | The window reads the variables; rotations live in memory only; the next start may fail after a rotation | The child inherits the variables; same rotation loss, per child |
+| C4 memory | The window's memory is the store; the cell contract runs with no lock file needed (one process) | **Unsupported as is**: a child shares no memory with the window. To support it, the window would hand the credentials to the child over its ACP pipe (a chord request after `initialize`, never in argv or the environment, which other processes of the same user can read with `ps`), and the child would send every rotation back in `_chord/credentials` for the window to keep. The window becomes the store for its children; two windows cannot share. Cost: a credential channel in chord's ACP extensions, and tokens in a pipe |
 
 Recommendation: C1 by default with C4 offered on the same screen ("sign in
-for this run only"), and C2 only if the owner wants headless servers
-covered. C3 is not recommended because of rotation.
+for this run only") in Q1-A; in Q1-B, C4 only if the owner accepts the
+pipe channel above, otherwise C1 alone (or C1 with C2). C3 is not
+recommended because of rotation.
 
 `--fake`/`--qa` never touch Bun.secrets: they get a fixture store
 (AGENTS.md; `src/platform/AGENTS.md`).
@@ -487,9 +707,9 @@ covered. C3 is not recommended because of rotation.
 | Scenario | Expected outcome |
 | --- | --- |
 | Model never answers | Turn waits; Esc → `cancelled` in ≤ 11 ms (T2) |
-| Provider answers 5xx persistently | libfx retries without end (finding 5); status shows retrying from `onEvent`'s `transport.retry`; Esc cancels. No chord-side timeout proposed (open question 2) |
+| Provider answers 5xx persistently | libfx keeps retrying, every 30 s after 31 s, and was still retrying at 300 s (T7, finding 5). Status shows it (protocol's path, from `onEvent`'s `transport.*` events). Esc cancels. A host bound is the owner's (R1 to R3 below) |
 | 401 | One refresh through `fetch`, `onCredentials`, retry (T3) |
-| Refresh rejected (revoked) | `LIBFX_*_REFRESH_FAILED` ends the turn; chord clears the stored entry and leads to sign-in (CHD-435's `authRequired` shape in Q1-B) |
+| Refresh rejected (revoked) | `LIBFX_*_REFRESH_FAILED` ends the turn. Under the lock, chord deletes the entry only if it still holds the rejected refresh token (compare-and-delete), signs the cell out, and leads to sign-in (`authRequired` in Q1-B) |
 | Grok account changed on refresh | `LIBFX_GROK_ACCOUNT_CHANGED` (`grok.js:90-92`): same as revoked |
 | Tool ignores abort | Abandoned by libfx; chord's tools all honour `signal` |
 | Shell started a daemon | `runShell` stops its group on abort; on quit the spawn registry SIGKILLs it |
@@ -497,9 +717,13 @@ covered. C3 is not recommended because of rotation.
 | Native core crashes | Q1-A: chord dies. Q1-B: the agent process dies, the window reports it |
 | Native cannot load (glibc < 2.34, temp dir unwritable or `noexec`) | Wasm, serial tools; diagnostics name the backend |
 | Neither loads | Start fails with `getBackendInfo()`'s reasons |
-| Bun.secrets blocks | Bounded at 20 s; store marked unusable for the process; notice |
-| Store write fails after rotation | Memory copy kept; notice; next start signs in again |
-| Two processes refresh at once | `refreshLock` serialises; the second reads the first's save |
+| Bun.secrets blocks | The caller times out at 20 s and is told; the operation keeps the queue's head until it settles; queued reads are dropped, queued writes and deletes run in order later and report |
+| Store write fails after rotation | `unsaved`; the cache holds the only live chain; the write is retried at the next lock; notice (direct, or `_chord/credentials`); other processes that spend the old token fail and sign out |
+| Two processes refresh at once | `refreshLock` serialises; the second reads the first's save under the lock (T8 `cas`) |
+| Logout while another process refreshes | The logout waits for the lock; the refresh's CAS write lands first, then the delete; the store ends absent (T8 `logout`) |
+| A late write after logout | Refused by CAS (store absent ≠ base); the cell signs out (T8 `logout`) |
+| Sign-in to another account in another window | Other cells see another account at their next lock read (or turn start under L2) and sign out as "account changed" |
+| `edit` file changed during the prompt | Refused, nothing written (permission contract) |
 | 1455 taken (either family) | "port taken", device code offered |
 | Grok's random port taken | `startSignIn()` again, three tries |
 | Browser never comes back | 10 min deadline (proposed), listener closed |
@@ -537,9 +761,10 @@ and every Bun.secrets call through a store chord passes.
 - **Time.** Device polling uses libfx's own timers (`setTimeout` in
   `oauth.js:60`); `bun:test`'s fake timers drive them; the listener's
   deadline is chord's timer.
-- **Credentials.** A memory store implementing the platform store's
-  interface; a test that the queue serialises and bounds (with a fake that
-  never settles).
+- **Credentials.** A memory backing store implementing the platform
+  store's interface, shared by two cell instances to play two processes,
+  and a real `proper-lockfile` lock directory under the test's temporary
+  directory; a fake backend that never settles for the queue's bounds.
 - **Bun.secrets itself** is not reached by tests. A manual check on each
   platform, with a throwaway service name, belongs in the ship team's
   handover.
@@ -551,9 +776,9 @@ and every Bun.secrets call through a store chord passes.
 | `src/agent/sign_in.ts` (pure) | `tests/agent/sign_in_test.ts` | every transition, the interface's states |
 | `src/agent/sign_in_run.ts` | `tests/agent/sign_in_run_test.ts` | fake `fetch`, real loopback on a random port, fake timers: success, state mismatch then success, denied, expired, Esc, deadline, port taken |
 | `src/platform/loopback.ts` | `tests/platform/loopback_test.ts` | a holder on `127.0.0.1` and one on `::1`: both reported taken; `stop` frees the port |
-| `src/platform/secrets.ts` | `tests/platform/secrets_test.ts` | the queue and bound over an injected backend; never `Bun.secrets` |
-| `src/agent/credentials.ts` | `tests/agent/credentials_test.ts` | memory first, write-failure notice, lock order with two "processes" (two instances, one lock dir) |
-| `src/agent/tools/*.ts` | `tests/agent/tools/*_test.ts` | in a temp directory; abort mid-call; limits; permission prompt withdrawn on abort |
+| `src/platform/secrets.ts` | `tests/platform/secrets_test.ts` | over an injected backend, never `Bun.secrets`: calls strictly serial; a caller times out while its operation holds the head; a queued read past its timeout is dropped; a queued write and a later delete run in order after a late completion and the delete wins |
+| `src/agent/credentials.ts` | `tests/agent/credentials_test.ts` | two independent cells (two store instances with their own caches, one backing store, one lock directory) and real libfx engines on a fake `fetch` whose token endpoint rotates and refuses a spent token, as T8: concurrent refresh spends once; the cache is not trusted under the lock; a write failure leaves `unsaved` and the retry at the next lock wins; logout racing a refresh ends absent; a late write after logout is refused; another account signs the cell out; L2's turn-start check |
+| `src/agent/tools/*.ts` | `tests/agent/tools/*_test.ts` | in a temp directory; abort mid-call; limits; permission prompt withdrawn on abort; a symlink inside the project to a file outside asks as outside (P2); a symlink retargeted between the prompt and the effect is judged on the new real path; an edit whose file changed while the prompt waited is refused and writes nothing; a `write` whose new file appeared meanwhile is refused; a granted exact command does not grant a longer one |
 | `src/agent/engine.ts` (libfx wiring) | `tests/agent/engine_test.ts` | fake Chat Completions server: a turn, parallel reads, serial writes, cancel with a hung model and with a stuck tool, close bounds, 5xx retry visible, backend reported |
 | plan path | `tests/agent/plans_test.ts` | Codex and Grok with a fake `fetch`: a turn, 401 refresh, refresh rejected → sign-in |
 | `scripts/dev/libfx_assets.ts` | `tests/scripts/dev/libfx_assets_test.ts` (or `lint/`) | passes on the installed tree; fails on a copied tree with the addon renamed, a platform package removed, the wasm missing, a version off |
@@ -644,12 +869,36 @@ this draft does not answer.
 
 1. Q1 (the owner's, with protocol): in-process or a subcommand. Runtime
    leans to the subcommand for crash isolation.
-2. A chord-side bound on a turn that only retries (finding 5): none
-   proposed; libfx's `onEvent` diagnostics show the retries. Does the owner
-   want one?
+2. A host bound on a turn that only retries (finding 5), the owner's. It
+   is chord's policy through `cancel()`; it never replaces libfx's retry
+   loop or answers in its place.
+   - **R1. None.** Esc only, in the window. `-p` and `chord acp` wait for
+     the client's cancel or their own exit; a script can hang for as long
+     as the provider is down.
+   - **R2. Cancel after N consecutive failed attempts with no output**,
+     counted from `onEvent`'s `transport.response` with a 429 or 5xx
+     status and `transport.error` (a thrown fetch; a 500 is a response,
+     not an error), and reset by any `transport.activity`
+     (`engine.js:1495-1517, 1622`).
+     The turn ends `cancelled` with chord's reason ("the provider failed N
+     times in a row").
+   - **R3. Cancel after T seconds with no output**, the same reset.
+   - Where: the window could keep R1 (a person is watching and can press
+     Esc) while `-p` and `chord acp` take R2 or R3 (no one may be
+     watching).
+
+   Recommendation: R1 in the window; R3 with T = 120 s for `-p` and
+   `chord acp`, a setting with that default. In T7's schedule, 120 s
+   covers six attempts.
 3. The browser sign-in's deadline: 10 minutes proposed; libfx sets none.
-4. Q4 (the owner's): C1 + C4 recommended.
-5. Q2 permissions (the owner's): P2 recommended.
+4. Q4 (the owner's): C1, with C4 in Q1-A; in Q1-B, C4 only with the
+   credential pipe described in the Q1 × Q4 table, else unsupported.
+5. Q2 permissions (the owner's): P2 with exact-command shell grants
+   recommended; the grant scopes are part of the question.
+5a. Logout reaching other processes (the owner's): L2, plus cancelling the
+   logging-out window's own turns and its children's, recommended.
+5b. The notice from a child: `_chord/credentials` proposed; its name and
+   shape are protocol's.
 6. `search` on JS over `globby` or a ripgrep binary per target: a ship-team
    trial, recorded in `docs/decisions.md`.
 7. Whether chord puts the project's `AGENTS.md` (and which others) into
@@ -693,6 +942,8 @@ the four platform packages' `package.json` and `index.js`. fx at `v0.0.16`:
 | T4/T4b | Bun.secrets timings and concurrency | serial fine; 20 concurrent wedge the process's store |
 | T5/T5b | loopback binds | `EADDRINUSE`; `::1` bindable beside another's `127.0.0.1`, and `localhost` reaches it |
 | T6 | memory per engine | native +2 MB, Wasm +41 MB first |
+| T7 | every model request 500, custom and Codex, 300 s cap | 15 and 16 requests, backoff to 30 s then every 30 s; not ended at 300 s |
+| T8 | two independent credential cells, one store, one lock dir, rotating provider: `naive`, `cas`, `logout` | naive spends a rotated token and fails; cas: one rotation, both turns end; logout: store ends absent, late write refused, turn-start check signs out |
 | build | missing file import; per-target selection; plugin; durability in binary; unwritable TMPDIR | build fails; only the plugin embeds one addon; default durability fails compiled; Wasm fallback works |
 
 ## What I could not check
@@ -705,6 +956,10 @@ the four platform packages' `package.json` and `index.js`. fx at `v0.0.16`:
 - Whether xAI rotates refresh tokens.
 - The Responses API stream for tool calls and reasoning on the plan
   providers (only text was played).
-- `proper-lockfile` inside the compiled binary.
+- `proper-lockfile` inside the compiled binary, and across real
+  processes (T8 ran two cells in one process with one lock directory).
+- Where the agent-level retry of T7 is capped, if anywhere.
+- The permission contract's symlink and changed-file cases: specified,
+  not tried.
 - The live text of OpenAI's and xAI's terms (403).
 - A native crash's effect, which would need a crashing addon.

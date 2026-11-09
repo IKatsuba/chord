@@ -596,6 +596,55 @@ describe('CHD-565 tester: offered catalog boundaries', () => {
   });
 });
 
+describe('CHD-598 tester: JSON catalog boundaries', () => {
+  test('repeated offered and unknown names keep first order without duplicate rows or problems', async () => {
+    const listed = await listedAgents({}, () => Promise.resolve(undefined));
+    const result = agentsJson({
+      listed,
+      offered: ['goose', 'missing-tester', 'claude', 'goose', 'missing-tester'],
+      preferred: 'missing-preference',
+      problems: [],
+      refused: new Set(['claude', 'refused-only-tester']),
+    });
+
+    expect(result.preferred).toBe('missing-preference');
+    expect(result.agents.map(({ name }) => name)).toStrictEqual([
+      'goose',
+      ...listed.filter(({ name }) => name !== 'goose').map(({ name }) => name),
+    ]);
+    expect(result.agents.filter(({ offered }) => offered)).toStrictEqual([
+      {
+        name: 'goose',
+        title: 'goose',
+        via: 'cli',
+        found: false,
+        offered: true,
+        startable: true,
+      },
+    ]);
+    expect(result.problems).toStrictEqual([
+      { message: '"offeredAgents": no agent named missing-tester, left out' },
+    ]);
+  });
+
+  test('an empty offered list leaves every catalog row present and unoffered', async () => {
+    const listed = await listedAgents({}, () => Promise.resolve(undefined));
+    const result = agentsJson({
+      listed,
+      offered: [],
+      preferred: 'claude',
+      problems: [],
+      refused: new Set(),
+    });
+
+    expect(result.agents.map(({ name }) => name)).toStrictEqual(
+      listed.map(({ name }) => name),
+    );
+    expect(result.agents.every(({ offered }) => !offered)).toBe(true);
+    expect(result.problems).toStrictEqual([]);
+  });
+});
+
 describe('chord agents --json (CHD-598)', () => {
   const listed = [
     { name: 'claude', title: 'Claude', start: 'npx claude', from: 'npx' },

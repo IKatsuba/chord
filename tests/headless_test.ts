@@ -887,6 +887,211 @@ test('chord agents marks each own CLI by PATH and lists a settings name', async 
   expect(line('claude') ?? '').toMatch(/npx +npx -y /);
 });
 
+describe('CHD-598 tester: spawned JSON settings boundaries', () => {
+  async function listing(user: unknown, project: unknown, before = false) {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-json-tester-'));
+    const target = join(dir, 'target');
+    const config = join(dir, 'config');
+    const userFile = join(config, 'chord', 'settings.json');
+    const projectFile = join(target, '.chord', 'settings.json');
+
+    try {
+      await mkdir(join(config, 'chord'), { recursive: true });
+      await mkdir(join(target, '.chord'), { recursive: true });
+      await writeFile(userFile, JSON.stringify(user));
+      await writeFile(
+        projectFile,
+        typeof project === 'string' ? project : JSON.stringify(project),
+      );
+
+      const invoke = (json: boolean) =>
+        spawnSync(
+          process.execPath,
+          [
+            fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+            'agents',
+            ...(before ? ['-C', target] : []),
+            ...(json ? ['--json'] : []),
+            ...(before ? [] : ['-C', target]),
+          ],
+          {
+            cwd: dir,
+            env: {
+              ...process.env,
+              HOME: dir,
+              XDG_CONFIG_HOME: config,
+              XDG_STATE_HOME: join(dir, 'state'),
+              PATH: join(dir, 'no-programs'),
+              NO_COLOR: '1',
+            },
+            stdio: ['ignore', 'pipe', 'pipe'],
+            encoding: 'utf8',
+            timeout: 10000,
+          },
+        );
+      const json = invoke(true);
+      const table = invoke(false);
+
+      expect(json.error).toBeUndefined();
+      expect(json.status).toBe(0);
+      expect(json.signal).toBeNull();
+      expect(json.stderr).toBe(table.stderr);
+      expect(json.stdout.trimEnd().split('\n')).toHaveLength(1);
+
+      const parsed = JSON.parse(json.stdout) as AgentsJson;
+
+      expect(Object.keys(parsed).sort()).toStrictEqual([
+        'agents',
+        'preferred',
+        'problems',
+        'version',
+      ]);
+      expect(parsed.version).toBe(1);
+
+      for (const agent of parsed.agents) {
+        expect(Object.keys(agent).sort()).toStrictEqual([
+          'found',
+          'name',
+          'offered',
+          'startable',
+          'title',
+          'via',
+        ]);
+      }
+
+      return {
+        parsed,
+        stdout: json.stdout,
+        table: table.stdout,
+        userFile,
+        projectFile,
+      };
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  }
+
+  for (const command of [
+    'env TEST_TOKEN=chd598-string-sentinel tester-agent --acp',
+    ['env', 'TEST_TOKEN=chd598-argv-sentinel', 'tester-agent', '--acp'],
+  ]) {
+    test(`a ${typeof command === 'string' ? 'string' : 'argv'} command stays out of non-TTY JSON with -C`, async () => {
+      const { parsed, stdout, table } = await listing(
+        {
+          offeredAgents: ['mine', 'mine'],
+          agents: { mine: { command: 'user-agent-command' } },
+        },
+        {
+          agent: 'mine',
+          agents: { mine: { command } },
+        },
+        typeof command === 'string',
+      );
+
+      expect(parsed.preferred).toBe('mine');
+      expect(parsed.agents[0]).toStrictEqual({
+        name: 'mine',
+        title: null,
+        via: 'settings',
+        found: null,
+        offered: true,
+        startable: true,
+      });
+      expect(parsed.problems).toStrictEqual([]);
+      expect(stdout).not.toContain('sentinel');
+      expect(stdout).not.toContain('TEST_TOKEN');
+      expect(stdout).not.toContain('tester-agent');
+      expect(stdout).not.toContain('user-agent-command');
+      expect(table).toContain('tester-agent');
+      expect(table).toContain('sentinel');
+      expect(table).not.toContain('user-agent-command');
+    });
+  }
+
+  test('a project command recovers a user refusal while refused-only unknown names stay absent', async () => {
+    const { parsed, userFile } = await listing(
+      {
+        offeredAgents: ['codex', 'refused-only-tester', 'refused-only-tester'],
+        agents: {
+          codex: { command: false },
+          'refused-only-tester': { command: 7 },
+        },
+      },
+      {
+        agents: { codex: { command: ['project-agent', '--acp'] } },
+      },
+    );
+
+    expect(parsed.agents[0]).toMatchObject({
+      name: 'codex',
+      via: 'settings',
+      offered: true,
+      startable: true,
+    });
+    expect(
+      parsed.agents.some(({ name }) => name === 'refused-only-tester'),
+    ).toBe(false);
+    expect(parsed.problems).toStrictEqual([
+      {
+        file: userFile,
+        message:
+          '"agents.codex.command": expected a string, got a boolean · codex will not start',
+      },
+      {
+        file: userFile,
+        message:
+          '"agents.refused-only-tester.command": expected a string, got a number · refused-only-tester will not start',
+      },
+      {
+        message:
+          '"offeredAgents": no agent named refused-only-tester, left out',
+      },
+    ]);
+  });
+
+  test('a refused project override disables the valid user command', async () => {
+    const { parsed, projectFile } = await listing(
+      {
+        offeredAgents: ['mine'],
+        agents: { mine: { command: 'valid-user-agent' } },
+      },
+      { agents: { mine: { command: false } } },
+    );
+
+    expect(parsed.agents.find(({ name }) => name === 'mine')).toStrictEqual({
+      name: 'mine',
+      title: null,
+      via: 'settings',
+      found: null,
+      offered: false,
+      startable: false,
+    });
+    expect(parsed.problems).toStrictEqual([
+      {
+        file: projectFile,
+        message:
+          '"agents.mine.command": expected a string, got a boolean · mine will not start',
+      },
+    ]);
+  });
+
+  test('broken project settings still produce JSON and retain the file problem', async () => {
+    const { parsed, projectFile } = await listing(
+      { agent: 'goose', offeredAgents: ['goose'] },
+      '{"agents":',
+    );
+
+    expect(parsed.preferred).toBe('goose');
+    expect(parsed.agents.length).toBeGreaterThan(0);
+    expect(
+      parsed.agents.filter(({ offered }) => offered).map(({ name }) => name),
+    ).toStrictEqual(['goose']);
+    expect(parsed.problems).toHaveLength(1);
+    expect(parsed.problems[0]?.file).toBe(projectFile);
+    expect(parsed.problems[0]?.message).toContain('JSON');
+  });
+});
+
 describe('chord agents --json (CHD-598)', () => {
   /** `chord agents` with `args` on a user file, a project file and goose on PATH. */
   async function agents(args: string[]) {

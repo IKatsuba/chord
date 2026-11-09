@@ -289,9 +289,10 @@ export async function riffStep(
   arch: string | undefined,
   cwd: string,
 ): Promise<void> {
-  const fake = serveFakeChat();
-
+  // The needle first: a write that fails leaves no server running.
   await writeFile(join(cwd, NEEDLE_FILE), `${NEEDLE}\n`);
+
+  const fake = serveFakeChat();
 
   try {
     const turns = [

@@ -728,6 +728,35 @@ function sourced(
 }
 
 /**
+ * The last file to give the agent a command decides, as every setting
+ * merges: a refused one refuses the agent, never falling back to chord's
+ * own, and a later good one replaces it (the lead, on the owner's Q52).
+ */
+function commandLayer(
+  layers: readonly SettingsLayer[],
+  agent: string,
+): SettingsLayer | undefined {
+  return layers.findLast(
+    (layer) =>
+      layer.refused?.[agent] !== undefined ||
+      layer.settings.agents?.[agent]?.command !== undefined,
+  );
+}
+
+/** The agents the files leave unstartable: their deciding command was refused. */
+export function refusedAgents(layers: readonly SettingsLayer[]): Set<string> {
+  const named = new Set(
+    layers.flatMap((layer) => Object.keys(layer.refused ?? {})),
+  );
+
+  return new Set(
+    [...named].filter(
+      (agent) => commandLayer(layers, agent)?.refused?.[agent] !== undefined,
+    ),
+  );
+}
+
+/**
  * A flag beats the files, and a later file an earlier one. The agent's other
  * settings are looked up under the agent chosen, whichever said it.
  */
@@ -739,14 +768,7 @@ export function resolveStartup(
   const settings = mergeSettings(...layers.map((layer) => layer.settings));
   const agent = flags.agent ?? settings.agent ?? defaultAgent;
   const agentCommand = flags.agentCommand ?? settings.agents?.[agent]?.command;
-  // The last file to give the agent a command decides, as every setting
-  // merges: a refused one refuses the agent, never falling back to chord's
-  // own, and a later good one replaces it (the lead, on the owner's Q52).
-  const last = layers.findLast(
-    (layer) =>
-      layer.refused?.[agent] !== undefined ||
-      layer.settings.agents?.[agent]?.command !== undefined,
-  );
+  const last = commandLayer(layers, agent);
   const cause = last?.refused?.[agent];
   const refused =
     flags.agentCommand === undefined && cause !== undefined
@@ -964,8 +986,13 @@ export function unknownOffered(
     file,
     kind: 'validation',
     key: ['offeredAgents'],
-    message: `"offeredAgents": no agent named ${name}, left out`,
+    message: unknownOfferedMessage(name),
   }));
+}
+
+/** What chord says of a name `offeredAgents` gives that it lacks. */
+export function unknownOfferedMessage(name: string): string {
+  return `"offeredAgents": no agent named ${name}, left out`;
 }
 
 /** A problem as stderr says it, naming the file. */

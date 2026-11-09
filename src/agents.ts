@@ -5,6 +5,7 @@ import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { CLI_AGENTS, type CliAgent } from './clis.ts';
 import { REGISTRY_AGENTS, type RegistryAgent } from './registry.ts';
+import { type SettingsProblem, unknownOfferedMessage } from './settings.ts';
 
 /**
  * The registry calls Claude's and Codex's adapters `claude-acp` and
@@ -373,4 +374,84 @@ export function agentTable(
     .split('\n')
     .map((line) => line.trimEnd())
     .join('\n');
+}
+
+/**
+ * `chord agents --json`: what a client offering a choice of agent reads. Its
+ * shape is promised; `version` changes when a field's meaning does.
+ */
+export interface AgentsJson {
+  readonly version: 1;
+  /** The `agent` setting, else chord's default. */
+  readonly preferred: string;
+  readonly agents: readonly AgentJson[];
+  readonly problems: readonly ProblemJson[];
+}
+
+/** One agent kind; every field is always there. No start command: it can hold tokens. */
+export interface AgentJson {
+  readonly name: string;
+  /** `null` for a name the settings files alone define. */
+  readonly title: string | null;
+  /** `npx` and `uvx` download and run a package, which a client may confirm. */
+  readonly via: ListedAgent['from'];
+  /** Whether PATH has an own CLI's command; `null` for the other kinds. */
+  readonly found: boolean | null;
+  /** What the start screen offers; never an agent that will not start. */
+  readonly offered: boolean;
+  /** `false` where the settings files gave a command chord refused. */
+  readonly startable: boolean;
+}
+
+/** A settings problem; one about the files names the file. */
+export interface ProblemJson {
+  readonly file?: string;
+  readonly message: string;
+}
+
+/**
+ * The listed agents as `--json` gives them: the offered first, in the start
+ * screen's order, then the rest in the catalog's. A name `offered` gives that
+ * the catalog lacks is a problem, as it is on the start screen.
+ */
+export function agentsJson({
+  listed,
+  offered,
+  preferred,
+  problems,
+  refused,
+}: {
+  readonly listed: readonly ListedAgent[];
+  readonly offered: readonly string[] | undefined;
+  readonly preferred: string;
+  readonly problems: readonly SettingsProblem[];
+  readonly refused: ReadonlySet<string>;
+}): AgentsJson {
+  const chosen = offeredAgents(listed, offered);
+  const shown = chosen.agents.filter(({ name }) => !refused.has(name));
+  const entry = (agent: ListedAgent, isOffered: boolean): AgentJson => ({
+    name: agent.name,
+    title: agent.title ?? null,
+    via: agent.from,
+    found: agent.from === 'cli' ? (agent.found ?? false) : null,
+    offered: isOffered,
+    startable: !refused.has(agent.name),
+  });
+
+  return {
+    version: 1,
+    preferred,
+    agents: [
+      ...shown.map((agent) => entry(agent, true)),
+      ...listed
+        .filter((agent) => !shown.includes(agent))
+        .map((agent) => entry(agent, false)),
+    ],
+    problems: [
+      ...problems.map(({ file, message }) => ({ file, message })),
+      ...chosen.unknown.map((name) => ({
+        message: unknownOfferedMessage(name),
+      })),
+    ],
+  };
 }

@@ -3,7 +3,9 @@
 - `bun dev <command>` is the Cliffy CLI in `dev.ts`, with modules in
   `dev/`; declare its arguments there, not in each module. `bun quality`
   and `bun lint` use `quality.ts` and `lint.ts`; `bun check` and `bun fmt`
-  are native Bun commands.
+  are native Bun commands. Local quality checks the host's installed libfx
+  package and every target's metadata; CI's static job installs all platforms
+  and sets `CHORD_LIBFX_ALL_TARGETS=1` to check all four packages.
 - `bun dev release [version|major|minor|patch|fix]` is the owner's
   (`docs/decisions.md`, "Releasing"); nobody else publishes. Give it the
   version instead of editing package.json's by hand. `--channel <name>` makes
@@ -45,7 +47,15 @@
   tagged; finish with the printed `gh` command, since rerunning cannot create it.
 - `dev/compile.ts` uses `Bun.build` with a plugin resolving OpenTUI's
   `react/jsx-dev-runtime` imports to `dev/jsx_dev_runtime.ts` on React's
-  production runtime. Its `buildOptions` also builds the boundary test.
+  production runtime. It installs all target packages, then checks the pinned
+  libfx layout for each target it builds with `dev/libfx_assets.ts`; a mismatch
+  names the package and version and stops the build. A plugin embeds only the
+  target's `libfx.node`; Linux builds define `FFF_LIBC` as `'gnu'` to embed
+  fff's glibc library.
+  Its `buildOptions` also builds the boundary test.
+- `bun dev selftest <binary>` checks the version, `-p`, ACP stdio, the window
+  and clipboard with the fake agent, plus a libfx tool turn on each of the
+  native and WebAssembly backends against a local fake provider and an fff grep.
 - `targets.ts` is the one list of release platforms. Resource collector support
   is separately guarded; compiling a target does not enable its collectors.
   Keep the resource worker in the same binary and provider executables external.

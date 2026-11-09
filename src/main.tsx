@@ -68,6 +68,10 @@ import {
   RESOURCE_WORKER_FLAG,
   runResourceWorker,
 } from './platform/resource_worker.ts';
+import {
+  RIFF_SELFTEST_FLAG,
+  runRiffSelftest,
+} from './platform/riff_selftest.ts';
 import { serveChord } from './server/server.ts';
 import { upgradeCommand } from './upgrade.ts';
 import { chordStateDir } from './session/state_dir.ts';
@@ -873,6 +877,9 @@ if (import.meta.main) {
 
   if (args[0] === RESOURCE_WORKER_FLAG) {
     await runResourceWorker(args.slice(1));
+  } else if (args[0] === RIFF_SELFTEST_FLAG) {
+    // Before Cliffy, so no help lists it: only `bun dev selftest` uses it.
+    await runRiffSelftest(args.slice(1));
   } else {
     try {
       await cli.parse(args);

@@ -6,12 +6,13 @@
  *   bun dev compile --install   this machine's target, into ~/.local/bin/chord
  */
 import { spawnSync } from 'node:child_process';
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { BuildConfig, BunPlugin } from 'bun';
 import manifest from '../../package.json' with { type: 'json' };
-import { TARGETS } from '../targets.ts';
+import { hostTarget, type Target, TARGETS } from '../targets.ts';
+import { assertLibfxAssets, libfxAddon, libfxPackage } from './libfx_assets.ts';
 
 /** `bun dev compile`'s options. */
 export interface CompileOptions {
@@ -45,6 +46,51 @@ const jsxDevRuntime: BunPlugin = {
     );
   },
 };
+
+/**
+ * `chord:libfx-native`, which src/platform/libfx.ts imports only in a
+ * compiled binary, resolved to `target`'s libfx addon and embedded as a
+ * file. Only that one addon goes into the binary: a plain import of every
+ * platform's, or one picked by a define, embeds all four (CHD-485). A
+ * missing addon fails the build, naming the package and version.
+ */
+export function libfxNative(target: Target | undefined): BunPlugin {
+  return {
+    name: 'libfx-native',
+    setup(build) {
+      build.onResolve({ filter: /^chord:libfx-native$/ }, () => {
+        if (target === undefined) {
+          throw new Error(
+            `libfx has no addon for ${process.platform}-${process.arch}`,
+          );
+        }
+
+        const path = libfxAddon(target);
+
+        if (!existsSync(path)) {
+          throw new Error(
+            `${libfxPackage(target)}@${libfxVersion()} has no libfx.node for ${target.bun}; run bun install ${EVERY_PLATFORM.join(' ')}`,
+          );
+        }
+
+        return { path, namespace: 'libfx-native' };
+      });
+
+      build.onLoad({ filter: /.*/, namespace: 'libfx-native' }, ({ path }) => ({
+        contents: readFileSync(path),
+        loader: 'file',
+      }));
+    },
+  };
+}
+
+function libfxVersion(): string {
+  const libfx = JSON.parse(
+    readFileSync(join(root, 'node_modules', 'libfx', 'package.json'), 'utf8'),
+  ) as { version: string };
+
+  return libfx.version;
+}
 
 /**
  * The native package OpenTUI loads on `platform` and `arch`, as its own
@@ -97,7 +143,8 @@ export function buildOptions(
   {
     host = false,
     compiled = false,
-  }: { host?: boolean; compiled?: boolean } = {},
+    target = hostTarget(),
+  }: { host?: boolean; compiled?: boolean; target?: Target | undefined } = {},
 ): BuildConfig & { target: 'bun' } {
   return {
     entrypoints: [entry],
@@ -116,8 +163,11 @@ export function buildOptions(
     define: {
       'process.env.NODE_ENV': '"production"',
       ...(compiled ? { CHORD_RESOURCE_COMPILED: 'true' } : {}),
+      // fff picks its Linux library by this at build time and embeds it;
+      // without it, it looks for the library at run time (its README).
+      ...(target?.os === 'linux' ? { FFF_LIBC: '"gnu"' } : {}),
     },
-    plugins: [jsxDevRuntime],
+    plugins: [jsxDevRuntime, libfxNative(target)],
   };
 }
 
@@ -130,9 +180,7 @@ export async function compile(args: CompileOptions): Promise<void> {
     process.exit(1);
   }
 
-  const host = TARGETS.find(
-    (target) => target.os === process.platform && target.cpu === process.arch,
-  );
+  const host = hostTarget();
   const targets = args.all ? TARGETS : host ? [host] : [];
 
   if (targets.length === 0) {
@@ -145,6 +193,8 @@ export async function compile(args: CompileOptions): Promise<void> {
   // A binary embeds only the clipboard addon that is installed, which is
   // otherwise the host's alone, so a cross-compiled one could not read it.
   run(['install', ...EVERY_PLATFORM]);
+  // A libfx layout change fails here, not in the binary it would break.
+  assertLibfxAssets(targets);
 
   for (const target of targets) {
     const output = args.install
@@ -153,7 +203,10 @@ export async function compile(args: CompileOptions): Promise<void> {
 
     // The JS API, as the command line takes no plugin.
     const built = await Bun.build({
-      ...buildOptions(join(root, 'src', 'main.tsx'), { compiled: true }),
+      ...buildOptions(join(root, 'src', 'main.tsx'), {
+        compiled: true,
+        target,
+      }),
       compile: { target: target.bun, outfile: output },
     });
 

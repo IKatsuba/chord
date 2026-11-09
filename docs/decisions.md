@@ -8226,8 +8226,13 @@ effect; an approved edit whose file changed is refused.
 - **Choice (the owner): both of fx's lists as fx has them,** its direct
   read-only set and its reversible list (installs, `test`, `run`, `zig
   build`, `git fetch`). Anything else, or anything that does not parse, is
-  reviewed. How an admitted command runs (fx's direct executor and
-  `safe_git`, or the shell) is open with the owner.
+  reviewed.
+- **How they run, options:** a port of fx's direct executor and `safe_git`
+  for the direct set; the executor without `safe_git` (git reviewed); or
+  `$SHELL -c` for all, where aliases, functions, shell options, `PATH` and a
+  repository's `core.fsmonitor` apply. **Choice (the owner): the executor
+  and `safe_git`** (Apache-2.0, attributed) for the direct read-only set;
+  the reversible list through `$SHELL -c`, as in fx.
 
 ## 2026-11-09 — CHD-485: riff follows chord's treatment of every agent (owner)
 

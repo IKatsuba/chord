@@ -9,22 +9,8 @@ import { Readable } from 'node:stream';
 import { outputStream } from '../acp/stdio.ts';
 import { libfxBackend } from '../platform/libfx.ts';
 import { chordStateDir } from '../session/state_dir.ts';
-import { connectRiff, type FakeProvider } from './adapter.ts';
-
-/**
- * The fake Chat Completions server's base URL. Only tests, selftest, --fake
- * and --qa set it, never settings: it is the one provider riff has until it
- * can sign in (CHD-485 part 4).
- */
-export const FAKE_PROVIDER_ENV = 'CHORD_RIFF_FAKE_PROVIDER';
-
-export function fakeProvider(
-  env: Readonly<Record<string, string | undefined>>,
-): FakeProvider | undefined {
-  const baseUrl = env[FAKE_PROVIDER_ENV];
-
-  return baseUrl === undefined || baseUrl === '' ? undefined : { baseUrl };
-}
+import { connectRiff } from './adapter.ts';
+import { fakeProvider } from './start.ts';
 
 /**
  * `wasm` turns libfx's native addon off. Only tests and selftest set it,

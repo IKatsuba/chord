@@ -5,12 +5,8 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { agentStart } from '../../src/agents.ts';
 import { openAgent } from '../../src/acp/connection.ts';
-import {
-  BACKEND_ENV,
-  FAKE_PROVIDER_ENV,
-  fakeProvider,
-  riffBackend,
-} from '../../src/riff/serve.ts';
+import { BACKEND_ENV, riffBackend } from '../../src/riff/serve.ts';
+import { FAKE_PROVIDER_ENV, fakeProvider } from '../../src/riff/start.ts';
 import { HELLO, serveFakeChat } from '../fixtures/riff/fake_chat.ts';
 
 const STOP = { exitMs: 300, termMs: 300, killMs: 2000 } as const;

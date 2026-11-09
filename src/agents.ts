@@ -2,10 +2,11 @@ import { which } from '@david/which';
 import { quote } from 'shell-quote';
 import { Table } from '@cliffy/table';
 import stringWidth from 'string-width';
+import process from 'node:process';
 import wrapAnsi from 'wrap-ansi';
 import { CLI_AGENTS, type CliAgent } from './clis.ts';
 import { REGISTRY_AGENTS, type RegistryAgent } from './registry.ts';
-import { RIFF, riffAgentStart } from './riff/start.ts';
+import { RIFF, riffAgentStart, riffOffered } from './riff/start.ts';
 import { type SettingsProblem, unknownOfferedMessage } from './settings.ts';
 
 /**
@@ -29,10 +30,10 @@ export interface KnownAgent {
   readonly title: string;
   readonly start: AgentStart;
   /**
-   * What starts it: npx or uvx with the registry's package, or `cli`, a
-   * command the person installs themselves.
+   * What starts it: npx or uvx with the registry's package, `cli`, a
+   * command the person installs themselves, or `builtin`, chord itself.
    */
-  readonly runner: 'npx' | 'uvx' | 'cli';
+  readonly runner: 'npx' | 'uvx' | 'cli' | 'builtin';
   /** Where the agent says to install it, when it says. */
   readonly install: string | undefined;
   /** `false` where chord's own table gives the agent no MCP servers. */
@@ -100,6 +101,28 @@ const AGENTS: readonly KnownAgent[] = [
   ).map(fromCli),
 ];
 
+/** riff, chord's own agent, as the catalog's first row (CHD-485). */
+function riffAgent(): KnownAgent {
+  return {
+    name: RIFF,
+    title: "chord's own agent · on a ChatGPT or Grok plan",
+    start: riffAgentStart(),
+    runner: 'builtin',
+    install: undefined,
+  };
+}
+
+/** The process's environment, which decides whether riff is listed. */
+type Env = Readonly<Record<string, string | undefined>>;
+
+/**
+ * The agents chord knows, riff first where `env` offers it: the one
+ * place that decides whether riff is listed, started by name and offered.
+ */
+function catalog(env: Env): readonly KnownAgent[] {
+  return riffOffered(env) ? [riffAgent(), ...AGENTS] : AGENTS;
+}
+
 /**
  * Whether a session of `agent` is given MCP servers: as its
  * `agents.<name>.mcpServers` setting says, `set`, else as chord's own table
@@ -109,14 +132,20 @@ export function takesMcpServers(agent: string, set?: boolean): boolean {
   return set ?? findAgent(agent)?.mcpServers ?? true;
 }
 
-/** Every agent chord can start by name: the registry's, then the table's. */
-export function listAgents(): readonly KnownAgent[] {
-  return AGENTS;
+/**
+ * Every agent chord can start by name: riff where it is offered, the
+ * registry's, then the table's.
+ */
+export function listAgents(env: Env = process.env): readonly KnownAgent[] {
+  return catalog(env);
 }
 
 /** The agent a name means, or undefined for one chord does not know. */
-export function findAgent(name: string): KnownAgent | undefined {
-  return AGENTS.find((agent) => agent.name === name);
+export function findAgent(
+  name: string,
+  env: Env = process.env,
+): KnownAgent | undefined {
+  return catalog(env).find((agent) => agent.name === name);
 }
 
 /**
@@ -132,8 +161,8 @@ export function agentStart(
     return { command: override, env: {} };
   }
 
-  // Not listed until riff can sign in (CHD-604c), but tests and selftest
-  // start it by name.
+  // Listed only on its fake provider, but tests and selftest start it by
+  // name without one.
   if (name === RIFF) {
     return riffAgentStart();
   }
@@ -173,7 +202,12 @@ export async function missingCommand(
 ): Promise<string | undefined> {
   const agent = findAgent(name);
 
-  if (override !== undefined || agent === undefined) {
+  // chord starts itself for riff, and it is there.
+  if (
+    override !== undefined ||
+    agent === undefined ||
+    agent.runner === 'builtin'
+  ) {
     return undefined;
   }
 
@@ -217,46 +251,50 @@ export interface ListedAgent {
   /** What starts it, as a person would type it. */
   readonly start: string;
   /**
-   * Where that comes from: the registry's npx or uvx, the agent's own CLI
-   * from the table, or a command in the settings files, which wins over both.
+   * Where that comes from: chord itself, the registry's npx or uvx, the
+   * agent's own CLI from the table, or a command in the settings files,
+   * which wins over all of them.
    */
-  readonly from: 'npx' | 'uvx' | 'cli' | 'settings';
+  readonly from: 'builtin' | 'npx' | 'uvx' | 'cli' | 'settings';
   /** For the agent's own CLI, whether PATH has its command. */
   readonly found?: boolean;
 }
 
 /**
- * Every agent chord can start, as `chord agents` lists them: the registry's
- * and the table's, each on the settings files' command where they give one,
+ * Every agent chord can start, as `chord agents` lists them: riff where
+ * `env` offers it, the registry's and the table's, each on the settings files' command where they give one,
  * then the names only the settings files define, in their order.
  */
 export async function listedAgents(
   commands: Readonly<Record<string, string | readonly string[]>>,
   lookup: Lookup = onPath,
+  env: Env = process.env,
 ): Promise<ListedAgent[]> {
   const known = await Promise.all(
-    AGENTS.map(async ({ name, title, start, runner }): Promise<ListedAgent> => {
-      const command = commands[name];
+    catalog(env).map(
+      async ({ name, title, start, runner }): Promise<ListedAgent> => {
+        const command = commands[name];
 
-      if (command !== undefined) {
-        return { name, title, start: commandLine(command), from: 'settings' };
-      }
+        if (command !== undefined) {
+          return { name, title, start: commandLine(command), from: 'settings' };
+        }
 
-      const [first] = start.command;
+        const [first] = start.command;
 
-      return {
-        name,
-        title,
-        start: startLine(start),
-        from: runner,
-        ...(runner === 'cli' && first !== undefined
-          ? { found: (await lookup(first)) !== undefined }
-          : {}),
-      };
-    }),
+        return {
+          name,
+          title,
+          start: startLine(start),
+          from: runner,
+          ...(runner === 'cli' && first !== undefined
+            ? { found: (await lookup(first)) !== undefined }
+            : {}),
+        };
+      },
+    ),
   );
   const theirs = Object.entries(commands)
-    .filter(([name]) => findAgent(name) === undefined)
+    .filter(([name]) => findAgent(name, env) === undefined)
     .map(([name, command]): ListedAgent => ({
       name,
       title: undefined,
@@ -333,6 +371,8 @@ function mark({ from, found }: ListedAgent): string {
       return found ? 'own CLI · found' : `own CLI · ${NOT_ON_PATH}`;
     case 'settings':
       return 'settings';
+    case 'builtin':
+      return 'built in';
     default:
       return from;
   }

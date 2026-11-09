@@ -95,12 +95,12 @@ const RUN: DevActions = {
     await dying(() => runRelease(release(), stages, options, process, version));
   },
   chord: async (fake, args, fixtureResources) => {
-    process.exitCode = (await import('./dev/tools.ts')).chord(
-      fake,
-      args,
-      undefined,
-      fixtureResources,
-    );
+    const tools = await import('./dev/tools.ts');
+
+    process.exitCode =
+      fake || fixtureResources === true
+        ? await tools.chordWithRiff(fake, args, fixtureResources)
+        : tools.chord(fake, args, undefined, fixtureResources);
   },
   riff: async (args) => {
     process.exitCode = await (await import('./dev/tools.ts')).chordOnRiff(args);

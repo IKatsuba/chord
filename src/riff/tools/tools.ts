@@ -9,6 +9,7 @@ import type {
 } from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
 import type { FxAgentHostTool } from 'libfx/node';
+import { realpathSync } from 'node:fs';
 import type { Finder } from '../../platform/fff.ts';
 import type { Drawn } from '../events.ts';
 import type { RiffMode } from '../models.ts';
@@ -95,7 +96,18 @@ async function permit(
   }
 
   const chosen = await session.ask?.(
-    { toolCallId, ...drawn(directory, name, input) },
+    {
+      toolCallId,
+      ...drawn(
+        directory,
+        name,
+        input,
+        reach.tool === 'read' ? reach.real : undefined,
+      ),
+      // A read's title names its file already; list and search keep the
+      // directory "this directory" means.
+      ...(reach.tool === 'read' ? { locations: [] } : {}),
+    },
     permissionOptions(reach, directory),
     signal,
   );
@@ -188,6 +200,18 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
   ];
 }
 
+/**
+ * `path`'s real path as it is now, or undefined when it has none; for a
+ * call's row, drawn as its call starts, before the read decides anything.
+ */
+function realOrNone(path: string): string | undefined {
+  try {
+    return realpathSync(path);
+  } catch {
+    return undefined;
+  }
+}
+
 /** The range a read names, as `:10-40`, or nothing for the whole file. */
 function range({ offset, limit }: ReadInput): string {
   if (offset === undefined && limit === undefined) {
@@ -196,14 +220,25 @@ function range({ offset, limit }: ReadInput): string {
 
   const first = offset ?? 1;
 
-  return limit === undefined ? `:${first}` : `:${first}-${first + limit - 1}`;
+  if (limit === undefined || limit === 1) {
+    return `:${first}`;
+  }
+
+  return `:${first}-${first + limit - 1}`;
 }
 
 /**
  * How `name`'s call with `input` is drawn in `directory`; a tool riff does
- * not know, or an input it cannot read, by its name alone.
+ * not know, or an input it cannot read, by its name alone. A read names the
+ * file it reaches, `real` or its real path now, when that is not the path
+ * asked for.
  */
-export function drawn(directory: string, name: string, input: unknown): Drawn {
+export function drawn(
+  directory: string,
+  name: string,
+  input: unknown,
+  real?: string,
+): Drawn {
   switch (name) {
     case 'read': {
       const read = ReadInput.safeParse(input);
@@ -213,9 +248,15 @@ export function drawn(directory: string, name: string, input: unknown): Drawn {
       }
 
       const path = resolveIn(directory, read.data.path);
+      const target = real ?? realOrNone(path);
+      // Through a link, the title says where it points, as option 2 does.
+      const through =
+        target === undefined || target === path
+          ? ''
+          : ` → ${shown(directory, target)}`;
 
       return {
-        title: `Read ${shown(directory, path)}${range(read.data)}`,
+        title: `Read ${shown(directory, path)}${range(read.data)}${through}`,
         kind: 'read',
         locations: [
           {

@@ -1,7 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { FxAgentHostTool } from 'libfx/node';
 import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type Finder, openFinder } from '../../../src/platform/fff.ts';
 import type { RiffMode } from '../../../src/riff/models.ts';
@@ -32,8 +32,25 @@ describe('how riff draws a call', () => {
     expect(drawn('/p/app', 'read', { path: 'a.ts', limit: 5 }).title).toBe(
       'Read a.ts:1-5',
     );
-    expect(drawn('/p/app', 'read', { path: '/etc/hosts' }).title).toBe(
-      'Read /etc/hosts',
+    expect(
+      drawn('/p/app', 'read', { path: 'a.ts', offset: 3, limit: 1 }).title,
+    ).toBe('Read a.ts:3');
+    expect(drawn('/p/app', 'read', { path: '/nowhere/hosts' }).title).toBe(
+      'Read /nowhere/hosts',
+    );
+  });
+
+  test('a read through a link names where it points, as option 2 spells it', () => {
+    expect(
+      drawn(
+        '/p/app',
+        'read',
+        { path: 'docs/notes.txt', offset: 2, limit: 3 },
+        join(homedir(), '.ssh', 'id_rsa'),
+      ).title,
+    ).toBe('Read docs/notes.txt:2-4 → ~/.ssh/id_rsa');
+    expect(drawn('/p/app', 'read', { path: 'a.ts' }, '/p/app/a.ts').title).toBe(
+      'Read a.ts',
     );
   });
 
@@ -303,7 +320,11 @@ describe("riff's tools ask as the session's mode says", () => {
     answers: (string | undefined)[],
     grants = new Set<string>(),
   ) => {
-    const asked: { title: string; options: string[] }[] = [];
+    const asked: {
+      title: string;
+      options: string[];
+      locations?: unknown;
+    }[] = [];
     let current = mode;
     const tools = Object.fromEntries(
       riffTools({
@@ -315,6 +336,7 @@ describe("riff's tools ask as the session's mode says", () => {
           asked.push({
             title: toolCall.title ?? '',
             options: options.map(({ optionId }) => optionId),
+            locations: toolCall.locations,
           });
 
           return Promise.resolve(answers.shift());
@@ -344,10 +366,24 @@ describe("riff's tools ask as the session's mode says", () => {
     expect(await run('read', { path: 'a.txt' })).toBe('1\tneedle');
     expect(await run('list', { pattern: '*.txt' })).toContain('a.txt');
     expect(await run('search', { query: 'needle' })).toBe('a.txt:1: needle');
+    // A read's ask names its file in the title alone; list and search
+    // keep the directory.
     expect(asked).toStrictEqual([
-      { title: 'Read a.txt', options: [ALLOW, ALLOW_SESSION, DENY] },
-      { title: 'List *.txt', options: [ALLOW, ALLOW_SESSION, DENY] },
-      { title: 'Search needle', options: [ALLOW, ALLOW_SESSION, DENY] },
+      {
+        title: 'Read a.txt',
+        options: [ALLOW, ALLOW_SESSION, DENY],
+        locations: [],
+      },
+      {
+        title: 'List *.txt',
+        options: [ALLOW, ALLOW_SESSION, DENY],
+        locations: [{ path: root }],
+      },
+      {
+        title: 'Search needle',
+        options: [ALLOW, ALLOW_SESSION, DENY],
+        locations: [{ path: root }],
+      },
     ]);
   });
 
@@ -407,11 +443,14 @@ describe("riff's tools ask as the session's mode says", () => {
     await expect(run('read', { path: join(outside, 'b.txt') })).rejects.toThrow(
       'The person denied this call.',
     );
-    // A link inside that points out is outside.
+    // A link inside that points out is outside, and the ask says where.
     await expect(run('read', { path: 'link.txt' })).rejects.toThrow(
       'The person denied this call.',
     );
-    expect(asked).toHaveLength(2);
+    expect(asked.map(({ title }) => title)).toStrictEqual([
+      `Read ${join(outside, 'b.txt')}`,
+      `Read link.txt → ${join(outside, 'b.txt')}`,
+    ]);
   });
 
   test("an abort while the ask waits ends the call with the signal's reason", async () => {

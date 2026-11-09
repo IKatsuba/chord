@@ -1112,7 +1112,7 @@ describe("riff's read, list and search in the session's directory", () => {
         .map((update) => [update.toolCallId, update.title]),
     ).toStrictEqual([
       ['call_read_1', 'Read a.txt'],
-      ['call_read_2', 'Read a.txt:1-1'],
+      ['call_read_2', 'Read a.txt:1'],
     ]);
   });
 

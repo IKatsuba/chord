@@ -44,3 +44,50 @@ describe('riff started by name', () => {
     }
   });
 });
+
+describe('tester: riff startup protocol contract', () => {
+  test('the child advertises the literal initialize contract and steering', async () => {
+    const agent = await openAgent({
+      command: agentStart('riff').command,
+      cwd: process.cwd(),
+      onTraffic: () => {},
+      onPermission: () =>
+        Promise.resolve({ outcome: { outcome: 'cancelled' } }),
+      onElicitation: () => Promise.resolve({ action: 'decline' }),
+      stop: STOP,
+    });
+
+    try {
+      expect(agent.init).toStrictEqual({
+        protocolVersion: 1,
+        _meta: { steering: { supported: true } },
+        agentInfo: { name: 'riff', title: 'riff', version: manifest.version },
+        authMethods: [
+          {
+            id: 'chatgpt',
+            name: 'ChatGPT plan',
+            description: 'Sign in to ChatGPT in chord',
+          },
+          {
+            id: 'grok',
+            name: 'Grok plan',
+            description: 'Sign in to Grok in chord',
+          },
+        ],
+        agentCapabilities: {
+          loadSession: false,
+          promptCapabilities: {
+            image: true,
+            audio: false,
+            embeddedContext: true,
+          },
+          mcpCapabilities: { http: true, sse: true },
+          sessionCapabilities: { resume: {}, close: {} },
+        },
+      });
+      expect(agent.steering).toBe(true);
+    } finally {
+      await agent.close();
+    }
+  });
+});

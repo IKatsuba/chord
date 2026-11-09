@@ -332,6 +332,33 @@ test('a stop with no key first stays bare when its agent closes it after, and it
   ).toBeUndefined();
 });
 
+test("a turn that completes after its agent's close still ends stopped by it, with no report (CHD-590)", () => {
+  const { task, relayed, delivered, ahead } = harness();
+
+  task.heard({ type: 'connected', sessionId: 's1' });
+  task.heard({ type: 'prompt', turnId: 'r1', text: 'x', at: 1 });
+  task.cancel({ agent: 'main' });
+  task.heard({
+    type: 'result',
+    turnId: 'r1',
+    result: { status: 'completed', stopReason: 'end_turn' },
+  });
+
+  expect(delivered).toStrictEqual([]);
+  expect(ahead).toStrictEqual([]);
+
+  const last = relayed.at(-1);
+
+  expect(
+    last?.type === 'update' && last.update.sessionUpdate === 'subagent_update'
+      ? [last.update.state, last.update._meta]
+      : undefined,
+  ).toStrictEqual([
+    { state: 'cancelled' },
+    { 'chord/stopped': { agent: 'main' } },
+  ]);
+});
+
 test('an agent close first keeps its name when a stop with no key follows (CHD-590)', () => {
   const { task, relayed, ahead } = harness();
 

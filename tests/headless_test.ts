@@ -1708,3 +1708,45 @@ describe('riff by name on its fake provider alone (CHD-604c)', () => {
     }
   });
 });
+
+describe('CHD-604c tester: named riff outside the fake provider', () => {
+  for (const provider of [undefined, '']) {
+    test(`riff is unknown with ${provider === undefined ? 'no' : 'an empty'} provider`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-riff-boundary-'));
+
+      try {
+        const result = spawnSync(
+          process.execPath,
+          [
+            fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+            'riff',
+            '-p',
+            'hi',
+            '-C',
+            dir,
+          ],
+          {
+            encoding: 'utf8',
+            input: '',
+            timeout: 15_000,
+            env: {
+              ...process.env,
+              HOME: dir,
+              XDG_CONFIG_HOME: join(dir, 'config'),
+              XDG_STATE_HOME: join(dir, 'state'),
+              [FAKE_PROVIDER_ENV]: provider,
+            },
+          },
+        );
+
+        expect(result.error).toBeUndefined();
+        expect(result.status).toBe(2);
+        expect(result.stderr).toContain(
+          'Unknown agent "riff". `chord agents` lists them.',
+        );
+      } finally {
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
+});

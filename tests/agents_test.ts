@@ -891,3 +891,90 @@ describe('riff in the agent list (CHD-604c)', () => {
     expect(DEFAULT_AGENT).toBe('claude');
   });
 });
+
+describe('CHD-604c tester: fake-only catalog boundaries', () => {
+  const lookup = (command: string) =>
+    Promise.resolve(command === 'agent' ? '/fixture/bin/agent' : undefined);
+
+  test('an explicit offered list names riff only when its provider is set', async () => {
+    for (const provider of [undefined, '', 'http://localhost:1/v1']) {
+      const listed = await listedAgents({}, lookup, {
+        [FAKE_PROVIDER_ENV]: provider,
+      });
+      const offered = offeredAgents(listed, ['riff', 'claude', 'riff']);
+      const enabled = provider !== undefined && provider !== '';
+
+      expect(offered.agents.map(({ name }) => name)).toStrictEqual(
+        enabled ? ['riff', 'claude'] : ['claude'],
+      );
+      expect(offered.unknown).toStrictEqual(enabled ? [] : ['riff']);
+      expect(DEFAULT_AGENT).toBe('claude');
+    }
+  });
+
+  test('enabling riff preserves every other JSON field and agent entry', async () => {
+    const commands = { mine: 'fixture-agent --token fixture-secret' };
+    const snapshot = async (enabled: boolean) =>
+      agentsJson({
+        listed: await listedAgents(commands, lookup, {
+          [FAKE_PROVIDER_ENV]: enabled ? 'http://localhost:1/v1' : undefined,
+        }),
+        offered: undefined,
+        preferred: DEFAULT_AGENT,
+        problems: [
+          {
+            file: '/fixture/settings.json',
+            kind: 'validation',
+            message: 'fixture settings problem',
+          },
+        ],
+        refused: new Set(['mine']),
+      });
+    const before = await snapshot(false);
+    const after = await snapshot(true);
+
+    expect({
+      ...after,
+      agents: after.agents.filter(({ name }) => name !== 'riff'),
+    }).toStrictEqual({ ...before, agents: [...before.agents] });
+    expect(Object.keys(after).sort()).toStrictEqual([
+      'agents',
+      'preferred',
+      'problems',
+      'version',
+    ]);
+    expect(JSON.stringify(after)).not.toContain('fixture-secret');
+    expect(after.agents[0]).toMatchObject({
+      name: 'riff',
+      via: 'builtin',
+      found: null,
+      offered: true,
+      startable: true,
+    });
+  });
+
+  test('an explicit list can leave built-in riff unoffered without changing the preference', async () => {
+    const listed = await listedAgents({}, lookup, {
+      [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+    });
+
+    for (const offered of [[], ['claude']]) {
+      const json = agentsJson({
+        listed,
+        offered,
+        preferred: DEFAULT_AGENT,
+        problems: [],
+        refused: new Set(),
+      });
+
+      expect(json.preferred).toBe('claude');
+      expect(json.agents.find(({ name }) => name === 'riff')).toMatchObject({
+        via: 'builtin',
+        found: null,
+        offered: false,
+        startable: true,
+      });
+      expect(json.problems).toStrictEqual([]);
+    }
+  });
+});

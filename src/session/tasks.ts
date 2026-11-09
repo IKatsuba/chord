@@ -458,13 +458,6 @@ export class TaskAgent {
 
         this.#tokens = result.status === 'failed' ? undefined : result.usage;
 
-        // Its agent's close stands however the turn ended after it, so its
-        // line names who stopped it (CHD-590); the person's keys keep how
-        // the turn ended.
-        if (typeof this.#stoppedWith === 'object') {
-          return this.#end('cancelled', '');
-        }
-
         return result.status === 'failed'
           ? this.#end('failed', result.error.message)
           : result.status === 'cancelled'
@@ -535,10 +528,15 @@ export class TaskAgent {
     return this.#session?.close() ?? Promise.resolve();
   }
 
-  #end(state: SubagentState, text: string): void {
+  #end(how: SubagentState, text: string): void {
     if (this.#ended) {
       return;
     }
+
+    // Its agent's close stands however it ended after it, its turn's result
+    // or its agent's exit, so its line names who stopped it (CHD-590); the
+    // person's keys keep how it ended.
+    const state = typeof this.#stoppedWith === 'object' ? 'cancelled' : how;
 
     this.#ended = true;
 

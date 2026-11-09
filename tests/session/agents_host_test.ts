@@ -1581,6 +1581,46 @@ describe('closing a task by close_agent (CHD-590)', () => {
     await host.sessions.closeAll();
   });
 
+  test('a task ended before a /clear does not share its name with one after', async () => {
+    const { host, key } = await withMain(
+      { startupOf: () => ({ agentCommand: fakeAgentCommand() }) },
+      {},
+      { open: openSession },
+    );
+    const person: Caller = {
+      role: 'person',
+      key,
+      window: {} as WindowView,
+    };
+    const before = await host.spawn(person, LONG_TASK_ARGS);
+
+    assert(!('error' in before));
+    expect(host.closeAgent(person, before.id)).toEqual({
+      closed: 'Watch the build',
+    });
+
+    const conversation = host.conversationAt(key)!;
+    const old = conversation.session;
+
+    await conversation.clear();
+    // The fresh session up, which a task starts from.
+    await until(
+      () => conversation.session !== undefined && conversation.session !== old,
+    );
+
+    const after = await host.spawn(person, LONG_TASK_ARGS);
+
+    assert(!('error' in after));
+    expect(host.closeAgent(person, 'Watch the build')).toEqual({
+      closed: 'Watch the build',
+    });
+    expect(host.closeAgent(person, before.id)).toEqual({
+      error: `No agent ${before.id} is open in this session; list_sessions names them`,
+    });
+
+    await host.sessions.closeAll();
+  });
+
   test('a name two of the caller’s tasks have is refused, naming their ids', async () => {
     const { host, person, spawn } = await onFake();
     const one = await spawn();

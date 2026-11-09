@@ -968,6 +968,7 @@ export class Conversation {
     }
 
     this.#tasks.clear();
+    this.#endedTaskNames.clear();
     this.#foreign.clear();
     this.#foreignBetween.clear();
 

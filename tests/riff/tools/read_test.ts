@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import {
   mkdir,
   mkdtemp,
@@ -157,23 +158,84 @@ describe("riff's read", () => {
 });
 
 describe('a real path opened', () => {
-  test('a file swapped between its open and its check is refused', async () => {
-    const root = await realpath(
-      await mkdtemp(join(tmpdir(), 'chord-riff-swap-')),
+  let root: string;
+  let outside: string;
+  let path: string;
+
+  beforeEach(async () => {
+    root = await realpath(await mkdtemp(join(tmpdir(), 'chord-riff-swap-')));
+    outside = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-outside-')),
     );
-    const path = join(root, 'a.txt');
+    path = join(root, 'a.txt');
 
-    try {
-      await writeFile(path, 'first\n');
+    await writeFile(path, 'first\n');
+    await writeFile(join(outside, 'secret.txt'), 'secret\n');
+  });
 
-      await expect(
-        openReal(path, async () => {
+  afterEach(async () => {
+    await rm(root, { recursive: true, force: true });
+    await rm(outside, { recursive: true, force: true });
+  });
+
+  const changed = 'the file changed while it was opened; read it again';
+
+  test('another file swapped in before the open is refused', async () => {
+    await expect(
+      openReal(path, {
+        beforeOpen: async () => {
           await rename(path, join(root, 'old.txt'));
           await writeFile(path, 'second\n');
-        }),
-      ).rejects.toThrow('the file changed while it was opened; read it again');
+        },
+      }),
+    ).rejects.toThrow(changed);
+  });
+
+  test('a link to a file outside swapped in before the open is refused', async () => {
+    await expect(
+      openReal(path, {
+        beforeOpen: async () => {
+          await rm(path);
+          await symlink(join(outside, 'secret.txt'), path);
+        },
+      }),
+    ).rejects.toThrow(changed);
+  });
+
+  test('another file swapped in after the open is refused', async () => {
+    await expect(
+      openReal(path, {
+        afterOpen: async () => {
+          await rename(path, join(root, 'old.txt'));
+          await writeFile(path, 'second\n');
+        },
+      }),
+    ).rejects.toThrow(changed);
+  });
+
+  test('a FIFO is refused without waiting on it, and so is one swapped in', async () => {
+    const fifo = join(root, 'pipe');
+
+    expect(spawnSync('mkfifo', [fifo]).status).toBe(0);
+    await expect(openReal(fifo)).rejects.toThrow('not a regular file');
+    await expect(
+      openReal(path, {
+        beforeOpen: async () => {
+          await rm(path);
+          expect(spawnSync('mkfifo', [path]).status).toBe(0);
+        },
+      }),
+    ).rejects.toThrow(changed);
+  });
+
+  test('an untouched file opens, its size read', async () => {
+    const opened = await openReal(path);
+
+    try {
+      expect(opened.real).toBe(path);
+      expect(opened.size).toBe(6);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await opened.handle.close();
     }
   });
 });

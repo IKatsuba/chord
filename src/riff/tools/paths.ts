@@ -2,11 +2,12 @@
  * Where a tool's path really is (CHD-485, "Tools"): resolved with `realpath`
  * at the effect, not at the ask, so a symlink inside the session's directory
  * that points out of it is outside. A file is opened at its real path and
- * its handle's `dev`/`ino` compared with a `stat` of that path, so a swap in
- * between is refused; a parent directory swapped between the two is not
- * caught, as the design acknowledges.
+ * its handle's `dev`/`ino` compared with the path's before and after, so a
+ * swap in between is refused; a parent directory swapped between the
+ * realpath and the open is not caught, as the design acknowledges.
  */
-import { open, realpath, stat, type FileHandle } from 'node:fs/promises';
+import { constants, type Stats } from 'node:fs';
+import { type FileHandle, lstat, open, realpath } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 
@@ -46,45 +47,66 @@ export interface Opened {
   readonly size: number;
 }
 
+/** Points in an open where tests swap the file, to force each check. */
+export interface OpenSteps {
+  /** After the file's identity is taken, before it is opened. */
+  readonly beforeOpen?: () => Promise<void>;
+  /** After it is opened, before the handle is checked. */
+  readonly afterOpen?: () => Promise<void>;
+}
+
+const CHANGED = 'the file changed while it was opened; read it again';
+
+// No link followed at the last name, and no wait on a FIFO swapped in.
+const FLAGS = constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK;
+
 /**
- * Opens the file at `path`'s real path for reading. Throws, with words for
- * the model, when it is missing, not a file, or not the file the path names
- * by the time it is open. `between` runs after the open and before the
- * check, for tests to swap the file there.
+ * Opens the file at `path`'s real path for reading. Its identity is taken
+ * before the open, which follows no link at the last name, and the handle
+ * must be that file and still the one the path names: a file, a link or a
+ * FIFO swapped in at any point is refused. Throws, with words for the
+ * model, when it is missing, not a regular file, or not that file.
  */
 export async function openReal(
   path: string,
-  between?: () => Promise<void>,
+  steps: OpenSteps = {},
 ): Promise<Opened> {
   let real: string;
+  let before: Stats;
 
   try {
     real = await realpath(path);
+    before = await lstat(real);
   } catch (error) {
     throw new Error(`${path}: ${reason(error)}`);
   }
 
-  const handle = await open(real, 'r').catch((error: unknown) => {
-    throw new Error(`${real}: ${reason(error)}`);
+  if (before.isDirectory()) {
+    throw new Error(`${real}: is a directory; list it instead`);
+  }
+
+  if (!before.isFile()) {
+    throw new Error(`${real}: not a regular file`);
+  }
+
+  await steps.beforeOpen?.();
+
+  const handle = await open(real, FLAGS).catch((error: unknown) => {
+    const code = (error as { code?: unknown }).code;
+
+    // ELOOP: a link now stands at the last name.
+    throw new Error(`${real}: ${code === 'ELOOP' ? CHANGED : reason(error)}`);
   });
 
   try {
-    await between?.();
+    await steps.afterOpen?.();
 
-    const [held, named] = await Promise.all([handle.stat(), stat(real)]);
+    const [held, named] = await Promise.all([handle.stat(), lstat(real)]);
+    const same = (other: Stats) =>
+      held.dev === other.dev && held.ino === other.ino;
 
-    if (held.dev !== named.dev || held.ino !== named.ino) {
-      throw new Error(
-        `${real}: the file changed while it was opened; read it again`,
-      );
-    }
-
-    if (held.isDirectory()) {
-      throw new Error(`${real}: is a directory; list it instead`);
-    }
-
-    if (!held.isFile()) {
-      throw new Error(`${real}: not a regular file`);
+    if (!held.isFile() || !same(before) || !same(named)) {
+      throw new Error(`${real}: ${CHANGED}`);
     }
 
     return { real, handle, size: held.size };

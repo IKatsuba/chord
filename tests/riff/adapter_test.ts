@@ -12,6 +12,7 @@ import {
 } from '../../src/riff/adapter.ts';
 import { riffStore, type Sidecar } from '../../src/riff/store.ts';
 import { until } from '../session/conversation_fake.ts';
+import { openFinder } from '../../src/platform/fff.ts';
 import { libfxBackend } from '../../src/platform/libfx.ts';
 import { clientOverStreams, type AcpClient } from '../fixtures/acp_client.ts';
 import {
@@ -1111,6 +1112,52 @@ describe("riff's read, list and search in the session's directory", () => {
         locations: [{ path: project }],
       }),
     );
+  });
+
+  test("a libfx close that fails still ends the session's finder", async () => {
+    const ended: string[] = [];
+
+    await open(true, {
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          close: async () => {
+            await made.close();
+
+            throw new Error('the core would not close');
+          },
+        });
+      },
+      openFinder: (directory) => {
+        const finder = openFinder(directory);
+
+        return {
+          ...finder,
+          destroy: async () => {
+            await finder.destroy();
+            ended.push(directory);
+          },
+        };
+      },
+    });
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    // A search starts the finder's Worker, which must not outlive the close.
+    await prompt(sessionId, 'call search {"query":"hello"}');
+
+    const closed = await client.request('session/close', { sessionId });
+
+    expect(closed.error).toBeDefined();
+    expect(ended).toStrictEqual([project]);
+
+    // The failure is the close's; the connection's end has nothing more.
+    riff = { ...riff, finished: riff.finished.catch(() => {}) };
   });
 
   test('a directory that is not there fails session/new', async () => {

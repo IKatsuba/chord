@@ -70,6 +70,8 @@ export interface RiffOptions {
    * to put a close in the middle.
    */
   readonly createAgent?: typeof createFxAgent;
+  /** Makes the session's finder: fff's but in tests that watch its end. */
+  readonly openFinder?: typeof openFinder;
   /** The store: `riffStore(stateDir)` but in tests that hold its writes. */
   readonly store?: RiffStore;
 }
@@ -231,7 +233,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       throw RequestError.invalidParams(undefined, `no directory ${cwd}`);
     });
 
-    const finder = openFinder(directory);
+    const finder = (options.openFinder ?? openFinder)(directory);
     const fx = (options.createAgent ?? createFxAgent)({
       ...options.backend,
       name: RIFF,
@@ -265,8 +267,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     try {
       id = resumed?.id ?? (await fx.newSessionId());
     } catch (error) {
-      await fx.close();
-      await finder.destroy();
+      await closeBoth(fx, finder);
 
       throw error;
     }
@@ -274,8 +275,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     // The connection went while the session was being made: nobody will
     // close it but this.
     if (gone) {
-      await fx.close();
-      await finder.destroy();
+      await closeBoth(fx, finder);
 
       throw RequestError.internalError(undefined, 'the connection closed');
     }
@@ -353,10 +353,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   };
 
   /** Ends the session's libfx agent and its finder. */
-  const closeOpen = async (session: Open) => {
-    await session.agent.close();
-    await session.finder.destroy();
-  };
+  const closeOpen = (session: Open) => closeBoth(session.agent, session.finder);
 
   const drawIn = (session: Open) => (name: string, input: unknown) =>
     drawn(session.directory, name, input);
@@ -530,6 +527,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     .connect(stream);
 
   return { connection, finished: connection.closed.then(shutdown) };
+}
+
+/** Ends a libfx agent and its finder, the finder even when the agent fails to. */
+async function closeBoth(agent: FxAgent, finder: Finder): Promise<void> {
+  try {
+    await agent.close();
+  } finally {
+    await finder.destroy();
+  }
 }
 
 /** ACP's prompt blocks as a libfx session takes them. */

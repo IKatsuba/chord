@@ -1,6 +1,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { rm } from 'node:fs/promises';
 import { type Finder, openFinder } from '../../../src/platform/fff.ts';
+import { LIMITS } from '../../../src/riff/tools/limits.ts';
 import { searcher } from '../../../src/riff/tools/search.ts';
 import { makeTree } from '../../fixtures/riff/tree.ts';
 
@@ -109,5 +110,46 @@ describe("riff's search outside a git repository: fff's set, pinned", () => {
       await finder.destroy();
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe("riff's search asks fff for its limits", () => {
+  test('page, per-file cap, context and an enforced time budget', async () => {
+    const asked: unknown[] = [];
+    const finder = {
+      grep: (query: string, options: unknown) => {
+        asked.push([query, options]);
+
+        return Promise.resolve({
+          items: [],
+          totalMatched: 0,
+          totalFilesSearched: 0,
+          totalFiles: 0,
+          filteredFileCount: 0,
+          nextCursor: null,
+        });
+      },
+    } as unknown as Finder;
+
+    await searcher(finder)(
+      { query: 'x', regex: true, context: 99, limit: 9999 },
+      live(),
+    );
+
+    expect(asked).toStrictEqual([
+      [
+        'x',
+        {
+          mode: 'regex',
+          cursor: null,
+          pageSize: LIMITS.searchMax,
+          maxMatchesPerFile: LIMITS.searchPerFile,
+          timeBudgetMs: LIMITS.searchMs,
+          enforceTimeBudget: true,
+          beforeContext: LIMITS.searchContext,
+          afterContext: LIMITS.searchContext,
+        },
+      ],
+    ]);
   });
 });

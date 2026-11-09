@@ -77,6 +77,8 @@ export function searcher(finder: Finder) {
         pageSize: Math.min(input.limit ?? LIMITS.searchPage, LIMITS.searchMax),
         maxMatchesPerFile: LIMITS.searchPerFile,
         timeBudgetMs: LIMITS.searchMs,
+        // A bound even when nothing has matched yet, which fff waives by default.
+        enforceTimeBudget: true,
         beforeContext: context,
         afterContext: context,
       },

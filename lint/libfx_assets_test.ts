@@ -4,6 +4,7 @@
 // job installs every platform and sets CHORD_LIBFX_ALL_TARGETS for all four.
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
+  existsSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -201,6 +202,25 @@ function manifestOf(name: string): {
 }
 
 describe('CHD-603 U2 tester: libfx layout contract drift', () => {
+  for (const target of TARGETS) {
+    test.skipIf(
+      !TARGETS.every((entry) => existsSync(join(modules, libfxPackage(entry)))),
+    )(`${target.bun} is required under the CI switch`, () => {
+      const platform = libfxPackage(target);
+      const dir = project({ [platform]: null });
+
+      expect(
+        libfxAssetFailures(
+          dir,
+          pinned,
+          installedTargets({ [ALL_TARGETS_ENV]: '1' }),
+        ),
+      ).toEqual([
+        `${platform}@${pinned} is not installed for ${target.bun}; CI's static job installs it with every platform's packages`,
+      ]);
+    });
+  }
+
   test.each(TARGETS)(
     '$bun rejects an optional dependency one version off',
     (target) => {
@@ -224,17 +244,19 @@ describe('CHD-603 U2 tester: libfx layout contract drift', () => {
     },
   );
 
-  test.each(TARGETS)(
-    '$bun rejects a missing index even with its addon present',
-    (target) => {
-      const platform = libfxPackage(target);
-      const dir = project({ [platform]: { 'index.js': null } });
+  for (const target of TARGETS) {
+    test.skipIf(!existsSync(join(modules, libfxPackage(target))))(
+      `${target.bun} rejects a missing index even with its addon present`,
+      () => {
+        const platform = libfxPackage(target);
+        const dir = project({ [platform]: { 'index.js': null } });
 
-      expect(libfxAssetFailures(dir, pinned)).toEqual([
-        `${platform}@${pinned}'s index.js no longer names ./libfx.node`,
-      ]);
-    },
-  );
+        expect(libfxAssetFailures(dir, pinned, [target])).toEqual([
+          `${platform}@${pinned}'s index.js no longer names ./libfx.node`,
+        ]);
+      },
+    );
+  }
 
   test.each(['2', '4', 'undefined', "'3'"])(
     'rejects libfxApiVersion %s without coercing it',
@@ -257,15 +279,15 @@ describe('CHD-603 U2 tester: libfx layout contract drift', () => {
 
   test('reports independent platform and Wasm drift together', () => {
     const dir = project({
-      [darwinArm]: {
+      [hostPackage]: {
         'index.js':
           'export default new URL("./renamed.node", import.meta.url);\n',
       },
       libfx: { 'fx-core.wasm': '\0as' },
     });
 
-    expect(libfxAssetFailures(dir, pinned)).toEqual([
-      `${darwinArm}@${pinned}'s index.js no longer names ./libfx.node`,
+    expect(libfxAssetFailures(dir, pinned, [host])).toEqual([
+      `${hostPackage}@${pinned}'s index.js no longer names ./libfx.node`,
       `libfx@${pinned}'s fx-core.wasm is not WebAssembly`,
     ]);
   });

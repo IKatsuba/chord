@@ -1,8 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { getBackendInfo } from 'libfx/node';
 import manifest from '../../package.json' with { type: 'json' };
@@ -96,56 +97,60 @@ describe('libfx backend options', () => {
 });
 
 describe('CHD-603 U3 tester: target isolation and fallback', () => {
-  test.each(TARGETS)(
-    '$bun fails when its real platform addon is missing',
-    async (target) => {
-      const addon = libfxAddon(target);
-      const held = `${addon}.tester-held`;
+  for (const target of TARGETS) {
+    test.skipIf(!existsSync(dirname(libfxAddon(target))))(
+      `${target.bun} fails when its real platform addon is missing`,
+      async () => {
+        const addon = libfxAddon(target);
+        const held = `${addon}.tester-held`;
 
-      await rename(addon, held);
+        await rename(addon, held);
 
-      try {
-        const built = await Bun.build({
-          ...buildOptions(FIXTURE, { compiled: true, target }),
-          throw: false,
-        });
+        try {
+          const built = await Bun.build({
+            ...buildOptions(FIXTURE, { compiled: true, target }),
+            throw: false,
+          });
 
-        expect(built.success).toBe(false);
-        expect(built.logs.map(String).join('\n')).toContain(
-          `${libfxPackage(target)}@${manifest.dependencies.libfx} has no libfx.node for ${target.bun}`,
-        );
-      } finally {
-        await rename(held, addon);
-      }
-    },
-  );
+          expect(built.success).toBe(false);
+          expect(built.logs.map(String).join('\n')).toContain(
+            `${libfxPackage(target)}@${manifest.dependencies.libfx} has no libfx.node for ${target.bun}`,
+          );
+        } finally {
+          await rename(held, addon);
+        }
+      },
+    );
+  }
 
-  test.each(TARGETS)(
-    '$bun embeds only its addon in a cross-compiled fixture',
-    async (target) => {
-      const directory = await mkdtemp(join(tmpdir(), 'chord-libfx-target-'));
+  for (const target of TARGETS) {
+    test.skipIf(!existsSync(dirname(libfxAddon(target))))(
+      `${target.bun} embeds only its addon in a cross-compiled fixture`,
+      async () => {
+        const directory = await mkdtemp(join(tmpdir(), 'chord-libfx-target-'));
 
-      try {
-        const built = await Bun.build({
-          ...buildOptions(FIXTURE, { compiled: true, target }),
-          compile: { target: target.bun, outfile: join(directory, 'libfx') },
-          metafile: true,
-        });
+        try {
+          const built = await Bun.build({
+            ...buildOptions(FIXTURE, { compiled: true, target }),
+            compile: { target: target.bun, outfile: join(directory, 'libfx') },
+            metafile: true,
+          });
 
-        expect(built.success).toBe(true);
-        expect(
-          Object.keys(built.metafile!.inputs).filter((input) =>
-            input.endsWith('libfx.node'),
-          ),
-        ).toEqual([
-          expect.stringContaining(`${libfxPackage(target)}/libfx.node`),
-        ]);
-      } finally {
-        await rm(directory, { recursive: true, force: true });
-      }
-    },
-    120_000,
-  );
+          expect(built.success).toBe(true);
+          expect(
+            Object.keys(built.metafile!.inputs).filter((input) =>
+              input.endsWith('libfx.node'),
+            ),
+          ).toEqual([
+            expect.stringContaining(`${libfxPackage(target)}/libfx.node`),
+          ]);
+        } finally {
+          await rm(directory, { recursive: true, force: true });
+        }
+      },
+      120_000,
+    );
+  }
 
   test('auto falls back to Wasm when an addon exists but cannot load', async () => {
     const directory = await mkdtemp(join(tmpdir(), 'chord-libfx-broken-'));

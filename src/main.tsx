@@ -68,10 +68,6 @@ import {
   RESOURCE_WORKER_FLAG,
   runResourceWorker,
 } from './platform/resource_worker.ts';
-import {
-  RIFF_SELFTEST_FLAG,
-  runRiffSelftest,
-} from './platform/riff_selftest.ts';
 import { RIFF_AGENT_FLAG } from './riff/start.ts';
 import { runRiffAgent } from './riff/serve.ts';
 import { serveChord } from './server/server.ts';
@@ -882,9 +878,6 @@ if (import.meta.main) {
   } else if (args[0] === RIFF_AGENT_FLAG) {
     // Before Cliffy, so no help lists it: chord starts it, never a person.
     await runRiffAgent(manifest.version);
-  } else if (args[0] === RIFF_SELFTEST_FLAG) {
-    // Before Cliffy, so no help lists it: only `bun dev selftest` uses it.
-    await runRiffSelftest(args.slice(1));
   } else {
     try {
       await cli.parse(args);

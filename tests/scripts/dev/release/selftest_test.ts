@@ -14,19 +14,11 @@ import { type Scratch, scratch } from './scratch.ts';
 
 const SCRIPTS = join(import.meta.dir, '..', '..', '..', '..', 'scripts');
 
-/** What a binary's --riff-selftest says when libfx and fff both work. */
-const RIFF_REPORT = JSON.stringify({
-  turns: [
-    { backend: 'native', stopReason: 'end_turn', text: 'done', echoed: ['hi'] },
-    {
-      backend: 'wasm-jspi',
-      stopReason: 'end_turn',
-      text: 'done',
-      echoed: ['hi'],
-    },
-  ],
-  grep: ['needle.txt:2: chord riff selftest needle'],
-});
+/** The two turns a binary's riff runs when libfx loads on both backends. */
+const RIFF_TURNS = [
+  { backend: 'native', stopReason: 'end_turn', text: 'done' },
+  { backend: 'wasm-jspi', stopReason: 'end_turn', text: 'done' },
+];
 
 let at: Scratch;
 
@@ -52,10 +44,20 @@ acp)
     esac
   done
   ;;
---riff-selftest)
-  # Two model requests per turn, as libfx makes them, then the report.
-  ${JSON.stringify(process.execPath)} -e 'for (let i = 0; i < 4; i++) await fetch(process.argv[1] + "/chat/completions", { method: "POST", body: "{}" })' "$2"
-  echo '${RIFF_REPORT}'
+--riff-agent)
+  # riff as the window starts it: one model request per turn, then done.
+  if [ "$CHORD_RIFF_BACKEND" = wasm ]; then echo "riff: backend wasm-jspi" >&2; else echo "riff: backend native" >&2; fi
+  while read -r line; do
+    case "$line" in
+    *'"initialize"'*) echo '{"jsonrpc":"2.0","id":1,"result":{}}' ;;
+    *'"session/new"'*) echo '{"jsonrpc":"2.0","id":2,"result":{"sessionId":"s"}}' ;;
+    *'"session/prompt"'*)
+      ${JSON.stringify(process.execPath)} -e 'await fetch(process.argv[1] + "/chat/completions", { method: "POST", body: "{}" })' "$CHORD_RIFF_FAKE_PROVIDER"
+      echo '{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"done"}}}}'
+      echo '{"jsonrpc":"2.0","id":3,"result":{"stopReason":"end_turn"}}'
+      ;;
+    esac
+  done
   ;;
 *) echo "Hello, world." ;;
 esac
@@ -276,43 +278,26 @@ await selftest({ ...release(), root: ${JSON.stringify(at.root)} }, 'chord');`,
 });
 
 describe('the riff step', () => {
-  const report = JSON.parse(RIFF_REPORT) as Parameters<typeof riffProblems>[0];
+  const [native, wasm] = RIFF_TURNS;
 
-  test('a report of both backends, done, four requests and a grep holds', () => {
-    expect(riffProblems(report, 4)).toBeUndefined();
+  test('two turns, native then Wasm, done after one request each, hold', () => {
+    expect(riffProblems(RIFF_TURNS, 2)).toBeUndefined();
   });
 
-  test('each way a report falls short is named', () => {
-    const [native, wasm] = report.turns!;
-
-    expect(riffProblems({ ...report, turns: [native!] }, 4)).toBe(
-      'did not report two turns',
-    );
-    expect(riffProblems({ ...report, turns: [native!, native!] }, 4)).toBe(
+  test('each way the turns fall short is named', () => {
+    expect(riffProblems([native!], 2)).toBe('ran 1 turns, not 2');
+    expect(riffProblems([native!, native!], 2)).toBe(
       'ran turn 2 on native, not wasm-jspi',
     );
-    expect(
-      riffProblems(
-        { ...report, turns: [native!, { ...wasm!, stopReason: 'error' }] },
-        4,
-      ),
-    ).toBe('ended its wasm-jspi turn error with "done"');
-    expect(
-      riffProblems(
-        { ...report, turns: [{ ...native!, echoed: [] }, wasm!] },
-        4,
-      ),
-    ).toBe('ran echo [] on native, not once on "hi"');
-    expect(
-      riffProblems(
-        { ...report, turns: [native!, { ...wasm!, echoed: ['hi', 'hi'] }] },
-        4,
-      ),
-    ).toBe('ran echo ["hi","hi"] on wasm-jspi, not once on "hi"');
-    expect(riffProblems(report, 3)).toBe('made 3 model requests, not 4');
-    expect(riffProblems({ ...report, grep: [] }, 4)).toBe(
-      "found nothing with fff's grep",
+    expect(riffProblems([{ ...native!, backend: undefined }, wasm!], 2)).toBe(
+      'ran turn 1 on undefined, not native',
     );
-    expect(riffProblems({}, 4)).toBe('did not report two turns');
+    expect(
+      riffProblems([native!, { ...wasm!, stopReason: 'cancelled' }], 2),
+    ).toBe('ended its wasm-jspi turn cancelled with "done"');
+    expect(riffProblems([{ ...native!, text: '' }, wasm!], 2)).toBe(
+      'ended its native turn end_turn with ""',
+    );
+    expect(riffProblems(RIFF_TURNS, 3)).toBe('made 3 model requests, not 2');
   });
 });

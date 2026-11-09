@@ -3,8 +3,8 @@
  * version, -p answers, acp answers a prompt and a permission on stdio and goes
  * at EOF, and the window opens, answers a prompt and reads the
  * clipboard on ctrl+v, each of which a native library the binary could not
- * load would stop; a libfx turn on each backend and an fff grep, through
- * the hidden --riff-selftest, prove libfx and fff are in the binary. The
+ * load would stop; a riff turn on each backend, through the hidden
+ * --riff-agent, proves libfx is in the binary. The
  * window runs in a tmux of its own, on temporary state
  * and config directories. ARCH x86_64 runs it all under `arch -x86_64`
  * (Rosetta).
@@ -20,7 +20,7 @@ import {
 import { tmpdir } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join, resolve } from 'node:path';
-import { serveFakeChat } from './fake_chat.ts';
+import { DONE, serveFakeChat } from './fake_chat.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 
@@ -157,13 +157,153 @@ async function acpStep(
 }
 
 /**
- * `--riff-selftest` against the fake Chat Completions server: on each
- * backend echo ran once on its input, and the turn ended `end_turn` with
- * `done`, which the server says only for echo's own result, after two model
- * requests each; native and Wasm are each the backend reported, and fff
- * finds its line. Spawned, not run synchronously, as the server answers on
- * this process's event loop.
- * Part 2 (CHD-604) replaces it with a real riff turn through --riff-agent.
+ * One riff turn through the binary's hidden `--riff-agent`, as the window
+ * starts riff, against the fake Chat Completions server: `initialize`,
+ * `session/new`, one prompt, then EOF. `wasm` turns the native addon off.
+ * Spawned, not run synchronously, as the server answers on this process's
+ * event loop.
+ */
+async function riffTurn(
+  release: Release,
+  binary: string,
+  arch: string | undefined,
+  cwd: string,
+  url: string,
+  wasm: boolean,
+): Promise<RiffTurn> {
+  const child = spawn(
+    arch === undefined ? binary : 'arch',
+    [...(arch === undefined ? [] : [`-${arch}`, binary]), '--riff-agent'],
+    {
+      cwd,
+      env: {
+        ...release.env,
+        CHORD_RIFF_FAKE_PROVIDER: url,
+        ...(wasm ? { CHORD_RIFF_BACKEND: 'wasm' } : {}),
+      },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    },
+  );
+  let said = '';
+  let held = '';
+  let text = '';
+  const write = (message: object) =>
+    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
+  const ended = new Promise<number | null>((done) => {
+    child.once('exit', done);
+  });
+
+  const answered = new Promise<string | undefined>((done, failed) => {
+    child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
+      said += chunk;
+    });
+
+    child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
+      held += chunk;
+
+      const parts = held.split('\n');
+
+      held = parts.pop() ?? '';
+
+      for (const part of parts) {
+        let line: Record<string, unknown>;
+
+        try {
+          line = JSON.parse(part) as Record<string, unknown>;
+        } catch {
+          failed(new Error(`${binary} --riff-agent wrote: ${part}`));
+
+          return;
+        }
+
+        const result = line['result'] as Record<string, unknown> | undefined;
+
+        if (line['error'] !== undefined) {
+          failed(new Error(`${binary} --riff-agent answered: ${part}`));
+        } else if (line['id'] === 1) {
+          write({
+            id: 2,
+            method: 'session/new',
+            params: { cwd, mcpServers: [] },
+          });
+        } else if (line['id'] === 2) {
+          write({
+            id: 3,
+            method: 'session/prompt',
+            params: {
+              sessionId: result?.['sessionId'],
+              prompt: [{ type: 'text', text: 'Say done.' }],
+            },
+          });
+        } else if (line['id'] === 3) {
+          done(result?.['stopReason'] as string | undefined);
+        } else if (line['method'] === 'session/update') {
+          const update = (
+            line['params'] as {
+              update?: { sessionUpdate?: string; content?: { text?: string } };
+            }
+          ).update;
+
+          if (update?.sessionUpdate === 'agent_message_chunk') {
+            text += update.content?.text ?? '';
+          }
+        }
+      }
+    });
+
+    void ended.then(() =>
+      failed(new Error(`${binary} --riff-agent exited early; stderr: ${said}`)),
+    );
+  });
+
+  write({
+    id: 1,
+    method: 'initialize',
+    params: { protocolVersion: 1, clientCapabilities: {} },
+  });
+
+  let stopReason: string | undefined;
+
+  try {
+    stopReason = await Promise.race([
+      answered,
+      sleep(60_000, undefined, { ref: false }).then(() => {
+        throw new Error(
+          `${binary} --riff-agent never answered; stderr: ${said}`,
+        );
+      }),
+    ]);
+  } catch (error) {
+    child.kill('SIGKILL');
+    die(error instanceof Error ? error.message : String(error));
+  }
+
+  child.stdin.end();
+
+  const code = await Promise.race([
+    ended,
+    sleep(20_000, undefined, { ref: false }).then(() => -1),
+  ]);
+
+  if (code !== 0) {
+    child.kill('SIGKILL');
+    die(
+      `${binary} --riff-agent did not leave at EOF (${code}); stderr: ${said}`,
+    );
+  }
+
+  return {
+    backend: /^riff: backend (\S+)$/m.exec(said)?.[1],
+    stopReason,
+    text,
+  };
+}
+
+/**
+ * A real riff turn through `--riff-agent` on each backend: native, then
+ * with native turned off (Wasm), each reported by riff and ending
+ * `end_turn` with `done` after one model request. The binary carries no fff
+ * until riff's search tool (CHD-604b), whose turn brings the grep back.
  */
 export async function riffStep(
   release: Release,
@@ -174,99 +314,51 @@ export async function riffStep(
   const fake = serveFakeChat();
 
   try {
-    const child = spawn(
-      arch === undefined ? binary : 'arch',
-      [
-        ...(arch === undefined ? [] : [`-${arch}`, binary]),
-        '--riff-selftest',
-        fake.url,
-      ],
-      { cwd, env: release.env, stdio: ['ignore', 'pipe', 'pipe'] },
-    );
-    let out = '';
-    let err = '';
-
-    child.stdout.setEncoding('utf8').on('data', (text: string) => {
-      out += text;
-    });
-
-    child.stderr.setEncoding('utf8').on('data', (text: string) => {
-      err += text;
-    });
-
-    const code = await Promise.race([
-      new Promise<number | null>((done) => child.once('close', done)),
-      sleep(60_000, undefined, { ref: false }).then(() => {
-        child.kill('SIGKILL');
-
-        return 'timeout' as const;
-      }),
-    ]);
-
-    if (code !== 0) {
-      die(`${binary} --riff-selftest ended ${code}; stderr: ${said(err)}`);
-    }
-
-    const report = riffReport(out);
-    const wrong = riffProblems(report, fake.requests());
+    const turns = [
+      await riffTurn(release, binary, arch, cwd, fake.url, false),
+      await riffTurn(release, binary, arch, cwd, fake.url, true),
+    ];
+    const wrong = riffProblems(turns, fake.requests());
 
     if (wrong !== undefined) {
-      die(`${binary} --riff-selftest ${wrong}: ${said(out)}`);
+      die(`${binary} --riff-agent ${wrong}: ${JSON.stringify(turns)}`);
     }
   } finally {
     await fake.stop();
   }
 }
 
-interface RiffReport {
-  turns?: {
-    backend?: string;
-    stopReason?: string;
-    text?: string;
-    echoed?: string[];
-  }[];
-  grep?: string[];
+/** What one riff turn did, as the self-test checks it. */
+export interface RiffTurn {
+  /** The backend riff said on stderr it loaded. */
+  readonly backend?: string | undefined;
+  readonly stopReason?: string | undefined;
+  readonly text?: string;
 }
 
-function riffReport(out: string): RiffReport {
-  try {
-    return JSON.parse(out) as RiffReport;
-  } catch {
-    return {};
-  }
-}
-
-/** What is wrong with the flag's report, or undefined when it all holds. */
+/** What is wrong with the two turns, or undefined when it all holds. */
 export function riffProblems(
-  report: RiffReport,
+  turns: readonly RiffTurn[],
   requests: number,
 ): string | undefined {
   const backends = ['native', 'wasm-jspi'];
 
-  if (report.turns?.length !== backends.length) {
-    return 'did not report two turns';
+  if (turns.length !== backends.length) {
+    return `ran ${turns.length} turns, not ${backends.length}`;
   }
 
-  for (const [index, turn] of report.turns.entries()) {
+  for (const [index, turn] of turns.entries()) {
     if (turn.backend !== backends[index]) {
       return `ran turn ${index + 1} on ${turn.backend}, not ${backends[index]}`;
     }
 
-    if (turn.echoed?.length !== 1 || turn.echoed[0] !== 'hi') {
-      return `ran echo ${JSON.stringify(turn.echoed)} on ${turn.backend}, not once on "hi"`;
-    }
-
-    if (turn.stopReason !== 'end_turn' || turn.text !== 'done') {
+    if (turn.stopReason !== 'end_turn' || turn.text !== DONE) {
       return `ended its ${turn.backend} turn ${turn.stopReason} with ${JSON.stringify(turn.text)}`;
     }
   }
 
-  if (requests !== 2 * backends.length) {
-    return `made ${requests} model requests, not ${2 * backends.length}`;
-  }
-
-  if (!report.grep?.some((line) => line.includes('riff selftest needle'))) {
-    return "found nothing with fff's grep";
+  if (requests !== backends.length) {
+    return `made ${requests} model requests, not ${backends.length}`;
   }
 
   return undefined;

@@ -204,3 +204,138 @@ addon of another agent's internals whose embedding goes through that agent's
 own build step, and `ripgrep-napi` is abandoned. The JS fallback is both the
 slowest and wrong on case (`*.s` drops `.S`), so it should not ship even as
 a fallback.
+
+## The list tool on fff
+
+Run on 2026-11-09 by runtime, after the owner chose fff for `search`, to see
+whether the same finder can serve `list` (files in a directory or by glob,
+.gitignore honoured, limits) as it is. Same scratch setup and the same
+`@ff-labs/fff-bun` 0.11.0; finders created with `disableWatch: true,
+aiMode: true`. The truth is `git ls-files --cached --others
+--exclude-standard`, run with `core.ignorecase=false` (on macOS `git init`
+sets it to true, which would make `*.s` hide `.S` too); the glob reference is
+`minimatch` 10, npm `glob`'s matcher, with default options.
+
+The fixture is a git repository: a root `.gitignore` with `*.s`, `ignored/`,
+`/build`, `*.log`, `!keep.log`, a nested `docs/.gitignore`, tracked and
+untracked files, `arch/head.S` beside an ignored `arch/gen.s`, dotfiles
+(`.hidden`, `.config/x.ts`), `node_modules/`, an empty directory, a name with
+a space, nested `src/deep/er/est/`, a symlinked file and a symlinked
+directory, a tracked file that matches an ignore rule (`git add -f`) and an
+entry in `.git/info/exclude`.
+
+### What each call returns
+
+- **`glob(pattern)`** returns files only, as paths relative to `basePath`,
+  with `totalMatched` and `totalFiles`. It is case-sensitive. **It is not npm
+  `glob`'s semantics**, although its doc says "100% compatible": `*` crosses
+  `/`, and a pattern without `/` matches at any depth.
+
+  | Pattern | fff | minimatch over git's list |
+  | --- | --- | --- |
+  | `*` | all 16 files, every depth, dotfiles too | `README.md`, `keep.log` |
+  | `src/*` | `src/a.ts`, `src/b.TS`, `src/deep/c.ts`, `src/deep/er/est/d.ts` | `src/a.ts`, `src/b.TS`, `src/link.md` |
+  | `src/*.ts` | `src/a.ts` and the two nested `.ts` | `src/a.ts` |
+  | `src/deep/*` | `src/deep/c.ts`, `src/deep/er/est/d.ts` | `src/deep/c.ts` |
+  | `*.md` | `README.md`, `docs/Readme.md`, `docs/with space.md` | `README.md` |
+  | `.*` | `.gitignore`, `.hidden`, `.config/x.ts` | `.gitignore`, `.hidden` |
+  | `**/*` | 16 files including dotfiles | 12, no dotfiles (`dot: false`) |
+
+  `**/*.S` finds `arch/head.S` and `**/*.s` nothing, as git does (globby got
+  this wrong). `?`, `[ab]`, `{a,c}` and `**/x/**` work. `src`, `src/` and
+  `src/deep/**/` as patterns return nothing or only files: there is no way to
+  ask for the direct children of a directory.
+- **Directories** never come from `glob` or `fileSearch`.
+  `directorySearch('')` lists every indexed directory (12 here, the root as
+  `""`, the empty directory included, ignored ones left out); with a query it
+  is fuzzy: `src` returned 11 of 12. `mixedSearch('')` is both lists one after
+  the other.
+- **`fileSearch(query)`** is the fuzzy finder: `''` returns all files, any
+  other query a ranked list, not a filter (`ts` returned all 16, `src/` 12 of
+  16, `*.ts` 5).
+- **Outside `basePath`** nothing is reachable: `../*`, `/etc/*` and even an
+  absolute pattern inside the tree return 0, without an error.
+- **Order** is the index's, not path order and not stable by name: in the
+  fixture tracked files came first, then the rest by directory.
+- **Pagination**: `pageSize` defaults to 100; `pageIndex` is an item offset,
+  not a page number, contrary to its name and doc (`pageSize: 3, pageIndex: 1`
+  returned items 2 to 4); an offset past the end returns an empty page with
+  the right `totalMatched`. No limit other than the page.
+
+### Against git's file list
+
+| Case | git | fff |
+| --- | --- | --- |
+| `.gitignore` at any level, negation (`!keep.log`), anchored `/build` | honoured | honoured |
+| `*.s` against `arch/head.S` | listed | listed |
+| dotfiles, `node_modules/` not ignored | listed | listed in a git repository; **left out** in a directory with no `.git` |
+| a tracked file matching an ignore rule | listed | **left out** |
+| `.git/info/exclude` | honoured | **not honoured**: the file is listed |
+| symlinked file or directory | listed as an entry | **never listed**, with `followSymlinks` off or on |
+
+On the kernel tree (97,362 files by git) fff's `glob('**/*')` returned 97,242,
+none extra. The 120 missing: 106 symlinks (94 to files, 12 to directories),
+13 files whose name differs from another only by case (on macOS's
+case-insensitive disk only one of each pair exists, so this is the checkout,
+not fff), and `Documentation/.renames.txt`, tracked but matching the root's
+`.*` rule.
+
+Without a `.git`, the `.gitignore` rules still applied, but `.hidden`,
+`.config/x.ts`, both `.gitignore` files and `node_modules/pkg/index.js`
+disappeared: fff's rules differ by whether the directory is a repository.
+
+### Time, kernel tree, warm cache, Apple Silicon
+
+| Call | ms (two runs) |
+| --- | --- |
+| `create` + `waitForScan` | 327, 155 |
+| `glob('**/*')`, all 97,242 in one page | 106, 86 (75, 95 again) |
+| `glob('**/*')`, `pageSize: 100` | 11, 16 |
+| `glob('drivers/net/**/*.c')`, 3,644 | 9, 11 |
+| `glob('**/*.S')`, 1,339 | 6, 5 |
+| `fileSearch('')`, all files | 65, 72 |
+| `directorySearch('')`, 6,338 directories | 3, 4 |
+
+Peak resident memory of the process: 471 and 485 MB, the same finder as
+`search` with its mmap cache and content index (not measured with them off).
+The calls are synchronous FFI, so they belong in the same `Worker` as
+`search`.
+
+### Inside a compiled binary
+
+The fixture probe and the kernel run, built with `Bun.build({ compile:
+{ target: 'bun-darwin-arm64' } })` and run from a directory with no
+`node_modules`, gave output identical to the source run (the 40 fixture lines
+byte for byte, the kernel's sorted list equal) and the same times (scan
+261 ms, full glob 91 to 103 ms). The other targets were covered for `search`;
+`list` uses the same library and was not rebuilt for them.
+
+### Verdict
+
+**fff does not fit `list` as it is.** It is fast, honours `.gitignore` the
+way git does on case, and paginates, but:
+
+1. its glob is not glob: `*` crosses `/` and bare patterns match at any
+   depth, so "the files in `src/`" cannot be asked for, only "everything
+   under `src/`";
+2. it lists files only; directories come from a separate fuzzy call, so a
+   directory listing (files and subdirectories) has to be assembled;
+3. nothing outside the finder's `basePath` is reachable;
+4. its file set is not git's: tracked-but-ignored files, `.git/info/exclude`
+   and symlinks differ, and outside a repository dotfiles and
+   `node_modules/` vanish.
+
+Options for the owner:
+
+- **a. Change the task to fit fff**: `list` becomes "files under the session
+  directory matching fff's pattern", described to the model as it behaves
+  (`*` matches across `/`, files only, relative paths, index order, a
+  directory listing through `directorySearch`), with the set differences
+  above accepted.
+- **b. fff plus chord's own filtering**: take fff's results and cut them to
+  direct children by path depth, merge in `directorySearch('')` entries,
+  and sort. That is a workaround around the library (rewriting its output to
+  mean something it does not), so it is the owner's decision.
+- **c. Another library for `list`**, not tried here: a maintained walker or
+  glob matcher with git's ignore semantics, case-sensitive, that survives
+  `bun build --compile`. globby is already shown wrong on case.

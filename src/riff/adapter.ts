@@ -124,9 +124,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const store = options.store ?? riffStore(options.stateDir);
   let open: Open | undefined;
   // The session being created, so a second session/new and a close that
-  // comes meanwhile see it; and whether the connection has gone.
+  // comes meanwhile see it; and whether the session is closing, by
+  // session/close or the connection's end.
   let opening: Promise<Open> | undefined;
   let gone = false;
+  // The one cleanup both a session/close and the connection's end await.
+  let closing: Promise<void> | undefined;
   // Sidecar writes, one after another in the order they were asked, so the
   // last config change is the one on disk.
   let saving: Promise<void> = Promise.resolve();
@@ -134,6 +137,11 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const opened = (sessionId: string): Open => {
     if (open?.id !== sessionId) {
       throw RequestError.sessionNotFound(sessionId);
+    }
+
+    // Nothing more is admitted once the close has begun: it owns what runs.
+    if (gone) {
+      throw RequestError.invalidRequest(undefined, 'the session is closing');
     }
 
     return open;
@@ -157,7 +165,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       });
     }
 
-    if (open !== undefined || opening !== undefined) {
+    if (open !== undefined || opening !== undefined || gone) {
       throw RequestError.invalidRequest(
         undefined,
         'riff serves one session per process',
@@ -333,7 +341,9 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       // The window has gone; the turn ends on its cancel or the close.
     });
 
-  const shutdown = async () => {
+  const shutdown = (): Promise<void> => (closing ??= cleanUp());
+
+  const cleanUp = async () => {
     gone = true;
 
     await opening?.catch(() => {
@@ -344,17 +354,17 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       // Its caller had the failure.
     });
 
-    const closing = open;
+    const session = open;
 
-    open = undefined;
-
-    if (closing !== undefined) {
-      if (closing.running) {
-        await closing.agent.session(closing.id).cancel();
+    if (session !== undefined) {
+      if (session.running) {
+        await session.agent.session(session.id).cancel();
       }
 
-      await closing.agent.close();
+      await session.agent.close();
     }
+
+    open = undefined;
   };
 
   const connection = agent({ name: RIFF })
@@ -453,7 +463,11 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         if (result.error?.code === 'LIBFX_MODEL_UNSUPPORTED_EFFORT') {
           session.config = { ...session.config, effort: 'default' };
 
-          await save(session);
+          // A close that began during the turn owns the sidecar now.
+          if (!gone) {
+            await save(session);
+          }
+
           await notify(client, session.id, {
             sessionUpdate: 'config_option_update',
             configOptions: configOptions(session.plan, session.config),

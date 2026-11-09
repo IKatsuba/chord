@@ -610,6 +610,17 @@ function countedAgent(closes: string[]) {
 }
 
 describe("riff's sidecar writes and reopen, in forced order", () => {
+  /**
+   * Until every request sent before it has been taken: the SDK hands requests
+   * to their handlers in order, and a refused config change answers at once.
+   */
+  const admitted = (sessionId: string) =>
+    client.request('session/set_config_option', {
+      sessionId,
+      configId: 'colour',
+      value: 'red',
+    });
+
   test('config changes land on disk in the order they were asked', async () => {
     const held = heldStore(stateDir);
 
@@ -619,7 +630,7 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
 
     held.state.hold = true;
 
-    const answers = [
+    const answers = Promise.all([
       client.request('session/set_config_option', {
         sessionId,
         configId: 'effort',
@@ -630,24 +641,146 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
         configId: 'mode',
         value: 'auto',
       }),
-    ];
-    let done = 0;
+    ]);
 
-    void Promise.all(answers).then(() => {
-      done = 2;
-    });
+    try {
+      await admitted(sessionId);
 
-    // Lets the last write held go first, as a slow disk could.
-    while (done < 2) {
-      await until(() => held.held.length > 0 || done === 2);
-      await Bun.sleep(20);
-      held.held.pop()?.release();
+      // Both are taken, and the second write waits for the first.
+      expect(held.held.map(({ sidecar }) => sidecar.effort)).toStrictEqual([
+        'low',
+      ]);
+      expect(held.held[0]?.sidecar.mode).toBe('ask');
+    } finally {
+      held.held.shift()?.release();
     }
+
+    try {
+      await until(() => held.held.length === 1);
+
+      expect(held.held[0]?.sidecar).toMatchObject({
+        effort: 'low',
+        mode: 'auto',
+      });
+    } finally {
+      held.held.shift()?.release();
+    }
+
+    await answers;
 
     expect(await held.store.read(sessionId)).toMatchObject({
       effort: 'low',
       mode: 'auto',
     });
+  });
+
+  test('a close while a config change is written refuses any more and waits for it', async () => {
+    const held = heldStore(stateDir);
+    const writes: string[] = [];
+    let finished = false;
+
+    await open(true, { store: held.store });
+
+    const sessionId = await newSession();
+    const write = held.store.write;
+
+    held.store.write = (id, sidecar) => {
+      writes.push(sidecar.mode);
+
+      return write(id, sidecar);
+    };
+
+    void riff.finished.then(() => {
+      finished = true;
+    });
+
+    held.state.hold = true;
+
+    const changed = client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'auto',
+    });
+
+    await until(() => held.held.length === 1);
+
+    const closed = client.request('session/close', { sessionId });
+
+    try {
+      // Until the close has begun: a request taken before it is still the
+      // session's, and the close waits for its write too.
+      let probe = await admitted(sessionId);
+
+      for (let tries = 0; probe.error?.code !== -32600; tries++) {
+        expect(tries).toBeLessThan(1000);
+
+        probe = await admitted(sessionId);
+      }
+
+      const late = await client.request('session/set_config_option', {
+        sessionId,
+        configId: 'effort',
+        value: 'high',
+      });
+
+      expect(late.error?.code).toBe(-32600);
+      expect(finished).toBe(false);
+    } finally {
+      held.held[0]?.release();
+    }
+
+    expect((await changed).error).toBeUndefined();
+    expect((await closed).result).toStrictEqual({});
+    expect(writes).toStrictEqual(['auto']);
+    expect(await held.store.read(sessionId)).toMatchObject({
+      mode: 'auto',
+      effort: 'default',
+    });
+  });
+
+  test("the connection's end during a session/close waits for that close", async () => {
+    const gate = Promise.withResolvers<void>();
+    const entered = Promise.withResolvers<void>();
+    const closes: string[] = [];
+    let finished = false;
+
+    await open(true, {
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          close: async () => {
+            closes.push('closed');
+            entered.resolve();
+            await gate.promise;
+            await made.close();
+          },
+        });
+      },
+    });
+
+    const sessionId = await newSession();
+
+    void riff.finished.then(() => {
+      finished = true;
+    });
+
+    client.send('session/close', { sessionId });
+    await entered.promise;
+    end();
+
+    try {
+      await riff.connection.closed;
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(finished).toBe(false);
+    } finally {
+      gate.resolve();
+    }
+
+    await riff.finished;
+
+    expect(closes).toStrictEqual(['closed']);
   });
 
   test('a close while the first sidecar is written waits for it, then closes the session', async () => {

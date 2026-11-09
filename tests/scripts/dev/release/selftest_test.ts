@@ -5,6 +5,7 @@ import { setTimeout as sleep } from 'node:timers/promises';
 import { join } from 'node:path';
 import {
   riffProblems,
+  riffStep,
   selftest,
 } from '../../../../scripts/dev/release/selftest.ts';
 import { type Scratch, scratch } from './scratch.ts';
@@ -287,5 +288,35 @@ describe('the riff step', () => {
       'ended its native turn end_turn with ""',
     );
     expect(riffProblems(RIFF_TURNS, 3)).toBe('made 3 model requests, not 2');
+  });
+});
+
+describe('tester: riff selftest backend and exit contract', () => {
+  test('a caller forcing wasm does not prevent the native leg', async () => {
+    await expect(
+      riffStep(
+        {
+          ...at.release,
+          env: { ...at.release.env, CHORD_RIFF_BACKEND: 'wasm' },
+        },
+        join(at.root, 'chord'),
+        undefined,
+        at.root,
+      ),
+    ).resolves.toBeUndefined();
+  });
+
+  test('a correct reply followed by a nonzero exit fails the step', async () => {
+    const fake = join(import.meta.dir, '../../../fixtures/fake_riff.ts');
+
+    writeFileSync(
+      join(at.root, 'chord'),
+      `#!/bin/bash\n${JSON.stringify(process.execPath)} ${JSON.stringify(fake)}\nexit 7\n`,
+      { mode: 0o755 },
+    );
+
+    await expect(
+      riffStep(at.release, join(at.root, 'chord'), undefined, at.root),
+    ).rejects.toThrow('did not leave at EOF (7)');
   });
 });

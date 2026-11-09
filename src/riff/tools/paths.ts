@@ -104,11 +104,11 @@ export async function openReal(
   try {
     await steps.afterOpen?.();
 
-    const [held, named] = await Promise.all([handle.stat(), lstat(real)]);
+    const [held, current] = await Promise.all([handle.stat(), lstat(real)]);
     const same = (other: Stats) =>
       held.dev === other.dev && held.ino === other.ino;
 
-    if (!held.isFile() || !same(before) || !same(named)) {
+    if (!held.isFile() || !same(before) || !same(current)) {
       throw new Error(`${named}: ${CHANGED}`);
     }
 

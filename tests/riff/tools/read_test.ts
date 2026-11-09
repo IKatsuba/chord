@@ -232,6 +232,20 @@ describe('a real path opened', () => {
     ).rejects.toThrow(changed);
   });
 
+  test('a refusal after the open names the file by its label', async () => {
+    await expect(
+      openReal(path, {
+        label: 'a.txt',
+        afterOpen: async () => {
+          await rename(path, join(root, 'old.txt'));
+          await writeFile(path, 'second\n');
+        },
+      }),
+    ).rejects.toThrow(
+      /^a\.txt: the file changed while it was opened; read it again$/,
+    );
+  });
+
   test('another file swapped in after the open is refused', async () => {
     await expect(
       openReal(path, {

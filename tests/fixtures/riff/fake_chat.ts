@@ -4,7 +4,9 @@
  * picks the scenario: one naming `hang` streams a word and then nothing until
  * the request is dropped, `long` ends cut at the output limit, `fail` is
  * refused with a 400, `think` reasons before it answers, `tool` calls the
- * host tool `mark` once and answers once it has its result; anything else is
+ * host tool `mark` once and answers once it has its result, `call <tool>
+ * <json>` calls that tool with those arguments once and answers with what
+ * the tool returned; anything else is
  * answered `Hello from riff.` Every answer reports usage. Nothing reaches a
  * real provider.
  */
@@ -108,6 +110,37 @@ export function serveFakeChat(): FakeChat {
               hung.resolve();
             },
           }),
+          { headers },
+        );
+      }
+
+      const call = /call (\w+) (\{.*\})/.exec(said);
+
+      if (call !== null) {
+        // The tool has answered when its result is the last message.
+        const result = body.messages?.at(-1);
+
+        if (result?.role === 'tool') {
+          return new Response(answer(String(result.content)), { headers });
+        }
+
+        return new Response(
+          [
+            chunk({
+              role: 'assistant',
+              tool_calls: [
+                {
+                  index: 0,
+                  id: `call_${call[1]}`,
+                  type: 'function',
+                  function: { name: call[1], arguments: call[2] },
+                },
+              ],
+            }),
+            chunk({}, 'tool_calls'),
+            usage,
+            'data: [DONE]\n\n',
+          ].join(''),
           { headers },
         );
       }

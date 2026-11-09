@@ -7,18 +7,32 @@ import {
   RequestError,
   type SessionUpdate,
   type StopReason,
+  type ToolCallLocation,
+  type ToolKind,
   type Usage,
 } from '@agentclientprotocol/sdk/unstable';
 import type { FxErrorSummary, FxSessionTurnEvent, FxUsage } from 'libfx/node';
 
+/** How a call is drawn: its title, ACP kind and locations. */
+export interface Drawn {
+  readonly title: string;
+  readonly kind: ToolKind;
+  readonly locations?: ToolCallLocation[];
+}
+
+/** A call by its name alone, for a tool riff draws no other way. */
+const byName = (name: string): Drawn => ({ title: name, kind: 'other' });
+
 /**
  * The `session/update` an event makes, or undefined for none. `started`
  * holds the calls this turn has sent, so a duplicate start is dropped: calls
- * are merged by id, never by position.
+ * are merged by id, never by position. `draw` gives a call its title, kind
+ * and locations from the tool's own table.
  */
 export function updateOf(
   event: FxSessionTurnEvent,
   started: Set<string>,
+  draw: (name: string, input: unknown) => Drawn = byName,
 ): SessionUpdate | undefined {
   switch (event.type) {
     case 'text_delta':
@@ -44,8 +58,7 @@ export function updateOf(
       return {
         sessionUpdate: 'tool_call',
         toolCallId: event.id,
-        title: event.name,
-        kind: 'other',
+        ...draw(event.name, event.input),
         status: 'pending',
         // A truncated input's preview is not the input; the tool's own
         // start gives the whole of it.

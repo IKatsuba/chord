@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
 import { createFxAgent, type FxAgent } from 'libfx/node';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -1042,5 +1042,85 @@ describe("riff's sidecar writes and reopen, in forced order", () => {
 
     expect(cancels).toBe(2);
     expect(closes).toStrictEqual(['closed']);
+  });
+});
+
+describe("riff's read, list and search in the session's directory", () => {
+  let project: string;
+
+  beforeEach(async () => {
+    project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-project-')),
+    );
+
+    await writeFile(join(project, 'a.txt'), 'hello\n');
+  });
+
+  afterEach(async () => {
+    await rm(project, { recursive: true, force: true });
+  });
+
+  test('a read is drawn by its own table and its result comes back', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call read {"path":"a.txt"}');
+
+    const updates = client.updates(sessionId);
+
+    expect(updates).toContainEqual({
+      sessionUpdate: 'tool_call',
+      toolCallId: 'call_read',
+      title: 'Read a.txt',
+      kind: 'read',
+      locations: [{ path: join(project, 'a.txt') }],
+      status: 'pending',
+      rawInput: { path: 'a.txt' },
+    });
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_read',
+        status: 'completed',
+      }),
+    );
+    expect(client.said(sessionId)).toContain('hello');
+  });
+
+  test('list and search run in the directory session/new named', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call search {"query":"hello"}');
+    expect(client.said(sessionId)).toContain('a.txt:1: hello');
+    expect(client.updates(sessionId)).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call',
+        title: 'Search hello',
+        kind: 'search',
+        locations: [{ path: project }],
+      }),
+    );
+  });
+
+  test('a directory that is not there fails session/new', async () => {
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: join(project, 'missing'),
+      mcpServers: [],
+    });
+
+    expect(answer.error?.message).toContain('no directory');
   });
 });

@@ -264,7 +264,7 @@ chosen.
 ```json
 {
   "protocolVersion": 1,
-  "agentInfo": { "name": "chord-agent", "title": "chord", "version": "<chord's>" },
+  "agentInfo": { "name": "riff", "title": "riff", "version": "<chord's>" },
   "authMethods": [
     { "id": "chatgpt", "name": "ChatGPT plan", "description": "Sign in to ChatGPT in chord" },
     { "id": "grok", "name": "Grok plan", "description": "Sign in to Grok in chord" }

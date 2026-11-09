@@ -489,15 +489,15 @@ offered device code, which is the owner's rule.
 ### Where the logic lives
 
 ```text
-src/agent/sign_in.ts          pure: the state machine (choosing, waiting,
+src/riff/sign_in.ts          pure: the state machine (choosing, waiting,
                               port taken, device code, expired, failed,
                               cancelled, done) from events to state
-src/agent/sign_in_run.ts      runs a flow: libfx calls, timers, signal,
+src/riff/sign_in_run.ts      runs a flow: libfx calls, timers, signal,
                               the listener through a port
 src/platform/loopback.ts      Bun.serve on 127.0.0.1 and ::1, taken or bound
 ```
 
-(`src/agent/` is a placeholder name for the built-in agent's folder; its
+(`src/riff/` is a placeholder name for the built-in agent's folder; its
 name follows Q5.) `sign_in_run.ts` takes the libfx functions and `fetch`
 as parameters, so tests give it fakes.
 
@@ -550,7 +550,7 @@ it: with two independent caches, B's turns failed (`HostStreamFailed`)
 after the provider refused the spent `r0`, eight times over two rounds.
 
 Each process (a window, or a Q1-B child) holds one **credential cell** per
-provider, `src/agent/credentials.ts` over the platform store:
+provider, `src/riff/credentials.ts` over the platform store:
 
 - `cache`: the value this process last read from the store or saved to it.
 - `base`: the value the store held when this process last read it under
@@ -773,14 +773,14 @@ and every Bun.secrets call through a store chord passes.
 
 | Module | Test | How |
 | --- | --- | --- |
-| `src/agent/sign_in.ts` (pure) | `tests/agent/sign_in_test.ts` | every transition, the interface's states |
-| `src/agent/sign_in_run.ts` | `tests/agent/sign_in_run_test.ts` | fake `fetch`, real loopback on a random port, fake timers: success, state mismatch then success, denied, expired, Esc, deadline, port taken |
+| `src/riff/sign_in.ts` (pure) | `tests/riff/sign_in_test.ts` | every transition, the interface's states |
+| `src/riff/sign_in_run.ts` | `tests/riff/sign_in_run_test.ts` | fake `fetch`, real loopback on a random port, fake timers: success, state mismatch then success, denied, expired, Esc, deadline, port taken |
 | `src/platform/loopback.ts` | `tests/platform/loopback_test.ts` | a holder on `127.0.0.1` and one on `::1`: both reported taken; `stop` frees the port |
 | `src/platform/secrets.ts` | `tests/platform/secrets_test.ts` | over an injected backend, never `Bun.secrets`: calls strictly serial; a caller times out while its operation holds the head; a queued read past its timeout is dropped; a queued write and a later delete run in order after a late completion and the delete wins |
-| `src/agent/credentials.ts` | `tests/agent/credentials_test.ts` | two independent cells (two store instances with their own caches, one backing store, one lock directory) and real libfx engines on a fake `fetch` whose token endpoint rotates and refuses a spent token, as T8: concurrent refresh spends once; the cache is not trusted under the lock; a write failure leaves `unsaved` and the retry at the next lock wins; logout racing a refresh ends absent; a late write after logout is refused; another account signs the cell out; L2's turn-start check |
-| `src/agent/tools/*.ts` | `tests/agent/tools/*_test.ts` | in a temp directory; abort mid-call; limits; permission prompt withdrawn on abort; a symlink inside the project to a file outside asks as outside (P2); a symlink retargeted between the prompt and the effect is judged on the new real path; an edit whose file changed while the prompt waited is refused and writes nothing; a `write` whose new file appeared meanwhile is refused; a granted exact command does not grant a longer one |
-| `src/agent/engine.ts` (libfx wiring) | `tests/agent/engine_test.ts` | fake Chat Completions server: a turn, parallel reads, serial writes, cancel with a hung model and with a stuck tool, close bounds, 5xx retry visible, backend reported |
-| plan path | `tests/agent/plans_test.ts` | Codex and Grok with a fake `fetch`: a turn, 401 refresh, refresh rejected → sign-in |
+| `src/riff/credentials.ts` | `tests/riff/credentials_test.ts` | two independent cells (two store instances with their own caches, one backing store, one lock directory) and real libfx engines on a fake `fetch` whose token endpoint rotates and refuses a spent token, as T8: concurrent refresh spends once; the cache is not trusted under the lock; a write failure leaves `unsaved` and the retry at the next lock wins; logout racing a refresh ends absent; a late write after logout is refused; another account signs the cell out; L2's turn-start check |
+| `src/riff/tools/*.ts` | `tests/riff/tools/*_test.ts` | in a temp directory; abort mid-call; limits; permission prompt withdrawn on abort; a symlink inside the project to a file outside asks as outside (P2); a symlink retargeted between the prompt and the effect is judged on the new real path; an edit whose file changed while the prompt waited is refused and writes nothing; a `write` whose new file appeared meanwhile is refused; a granted exact command does not grant a longer one |
+| `src/riff/engine.ts` (libfx wiring) | `tests/riff/engine_test.ts` | fake Chat Completions server: a turn, parallel reads, serial writes, cancel with a hung model and with a stuck tool, close bounds, 5xx retry visible, backend reported |
+| plan path | `tests/riff/plans_test.ts` | Codex and Grok with a fake `fetch`: a turn, 401 refresh, refresh rejected → sign-in |
 | `scripts/dev/libfx_assets.ts` | `tests/scripts/dev/libfx_assets_test.ts` (or `lint/`) | passes on the installed tree; fails on a copied tree with the addon renamed, a platform package removed, the wasm missing, a version off |
 | the window | `tests/ui/…` through `tests/ui/harness.tsx` | sign-in screens and keys (interface's list) over the pure state |
 

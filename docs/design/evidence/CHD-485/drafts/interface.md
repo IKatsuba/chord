@@ -5,7 +5,7 @@ its states and keys, and the state slices beneath it. Q5, Q7 and Q8, and the
 screens of Q2 and Q4, are the owner's; each has its options, its evidence and a
 recommendation, and none is settled here.
 
-`builtin` stands in for the agent's name throughout (Q5), and `gpt-6.1-sol`
+`riff`, the owner's name for the agent (Q5), stands in throughout, and `gpt-6.1-sol`
 and `grok-4.7` for a plan's models (libfx `README.md:324`, `:352`). The words
 in the drawings are proposals; libfx's own error messages are quoted as libfx
 writes them.
@@ -100,8 +100,8 @@ this draft's.
 
 ### Its life
 
-1. `chord builtin`, or the agent picked, with no credential in the store:
-   the window opens as for any agent. The header says `builtin · not signed
+1. `chord riff`, or the agent picked, with no credential in the store:
+   the window opens as for any agent. The header says `riff · not signed
    in`, a row says why, and the box opens on the provider step. The session
    is not started yet; the prompt is drawn but has no keys while the box does.
 2. Provider → way → waiting (browser or code) → success, failure, expired
@@ -110,12 +110,12 @@ this draft's.
    permission prompt's.
 3. Success: the box closes. The row under the reason says how it went and
    where the credential is kept, and the session starts. The header's second
-   line becomes `builtin · ChatGPT · <model>`.
+   line becomes `riff · ChatGPT · <model>`.
 4. Esc on the first step, or Esc from a later one back to it: the attempt
    ends, the listener is closed (the brief's settled point), polling stops,
    and the row says `Not signed in. /login to sign in, or /new for another
    agent.` The prompt takes keys and answers chord's own commands only. A
-   typed prompt gets the status line's notice `builtin is not signed in:
+   typed prompt gets the status line's notice `riff is not signed in:
    /login`.
 5. `/login` at any time opens the box again (switching, below). `/logout`
    signs out.
@@ -147,11 +147,11 @@ scrolls off before the box is cut.
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 
 
 
@@ -172,9 +172,9 @@ scrolls off before the box is cut.
 
 
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Sign in to builtin                                                                                                   │
+│ Sign in to riff                                                                                                   │
 │                                                                                                                      │
-│ builtin runs on your ChatGPT or Grok plan. Your plan and its provider's terms apply to its turns.                    │
+│ riff runs on your ChatGPT or Grok plan. Your plan and its provider's terms apply to its turns.                    │
 │                                                                                                                      │
 │ ❯ 1. ChatGPT · a ChatGPT plan                                                                                        │
 │   2. Grok · a Grok plan                                                                                              │
@@ -192,17 +192,17 @@ scrolls off before the box is cut.
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ Sign in to builtin                                                           │
+│ Sign in to riff                                                           │
 │                                                                              │
-│ builtin runs on your ChatGPT or Grok plan. Your plan and its                 │
+│ riff runs on your ChatGPT or Grok plan. Your plan and its                 │
 │ provider's terms apply to its turns.                                         │
 │                                                                              │
 │ ❯ 1. ChatGPT · a ChatGPT plan                                                │
@@ -250,11 +250,11 @@ wants it.
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 
 
 
@@ -319,7 +319,7 @@ helps nobody and "Copy the address" carries it whole.
 
 ```text
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 
  ››› Waiting for the browser… (12s)
 ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -391,11 +391,11 @@ this box.
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ Sign in to ChatGPT in the browser                                            │
 │                                                                              │
@@ -506,11 +506,11 @@ Success, 120x40, the top of the window: the box closes, a row stays, the session
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · ChatGPT · gpt-6.1-sol
+ ▀▀▀▄   riff · ChatGPT · gpt-6.1-sol
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
    ⎿  Signed in to ChatGPT in the browser. Kept in the macOS Keychain.
 ```
 
@@ -518,11 +518,11 @@ Success, 80x24, the whole window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · ChatGPT · gpt-6.1-sol
+ ▀▀▀▄   riff · ChatGPT · gpt-6.1-sol
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
    ⎿  Signed in to ChatGPT with a code. Kept in the macOS Keychain.
 
 
@@ -568,11 +568,11 @@ Failure, device code refused, 80x24, the whole window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ Sign in to ChatGPT with a code                                               │
 │                                                                              │
@@ -616,11 +616,11 @@ Expired, 80x24, the whole window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 
 
 
@@ -645,11 +645,11 @@ Cancelled, 120x40, the top of the window: Esc on the first step; the listener is
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
    ⎿  Not signed in. /login to sign in, or /new for another agent.
 ```
 
@@ -657,11 +657,11 @@ Cancelled, 80x24, the whole window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
    ⎿  Not signed in. /login to sign in, or /new for another agent.
 
 
@@ -737,11 +737,11 @@ C1 alone, where C4 does not reach the agent, 80x24, the whole window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
 
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -766,11 +766,11 @@ C4 chosen: the success row says so, 80x24, the top of the window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
    ⎿  Signed in to ChatGPT for this run only: no credential store
       answered, so chord forgets the sign-in when it quits.
 ```
@@ -779,11 +779,11 @@ C2, a file the person named in settings, 80x24, the top of the window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · not signed in
+ ▀▀▀▄   riff · not signed in
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
- ⏺ builtin needs a sign-in to a ChatGPT or Grok plan
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
    ⎿  Signed in to ChatGPT. Kept in the file your settings name (mode
       0600), as no credential store answered.
 ```
@@ -791,17 +791,17 @@ C2, a file the person named in settings, 80x24, the top of the window:
 C2, that file readable by others: refused, 80x24, the top of the window:
 
 ```text
- ⏺ builtin did not start: its credential file can be read by others
+ ⏺ riff did not start: its credential file can be read by others
    ⎿  chord reads a credential file only at mode 0600. Run chmod 600 on
-      the file your settings name, then start builtin again.
+      the file your settings name, then start riff again.
 ```
 
 C3, environment only, 80x24, the top of the window:
 
 ```text
- ⏺ builtin did not start: no credential store answered
+ ⏺ riff did not start: no credential store answered
    ⎿  Set CHORD_CHATGPT_REFRESH_TOKEN, or start a Secret Service
-      (gnome-keyring or KeePassXC), and start builtin again.
+      (gnome-keyring or KeePassXC), and start riff again.
 ```
 
 A slow store (bounded read), 120x40, the working line:
@@ -853,7 +853,7 @@ Service or Credential Manager.
 
 ```text
 ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
-│ Sign in to builtin                                                                                                   │
+│ Sign in to riff                                                                                                   │
 │                                                                                                                      │
 │ Signed in to ChatGPT. Signing in to another plan or account starts a new session; this transcript stays above it.    │
 │                                                                                                                      │
@@ -873,7 +873,7 @@ Service or Credential Manager.
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · ChatGPT · gpt-6.1-sol
+ ▀▀▀▄   riff · ChatGPT · gpt-6.1-sol
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
@@ -911,7 +911,7 @@ L1 and L2, another window on the same account, at its next refresh, 80x24, the w
 ```text
  ⏺ Renamed it; the one test passes.
 
- ⏺ builtin is signed out of ChatGPT
+ ⏺ riff is signed out of ChatGPT
    ⎿  The sign-in was removed, here or in another chord. Sign in again to
       go on; this transcript stays above.
 
@@ -921,7 +921,7 @@ L1 and L2, another window on the same account, at its next refresh, 80x24, the w
 
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
-│ Sign in to builtin                                                           │
+│ Sign in to riff                                                           │
 │                                                                              │
 │ ❯ 1. ChatGPT · a ChatGPT plan                                                │
 │   2. Grok · a Grok plan                                                      │
@@ -975,8 +975,8 @@ the slash list, with their descriptions, not in the panel. Following that:
 
 | Action | Key | Rebindable | Where it is listed |
 | --- | --- | --- | --- |
-| sign in, switch | `/login` | no: a command, not a binding | slash list: `Sign in to a ChatGPT or Grok plan for builtin`; `?` panel: one new line, `/login /logout to sign builtin in or out`, `commands: []`, after `/vim` |
-| sign out | `/logout` | no | slash list: `Sign out of builtin's plan`; the same panel line |
+| sign in, switch | `/login` | no: a command, not a binding | slash list: `Sign in to a ChatGPT or Grok plan for riff`; `?` panel: one new line, `/login /logout to sign riff in or out`, `commands: []`, after `/vim` |
+| sign out | `/logout` | no | slash list: `Sign out of riff's plan`; the same panel line |
 | give up a sign-in | `esc` | no: the pickers' Esc, as today | covered by `esc ← to leave a picker or shortcuts` |
 
 The panel line follows `/vim`'s precedent: a command named in the panel
@@ -999,7 +999,7 @@ The start picker, 120x40 (title page rows above as today):
 ```text
  Select agent
 
- ❯   1.  builtin · chord's own agent · on a ChatGPT or Grok plan
+ ❯   1.  riff · chord's own agent · on a ChatGPT or Grok plan
      2.  agoragentic-acp · Agoragentic
      3.  auggie · Auggie CLI
      4.  autohand · Autohand Code
@@ -1014,7 +1014,7 @@ The start picker, 120x40 (title page rows above as today):
 The same rows at 80x24:
 
 ```text
- ❯   1.  builtin · chord's own agent · on a ChatGPT or Grok plan
+ ❯   1.  riff · chord's own agent · on a ChatGPT or Grok plan
      2.  agoragentic-acp · Agoragentic
 ```
 
@@ -1041,7 +1041,7 @@ since `chord <name>` must not mean both.
 - **A short name of its own** (the owner's pick): reads best in the header,
   but says nothing until someone learns it.
 
-Runtime's module folder (`src/agent/` in its draft, a placeholder) takes
+Runtime's module folder (`src/riff/` in its draft, a placeholder) takes
 the chosen name.
 
 ### Q5 options: the default
@@ -1079,7 +1079,7 @@ contradict the record and the window's summed `/cost`. So each Q7 option is
 an enricher policy first, which protocol specifies, and the screen only
 draws what the record holds.
 
-- **Header**: `builtin · ChatGPT · gpt-6.1-sol`. The provider sits between
+- **Header**: `riff · ChatGPT · gpt-6.1-sol`. The provider sits between
   the agent and the model, so the plan in use is always visible.
 - **Status line**: model and effort, as drawn. The context gauge (`N%
   context used`, `contextUsed`, `src/ui/status/status.ts:266`) appears only
@@ -1107,7 +1107,7 @@ Option a (recommended): cost unknown, tokens kept, 120x40:
 
 ```text
  › /cost
-   ⎿  Total cost:   unknown: builtin runs on your ChatGPT plan, which reports no cost per token
+   ⎿  Total cost:   unknown: riff runs on your ChatGPT plan, which reports no cost per token
       Tokens in:    48,210
       Tokens out:   3,904
       Cache read:   41,000
@@ -1163,7 +1163,7 @@ Streaming, 120x40, the whole window:
 
 ```text
  ▀▄     chord v0.69.0
- ▀▀▀▄   builtin · ChatGPT · gpt-6.1-sol
+ ▀▀▀▄   riff · ChatGPT · gpt-6.1-sol
  ▄▀▀▀   ~/projects/app
  ▀▀     ? for shortcuts · /help
 
@@ -1309,7 +1309,7 @@ A command, 80x24, the whole window:
 ## State slices and pure modules
 
 One source of truth for the transitions: **the sign-in state machine is
-runtime's** pure module, `src/<agent>/sign_in.ts` (`src/agent/` in runtime's
+runtime's** pure module, `src/riff/sign_in.ts` (`src/riff/` in runtime's
 draft, named after Q5), with its driver `sign_in_run.ts` beside it. The
 interface draws that machine's state and sends it the person's choices. It
 holds no transition of its own. Following `src/ui/AGENTS.md`:

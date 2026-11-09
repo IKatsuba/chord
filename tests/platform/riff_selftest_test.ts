@@ -97,3 +97,43 @@ describe('--riff-selftest', () => {
     expect(help.out).not.toContain(RIFF_SELFTEST_FLAG);
   });
 });
+
+describe('CHD-603 U4 tester: isolated selftest processes', () => {
+  test('two processes complete both turns against their own fake provider', async () => {
+    const first = serveFakeChat();
+    const second = serveFakeChat();
+
+    try {
+      const results = await Promise.all([
+        chord([RIFF_SELFTEST_FLAG, first.url]),
+        chord([RIFF_SELFTEST_FLAG, second.url]),
+      ]);
+
+      for (const [index, fake] of [first, second].entries()) {
+        const ran = results[index]!;
+
+        expect(ran.killed).toBeFalse();
+        expect(ran.code).toBe(0);
+        expect(ran.err).toBe('');
+        expect(fake.requests()).toBe(4);
+        expect(
+          riffProblems(JSON.parse(ran.out) as object, fake.requests()),
+        ).toBeUndefined();
+      }
+    } finally {
+      await first.stop();
+      await second.stop();
+    }
+  }, 60_000);
+
+  test('a missing fake URL fails before any turn is started', async () => {
+    const ran = await chord([RIFF_SELFTEST_FLAG]);
+
+    expect(ran.killed).toBeFalse();
+    expect(ran.code).not.toBe(0);
+    expect(ran.out).toBe('');
+    expect(ran.err).toContain(
+      `${RIFF_SELFTEST_FLAG} takes the fake server's base URL`,
+    );
+  });
+});

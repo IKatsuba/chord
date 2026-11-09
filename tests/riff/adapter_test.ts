@@ -361,12 +361,17 @@ describe('a connection that closes while session/new makes the session', () => {
     client.send('session/new', { cwd: process.cwd(), mcpServers: [] });
     await entered.promise;
     end();
-    await Bun.sleep(50);
 
-    expect(finished).toBe(false);
-    expect(closes).toStrictEqual([]);
+    try {
+      await riff.connection.closed;
+      await Bun.sleep(50);
 
-    release.resolve();
+      expect(finished).toBe(false);
+      expect(closes).toStrictEqual([]);
+    } finally {
+      release.resolve();
+    }
+
     await riff.finished;
 
     expect(closes).toStrictEqual(['closed']);

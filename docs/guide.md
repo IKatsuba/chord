@@ -1501,6 +1501,9 @@ lower known monetary spend, without converting quota to dollars. `prefer` uses
 soft `prefer.agent` and nullable `prefer.model` fields. `constraints.agents`,
 `constraints.models.<agent>` and `constraints.modes.<agent>` are exact
 allowlists: omitted means no added restriction, empty means no allowed choice.
+An item that is not a string, is empty or exceeds 128 characters is left out;
+the rest of the list and file still count. A list emptied this way stays `[]`
+and allows nothing.
 Preferences are not returned by `get_budgets`. Allowlists constrain every
 effective role of calls carrying `selection`; direct
 `/team run` and `run_team` without selection keep saved composition and existing
@@ -1508,8 +1511,9 @@ startup checks. They are selection policy, not global security controls.
 
 Project settings override user settings: `intent` replaces, `prefer` merges by
 key, `constraints.agents` replaces, and model/mode maps merge by runtime with
-each runtime's list replaced. Selected admission rereads current policy; invalid
-selection settings or unreadable/unparseable files refuse it. An unopened member
+each runtime's list replaced. Selected admission rereads current policy and uses
+lists without their bad items; every other `teamSelection` problem or
+unreadable/unparseable file refuses it. An unopened member
 can therefore be refused after a policy edit; running work is untouched.
 
 For a selected run, the agent calls normal `run_team` with optional
@@ -1671,8 +1675,12 @@ on offers. A starting model, effort or mode the agent refuses is said in the
 transcript, with where it was set and what the agent offers, and the session
 goes on as the agent chose; an agent with no effort starts on its own, and
 the line says it offers none. An unknown key or wrong-type value is named
-with its file and left out; the rest still counts. A file that is not a
-JSON object is named and ignored. A refused `agents.<name>.command`
+with its file and left out; the rest still counts. Each bad item in a
+`teamSelection` constraint list gets one warning naming its list, position
+(counted from 1), value and cause, ending in `left out`. A list emptied this
+way also says `no item left; the list now allows no agent`, or no model or
+mode for the named agent. A file that is not a JSON object is named and
+ignored. A refused `agents.<name>.command`
 instead prevents that agent from starting: main, child, task or team
 member, and a session resumed alone in a directory that refuses it.
 The warning names the cause and says `<agent> will not start`; stderr

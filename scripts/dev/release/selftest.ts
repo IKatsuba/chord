@@ -20,6 +20,8 @@ import {
 import { tmpdir } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join, resolve } from 'node:path';
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
+import { type Agent, openAgent } from '../../../src/acp/connection.ts';
 import { DONE, serveFakeChat } from './fake_chat.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
@@ -157,11 +159,11 @@ async function acpStep(
 }
 
 /**
- * One riff turn through the binary's hidden `--riff-agent`, as the window
- * starts riff, against the fake Chat Completions server: `initialize`,
- * `session/new`, one prompt, then EOF. `wasm` turns the native addon off.
- * Spawned, not run synchronously, as the server answers on this process's
- * event loop.
+ * One riff turn through the binary's hidden `--riff-agent`, started and
+ * driven by chord's own ACP client as the window starts riff, against the
+ * fake Chat Completions server: `session/new`, one prompt, then the close,
+ * which ends stdin and must see riff exit 0. `wasm` turns the native addon
+ * off; the native leg clears it, whatever the caller's environment says.
  */
 async function riffTurn(
   release: Release,
@@ -171,129 +173,87 @@ async function riffTurn(
   url: string,
   wasm: boolean,
 ): Promise<RiffTurn> {
-  const child = spawn(
-    arch === undefined ? binary : 'arch',
-    [...(arch === undefined ? [] : [`-${arch}`, binary]), '--riff-agent'],
-    {
-      cwd,
-      env: {
-        ...release.env,
-        CHORD_RIFF_FAKE_PROVIDER: url,
-        ...(wasm ? { CHORD_RIFF_BACKEND: 'wasm' } : {}),
-      },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    },
-  );
-  let said = '';
-  let held = '';
+  let stderr = '';
   let text = '';
-  const write = (message: object) =>
-    child.stdin.write(`${JSON.stringify({ jsonrpc: '2.0', ...message })}\n`);
-  const ended = new Promise<number | null>((done) => {
-    child.once('exit', done);
-  });
+  const env = Object.fromEntries(
+    Object.entries({
+      ...release.env,
+      CHORD_RIFF_FAKE_PROVIDER: url,
+      CHORD_RIFF_BACKEND: wasm ? 'wasm' : '',
+    }).filter((entry): entry is [string, string] => entry[1] !== undefined),
+  );
+  let agent: Agent;
 
-  const answered = new Promise<string | undefined>((done, failed) => {
-    child.stderr.setEncoding('utf8').on('data', (chunk: string) => {
-      said += chunk;
-    });
+  try {
+    agent = await openAgent({
+      command: [
+        ...(arch === undefined ? [] : ['arch', `-${arch}`]),
+        binary,
+        '--riff-agent',
+      ],
+      env,
+      cwd,
+      // Long enough for an exit at EOF, which the self-test requires.
+      stop: { exitMs: 20_000, termMs: 2000, killMs: 2000 },
+      onTraffic: (traffic) => {
+        if (traffic.from === 'stderr') {
+          stderr += traffic.text;
+        } else if (traffic.from === 'agent') {
+          const { update } =
+            (traffic.message as { params?: { update?: SessionUpdate } })
+              .params ?? {};
 
-    child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
-      held += chunk;
-
-      const parts = held.split('\n');
-
-      held = parts.pop() ?? '';
-
-      for (const part of parts) {
-        let line: Record<string, unknown>;
-
-        try {
-          line = JSON.parse(part) as Record<string, unknown>;
-        } catch {
-          failed(new Error(`${binary} --riff-agent wrote: ${part}`));
-
-          return;
-        }
-
-        const result = line['result'] as Record<string, unknown> | undefined;
-
-        if (line['error'] !== undefined) {
-          failed(new Error(`${binary} --riff-agent answered: ${part}`));
-        } else if (line['id'] === 1) {
-          write({
-            id: 2,
-            method: 'session/new',
-            params: { cwd, mcpServers: [] },
-          });
-        } else if (line['id'] === 2) {
-          write({
-            id: 3,
-            method: 'session/prompt',
-            params: {
-              sessionId: result?.['sessionId'],
-              prompt: [{ type: 'text', text: 'Say done.' }],
-            },
-          });
-        } else if (line['id'] === 3) {
-          done(result?.['stopReason'] as string | undefined);
-        } else if (line['method'] === 'session/update') {
-          const update = (
-            line['params'] as {
-              update?: { sessionUpdate?: string; content?: { text?: string } };
-            }
-          ).update;
-
-          if (update?.sessionUpdate === 'agent_message_chunk') {
-            text += update.content?.text ?? '';
+          if (
+            update?.sessionUpdate === 'agent_message_chunk' &&
+            update.content.type === 'text'
+          ) {
+            text += update.content.text;
           }
         }
-      }
+      },
+      onPermission: () =>
+        Promise.resolve({ outcome: { outcome: 'cancelled' } }),
+      onElicitation: () => Promise.resolve({ action: 'decline' }),
+      signal: AbortSignal.timeout(60_000),
     });
-
-    void ended.then(() =>
-      failed(new Error(`${binary} --riff-agent exited early; stderr: ${said}`)),
+  } catch (error) {
+    die(
+      `${binary} --riff-agent did not start: ${String(error)}; stderr: ${stderr}`,
     );
-  });
-
-  write({
-    id: 1,
-    method: 'initialize',
-    params: { protocolVersion: 1, clientCapabilities: {} },
-  });
+  }
 
   let stopReason: string | undefined;
 
   try {
-    stopReason = await Promise.race([
-      answered,
-      sleep(60_000, undefined, { ref: false }).then(() => {
-        throw new Error(
-          `${binary} --riff-agent never answered; stderr: ${said}`,
-        );
-      }),
-    ]);
+    const { sessionId } = (await agent.newSession(
+      { cwd, mcpServers: [] },
+      AbortSignal.timeout(60_000),
+    )) as { sessionId: string };
+
+    ({ stopReason } = await agent.prompt(
+      { sessionId, prompt: [{ type: 'text', text: 'Say done.' }] },
+      AbortSignal.timeout(60_000),
+    ));
   } catch (error) {
-    child.kill('SIGKILL');
-    die(error instanceof Error ? error.message : String(error));
+    await agent.close().catch(() => {});
+
+    die(
+      `${binary} --riff-agent's turn failed: ${String(error)}; stderr: ${stderr}`,
+    );
   }
 
-  child.stdin.end();
+  await agent.close();
 
-  const code = await Promise.race([
-    ended,
-    sleep(20_000, undefined, { ref: false }).then(() => -1),
-  ]);
+  const exit = await agent.exited;
 
-  if (code !== 0) {
-    child.kill('SIGKILL');
+  if (exit.code !== 0) {
     die(
-      `${binary} --riff-agent did not leave at EOF (${code}); stderr: ${said}`,
+      `${binary} --riff-agent did not leave at EOF (${exit.signal ?? exit.code}); stderr: ${stderr}`,
     );
   }
 
   return {
-    backend: /^riff: backend (\S+)$/m.exec(said)?.[1],
+    backend: /^riff: backend (\S+)$/m.exec(stderr)?.[1],
     stopReason,
     text,
   };

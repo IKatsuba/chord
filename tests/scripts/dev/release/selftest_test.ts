@@ -45,19 +45,7 @@ acp)
   done
   ;;
 --riff-agent)
-  # riff as the window starts it: one model request per turn, then done.
-  if [ "$CHORD_RIFF_BACKEND" = wasm ]; then echo "riff: backend wasm-jspi" >&2; else echo "riff: backend native" >&2; fi
-  while read -r line; do
-    case "$line" in
-    *'"initialize"'*) echo '{"jsonrpc":"2.0","id":1,"result":{}}' ;;
-    *'"session/new"'*) echo '{"jsonrpc":"2.0","id":2,"result":{"sessionId":"s"}}' ;;
-    *'"session/prompt"'*)
-      ${JSON.stringify(process.execPath)} -e 'await fetch(process.argv[1] + "/chat/completions", { method: "POST", body: "{}" })' "$CHORD_RIFF_FAKE_PROVIDER"
-      echo '{"jsonrpc":"2.0","method":"session/update","params":{"sessionId":"s","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"done"}}}}'
-      echo '{"jsonrpc":"2.0","id":3,"result":{"stopReason":"end_turn"}}'
-      ;;
-    esac
-  done
+  exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(import.meta.dir, '..', '..', '..', 'fixtures', 'fake_riff.ts'))}
   ;;
 *) echo "Hello, world." ;;
 esac

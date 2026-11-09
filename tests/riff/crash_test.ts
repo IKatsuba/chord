@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
 import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -9,7 +10,7 @@ import { libfxBackend } from '../../src/platform/libfx.ts';
 import { connectRiff, INTERRUPTED } from '../../src/riff/adapter.ts';
 import { AcpClient, clientOverStreams } from '../fixtures/acp_client.ts';
 import { serveFakeChat } from '../fixtures/riff/fake_chat.ts';
-import { notFound } from '../../src/not_found.ts';
+import { until } from '../session/conversation_fake.ts';
 
 const CHILD = join(import.meta.dir, '../fixtures/riff/crash_child.ts');
 
@@ -20,21 +21,6 @@ afterEach(async () => {
     await cleanup();
   }
 });
-
-/** Until `file` exists, polling: the child publishes it whole. */
-async function published(file: string): Promise<string> {
-  for (;;) {
-    try {
-      return await readFile(file, 'utf8');
-    } catch (error) {
-      if (!notFound(error)) {
-        throw error;
-      }
-    }
-
-    await Bun.sleep(20);
-  }
-}
 
 /**
  * The owner's T2 (CHD-485): reopening cancels a turn a dead process left
@@ -84,7 +70,10 @@ describe('a turn a crashed riff left open (T2)', () => {
       prompt: [{ type: 'text', text: 'call the tool' }],
     });
 
-    expect(Number(await published(ready))).toBe(child.pid ?? -1);
+    // The child publishes it whole, once its tool runs.
+    await until(() => existsSync(ready), 30_000);
+
+    expect(Number(await readFile(ready, 'utf8'))).toBe(child.pid ?? -1);
 
     child.kill('SIGKILL');
     await new Promise((resolve) => child.once('exit', resolve));

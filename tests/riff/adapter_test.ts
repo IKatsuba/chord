@@ -4,7 +4,14 @@ import { createFxAgent, type FxAgent } from 'libfx/node';
 import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { connectRiff, type Riff, riffInit } from '../../src/riff/adapter.ts';
+import {
+  connectRiff,
+  type Riff,
+  type RiffOptions,
+  riffInit,
+} from '../../src/riff/adapter.ts';
+import { riffStore, type Sidecar } from '../../src/riff/store.ts';
+import { until } from '../session/conversation_fake.ts';
 import { libfxBackend } from '../../src/platform/libfx.ts';
 import { clientOverStreams, type AcpClient } from '../fixtures/acp_client.ts';
 import {
@@ -21,7 +28,10 @@ let end: () => void;
 let stateDir: string;
 
 /** riff in this process, on the fake provider or on none. */
-async function open(provider = true): Promise<void> {
+async function open(
+  provider = true,
+  more: Partial<RiffOptions> = {},
+): Promise<void> {
   const pair = clientOverStreams();
 
   client = pair.client;
@@ -31,6 +41,7 @@ async function open(provider = true): Promise<void> {
     provider: provider ? { baseUrl: fake.url } : undefined,
     backend: await libfxBackend(),
     stateDir,
+    ...more,
   });
 
   await client.request('initialize', { protocolVersion: 1 });
@@ -551,5 +562,269 @@ describe('tester: riff turn recovery and isolation', () => {
       data: { code: null },
     });
     expect(client.said(sessionId)).toBe('Cut');
+  });
+});
+
+/** riff's store, its sidecar writes held until a test lets each go. */
+function heldStore(dir: string) {
+  const real = riffStore(dir);
+  const held: { sidecar: Sidecar; release(): void; fail(): void }[] = [];
+  const state = { hold: false };
+
+  return {
+    state,
+    held,
+    store: {
+      durability: real.durability,
+      read: real.read,
+      write: async (sessionId: string, sidecar: Sidecar) => {
+        if (state.hold) {
+          const gate = Promise.withResolvers<void>();
+
+          held.push({
+            sidecar,
+            release: gate.resolve,
+            fail: () => gate.reject(new Error('the disk is full')),
+          });
+          await gate.promise;
+        }
+
+        await real.write(sessionId, sidecar);
+      },
+    },
+  };
+}
+
+/** libfx's agent, its closes counted. */
+function countedAgent(closes: string[]) {
+  return (options: Parameters<typeof createFxAgent>[0]) => {
+    const made = createFxAgent(options);
+
+    return Object.assign(Object.create(made) as FxAgent, {
+      close: async () => {
+        closes.push('closed');
+        await made.close();
+      },
+    });
+  };
+}
+
+describe("riff's sidecar writes and reopen, in forced order", () => {
+  test('config changes land on disk in the order they were asked', async () => {
+    const held = heldStore(stateDir);
+
+    await open(true, { store: held.store });
+
+    const sessionId = await newSession();
+
+    held.state.hold = true;
+
+    const answers = [
+      client.request('session/set_config_option', {
+        sessionId,
+        configId: 'effort',
+        value: 'low',
+      }),
+      client.request('session/set_config_option', {
+        sessionId,
+        configId: 'mode',
+        value: 'auto',
+      }),
+    ];
+    let done = 0;
+
+    void Promise.all(answers).then(() => {
+      done = 2;
+    });
+
+    // Lets the last write held go first, as a slow disk could.
+    while (done < 2) {
+      await until(() => held.held.length > 0 || done === 2);
+      await Bun.sleep(20);
+      held.held.pop()?.release();
+    }
+
+    expect(await held.store.read(sessionId)).toMatchObject({
+      effort: 'low',
+      mode: 'auto',
+    });
+  });
+
+  test('a close while the first sidecar is written waits for it, then closes the session', async () => {
+    const held = heldStore(stateDir);
+    const closes: string[] = [];
+    let finished = false;
+
+    await open(true, { store: held.store, createAgent: countedAgent(closes) });
+    void riff.finished.then(() => {
+      finished = true;
+    });
+
+    held.state.hold = true;
+
+    client.send('session/new', { cwd: process.cwd(), mcpServers: [] });
+    await until(() => held.held.length === 1);
+    end();
+
+    try {
+      await riff.connection.closed;
+      await Bun.sleep(50);
+
+      expect(finished).toBe(false);
+      expect(closes).toStrictEqual([]);
+    } finally {
+      held.held[0]?.release();
+    }
+
+    await riff.finished;
+
+    expect(closes).toStrictEqual(['closed']);
+  });
+
+  test('a sidecar that cannot be written fails session/new and closes its session', async () => {
+    const held = heldStore(stateDir);
+    const closes: string[] = [];
+
+    await open(true, { store: held.store, createAgent: countedAgent(closes) });
+
+    held.state.hold = true;
+
+    const answer = client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+
+    await until(() => held.held.length === 1);
+    held.held[0]?.fail();
+
+    expect((await answer).error?.code).toBe(-32603);
+    expect(closes).toStrictEqual(['closed']);
+  });
+
+  /**
+   * A session riff made and let go, and riff again with libfx's session for
+   * it played by `session`, its closes counted.
+   */
+  async function reopenWith(session: object, closes: string[]) {
+    await open();
+
+    const sessionId = await newSession();
+
+    end();
+    await riff.finished;
+    await open(true, {
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          session: () => session,
+          close: async () => {
+            closes.push('closed');
+            await made.close();
+          },
+        });
+      },
+    });
+
+    return sessionId;
+  }
+
+  test("a close during the reopen's cancel resumes nothing", async () => {
+    const gate = Promise.withResolvers<void>();
+    const entered = Promise.withResolvers<void>();
+    const closes: string[] = [];
+    let resumed = 0;
+    const sessionId = await reopenWith(
+      {
+        cancel: async () => {
+          entered.resolve();
+          await gate.promise;
+        },
+        resume: () => {
+          resumed++;
+
+          throw new Error('resumed after the close');
+        },
+      },
+      closes,
+    );
+
+    client.send('session/resume', {
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+    await entered.promise;
+    end();
+
+    try {
+      await riff.connection.closed;
+    } finally {
+      gate.resolve();
+    }
+
+    await riff.finished;
+
+    expect(resumed).toBe(0);
+    expect(closes).toStrictEqual(['closed']);
+  });
+
+  test("a close while the reopen's turn runs cancels it", async () => {
+    const cancelled = Promise.withResolvers<void>();
+    const closes: string[] = [];
+    let cancels = 0;
+    let resumed = false;
+    const sessionId = await reopenWith(
+      {
+        cancel: () => {
+          cancels++;
+
+          if (resumed) {
+            cancelled.resolve();
+          }
+
+          return Promise.resolve();
+        },
+        resume: () => {
+          resumed = true;
+
+          return {
+            messageId: null,
+            accepted: Promise.resolve({ messageId: 'res_1', sessionId }),
+            result: cancelled.promise.then(() => ({
+              messageId: 'msg_1',
+              stopReason: 'cancelled',
+              usage: {},
+            })),
+            // A turn with no events, ending once it is cancelled.
+            [Symbol.asyncIterator]: () => ({
+              next: async () => {
+                await cancelled.promise;
+
+                return { done: true, value: undefined };
+              },
+            }),
+          };
+        },
+      },
+      closes,
+    );
+
+    client.send('session/resume', {
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+    await until(() => resumed);
+
+    const second = await prompt(sessionId, 'hello');
+
+    expect(second.error?.message).toContain('riff runs one prompt at a time');
+
+    end();
+    await riff.finished;
+
+    expect(cancels).toBe(2);
+    expect(closes).toStrictEqual(['closed']);
   });
 });

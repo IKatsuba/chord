@@ -36,7 +36,7 @@ import {
   windowOf,
 } from './models.ts';
 import { RIFF } from './start.ts';
-import { riffStore, type Sidecar } from './store.ts';
+import { type RiffStore, riffStore, type Sidecar } from './store.ts';
 
 /** What a reopened session says of a turn a dead process left open. */
 export const INTERRUPTED = 'The interrupted turn was cancelled.';
@@ -67,6 +67,8 @@ export interface RiffOptions {
    * to put a close in the middle.
    */
   readonly createAgent?: typeof createFxAgent;
+  /** The store: `riffStore(stateDir)` but in tests that hold its writes. */
+  readonly store?: RiffStore;
 }
 
 /** riff on a connection, and when it has let its session go. */
@@ -119,12 +121,15 @@ interface Open {
 }
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
-  const store = riffStore(options.stateDir);
+  const store = options.store ?? riffStore(options.stateDir);
   let open: Open | undefined;
   // The session being created, so a second session/new and a close that
   // comes meanwhile see it; and whether the connection has gone.
   let opening: Promise<Open> | undefined;
   let gone = false;
+  // Sidecar writes, one after another in the order they were asked, so the
+  // last config change is the one on disk.
+  let saving: Promise<void> = Promise.resolve();
 
   const opened = (sessionId: string): Open => {
     if (open?.id !== sessionId) {
@@ -159,7 +164,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
     }
 
-    opening = create(options.provider, resumed);
+    opening = made(options.provider, resumed);
 
     try {
       open = await opening;
@@ -167,9 +172,33 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       opening = undefined;
     }
 
-    await save(open);
-
     return open;
+  };
+
+  /** A session made and its sidecar written, or none, closed. */
+  const made = async (
+    provider: FakeProvider,
+    resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
+  ): Promise<Open> => {
+    const session = await create(provider, resumed);
+
+    try {
+      await save(session);
+    } catch (error) {
+      await session.agent.close();
+
+      throw error;
+    }
+
+    // The connection went while the sidecar was written: nobody will close
+    // the session but this.
+    if (gone) {
+      await session.agent.close();
+
+      throw RequestError.internalError(undefined, 'the connection closed');
+    }
+
+    return session;
   };
 
   const create = async (
@@ -237,12 +266,23 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     return holder.open;
   };
 
-  const save = (session: Open) =>
-    store.write(session.id, {
+  /** Writes the session's sidecar as it is now, after every earlier write. */
+  const save = (session: Open): Promise<void> => {
+    const sidecar: Sidecar = {
       provider: session.plan,
       account: null,
       ...session.config,
-    });
+    };
+    const next = saving
+      .catch(() => {
+        // An earlier write's caller has its failure.
+      })
+      .then(() => store.write(session.id, sidecar));
+
+    saving = next;
+
+    return next;
+  };
 
   /**
    * libfx's `resume()` runs a turn a crashed process left open, and a plain
@@ -256,6 +296,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const fx = session.agent.session(session.id);
 
     await fx.cancel();
+
+    // The connection went during the cancel: resume nothing it would leave
+    // running.
+    if (gone) {
+      return;
+    }
 
     const turn = fx.resume();
     const started = new Set<string>();
@@ -294,6 +340,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       // It closed itself on seeing the connection gone.
     });
 
+    await saving.catch(() => {
+      // Its caller had the failure.
+    });
+
     const closing = open;
 
     open = undefined;
@@ -326,7 +376,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
       const session = await start({ id: params.sessionId, sidecar });
 
-      await closeOpenTurn(session, client);
+      // The reopen's turn is the session's running work: a prompt waits for
+      // it, and a close cancels it.
+      session.running = true;
+
+      try {
+        await closeOpenTurn(session, client);
+      } finally {
+        session.running = false;
+      }
 
       return { configOptions: configOptions(session.plan, session.config) };
     })

@@ -25,6 +25,7 @@ import {
 import { xdgConfig } from 'xdg-basedir';
 import { chordCommand } from './cli.ts';
 import {
+  agentsJson,
   agentTable,
   DEFAULT_AGENT,
   findAgent,
@@ -79,6 +80,7 @@ import {
   problemLine,
   problemNote,
   refusalLine,
+  refusedAgents,
   resolveStartup,
   saveEditorMode,
   saveTheme,
@@ -615,7 +617,11 @@ cli
   .option('-C, --cwd <dir:string>', 'Directory whose settings to read.', {
     default: process.cwd(),
   })
-  .action(async ({ cwd }) => {
+  .option(
+    '--json',
+    'Print one JSON object instead: the preferred agent, each agent with how it starts and whether it is offered and startable, and the settings problems.',
+  )
+  .action(async ({ cwd, json }) => {
     const home = process.env['HOME'];
     const loaded = await loadSettings({
       configHome: xdgConfig,
@@ -627,11 +633,23 @@ cli
       console.error(problemLine(problem));
     }
 
+    const listed = await listedAgents(agentCommands(loaded.layers));
+
     console.log(
-      agentTable(
-        await listedAgents(agentCommands(loaded.layers)),
-        process.stdout.isTTY === true ? process.stdout.columns : undefined,
-      ),
+      json === true
+        ? JSON.stringify(
+            agentsJson({
+              listed,
+              offered: loaded.settings.offeredAgents,
+              preferred: loaded.settings.agent ?? DEFAULT_AGENT,
+              problems: loaded.problems,
+              refused: refusedAgents(loaded.layers),
+            }),
+          )
+        : agentTable(
+            listed,
+            process.stdout.isTTY === true ? process.stdout.columns : undefined,
+          ),
     );
   });
 

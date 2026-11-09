@@ -40,6 +40,18 @@ export function resolveIn(directory: string, path: string): string {
   return resolve(directory, path);
 }
 
+/**
+ * `path`'s real path, or a refusal naming it as `label` when it has none
+ * (missing, not reachable): what a permission is asked on.
+ */
+export async function realOf(path: string, label: string): Promise<string> {
+  try {
+    return await realpath(path);
+  } catch (error) {
+    throw new Error(`${label}: ${reason(error)}`);
+  }
+}
+
 /** A file opened at its real path, its handle checked to be that file. */
 export interface Opened {
   readonly real: string;

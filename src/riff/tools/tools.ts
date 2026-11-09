@@ -10,11 +10,10 @@ import type {
 import { z } from '@zod/zod';
 import type { FxAgentHostTool } from 'libfx/node';
 import type { Finder } from '../../platform/fff.ts';
-import { realpath } from 'node:fs/promises';
 import type { Drawn } from '../events.ts';
 import type { RiffMode } from '../models.ts';
 import { list, LIST_DESCRIPTION, ListInput } from './list.ts';
-import { resolveIn, shown } from './paths.ts';
+import { realOf, resolveIn, shown } from './paths.ts';
 import {
   ALLOW,
   ALLOW_SESSION,
@@ -148,24 +147,28 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
       name: 'read',
       description: READ_DESCRIPTION,
       schema: ReadInput,
-      // A path with no real path asks nothing: the read fails on it.
-      reach: (input) =>
-        realpath(resolveIn(directory, input.path)).then(
-          (real) => ({ tool: 'read', real }) as const,
-          () => undefined,
-        ),
-      run: (input, reach, signal, id) => {
+      // A path with no real path is refused here, before any ask: nothing
+      // is read that the mode and the person did not see.
+      reach: async (input) => {
         const path = resolveIn(directory, input.path);
-        const steps = {
-          label: shown(directory, path),
-          onShown: (text: string) => session.show?.(id, text),
-        };
 
-        // The file read is the one asked about: a path whose real path has
-        // changed since is refused.
-        return reach?.tool === 'read'
-          ? readLines(reach.real, input, signal, { ...steps, exact: true })
-          : readLines(path, input, signal, steps);
+        return {
+          tool: 'read',
+          real: await realOf(path, shown(directory, path)),
+        };
+      },
+      // The file read is the one asked about: a path whose real path has
+      // changed since is refused.
+      run: (input, reach, signal, id) => {
+        if (reach?.tool !== 'read') {
+          throw new Error('read reached no file');
+        }
+
+        return readLines(reach.real, input, signal, {
+          label: shown(directory, resolveIn(directory, input.path)),
+          onShown: (text: string) => session.show?.(id, text),
+          exact: true,
+        });
       },
     }),
     hostTool(session, {

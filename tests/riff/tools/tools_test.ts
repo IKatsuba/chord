@@ -351,6 +351,15 @@ describe("riff's tools ask as the session's mode says", () => {
     ]);
   });
 
+  test('a path with no real path is refused before any ask, and nothing is read', async () => {
+    const { asked, run } = session('ask', [ALLOW]);
+
+    await expect(run('read', { path: 'later.txt' })).rejects.toThrow(
+      /^later\.txt: no such file$/,
+    );
+    expect(asked).toStrictEqual([]);
+  });
+
   test('Deny, or an ask nobody answers, keeps the call from running', async () => {
     const { run } = session('ask', [DENY, undefined]);
 

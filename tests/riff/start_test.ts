@@ -46,7 +46,7 @@ describe('riff started by name', () => {
 });
 
 describe('tester: riff startup protocol contract', () => {
-  test('the child advertises the literal initialize contract and steering', async () => {
+  test('the child advertises the literal initialize contract without steering', async () => {
     const agent = await openAgent({
       command: agentStart('riff').command,
       cwd: process.cwd(),
@@ -60,7 +60,7 @@ describe('tester: riff startup protocol contract', () => {
     try {
       expect(agent.init).toStrictEqual({
         protocolVersion: 1,
-        _meta: { steering: { supported: true } },
+        _meta: { steering: { supported: false } },
         agentInfo: { name: 'riff', title: 'riff', version: manifest.version },
         authMethods: [
           {
@@ -85,7 +85,7 @@ describe('tester: riff startup protocol contract', () => {
           sessionCapabilities: { resume: {}, close: {} },
         },
       });
-      expect(agent.steering).toBe(true);
+      expect(agent.steering).toBe(false);
     } finally {
       await agent.close();
     }

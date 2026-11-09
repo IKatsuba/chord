@@ -457,3 +457,99 @@ describe("riff's store and resume", () => {
     expect(answer.error?.code).toBe(-32002);
   });
 });
+
+describe('tester: riff turn recovery and isolation', () => {
+  test('cancel after a streamed chunk allows a fresh turn in the same session', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const first = prompt(sessionId, 'hang');
+
+    await fake.hanging();
+    await client.until(
+      (message) =>
+        message.method === 'session/update' &&
+        client.said(sessionId) === 'Wait',
+    );
+    client.notify('session/cancel', { sessionId });
+
+    expect((await first).result?.['stopReason']).toBe('cancelled');
+    expect((await prompt(sessionId, 'hello')).result?.['stopReason']).toBe(
+      'end_turn',
+    );
+    expect(client.said(sessionId)).toBe(`Wait${HELLO}`);
+    expect(fake.requests).toHaveLength(2);
+  });
+
+  test('steering during a running turn is refused without another provider request', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const first = prompt(sessionId, 'hang');
+
+    await fake.hanging();
+
+    try {
+      const steer = await client.request('_session/steering', {
+        sessionId,
+        prompt: [{ type: 'text', text: 'hello' }],
+        _meta: { steering: { idleBehavior: 'promptRequired' } },
+      });
+
+      expect(steer.error?.code).toBe(-32601);
+      expect(fake.requests).toHaveLength(1);
+    } finally {
+      client.notify('session/cancel', { sessionId });
+      await first;
+    }
+  });
+
+  test('an unsupported effort resets the next turn to a working default', async () => {
+    await open();
+
+    const sessionId = await newSession();
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'effort',
+      value: 'xhigh',
+    });
+
+    expect((await prompt(sessionId, 'hello')).error?.code).toBe(-32603);
+    expect(fake.requests).toHaveLength(0);
+    expect((await prompt(sessionId, 'hello')).result?.['stopReason']).toBe(
+      'end_turn',
+    );
+    expect(fake.requests).toHaveLength(1);
+    expect(fake.requests[0]?.reasoning_effort).toBeUndefined();
+    expect(client.said(sessionId)).toBe(HELLO);
+  });
+
+  test('a provider 400 maps to refusal and leaves the session usable', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const failed = await prompt(sessionId, 'fail');
+
+    expect(failed.result).toStrictEqual({ stopReason: 'refusal' });
+    expect(fake.requests).toHaveLength(1);
+    expect((await prompt(sessionId, 'hello')).result?.['stopReason']).toBe(
+      'end_turn',
+    );
+    expect(fake.requests).toHaveLength(2);
+  });
+
+  test('the custom provider output limit maps libfx OutputTruncated to internal error', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const answer = await prompt(sessionId, 'long');
+
+    expect(answer.error).toStrictEqual({
+      code: -32603,
+      message: 'OutputTruncated',
+      data: { code: null },
+    });
+    expect(client.said(sessionId)).toBe('Cut');
+  });
+});

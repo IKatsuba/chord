@@ -13,7 +13,10 @@ jobs:
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.4.4
-      - run: bun install --frozen-lockfile
+      # Every platform's packages, as the compile installs them: the static
+      # checks include lint/libfx_assets_test.ts, which checks every target's
+      # libfx addon package before a binary is built from it (CHD-603).
+      - run: bun install --frozen-lockfile --os='*' --cpu='*' --libc='*'
       - run: bun quality --static
 
   # The suite in three, each test file in exactly one: Bun's --shard cuts

@@ -1,5 +1,7 @@
 // In lint/ so the static job runs it: a libfx layout change fails CI before
-// any binary is built from it.
+// any binary is built from it. Like `bun dev compile`, it needs every
+// platform's packages installed (`bun install --os='*' --cpu='*' --libc='*'`),
+// which CI's static job does.
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
   mkdirSync,

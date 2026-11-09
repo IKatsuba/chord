@@ -39,11 +39,13 @@ import {
   startupOf,
   unknownOffered,
   unseenProblems,
+  type Settings,
 } from '../src/settings.ts';
 import { parse } from 'shell-quote';
 import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
 import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
+import { validateSelectedRole } from '../src/session/team_selection.ts';
 
 describe('CHD-565 tester: offered settings isolation and fresh reads', () => {
   test('many invalid elements cost one key without exhausting file recovery', () => {
@@ -1936,4 +1938,408 @@ describe('the settings path writer (CHD-568)', () => {
     );
     expect(shownSettingPath(['a\u202eb'])).toBe('"a\\u202eb"');
   });
+});
+
+describe("a bad item in a settings list (CHD-567, the owner's Q346)", () => {
+  const listed = (list: unknown) => ({
+    theme: 'dark',
+    teamSelection: { constraints: list },
+  });
+  const parsedOf = (value: unknown) =>
+    parseSettings('f', JSON.stringify(value));
+  const lines = (value: unknown) =>
+    parsedOf(value).problems.map(({ message }) => message);
+
+  for (const [name, list, kept, key, line] of [
+    [
+      'constraints.agents',
+      { agents: ['codex', 1, 'claude'] },
+      { agents: ['codex', 'claude'] },
+      ['teamSelection', 'constraints', 'agents'],
+      '"teamSelection.constraints.agents": item 2 (1), invalid input: expected string, received number, left out',
+    ],
+    [
+      'constraints.models.<agent>',
+      { models: { codex: ['large', null, 'small'] } },
+      { models: { codex: ['large', 'small'] } },
+      ['teamSelection', 'constraints', 'models', 'codex'],
+      '"teamSelection.constraints.models.codex": item 2 (null), invalid input: expected string, received null, left out',
+    ],
+    [
+      'constraints.modes.<agent>',
+      { modes: { codex: ['auto', false, 'plan'] } },
+      { modes: { codex: ['auto', 'plan'] } },
+      ['teamSelection', 'constraints', 'modes', 'codex'],
+      '"teamSelection.constraints.modes.codex": item 2 (false), invalid input: expected string, received boolean, left out',
+    ],
+  ] satisfies [
+    string,
+    unknown,
+    NonNullable<Settings['teamSelection']>['constraints'],
+    string[],
+    string,
+  ][]) {
+    test(`${name}: the item is left out, the rest of the list and the file count`, () => {
+      expect(parsedOf(listed(list))).toStrictEqual({
+        settings: { theme: 'dark', teamSelection: { constraints: kept } },
+        problems: [
+          {
+            file: 'f',
+            kind: 'validation',
+            key,
+            leftOut: 'item',
+            message: line,
+          },
+        ],
+      });
+    });
+  }
+
+  test('several bad items in one list are a line each, at their own positions', () => {
+    const parsed = parsedOf(listed({ agents: [1, 'codex', '', 'claude', 2] }));
+
+    expect(parsed.settings).toStrictEqual({
+      theme: 'dark',
+      teamSelection: { constraints: { agents: ['codex', 'claude'] } },
+    });
+    expect(parsed.problems.map(({ message }) => message)).toStrictEqual([
+      '"teamSelection.constraints.agents": item 1 (1), invalid input: expected string, received number, left out',
+      '"teamSelection.constraints.agents": item 3 (""), too small: expected string to have >=1 characters, left out',
+      '"teamSelection.constraints.agents": item 5 (2), invalid input: expected string, received number, left out',
+    ]);
+  });
+
+  test('a list left all bad stays empty and says it allows nothing', () => {
+    const parsed = parsedOf({
+      teamSelection: {
+        constraints: {
+          agents: [1],
+          models: { claude: [null] },
+          modes: { claude: [{}, []] },
+        },
+      },
+    });
+
+    expect(parsed.settings).toStrictEqual({
+      teamSelection: {
+        constraints: {
+          agents: [],
+          models: { claude: [] },
+          modes: { claude: [] },
+        },
+      },
+    });
+    expect(
+      parsed.problems.map(({ leftOut, message }) => [leftOut, message]),
+    ).toStrictEqual([
+      [
+        'item',
+        '"teamSelection.constraints.agents": item 1 (1), invalid input: expected string, received number, left out',
+      ],
+      [
+        'list',
+        '"teamSelection.constraints.agents": no item left; the list now allows no agent',
+      ],
+      [
+        'item',
+        '"teamSelection.constraints.models.claude": item 1 (null), invalid input: expected string, received null, left out',
+      ],
+      [
+        'list',
+        '"teamSelection.constraints.models.claude": no item left; the list now allows no model for claude',
+      ],
+      [
+        'item',
+        '"teamSelection.constraints.modes.claude": item 1 ({}), invalid input: expected string, received object, left out',
+      ],
+      [
+        'item',
+        '"teamSelection.constraints.modes.claude": item 2 ([]), invalid input: expected string, received array, left out',
+      ],
+      [
+        'list',
+        '"teamSelection.constraints.modes.claude": no item left; the list now allows no mode for claude',
+      ],
+    ]);
+  });
+
+  test('a list written empty has no line', () => {
+    expect(lines(listed({ agents: [] }))).toStrictEqual([]);
+  });
+
+  test('an empty or over-long name is a bad item too, its value cut short', () => {
+    const long = 'x'.repeat(129);
+    const parsed = parsedOf(listed({ models: { codex: ['', 'large', long] } }));
+
+    expect(parsed.settings.teamSelection).toStrictEqual({
+      constraints: { models: { codex: ['large'] } },
+    });
+    expect(parsed.problems.map(({ message }) => message)).toStrictEqual([
+      '"teamSelection.constraints.models.codex": item 1 (""), too small: expected string to have >=1 characters, left out',
+      `"teamSelection.constraints.models.codex": item 3 ("${'x'.repeat(39)}…), too big: expected string to have <=128 characters, left out`,
+    ]);
+  });
+
+  test('other lists and keys keep their lines word for word', () => {
+    expect(
+      lines({
+        theme: 7,
+        offeredAgents: ['codex', 1],
+        agents: { codex: { command: ['', 'x'] } },
+        teamSelection: { intent: 'odd', constraints: { agents: 'codex' } },
+      }),
+    ).toStrictEqual([
+      '"agents.codex.command.0": too small: expected string to have >=1 characters, ignored',
+      '"teamSelection.intent": invalid option: expected one of "balanced"|"prefer"|"economy"|"fixed", ignored',
+      '"teamSelection.constraints.agents": invalid input: expected array, received string, ignored',
+      '"theme": invalid option: expected one of "auto"|"dark"|"light"|"dark-daltonized"|"light-daltonized"|"dark-ansi"|"light-ansi", ignored',
+      '"offeredAgents": expected a list of one or more agent names, ignored',
+      '"agents.codex.command": expected a string, got a list whose program is empty · codex will not start',
+    ]);
+  });
+
+  test('selection goes on with what the list keeps', async () => {
+    await place(
+      {
+        project: JSON.stringify({
+          teamSelection: { constraints: { agents: [1, 'codex'] } },
+        }),
+      },
+      async (where) => {
+        const read = await readTeamSelection(where);
+
+        expect(read).toStrictEqual({
+          policy: { constraints: { agents: ['codex'] } },
+        });
+
+        const policy = 'policy' in read ? read.policy : {};
+
+        expect(
+          validateSelectedRole('lead', { agent: 'codex' }, policy, [
+            'codex',
+            'claude',
+          ]),
+        ).toBeUndefined();
+        expect(
+          validateSelectedRole('lead', { agent: 'claude' }, policy, [
+            'codex',
+            'claude',
+          ]),
+        ).toContain('outside the configured allowlist');
+      },
+    );
+  });
+
+  test('a list emptied by bad items refuses every choice', async () => {
+    await place(
+      {
+        project: JSON.stringify({
+          teamSelection: { constraints: { agents: [1] } },
+        }),
+      },
+      async (where) => {
+        const read = await readTeamSelection(where);
+
+        expect(read).toStrictEqual({ policy: { constraints: { agents: [] } } });
+        expect(
+          validateSelectedRole(
+            'lead',
+            { agent: 'codex' },
+            'policy' in read ? read.policy : {},
+            ['codex'],
+          ),
+        ).toContain('outside the configured allowlist');
+      },
+    );
+  });
+
+  test('any other team selection problem still refuses selection', async () => {
+    await place(
+      {
+        project: JSON.stringify({
+          teamSelection: {
+            intent: 'odd',
+            constraints: { agents: [1, 'codex'] },
+          },
+        }),
+      },
+      async (where) => {
+        expect(await readTeamSelection(where)).toStrictEqual({
+          error:
+            'Team selection settings could not be validated. Correct the settings before selecting a team.',
+        });
+      },
+    );
+  });
+});
+
+describe('CHD-567 tester: recovered lists across files and selection', () => {
+  test('all three lists recover independently across several agent records and unrelated problems', () => {
+    const parsed = parseSettings(
+      'fixture.json',
+      JSON.stringify({
+        agent: 'codex',
+        theme: 7,
+        teamSelection: {
+          intent: 'prefer',
+          constraints: {
+            agents: [null, 'codex', false, 'claude'],
+            models: { codex: [1, 'large'], claude: ['sonnet', '', 'opus'] },
+            modes: { codex: ['auto', {}], claude: [[], 'plan'] },
+          },
+        },
+      }),
+    );
+
+    expect(parsed.settings).toEqual({
+      agent: 'codex',
+      teamSelection: {
+        intent: 'prefer',
+        constraints: {
+          agents: ['codex', 'claude'],
+          models: { codex: ['large'], claude: ['sonnet', 'opus'] },
+          modes: { codex: ['auto'], claude: ['plan'] },
+        },
+      },
+    });
+    expect(parsed.problems).toHaveLength(7);
+    expect(
+      parsed.problems
+        .filter(({ leftOut }) => leftOut === 'item')
+        .map(({ key }) => key),
+    ).toEqual([
+      ['teamSelection', 'constraints', 'agents'],
+      ['teamSelection', 'constraints', 'agents'],
+      ['teamSelection', 'constraints', 'models', 'codex'],
+      ['teamSelection', 'constraints', 'models', 'claude'],
+      ['teamSelection', 'constraints', 'modes', 'codex'],
+      ['teamSelection', 'constraints', 'modes', 'claude'],
+    ]);
+    expect(parsed.problems.some(({ kind }) => kind === 'parse')).toBe(false);
+  });
+
+  test('project recovered lists replace user lists while sibling agent records and settings survive', async () => {
+    await place(
+      {
+        user: JSON.stringify({
+          theme: 'light',
+          teamSelection: {
+            intent: 'prefer',
+            constraints: {
+              agents: ['claude'],
+              models: { codex: ['old'], claude: ['sonnet'] },
+              modes: { codex: ['plan'], claude: ['auto'] },
+            },
+          },
+        }),
+        project: JSON.stringify({
+          agent: 'codex',
+          teamSelection: {
+            constraints: {
+              agents: [1, 'codex'],
+              models: { codex: [null, 'large'] },
+              modes: { codex: [false, 'auto'] },
+            },
+          },
+        }),
+      },
+      async (where) => {
+        const loaded = await loadSettings(where);
+        const expected = {
+          constraints: {
+            agents: ['codex'],
+            models: { codex: ['large'], claude: ['sonnet'] },
+            modes: { codex: ['auto'], claude: ['auto'] },
+          },
+          intent: 'prefer' as const,
+        };
+
+        expect(
+          mergeSettings(...loaded.layers.map(({ settings }) => settings)),
+        ).toEqual(loaded.settings);
+        expect(loaded.settings).toEqual({
+          theme: 'light',
+          agent: 'codex',
+          teamSelection: expected,
+        });
+        expect(loaded.problems).toHaveLength(3);
+        expect(await readTeamSelection(where)).toEqual({ policy: expected });
+      },
+    );
+  });
+
+  test('valid unknown names and boundary length strings are preserved without problems', () => {
+    const names = ['unlisted-runtime', 'x'.repeat(128)];
+    const settings = {
+      teamSelection: {
+        constraints: {
+          agents: names,
+          models: { unlisted: names },
+          modes: { unlisted: names },
+        },
+      },
+    };
+
+    expect(parseSettings('fixture.json', JSON.stringify(settings))).toEqual({
+      settings,
+      problems: [],
+    });
+  });
+
+  for (const field of ['models', 'modes'] as const) {
+    test(`a project ${field} list emptied by bad items overrides the user's list and refuses only that agent`, async () => {
+      await place(
+        {
+          user: JSON.stringify({
+            teamSelection: {
+              constraints: {
+                [field]: { codex: ['allowed'], claude: ['allowed'] },
+              },
+            },
+          }),
+          project: JSON.stringify({
+            theme: 7,
+            teamSelection: {
+              constraints: {
+                [field]: { codex: [null, ''] },
+              },
+            },
+          }),
+        },
+        async (where) => {
+          const read = await readTeamSelection(where);
+
+          expect(read).toEqual({
+            policy: {
+              constraints: { [field]: { codex: [], claude: ['allowed'] } },
+            },
+          });
+
+          if (!('policy' in read)) {
+            throw new Error('Recovered list must remain a policy');
+          }
+
+          for (const value of [undefined, 'allowed']) {
+            expect(
+              validateSelectedRole(
+                'lead',
+                { agent: 'codex', model: value, mode: value },
+                read.policy,
+                ['codex', 'claude'],
+              ),
+            ).toContain('outside the configured allowlist');
+          }
+
+          expect(
+            validateSelectedRole(
+              'member',
+              { agent: 'claude', model: 'allowed', mode: 'allowed' },
+              read.policy,
+              ['codex', 'claude'],
+            ),
+          ).toBeUndefined();
+        },
+      );
+    });
+  }
 });

@@ -106,9 +106,9 @@ const SettingsFile = z
     /**
      * The agents the start screen and `/new` offer, in the order they show;
      * read only from the user's file, as it is about what a person picks from,
-     * not a project. Checked whole, so a bad name costs this key alone: an
-     * issue on an item is one the file's parse cannot drop from a list
-     * (the owner's Q327).
+     * not a project. Checked whole, so a bad name costs this key alone, rather
+     * than leaving the list as the file's parse leaves other lists, without
+     * the bad item (the owner's Q327).
      */
     offeredAgents: z.custom<string[]>(
       (value) => OfferedAgents.safeParse(value).success,
@@ -118,8 +118,8 @@ const SettingsFile = z
   .partial();
 
 /**
- * Each key's own schema, for a check of that key alone: `parseSettings`'s drop
- * loop would cost a whole file for a wrong item in a list.
+ * Each key's own schema, for a check of that key alone, without the rest of
+ * the file.
  */
 export const SETTING_SCHEMAS = SettingsFile.shape;
 
@@ -136,6 +136,12 @@ export interface SettingsProblem {
   /** Admission checks use structure rather than interpreting display prose. */
   readonly kind?: 'read' | 'parse' | 'validation' | 'scope';
   readonly key?: readonly string[];
+  /**
+   * Set when the problem only left an item out of the list at `key`, or
+   * says the list has none left: the list still counts without its bad items
+   * (the owner's Q346).
+   */
+  readonly leftOut?: 'item' | 'list';
 }
 
 /** The user's own settings file, which chord also writes; none without a home. */
@@ -271,6 +277,35 @@ function drop(value: unknown, path: readonly PropertyKey[]): boolean {
 }
 
 /**
+ * What the list at `path` allows, for a list a bad item is left out of
+ * rather than costing the list: the names in `teamSelection.constraints`.
+ */
+function namesAllowed(path: readonly PropertyKey[]): string | undefined {
+  const [first, second, list, agent] = path;
+
+  if (first !== 'teamSelection' || second !== 'constraints') {
+    return undefined;
+  }
+
+  if (path.length === 3 && list === 'agents') {
+    return 'agent';
+  }
+
+  return path.length === 4 &&
+    (list === 'models' || list === 'modes') &&
+    typeof agent === 'string'
+    ? `${list.slice(0, -1)} for ${agent}`
+    : undefined;
+}
+
+/** An item as the person wrote it, short enough for one line. */
+function shownItem(value: unknown): string {
+  const json = JSON.stringify(value);
+
+  return json.length > 40 ? `${json.slice(0, 40)}…` : json;
+}
+
+/**
  * Reads one file's text. A key that is unknown or holds the wrong kind of
  * value is a problem and is left out, and the rest still counts, so one typo
  * does not cost every other setting; text that is not a JSON object counts
@@ -315,6 +350,15 @@ export function parseSettings(
       ? { settings, problems }
       : { settings, problems, refused };
 
+  // A problem a later round finds again is not shown twice.
+  const shown = new Set<string>();
+  const report = (problem: SettingsProblem) => {
+    if (!shown.has(problem.message)) {
+      shown.add(problem.message);
+      problems.push(problem);
+    }
+  };
+
   // Each round drops what the last one found; nested records can hide a
   // problem behind another, so a few rounds may be needed.
   for (let round = 0; round < 8; round++) {
@@ -323,6 +367,19 @@ export function parseSettings(
     if (result.success) {
       return parsed(result.data);
     }
+
+    // A bad item leaves its list rather than a hole in it (the owner's
+    // Q346): removed after the round, by its original position, so several
+    // in one list each remove the item they name.
+    const lists = new Map<
+      string,
+      {
+        list: unknown[];
+        path: PropertyKey[];
+        allows: string;
+        items: Map<number, string>;
+      }
+    >();
 
     for (const issue of result.error.issues) {
       const paths =
@@ -344,6 +401,31 @@ export function parseSettings(
           refused[command] = `expected a string, got ${given(at(input, path))}`;
         }
 
+        const item = path.at(-1);
+        const listPath = path.slice(0, -1);
+        const list = at(input, listPath);
+        const allows = namesAllowed(listPath);
+
+        if (
+          typeof item === 'number' &&
+          Array.isArray(list) &&
+          allows !== undefined
+        ) {
+          const entry = lists.get(keyOf(listPath)) ?? {
+            list,
+            path: listPath,
+            allows,
+            items: new Map<number, string>(),
+          };
+
+          lists.set(keyOf(listPath), entry);
+          entry.items.set(
+            item,
+            entry.items.get(item) ?? issue.message.toLowerCase(),
+          );
+          continue;
+        }
+
         if (path.length === 0 || !drop(input, path)) {
           return {
             settings: {},
@@ -358,7 +440,7 @@ export function parseSettings(
           };
         }
 
-        problems.push({
+        report({
           file,
           kind: 'validation',
           key: path.map(String),
@@ -370,6 +452,35 @@ export function parseSettings(
               : issue.code === 'unrecognized_keys'
                 ? `unknown key "${keyOf(path)}", ignored`
                 : `"${keyOf(path)}": ${issue.message.toLowerCase()}, ignored`,
+        });
+      }
+    }
+
+    for (const { list, path, allows, items } of lists.values()) {
+      const positions = [...items.keys()].sort((a, b) => a - b);
+      const key = path.map(String);
+
+      for (const position of positions) {
+        report({
+          file,
+          kind: 'validation',
+          key,
+          leftOut: 'item',
+          message: `"${keyOf(path)}": item ${position + 1} (${shownItem(list[position])}), ${items.get(position)!}, left out`,
+        });
+      }
+
+      for (const position of positions.toReversed()) {
+        list.splice(position, 1);
+      }
+
+      if (list.length === 0) {
+        report({
+          file,
+          kind: 'validation',
+          key,
+          leftOut: 'list',
+          message: `"${keyOf(path)}": no item left; the list now allows no ${allows}`,
         });
       }
     }
@@ -539,7 +650,11 @@ export async function readTeamSelection(
     (problem) =>
       problem.kind === 'read' ||
       problem.kind === 'parse' ||
-      (problem.kind === 'validation' && problem.key?.[0] === 'teamSelection'),
+      // A list without its bad items still holds what the person wrote of
+      // it, so selection goes on with it (the owner's Q346).
+      (problem.kind === 'validation' &&
+        problem.key?.[0] === 'teamSelection' &&
+        problem.leftOut === undefined),
   );
 
   return invalid

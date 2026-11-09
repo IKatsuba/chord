@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d567
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received number, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: "teamSelection.constraints.agents.0": invalid input: expected string,
+   received undefined, ignored
+
+ ⏺ /tmp/chord-qa-cfg567/chord/settings.json: the file is ignored
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

@@ -1,0 +1,96 @@
+import { describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { getBackendInfo } from 'libfx/node';
+import manifest from '../../package.json' with { type: 'json' };
+import { buildOptions, libfxNative } from '../../scripts/dev/compile.ts';
+import { libfxPackage } from '../../scripts/dev/libfx_assets.ts';
+import { type Target, TARGETS } from '../../scripts/targets.ts';
+import { libfxBackend } from '../../src/platform/libfx.ts';
+
+const FIXTURE = fileURLToPath(
+  new URL('../fixtures/libfx/main.ts', import.meta.url),
+);
+const host = TARGETS.find(
+  (target) => target.os === process.platform && target.cpu === process.arch,
+);
+
+describe('libfx backend options', () => {
+  test('from source, libfx finds its own addon and gets the Wasm bytes', async () => {
+    const options = await libfxBackend();
+
+    expect(options.backend).toBe('auto');
+    expect(options).not.toHaveProperty('nativeAddon');
+    expect([...(options.wasm as Uint8Array).subarray(0, 4)]).toEqual([
+      0x00, 0x61, 0x73, 0x6d,
+    ]);
+    expect((await getBackendInfo(options)).backend).toBe('native');
+    expect(
+      (await getBackendInfo({ ...options, nativeAddon: false })).backend,
+    ).toBe('wasm-jspi');
+  });
+
+  test.if(host !== undefined)(
+    "compiled, the binary embeds this target's addon alone and loads both backends with no node_modules",
+    async () => {
+      const directory = await mkdtemp(join(tmpdir(), 'chord-libfx-'));
+      const binary = join(directory, 'libfx');
+
+      try {
+        const built = await Bun.build({
+          ...buildOptions(FIXTURE, { compiled: true }),
+          compile: { outfile: binary },
+          metafile: true,
+        });
+
+        expect(built.success).toBe(true);
+        expect(
+          Object.keys(built.metafile!.inputs).filter((input) =>
+            input.endsWith('libfx.node'),
+          ),
+        ).toEqual([
+          expect.stringContaining(`${libfxPackage(host!)}/libfx.node`),
+        ]);
+
+        const run = spawnSync(binary, { cwd: directory, encoding: 'utf8' });
+
+        expect(run.stderr).toBe('');
+        expect(JSON.parse(run.stdout)).toMatchObject({
+          native: 'native',
+          wasm: 'wasm-jspi',
+        });
+      } finally {
+        await rm(directory, { recursive: true, force: true });
+      }
+    },
+    120_000,
+  );
+
+  test('a missing addon fails the build, naming the package and version', async () => {
+    // No such package: the build must stop rather than embed nothing.
+    const missing = { bun: 'bun-linux-x64', os: 'linux', cpu: 'ia32' };
+    const built = await Bun.build({
+      entrypoints: [FIXTURE],
+      target: 'bun',
+      define: { CHORD_RESOURCE_COMPILED: 'true' },
+      plugins: [libfxNative(missing as unknown as Target)],
+      throw: false,
+    });
+
+    expect(built.success).toBe(false);
+    expect(built.logs.map(String).join('\n')).toContain(
+      `@libfx/libfx-linux-ia32-gnu@${manifest.dependencies.libfx} has no libfx.node for bun-linux-x64`,
+    );
+  });
+
+  test('fff embeds its glibc library on the Linux targets alone', () => {
+    for (const target of TARGETS) {
+      expect(buildOptions('entry.ts', { target }).define?.FFF_LIBC).toBe(
+        target.os === 'linux' ? '"gnu"' : undefined,
+      );
+    }
+  });
+});

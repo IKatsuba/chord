@@ -60,6 +60,11 @@ export interface RiffOptions {
    * binary can add one.
    */
   readonly tools?: FxAgentTools;
+  /**
+   * Makes the libfx agent: libfx's own but in tests that hold its creation
+   * to put a close in the middle.
+   */
+  readonly createAgent?: typeof createFxAgent;
 }
 
 /** riff on a connection, and when it has let its session go. */
@@ -167,7 +172,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const plan: RiffPlan = 'fake';
     const config = defaultConfig(plan);
     const holder: { open?: Open } = {};
-    const fx = createFxAgent({
+    const fx = (options.createAgent ?? createFxAgent)({
       ...options.backend,
       name: RIFF,
       durability: options.durability,

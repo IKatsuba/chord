@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
-import { memory } from 'libfx/node';
+import { createFxAgent, type FxAgent, memory } from 'libfx/node';
 import { connectRiff, type Riff, riffInit } from '../../src/riff/adapter.ts';
 import { libfxBackend } from '../../src/platform/libfx.ts';
 import { clientOverStreams, type AcpClient } from '../fixtures/acp_client.ts';
@@ -317,5 +317,58 @@ describe('riff owns one session and one prompt', () => {
 
     expect(closed.result).toStrictEqual({});
     expect((await first).result?.['stopReason']).toBe('cancelled');
+  });
+});
+
+describe('a connection that closes while session/new makes the session', () => {
+  test('riff finishes only once the agent it was making is closed', async () => {
+    const pair = clientOverStreams();
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const closes: string[] = [];
+    let finished = false;
+
+    client = pair.client;
+    end = pair.end;
+    riff = connectRiff(ndJsonStream(pair.output, pair.input), {
+      version: '1.2.3',
+      provider: { baseUrl: fake.url },
+      backend: await libfxBackend(),
+      durability: memory(),
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          newSessionId: async () => {
+            entered.resolve();
+            await release.promise;
+
+            return await made.newSessionId();
+          },
+          close: async () => {
+            closes.push('closed');
+            await made.close();
+          },
+        });
+      },
+    });
+
+    void riff.finished.then(() => {
+      finished = true;
+    });
+
+    await client.request('initialize', { protocolVersion: 1 });
+    client.send('session/new', { cwd: process.cwd(), mcpServers: [] });
+    await entered.promise;
+    end();
+    await Bun.sleep(50);
+
+    expect(finished).toBe(false);
+    expect(closes).toStrictEqual([]);
+
+    release.resolve();
+    await riff.finished;
+
+    expect(closes).toStrictEqual(['closed']);
   });
 });

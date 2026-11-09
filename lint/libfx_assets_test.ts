@@ -183,3 +183,74 @@ function manifestOf(name: string): {
     readFileSync(join(modules, name, 'package.json'), 'utf8'),
   ) as { version: string; optionalDependencies?: Record<string, string> };
 }
+
+describe('CHD-603 U2 tester: libfx layout contract drift', () => {
+  test.each(TARGETS)(
+    '$bun rejects an optional dependency one version off',
+    (target) => {
+      const platform = libfxPackage(target);
+      const libfx = manifestOf('libfx');
+      const dir = project({
+        libfx: {
+          'package.json': JSON.stringify({
+            ...libfx,
+            optionalDependencies: {
+              ...libfx.optionalDependencies,
+              [platform]: '0.0.17',
+            },
+          }),
+        },
+      });
+
+      expect(libfxAssetFailures(dir, pinned)).toEqual([
+        `libfx@${pinned} lists ${platform}@0.0.17, not ${pinned}`,
+      ]);
+    },
+  );
+
+  test.each(TARGETS)(
+    '$bun rejects a missing index even with its addon present',
+    (target) => {
+      const platform = libfxPackage(target);
+      const dir = project({ [platform]: { 'index.js': null } });
+
+      expect(libfxAssetFailures(dir, pinned)).toEqual([
+        `${platform}@${pinned}'s index.js no longer names ./libfx.node`,
+      ]);
+    },
+  );
+
+  test.each(['2', '4', 'undefined', "'3'"])(
+    'rejects libfxApiVersion %s without coercing it',
+    (api) => {
+      const dir = project({
+        libfx: {
+          'package.json': JSON.stringify({
+            ...manifestOf('libfx'),
+            exports: './tester-api.cjs',
+          }),
+          'tester-api.cjs': `module.exports = { libfxApiVersion: ${api} };\n`,
+        },
+      });
+
+      expect(libfxAssetFailures(dir, pinned)).toEqual([
+        `libfx@${pinned} has libfxApiVersion ${api === "'3'" ? '3' : api}, not 3`,
+      ]);
+    },
+  );
+
+  test('reports independent platform and Wasm drift together', () => {
+    const dir = project({
+      [darwinArm]: {
+        'index.js':
+          'export default new URL("./renamed.node", import.meta.url);\n',
+      },
+      libfx: { 'fx-core.wasm': '\0as' },
+    });
+
+    expect(libfxAssetFailures(dir, pinned)).toEqual([
+      `${darwinArm}@${pinned}'s index.js no longer names ./libfx.node`,
+      `libfx@${pinned}'s fx-core.wasm is not WebAssembly`,
+    ]);
+  });
+});

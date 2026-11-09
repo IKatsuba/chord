@@ -276,3 +276,46 @@ describe('riff over an in-memory pair', () => {
     expect(after.error?.code).toBe(-32002);
   });
 });
+
+describe('riff owns one session and one prompt', () => {
+  test('of two session/new sent together, the second is refused', async () => {
+    await open();
+
+    const first = client.answerTo(
+      client.send('session/new', { cwd: process.cwd(), mcpServers: [] }),
+    );
+    const second = client.answerTo(
+      client.send('session/new', { cwd: process.cwd(), mcpServers: [] }),
+    );
+
+    expect((await first).result?.['sessionId']).toEqual(expect.any(String));
+    expect((await second).error?.code).toBe(-32600);
+  });
+
+  test('a connection that closes while session/new runs still lets riff finish', async () => {
+    await open();
+    client.send('session/new', { cwd: process.cwd(), mcpServers: [] });
+    end();
+
+    await riff.finished;
+  });
+
+  test('a second prompt while one runs is refused, and close cancels the first', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const first = prompt(sessionId, 'hang');
+
+    await fake.hanging();
+
+    const second = await prompt(sessionId, 'hello');
+
+    expect(second.error?.code).toBe(-32600);
+    expect(second.error?.message).toContain('riff runs one prompt at a time');
+
+    const closed = await client.request('session/close', { sessionId });
+
+    expect(closed.result).toStrictEqual({});
+    expect((await first).result?.['stopReason']).toBe('cancelled');
+  });
+});

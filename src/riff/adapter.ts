@@ -125,6 +125,10 @@ interface Open {
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   let open: Open | undefined;
+  // The session being created, so a second session/new and a close that
+  // comes meanwhile see it; and whether the connection has gone.
+  let opening: Promise<Open> | undefined;
+  let gone = false;
 
   const opened = (sessionId: string): Open => {
     if (open?.id !== sessionId) {
@@ -141,13 +145,25 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       });
     }
 
-    if (open !== undefined) {
+    if (open !== undefined || opening !== undefined) {
       throw RequestError.invalidRequest(
         undefined,
         'riff serves one session per process',
       );
     }
 
+    opening = create(options.provider);
+
+    try {
+      open = await opening;
+    } finally {
+      opening = undefined;
+    }
+
+    return open;
+  };
+
+  const create = async (provider: FakeProvider): Promise<Open> => {
     const plan: RiffPlan = 'fake';
     const config = defaultConfig(plan);
     const holder: { open?: Open } = {};
@@ -157,7 +173,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       durability: options.durability,
       provider: {
         name: 'fake',
-        baseUrl: options.provider.baseUrl,
+        baseUrl: provider.baseUrl,
         models: {
           fake: {
             contextWindow: windowOf(plan, 'fake'),
@@ -179,7 +195,23 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         },
       },
     });
-    const id = await fx.newSessionId();
+    let id: string;
+
+    try {
+      id = await fx.newSessionId();
+    } catch (error) {
+      await fx.close();
+
+      throw error;
+    }
+
+    // The connection went while the session was being made: nobody will
+    // close it but this.
+    if (gone) {
+      await fx.close();
+
+      throw RequestError.internalError(undefined, 'the connection closed');
+    }
 
     holder.open = {
       id,
@@ -189,9 +221,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       used: undefined,
       running: false,
     };
-    open = holder.open;
 
-    return open;
+    return holder.open;
   };
 
   const notify = (
@@ -204,6 +235,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     });
 
   const shutdown = async () => {
+    gone = true;
+
+    await opening?.catch(() => {
+      // It closed itself on seeing the connection gone.
+    });
+
     const closing = open;
 
     open = undefined;
@@ -249,15 +286,26 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     })
     .onRequest('session/prompt', async ({ params, client }) => {
       const session = opened(params.sessionId);
+
+      // One prompt at a time: the running flag is that prompt's, so close
+      // knows to cancel its turn.
+      if (session.running) {
+        throw RequestError.invalidRequest(
+          undefined,
+          'riff runs one prompt at a time',
+        );
+      }
+
       const { model, effort } = session.config;
-      const turn = session.agent
-        .session(session.id, { model: { id: model, effort } })
-        .prompt(promptOf(params.prompt));
       const started = new Set<string>();
 
       session.running = true;
 
       try {
+        const turn = session.agent
+          .session(session.id, { model: { id: model, effort } })
+          .prompt(promptOf(params.prompt));
+
         for await (const event of turn) {
           const update = updateOf(event, started);
 

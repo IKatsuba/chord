@@ -50,11 +50,13 @@
   production runtime. It installs all target packages, then checks the pinned
   libfx layout for each target it builds with `dev/libfx_assets.ts`; a mismatch
   names the package and version and stops the build. A plugin embeds only the
-  target's `libfx.node`.
+  target's `libfx.node`. The binary includes fff's Worker and exactly its
+  target's fff library (gnu on Linux); the build checks that selection.
   Its `buildOptions` also builds the boundary test.
 - `bun dev selftest <binary>` checks the version, `-p`, ACP stdio, the window
-  and clipboard with the fake agent, plus a plain-text riff turn through
-  `--riff-agent` on native and WebAssembly against a local fake provider.
+  and clipboard with the fake agent. On native and WebAssembly, riff
+  searches with fff, reads `needle.txt`, then answers `done`: three requests
+  per backend to a local fake provider through `--riff-agent`.
 - `targets.ts` is the one list of release platforms. Resource collector support
   is separately guarded; compiling a target does not enable its collectors.
   Keep the resource worker in the same binary and provider executables external.

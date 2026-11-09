@@ -42,6 +42,7 @@ owner's consent.
 bun install                    # the dependencies, as bun.lock pins them
 bun dev chord [agent]           # run from source
 bun dev chord --fake            # run against the scripted test agent
+bun dev chord --fake riff       # riff on its fake provider
 bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
 bun quality                    # types, lint, format and all tests
 bun quality --static           # types, coverage, lint, format and lint/ tests
@@ -132,9 +133,9 @@ signal cleanup.
   `bun dev test`. Tests use `test`, `describe`, `expect` and the fake timers of
   `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
   folder holds Bun's runtime calls. The binary embeds OpenTUI's native
-  library and libfx's target addon and WebAssembly core.
-  Linux builds use glibc. Dependencies go in `package.json`; jsr packages come
-  from `npm.jsr.io` under their own names
+  library, libfx's target addon and WebAssembly core, and fff's target library
+  with its Worker. Linux builds use glibc. Dependencies go in `package.json`;
+  jsr packages come from `npm.jsr.io` under their own names
   (`bunfig.toml`, `.npmrc`). No `node_modules` checked in.
 - **Versions are pinned for things that move.** A pre-1.0 package is
   exact-pinned (`@replit/codemirror-vim-core`); the rest use caret ranges, and
@@ -198,7 +199,8 @@ chord is a terminal program, so a check runs it in a real terminal of a known
 size and reads the screen back as text. For captures, use
 `bun dev chord --fake --qa <name>`: it recreates the fixed `/tmp/chord-qa.<name>`,
 never a directory from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa`;
-an empty name is treated as no `--qa`.
+an empty name is treated as no `--qa`. For riff on its fake provider, use
+`bun dev chord --fake --qa <name> riff`; both flags come before `riff`.
 
 ```sh
 tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord --fake --qa capture'

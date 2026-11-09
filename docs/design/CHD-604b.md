@@ -49,6 +49,8 @@ Each tool sends a verb-first title, so the renderer draws the name from it
 | --- | --- | --- |
 | `read` | `Read src/greeting.ts` | `⏺ Read(src/greeting.ts)` |
 | `read`, a range | `Read src/greeting.ts:10-40` | `⏺ Read(src/greeting.ts:10-40)` |
+| `read`, one line | `Read src/greeting.ts:10` | `⏺ Read(src/greeting.ts:10)` |
+| `read` through a link | `Read docs/notes.txt → ~/.ssh/id_rsa` | `⏺ Read(docs/notes.txt → ~/.ssh/id_rsa)` |
 | `list` | `List src/**/*.ts` | `⏺ List(src/**/*.ts)` |
 | `search` | `Search welcome` | `⏺ Search(welcome)` |
 
@@ -90,6 +92,7 @@ search from any agent; nothing riff-specific.
 
 ╭──────────────────────────────────────────────────────────────────────────────╮
 │ Search greeting                                                              │
+│ /work/app                                                                    │
 │                                                                              │
 │ Do you want to proceed?                                                      │
 │ ❯ 1. Allow                                                                   │
@@ -107,6 +110,57 @@ search from any agent; nothing riff-specific.
 
 A list's box is the same with `List src/**/*.ts` and `Allow every list in
 this directory for this session`.
+
+A list's and a search's box keep the location line the existing box draws
+under the title: the session's directory, absolute as ACP's locations are
+(`/work/app` above stands for it). It says which directory "this
+directory" is. A read's box has no location line: its title already names
+the file, and the box drops a location the title repeats.
+
+## A read through a link that points elsewhere
+
+When the real path differs from the path asked for (a link inside the
+project pointing out, or a link in the path itself, such as macOS's `/etc`
+to `/private/etc`), the title names both, the asked path, ` → `, and the
+real path, so a person choosing plain `Allow` sees where it points. The
+real path is spelled as option 2 spells it; the row carries the same title.
+A link inside the directory that points out is an outside read, so auto
+asks for it too.
+
+120x40, the box:
+
+```text
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Read docs/notes.txt → ~/.ssh/id_rsa                                                                                  │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Allow reads of ~/.ssh/id_rsa for this session                                                                   │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+```
+
+80x24, a title too long for the row: it wraps at its spaces as the box wraps
+any title, so the arrow ends the first row and the real path takes the next,
+at the title's indent; a path longer than a whole row breaks at the row's
+edge. Nothing is cut or shortened with `…`: the person must see the whole
+real path.
+
+```text
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Read docs/reference/generated/api-notes.txt →                                │
+│ ~/work/shared/secrets/api-notes.txt                                          │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Allow reads of ~/work/shared/secrets/api-notes.txt for this session     │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+```
 
 ## A read outside the directory in auto, 80x24, the whole window
 

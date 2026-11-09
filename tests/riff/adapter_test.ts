@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
 import { createFxAgent, type FxAgent } from 'libfx/node';
-import { mkdtemp, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -562,6 +562,89 @@ describe('tester: riff turn recovery and isolation', () => {
       data: { code: null },
     });
     expect(client.said(sessionId)).toBe('Cut');
+  });
+});
+
+describe('tester: riff resume rejects broken metadata', () => {
+  test.each(['missing', 'malformed', 'invalid config'])(
+    'an existing session with %s sidecar is refused without provider traffic',
+    async (kind) => {
+      await open();
+
+      const sessionId = await newSession();
+
+      await prompt(sessionId, 'hello');
+      end();
+      await riff.finished;
+
+      const path = join(stateDir, 'riff', 'sidecars', `${sessionId}.json`);
+
+      if (kind === 'missing') {
+        await rm(path);
+      } else {
+        await writeFile(
+          path,
+          kind === 'malformed'
+            ? '{'
+            : JSON.stringify({
+                provider: 'fake',
+                account: null,
+                model: 'fake',
+                effort: 'max',
+                mode: 'ask',
+              }),
+        );
+      }
+
+      await open();
+
+      const resumed = await client.request('session/resume', {
+        sessionId,
+        cwd: process.cwd(),
+        mcpServers: [],
+      });
+
+      expect(resumed.error?.code).toBe(-32002);
+      expect(client.updates(sessionId)).toStrictEqual([]);
+      expect(fake.requests).toHaveLength(1);
+      expect(await newSession()).not.toBe(sessionId);
+    },
+  );
+
+  test('the unsupported effort reset survives closing and reopening', async () => {
+    await open();
+
+    const sessionId = await newSession();
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'effort',
+      value: 'high',
+    });
+
+    expect((await prompt(sessionId, 'hello')).error?.code).toBe(-32603);
+
+    end();
+    await riff.finished;
+
+    expect(await riffStore(stateDir).read(sessionId)).toMatchObject({
+      effort: 'default',
+    });
+
+    await open();
+
+    const resumed = await client.request('session/resume', {
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+
+    expect(resumed.error).toBeUndefined();
+    expect(fake.requests).toHaveLength(0);
+    expect((await prompt(sessionId, 'hello')).result?.['stopReason']).toBe(
+      'end_turn',
+    );
+    expect(fake.requests).toHaveLength(1);
   });
 });
 

@@ -2172,3 +2172,174 @@ describe("a bad item in a settings list (CHD-567, the owner's Q346)", () => {
     );
   });
 });
+
+describe('CHD-567 tester: recovered lists across files and selection', () => {
+  test('all three lists recover independently across several agent records and unrelated problems', () => {
+    const parsed = parseSettings(
+      'fixture.json',
+      JSON.stringify({
+        agent: 'codex',
+        theme: 7,
+        teamSelection: {
+          intent: 'prefer',
+          constraints: {
+            agents: [null, 'codex', false, 'claude'],
+            models: { codex: [1, 'large'], claude: ['sonnet', '', 'opus'] },
+            modes: { codex: ['auto', {}], claude: [[], 'plan'] },
+          },
+        },
+      }),
+    );
+
+    expect(parsed.settings).toEqual({
+      agent: 'codex',
+      teamSelection: {
+        intent: 'prefer',
+        constraints: {
+          agents: ['codex', 'claude'],
+          models: { codex: ['large'], claude: ['sonnet', 'opus'] },
+          modes: { codex: ['auto'], claude: ['plan'] },
+        },
+      },
+    });
+    expect(parsed.problems).toHaveLength(7);
+    expect(
+      parsed.problems
+        .filter(({ leftOut }) => leftOut === 'item')
+        .map(({ key }) => key),
+    ).toEqual([
+      ['teamSelection', 'constraints', 'agents'],
+      ['teamSelection', 'constraints', 'agents'],
+      ['teamSelection', 'constraints', 'models', 'codex'],
+      ['teamSelection', 'constraints', 'models', 'claude'],
+      ['teamSelection', 'constraints', 'modes', 'codex'],
+      ['teamSelection', 'constraints', 'modes', 'claude'],
+    ]);
+    expect(parsed.problems.some(({ kind }) => kind === 'parse')).toBe(false);
+  });
+
+  test('project recovered lists replace user lists while sibling agent records and settings survive', async () => {
+    await place(
+      {
+        user: JSON.stringify({
+          theme: 'light',
+          teamSelection: {
+            intent: 'prefer',
+            constraints: {
+              agents: ['claude'],
+              models: { codex: ['old'], claude: ['sonnet'] },
+              modes: { codex: ['plan'], claude: ['auto'] },
+            },
+          },
+        }),
+        project: JSON.stringify({
+          agent: 'codex',
+          teamSelection: {
+            constraints: {
+              agents: [1, 'codex'],
+              models: { codex: [null, 'large'] },
+              modes: { codex: [false, 'auto'] },
+            },
+          },
+        }),
+      },
+      async (where) => {
+        const loaded = await loadSettings(where);
+        const expected = {
+          constraints: {
+            agents: ['codex'],
+            models: { codex: ['large'], claude: ['sonnet'] },
+            modes: { codex: ['auto'], claude: ['auto'] },
+          },
+          intent: 'prefer' as const,
+        };
+
+        expect(
+          mergeSettings(...loaded.layers.map(({ settings }) => settings)),
+        ).toEqual(loaded.settings);
+        expect(loaded.settings).toEqual({
+          theme: 'light',
+          agent: 'codex',
+          teamSelection: expected,
+        });
+        expect(loaded.problems).toHaveLength(3);
+        expect(await readTeamSelection(where)).toEqual({ policy: expected });
+      },
+    );
+  });
+
+  test('valid unknown names and boundary length strings are preserved without problems', () => {
+    const names = ['unlisted-runtime', 'x'.repeat(128)];
+    const settings = {
+      teamSelection: {
+        constraints: {
+          agents: names,
+          models: { unlisted: names },
+          modes: { unlisted: names },
+        },
+      },
+    };
+
+    expect(parseSettings('fixture.json', JSON.stringify(settings))).toEqual({
+      settings,
+      problems: [],
+    });
+  });
+
+  for (const field of ['models', 'modes'] as const) {
+    test(`a project ${field} list emptied by bad items overrides the user's list and refuses only that agent`, async () => {
+      await place(
+        {
+          user: JSON.stringify({
+            teamSelection: {
+              constraints: {
+                [field]: { codex: ['allowed'], claude: ['allowed'] },
+              },
+            },
+          }),
+          project: JSON.stringify({
+            theme: 7,
+            teamSelection: {
+              constraints: {
+                [field]: { codex: [null, ''] },
+              },
+            },
+          }),
+        },
+        async (where) => {
+          const read = await readTeamSelection(where);
+
+          expect(read).toEqual({
+            policy: {
+              constraints: { [field]: { codex: [], claude: ['allowed'] } },
+            },
+          });
+
+          if (!('policy' in read)) {
+            throw new Error('Recovered list must remain a policy');
+          }
+
+          for (const value of [undefined, 'allowed']) {
+            expect(
+              validateSelectedRole(
+                'lead',
+                { agent: 'codex', model: value, mode: value },
+                read.policy,
+                ['codex', 'claude'],
+              ),
+            ).toContain('outside the configured allowlist');
+          }
+
+          expect(
+            validateSelectedRole(
+              'member',
+              { agent: 'claude', model: 'allowed', mode: 'allowed' },
+              read.policy,
+              ['codex', 'claude'],
+            ),
+          ).toBeUndefined();
+        },
+      );
+    });
+  }
+});

@@ -5,7 +5,13 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { buildOptions, withFffWorker } from '../../scripts/dev/compile.ts';
-import { type Finder, openFinder } from '../../src/platform/fff.ts';
+import {
+  type FffReply,
+  type FffRequest,
+  type FffWorker,
+  type Finder,
+  openFinder,
+} from '../../src/platform/fff.ts';
 
 const FIXTURE = fileURLToPath(
   new URL('../fixtures/fff/main.ts', import.meta.url),
@@ -73,7 +79,7 @@ describe('the fff finder in its Worker', () => {
 
     controller.abort(reason);
 
-    expect(aborted).rejects.toBe(reason);
+    await expect(aborted).rejects.toBe(reason);
 
     // The Worker was ended; a new one scans again and answers.
     const result = await finder.glob('*.md', {}, live());
@@ -88,18 +94,18 @@ describe('the fff finder in its Worker', () => {
 
     controller.abort();
 
-    expect(aborted).rejects.toBeDefined();
+    await expect(aborted).rejects.toBeDefined();
     expect((await other).items.map((item) => item.relativePath)).toEqual([
       'notes.md',
     ]);
   });
 
-  test('a call on an aborted signal never starts', () => {
+  test('a call on an aborted signal never starts', async () => {
     const controller = new AbortController();
 
     controller.abort(new Error('already'));
 
-    expect(finder.grep('needle', {}, controller.signal)).rejects.toThrow(
+    await expect(finder.grep('needle', {}, controller.signal)).rejects.toThrow(
       'already',
     );
   });
@@ -108,7 +114,7 @@ describe('the fff finder in its Worker', () => {
     await finder.glob('*.ts', {}, live());
     await finder.destroy();
 
-    expect(finder.glob('*.ts', {}, live())).rejects.toThrow(
+    await expect(finder.glob('*.ts', {}, live())).rejects.toThrow(
       'fff: the finder is destroyed',
     );
 
@@ -119,10 +125,121 @@ describe('the fff finder in its Worker', () => {
     const missing = openFinder(join(root, 'missing'));
 
     try {
-      expect(missing.glob('*', {}, live())).rejects.toThrow(/^fff: /);
+      await expect(missing.glob('*', {}, live())).rejects.toThrow(/^fff: /);
     } finally {
       await missing.destroy();
     }
+  });
+});
+
+/** A Worker the test answers by hand, in the order it chooses. */
+class HeldWorker implements FffWorker {
+  onmessage: ((event: MessageEvent<FffReply>) => void) | null = null;
+  onerror: ((event: ErrorEvent) => void) | null = null;
+  readonly requests: FffRequest[] = [];
+  terminated = false;
+  // What the finder had set before it retired this Worker.
+  private message: ((event: MessageEvent<FffReply>) => void) | null = null;
+  private error: ((event: ErrorEvent) => void) | null = null;
+
+  postMessage(request: FffRequest): void {
+    this.message = this.onmessage;
+    this.error = this.onerror;
+
+    this.requests.push(request);
+  }
+
+  terminate(): void {
+    this.terminated = true;
+  }
+
+  /** Delivers as a real Worker may after terminate: to what was set. */
+  reply(reply: FffReply): void {
+    (this.onmessage ?? this.message)?.(
+      new MessageEvent('message', { data: reply }),
+    );
+  }
+
+  fail(message: string): void {
+    (this.onerror ?? this.error)?.(new ErrorEvent('error', { message }));
+  }
+}
+
+describe('the finder against its Worker, in a forced order', () => {
+  const held = () => {
+    const workers: HeldWorker[] = [];
+    const finder = openFinder('/project', () => {
+      const made = new HeldWorker();
+
+      workers.push(made);
+
+      return made;
+    });
+
+    return { workers, finder };
+  };
+
+  test("a retired Worker's late answer does not settle the call sent again", async () => {
+    const { workers, finder } = held();
+    const controller = new AbortController();
+    const aborted = finder.grep('a', {}, controller.signal);
+    const other = finder.glob('*', {}, live());
+
+    controller.abort();
+    await expect(aborted).rejects.toBeDefined();
+
+    const [old, current] = workers;
+    const otherId = old!.requests[1]!.id;
+
+    expect(old!.terminated).toBe(true);
+    expect(current!.requests.map((request) => request.id)).toEqual([otherId]);
+
+    old!.reply({ id: otherId, ok: true, value: 'stale' });
+    current!.reply({ id: otherId, ok: true, value: 'fresh' });
+
+    expect(await other).toBe('fresh' as never);
+  });
+
+  test("a retired Worker's error leaves the calls sent again alone", async () => {
+    const { workers, finder } = held();
+    const controller = new AbortController();
+    const aborted = finder.grep('a', {}, controller.signal);
+    const other = finder.glob('*', {}, live());
+
+    controller.abort();
+    await expect(aborted).rejects.toBeDefined();
+
+    const [old, current] = workers;
+    const otherId = current!.requests[0]!.id;
+
+    old!.fail('late');
+    current!.reply({ id: otherId, ok: true, value: 'fresh' });
+
+    expect(await other).toBe('fresh' as never);
+  });
+
+  test("destroy waits for its own answer, not a call's queued before it", async () => {
+    const { workers, finder } = held();
+    const call = finder.grep('a', {}, live());
+    const destroyed = finder.destroy();
+
+    await expect(call).rejects.toThrow('fff: the finder is destroyed');
+
+    const [worker] = workers;
+    const order: string[] = [];
+
+    void destroyed.then(() => order.push('destroyed'));
+    worker!.reply({ id: worker!.requests[0]!.id, ok: true, value: null });
+    await Promise.resolve();
+    order.push('call answered');
+    expect(worker!.terminated).toBe(false);
+    expect(worker!.requests.at(-1)).toMatchObject({ op: 'destroy' });
+
+    worker!.reply({ id: worker!.requests.at(-1)!.id, ok: true, value: null });
+    await destroyed;
+
+    expect(order).toEqual(['call answered', 'destroyed']);
+    expect(worker!.terminated).toBe(true);
   });
 });
 

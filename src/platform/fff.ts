@@ -72,14 +72,32 @@ interface Pending {
   readonly reject: (error: unknown) => void;
 }
 
+/** The part of a `Worker` the finder uses, so tests can order its events. */
+export interface FffWorker {
+  onmessage: ((event: MessageEvent<FffReply>) => void) | null;
+  onerror: ((event: ErrorEvent) => void) | null;
+  postMessage(request: FffRequest): void;
+  terminate(): void;
+}
+
+/** The id of a destroy request, which no call takes. */
+const DESTROY_ID = -1;
+
+function fffWorker(): FffWorker {
+  return new Worker(new URL('./fff_worker.ts', import.meta.url));
+}
+
 /**
  * A finder over `basePath`, made in its Worker at the first call. A synchronous
  * FFI call cannot be interrupted, so an aborted call ends its Worker, and the
  * next call starts another that scans the directory again: the rescan is what
  * honouring the signal costs. Calls the abort did not concern are sent again.
  */
-export function openFinder(basePath: string): Finder {
-  let worker: Worker | undefined;
+export function openFinder(
+  basePath: string,
+  makeWorker: () => FffWorker = fffWorker,
+): Finder {
+  let worker: FffWorker | undefined;
   let destroyed = false;
   let next = 0;
   const pending = new Map<number, Pending>();
@@ -90,11 +108,13 @@ export function openFinder(basePath: string): Finder {
     worker.postMessage({ ...call, id, basePath } satisfies FffRequest);
   };
 
-  const spawn = (): Worker => {
-    const made = new Worker(new URL('./fff_worker.ts', import.meta.url));
+  const spawn = (): FffWorker => {
+    const made = makeWorker();
 
-    made.onmessage = ({ data }: MessageEvent<FffReply>) => {
-      const waiting = pending.get(data.id);
+    // A Worker retired by an abort may still deliver: its answers belong to
+    // calls now sent again to its successor, so only the current one counts.
+    made.onmessage = ({ data }) => {
+      const waiting = worker === made ? pending.get(data.id) : undefined;
 
       if (waiting === undefined) {
         return;
@@ -113,9 +133,11 @@ export function openFinder(basePath: string): Finder {
     made.onerror = (event) => {
       event.preventDefault();
 
-      if (worker === made) {
-        worker = undefined;
+      if (worker !== made) {
+        return;
       }
+
+      worker = undefined;
 
       const failed = [...pending.values()];
 
@@ -129,8 +151,17 @@ export function openFinder(basePath: string): Finder {
     return made;
   };
 
+  const retire = (old: FffWorker) => {
+    old.onmessage = null;
+    old.onerror = null;
+
+    old.terminate();
+  };
+
   const restart = () => {
-    worker?.terminate();
+    if (worker !== undefined) {
+      retire(worker);
+    }
 
     worker = undefined;
 
@@ -197,14 +228,20 @@ export function openFinder(basePath: string): Finder {
       }
 
       // The finder frees its index and watcher when the Worker reaches the
-      // request; a call still running there is cut off by the bound.
+      // request, after any call still running there; the bound cuts off one
+      // that never ends. Earlier calls' answers are not the destroy's.
       const freed = Promise.withResolvers<void>();
 
-      running.onmessage = () => freed.resolve();
+      running.onmessage = ({ data }) => {
+        if (data.id === DESTROY_ID) {
+          freed.resolve();
+        }
+      };
+
       running.onerror = () => freed.resolve();
 
       running.postMessage({
-        id: -1,
+        id: DESTROY_ID,
         basePath,
         op: 'destroy',
       } satisfies FffRequest);
@@ -213,7 +250,7 @@ export function openFinder(basePath: string): Finder {
 
       await freed.promise;
       clearTimeout(timer);
-      running.terminate();
+      retire(running);
     },
   };
 }

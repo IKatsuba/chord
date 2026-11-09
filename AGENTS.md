@@ -79,7 +79,7 @@ bun dev compile --all     # every release target
 bun dev compile --install # this machine's binary into ~/.local/bin/chord
 bun dev npm               # lay out npm/ from dist/
 bun dev release [version|major|minor|patch|fix] # the owner's release
-bun dev selftest <binary> # fake-agent CLI/window, libfx backends and fff grep
+bun dev selftest <binary> # fake-agent CLI/window, riff on native and Wasm
 bun dev registry          # refetch the ACP Registry into src/registry.ts
 bun dev mark              # rasterise scripts/mark.svg into the header mark
 bun dev screenshots       # retake docs/images/, including title pages and logos
@@ -132,7 +132,7 @@ signal cleanup.
   `bun dev test`. Tests use `test`, `describe`, `expect` and the fake timers of
   `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
   folder holds Bun's runtime calls. The binary embeds OpenTUI's native
-  library, libfx's target addon and WebAssembly core, and fff's target library.
+  library and libfx's target addon and WebAssembly core.
   Linux builds use glibc. Dependencies go in `package.json`; jsr packages come
   from `npm.jsr.io` under their own names
   (`bunfig.toml`, `.npmrc`). No `node_modules` checked in.

@@ -9,4 +9,9 @@
   `propose_team`'s save. Selected runs freeze composition and instructions;
   later member admission rereads policy, never the saved team.
 - Read a file that may be absent through `not_found.ts`; absent means none.
-- No console calls in `session/`, `acp/` or `server/`: stdout may carry ACP.
+- No console calls in `session/`, `acp/`, `server/` or `riff/`: stdout may
+  carry ACP.
+- `riff/` serves one ACP session per process on the hidden `--riff-agent`
+  flag; it has no tools and stays out of the agent list until sign-in lands.
+  Sessions use libfx's `local()` store under chord's state directory, with
+  a sidecar per session; chord's record remains what was shown.

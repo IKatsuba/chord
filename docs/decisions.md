@@ -8053,3 +8053,20 @@ All `_chord` notifications, including children's monitor snapshots, go to
 every client regardless of declarations. The drop-only capability check
 applies to ordinary `session/update` traffic. This clarifies the extension
 contract above; that check does not gate extension notifications.
+
+## 2026-11-09 — CHD-567: a bad item in a settings list is left out
+
+A bad item in a `teamSelection` constraint list (`constraints.agents`,
+`constraints.models.<agent>`, `constraints.modes.<agent>`) is left out of
+the list, and the rest of the list and of the file count, with one problem
+line for each item naming the list and the item (the owner's Q346). Before,
+the parse left a hole where the item was, found the same issue every round
+and ignored the whole file. A list whose items are all bad stays `[]` and
+allows nothing, as an explicit empty allowlist does, and one more line says
+so.
+
+This narrows the fail-closed guard on team selection: a problem that only
+left items out of a list no longer refuses selection, which goes on with
+what remains. Such a problem is marked as one in a field, so the guard reads
+structure rather than the line's words. Every other `teamSelection`
+problem, and every read or parse problem, still refuses selection as before.

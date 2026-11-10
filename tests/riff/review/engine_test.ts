@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { createFxEngine, type FxFetch } from 'libfx/node';
 import { libfxBackend } from '../../../src/platform/libfx.ts';
 import { reviewer } from '../../../src/riff/review/engine.ts';
@@ -189,4 +189,75 @@ test('cancellation during engine creation waits to close the late engine before 
   expect(await outcome).toBeInstanceOf(Error);
   expect(closed).toBe(true);
   expect(requests).toBe(0);
+});
+
+describe('CHD-608 tester: isolated reviewer attempts', () => {
+  test('malformed then caution closes both engines and a later review starts fresh', async () => {
+    const bodies: string[] = [];
+    const closed: number[] = [];
+    let created = 0;
+    const run = reviewer({
+      configuration: {
+        ...(await libfxBackend()),
+        provider: 'codex',
+        model: 'gpt-6-luna',
+        credentials: () => planCredential('codex'),
+        fetch: async (url, init) => {
+          // Each independent conversation needs its own first-response tool.
+          const fixture = planFetch({ plan: 'codex', tools: true });
+
+          if (url.endsWith('/responses')) {
+            bodies.push(String(init.body));
+          }
+
+          const response = await fixture.fetch(url, init);
+          const decision = bodies.length === 1 ? 'invalid' : 'caution';
+          const text = (await response.text())
+            .replaceAll('"mark"', '"permission_decision"')
+            .replaceAll(
+              '\\"value\\":\\"fixture\\"',
+              `\\"decision\\":\\"${decision}\\"`,
+            );
+
+          return new Response(text, {
+            status: response.status,
+            headers: response.headers,
+          });
+        },
+      },
+      createEngine: async (options) => {
+        const id = ++created;
+
+        expect(closed.length).toBe(id - 1);
+
+        const engine = await createFxEngine(options);
+
+        return {
+          ...engine,
+          close: async () => {
+            await engine.close();
+            closed.push(id);
+          },
+        };
+      },
+    });
+
+    expect(
+      await run('first pending action', new AbortController().signal),
+    ).toEqual({
+      outcome: 'caution',
+      rationale: '',
+    });
+    expect(closed).toEqual([1, 2]);
+    expect(
+      await run('second pending action', new AbortController().signal),
+    ).toEqual({
+      outcome: 'caution',
+      rationale: '',
+    });
+    expect(closed).toEqual([1, 2, 3]);
+    expect(bodies.length).toBe(3);
+    expect(bodies[2]).toContain('second pending action');
+    expect(bodies[2]).not.toContain('first pending action');
+  });
 });

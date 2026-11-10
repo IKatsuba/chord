@@ -1,4 +1,4 @@
-import { afterEach, expect, jest, test } from 'bun:test';
+import { afterEach, describe, expect, jest, test } from 'bun:test';
 import { review } from '../../../src/riff/review/review.ts';
 
 afterEach(() => jest.useRealTimers());
@@ -165,4 +165,87 @@ test('cancellation interrupts the review without retrying or yielding a verdict'
 
   await expect(result).rejects.toThrow('cancelled by fixture');
   expect(attempts).toBe(1);
+});
+
+describe('CHD-608 tester: review retry authority', () => {
+  test('a pre-cancelled turn starts no attempt', async () => {
+    const controller = new AbortController();
+    let attempts = 0;
+
+    controller.abort(new Error('already cancelled'));
+
+    await expect(
+      review(
+        () => {
+          attempts++;
+
+          return Promise.resolve({ outcome: 'clear' });
+        },
+        'pending',
+        controller.signal,
+      ),
+    ).rejects.toThrow('already cancelled');
+    expect(attempts).toBe(0);
+  });
+
+  test('format and transport retry allowances remain separate and caution ends retries', async () => {
+    for (const malformedFirst of [true, false]) {
+      let attempts = 0;
+      const outcome = await review(
+        () => {
+          attempts++;
+
+          if (attempts === (malformedFirst ? 1 : 2)) {
+            return Promise.resolve(undefined);
+          }
+
+          if (attempts < 3) {
+            throw new Error('fixture transport');
+          }
+
+          return Promise.resolve({ outcome: 'caution', rationale: 'held' });
+        },
+        'pending',
+        new AbortController().signal,
+      );
+
+      expect(outcome).toEqual({ outcome: 'caution', rationale: 'held' });
+      expect(attempts).toBe(3);
+    }
+  });
+
+  test('a clear decision returned after each deadline cannot authorize a call', async () => {
+    jest.useFakeTimers();
+
+    const retried = Promise.withResolvers<void>();
+    let attempts = 0;
+    const outcome = review(
+      (_input, signal) => {
+        attempts++;
+
+        if (attempts === 2) {
+          retried.resolve();
+        }
+
+        return new Promise((resolve) => {
+          signal.addEventListener(
+            'abort',
+            () => resolve({ outcome: 'clear' }),
+            {
+              once: true,
+            },
+          );
+        });
+      },
+      'pending',
+      new AbortController().signal,
+    );
+
+    jest.advanceTimersByTime(30_000);
+    await retried.promise;
+    jest.advanceTimersByTime(30_000);
+
+    expect((await outcome).outcome).toBe('unavailable');
+    expect(attempts).toBe(2);
+  });
 });

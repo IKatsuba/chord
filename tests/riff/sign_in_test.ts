@@ -247,3 +247,188 @@ describe('riff sign-in state machine', () => {
     ).toEqual([]);
   });
 });
+
+describe('tester: sign-in reducer boundaries', () => {
+  test('Esc fences late progress at every stage', () => {
+    const steps: SignInState['step'][] = [
+      { kind: 'provider' },
+      { kind: 'way', provider: 'codex' },
+      ...(['starting', 'finishing', 'saving'] as const).map((kind) => ({
+        kind,
+        provider: 'codex' as const,
+        way: 'browser' as const,
+      })),
+      {
+        kind: 'browser',
+        provider: 'codex',
+        way: 'browser',
+        address: 'https://example.invalid',
+      },
+      {
+        kind: 'code',
+        provider: 'grok',
+        way: 'code',
+        address: 'https://example.invalid',
+        code: 'FIXTURE',
+        expiresAt: 60_000,
+      },
+      { kind: 'port_taken', provider: 'codex', way: 'browser' },
+      { kind: 'expired', provider: 'grok', way: 'code', message: 'expired' },
+      {
+        kind: 'failure',
+        provider: 'codex',
+        way: 'browser',
+        code: 'unknown',
+        message: 'fixture',
+      },
+      ...(['reading_store', 'no_store', 'store_slow'] as const).map((kind) => ({
+        kind,
+        provider: undefined,
+        store: 'fixture store',
+        message: 'fixture recovery',
+      })),
+    ];
+
+    for (const step of steps) {
+      const state = { attempt: 10, step };
+      const backed = signInReduce(state, { type: 'back' });
+      const expected: SignInState['step'] =
+        step.kind === 'way'
+          ? { kind: 'provider' }
+          : step.kind === 'expired' || step.kind === 'port_taken'
+            ? { kind: 'way', provider: step.provider }
+            : { kind: 'cancelled' };
+
+      expect(backed.step).toEqual(expected);
+      expect(backed.attempt).toBe(11);
+
+      for (const id of [state.attempt, backed.attempt]) {
+        expect(
+          signInReduce(backed, {
+            type: 'progress',
+            attempt: id,
+            step: {
+              kind: 'success',
+              provider: 'codex',
+              way: 'browser',
+              store: 'fixture store',
+            },
+          }),
+        ).toBe(backed);
+        expect(signInReduce(backed, { type: 'store_ready', attempt: id })).toBe(
+          backed,
+        );
+      }
+    }
+  });
+
+  test('same-provider retries reject the previous attempt and invalid choices', () => {
+    const first = attempt();
+    const failed = signInReduce(first, {
+      type: 'progress',
+      attempt: first.attempt,
+      step: {
+        kind: 'failure',
+        provider: 'codex',
+        way: 'browser',
+        code: 'LIBFX_CHATGPT_SIGN_IN_DENIED',
+        message: 'DEVICE_CODE_EXPIRED',
+      },
+    });
+
+    expect(signInChoices(failed.step)).toEqual(['retry', 'another_plan']);
+    expect(signInReduce(failed, { type: 'choose', choice: 'new_code' })).toBe(
+      failed,
+    );
+
+    const retry = signInReduce(failed, { type: 'choose', choice: 'retry' });
+
+    expect(retry.attempt).toBe(first.attempt + 1);
+    expect(retry.step).toEqual({
+      kind: 'starting',
+      provider: 'codex',
+      way: 'browser',
+    });
+    expect(
+      signInReduce(retry, {
+        type: 'progress',
+        attempt: first.attempt,
+        step: {
+          kind: 'success',
+          provider: 'codex',
+          way: 'browser',
+          store: 'fixture store',
+        },
+      }),
+    ).toBe(retry);
+    expect(signInReduce(retry, { type: 'provider', provider: 'grok' })).toBe(
+      retry,
+    );
+    expect(signInReduce(retry, { type: 'way', way: 'code' })).toBe(retry);
+  });
+
+  test('store retries preserve cause and provider while rejecting stale readiness', () => {
+    for (const provider of [undefined, 'codex', 'grok'] as const) {
+      for (const kind of ['no_store', 'store_slow'] as const) {
+        const state: SignInState = {
+          attempt: 9,
+          step: {
+            kind,
+            provider,
+            store: 'fixture store',
+            message: 'fixture recovery',
+          },
+        };
+        const retry = signInReduce(state, {
+          type: 'choose',
+          choice: 'retry_store',
+        });
+
+        expect(retry.step).toEqual({
+          kind: 'reading_store',
+          provider,
+          store: 'fixture store',
+          message: 'fixture recovery',
+        });
+        expect(
+          signInReduce(retry, { type: 'store_ready', attempt: state.attempt }),
+        ).toBe(retry);
+        expect(
+          signInReduce(retry, { type: 'store_ready', attempt: retry.attempt })
+            .step,
+        ).toEqual(
+          provider === undefined
+            ? { kind: 'provider' }
+            : { kind: 'way', provider },
+        );
+      }
+    }
+  });
+
+  test('expiry choices and countdown boundaries remain independent of wording', () => {
+    for (const provider of ['CHATGPT', 'GROK']) {
+      expect(
+        failureChoices(`LIBFX_${provider}_DEVICE_CODE_EXPIRED`, 'browser'),
+      ).toEqual(['new_code']);
+      expect(
+        failureChoices(`LIBFX_${provider}_SIGN_IN_STATE_MISMATCH`, 'code'),
+      ).toEqual([]);
+      expect(failureChoices('unknown', 'code')).toEqual([
+        'retry',
+        'browser',
+        'another_plan',
+      ]);
+    }
+
+    for (const [remaining, minutes] of [
+      [-1, 0],
+      [0, 0],
+      [1, 1],
+      [59_999, 1],
+      [60_000, 1],
+      [60_001, 2],
+    ] as const) {
+      expect(signInMinutes(100_000 + remaining, 100_000)).toBe(minutes);
+    }
+  });
+});

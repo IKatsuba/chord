@@ -173,6 +173,8 @@ interface Open {
   readonly reviewHistory: ReviewHistory;
   reviews: ReviewTurn;
   readonly safetyReview: NonNullable<RiffOptions['review']>;
+  /** Host execution may outlive libfx's cancellation race; riff owns its disposal. */
+  readonly reviewJobs: Set<Promise<unknown>>;
   /** The window, while a turn runs that may ask it. */
   client: AgentContext | undefined;
 }
@@ -461,17 +463,29 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
               throw new Error('The review session is closed.');
             }
 
-            const branch = await currentBranch(directory, signal);
+            const job = Promise.try(async () => {
+              const branch = await currentBranch(directory, signal);
 
-            return session.reviews.run(
-              arguments_,
-              {
-                action,
-                ...session.reviewHistory.snapshot(),
-                ...(branch === undefined ? {} : { branch }),
-              },
-              signal,
-            );
+              signal.throwIfAborted();
+
+              return session.reviews.run(
+                arguments_,
+                {
+                  action,
+                  ...session.reviewHistory.snapshot(),
+                  ...(branch === undefined ? {} : { branch }),
+                },
+                signal,
+              );
+            });
+
+            session.reviewJobs.add(job);
+
+            try {
+              return await job;
+            } finally {
+              session.reviewJobs.delete(job);
+            }
           },
           mode: () => holder.open?.config.mode ?? config.mode,
           grants,
@@ -528,6 +542,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       reviewHistory: new ReviewHistory(),
       reviews: new ReviewTurn(safetyReview),
       safetyReview,
+      reviewJobs: new Set(),
       client: undefined,
     };
 
@@ -599,7 +614,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   };
 
   /** Ends the session's libfx agent and its finder. */
-  const closeOpen = (session: Open) => closeBoth(session.agent, session.finder);
+  const closeOpen = async (session: Open) => {
+    try {
+      await closeBoth(session.agent, session.finder);
+    } finally {
+      await finishReviews(session);
+    }
+  };
 
   const drawIn = (session: Open) => (name: string, input: unknown) =>
     drawn(session.directory, name, input);
@@ -736,6 +757,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       try {
         await closeOpenTurn(session, client);
       } finally {
+        await finishReviews(session);
+
         session.running = false;
         session.turn = undefined;
         session.client = undefined;
@@ -880,6 +903,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           ...(usage === undefined ? {} : { usage }),
         };
       } finally {
+        await finishReviews(session);
+
         session.running = false;
         session.admitting = false;
         session.turn = undefined;
@@ -951,6 +976,13 @@ async function closeBoth(agent: FxAgent, finder: Finder): Promise<void> {
 
   if (closed.status === 'rejected') {
     throw closed.reason;
+  }
+}
+
+/** Parent libfx cancellation does not wait for host execute promises. */
+async function finishReviews(session: Open): Promise<void> {
+  while (session.reviewJobs.size > 0) {
+    await Promise.allSettled([...session.reviewJobs]);
   }
 }
 

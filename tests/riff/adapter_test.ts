@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
-import { createFxAgent, type FxAgent, type FxAgentHostTool } from 'libfx/node';
+import {
+  createFxAgent,
+  createFxEngine,
+  type FxAgent,
+  type FxAgentHostTool,
+} from 'libfx/node';
+import { reviewer } from '../../src/riff/review/engine.ts';
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -77,6 +83,106 @@ afterEach(async () => {
 });
 
 describe('CHD-608 auto admission', () => {
+  test('cancel and close retain a late-created review engine until disposal, blocking a new turn', async () => {
+    const target = join(stateDir, 'outside.txt');
+    const creating = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const primaryClosing = Promise.withResolvers<void>();
+    let disposed = false;
+    let promptDone = false;
+    let closeDone = false;
+    const review = reviewer({
+      configuration: {
+        ...(await libfxBackend()),
+        provider: {
+          name: 'fake',
+          baseUrl: fake.url,
+          models: { fake: { contextWindow: 128000, supportsToolUse: true } },
+        },
+        model: 'fake',
+      },
+      createEngine: async (configuration) => {
+        creating.resolve();
+        await release.promise;
+
+        const engine = await createFxEngine(configuration);
+
+        return {
+          ...engine,
+          close: async () => {
+            await engine.close();
+
+            disposed = true;
+          },
+        };
+      },
+    });
+
+    await writeFile(target, 'fixture output\n');
+    await open(true, {
+      review,
+      createAgent: (configuration) => {
+        const agent = createFxAgent(configuration);
+
+        return Object.assign(Object.create(agent) as FxAgent, {
+          close: async () => {
+            primaryClosing.resolve();
+            await agent.close();
+          },
+        });
+      },
+    });
+
+    const sessionId = await newSession();
+    const work = prompt(
+      sessionId,
+      `call read ${JSON.stringify({ path: target })}`,
+    ).then((result) => {
+      promptDone = true;
+
+      return result;
+    });
+
+    await creating.promise;
+
+    client.notify('session/cancel', { sessionId });
+
+    const next = await prompt(sessionId, 'another prompt');
+
+    expect(next.error?.message).toContain('one prompt at a time');
+
+    const closing = client
+      .request('session/close', { sessionId })
+      .then((result) => {
+        closeDone = true;
+
+        return result;
+      });
+
+    try {
+      await primaryClosing.promise;
+
+      const barrier = await client.request('session/set_config_option', {
+        sessionId,
+        configId: 'mode',
+        value: 'ask',
+      });
+
+      expect(barrier.error?.message).toContain('closing');
+      expect(promptDone).toBe(false);
+      expect(closeDone).toBe(false);
+      expect(disposed).toBe(false);
+    } finally {
+      release.resolve();
+      await Promise.all([work, closing]);
+    }
+
+    expect(disposed).toBe(true);
+    expect(promptDone).toBe(true);
+    expect(closeDone).toBe(true);
+    expect(fake.requests).toHaveLength(1);
+  });
+
   test('switching to ask during review drops the verdict and preserves ask grants in auto', async () => {
     const target = join(stateDir, 'outside.txt');
     const reviewing = Promise.withResolvers<void>();

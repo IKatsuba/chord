@@ -138,7 +138,7 @@ async function permit(
   reach: Reach | undefined,
   signal: AbortSignal,
   proposal?: Proposal,
-): Promise<readonly DirectInvocation[] | undefined> {
+): Promise<readonly DirectInvocation[] | 'shell' | undefined> {
   const { directory, grants = new Set() } = session;
   let mode = session.mode?.() ?? 'auto';
 
@@ -258,7 +258,7 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
           signal,
           executionId,
           proposal,
-          direct,
+          direct === 'shell' ? undefined : direct,
         );
       }),
   };

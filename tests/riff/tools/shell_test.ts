@@ -328,10 +328,16 @@ async function commandSession(
 
   await mkdir(home);
 
+  const startup = join(home, 'bashenv');
+
+  await writeFile(startup, '');
+
   const environment = {
     HOME: home,
     XDG_CONFIG_HOME: home,
     GIT_CONFIG_NOSYSTEM: '1',
+    SHELL: '/bin/bash',
+    BASH_ENV: startup,
   };
   const finder = openFinder(root);
   const updates: ToolCallUpdate[] = [];
@@ -432,12 +438,12 @@ describe('CHD-609 command admission and terminal streaming', () => {
     }
   });
 
-  test('reversible commands wait for the captured-name admission unit', async () => {
+  test('reversible commands run after a fresh captured-name check', async () => {
     const s = await commandSession();
 
     try {
       expect((await s.run('node --version')).isError).toBe(false);
-      expect(s.counts).toEqual({ ask: 0, review: 1, begin: 1 });
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
     } finally {
       await s.close();
     }
@@ -490,4 +496,35 @@ describe('CHD-609 command admission and terminal streaming', () => {
       }
     },
   );
+});
+
+describe('CHD-609 reversible alias gate integration', () => {
+  test('captured alias in any word falls back to review; the next call captures again', async () => {
+    const s = await commandSession();
+
+    try {
+      await writeFile(s.environment.BASH_ENV, "alias node='false'\n");
+      expect((await s.run('node --version')).isError).toBe(false);
+      expect(s.counts.review).toBe(1);
+      await writeFile(s.environment.BASH_ENV, '');
+      expect((await s.run('node --version')).isError).toBe(false);
+      expect(s.counts.review).toBe(1);
+      expect(s.counts.begin).toBe(2);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('unknown shell falls back to review', async () => {
+    const s = await commandSession();
+
+    try {
+      s.environment.SHELL = '/bin/sh';
+
+      expect((await s.run('node --version')).isError).toBe(false);
+      expect(s.counts.review).toBe(1);
+    } finally {
+      await s.close();
+    }
+  });
 });

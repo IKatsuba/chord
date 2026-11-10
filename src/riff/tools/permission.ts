@@ -78,11 +78,8 @@ export function permissionOptions(
 
       break;
     case 'edit':
-      grant = `Allow edits to ${shown(directory, reach.real)} for this session`;
-
-      break;
     case 'write':
-      grant = `Allow edits and writes to ${shown(directory, reach.real)} for this session`;
+      grant = `Allow edits to ${shown(directory, reach.real)} for this session`;
 
       break;
     case 'shell':

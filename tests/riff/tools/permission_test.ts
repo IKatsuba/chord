@@ -109,7 +109,7 @@ describe('what an ask offers', () => {
       'allow_always',
     ]);
     expect(names(write)[1]).toEqual([
-      'Allow edits and writes to src/a.ts for this session',
+      'Allow edits to src/a.ts for this session',
       'allow_always',
     ]);
     expect(names(shell)[1]).toEqual([

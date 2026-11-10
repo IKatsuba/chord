@@ -23,6 +23,105 @@ const backend = (get: SecretBackend['get']): SecretBackend => ({
   delete: () => Promise.resolve(true),
 });
 
+describe('CHD-606 tester: late credential-store failures', () => {
+  test.each(['set', 'delete'] as const)(
+    'a late rejected %s stays serial, sanitizes its error and allows the next call',
+    async (operation) => {
+      jest.useFakeTimers();
+
+      const gate = Promise.withResolvers<never>();
+      const calls: string[] = [];
+      const store = secrets(
+        {
+          get: () => {
+            calls.push('get');
+
+            return Promise.resolve(null);
+          },
+          set: () => {
+            calls.push('set');
+
+            return gate.promise;
+          },
+          delete: () => {
+            calls.push('delete');
+
+            return gate.promise;
+          },
+        },
+        'macOS Keychain',
+      );
+
+      await store.get('codex');
+
+      const mutation =
+        operation === 'set'
+          ? store.set('codex', 'fixture credential')
+          : store.delete('codex');
+      const result = mutation.catch((error: unknown) => error);
+
+      await flush();
+      jest.advanceTimersByTime(SECRET_TIMEOUT);
+
+      const timeout: unknown = await result;
+
+      assert(timeout instanceof SecretStoreTimeout);
+
+      const completion = timeout.completion.catch((error: unknown) => error);
+      const following = store.get('grok');
+
+      await flush();
+      expect(calls).toEqual(['get', operation]);
+      gate.reject(new Error('fixture credential backend detail'));
+
+      const failure: unknown = await completion;
+
+      assert(failure instanceof Error);
+      expect(failure).not.toBeInstanceOf(SecretStoreUnavailable);
+      expect(failure.message).toBe(
+        'The macOS Keychain could not complete the sign-in operation.',
+      );
+      expect(failure.message).not.toContain('fixture credential');
+      expect(await following).toBeNull();
+      expect(calls).toEqual(['get', operation, 'get']);
+      expect(await result).toBe(timeout);
+    },
+  );
+
+  test('a first-call delete rejected after its bound reports unavailable and releases the queue', async () => {
+    jest.useFakeTimers();
+
+    const gate = Promise.withResolvers<boolean>();
+    const store = secrets(
+      {
+        get: () => Promise.resolve(null),
+        set: () => Promise.resolve(),
+        delete: () => gate.promise,
+      },
+      'Secret Service',
+    );
+    const result = store.delete('grok').catch((error: unknown) => error);
+
+    await flush();
+    jest.advanceTimersByTime(SECRET_TIMEOUT);
+
+    const timeout: unknown = await result;
+
+    assert(timeout instanceof SecretStoreTimeout);
+
+    const completion = timeout.completion.catch((error: unknown) => error);
+
+    gate.reject(new Error('fixture backend credential'));
+
+    const failure: unknown = await completion;
+
+    assert(failure instanceof SecretStoreUnavailable);
+    expect(failure.message).toContain('no Secret Service');
+    expect(failure.message).not.toContain('fixture backend');
+    expect(await store.get('grok')).toBeNull();
+  });
+});
+
 afterEach(() => jest.useRealTimers());
 
 describe('riff secrets queue', () => {

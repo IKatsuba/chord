@@ -76,3 +76,37 @@ test('background, size, platform and chord stricter syntax', () => {
     expect(commandEffect(s).kind).toBe('review');
   }
 });
+
+test('quoted literal newlines keep direct argv without shell expansion', () => {
+  const result = commandEffect("printf '%s' 'a\nb'");
+
+  expect(result).toEqual({
+    kind: 'direct',
+    stages: [
+      {
+        executable: '/usr/bin/printf',
+        argv: ['/usr/bin/printf', '%s', 'a\nb'],
+        git: false,
+      },
+    ],
+  });
+  expect(commandEffect('ls\nREADME.md').kind).toBe('review');
+});
+
+test('git preparation precedes reversible fallback only after direct shell shape', () => {
+  expect(commandEffect('git status --ignored')).toEqual({
+    kind: 'reversible',
+    prepareGit: true,
+  });
+
+  for (const command of [
+    'git status 2>&1',
+    'git status && npm test',
+    'git fetch',
+  ]) {
+    expect(commandEffect(command)).toEqual({
+      kind: 'reversible',
+      prepareGit: false,
+    });
+  }
+});

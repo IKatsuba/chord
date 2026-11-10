@@ -14,7 +14,7 @@ const MAX_PIPE_STAGES = 8;
 export type DirectStage = { executable: string; argv: string[]; git: boolean };
 export type CommandEffect =
   | { kind: 'direct'; stages: DirectStage[] }
-  | { kind: 'reversible' }
+  | { kind: 'reversible'; prepareGit: boolean }
   | { kind: 'review'; reason: string };
 
 export function commandEffect(
@@ -48,7 +48,18 @@ export function commandEffect(
   }
 
   if (reversible(source, line)) {
-    return { kind: 'reversible' };
+    // fx prepares a supported git family before validating its arguments.
+    const stage = line.stages[0];
+    const prepareGit =
+      (platform === 'darwin' || platform === 'linux') &&
+      sourceOk(source, true) &&
+      line.join === null &&
+      stage !== undefined &&
+      directShape(stage) &&
+      stage.words[0]?.value === 'git' &&
+      ['status', 'diff', 'log'].includes(stage.words[1]?.value ?? '');
+
+    return { kind: 'reversible', prepareGit };
   }
 
   return { kind: 'review', reason: 'Command requires review' };
@@ -78,7 +89,7 @@ function sourceOk(source: string, allowTrailingNewline: boolean): boolean {
     return false;
   }
 
-  return !/[\0\r\n]/.test(s);
+  return !(allowTrailingNewline ? /[\0\r]/ : /[\0\r\n]/).test(s);
 }
 
 // command_effect.zig:137-143, plus `\`: chord reviews every backslash.
@@ -403,7 +414,7 @@ const PROCESS = [
   'nohup',
 ];
 
-function directStage(stage: Stage): boolean {
+function directShape(stage: Stage): boolean {
   if (
     stage.assigns > 0 ||
     stage.redirects.length > 0 ||
@@ -421,6 +432,14 @@ function directStage(stage: Stage): boolean {
     ) {
       return false;
     }
+  }
+
+  return true;
+}
+
+function directStage(stage: Stage): boolean {
+  if (!directShape(stage)) {
+    return false;
   }
 
   const words = stage.words.map((w) => w.value);

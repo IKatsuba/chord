@@ -834,6 +834,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           return { stopReason: 'cancelled' };
         }
 
+        const input = promptOf(params.prompt);
+
         session.reviewHistory.prompt(
           params.prompt
             .filter((block) => block.type === 'text')
@@ -845,7 +847,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
         const turn = session.agent
           .session(session.id, { model: { id: model, effort } })
-          .prompt(promptOf(params.prompt));
+          .prompt(input);
 
         for await (const event of turn) {
           if (event.type === 'tool_end') {

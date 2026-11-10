@@ -2371,4 +2371,50 @@ describe('CHD-613 riff embedded resources', () => {
       'embedded text fixture',
     );
   });
+
+  test('a rejected resource prompt never enters later safety review evidence', async () => {
+    const markers = ['REJECTED_RESOURCE_FIRST', 'REJECTED_RESOURCE_RECENT'];
+    const target = join(stateDir, 'reviewed.txt');
+    const inputs: string[] = [];
+
+    await writeFile(target, 'fixture output\n');
+    await open(true, {
+      review: (input) => {
+        inputs.push(input);
+
+        return Promise.resolve({ outcome: 'clear' });
+      },
+    });
+
+    const sessionId = await newSession();
+    const valid = `call read ${JSON.stringify({ path: target })}`;
+
+    for (const marker of markers) {
+      const requests = fake.requests.length;
+      const rejected = await client.request('session/prompt', {
+        sessionId,
+        prompt: [
+          { type: 'text', text: marker },
+          { type: 'resource', resource: { uri: 'custom:blob', blob: 'AAEC' } },
+        ],
+      });
+
+      expect(rejected.error?.code).toBe(-32602);
+      expect(fake.requests).toHaveLength(requests);
+      expect((await prompt(sessionId, valid)).result?.stopReason).toBe(
+        'end_turn',
+      );
+    }
+
+    expect(inputs).toHaveLength(2);
+
+    for (const input of inputs) {
+      expect(input).toContain('<current_request>call read');
+      expect(input).toContain('<first_root_user_request>call read');
+
+      for (const marker of markers) {
+        expect(input).not.toContain(marker);
+      }
+    }
+  });
 });

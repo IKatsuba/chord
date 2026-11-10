@@ -329,6 +329,14 @@ async function commandSession(
   await mkdir(home);
 
   const startup = join(home, 'bashenv');
+  const bin = join(home, 'bin');
+
+  await mkdir(bin);
+  await writeFile(
+    join(bin, 'node'),
+    '#!/bin/sh\nprintf "fixture-node-version\\n"\n',
+    { mode: 0o755 },
+  );
 
   await writeFile(startup, '');
 
@@ -338,6 +346,8 @@ async function commandSession(
     GIT_CONFIG_NOSYSTEM: '1',
     SHELL: '/bin/bash',
     BASH_ENV: startup,
+    PATH: `${bin}:/usr/bin:/bin`,
+    CHORD_RESOURCE_FIXTURE: 'true',
   };
   const finder = openFinder(root);
   const updates: ToolCallUpdate[] = [];
@@ -527,4 +537,23 @@ describe('CHD-609 reversible alias gate integration', () => {
       await s.close();
     }
   });
+});
+
+test('CHD-609 actual reviewed shell execution uses only fixture startup and environment', async () => {
+  const s = await commandSession();
+
+  try {
+    await writeFile(
+      s.environment.BASH_ENV,
+      'export CHORD_FIXTURE_VALUE=fixture-shell\n',
+    );
+
+    const result = await s.run('printf %s "$CHORD_FIXTURE_VALUE"');
+
+    expect(result.text).toContain('fixture-shell');
+    expect(result.isError).toBe(false);
+    expect(s.counts).toEqual({ ask: 0, review: 1, begin: 1 });
+  } finally {
+    await s.close();
+  }
 });

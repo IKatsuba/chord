@@ -22,6 +22,7 @@ export async function shell(
   terminalId: string,
   update: (update: ToolCallUpdate) => void | Promise<void>,
   direct?: readonly DirectInvocation[],
+  environment?: NodeJS.ProcessEnv,
 ): Promise<FxToolResult> {
   signal.throwIfAborted();
 
@@ -43,6 +44,15 @@ export async function shell(
   let cut = false;
   const options: ShellOptions = {
     cwd: directory,
+    ...(environment === undefined
+      ? {}
+      : {
+          environment: Object.fromEntries(
+            Object.entries(environment).filter(
+              (entry): entry is [string, string] => entry[1] !== undefined,
+            ),
+          ),
+        }),
     reap: true,
     onOutput: (_stream, text) => {
       send({

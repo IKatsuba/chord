@@ -46,7 +46,7 @@ export interface ToolSession {
   /** The session's directory, as its real path. */
   readonly directory: string;
   readonly finder: Finder;
-  /** Admission probes use this environment; tests supply fixture HOME/XDG. */
+  /** Complete shell/probe environment; tests supply fixture HOME and startup files. */
   readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
    * Keeps what the window shows of a call in place of what the model reads,
@@ -369,7 +369,15 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
             }
           });
 
-        return shell(directory, input, signal, id, stream, direct);
+        return shell(
+          directory,
+          input,
+          signal,
+          id,
+          stream,
+          direct,
+          session.commandEnvironment,
+        );
       },
     }),
   ];

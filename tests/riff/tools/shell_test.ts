@@ -675,3 +675,33 @@ describe('CHD-609 tester: direct admission lifecycle', () => {
     }
   });
 });
+
+describe('CHD-609 tester: reversible shell startup', () => {
+  test('a zsh startup alias named by a reversible command requires review before execution', async () => {
+    const s = await commandSession();
+    const startup = join(s.environment.HOME, '.zshenv');
+
+    Object.assign(s.environment, {
+      SHELL: '/bin/zsh',
+      ZDOTDIR: s.environment.HOME,
+    });
+
+    try {
+      await writeFile(startup, "alias node='printf alias-node'\n");
+
+      const held = await s.run('node --version');
+
+      expect(held.isError).toBe(false);
+      expect(held.text).toContain('alias-node');
+      expect(s.counts).toEqual({ ask: 0, review: 1, begin: 1 });
+      await writeFile(startup, '');
+
+      const fresh = await s.run('node --version');
+
+      expect(fresh.text).toContain('fixture-node-version');
+      expect(s.counts).toEqual({ ask: 0, review: 1, begin: 2 });
+    } finally {
+      await s.close();
+    }
+  });
+});

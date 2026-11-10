@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -459,4 +459,145 @@ test('zsh global aliases cannot replace fixed listing builtins or arguments', as
       environment: f.environment,
     }),
   ).toBe(false);
+});
+
+describe('CHD-609 tester: capture completion and session isolation', () => {
+  test('foreign prefix frames do not replace the actual nonce frame', () => {
+    const nonce = 'tester-actual';
+    const prefix = 'FXSNAP:foreign:NAMES\0ignored\0\0FXSNAP:foreign:END\0';
+    const result = parseCapturedNames(
+      prefix + `FXSNAP:${nonce}:NAMES\0node\0\0FXSNAP:${nonce}:END\0`,
+      nonce,
+    );
+
+    expect(result).toEqual(new Set(['node']));
+    expect(definesAnyWord('node --version', result!)).toBe(true);
+  });
+
+  test.each(['\0', '\n', 'FXSNAP:tester:END\0'])(
+    'a payload after the end marker prevents admission: %s',
+    (tail) => {
+      expect(
+        parseCapturedNames(
+          'FXSNAP:tester:NAMES\0node\0\0FXSNAP:tester:END\0' + tail,
+          'tester',
+        ),
+      ).toBeUndefined();
+    },
+  );
+
+  test.each([
+    'FXSNAP:unexpected',
+    'bad\ufffdname',
+    'helper\tname',
+    'helper\\name',
+  ])('an ambiguous framed name prevents admission: %s', (name) => {
+    expect(
+      parseCapturedNames(
+        `FXSNAP:tester:NAMES\0${name}\0\0FXSNAP:tester:END\0`,
+        'tester',
+      ),
+    ).toBeUndefined();
+  });
+
+  for (const shell of ['bash', 'zsh'] as const) {
+    test(`${shell} startup exit output cannot follow a complete frame`, async () => {
+      const f = await fixture(shell);
+
+      await writeFile(f.startup, "trap 'printf trailing-output' EXIT\n");
+      expect(
+        await capturedNamesAllow('node --version', {
+          cwd: f.root,
+          signal: live(),
+          environment: f.environment,
+        }),
+      ).toBe(false);
+    });
+
+    test(`${shell} a readonly IFS that prevents setup falls back to review`, async () => {
+      const f = await fixture(shell);
+
+      await writeFile(f.startup, 'readonly IFS=:\n');
+      expect(
+        await capturedNamesAllow('node --version', {
+          cwd: f.root,
+          signal: live(),
+          environment: f.environment,
+        }),
+      ).toBe(false);
+    });
+  }
+
+  test('cancelling one capture does not stop another session capture', async () => {
+    const fixtures = await Promise.all([fixture('bash'), fixture('bash')]);
+    const controllers = [new AbortController(), new AbortController()];
+    const pids = [0, 0];
+    const reason = new Error('cancel first capture only');
+
+    for (const f of fixtures) {
+      await writeFile(
+        f.startup,
+        `
+/bin/sleep 60 &
+child=$!
+printf '%s' "$child" > "$CHORD_TESTER_PID"
+while ! test -e "$CHORD_TESTER_RELEASE"; do /bin/sleep 0.01; done
+kill "$child"
+wait "$child" 2>/dev/null
+:
+`,
+      );
+    }
+
+    const jobs = fixtures.map((f, index) =>
+      capturedNamesAllow('node --version', {
+        cwd: f.root,
+        signal: controllers[index]!.signal,
+        environment: {
+          ...f.environment,
+          CHORD_TESTER_PID: join(f.root, 'pid'),
+          CHORD_TESTER_RELEASE: join(f.root, 'release'),
+        },
+      }),
+    );
+    const settled = Promise.allSettled(jobs);
+    let secondEnded = false;
+
+    void jobs[1]!.then(
+      () => {
+        secondEnded = true;
+      },
+      () => {
+        secondEnded = true;
+      },
+    );
+
+    try {
+      await until(() =>
+        fixtures.every((f, index) => {
+          try {
+            pids[index] = Number(readFileSync(join(f.root, 'pid'), 'utf8'));
+
+            return pids[index]! > 0;
+          } catch {
+            return false;
+          }
+        }),
+      );
+      controllers[0]!.abort(reason);
+      await expect(jobs[0]!).rejects.toBe(reason);
+      expect(() => process.kill(pids[0]!, 0)).toThrow();
+      expect(secondEnded).toBe(false);
+      expect(process.kill(pids[1]!, 0)).toBe(true);
+      await writeFile(join(fixtures[1]!.root, 'release'), '');
+      expect(await jobs[1]!).toBe(true);
+      expect(() => process.kill(pids[1]!, 0)).toThrow();
+    } finally {
+      for (const controller of controllers) {
+        controller.abort();
+      }
+
+      await settled;
+    }
+  });
 });

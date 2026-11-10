@@ -10,7 +10,7 @@ import { outputStream } from '../acp/stdio.ts';
 import { libfxBackend } from '../platform/libfx.ts';
 import { chordStateDir } from '../session/state_dir.ts';
 import { connectRiff } from './adapter.ts';
-import { fakeProvider } from './start.ts';
+import { riffAccess } from './qa.ts';
 
 /**
  * `wasm` turns libfx's native addon off. Only tests and selftest set it,
@@ -26,7 +26,12 @@ export function riffBackend(
   return env[BACKEND_ENV] === 'wasm' ? { ...base, nativeAddon: false } : base;
 }
 
-export async function runRiffAgent(version: string): Promise<void> {
+export async function runRiffAgent(
+  version: string,
+  access = riffAccess(process.env),
+): Promise<void> {
+  const { provider, secrets } = access;
+
   const backend = riffBackend(await libfxBackend(), process.env);
 
   const info = await getBackendInfo(backend);
@@ -51,7 +56,9 @@ export async function runRiffAgent(version: string): Promise<void> {
     ),
     {
       version,
-      provider: fakeProvider(process.env),
+      provider,
+      secrets,
+      fetch: access.fetch,
       backend,
       stateDir: chordStateDir(),
     },

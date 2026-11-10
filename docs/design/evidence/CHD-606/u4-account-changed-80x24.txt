@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · gpt-6.1-sol
+ ▄▀▀▀   /tmp/chord-qa.chd606-designer-u4-account-changed-linux-codex
+ ▀▀     ? for shortcuts · /help
+
+ › hello
+
+ ∴ Thinking…
+
+ ⏺ Hello from a fixture plan.
+
+ › hello again
+
+ ⏺ Sign in to a plan for riff.
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ChatGPT account changed. This session is signed out.   gpt-6.1-sol · 1% used

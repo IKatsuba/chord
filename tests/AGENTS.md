@@ -33,4 +33,7 @@
   `CHORD_RIFF_FAKE_PROVIDER` sets its URL, and `CHORD_RIFF_BACKEND=wasm`
   forces WebAssembly. Neither is a setting. `call <tool> <json>` prompts
   exercise a tool on the fake provider; `fixtures/riff/tree.ts` supplies
-  fff's git and non-git file-set cases.
+  fff's git and non-git file-set cases. Credential tests inject `Secrets`
+  and fake plan fetches; never call `Bun.secrets`. QA credential states use
+  `CHORD_RIFF_QA=1` with a fake provider URL and `CHORD_RIFF_QA_STATE`;
+  provider and store-name overrides are documented in the guide.

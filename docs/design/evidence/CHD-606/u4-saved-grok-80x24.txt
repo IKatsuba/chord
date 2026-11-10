@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · grok-4.7
+ ▄▀▀▀   /tmp/chord-qa.chd606-designer-u4-saved-linux-grok
+ ▀▀     ? for shortcuts · /help
+
+ › hello
+
+ ∴ Thinking…
+
+ ⏺ Hello from a fixture plan.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft stays here                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  Grok sign-in saved.              grok-4.7 · default effort · 1% context used

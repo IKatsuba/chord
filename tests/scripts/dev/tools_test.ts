@@ -127,7 +127,10 @@ describe('chordOnRiff', () => {
           '-p',
           'hi',
         ],
-        { CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1' },
+        {
+          CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1',
+          CHORD_RIFF_QA: '',
+        },
       ],
     ]);
   });
@@ -202,7 +205,10 @@ describe('chordWithRiff (CHD-604c)', () => {
       ran: [
         [
           recorded.ran[0]!,
-          { CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1' },
+          {
+            CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1',
+            CHORD_RIFF_QA: '',
+          },
         ],
       ],
     });
@@ -216,7 +222,13 @@ describe('chordWithRiff (CHD-604c)', () => {
     const { ran } = await served(false, ['-C', '/tmp/chord-qa'], true);
 
     expect(ran).toStrictEqual([
-      [recorded.ran[0]!, { CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1' }],
+      [
+        recorded.ran[0]!,
+        {
+          CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1',
+          CHORD_RIFF_QA: '1',
+        },
+      ],
     ]);
   });
 });

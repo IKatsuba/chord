@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   fake
+ ▄▀▀▀   /tmp/chord-qa.chd606-designer-main
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ fake did not start: it refused session/new: session/new requires
+   `agentAlias` (alias of a configured [agents.<alias>] entry)
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

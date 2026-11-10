@@ -185,7 +185,7 @@ describe('chord', () => {
       await parsed(['chord', '--qa', 'read', '--fake', 'riff', '-p', 'hi']),
     ).toStrictEqual([
       ['qa', '/tmp/chord-qa.read'],
-      ['riff', ['-C', '/tmp/chord-qa.read', '-p', 'hi']],
+      ['riff', ['-C', '/tmp/chord-qa.read', '-p', 'hi'], true],
     ]);
     // Without --fake, riff is an agent name like any other.
     expect(await parsed(['chord', 'riff'])).toStrictEqual([

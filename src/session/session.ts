@@ -10,6 +10,7 @@ import type {
 import process from 'node:process';
 import { type Agent, openAgent } from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
+import { credentialNotice, type CredentialNotice } from './credentials.ts';
 import { agentStart, findAgent } from '../agents.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
@@ -223,6 +224,10 @@ export interface Session {
   subscribe(
     listener: (update: SessionUpdate, subagentId?: string) => void,
   ): () => void;
+  /** Transient riff status facts, kept out of transcript records. */
+  subscribeCredentials?(
+    listener: (notice: CredentialNotice) => void,
+  ): () => void;
   /**
    * Sends a prompt, with images after its text, then a `resource_link` for
    * each of the `mentions` that is a file `@` offers in the session's
@@ -378,6 +383,8 @@ export async function openSession(
   >();
   /** Updates no listener has heard yet, for the first one to come. */
   const held: Heard[] = [];
+  const credentialListeners = new Set<(notice: CredentialNotice) => void>();
+  let heldCredential: CredentialNotice | undefined;
 
   /** Where `notification` belongs, the tree grown by what it announces. */
   const route = (notification: SessionNotification): Heard | undefined => {
@@ -410,6 +417,23 @@ export async function openSession(
   };
 
   const onTraffic = (traffic: Traffic) => {
+    const credential =
+      agent === 'riff' && traffic.from === 'agent'
+        ? credentialNotice(traffic.message)
+        : undefined;
+
+    if (credential !== undefined) {
+      if (credentialListeners.size === 0) {
+        heldCredential = credential;
+      }
+
+      for (const listener of credentialListeners) {
+        listener(credential);
+      }
+
+      return;
+    }
+
     // The tap keeps notifications from the SDK: this is the one place to hear it.
     if (
       traffic.from === 'agent' &&
@@ -631,6 +655,17 @@ export async function openSession(
     exited: connection.exited.then(() => {}),
     gone: () => connection.gone(),
     history: () => past,
+    subscribeCredentials: (listener) => {
+      credentialListeners.add(listener);
+
+      if (heldCredential !== undefined) {
+        listener(heldCredential);
+
+        heldCredential = undefined;
+      }
+
+      return () => credentialListeners.delete(listener);
+    },
     subscribe: (listener) => {
       listeners.add(listener);
 

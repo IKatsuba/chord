@@ -22,6 +22,7 @@ import {
   type FxAgentTools,
   type FxNodeBackendOptions,
   type FxSessionPromptInput,
+  type FxFetch,
 } from 'libfx/node';
 import { realpath } from 'node:fs/promises';
 import { type Finder, openFinder } from '../platform/fff.ts';
@@ -44,6 +45,18 @@ import { RIFF } from './start.ts';
 import type { Grants } from './tools/permission.ts';
 import { drawn, riffTools } from './tools/tools.ts';
 import { type RiffStore, riffStore, type Sidecar } from './store.ts';
+import {
+  type Secrets,
+  type SecretProvider,
+  SecretStoreTimeout,
+  SecretStoreUnavailable,
+} from '../platform/secrets.ts';
+import {
+  credentialCell,
+  type CredentialCell,
+  CredentialSignedOut,
+} from './credentials.ts';
+import { planProvider, providerOf } from './provider.ts';
 
 /** What a reopened session says of a turn a dead process left open. */
 export const INTERRUPTED = 'The interrupted turn was cancelled.';
@@ -56,11 +69,12 @@ export interface FakeProvider {
 export interface RiffOptions {
   /** chord's version, which riff reports as its own. */
   readonly version: string;
-  /**
-   * The provider; undefined until riff has credentials (CHD-485 part 4), so
-   * `session/new` asks for a sign-in.
-   */
+  /** The custom fixture provider; plans instead read the supplied secrets. */
   readonly provider: FakeProvider | undefined;
+  /** Explicitly supplied; omitted access never reaches the system store. */
+  readonly secrets?: Secrets;
+  /** Every libfx request, including version lookups and refresh, uses this edge. */
+  readonly fetch?: FxFetch;
   readonly backend: FxNodeBackendOptions;
   /** chord's state directory, where riff keeps its sessions. */
   readonly stateDir: string;
@@ -125,11 +139,17 @@ interface Open {
   /** The session's directory, as its real path: where its tools work. */
   readonly directory: string;
   readonly finder: Finder;
+  readonly credential: CredentialCell | undefined;
+  readonly authorization: ReturnType<typeof planProvider> | undefined;
   config: RiffConfig;
   /** The last model request's context, for `usage_update`. */
   used: number | undefined;
   /** Whether a turn of a prompt is running. */
   running: boolean;
+  /** Esc may arrive while prompt admission is still waiting on the store. */
+  cancelled: boolean;
+  /** No libfx turn exists yet for a cancel to reach during store admission. */
+  admitting: boolean;
   /** Identity of the turn callbacks may still update. */
   turn: symbol | undefined;
   /** What tools kept for the window of a call, by its id, until it ends. */
@@ -141,6 +161,15 @@ interface Open {
   /** The window, while a turn runs that may ask it. */
   client: AgentContext | undefined;
 }
+
+type SelectedProvider =
+  | { readonly plan: 'fake'; readonly fake: FakeProvider }
+  | { readonly plan: SecretProvider; readonly cell: CredentialCell };
+
+const authRequired = () =>
+  new RequestError(-32000, 'Sign in to a plan for riff.', {
+    authMethods: riffInit('').authMethods,
+  });
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const store = options.store ?? riffStore(options.stateDir);
@@ -175,21 +204,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
    */
   const start = async (
     cwd: string,
+    client: AgentContext,
     resumed?: {
       readonly id: string;
       readonly sidecar: Sidecar;
     },
   ): Promise<Open> => {
-    // A session of a plan riff cannot run now needs a sign-in too.
-    if (
-      options.provider === undefined ||
-      (resumed !== undefined && resumed.sidecar.provider !== 'fake')
-    ) {
-      throw new RequestError(-32000, 'Sign in to a plan for riff.', {
-        authMethods: riffInit(options.version).authMethods,
-      });
-    }
-
     if (open !== undefined || opening !== undefined || gone) {
       throw RequestError.invalidRequest(
         undefined,
@@ -197,10 +217,72 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
     }
 
-    opening = made(options.provider, cwd, resumed);
+    opening = (async () => {
+      let provider: SelectedProvider;
+
+      if (
+        options.provider !== undefined &&
+        (resumed === undefined || resumed.sidecar.provider === 'fake')
+      ) {
+        provider = { plan: 'fake', fake: options.provider };
+      } else {
+        const secrets = options.secrets;
+
+        if (secrets === undefined || resumed?.sidecar.provider === 'fake') {
+          throw authRequired();
+        }
+
+        const plan =
+          resumed?.sidecar.provider ??
+          providerOf({
+            codex: await secrets.get('codex'),
+            grok: await secrets.get('grok'),
+          });
+
+        if (plan === undefined) {
+          throw authRequired();
+        }
+
+        const cell = credentialCell(
+          secrets,
+          options.stateDir,
+          plan,
+          (state) => {
+            void client
+              .notify('_chord/credentials', { provider: plan, state })
+              .catch(() => {});
+          },
+        );
+        const value = await cell.check();
+
+        if (
+          resumed !== undefined &&
+          resumed.sidecar.account !== value.accountId
+        ) {
+          throw authRequired();
+        }
+
+        provider = { plan, cell };
+      }
+
+      return made(provider, cwd, resumed);
+    })();
 
     try {
       open = await opening;
+    } catch (error) {
+      if (error instanceof CredentialSignedOut) {
+        throw authRequired();
+      }
+
+      if (
+        error instanceof SecretStoreUnavailable ||
+        error instanceof SecretStoreTimeout
+      ) {
+        throw new RequestError(-32603, error.message);
+      }
+
+      throw error;
     } finally {
       opening = undefined;
     }
@@ -210,7 +292,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
   /** A session made and its sidecar written, or none, closed. */
   const made = async (
-    provider: FakeProvider,
+    provider: SelectedProvider,
     cwd: string,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
@@ -236,11 +318,16 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   };
 
   const create = async (
-    provider: FakeProvider,
+    provider: SelectedProvider,
     cwd: string,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
-    const plan: RiffPlan = 'fake';
+    const plan: RiffPlan = provider.plan;
+    const credential = provider.plan === 'fake' ? undefined : provider.cell;
+    const authorization =
+      credential === undefined || provider.plan === 'fake'
+        ? undefined
+        : planProvider(credential, provider.plan);
     const config: RiffConfig = resumed?.sidecar ?? defaultConfig(plan);
     const holder: { open?: Open } = {};
     const shown = new Map<string, string | ToolCallContent[]>();
@@ -254,16 +341,21 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       ...options.backend,
       name: RIFF,
       durability: store.durability,
-      provider: {
-        name: 'fake',
-        baseUrl: provider.baseUrl,
-        models: {
-          fake: {
-            contextWindow: windowOf(plan, 'fake'),
-            supportsToolUse: true,
-          },
-        },
-      },
+      ...(provider.plan === 'fake'
+        ? {
+            provider: {
+              name: 'fake',
+              baseUrl: provider.fake.baseUrl,
+              models: {
+                fake: {
+                  contextWindow: windowOf(plan, 'fake'),
+                  supportsToolUse: true,
+                },
+              },
+            },
+          }
+        : authorization?.options),
+      fetch: options.fetch ?? globalThis.fetch,
       model: config.model,
       tools:
         options.tools ??
@@ -342,9 +434,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       agent: fx,
       directory,
       finder,
+      credential,
+      authorization,
       config: { model: config.model, effort: config.effort, mode: config.mode },
       used: undefined,
       running: false,
+      cancelled: false,
+      admitting: false,
       turn: undefined,
       shown,
       calls: new Set(),
@@ -359,7 +455,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const save = (session: Open): Promise<void> => {
     const sidecar: Sidecar = {
       provider: session.plan,
-      account: null,
+      account: session.credential?.account ?? null,
       ...session.config,
     };
     const next = saving
@@ -526,8 +622,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
   const connection = agent({ name: RIFF })
     .onRequest('initialize', () => riffInit(options.version))
-    .onRequest('session/new', async ({ params }) => {
-      const session = await start(params.cwd);
+    .onRequest('session/new', async ({ params, client }) => {
+      const session = await start(params.cwd, client);
 
       return {
         sessionId: session.id,
@@ -541,7 +637,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         throw RequestError.sessionNotFound(params.sessionId);
       }
 
-      const session = await start(params.cwd, {
+      const session = await start(params.cwd, client, {
         id: params.sessionId,
         sidecar,
       });
@@ -549,6 +645,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       // The reopen's turn is the session's running work: a prompt waits for
       // it, and a close cancels it.
       session.running = true;
+      session.cancelled = false;
       session.turn = Symbol('turn');
       session.client = client;
 
@@ -603,10 +700,30 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       session.calls = new Set();
 
       session.running = true;
+      session.cancelled = false;
+      session.admitting = true;
       session.turn = Symbol('turn');
       session.client = client;
 
       try {
+        session.authorization?.reset();
+
+        try {
+          await session.credential?.check();
+        } catch (error) {
+          if (error instanceof CredentialSignedOut) {
+            throw authRequired();
+          }
+
+          throw error;
+        }
+
+        session.admitting = false;
+
+        if (session.cancelled || gone) {
+          return { stopReason: 'cancelled' };
+        }
+
         const turn = session.agent
           .session(session.id, { model: { id: model, effort } })
           .prompt(promptOf(params.prompt));
@@ -625,6 +742,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         }
 
         const result = await turn.result;
+
+        if (session.authorization?.failed() !== undefined) {
+          throw authRequired();
+        }
 
         if (session.used !== undefined) {
           await notify(client, session.id, {
@@ -656,6 +777,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         };
       } finally {
         session.running = false;
+        session.admitting = false;
         session.turn = undefined;
         session.client = undefined;
 
@@ -664,7 +786,11 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     })
     .onNotification('session/cancel', async ({ params }) => {
       if (open?.id === params.sessionId) {
-        await open.agent.session(open.id).cancel();
+        open.cancelled = true;
+
+        if (!open.admitting) {
+          await open.agent.session(open.id).cancel();
+        }
       }
     })
     .onRequest('session/close', async ({ params }) => {

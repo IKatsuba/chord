@@ -4,7 +4,7 @@ import manifest from '../../package.json' with { type: 'json' };
 import { agentStart, findAgent, listAgents } from '../../src/agents.ts';
 import { openAgent } from '../../src/acp/connection.ts';
 import { riffInit } from '../../src/riff/adapter.ts';
-import { RIFF_AGENT_FLAG } from '../../src/riff/start.ts';
+import { FAKE_PROVIDER_ENV, RIFF_AGENT_FLAG } from '../../src/riff/start.ts';
 
 const STOP = { exitMs: 300, termMs: 300, killMs: 2000 } as const;
 
@@ -28,6 +28,7 @@ describe('riff started by name', () => {
   test("--riff-agent answers initialize with the design's answer", async () => {
     const agent = await openAgent({
       command: agentStart('riff').command,
+      env: { [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1' },
       cwd: process.cwd(),
       onTraffic: () => {},
       onPermission: () =>
@@ -49,6 +50,7 @@ describe('tester: riff startup protocol contract', () => {
   test('the child advertises the literal initialize contract without steering', async () => {
     const agent = await openAgent({
       command: agentStart('riff').command,
+      env: { [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1' },
       cwd: process.cwd(),
       onTraffic: () => {},
       onPermission: () =>

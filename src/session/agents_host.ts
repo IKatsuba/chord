@@ -2806,6 +2806,8 @@ export function createAgentsHost(
     const args = { agent: named === '' ? main.agent : named, prompt: '' };
     const parent = conversationAt(main.key);
     const signal = parent?.launchSignal;
+    const idleRiffParent =
+      main.agent === 'riff' && parent?.session === undefined;
     const refused =
       (await startRefusal(
         main.key,
@@ -2814,11 +2816,14 @@ export function createAgentsHost(
         'agent',
         args.agent,
         // The person can leave riff's sign-in without ever opening ACP.
-        main.agent === 'riff',
+        idleRiffParent,
       )) ?? fullRefusal(main.key);
     const agents = ownedBy(sessions.agents, main.key);
 
-    if (conversationAt(main.key) !== parent || signal?.aborted) {
+    if (
+      idleRiffParent &&
+      (conversationAt(main.key) !== parent || signal?.aborted)
+    ) {
       return said('This session is closing; no agent can start from it');
     }
 

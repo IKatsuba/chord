@@ -13,6 +13,7 @@ import {
 } from '../../../src/riff/commands/direct.ts';
 import { commandEffect } from '../../../src/riff/commands/effect.ts';
 import { until } from '../../session/conversation_fake.ts';
+import { killSpawnedGroups } from '../../../src/platform/process.ts';
 
 const fixturePath = fileURLToPath(
   new URL('./direct_fixture.ts', import.meta.url),
@@ -316,6 +317,33 @@ describe('tester: direct execution caps and group isolation', () => {
       result.command.stop();
       await result.command.ended;
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('CHD-609 direct startup failures', () => {
+  test('deleted cwd returns a bounded error and leaves no owned group', async () => {
+    const cwd = mkdtempSync(join(tmpdir(), 'chord-direct-deleted-'));
+
+    rmSync(cwd, { recursive: true, force: true });
+
+    const command = runDirect(
+      [{ executable: '/bin/pwd', argv: ['/bin/pwd', '-P'] }],
+      { cwd },
+    );
+    let end: Awaited<typeof command.ended> | undefined;
+    const settled = command.ended.then((value) => {
+      end = value;
+    });
+
+    try {
+      await until(() => end !== undefined);
+      expect(end?.error).toBeDefined();
+      expect(killSpawnedGroups()).toEqual([]);
+    } finally {
+      command.stop();
+      await until(() => end !== undefined);
+      await settled;
     }
   });
 });

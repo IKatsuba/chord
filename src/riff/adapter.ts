@@ -85,6 +85,8 @@ export interface RiffOptions {
   readonly backend: FxNodeBackendOptions;
   /** chord's state directory, where riff keeps its sessions. */
   readonly stateDir: string;
+  /** Complete shell environment for in-process fixtures; inherited when omitted. */
+  readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
    * Host tools, for tests constructing riff in-process alone: nothing in the
    * binary can add one.
@@ -420,6 +422,9 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         riffTools({
           directory,
           finder,
+          ...(options.commandEnvironment === undefined
+            ? {}
+            : { commandEnvironment: options.commandEnvironment }),
           show: (id, text) => shown.set(id, text),
           showContent: (id, content) => shown.set(id, content),
           stream: () => {

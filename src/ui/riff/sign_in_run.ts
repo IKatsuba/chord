@@ -96,6 +96,29 @@ export function useRiffSignIn({
     return update(at, { type: 'open', now: Date.now() });
   };
 
+  const ownedSignal = (at: number, controller: AbortController) => {
+    const owner = sessions.conversationAt(at);
+    const signal = AbortSignal.any([
+      controller.signal,
+      lifetime.current.signal,
+      owner?.launchSignal ?? AbortSignal.abort(),
+    ]);
+
+    signal.addEventListener(
+      'abort',
+      () => {
+        if (attempts.current.get(at) === controller) {
+          attempts.current.delete(at);
+          saves.current.get(at)?.discard();
+          saves.current.delete(at);
+        }
+      },
+      { once: true },
+    );
+
+    return signal;
+  };
+
   const event = (at: number, value: SignInEvent): RiffState => {
     const before = get(at);
     const next = update(at, { type: 'event', event: value, now: Date.now() });
@@ -125,6 +148,9 @@ export function useRiffSignIn({
       const { provider, way } = next.flow.step;
 
       attempts.current.set(at, controller);
+
+      const signal = ownedSignal(at, controller);
+
       void (access.run ?? runSignIn)({
         attempt: next.flow.attempt,
         provider,
@@ -132,8 +158,19 @@ export function useRiffSignIn({
         stateDir: root,
         store: access.store,
         fetch: access.fetch,
-        signal: AbortSignal.any([controller.signal, lifetime.current.signal]),
+        signal,
+        retainSave: (save) => {
+          if (signal.aborted) {
+            save.discard();
+          } else {
+            saves.current.set(at, save);
+          }
+        },
         emit: (attempt, step) => {
+          if (signal.aborted) {
+            return;
+          }
+
           const value = event(at, { type: 'progress', attempt, step });
 
           if (value.flow?.attempt !== attempt || value.flow.step !== step) {
@@ -142,7 +179,7 @@ export function useRiffSignIn({
 
           if (step.kind === 'browser') {
             void openUrl(step.address).then((failure) => {
-              if (failure !== undefined && !controller.signal.aborted) {
+              if (failure !== undefined && !signal.aborted) {
                 dispatch({ type: 'sessions_noted', message: failure });
               }
             });
@@ -165,14 +202,6 @@ export function useRiffSignIn({
             sessions.restartRiff(at, true);
           }
         },
-      }).then((save) => {
-        if (save !== undefined) {
-          if (controller.signal.aborted || lifetime.current.signal.aborted) {
-            save.discard();
-          } else {
-            saves.current.set(at, save);
-          }
-        }
       });
     }
 
@@ -193,19 +222,16 @@ export function useRiffSignIn({
 
     attempts.current.set(at, controller);
 
+    const signal = ownedSignal(at, controller);
+
     const save = saves.current.get(at);
 
     if (save !== undefined) {
-      void save
-        .retry(
-          flow.attempt,
-          AbortSignal.any([controller.signal, lifetime.current.signal]),
-        )
-        .then((saved) => {
-          if (saved || controller.signal.aborted) {
-            saves.current.delete(at);
-          }
-        });
+      void save.retry(flow.attempt, signal).then((saved) => {
+        if (saved || signal.aborted) {
+          saves.current.delete(at);
+        }
+      });
 
       return;
     }
@@ -215,7 +241,7 @@ export function useRiffSignIn({
         const codex = await access.store.get('codex');
         const grok = await access.store.get('grok');
 
-        if (controller.signal.aborted || lifetime.current.signal.aborted) {
+        if (signal.aborted) {
           return;
         }
 
@@ -227,7 +253,7 @@ export function useRiffSignIn({
           event(at, { type: 'store_ready', attempt: flow.attempt });
         }
       } catch (error) {
-        if (controller.signal.aborted || lifetime.current.signal.aborted) {
+        if (signal.aborted) {
           return;
         }
 
@@ -451,7 +477,7 @@ export function useRiffSignIn({
             suppressed.current.add(key);
             access.changed?.(undefined);
             update(key, { type: 'signed_out' });
-            sessions.restartRiff(key, true);
+            sessions.endRiff(key);
           },
         }).then(
           (result) => {

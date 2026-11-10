@@ -325,6 +325,68 @@ function setup(provider: SecretProvider, way: 'browser' | 'code') {
 }
 
 describe('riff sign-in driver over libfx', () => {
+  test('the browser save handle is available before G and before listener cleanup finishes', async () => {
+    const run = setup('codex', 'browser');
+    const gate = Promise.withResolvers<void>();
+    let save: import('../../src/riff/sign_in_run.ts').SignInSave | undefined;
+    let cleanup = false;
+    let failed = false;
+    const done = runSignIn({
+      ...run.options,
+      retainSave: (value) => {
+        save = value;
+      },
+      store: {
+        ...run.store,
+        set: () => Promise.reject(new Error('fixture store failed')),
+      },
+      emit: (id, step) => {
+        run.options.emit(id, step);
+
+        if (step.kind === 'no_store') {
+          expect(save).toBeDefined();
+
+          failed = true;
+        }
+      },
+      listen: async (options) => {
+        const listener = await run.options.listen!(options);
+
+        return {
+          ...listener,
+          close: async () => {
+            cleanup = true;
+
+            await gate.promise;
+          },
+        };
+      },
+    });
+
+    try {
+      await run.ready;
+
+      const browser = run.steps.find((step) => step.kind === 'browser');
+
+      assert(browser?.kind === 'browser');
+
+      const address = new URL(browser.address);
+
+      await run
+        .bound()!
+        .callback(
+          new Request(
+            `${address.searchParams.get('redirect_uri')}?code=fixture&state=${address.searchParams.get('state')}`,
+          ),
+        );
+      await until(() => failed && cleanup);
+      expect(save).toBeDefined();
+    } finally {
+      gate.resolve();
+      await done;
+    }
+  });
+
   test('a failed save retries the new account without rereading the old entry; a second failure stays in G', async () => {
     const run = setup('codex', 'code');
     const old = { ...planCredential('codex'), accountId: 'old-account' };

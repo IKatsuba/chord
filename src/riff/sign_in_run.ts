@@ -39,7 +39,7 @@ export function credentialSave(
 
   options.signal.addEventListener('abort', discard, { once: true });
 
-  return {
+  const save: SignInSave = {
     discard,
     retry: async (attempt, signal) => {
       const emit = (step: SignInProgress) => {
@@ -112,6 +112,12 @@ export function credentialSave(
       }
     },
   };
+
+  // Publish before a failed write makes G selectable; listener cleanup may
+  // still hold the driver's returned promise after that point.
+  options.retainSave?.(save);
+
+  return save;
 }
 
 async function startBrowser(provider: SecretProvider) {
@@ -145,6 +151,7 @@ export interface SignInRun {
   readonly store: Secrets;
   readonly stateDir: string;
   readonly emit: (attempt: number, step: SignInProgress) => void;
+  readonly retainSave?: (save: SignInSave) => void;
   /** Tests use random ports or an in-memory listener, never ChatGPT's 1455. */
   readonly listen?: typeof loopback;
 }

@@ -1548,7 +1548,25 @@ export function useSessions(
 
   return {
     conversationAt,
+    endRiff: (key: number) => {
+      if (agentOf(sessions.agents, key) === undefined) {
+        return;
+      }
+
+      dispatch({
+        type: 'in_session',
+        key,
+        action: { type: 'riff_restarting' },
+      });
+      void conversationAt(key)?.clear(undefined, false);
+    },
     restartRiff: (key: number, preserve: boolean) => {
+      const found = agentOf(sessions.agents, key);
+
+      if (found === undefined) {
+        return;
+      }
+
       if (preserve) {
         dispatch({
           type: 'in_session',
@@ -1556,8 +1574,6 @@ export function useSessions(
           action: { type: 'riff_restarting' },
         });
       }
-
-      const found = agentOf(sessions.agents, key);
 
       if (found?.child !== undefined) {
         void clearByPerson(found.child);

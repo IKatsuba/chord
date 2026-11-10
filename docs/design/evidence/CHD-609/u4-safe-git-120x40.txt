@@ -1,0 +1,40 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.chd609-designer-wide
+ █▀     ? for shortcuts · /help
+
+ › call shell {"command":"printf '%s' 'direct admission' | wc -c"}
+
+ ⏺ Bash(printf '%s' 'direct admission' | wc -c)
+   ⎿        16
+
+ ⏺ ┌─[copy]─┐
+   │   16   │
+   └────────┘
+
+   Exit code 0
+
+ › call shell {"command": "git status --short | wc -l"}
+
+ ⏺ Bash(git status --short | wc -l)
+   ⎿         0
+
+ ⏺ ┌─[copy]─┐
+   │    0   │
+   └────────┘
+
+   Exit code 0
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

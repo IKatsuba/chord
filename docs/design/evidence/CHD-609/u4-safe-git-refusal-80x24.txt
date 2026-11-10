@@ -1,0 +1,24 @@
+      materially different safe action, or explain why no safe path remains.
+      Fixture safety review: caution.
+   ⎿  Rejected Bash printf reviewed; pwd
+
+ ⏺ The person denied this call. Action held after safety review. Use the review
+   advice to choose a materially different safe action, or explain why no safe
+   path remains. Fixture safety review: caution.
+
+ › call shell {"command": "git status --ignored"}
+
+ ⏺ Bash(git status --ignored)
+   ⎿  Error: chord did not run this git command. It could not run git here
+      with every program this repository config names turned off, and plain
+      git could start them. Inspect files with read, list or search, or as
+
+ ⏺ chord did not run this git command. It could not run git here with every
+   program this repository config names turned off, and plain git could start
+   them. Inspect files with read, list or search, or ask the person to run git
+   themselves.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                fake · default · 1% used

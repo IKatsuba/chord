@@ -874,7 +874,10 @@ export function runAcp(options: AcpOptions): AcpRun {
       sessionId: upstreamId,
       configOptions,
       _meta: {
-        [ACP_META]: { image: session?.takesImages() === true },
+        [ACP_META]: {
+          image: session?.takesImages() === true,
+          embeddedContext: session?.takesEmbeddedContext() === true,
+        },
         ...(session === undefined || session.heldBack.length === 0
           ? {}
           : { 'chord/held_back': session.heldBack }),
@@ -1797,7 +1800,7 @@ export function runAcp(options: AcpOptions): AcpRun {
             promptCapabilities: {
               image: true,
               audio: false,
-              embeddedContext: false,
+              embeddedContext: true,
             },
             mcpCapabilities: { http: true, sse: true },
             sessionCapabilities: { list: {}, resume: {}, close: {} },
@@ -1880,6 +1883,7 @@ export function runAcp(options: AcpOptions): AcpRun {
           params.prompt,
           agent,
           session?.takesImages() === true,
+          session?.takesEmbeddedContext() === true,
         );
 
         if ('refused' in parsed) {
@@ -1915,7 +1919,7 @@ export function runAcp(options: AcpOptions): AcpRun {
             asked?.form === 'new' ? newTeamPrompt(asked.words) : parsed.text,
             parsed.attachments,
             [],
-            { turnId, links: parsed.links },
+            { turnId, links: parsed.links, resources: parsed.resources },
           )
         ) {
           step(entry, { type: 'unbind', turnId });
@@ -2045,6 +2049,7 @@ export function runAcp(options: AcpOptions): AcpRun {
           params.prompt,
           child.runtime,
           conversation.session.takesImages(),
+          conversation.session.takesEmbeddedContext(),
         );
 
         if ('refused' in parsed) {
@@ -2057,6 +2062,7 @@ export function runAcp(options: AcpOptions): AcpRun {
         if (
           !conversation.send(parsed.text, parsed.text, parsed.attachments, [], {
             links: parsed.links,
+            resources: parsed.resources,
           })
         ) {
           throw RequestError.sessionNotFound(params.sessionId);
@@ -2108,6 +2114,7 @@ export function runAcp(options: AcpOptions): AcpRun {
           params.prompt,
           agent,
           entry.conversation.session?.takesImages() === true,
+          entry.conversation.session?.takesEmbeddedContext() === true,
         );
 
         if ('refused' in parsed) {
@@ -2126,7 +2133,7 @@ export function runAcp(options: AcpOptions): AcpRun {
             parsed.text,
             parsed.attachments,
             [],
-            { turnId, links: parsed.links },
+            { turnId, links: parsed.links, resources: parsed.resources },
           )
         ) {
           step(entry, { type: 'unbind', turnId });

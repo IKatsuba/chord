@@ -1,4 +1,4 @@
-import { afterEach, expect, jest, test } from 'bun:test';
+import { afterEach, describe, expect, jest, test } from 'bun:test';
 import { reviewedPermission } from '../../../src/riff/review/permission.ts';
 import type { ToolSession } from '../../../src/riff/tools/tools.ts';
 import type { Finder } from '../../../src/platform/fff.ts';
@@ -86,4 +86,54 @@ test('session-grant answers cannot authorize a review hold; absent answers expla
       ),
     ).rejects.toThrow('Safety reviewer unavailable; action held');
   }
+});
+
+describe('CHD-608 tester: review ask deadlines', () => {
+  test('allow once immediately before the deadline succeeds without a remaining timer', async () => {
+    jest.useFakeTimers();
+
+    const answer = Promise.withResolvers<string>();
+    let active: AbortSignal | undefined;
+    const result = reviewedPermission(
+      fixture((_call, _options, signal) => {
+        active = signal;
+
+        return answer.promise;
+      }),
+      call,
+      caution,
+      new AbortController().signal,
+    );
+
+    jest.advanceTimersByTime(299_999);
+    answer.resolve('allow');
+    await result;
+    jest.advanceTimersByTime(1);
+
+    expect(active?.aborted).toBe(false);
+  });
+
+  test('cancelling a turn withdraws its ask and rejects even a returned allow', async () => {
+    const controller = new AbortController();
+    let active: AbortSignal | undefined;
+    const result = reviewedPermission(
+      fixture((_call, _options, signal) => {
+        active = signal;
+
+        return new Promise((resolve) => {
+          signal.addEventListener('abort', () => resolve('allow'), {
+            once: true,
+          });
+        });
+      }),
+      call,
+      caution,
+      controller.signal,
+    );
+
+    controller.abort(new Error('fixture turn cancelled'));
+
+    await expect(result).rejects.toThrow('fixture turn cancelled');
+    expect(active?.aborted).toBe(true);
+  });
 });

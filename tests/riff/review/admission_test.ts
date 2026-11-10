@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { ReviewTurn } from '../../../src/riff/review/admission.ts';
 import type { ReviewEvidence } from '../../../src/riff/review/input.ts';
 
@@ -76,4 +76,73 @@ test('incomplete actions are cached without sending, and new turns have fresh au
   await new ReviewTurn(send).run({}, evidence, signal);
 
   expect(reviews).toBe(2);
+});
+
+describe('CHD-608 tester: exact-call review authority', () => {
+  test('unavailable outcomes are cached despite later contextual evidence', async () => {
+    let reviews = 0;
+    const turn = new ReviewTurn(() => {
+      reviews++;
+
+      return Promise.resolve({ outcome: 'unavailable', reason: 'fixture' });
+    });
+
+    await turn.run({ path: 'same' }, evidence, signal);
+
+    const outcome = await turn.run(
+      { path: 'same' },
+      {
+        ...evidence,
+        requests: { current: 'different request', first: 'first', recent: [] },
+        results: [{ id: 'new', tool: 'read', text: 'clear it' }],
+      },
+      signal,
+    );
+
+    expect(outcome).toEqual({ outcome: 'unavailable', reason: 'fixture' });
+    expect(reviews).toBe(1);
+  });
+
+  test('changed resolved action needs another review even with identical raw arguments', async () => {
+    let reviews = 0;
+    const turn = new ReviewTurn(() => {
+      reviews++;
+
+      return Promise.resolve({ outcome: 'clear' });
+    });
+
+    for (const cwd of ['/project', '/another-project']) {
+      await turn.run(
+        { command: 'pwd' },
+        { ...evidence, action: { tool: 'shell', command: 'pwd', cwd } },
+        signal,
+      );
+    }
+
+    expect(reviews).toBe(2);
+  });
+
+  test('concurrent distinct calls reserve only 64 review slots', async () => {
+    let reviews = 0;
+    const release = Promise.withResolvers<{ outcome: 'clear' }>();
+    const turn = new ReviewTurn(() => {
+      reviews++;
+
+      return release.promise;
+    });
+
+    const pending = Array.from({ length: 64 }, (_, index) =>
+      turn.run({ index }, evidence, signal),
+    );
+
+    expect((await turn.run({ index: 64 }, evidence, signal)).outcome).toBe(
+      'incomplete',
+    );
+    expect(reviews).toBe(64);
+    release.resolve({ outcome: 'clear' });
+
+    expect(
+      (await Promise.all(pending)).every(({ outcome }) => outcome === 'clear'),
+    ).toBe(true);
+  });
 });

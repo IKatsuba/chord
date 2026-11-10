@@ -2110,3 +2110,48 @@ describe('shell error and turn ownership regressions', () => {
     }
   });
 });
+
+describe('CHD-608 tester: unavailable review admission', () => {
+  test('an unavailable review asks with a deadline and denial leaves auto enabled', async () => {
+    const target = join(stateDir, 'held.txt');
+
+    await writeFile(target, 'must not be read\n');
+    await open(true, {
+      review: () =>
+        Promise.resolve({
+          outcome: 'unavailable',
+          reason: 'fixture unavailable',
+        }),
+    });
+
+    const sessionId = await newSession();
+    const work = prompt(
+      sessionId,
+      `call read ${JSON.stringify({ path: target })}`,
+    );
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    expect(asked.params).toMatchObject({
+      _meta: {
+        'chord/permission': {
+          review: { outcome: 'failed', reason: 'fixture unavailable' },
+          deadlineAt: expect.any(Number),
+        },
+      },
+    });
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'deny' },
+    });
+    await work;
+
+    expect((await riffStore(stateDir).read(sessionId))?.mode).toBe('auto');
+    expect(JSON.stringify(client.updates(sessionId))).not.toContain(
+      'must not be read',
+    );
+    expect(JSON.stringify(client.updates(sessionId))).toContain(
+      'The person denied this call.',
+    );
+  });
+});

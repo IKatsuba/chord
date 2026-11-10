@@ -50,6 +50,65 @@ test('fixture mode refuses every system operation before selecting its backend',
   expect(calls).toBe(0);
 });
 
+describe('tester: fixture guard after backend selection', () => {
+  test('fixture mode blocks a cached injected backend on every provider operation', async () => {
+    const previous = process.env['CHORD_RESOURCE_FIXTURE'];
+    const calls: string[] = [];
+    let factories = 0;
+    const store = systemSecrets(() => {
+      factories++;
+
+      return {
+        get: ({ name }) => {
+          calls.push(`get ${name}`);
+
+          return Promise.resolve('fixture credential');
+        },
+        set: () => {
+          calls.push('set');
+
+          return Promise.resolve();
+        },
+        delete: () => {
+          calls.push('delete');
+
+          return Promise.resolve(true);
+        },
+      };
+    });
+
+    try {
+      delete process.env['CHORD_RESOURCE_FIXTURE'];
+      expect(factories).toBe(0);
+      expect(await store.get('codex')).toBe('fixture credential');
+      expect(factories).toBe(1);
+
+      process.env['CHORD_RESOURCE_FIXTURE'] = 'true';
+
+      for (const provider of ['codex', 'grok'] as const) {
+        for (const operation of [
+          () => store.get(provider),
+          () => store.set(provider, 'fixture replacement'),
+          () => store.delete(provider),
+        ]) {
+          await expect(operation()).rejects.toThrow(
+            'System credential access is disabled in fixture runs.',
+          );
+        }
+      }
+
+      expect(factories).toBe(1);
+      expect(calls).toEqual(['get codex']);
+    } finally {
+      if (previous === undefined) {
+        delete process.env['CHORD_RESOURCE_FIXTURE'];
+      } else {
+        process.env['CHORD_RESOURCE_FIXTURE'] = previous;
+      }
+    }
+  });
+});
+
 describe('CHD-606 tester: late credential-store failures', () => {
   test.each(['set', 'delete'] as const)(
     'a late rejected %s stays serial, sanitizes its error and allows the next call',

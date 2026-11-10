@@ -42,3 +42,42 @@ test('review history bounds retained results and counts omitted entries', () => 
   expect(history.snapshot().results).toEqual([]);
   expect(history.snapshot().omittedResults).toBe(0);
 });
+
+test('permission feedback is excluded by call identity, while admitted tool output remains', () => {
+  const history = new ReviewHistory();
+
+  history.prompt('request');
+  history.permission('denied');
+  history.permission('unanswered');
+  history.permission('allowed');
+  history.admitted('allowed');
+
+  for (const id of ['denied', 'unanswered', 'allowed', 'ordinary']) {
+    history.result({
+      id,
+      tool: 'read',
+      text: 'same text, different authority',
+    });
+  }
+
+  expect(history.snapshot().results.map(({ id }) => id)).toEqual([
+    'ordinary',
+    'allowed',
+  ]);
+});
+
+test('empty text prompts do not grow retained request history', () => {
+  const history = new ReviewHistory();
+
+  history.prompt('first');
+
+  for (let i = 0; i < 10000; i++) {
+    history.prompt('');
+  }
+
+  expect(history.snapshot().requests).toEqual({
+    current: '',
+    first: 'first',
+    recent: [],
+  });
+});

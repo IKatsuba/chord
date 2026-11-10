@@ -71,6 +71,8 @@ export interface ToolSession {
   readonly mode?: () => RiffMode;
   /** What the person has allowed for the rest of the session. */
   readonly grants?: Grants;
+  /** Marks a waiting permission so its refusal is not retained as tool evidence. */
+  readonly permissionWaiting?: (executionId: string) => void;
   /**
    * Asks the person about a call in the window: the option chosen, or
    * undefined when the ask was cancelled or nobody can answer it. Without
@@ -129,6 +131,8 @@ async function permit(
   }
 
   await session.announce?.(toolCallId, name, input);
+
+  session.permissionWaiting?.(toolCallId);
 
   const chosen = await session.ask?.(
     {

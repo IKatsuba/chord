@@ -413,7 +413,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
             };
           },
           announce: (id, name, input) => announce(holder.open, id, name, input),
-          begin: (id, name, input) => begin(holder.open, id, name, input),
+          begin: (id, name, input) => {
+            holder.open?.reviewHistory.admitted(id);
+
+            return begin(holder.open, id, name, input);
+          },
+          permissionWaiting: (id) => holder.open?.reviewHistory.permission(id),
           mode: () => holder.open?.config.mode ?? config.mode,
           grants,
           ask: (toolCall, permissionOptions, signal) =>

@@ -8,12 +8,13 @@ export class ReviewHistory {
   private recent: string[] = [];
   private results: ReviewResult[] = [];
   private omittedResults = 0;
+  private permissionFeedback = new Set<string>();
 
   /** Starts a received prompt: earlier turns' tool results have no authority here. */
   prompt(text: string): void {
     if (this.first === undefined) {
       this.first = excerpt(text, 1024);
-    } else if (this.current !== this.first) {
+    } else if (this.current !== '' && this.current !== this.first) {
       this.recent.unshift(this.current);
     }
 
@@ -35,10 +36,26 @@ export class ReviewHistory {
 
     this.results = [];
     this.omittedResults = 0;
+
+    this.permissionFeedback.clear();
+  }
+
+  /** A permission's answer is not evidence of what a tool actually did. */
+  permission(id: string): void {
+    this.permissionFeedback.add(id);
+  }
+
+  /** Once admitted, a call's actual success or failure belongs in the evidence. */
+  admitted(id: string): void {
+    this.permissionFeedback.delete(id);
   }
 
   /** Records only tool output, never assistant messages or permission feedback. */
   result(result: ReviewResult): void {
+    if (this.permissionFeedback.has(result.id)) {
+      return;
+    }
+
     this.results.unshift({
       id: excerpt(result.id, 512),
       tool: excerpt(result.tool, 512),

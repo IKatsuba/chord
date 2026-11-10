@@ -419,6 +419,9 @@ describe("riff's tools ask as the session's mode says", () => {
       directory: root,
       finder,
       mode: () => 'ask',
+      permissionWaiting: (id) => {
+        order.push(`permission ${id}`);
+      },
       ask: () => {
         order.push('ask');
 
@@ -446,10 +449,12 @@ describe("riff's tools ask as the session's mode says", () => {
     await expect(call('two')).rejects.toThrow('The person denied this call.');
     expect(order).toStrictEqual([
       'announce one',
+      'permission one',
       'ask',
       'begin read one',
       'read',
       'announce two',
+      'permission two',
       'ask',
     ]);
   });

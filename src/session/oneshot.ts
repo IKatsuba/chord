@@ -7,6 +7,7 @@ import type {
 import { DIMCODE_WORDS, dimcodeAtRisk } from '../notices.ts';
 import { filledIn } from './enrich.ts';
 import { allowOption } from './permissions.ts';
+import { permissionPresentation } from './permission_review.ts';
 import { openSession } from './session.ts';
 import {
   askStarting,
@@ -107,7 +108,12 @@ export async function runOneshot(
 
   try {
     session.permissions.subscribe(async (request) => {
-      const allow = options.allowAll ? allowOption(request.options) : undefined;
+      const reviewed =
+        permissionPresentation(request.raw._meta).review !== undefined;
+      const allow =
+        options.allowAll && !reviewed
+          ? allowOption(request.options)
+          : undefined;
 
       if (allow === undefined) {
         await options.onRefused(request.toolCall);

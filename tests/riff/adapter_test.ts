@@ -76,6 +76,149 @@ afterEach(async () => {
   await rm(stateDir, { recursive: true, force: true });
 });
 
+describe('CHD-608 auto admission', () => {
+  test('switching to ask during review drops the verdict and preserves ask grants in auto', async () => {
+    const target = join(stateDir, 'outside.txt');
+    const reviewing = Promise.withResolvers<void>();
+    const verdict = Promise.withResolvers<{ outcome: 'clear' }>();
+    let reviews = 0;
+
+    await writeFile(target, 'fixture output\n');
+    await open(true, {
+      review: () => {
+        reviews++;
+        reviewing.resolve();
+
+        return verdict.promise;
+      },
+    });
+
+    const sessionId = await newSession();
+    const work = prompt(
+      sessionId,
+      `call read ${JSON.stringify({ path: target })}`,
+    );
+
+    await reviewing.promise;
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'ask',
+    });
+
+    verdict.resolve({ outcome: 'clear' });
+
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    expect(asked.params?.['_meta']).toBeUndefined();
+    expect(asked.params?.['options']).toHaveLength(3);
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+    await work;
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'auto',
+    });
+    await prompt(sessionId, `call read ${JSON.stringify({ path: target })}`);
+
+    expect(reviews).toBe(1);
+    expect((await riffStore(stateDir).read(sessionId))?.mode).toBe('auto');
+    expect(
+      client.messages.filter(
+        (message) => message.method === 'session/request_permission',
+      ),
+    ).toHaveLength(1);
+  });
+
+  test('a clear outside read runs with bounded current-turn evidence and no ask', async () => {
+    const target = join(stateDir, 'outside.txt');
+    const inputs: string[] = [];
+
+    await writeFile(target, 'fixture output\n');
+    await open(true, {
+      review: (input) => {
+        inputs.push(input);
+
+        return Promise.resolve({ outcome: 'clear' });
+      },
+    });
+
+    const sessionId = await newSession();
+
+    await prompt(sessionId, `call read ${JSON.stringify({ path: target })}`);
+
+    expect(inputs).toHaveLength(1);
+    expect(inputs[0]).toContain('<tool>read</tool>');
+    expect(inputs[0]).toContain('<current_request>call read');
+    expect(
+      client.messages.some(
+        (message) => message.method === 'session/request_permission',
+      ),
+    ).toBe(false);
+    expect(JSON.stringify(client.updates(sessionId))).toContain(
+      'fixture output',
+    );
+  });
+
+  test('caution asks once without session grants and reviews anew in the next turn', async () => {
+    const target = join(stateDir, 'outside.txt');
+    let reviews = 0;
+
+    await writeFile(target, 'fixture output\n');
+    await open(true, {
+      review: () => {
+        reviews++;
+
+        return Promise.resolve({
+          outcome: 'caution',
+          rationale: 'Fixture caution.',
+        });
+      },
+    });
+
+    const sessionId = await newSession();
+
+    for (let index = 0; index < 2; index++) {
+      const seen = new Set(
+        client.messages
+          .filter((message) => message.method === 'session/request_permission')
+          .map((message) => message.id),
+      );
+      const work = prompt(
+        sessionId,
+        `call read ${JSON.stringify({ path: target })}`,
+      );
+      const asked = await client.until(
+        (message) =>
+          message.method === 'session/request_permission' &&
+          !seen.has(message.id),
+      );
+
+      expect(asked.params).toMatchObject({
+        options: [
+          { name: 'Allow once', kind: 'allow_once' },
+          { name: 'Deny', kind: 'reject_once' },
+        ],
+        _meta: {
+          'chord/permission': {
+            review: { outcome: 'caution', reason: 'Fixture caution.' },
+          },
+        },
+      });
+      client.respond(asked.id!, {
+        outcome: { outcome: 'selected', optionId: 'allow' },
+      });
+      await work;
+    }
+
+    expect(reviews).toBe(2);
+  });
+});
+
 describe('riff over an in-memory pair', () => {
   test('initialize answers as the design gives it', async () => {
     await open();

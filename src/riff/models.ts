@@ -41,9 +41,8 @@ export const EFFORTS = ['default', 'low', 'medium', 'high', 'xhigh'] as const;
 export type RiffEffort = (typeof EFFORTS)[number];
 
 /**
- * `ask` asks before every call; `auto`, until the review of CHD-485 part 6,
- * runs reads, lists and searches inside the session's directory and asks
- * before a read outside it.
+ * `ask` asks before every call; `auto` reviews outside reads, sensitive or
+ * outside mutations and ungranted shell calls. Grants hold in either mode.
  */
 export const MODES = ['ask', 'auto'] as const;
 

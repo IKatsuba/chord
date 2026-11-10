@@ -1,6 +1,6 @@
 /**
- * Session grants and admission before part 6's safety review (CHD-485,
- * CHD-604b, CHD-605). Grants hold in both modes; edit and write share one
+ * Session grants and admission (CHD-485, CHD-604b, CHD-605, CHD-608).
+ * Grants hold in both modes; edit and write share one
  * real-path grant, and shell grants cover only the exact command.
  */
 import type { PermissionOption } from '@agentclientprotocol/sdk/unstable';
@@ -33,7 +33,7 @@ export function grantKey(reach: Reach, directory: string): string {
   }
 }
 
-/** Whether a call reaching `reach` asks the person first. */
+/** Whether `reach` needs an ask or an auto review before its effect. */
 export function asks(
   mode: RiffMode,
   reach: Reach,

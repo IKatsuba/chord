@@ -15,6 +15,7 @@ import {
   type Stream,
   type ToolCallUpdate,
   type ToolCallContent,
+  type RequestPermissionRequest,
 } from '@agentclientprotocol/sdk/unstable';
 import {
   createFxAgent,
@@ -59,6 +60,10 @@ import {
 import { planProvider, providerOf } from './provider.ts';
 import { readProvider } from './provider_record.ts';
 import { ReviewHistory } from './review/state.ts';
+import { ReviewTurn } from './review/admission.ts';
+import { reviewer } from './review/engine.ts';
+import { currentBranch } from './review/current_branch.ts';
+import type { ReviewOutcome } from './review/review.ts';
 
 /** What a reopened session says of a turn a dead process left open. */
 export const INTERRUPTED = 'The interrupted turn was cancelled.';
@@ -92,6 +97,11 @@ export interface RiffOptions {
   readonly createAgent?: typeof createFxAgent;
   /** Makes the session's finder: fff's but in tests that watch its end. */
   readonly openFinder?: typeof openFinder;
+  /** Scripted safety reviewer; tests never need a real model. */
+  readonly review?: (
+    input: string,
+    signal: AbortSignal,
+  ) => Promise<ReviewOutcome>;
   /** The store: `riffStore(stateDir)` but in tests that hold its writes. */
   readonly store?: RiffStore;
 }
@@ -161,6 +171,8 @@ interface Open {
   /** What the person allowed for the rest of the session, in both modes. */
   readonly grants: Grants;
   readonly reviewHistory: ReviewHistory;
+  reviews: ReviewTurn;
+  readonly safetyReview: NonNullable<RiffOptions['review']>;
   /** The window, while a turn runs that may ask it. */
   client: AgentContext | undefined;
 }
@@ -357,12 +369,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       throw RequestError.invalidParams(undefined, `no directory ${cwd}`);
     });
 
-    const finder = (options.openFinder ?? openFinder)(directory);
-    const fx = (options.createAgent ?? createFxAgent)({
-      ...options.backend,
-      name: RIFF,
-      durability: store.durability,
-      ...(provider.plan === 'fake'
+    const selectedProvider =
+      provider.plan === 'fake'
         ? {
             provider: {
               name: 'fake',
@@ -375,7 +383,34 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
               },
             },
           }
-        : authorization?.options),
+        : authorization?.options;
+
+    if (selectedProvider === undefined) {
+      throw authRequired();
+    }
+
+    const safetyReview =
+      options.review ??
+      reviewer({
+        configuration: {
+          ...options.backend,
+          ...selectedProvider,
+          fetch: options.fetch ?? globalThis.fetch,
+          model:
+            plan === 'fake'
+              ? 'fake'
+              : plan === 'codex'
+                ? 'gpt-6-luna'
+                : 'grok-4.5',
+        },
+      });
+
+    const finder = (options.openFinder ?? openFinder)(directory);
+    const fx = (options.createAgent ?? createFxAgent)({
+      ...options.backend,
+      name: RIFF,
+      durability: store.durability,
+      ...selectedProvider,
       fetch: options.fetch ?? globalThis.fetch,
       model: config.model,
       tools:
@@ -419,10 +454,29 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
             return begin(holder.open, id, name, input);
           },
           permissionWaiting: (id) => holder.open?.reviewHistory.permission(id),
+          review: async (action, arguments_, signal) => {
+            const session = holder.open;
+
+            if (session === undefined) {
+              throw new Error('The review session is closed.');
+            }
+
+            const branch = await currentBranch(directory, signal);
+
+            return session.reviews.run(
+              arguments_,
+              {
+                action,
+                ...session.reviewHistory.snapshot(),
+                ...(branch === undefined ? {} : { branch }),
+              },
+              signal,
+            );
+          },
           mode: () => holder.open?.config.mode ?? config.mode,
           grants,
-          ask: (toolCall, permissionOptions, signal) =>
-            ask(holder.open, toolCall, permissionOptions, signal),
+          ask: (toolCall, permissionOptions, signal, metadata) =>
+            ask(holder.open, toolCall, permissionOptions, signal, metadata),
         }),
       hooks: {
         onEvent: (event) => {
@@ -472,6 +526,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       calls: new Set(),
       grants,
       reviewHistory: new ReviewHistory(),
+      reviews: new ReviewTurn(safetyReview),
+      safetyReview,
       client: undefined,
     };
 
@@ -762,6 +818,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
             .join('\n'),
         );
 
+        session.reviews = new ReviewTurn(session.safetyReview);
+
         const turn = session.agent
           .session(session.id, { model: { id: model, effort } })
           .prompt(promptOf(params.prompt));
@@ -860,6 +918,7 @@ async function ask(
   toolCall: ToolCallUpdate,
   options: PermissionOption[],
   signal: AbortSignal,
+  metadata?: RequestPermissionRequest['_meta'],
 ): Promise<string | undefined> {
   if (session?.client === undefined) {
     return undefined;
@@ -868,7 +927,12 @@ async function ask(
   try {
     const { outcome } = await session.client.request(
       'session/request_permission',
-      { sessionId: session.id, toolCall, options },
+      {
+        sessionId: session.id,
+        toolCall,
+        options,
+        ...(metadata === undefined ? {} : { _meta: metadata }),
+      },
       { cancellationSignal: signal },
     );
 

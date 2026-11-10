@@ -328,6 +328,7 @@ import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
 import { MODES } from './scenarios/modes.ts';
 import { PERMISSIONS } from './scenarios/permissions.ts';
+import { REVIEW_PERMISSIONS } from './scenarios/review_permissions.ts';
 import { PLANS } from './scenarios/plans.ts';
 import { SHELL } from './scenarios/shell.ts';
 import { claudeChildren, SUBAGENTS } from './scenarios/subagents.ts';
@@ -487,6 +488,7 @@ const SCENARIOS = [
   'late',
   'twins',
   'permissionsteer',
+  'reviewpermission',
   'mcpask',
   'bigask',
   'bigasktwice',
@@ -699,6 +701,7 @@ const PLAY: Record<Scenario, Play> = {
   ...TOOLS,
   ...GUARDIAN,
   ...PERMISSIONS,
+  ...REVIEW_PERMISSIONS,
   ...PLANS,
   ...FORMS,
   ...SHELL,

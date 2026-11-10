@@ -155,6 +155,7 @@ export interface SessionsOptions {
 
 /** What the sessions read of the window and do to it. */
 export interface SessionsWindow {
+  readonly riffStatus?: (key: number) => 'waiting' | 'signed_out' | undefined;
   readonly riffHeard?: (
     key: number,
     agent: string,
@@ -1014,12 +1015,19 @@ export function useSessions(
 
     const describe = (key: number) => {
       const session = all.sessions[key];
+      const signIn = host.riffStatus?.(key);
 
       return {
         model:
-          session?.models === undefined ? undefined : modelName(session.models),
-        effort: conversationAt(key)?.session?.efforts()?.current,
-        failed: session?.connection.status === 'failed',
+          signIn !== undefined || session?.models === undefined
+            ? undefined
+            : modelName(session.models),
+        effort:
+          signIn === undefined
+            ? conversationAt(key)?.session?.efforts()?.current
+            : undefined,
+        failed: signIn === undefined && session?.connection.status === 'failed',
+        ...(signIn === undefined ? {} : { signIn }),
       };
     };
 

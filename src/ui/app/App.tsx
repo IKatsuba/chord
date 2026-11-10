@@ -549,6 +549,10 @@ export function App({
   const notify = useNotify(notifications);
   const riffHear = useRef<ReturnType<typeof useRiffSignIn>['heard']>(() => {});
 
+  const riffStatus = useRef<ReturnType<typeof useRiffSignIn>['status']>(
+    () => undefined,
+  );
+
   const sessionVar = useSessionVar(notifications?.env.tmux ?? false);
   const sessions = useSessions(
     {
@@ -577,6 +581,7 @@ export function App({
     {
       all,
       riffHeard: (key, agent, event) => riffHear.current(key, agent, event),
+      riffStatus: (key) => riffStatus.current(key),
       state,
       dispatch,
       redraw,
@@ -604,6 +609,7 @@ export function App({
   });
 
   riffHear.current = riff.heard;
+  riffStatus.current = riff.status;
 
   useEffect(() => {
     dispatch({
@@ -615,7 +621,9 @@ export function App({
   // Once it has given way, the splash never comes back: not for /clear's
   // session.
   const [splashLeft, setSplashLeft] = useState(false);
-  const splashing = splashShown(splash, splashLeft, state.connection);
+  const splashing =
+    splashShown(splash, splashLeft, state.connection) &&
+    !(riff.enabled && riff.box);
 
   useEffect(() => {
     if (
@@ -629,6 +637,12 @@ export function App({
       onReady?.();
     }
   }, [state.connection.status]);
+
+  useEffect(() => {
+    if (riff.enabled && riff.box) {
+      setSplashLeft(true);
+    }
+  }, [riff.enabled, riff.box]);
 
   useTimers(state, dispatch);
 
@@ -2079,7 +2093,9 @@ export function App({
                       // The shown session's, main's or the picked child's, read
                       // where the list's row reads it.
                       effort={
-                        sessions.conversation()?.session?.efforts()?.current
+                        riff.enabled && riff.state.signedOut
+                          ? undefined
+                          : sessions.conversation()?.session?.efforts()?.current
                       }
                       // While the list has the keys, the line says what they
                       // do; its rows show what waits.

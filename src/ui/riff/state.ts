@@ -48,6 +48,7 @@ export type RiffAction =
   | { readonly type: 'notice'; readonly notice: RiffNotice }
   | { readonly type: 'provider'; readonly provider: SecretProvider }
   | { readonly type: 'signed_out' }
+  | { readonly type: 'start_failed' }
   | { readonly type: 'hide_error'; readonly turnId: string }
   | { readonly type: 'close' }
   | { readonly type: 'logout'; readonly provider: SecretProvider }
@@ -94,6 +95,11 @@ export function reduceRiff(state: RiffState, action: RiffAction): RiffState {
       return { ...state, provider: action.provider, signedOut: false };
     case 'signed_out':
       return { ...state, signedOut: true };
+    case 'start_failed': {
+      const { flow: _, logout: __, ...rest } = state;
+
+      return { ...rest, signedOut: false };
+    }
     case 'close': {
       const { flow: _, logout: __, ...rest } = state;
 

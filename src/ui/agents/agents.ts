@@ -20,6 +20,7 @@ import type { LeftOpen } from '../../session/transcript/types.ts';
 
 /** One agent of the front session, as the list is asked to draw it. */
 export interface AgentRow {
+  readonly signIn?: 'waiting' | 'signed_out';
   /** Its session's key: the main session's for `main`, the child's for a child. */
   readonly key: number;
   /** `main`, or the child's name. */
@@ -87,6 +88,12 @@ export const IDLE_GLYPH = '◦';
 export function agentState(row: AgentRow, now: number): AgentState {
   if (row.folded !== undefined) {
     return teamState(row, row.folded, now);
+  }
+
+  if (row.signIn !== undefined) {
+    return row.signIn === 'waiting'
+      ? { glyph: GLYPHS.asking, words: 'waiting for sign-in', tone: 'warning' }
+      : { glyph: IDLE_GLYPH, words: 'signed out', tone: 'dim' };
   }
 
   const { wait } = row;

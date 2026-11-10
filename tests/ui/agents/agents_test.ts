@@ -25,6 +25,20 @@ import {
 
 const NOW = 100_000;
 
+test('an expected riff sign-in replaces a startup failure with waiting or signed out', () => {
+  const signing = row('riff', {
+    runtime: 'riff',
+    signIn: 'waiting',
+    failed: true,
+  });
+
+  expect(agentState(signing, NOW).words).toBe('waiting for sign-in');
+  expect(agentState({ ...signing, signIn: 'signed_out' }, NOW).words).toBe(
+    'signed out',
+  );
+  expect(drawn([signing]).join('\n')).not.toContain('failed to start');
+});
+
 /** No summary line under the agents. */
 const NO_SUMMARY = { summary: false, onSummary: false };
 

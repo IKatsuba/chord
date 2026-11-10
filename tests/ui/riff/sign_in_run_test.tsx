@@ -12,8 +12,145 @@ import {
 import { ESC, ready, send, withWindow } from '../app/render.tsx';
 import { planCredential } from '../../../src/riff/qa_provider.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
+import type { CredentialNotice } from '../../../src/session/credentials.ts';
 
 describe('riff sign-in in the window', () => {
+  test('an unrelated backend startup failure closes the provisional store-read box', async () => {
+    const store = memorySecrets();
+
+    await withWindow(
+      async (window) => {
+        await window.shows('Fixture backend unavailable.');
+        expect(window.frame()).not.toContain('Reading the sign-in');
+        expect(window.frame()).not.toContain('Sign in to riff');
+      },
+      {
+        agent: 'riff',
+        columns: 80,
+        rows: 24,
+        splash: true,
+        whileStarting: true,
+        riffAccess: {
+          store,
+          fetch: () => {
+            throw new Error('must not fetch');
+          },
+        },
+        openWith: () =>
+          Promise.reject(new Error('Fixture backend unavailable.')),
+      },
+    );
+  });
+
+  test('an initial slow store read gives way from the splash to its named working line', async () => {
+    const gate = Promise.withResolvers<void>();
+    const store = memorySecrets();
+
+    try {
+      await withWindow(
+        async (window) => {
+          await window.shows('Reading the sign-in from the Secret Service');
+          expect(window.frame()).not.toContain('Starting riff');
+          gate.resolve();
+          await window.shows('Try the store again');
+        },
+        {
+          agent: 'riff',
+          columns: 80,
+          rows: 24,
+          splash: true,
+          whileStarting: true,
+          riffAccess: {
+            store: { ...store, name: 'Secret Service' },
+            fetch: () => {
+              throw new Error('must not fetch');
+            },
+          },
+          openWith: async () => {
+            await gate.promise;
+
+            throw new SignInNeeded({
+              message: 'fixture store timeout',
+              ways: [],
+              store: {
+                name: 'Secret Service',
+                state: 'timeout',
+                message: 'The Secret Service did not answer in 20 s.',
+              },
+            });
+          },
+        },
+      );
+    } finally {
+      gate.resolve();
+    }
+  });
+
+  test.each(['signed_out', 'account_changed'] as const)(
+    'credential %s removes stale effort and keeps its notice after Esc',
+    async (reason) => {
+      const store = memorySecrets();
+      const listeners = new Set<(notice: CredentialNotice) => void>();
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await window.shows('medium effort');
+          await send(window, 'hello');
+          await window.shows('riff is signed out of ChatGPT');
+          expect(window.frame()).not.toContain('effort');
+          await window.shows(
+            reason === 'signed_out'
+              ? 'ChatGPT sign-in removed.'
+              : 'ChatGPT account changed.',
+          );
+          await window.press(ESC);
+          expect(window.frame()).not.toContain('effort');
+        },
+        {
+          agent: 'riff',
+          columns: 80,
+          rows: 24,
+          riffAccess: {
+            store,
+            fetch: fixtureSignOut(store),
+            run: fixtureSignIn('waiting'),
+          },
+          openWith: async (options) => {
+            const session = await openSession(options);
+
+            return {
+              ...session,
+              riffProvider: 'codex',
+              subscribeCredentials: (listener) => {
+                listeners.add(listener);
+
+                return () => {
+                  listeners.delete(listener);
+                };
+              },
+              prompt: () => {
+                for (const listener of listeners) {
+                  listener({ provider: 'codex', state: reason });
+                }
+
+                return {
+                  id: crypto.randomUUID(),
+                  sent: Promise.resolve([]),
+                  result: Promise.resolve({
+                    status: 'failed',
+                    error: { code: '-32000', message: 'fixture auth required' },
+                  }),
+                  cancel: () => Promise.resolve(),
+                };
+              },
+            };
+          },
+        },
+      );
+    },
+  );
+
   test('G retries the new credential after two failed saves instead of selecting the old account', async () => {
     const backing = memorySecrets({
       codex: JSON.stringify({
@@ -126,8 +263,11 @@ describe('riff sign-in in the window', () => {
         await send(window, '/login');
         await window.shows('Sign in to riff');
         expect(window.frame()).toContain('not signed in');
+        await window.shows('waiting for sign-in');
+        expect(window.frame()).not.toContain('failed to start');
         await window.press(ESC);
         await window.shows('Not signed in. /login');
+        await window.shows('signed out');
       },
       {
         agent: 'fake',

@@ -272,6 +272,8 @@ export function useRiffSignIn({
       if (get(at).flow?.step.kind === 'reading_store') {
         update(at, { type: 'close' });
       }
+    } else if (heard.type === 'connect_failed' && heard.signIn === undefined) {
+      update(at, { type: 'start_failed' });
     } else if (
       heard.type === 'credentials' &&
       (heard.state === 'signed_out' || heard.state === 'account_changed')
@@ -536,6 +538,15 @@ export function useRiffSignIn({
 
   return {
     state: current,
+    status: (at: number): 'waiting' | 'signed_out' | undefined => {
+      const state = get(at);
+
+      return !state.signedOut
+        ? undefined
+        : state.flow === undefined
+          ? 'signed_out'
+          : 'waiting';
+    },
     heard,
     login,
     logout,

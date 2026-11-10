@@ -42,7 +42,8 @@ export function SignInBox({
     }
   });
 
-  const view = signInView(state, store, now, width <= 80);
+  // A new code can arrive between clock ticks; the old tick must not add a minute.
+  const view = signInView(state, store, Math.max(now, Date.now()), width <= 80);
 
   if (view === undefined) {
     return null;

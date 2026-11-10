@@ -377,7 +377,7 @@ test("initialize declares ACP v1, chord, forms and links, plans by id, compactio
     expect(agent.init.agentCapabilities).toStrictEqual({
       loadSession: true,
       mcpCapabilities: { http: true, sse: true },
-      promptCapabilities: { image: true },
+      promptCapabilities: { image: true, embeddedContext: false },
       sessionCapabilities: { list: {}, resume: {} },
     });
   }));

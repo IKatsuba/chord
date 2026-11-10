@@ -37,6 +37,8 @@ jobs:
         with:
           bun-version: 1.4.4
       - run: bun install --frozen-lockfile
+      # Captured-name tests run zsh, macOS's default shell.
+      - run: sudo apt-get update && sudo apt-get install -y zsh
       - run: bun dev test --shard=${{ matrix.shard }}/3
 
   compile:

@@ -5,6 +5,10 @@
  */
 import type { PermissionOption } from '@agentclientprotocol/sdk/unstable';
 import type { RiffMode } from '../models.ts';
+import { commandEffect } from '../commands/effect.ts';
+import { capturedNamesAllow } from '../commands/captured_names.ts';
+import type { DirectInvocation } from '../commands/direct.ts';
+import { prepareGit, gitInvocation } from '../commands/safe_git.ts';
 import { isInside, shown } from './paths.ts';
 import { sensitivePath } from './sensitive_path.ts';
 
@@ -33,7 +37,7 @@ export function grantKey(reach: Reach, directory: string): string {
   }
 }
 
-/** Whether `reach` needs an ask or an auto review before its effect. */
+/** Whether `reach` needs ask or auto admission before its effect. */
 export function asks(
   mode: RiffMode,
   reach: Reach,
@@ -95,4 +99,57 @@ export function permissionOptions(
     { optionId: ALLOW_SESSION, name: grant, kind: 'allow_always' },
     { optionId: DENY, name: 'Deny', kind: 'reject_once' },
   ];
+}
+
+/**
+ * Adapted from vercel-labs/fx v0.0.16,
+ * src/core/tooling/tool_admission.zig:1091-1160,2117-2148, Apache-2.0.
+ * chord keeps ask/grants first and returns a prepared direct invocation.
+ * Reversible commands run through the shell after a fresh captured-name check.
+ */
+export async function autoShell(
+  command: string,
+  directory: string,
+  signal: AbortSignal,
+  environment?: NodeJS.ProcessEnv,
+): Promise<readonly DirectInvocation[] | 'shell' | undefined> {
+  signal.throwIfAborted();
+
+  const effect = commandEffect(command);
+  const needsGit =
+    effect.kind === 'direct'
+      ? effect.stages.some((stage) => stage.git)
+      : effect.kind === 'reversible' && effect.prepareGit;
+  const prepared = needsGit
+    ? await prepareGit(directory, environment, signal)
+    : undefined;
+
+  signal.throwIfAborted();
+
+  if (prepared?.kind === 'refused') {
+    throw new Error(
+      'chord did not run this git command. It could not run git here with every program this repository config names turned off, and plain git could start them. Inspect files with read, list or search, or ask the person to run git themselves.',
+    );
+  }
+
+  if (
+    effect.kind === 'reversible' &&
+    (await capturedNamesAllow(command, {
+      cwd: directory,
+      signal,
+      ...(environment === undefined ? {} : { environment }),
+    }))
+  ) {
+    return 'shell';
+  }
+
+  if (effect.kind !== 'direct') {
+    return undefined;
+  }
+
+  return effect.stages.map((stage) =>
+    stage.git && prepared?.kind === 'ready'
+      ? gitInvocation(prepared.ready, stage)
+      : stage,
+  );
 }

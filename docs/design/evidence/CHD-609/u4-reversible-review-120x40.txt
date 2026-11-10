@@ -1,0 +1,40 @@
+   │   16   │
+   └────────┘
+
+   Exit code 0
+
+ › call shell {"command": "git status --short | wc -l"}
+
+ ⏺ Bash(git status --short | wc -l)
+   ⎿         0
+
+ ⏺ ┌─[copy]─┐
+   │    0   │
+   └────────┘
+
+   Exit code 0
+
+ › call shell {"command": "node --version"}
+
+ ⏺ Bash(node --version)
+   ⎿  Reviewed: caution
+
+ ››› Waiting for permission… (1s · denied in 4m 58s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Bash node --version                                                                                                  │
+│ /private/tmp/chord-qa.chd609-designer-wide                                                                           │
+│                                                                                                                      │
+│ The safety review held this:                                                                                         │
+│ Fixture safety review: caution.                                                                                      │
+│                                                                                                                      │
+│ ❯ 1. Allow once                                                                                                      │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject · denied by itself in 5 minutes                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

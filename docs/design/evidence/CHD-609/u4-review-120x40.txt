@@ -1,0 +1,40 @@
+
+   Exit code 0
+
+ › call shell {"command": "node --version"}
+
+ ⏺ Bash(node --version)
+   ⎿  Reviewed: caution
+      Error: The person denied this call.
+      Action held after safety review. Use the review advice to choose a materially different safe action, or explain
+      why no safe path remains.
+      Fixture safety review: caution.
+   ⎿  Rejected Bash node --version
+
+ ⏺ The person denied this call. Action held after safety review. Use the review advice to choose a materially different
+   safe action, or explain why no safe path remains. Fixture safety review: caution.
+
+ › call shell {"command": "printf reviewed; pwd"}
+
+ ⏺ Bash(printf reviewed; pwd)
+   ⎿  Reviewed: caution
+
+ ››› Waiting for permission… (1s · denied in 4m 58s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Bash printf reviewed; pwd                                                                                            │
+│ /private/tmp/chord-qa.chd609-designer-wide                                                                           │
+│                                                                                                                      │
+│ The safety review held this:                                                                                         │
+│ Fixture safety review: caution.                                                                                      │
+│                                                                                                                      │
+│ ❯ 1. Allow once                                                                                                      │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject · denied by itself in 5 minutes                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

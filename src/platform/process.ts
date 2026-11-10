@@ -27,6 +27,8 @@ export interface GroupOptions {
   readonly cwd: string;
   /** Laid over chord's own environment for the child alone. */
   readonly env?: Readonly<Record<string, string>>;
+  /** False uses only env, for execution with a fixed environment. */
+  readonly inheritEnv?: boolean;
   readonly stdin: IOType;
   readonly stdout: IOType;
   readonly stderr: IOType;
@@ -65,7 +67,10 @@ export function spawnGroup(
 ): GroupProcess {
   const child = spawn(program, args, {
     cwd: options.cwd,
-    env: { ...process.env, ...options.env },
+    env:
+      options.inheritEnv === false
+        ? (options.env ?? {})
+        : { ...process.env, ...options.env },
     stdio: [options.stdin, options.stdout, options.stderr],
     detached: !WINDOWS,
     windowsHide: true,

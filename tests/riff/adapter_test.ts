@@ -8,7 +8,14 @@ import {
 } from 'libfx/node';
 import { reviewer } from '../../src/riff/review/engine.ts';
 import { reviewInput } from '../../src/riff/review/input.ts';
-import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -34,6 +41,17 @@ let client: AcpClient;
 let riff: Riff;
 let end: () => void;
 let stateDir: string;
+
+function fixtureCommandEnvironment(): NodeJS.ProcessEnv {
+  return {
+    HOME: stateDir,
+    XDG_CONFIG_HOME: stateDir,
+    ZDOTDIR: stateDir,
+    SHELL: '/bin/sh',
+    PATH: '/usr/bin:/bin',
+    CHORD_RESOURCE_FIXTURE: 'true',
+  };
+}
 
 /** riff in this process, on the fake provider or on none. */
 async function open(
@@ -327,14 +345,26 @@ describe('CHD-608 auto admission', () => {
 });
 
 describe('CHD-608 fake review markers', () => {
-  test('clear marker runs an exact shell call with one fake reviewer request', async () => {
-    await open();
+  const reviewSession = async () => {
+    const project = join(stateDir, 'review-project');
 
-    const sessionId = await newSession();
+    await mkdir(project);
+    await open(true, { commandEnvironment: fixtureCommandEnvironment() });
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+
+    return answer.result?.['sessionId'] as string;
+  };
+
+  test('clear marker runs an exact shell call with one fake reviewer request', async () => {
+    const sessionId = await reviewSession();
 
     await prompt(
       sessionId,
-      `call shell ${JSON.stringify({ command: "printf '[review:clear]'" })}`,
+      `call shell ${JSON.stringify({ command: "touch '[review:clear]'" })}`,
     );
 
     expect(
@@ -354,12 +384,10 @@ describe('CHD-608 fake review markers', () => {
 
   for (const marker of ['[review:caution]', '[review:failed]', 'unmarked']) {
     test(`${marker} asks with the fixture outcome while auto remains selected`, async () => {
-      await open();
-
-      const sessionId = await newSession();
+      const sessionId = await reviewSession();
       const work = prompt(
         sessionId,
-        `call shell ${JSON.stringify({ command: `printf '${marker}'` })}`,
+        `call shell ${JSON.stringify({ command: `touch '${marker}'` })}`,
       );
       const asked = await client.until(
         (message) => message.method === 'session/request_permission',
@@ -1971,7 +1999,7 @@ describe('shell error and turn ownership regressions', () => {
       await mkdtemp(join(tmpdir(), 'chord-riff-shell-error-')),
     );
 
-    await open();
+    await open(true, { commandEnvironment: fixtureCommandEnvironment() });
 
     const answer = await client.request('session/new', {
       cwd: project,
@@ -1981,7 +2009,7 @@ describe('shell error and turn ownership regressions', () => {
 
     await rm(project, { recursive: true, force: true });
 
-    const turn = prompt(sessionId, 'call shell {"command":"printf never"}');
+    const turn = prompt(sessionId, 'call shell {"command":"touch never"}');
     const asked = await client.until(
       (message) => message.method === 'session/request_permission',
     );
@@ -2009,6 +2037,51 @@ describe('shell error and turn ownership regressions', () => {
       ],
     });
     expect(client.said(sessionId)).toContain('Shell failed:');
+  });
+
+  test('a direct command in a deleted working directory fails without an ask or a hang', async () => {
+    const project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-direct-error-')),
+    );
+
+    await open(true, { commandEnvironment: fixtureCommandEnvironment() });
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await rm(project, { recursive: true, force: true });
+
+    let complete = false;
+    const work = prompt(sessionId, 'call shell {"command":"printf never"}');
+    const settled = work.finally(() => {
+      complete = true;
+    });
+
+    settled.catch(() => {});
+
+    try {
+      await until(() => complete);
+      await settled;
+      expect(
+        client.messages.some(
+          (message) => message.method === 'session/request_permission',
+        ),
+      ).toBe(false);
+      expect(client.updates(sessionId)).toContainEqual(
+        expect.objectContaining({ status: 'failed' }),
+      );
+      expect(client.said(sessionId)).toContain('Shell failed:');
+    } finally {
+      if (!complete) {
+        await client.request('session/cancel', { sessionId });
+      }
+
+      await until(() => complete);
+      await settled;
+    }
   });
 
   test('an abandoned shell cannot send delayed output or exit to a new turn reusing its id', async () => {

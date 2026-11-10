@@ -1,0 +1,24 @@
+ ⏺ Bash(printf '%s' 'direct admission' | wc -c)
+   ⎿        16
+
+ ⏺ ┌─[copy]─┐
+   │   16   │
+   └────────┘
+
+   Exit code 0
+
+ › call shell {"command": "git status --short | wc -l"}
+
+ ⏺ Bash(git status --short | wc -l)
+   ⎿         0
+
+ ⏺ ┌─[copy]─┐
+   │    0   │
+   └────────┘
+
+   Exit code 0
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                fake · default · 1% used

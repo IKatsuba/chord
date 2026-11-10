@@ -16,6 +16,7 @@ import { basename, dirname } from 'node:path';
 import type { Finder } from '../../platform/fff.ts';
 import type { Drawn } from '../events.ts';
 import type { RiffMode } from '../models.ts';
+import type { DirectInvocation } from '../commands/direct.ts';
 import { edit, EDIT_DESCRIPTION, EditInput } from './edit.ts';
 import { apply, type Proposal } from './mutation.ts';
 import { write, WRITE_DESCRIPTION, WriteInput } from './write.ts';
@@ -25,6 +26,7 @@ import {
   ALLOW,
   ALLOW_SESSION,
   asks,
+  autoShell,
   DENY,
   type Grants,
   grantKey,
@@ -44,6 +46,8 @@ export interface ToolSession {
   /** The session's directory, as its real path. */
   readonly directory: string;
   readonly finder: Finder;
+  /** Complete shell/probe environment; tests supply fixture HOME and startup files. */
+  readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
    * Keeps what the window shows of a call in place of what the model reads,
    * by the call's id; nothing kept, the window shows the model's.
@@ -121,6 +125,7 @@ interface ToolSpec<T> {
     signal: AbortSignal,
     executionId: string,
     proposal?: Proposal,
+    direct?: readonly DirectInvocation[],
   ) => Promise<string | FxToolResult>;
 }
 
@@ -133,12 +138,27 @@ async function permit(
   reach: Reach | undefined,
   signal: AbortSignal,
   proposal?: Proposal,
-): Promise<void> {
+): Promise<readonly DirectInvocation[] | 'shell' | undefined> {
   const { directory, grants = new Set() } = session;
-  const mode = session.mode?.() ?? 'auto';
+  let mode = session.mode?.() ?? 'auto';
 
   if (reach === undefined || !asks(mode, reach, directory, grants)) {
     return;
+  }
+
+  if (mode === 'auto' && reach.tool === 'shell') {
+    const direct = await autoShell(
+      reach.command,
+      directory,
+      signal,
+      session.commandEnvironment,
+    );
+
+    mode = session.mode?.() ?? 'auto';
+
+    if (mode === 'auto' && direct !== undefined) {
+      return direct;
+    }
   }
 
   await session.announce?.(toolCallId, name, input);
@@ -218,7 +238,7 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
         const proposal = await spec.prepare?.(call, signal);
         const reach = await spec.reach(call, proposal);
 
-        await permit(
+        const direct = await permit(
           session,
           executionId,
           spec.name,
@@ -227,11 +247,19 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
           signal,
           proposal,
         );
+
         signal.throwIfAborted();
         await session.begin?.(executionId, spec.name, input);
         signal.throwIfAborted();
 
-        return await spec.run(call, reach, signal, executionId, proposal);
+        return await spec.run(
+          call,
+          reach,
+          signal,
+          executionId,
+          proposal,
+          direct === 'shell' ? undefined : direct,
+        );
       }),
   };
 }
@@ -330,7 +358,7 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
       writes: true,
       reach: (input) =>
         Promise.resolve({ tool: 'shell', command: input.command }),
-      run: (input, _reach, signal, id) => {
+      run: (input, _reach, signal, id, _proposal, direct) => {
         session.showContent?.(id, [{ type: 'terminal', terminalId: id }]);
 
         const stream =
@@ -341,7 +369,15 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
             }
           });
 
-        return shell(directory, input, signal, id, stream);
+        return shell(
+          directory,
+          input,
+          signal,
+          id,
+          stream,
+          direct,
+          session.commandEnvironment,
+        );
       },
     }),
   ];

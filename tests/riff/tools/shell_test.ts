@@ -1,6 +1,15 @@
 import { describe, expect, test } from 'bun:test';
+import type { FxToolResult } from 'libfx/node';
+import { execFileSync } from 'node:child_process';
 import type { ToolCallUpdate } from '@agentclientprotocol/sdk/unstable';
-import { mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  mkdir,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -143,7 +152,7 @@ describe('riff shell execution', () => {
     }
   });
 
-  test('an exact session grant admits only that command in ask and auto', async () => {
+  test('exact grants persist across modes while auto independently admits direct commands', async () => {
     const root = await directory();
     const finder = openFinder(root);
     let asks = 0;
@@ -165,12 +174,14 @@ describe('riff shell execution', () => {
     try {
       await run('ls');
       await run('ls');
+      await expect(run('ls -la')).rejects.toThrow('denied');
 
       mode = 'auto';
 
       await run('ls');
-      await expect(run('ls -la')).rejects.toThrow('denied');
-      expect(asks).toBe(2);
+      await run('ls -la');
+      await expect(run('ls --color=always')).rejects.toThrow('denied');
+      expect(asks).toBe(3);
     } finally {
       await finder.destroy();
       await rm(root, { recursive: true, force: true });
@@ -304,6 +315,393 @@ describe('CHD-605 tester: shell cancellation boundaries', () => {
       await settled;
       await finder.destroy();
       await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+async function commandSession(
+  mode: 'auto' | 'ask' = 'auto',
+  grants = new Set<string>(),
+) {
+  const root = await directory();
+  const home = join(root, 'fixture-home');
+
+  await mkdir(home);
+
+  const startup = join(home, 'bashenv');
+  const bin = join(home, 'bin');
+
+  await mkdir(bin);
+  await writeFile(
+    join(bin, 'node'),
+    '#!/bin/sh\nprintf "fixture-node-version\\n"\n',
+    { mode: 0o755 },
+  );
+
+  await writeFile(startup, '');
+
+  const environment = {
+    HOME: home,
+    XDG_CONFIG_HOME: home,
+    GIT_CONFIG_NOSYSTEM: '1',
+    SHELL: '/bin/bash',
+    BASH_ENV: startup,
+    PATH: `${bin}:/usr/bin:/bin`,
+    CHORD_RESOURCE_FIXTURE: 'true',
+  };
+  const finder = openFinder(root);
+  const updates: ToolCallUpdate[] = [];
+  const counts = { ask: 0, review: 0, begin: 0 };
+  const tools = riffTools({
+    directory: root,
+    finder,
+    grants,
+    commandEnvironment: environment,
+    mode: () => mode,
+    begin: () => {
+      counts.begin++;
+    },
+    stream: () => (update) => {
+      updates.push(update);
+    },
+    review: () => {
+      counts.review++;
+
+      return Promise.resolve({ outcome: 'clear' });
+    },
+    ask: () => {
+      counts.ask++;
+
+      return Promise.resolve(DENY);
+    },
+  });
+  const tool = tools.find((tool) => tool.name === 'shell')!;
+
+  return {
+    root,
+    environment,
+    updates,
+    counts,
+    git: (...args: string[]) =>
+      execFileSync('/usr/bin/git', args, {
+        cwd: root,
+        env: environment,
+        stdio: 'pipe',
+      }),
+    run: (command: string) =>
+      tool.execute(
+        { command },
+        { signal: live(), executionId: 'admission', sessionId: 'fixture' },
+      ) as Promise<FxToolResult>,
+    close: async () => {
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    },
+  };
+}
+
+describe('CHD-609 command admission and terminal streaming', () => {
+  test('auto direct pipeline streams terminal output without review or permission', async () => {
+    const s = await commandSession();
+
+    try {
+      const result = await s.run("printf '%s' 'direct output' | wc -c");
+
+      expect(result.isError).toBe(false);
+      expect(result.text).toContain('13');
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+      expect(
+        s.updates.some((u) =>
+          meta(u, 'terminal_output_delta')?.data?.includes('13'),
+        ),
+      ).toBe(true);
+      expect(meta(s.updates.at(-1)!, 'terminal_exit')?.exit_code).toBe(0);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('ask mode still asks for an ungranted direct command', async () => {
+    const s = await commandSession('ask');
+
+    try {
+      await expect(s.run('printf x')).rejects.toThrow('denied');
+      expect(s.counts).toEqual({ ask: 1, review: 0, begin: 0 });
+      expect(s.updates).toEqual([]);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('exact grants precede both direct planning and review', async () => {
+    const command = 'printf granted > granted.txt';
+    const s = await commandSession('auto', new Set([`shell:${command}`]));
+
+    try {
+      expect((await s.run(command)).isError).toBe(false);
+      expect(await readFile(join(s.root, 'granted.txt'), 'utf8')).toBe(
+        'granted',
+      );
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('reversible commands run after a fresh captured-name check', async () => {
+    const s = await commandSession();
+
+    try {
+      expect((await s.run('node --version')).isError).toBe(false);
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('commands outside both lists still use the existing review', async () => {
+    const s = await commandSession();
+
+    try {
+      const result = await s.run('printf reviewed; pwd');
+
+      expect(result.text).toContain('reviewed');
+      expect(s.counts).toEqual({ ask: 0, review: 1, begin: 1 });
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('admitted git stage uses the safe invocation without review', async () => {
+    const s = await commandSession();
+
+    try {
+      s.git('init', '-q');
+
+      const result = await s.run('git status --short | wc -l');
+
+      expect(result.isError).toBe(false);
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+      expect(meta(s.updates.at(-1)!, 'terminal_exit')?.exit_code).toBe(0);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test.each(['git status', 'git status --ignored'])(
+    'safe_git refusal holds before any fallback: %s',
+    async (command) => {
+      const s = await commandSession();
+
+      try {
+        s.git('init', '-q');
+        s.git('config', 'filter.a=b.clean', 'malicious');
+        await expect(s.run(command)).rejects.toThrow(
+          'chord did not run this git command',
+        );
+        expect(s.counts).toEqual({ ask: 0, review: 0, begin: 0 });
+        expect(s.updates).toEqual([]);
+      } finally {
+        await s.close();
+      }
+    },
+  );
+});
+
+describe('CHD-609 reversible alias gate integration', () => {
+  test('captured alias in any word falls back to review; the next call captures again', async () => {
+    const s = await commandSession();
+
+    try {
+      await writeFile(s.environment.BASH_ENV, "alias node='false'\n");
+      expect((await s.run('node --version')).isError).toBe(false);
+      expect(s.counts.review).toBe(1);
+      await writeFile(s.environment.BASH_ENV, '');
+      expect((await s.run('node --version')).isError).toBe(false);
+      expect(s.counts.review).toBe(1);
+      expect(s.counts.begin).toBe(2);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('unknown shell falls back to review', async () => {
+    const s = await commandSession();
+
+    try {
+      s.environment.SHELL = '/bin/sh';
+
+      expect((await s.run('node --version')).isError).toBe(false);
+      expect(s.counts.review).toBe(1);
+    } finally {
+      await s.close();
+    }
+  });
+});
+
+test('CHD-609 actual reviewed shell execution uses only fixture startup and environment', async () => {
+  const s = await commandSession();
+
+  try {
+    await writeFile(
+      s.environment.BASH_ENV,
+      'export CHORD_FIXTURE_VALUE=fixture-shell\n',
+    );
+
+    const result = await s.run('printf %s "$CHORD_FIXTURE_VALUE"');
+
+    expect(result.text).toContain('fixture-shell');
+    expect(result.isError).toBe(false);
+    expect(s.counts).toEqual({ ask: 0, review: 1, begin: 1 });
+  } finally {
+    await s.close();
+  }
+});
+
+describe('CHD-609 tester: direct admission lifecycle', () => {
+  test('a direct command failure returns its real exit without review fallback', async () => {
+    const s = await commandSession();
+
+    try {
+      const result = await s.run('ls -- no-such-fixture-entry');
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain('no-such-fixture-entry');
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+      expect(
+        meta(s.updates.at(-1)!, 'terminal_exit')?.exit_code,
+      ).toBeGreaterThan(0);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('unsafe git in a later stage holds the entire pipeline before streaming', async () => {
+    const s = await commandSession();
+
+    try {
+      s.git('init', '-q');
+      s.git('config', 'filter.a=b.clean', 'unused');
+      await expect(
+        s.run("printf '%s' 'must-not-stream' | git status"),
+      ).rejects.toThrow('chord did not run this git command');
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 0 });
+      expect(s.updates).toEqual([]);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('an exact shell grant remains authoritative when safe git would refuse', async () => {
+    const command = 'git status --ignored';
+    const s = await commandSession('auto', new Set([`shell:${command}`]));
+
+    try {
+      s.git('init', '-q');
+      s.git('config', 'filter.a=b.clean', 'unused');
+
+      const result = await s.run(command);
+
+      expect(result.isError).toBe(false);
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+      expect(meta(s.updates.at(-1)!, 'terminal_exit')?.exit_code).toBe(0);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('cancellation at begin cannot start an admitted direct command', async () => {
+    const root = await directory();
+    const home = join(root, 'home');
+
+    await mkdir(home);
+
+    const finder = openFinder(root);
+    const controller = new AbortController();
+    const reason = new Error('cancel before direct launch');
+    const updates: ToolCallUpdate[] = [];
+    const counts = { begin: 0, review: 0, ask: 0 };
+    const grants = new Set<string>();
+    const tools = riffTools({
+      directory: root,
+      finder,
+      grants,
+      commandEnvironment: {
+        HOME: home,
+        XDG_CONFIG_HOME: home,
+        GIT_CONFIG_NOSYSTEM: '1',
+        SHELL: '/bin/sh',
+        CHORD_RESOURCE_FIXTURE: 'true',
+      },
+      mode: () => 'auto',
+      begin: () => {
+        counts.begin++;
+        controller.abort(reason);
+      },
+      stream: () => (update) => {
+        updates.push(update);
+      },
+      review: () => {
+        counts.review++;
+
+        return Promise.resolve({ outcome: 'clear' });
+      },
+      ask: () => {
+        counts.ask++;
+
+        return Promise.resolve(DENY);
+      },
+    });
+    const tool = tools.find((tool) => tool.name === 'shell')!;
+
+    try {
+      await expect(
+        tool.execute(
+          { command: "printf '%s' 'never-launched'" },
+          {
+            signal: controller.signal,
+            executionId: 'cancel-direct',
+            sessionId: 'fixture',
+          },
+        ),
+      ).rejects.toBe(reason);
+      expect(counts).toEqual({ begin: 1, review: 0, ask: 0 });
+      expect(updates).toEqual([]);
+      expect(grants.size).toBe(0);
+    } finally {
+      controller.abort();
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('CHD-609 tester: reversible shell startup', () => {
+  test('a zsh startup alias named by a reversible command requires review before execution', async () => {
+    const s = await commandSession();
+    const startup = join(s.environment.HOME, '.zshenv');
+
+    Object.assign(s.environment, {
+      SHELL: '/bin/zsh',
+      ZDOTDIR: s.environment.HOME,
+    });
+
+    try {
+      await writeFile(startup, "alias node='printf alias-node'\n");
+
+      const held = await s.run('node --version');
+
+      expect(held.isError).toBe(false);
+      expect(held.text).toContain('alias-node');
+      expect(s.counts).toEqual({ ask: 0, review: 1, begin: 1 });
+      await writeFile(startup, '');
+
+      const fresh = await s.run('node --version');
+
+      expect(fresh.text).toContain('fixture-node-version');
+      expect(s.counts).toEqual({ ask: 0, review: 1, begin: 2 });
+    } finally {
+      await s.close();
     }
   });
 });

@@ -1,0 +1,40 @@
+
+ › call shell {"command": "bun run stream"}
+
+ ⏺ Bash(bun run stream)
+   ⎿  Fixture stream 6/8
+      Fixture stream 7/8
+      Fixture stream 8/8
+      … +6 lines (ctrl+o to expand)
+
+ ⏺ $ bun stream.ts Fixture stream 1/8 Fixture stream 2/8 Fixture stream 3/8 Fixture stream 4/8 Fixture stream 5/8
+   Fixture stream 6/8 Fixture stream 7/8 Fixture stream 8/8
+
+   Exit code 0
+
+ › call shell {"command": "bun run stream"}
+
+ ⏺ Bash(bun run stream)
+   ⎿  Reviewed: caution
+      Error: The person denied this call.
+      Action held after safety review. Use the review advice to choose a materially different safe action, or explain
+      why no safe path remains.
+      Fixture safety review: caution.
+   ⎿  Rejected Bash bun run stream
+
+ ⏺ The person denied this call. Action held after safety review. Use the review advice to choose a materially different
+   safe action, or explain why no safe path remains. Fixture safety review: caution.
+
+ › call shell {"command": "bun run stream"}
+
+ ⏺ Bash(bun run stream)
+   ⎿  $ bun stream.ts
+      Fixture stream 1/8
+      Fixture stream 2/8
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

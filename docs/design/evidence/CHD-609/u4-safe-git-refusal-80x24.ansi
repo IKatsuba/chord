@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mmaterially different safe action, or explain why no safe path remains.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mFixture safety review: caution.[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mRejected Bash printf reviewed; pwd[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mThe person denied this call. Action held after safety review. Use the review[38;2;255;255;255m
+   [39madvice to choose a materially different safe action, or explain why no safe [38;2;255;255;255m
+   [39mpath remains. Fixture safety review: caution.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcall shell {"command": "git status --ignored"}[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mBash[0m(git status --ignored)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mError: chord did not run this git command. It could not run git here[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mwith every program this repository config names turned off, and plain[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mgit could start them. Inspect files with read, list or search, or as[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mchord did not run this git command. It could not run git here with every [38;2;255;255;255m
+   [39mprogram this repository config names turned off, and plain git could start [38;2;255;255;255m
+   [39mthem. Inspect files with read, list or search, or ask the person to run git [38;2;255;255;255m
+   [39mthemselves.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;215;0m⏵⏵ auto mode on[39m [2m(shift+tab to cycle)[0m[38;2;255;255;255m                [2m[39mfake · default · 1% used[0m[38;2;255;255;255m

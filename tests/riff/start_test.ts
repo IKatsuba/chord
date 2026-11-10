@@ -20,9 +20,9 @@ describe('riff started by name', () => {
     expect(env).toStrictEqual({});
   });
 
-  test('is not listed until it can sign in', () => {
-    expect(findAgent('riff')).toBeUndefined();
-    expect(listAgents().some(({ name }) => name === 'riff')).toBe(false);
+  test('is listed first without a fake provider now that it can sign in', () => {
+    expect(findAgent('riff', {})?.runner).toBe('builtin');
+    expect(listAgents({})[0]?.name).toBe('riff');
   });
 
   test("--riff-agent answers initialize with the design's answer", async () => {

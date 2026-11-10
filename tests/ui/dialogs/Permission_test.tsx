@@ -967,3 +967,20 @@ describe('CHD-605 shared permission diffs', () => {
     });
   }
 });
+
+test('the multidiffask fake scenario shows both proposed files and accepts a choice', () =>
+  withWindow(async (window) => {
+    await send(window, 'multidiffask');
+    await asked(window);
+
+    const frame = window.frame();
+
+    expect(frame).toContain('Update files');
+    expect(frame).toContain('src/first.ts');
+    expect(frame).toContain('src/second.ts');
+    expect(frame).toMatch(/1 - old value/);
+    expect(frame).toMatch(/1 \+ new value/);
+    expect(frame).toMatch(/1 \+ created value/);
+    await window.press('1');
+    await window.shows('Permission: allow.');
+  }));

@@ -68,15 +68,18 @@ async function askMcp(
 async function askPermission(
   turn: Turn,
   options: acp.PermissionOption[],
-  { untilSteered = false }: { readonly untilSteered?: boolean } = {},
+  {
+    untilSteered = false,
+    multiple = false,
+  }: { readonly untilSteered?: boolean; readonly multiple?: boolean } = {},
 ): Promise<acp.StopReason> {
   const id = turn.callId('write');
   const toolCall: acp.ToolCall = {
     toolCallId: id,
-    title: 'Write notes.txt',
+    title: multiple ? 'Update files' : 'Write notes.txt',
     kind: 'edit',
     status: 'pending',
-    locations: [{ path: 'notes.txt' }],
+    locations: multiple ? [] : [{ path: 'notes.txt' }],
   };
 
   await turn.send({ sessionUpdate: 'tool_call', ...toolCall });
@@ -87,8 +90,25 @@ async function askPermission(
     sessionId: turn.sessionId,
     toolCall: {
       ...toolCall,
-      content: [{ type: 'diff', path: 'notes.txt', newText: 'notes\n' }],
-      rawInput: { file_path: 'notes.txt', content: 'notes\n' },
+      content: multiple
+        ? [
+            {
+              type: 'diff',
+              path: 'src/first.ts',
+              oldText: 'old value\n',
+              newText: 'new value\n',
+            },
+            {
+              type: 'diff',
+              path: 'src/second.ts',
+              oldText: null,
+              newText: 'created value\n',
+            },
+          ]
+        : [{ type: 'diff', path: 'notes.txt', newText: 'notes\n' }],
+      ...(multiple
+        ? {}
+        : { rawInput: { file_path: 'notes.txt', content: 'notes\n' } }),
     },
     options,
   });
@@ -228,6 +248,17 @@ export const PERMISSIONS = {
       { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
     ]);
   },
+
+  multidiffask: (turn) =>
+    askPermission(
+      turn,
+      [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        { optionId: 'always', name: 'Always allow', kind: 'allow_always' },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+      { multiple: true },
+    ),
 
   // A request carrying metadata of its own and on its call, as an adapter's may.
   async permissionmeta(turn) {

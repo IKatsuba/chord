@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
+import type { Session, Turn } from '../../../src/session/session.ts';
 import {
   memorySecrets,
   SecretStoreUnavailable,
@@ -9,7 +11,7 @@ import {
   fixtureSignIn,
   fixtureSignOut,
 } from '../../../src/riff/sign_in_fixture.ts';
-import { ESC, ready, send, until, withWindow } from '../app/render.tsx';
+import { CTRL_D, ESC, ready, send, until, withWindow } from '../app/render.tsx';
 import { credentialSave } from '../../../src/riff/sign_in_run.ts';
 import { serveChord } from '../../../src/server/server.ts';
 import type { WindowedState } from '../../../src/ui/app/state.ts';
@@ -17,6 +19,269 @@ import type { Caller } from '../../../src/server/tools.ts';
 import { planCredential } from '../../../src/riff/qa_provider.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import type { CredentialNotice } from '../../../src/session/credentials.ts';
+
+describe('tester: riff window lifecycle boundaries', () => {
+  test.each(['close', 'clear'] as const)(
+    '%s of a signing-in child preserves its sibling session and live agent',
+    async (action) => {
+      const server = serveChord();
+      const admit = server.admit.bind(server);
+      const opened: Session[] = [];
+      const gate = Promise.withResolvers<void>();
+      const finished = Promise.withResolvers<void>();
+      const store = memorySecrets();
+      let main: Caller | undefined;
+      let signal: AbortSignal | undefined;
+
+      server.admit = (caller) => {
+        if (caller.role === 'person') {
+          main = caller;
+        }
+
+        return admit(caller);
+      };
+
+      try {
+        await withWindow(
+          async (window) => {
+            await ready(window);
+            await send(window, '/new fake');
+            await window.shows('╭─ fake ');
+            await until('sibling connected', () => opened.length === 2);
+
+            const sibling = opened[1];
+
+            assert(sibling !== undefined);
+
+            const id = sibling.id;
+
+            await send(window, '/new riff');
+            await window.shows('Sign in to riff');
+            await window.press('1');
+            await window.press('2');
+            await until('OAuth attempt entered', () => signal !== undefined);
+            assert(main !== undefined);
+
+            if (action === 'close') {
+              expect(main.window.close(main, 'riff')).not.toHaveProperty(
+                'error',
+              );
+            } else {
+              await main.window.clear(main, 'riff');
+            }
+
+            expect(signal?.aborted).toBe(true);
+            gate.resolve();
+            await finished.promise;
+            expect(opened).toHaveLength(2);
+            expect(opened[1]).toBe(sibling);
+            expect(sibling.id).toBe(id);
+            expect(sibling.agentPids.size).toBeGreaterThan(0);
+            expect((await sibling.prompt('hello').result).status).toBe(
+              'completed',
+            );
+            expect(opened[0]?.agentPids.size).toBeGreaterThan(0);
+            expect(await store.get('codex')).toBeNull();
+            expect(window.frame()).not.toContain('Signed in to ChatGPT');
+          },
+          {
+            agent: 'fake',
+            columns: 120,
+            rows: 40,
+            server,
+            runtimes: ['fake', 'riff'],
+            startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+            riffAccess: {
+              store,
+              fetch: fixtureSignOut(store),
+              run: async (options) => {
+                signal = options.signal;
+
+                try {
+                  await gate.promise;
+
+                  const save = credentialSave(options, planCredential('codex'));
+
+                  await save.retry(options.attempt, options.signal);
+                  options.emit(options.attempt, {
+                    kind: 'success',
+                    provider: 'codex',
+                    way: 'code',
+                    store: store.name,
+                  });
+                } finally {
+                  finished.resolve();
+                }
+              },
+            },
+            openWith: async (options) => {
+              if (options.agent === 'riff') {
+                throw new SignInNeeded({
+                  message: 'fixture sign-in required',
+                  ways: [],
+                });
+              }
+
+              const session = await openSession(options);
+
+              opened.push(session);
+
+              return session;
+            },
+          },
+        );
+      } finally {
+        gate.resolve();
+        await server.close();
+      }
+    },
+  );
+
+  test('logout cancels real running turns in riff and its child before ending the session', async () => {
+    const server = serveChord();
+    const admit = server.admit.bind(server);
+    const turns: Turn[] = [];
+    const store = memorySecrets({
+      codex: JSON.stringify(planCredential('codex')),
+    });
+    let main: Caller | undefined;
+
+    server.admit = (caller) => {
+      if (caller.role === 'person') {
+        main = caller;
+      }
+
+      return admit(caller);
+    };
+
+    try {
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'slow');
+          await window.shows('esc to interrupt');
+          assert(main !== undefined);
+          expect(
+            await main.window.open(
+              main.key,
+              {
+                agent: 'fake',
+                name: 'worker',
+                prompt: 'slow',
+              },
+              main,
+            ),
+          ).not.toHaveProperty('error');
+          await until('both real turns are running', () => turns.length === 2);
+          await send(window, '/logout');
+          await window.shows('Sign out of ChatGPT?');
+          await window.press('1');
+          await window.shows('Signed out of ChatGPT.');
+          expect(
+            (await Promise.all(turns.map((turn) => turn.result))).map(
+              (result) => result.status,
+            ),
+          ).toEqual(['cancelled', 'cancelled']);
+          expect(await store.get('codex')).toBeNull();
+        },
+        {
+          agent: 'riff',
+          columns: 120,
+          rows: 40,
+          server,
+          runtimes: ['riff', 'fake'],
+          startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+          riffAccess: { store, fetch: fixtureSignOut(store) },
+          openWith: async (options) => {
+            const session = await openSession(options);
+
+            return {
+              ...session,
+              ...(options.agent === 'riff'
+                ? { riffProvider: 'codex' as const }
+                : {}),
+              prompt: (...args) => {
+                const turn = session.prompt(...args);
+
+                turns.push(turn);
+
+                return turn;
+              },
+            };
+          },
+        },
+      );
+    } finally {
+      await server.close();
+    }
+  });
+
+  test('quit aborts a delayed sign-in and its late success cannot save or reopen', async () => {
+    const store = memorySecrets();
+    const gate = Promise.withResolvers<void>();
+    const finished = Promise.withResolvers<void>();
+    let signal: AbortSignal | undefined;
+    let opens = 0;
+
+    try {
+      await withWindow(
+        async (window) => {
+          await window.shows('Sign in to riff');
+          await window.press('1');
+          await window.press('2');
+          await until('the attempt started', () => signal !== undefined);
+          await window.press(CTRL_D);
+          await until('quit aborts OAuth', () => signal?.aborted === true);
+          gate.resolve();
+          await finished.promise;
+          expect(opens).toBe(1);
+          expect(await store.get('codex')).toBeNull();
+        },
+        {
+          agent: 'riff',
+          columns: 80,
+          rows: 24,
+          whileStarting: true,
+          riffAccess: {
+            store,
+            fetch: fixtureSignOut(store),
+            run: async (options) => {
+              signal = options.signal;
+
+              try {
+                await gate.promise;
+
+                const save = credentialSave(options, planCredential('codex'));
+
+                await save.retry(options.attempt, options.signal);
+                options.emit(options.attempt, {
+                  kind: 'success',
+                  provider: 'codex',
+                  way: 'code',
+                  store: store.name,
+                });
+              } finally {
+                finished.resolve();
+              }
+            },
+          },
+          openWith: () => {
+            opens++;
+
+            return Promise.reject(
+              new SignInNeeded({
+                message: 'fixture sign-in required',
+                ways: [],
+              }),
+            );
+          },
+        },
+      );
+    } finally {
+      gate.resolve();
+    }
+  });
+});
 
 describe('riff sign-in in the window', () => {
   test('G can retry the new account while browser cleanup still holds the driver', async () => {

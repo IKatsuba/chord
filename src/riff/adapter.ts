@@ -279,7 +279,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         error instanceof SecretStoreUnavailable ||
         error instanceof SecretStoreTimeout
       ) {
-        throw RequestError.internalError(undefined, error.message);
+        throw new RequestError(-32603, error.message);
       }
 
       throw error;

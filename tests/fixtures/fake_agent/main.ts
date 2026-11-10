@@ -341,6 +341,7 @@ import { SETTINGS } from './scenarios/settings.ts';
 import { proposing, teamParts, TEAMS } from './scenarios/teams.ts';
 import { TEXT } from './scenarios/text.ts';
 import { TOOLS } from './scenarios/tools.ts';
+import { CREDENTIALS } from './scenarios/credentials.ts';
 import {
   AVAILABLE_EFFORTS,
   AVAILABLE_MODELS,
@@ -371,6 +372,10 @@ import {
 } from './turn.ts';
 
 const SCENARIOS = [
+  'credentialsunsaved',
+  'credentialssaved',
+  'credentialssignedout',
+  'credentialsaccountchanged',
   'fxerror',
   'resources',
   'selectedteam',
@@ -689,6 +694,7 @@ function promptText(prompt: acp.ContentBlock[]): string {
 
 /** Every scenario, each family's from its module under `scenarios/`. */
 const PLAY: Record<Scenario, Play> = {
+  ...CREDENTIALS,
   ...TEXT,
   ...TOOLS,
   ...GUARDIAN,

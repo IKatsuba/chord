@@ -22,6 +22,7 @@ const NOT_ACTIONS: Record<
   commands: true,
   connect_failed: true,
   connected: true,
+  credentials: true,
   mode_answered: true,
   mode_asked: true,
   model: true,

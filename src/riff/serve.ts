@@ -8,10 +8,9 @@ import process from 'node:process';
 import { Readable } from 'node:stream';
 import { outputStream } from '../acp/stdio.ts';
 import { libfxBackend } from '../platform/libfx.ts';
-import { memorySecrets, systemSecrets } from '../platform/secrets.ts';
 import { chordStateDir } from '../session/state_dir.ts';
 import { connectRiff } from './adapter.ts';
-import { fakeProvider } from './start.ts';
+import { riffAccess } from './qa.ts';
 
 /**
  * `wasm` turns libfx's native addon off. Only tests and selftest set it,
@@ -27,19 +26,11 @@ export function riffBackend(
   return env[BACKEND_ENV] === 'wasm' ? { ...base, nativeAddon: false } : base;
 }
 
-export async function runRiffAgent(version: string): Promise<void> {
-  const provider = fakeProvider(process.env);
-  const secrets = provider === undefined ? systemSecrets() : memorySecrets();
-
-  try {
-    await secrets.get('codex');
-    await secrets.get('grok');
-  } catch (error) {
-    process.stderr.write(
-      `riff: ${error instanceof Error ? error.message : 'The credential store did not answer.'}\n`,
-    );
-    process.exit(1);
-  }
+export async function runRiffAgent(
+  version: string,
+  access = riffAccess(process.env),
+): Promise<void> {
+  const { provider, secrets } = access;
 
   const backend = riffBackend(await libfxBackend(), process.env);
 
@@ -67,7 +58,7 @@ export async function runRiffAgent(version: string): Promise<void> {
       version,
       provider,
       secrets,
-      fetch: globalThis.fetch,
+      fetch: access.fetch,
       backend,
       stateDir: chordStateDir(),
     },

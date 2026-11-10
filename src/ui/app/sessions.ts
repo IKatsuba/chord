@@ -71,6 +71,7 @@ import { heldContext } from '../prompt/state.ts';
 import { vimReset } from '../prompt/vim.ts';
 import { hintKey } from '../shortcuts/bindings.ts';
 import { betweenNotice, waitsNotice } from '../status/status.ts';
+import { credentialWords } from '../status/credentials.ts';
 import { askedPermission } from '../dialogs/permission.ts';
 import { heldBack } from '../dialogs/state.ts';
 import {
@@ -214,6 +215,12 @@ export function useSessions(
   };
 
   const heard = (key: number, event: ConversationEvent, wait?: Wait) => {
+    if (event.type === 'credentials') {
+      dispatch({ type: 'sessions_noted', message: credentialWords(event) });
+
+      return;
+    }
+
     if (retiredHeard(key, event)) {
       return;
     }

@@ -37,7 +37,9 @@ export class SecretStoreUnavailable extends Error {
     const missing =
       store === 'Secret Service'
         ? 'no Secret Service (gnome-keyring or KeePassXC). Start one and try again.'
-        : `no ${store}. Enable or unlock ${store} and try again.`;
+        : store === 'macOS Keychain'
+          ? 'no macOS Keychain. Unlock the login keychain in Keychain Access and try again.'
+          : 'no Windows Credential Manager. Enable the Credential Manager service and try again.';
 
     super(
       `chord keeps your sign-in in the system's credential store, and none answered: ${missing}`,

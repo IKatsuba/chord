@@ -89,8 +89,10 @@ export async function chordOnRiff(
   args: readonly string[],
   run: RunServing = spawnServing,
   serve: () => Promise<FakeProvider> = serveFakeProvider,
+  qa = false,
 ): Promise<number> {
   const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
+  const { QA_ENV } = await import('../../src/riff/qa.ts');
   const provider = await serve();
 
   try {
@@ -105,7 +107,7 @@ export async function chordOnRiff(
         'riff',
         ...args,
       ],
-      { [FAKE_PROVIDER_ENV]: provider.url },
+      { [FAKE_PROVIDER_ENV]: provider.url, [QA_ENV]: qa ? '1' : '' },
     );
   } finally {
     await provider.stop();
@@ -134,11 +136,13 @@ export async function chordWithRiff(
   serve: () => Promise<FakeProvider> = serveFakeProvider,
 ): Promise<number> {
   const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
+  const { QA_ENV } = await import('../../src/riff/qa.ts');
   const provider = await serve();
 
   try {
     return await run(chordArgv(fake, args, fixtureResources), {
       [FAKE_PROVIDER_ENV]: provider.url,
+      [QA_ENV]: fixtureResources ? '1' : '',
     });
   } finally {
     await provider.stop();

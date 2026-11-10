@@ -456,9 +456,11 @@ describe('riff plans on an injected fetch', () => {
     );
     const next = await open('codex', fixture, unavailable);
 
-    expect((await start(next.client)).error?.message).toContain(
-      'no Secret Service (gnome-keyring or KeePassXC). Start one and try again.',
-    );
+    expect((await start(next.client)).error).toMatchObject({
+      code: -32603,
+      message:
+        "chord keeps your sign-in in the system's credential store, and none answered: no Secret Service (gnome-keyring or KeePassXC). Start one and try again.",
+    });
     expect(fixture.urls).toEqual([]);
   });
 });

@@ -46,7 +46,7 @@ export interface DevActions {
    * chord on riff and its fake provider, `args` chord's after the agent:
    * `bun dev chord --fake riff`.
    */
-  riff(args: readonly string[]): void | Promise<void>;
+  riff(args: readonly string[], qa?: boolean): void | Promise<void>;
   /** Makes `dir`, a capture's directory for `chord --qa`, afresh. */
   qa(dir: string): void | Promise<void>;
   test(args: readonly string[]): void | Promise<void>;
@@ -102,8 +102,10 @@ const RUN: DevActions = {
         ? await tools.chordWithRiff(fake, args, fixtureResources)
         : tools.chord(fake, args, undefined, fixtureResources);
   },
-  riff: async (args) => {
-    process.exitCode = await (await import('./dev/tools.ts')).chordOnRiff(args);
+  riff: async (args, qa) => {
+    process.exitCode = await (
+      await import('./dev/tools.ts')
+    ).chordOnRiff(args, undefined, undefined, qa);
   },
   qa: async (dir) => (await import('./dev/tools.ts')).qaPlace(dir),
   test: async (args) => {
@@ -183,7 +185,7 @@ export function devCommand(actions: DevActions = RUN) {
             await actions.qa(dir);
 
             return riff
-              ? actions.riff(['-C', dir, ...given.slice(1)])
+              ? actions.riff(['-C', dir, ...given.slice(1)], true)
               : actions.chord(fake, ['-C', dir, ...given], true);
           }),
       )

@@ -2418,3 +2418,54 @@ describe('CHD-613 riff embedded resources', () => {
     }
   });
 });
+
+describe('CHD-613 tester: binary refusal boundaries', () => {
+  for (const mixed of [false, true]) {
+    test(`${mixed ? 'mixed resources' : 'a resource-only prompt'} with an empty blob is refused without retaining any context`, async () => {
+      await open();
+
+      const sessionId = await newSession();
+      const { error } = await client.request('session/prompt', {
+        sessionId,
+        prompt: [
+          ...(mixed
+            ? [
+                { type: 'text', text: 'REJECTED_MIXED_PROMPT' },
+                {
+                  type: 'resource',
+                  resource: {
+                    uri: 'custom:rejected-text',
+                    text: 'REJECTED_EMBEDDED_CONTEXT',
+                  },
+                },
+              ]
+            : []),
+          {
+            type: 'resource',
+            resource: { uri: 'custom:empty-blob', blob: '', mimeType: null },
+          },
+        ],
+      });
+
+      expect(error).toMatchObject({
+        code: -32602,
+        message: expect.stringContaining('riff takes no binary resources'),
+      });
+      expect(fake.requests).toHaveLength(0);
+      expect((await prompt(sessionId, 'ordinary valid prompt')).error).toBe(
+        undefined,
+      );
+      expect(fake.requests).toHaveLength(1);
+
+      const sent = JSON.stringify(fake.requests[0]?.messages);
+
+      for (const marker of [
+        'REJECTED_MIXED_PROMPT',
+        'REJECTED_EMBEDDED_CONTEXT',
+        'custom:empty-blob',
+      ]) {
+        expect(sent).not.toContain(marker);
+      }
+    });
+  }
+});

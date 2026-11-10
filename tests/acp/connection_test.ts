@@ -21,6 +21,33 @@ import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { TRACEBACK_ERROR } from '../fixtures/fake_agent/options.ts';
 import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 
+describe('CHD-613 tester: fake capability environment', () => {
+  for (const value of ['1', '0', 'true', '']) {
+    test(`embedded context environment ${JSON.stringify(value)} is scoped to its process`, async () => {
+      const cwd = await mkdtemp(join(tmpdir(), 'chord-embedded-fixture-'));
+      const agent = await openAgent({
+        command: fakeAgentCommand(),
+        cwd,
+        env: { CHORD_FAKE_EMBEDDED_CONTEXT: value },
+        onTraffic: () => {},
+        stop: STOP,
+        ...REFUSE,
+      });
+
+      try {
+        expect(
+          agent.init.agentCapabilities?.promptCapabilities?.embeddedContext,
+        ).toBe(value === '1');
+      } finally {
+        await agent.close();
+        await rm(cwd, { recursive: true });
+      }
+
+      expect(await isAlive(agent.pid)).toBe(false);
+    });
+  }
+});
+
 /** Short enough to keep a wedged agent's test quick, long enough to be real. */
 const STOP = { exitMs: 300, termMs: 300, killMs: 2000 } as const;
 

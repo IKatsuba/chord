@@ -1,0 +1,24 @@
+ ››› Waiting for the code… (0s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to ChatGPT with a code                                               │
+│                                                                              │
+│ Open the address, sign in, and enter the code.                               │
+│                                                                              │
+│   https://example.invalid/codex/code                                         │
+│                                                                              │
+│   WXYZ-1234                                                                  │
+│                                                                              │
+│ The code expires in 15 minutes. If OpenAI's page says device code sign-in is │
+│ off, turn it on in ChatGPT's security settings.                              │
+│                                                                              │
+│ ❯ 1. Open the address in the browser                                         │
+│   2. Copy the code                                                           │
+│   3. Copy the address                                                        │
+│                                                                              │
+│ Enter to choose · Esc to give up                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

@@ -29,16 +29,18 @@ export interface DirectInvocation {
 /** Owns every stage until output is drained and its leader has exited. */
 export function runDirect(
   stages: readonly DirectInvocation[],
-  options: Pick<ShellOptions, 'cwd' | 'onOutput'>,
+  options: Pick<ShellOptions, 'cwd' | 'onOutput' | 'reap'>,
 ): ShellProcess {
   const groups: GroupProcess[] = [];
   let stopping = false;
+  let finished = false;
+  let killedAt: number | undefined;
   let failure: string | undefined;
+  let cleanupTimedOut = false;
   let admitted = 0;
   let escalation: ReturnType<typeof setTimeout> | undefined;
-  let escalated: Promise<void> | undefined;
   const terminate = () => {
-    if (stopping) {
+    if (stopping || finished) {
       return;
     }
 
@@ -48,15 +50,13 @@ export function runDirect(
       group.signal('SIGTERM');
     }
 
-    escalated = new Promise((resolve) => {
-      escalation = setTimeout(() => {
-        for (const group of groups) {
-          group.signal('SIGKILL');
-        }
+    escalation = setTimeout(() => {
+      killedAt = performance.now();
 
-        resolve();
-      }, 800);
-    });
+      for (const group of groups) {
+        group.signal('SIGKILL');
+      }
+    }, 800);
   };
 
   const fail = (message: string) => {
@@ -104,6 +104,8 @@ export function runDirect(
 
   const ended = (async (): Promise<ShellEnd> => {
     if (stages.length === 0 || stages.length > 8) {
+      finished = true;
+
       return { error: 'Invalid direct plan' };
     }
 
@@ -182,9 +184,20 @@ export function runDirect(
 
       return { error: failure! };
     } finally {
-      if (stopping && groups.some((group) => group.alive())) {
-        // A descendant may survive its leader and hold no pipe open.
-        await escalated;
+      // A successful capture must also stop children detached from its pipes.
+      if (options.reap && groups.some((group) => group.alive())) {
+        terminate();
+      }
+
+      if (stopping) {
+        // Same bounded group-reaping contract as chord's shell runner; count
+        // from the actual KILL so event-loop load cannot shorten the grace.
+        while (
+          groups.some((group) => group.alive()) &&
+          (killedAt === undefined || performance.now() < killedAt + 5000)
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
       }
 
       await Promise.allSettled(groups.map((group) => group.exit));
@@ -192,8 +205,14 @@ export function runDirect(
       if (escalation !== undefined) {
         clearTimeout(escalation);
       }
+
+      finished = true;
+
+      cleanupTimedOut = stopping && groups.some((group) => group.alive());
     }
-  })();
+  })().then((end) =>
+    cleanupTimedOut ? { error: 'Direct process group cleanup timed out' } : end,
+  );
 
   return { stop: terminate, ended };
 }

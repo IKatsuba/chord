@@ -8,6 +8,7 @@ import {
   capturedNamesAllow,
   definesAnyWord,
   CAPTURE_TIMEOUT_MS,
+  parseCapturedNames,
 } from '../../../src/riff/commands/captured_names.ts';
 import { until } from '../../session/conversation_fake.ts';
 
@@ -251,4 +252,211 @@ test('already cancelled capture reads no startup file', async () => {
       environment: f.environment,
     }),
   ).rejects.toBe(reason);
+});
+
+for (const shell of ['bash', 'zsh'] as const) {
+  test(`${shell} startup text without a newline cannot hide a captured name`, async () => {
+    const f = await fixture(shell);
+
+    await writeFile(f.startup, 'alias node=false\nprintf prefix\n');
+    expect(
+      await capturedNamesAllow('node --version', {
+        cwd: f.root,
+        signal: live(),
+        environment: f.environment,
+      }),
+    ).toBe(false);
+  });
+
+  test(`${shell} redirected startup stdout cannot appear to be a complete capture`, async () => {
+    const f = await fixture(shell);
+
+    await writeFile(f.startup, 'alias node=false\nexec >/dev/null\n');
+    expect(
+      await capturedNamesAllow('node --version', {
+        cwd: f.root,
+        signal: live(),
+        environment: f.environment,
+      }),
+    ).toBe(false);
+  });
+
+  test(`${shell} startup chatter is outside the nonce-framed names`, async () => {
+    const f = await fixture(shell);
+
+    await writeFile(f.startup, 'printf prefix\nalias builtin=false\n');
+    expect(
+      await capturedNamesAllow('node --version', {
+        cwd: f.root,
+        signal: live(),
+        environment: f.environment,
+      }),
+    ).toBe(true);
+  });
+}
+
+test.each(['-g', '-s'])('zsh captures %s aliases as fx does', async (flag) => {
+  const f = await fixture('zsh');
+
+  await writeFile(f.startup, `alias ${flag} helper=false\n`);
+  expect(
+    await capturedNamesAllow('npm run helper', {
+      cwd: f.root,
+      signal: live(),
+      environment: f.environment,
+    }),
+  ).toBe(false);
+});
+
+test('nonce frames require completion and reject duplicate or trailing payload', () => {
+  const nonce = '0123456789abcdef';
+  const start = `FXSNAP:${nonce}:NAMES\0`;
+  const end = `\0FXSNAP:${nonce}:END\0`;
+  const valid = `${start}node\0helper\0${end}`;
+
+  expect([
+    ...parseCapturedNames('startup-without-newline' + valid, nonce)!,
+  ]).toEqual(['node', 'helper']);
+
+  for (const malformed of [
+    '',
+    start + 'node\0',
+    valid + 'trailing',
+    start + valid,
+    valid.replaceAll(nonce, 'another-nonce'),
+  ]) {
+    expect(parseCapturedNames(malformed, nonce)).toBeUndefined();
+  }
+});
+
+test('successful capture reaps a startup background child with detached stdio', async () => {
+  const f = await fixture('bash');
+  const pidFile = join(f.root, 'child');
+  const readyFile = join(f.root, 'ready');
+
+  await writeFile(
+    f.startup,
+    `/bin/sh -c 'trap "" TERM; printf ready > "$CHORD_CAPTURE_READY"; exec /bin/sleep 60' </dev/null >/dev/null 2>&1 &
+printf "%s" "$!" > "$CHORD_CAPTURE_PID"
+while ! test -e "$CHORD_CAPTURE_READY"; do /bin/sleep 0.01; done
+`,
+  );
+
+  const controller = new AbortController();
+  const job = capturedNamesAllow('npm test', {
+    cwd: f.root,
+    signal: controller.signal,
+    environment: {
+      ...f.environment,
+      CHORD_CAPTURE_PID: pidFile,
+      CHORD_CAPTURE_READY: readyFile,
+    },
+  });
+  let pid = 0;
+
+  try {
+    const started = performance.now();
+
+    expect(await job).toBe(true);
+
+    pid = Number(await readFile(pidFile, 'utf8'));
+
+    expect(pid).toBeGreaterThan(0);
+    expect(() => process.kill(pid, 0)).toThrow();
+    expect(performance.now() - started).toBeGreaterThanOrEqual(700);
+  } finally {
+    controller.abort();
+    await Promise.allSettled([job]);
+
+    if (pid === 0) {
+      pid = Number(await readFile(pidFile, 'utf8').catch(() => '0'));
+    }
+
+    if (pid > 0) {
+      try {
+        process.kill(pid, 'SIGKILL');
+      } catch {
+        /* Already reaped. */
+      }
+    }
+  }
+});
+
+for (const shell of ['bash', 'zsh'] as const) {
+  test.each([':', 'e'])(
+    `${shell} custom IFS %s cannot split or merge captured names`,
+    async (ifs) => {
+      const f = await fixture(shell);
+
+      await writeFile(
+        f.startup,
+        `alias helper=false\nalias node=false\nIFS=${ifs}\n`,
+      );
+      expect(
+        await capturedNamesAllow('node --version', {
+          cwd: f.root,
+          signal: live(),
+          environment: f.environment,
+        }),
+      ).toBe(false);
+    },
+  );
+}
+
+test('ambiguous captured names defer to review', () => {
+  const nonce = '0123456789abcdef';
+
+  for (const name of ['helper\nnode', 'he lper', 'he;lper']) {
+    expect(
+      parseCapturedNames(
+        `FXSNAP:${nonce}:NAMES\0${name}\0\0FXSNAP:${nonce}:END\0`,
+        nonce,
+      ),
+    ).toBeUndefined();
+  }
+});
+
+test('bash capture does not let glob options hide other names', async () => {
+  const f = await fixture('bash');
+
+  await writeFile(
+    f.startup,
+    "alias node=false\nalias '*missingglob*'=false\nshopt -s failglob\n",
+  );
+  expect(
+    await capturedNamesAllow('node --version', {
+      cwd: f.root,
+      signal: live(),
+      environment: f.environment,
+    }),
+  ).toBe(false);
+});
+
+test('bash capture establishes its required compgen builtin', async () => {
+  const f = await fixture('bash');
+
+  await writeFile(f.startup, 'alias node=false\nenable -n compgen\n');
+  expect(
+    await capturedNamesAllow('node --version', {
+      cwd: f.root,
+      signal: live(),
+      environment: f.environment,
+    }),
+  ).toBe(false);
+});
+
+test('zsh global aliases cannot replace fixed listing builtins or arguments', async () => {
+  const f = await fixture('zsh');
+
+  await writeFile(
+    f.startup,
+    'alias -g printf=false\nalias -g zmodload=false\nalias -g set=false\nalias node=false\n',
+  );
+  expect(
+    await capturedNamesAllow('node --version', {
+      cwd: f.root,
+      signal: live(),
+      environment: f.environment,
+    }),
+  ).toBe(false);
 });

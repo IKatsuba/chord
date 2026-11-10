@@ -13,6 +13,7 @@ import { libfxBackend } from '../../src/platform/libfx.ts';
 import { connectRiff, type Riff } from '../../src/riff/adapter.ts';
 import { riffStore } from '../../src/riff/store.ts';
 import { clientOverStreams, type AcpClient } from '../fixtures/acp_client.ts';
+import { until } from '../session/conversation_fake.ts';
 import {
   planCredential,
   planFetch,
@@ -77,6 +78,127 @@ afterEach(async () => {
   root = undefined;
   riff = undefined;
   end = undefined;
+});
+
+describe('CHD-606 tester: plan admission and account boundaries', () => {
+  test.each(['unchanged', 'replaced'] as const)(
+    'Grok refresh account mismatch invalidates only the %s chain it read',
+    async (change) => {
+      const fixture = planFetch({ plan: 'grok', unauthorized: true });
+      const backing = memorySecrets({
+        grok: JSON.stringify(planCredential('grok')),
+      });
+      const replacement = JSON.stringify({
+        ...planCredential('grok', 9),
+        accountId: 'replacement-account',
+      });
+      const originalFetch = fixture.fetch;
+      const intercepted: PlanFetch = {
+        ...fixture,
+        fetch: async (url, init) => {
+          if (new URL(url).pathname === '/oauth2/userinfo') {
+            fixture.urls.push(url);
+
+            if (change === 'replaced') {
+              await backing.set('grok', replacement);
+            }
+
+            return Response.json({ sub: 'different-refreshed-account' });
+          }
+
+          return originalFetch(url, init);
+        },
+      };
+      const { client } = await open('grok', intercepted, backing);
+      const created = await start(client);
+      const id = created.result?.['sessionId'] as string;
+
+      expect((await prompt(client, id)).error?.code).toBe(-32000);
+      expect(fixture.refreshes).toBe(1);
+      expect(await backing.get('grok')).toBe(
+        change === 'replaced' ? replacement : null,
+      );
+      expect(
+        client.messages
+          .filter((message) => message.method === '_chord/credentials')
+          .map((message) => message.params),
+      ).toEqual([{ provider: 'grok', state: 'account_changed' }]);
+
+      const requests = fixture.urls.length;
+
+      expect((await prompt(client, id)).error?.code).toBe(-32000);
+      expect(fixture.urls).toHaveLength(requests);
+    },
+  );
+
+  for (const plan of ['codex', 'grok'] as const) {
+    test.each(['cancel', 'close'] as const)(
+      `${plan}: %s during delayed admission leaves no model request or stale work`,
+      async (action) => {
+        const fixture = planFetch({ plan });
+        const backing = memorySecrets({
+          [plan]: JSON.stringify(planCredential(plan)),
+        });
+        const gate = Promise.withResolvers<void>();
+        let hold = false;
+        let entered = false;
+        const store: Secrets = {
+          ...backing,
+          get: async (provider) => {
+            if (hold) {
+              hold = false;
+              entered = true;
+
+              await gate.promise;
+            }
+
+            return backing.get(provider);
+          },
+        };
+        const { client } = await open(plan, fixture, store);
+        const created = await start(client);
+        const id = created.result?.['sessionId'] as string;
+
+        hold = true;
+
+        const answer = prompt(client, id);
+
+        try {
+          await until(() => entered);
+
+          if (action === 'close') {
+            expect(
+              (await client.request('session/close', { sessionId: id })).error,
+            ).toBeUndefined();
+          } else {
+            client.notify('session/cancel', { sessionId: id });
+            await client.request('session/set_config_option', {
+              sessionId: id,
+              configId: 'effort',
+              value: 'low',
+            });
+          }
+
+          expect(fixture.urls).toEqual([]);
+        } finally {
+          gate.resolve();
+        }
+
+        expect((await answer).result?.['stopReason']).toBe('cancelled');
+        expect(fixture.urls).toEqual([]);
+
+        if (action === 'cancel') {
+          expect((await prompt(client, id)).result?.['stopReason']).toBe(
+            'end_turn',
+          );
+          expect(fixture.responses).toBe(1);
+        } else {
+          expect((await prompt(client, id)).error?.code).toBe(-32002);
+          expect(fixture.urls).toEqual([]);
+        }
+      },
+    );
+  }
 });
 
 describe('riff plans on an injected fetch', () => {
@@ -306,6 +428,10 @@ describe('riff plans on an injected fetch', () => {
 
     expect((await answer).result?.['stopReason']).toBe('cancelled');
     expect(fixture.urls).toEqual([]);
+
+    hold = false;
+
+    expect((await prompt(client, id)).result?.['stopReason']).toBe('end_turn');
   });
 
   test('no credential returns both methods; no store returns C1 words', async () => {

@@ -1836,6 +1836,28 @@ settings agents in `/new`; Claude Code stays the default. Use
 `bun dev chord --fake --qa capture riff` for riff captures: both flags
 must come before `riff`.
 
+With `--qa`, `CHORD_RIFF_QA_STATE` selects a credential fixture:
+`signed-in`, `signed-out`, `no-store`, `timeout`, `unsaved`, `saved`,
+`removed` or `account-changed`. `CHORD_RIFF_QA_PROVIDER` selects `codex`
+(ChatGPT, the default) or `grok`; `CHORD_RIFF_QA_STORE` selects the store's
+platform name with `darwin`, `linux` or `win32`. For example,
+`CHORD_RIFF_QA_STATE=unsaved bun dev chord --fake --qa credentials riff`
+shows a failed save after refresh. `removed` and `account-changed` let the
+first prompt succeed and refuse the next. `timeout` waits the real 20 s
+bound. Fake and QA launches use an in-memory credential store and fake
+providers; they never reach the system store or a live provider.
+
+riff's plan credentials belong only in the system store: macOS Keychain,
+Secret Service on Linux or Windows Credential Manager. An unavailable store
+refuses startup with its name and a recovery step; a timeout names the
+store and the 20 s bound. A new session uses the stored plan, preferring
+ChatGPT when both exist; resume uses its recorded plan and account.
+Missing credentials or an account change refuse the next prompt with
+`authRequired` (-32000). A failed refresh keeps the stored entry.
+The status line reports an unsaved refresh, a successful save, removal or
+an account change for the current riff session. Real sign-in is not yet
+available.
+
 riff has `read`, `list`, `search`, `edit`, `write` and `shell` tools.
 `edit` replaces one unique exact string; `write` replaces a whole file or
 creates one under an existing directory. Both propose a diff and refuse

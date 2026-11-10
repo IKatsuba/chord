@@ -20,3 +20,13 @@
   hidden until sign-in lands.
   Sessions use libfx's `local()` store under chord's state directory, with
   a sidecar per session; chord's record remains what was shown.
+- riff's plan credentials use `platform/secrets.ts` only. Refresh and logout
+  share a per-provider `proper-lockfile` lock and in-process mutex; reread
+  inside the lock and compare before saving a rotation. Recheck the store
+  at each prompt; a missing entry or changed account refuses it. A failed
+  refresh never clears the stored entry. `_chord/credentials` notices apply
+  only to the current riff session.
+  Fake and QA launches use in-memory secrets and fake providers. `--qa`
+  enables `CHORD_RIFF_QA_STATE`, `CHORD_RIFF_QA_PROVIDER` and
+  `CHORD_RIFF_QA_STORE` fixtures documented in the guide; never use the
+  system store or a live provider for them.

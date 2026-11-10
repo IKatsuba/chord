@@ -25,6 +25,8 @@
   `forms.ts` (`form`, `link`, `leftform`, `leftformgated`, `requestform`,
   `strangerform`),
   `guardian.ts` (`guardian`, `guardiangated`),
+  `credentials.ts` (`credentialsunsaved`, `credentialssaved`,
+  `credentialssignedout`, `credentialsaccountchanged`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
@@ -63,7 +65,20 @@
   wait on it. `turn.ts`'s `steeredIn` waits up to 10 s for a message count;
   `scenarios/agents.ts`'s `gateOpened` waits up to 10 s for a gate file.
   The gated scenarios below use `<cwd>/.fake-gate/release`.
+  The four credential scenarios say `Credential fixture ready.`, wait on
+  that gate, then send `_chord/credentials` for ChatGPT with their named
+  state. They touch no store or provider; the window accepts these notices
+  only from riff's current session. For riff's credential QA, use `--qa`
+  with `CHORD_RIFF_QA_STATE`: `signed-in`, `signed-out`, `no-store`,
+  `timeout`, `unsaved`, `saved`, `removed` or `account-changed`.
+  `CHORD_RIFF_QA_PROVIDER` is `codex` (default) or `grok`;
+  `CHORD_RIFF_QA_STORE` is `darwin`, `linux` or `win32` (default: host).
+  These use in-memory secrets and fake fetches, never `Bun.secrets` or a
+  live provider. `removed` and `account-changed` refuse the second prompt;
+  `timeout` uses the real 20 s store deadline.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
+  `credentialsunsaved`, `credentialssaved`, `credentialssignedout`,
+  `credentialsaccountchanged`,
   `texttillsteeredheld`, `readsheld`,
   `guardian`, `guardiangated`,
   `titled`, `retitled`, `titledlook`, `titledfix`, `titledlong`,

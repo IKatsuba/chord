@@ -1730,7 +1730,7 @@ describe('riff by name with explicit fixture access (CHD-604c)', () => {
 
 describe('CHD-604c tester: named riff outside the fake provider', () => {
   for (const provider of [undefined, '']) {
-    test(`riff is unknown with ${provider === undefined ? 'no' : 'an empty'} provider`, async () => {
+    test(`riff uses an explicit fake ACP command with ${provider === undefined ? 'no' : 'an empty'} provider`, async () => {
       const dir = await mkdtemp(join(tmpdir(), 'chord-riff-boundary-'));
 
       try {
@@ -1739,6 +1739,8 @@ describe('CHD-604c tester: named riff outside the fake provider', () => {
           [
             fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
             'riff',
+            '--agent-command',
+            quote(fakeAgentCommand()),
             '-p',
             'hi',
             '-C',
@@ -1759,10 +1761,11 @@ describe('CHD-604c tester: named riff outside the fake provider', () => {
         );
 
         expect(result.error).toBeUndefined();
-        expect(result.status).toBe(2);
-        expect(result.stderr).toContain(
-          'Unknown agent "riff". `chord agents` lists them.',
+        expect(result.status).toBe(0);
+        expect(result.stdout).toBe(
+          'Hello, world. This reply came in chunks.\n',
         );
+        expect(result.stderr).toBe('');
       } finally {
         await rm(dir, { recursive: true });
       }

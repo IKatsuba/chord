@@ -1,7 +1,8 @@
-import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { providerOf } from '../../src/riff/provider.ts';
 import { memorySecrets } from '../../src/platform/secrets.ts';
 import { credentialCell } from '../../src/riff/credentials.ts';
 import { planCredential } from '../../src/riff/qa_provider.ts';
@@ -15,10 +16,97 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
+  jest.useRealTimers();
   await rm(root, { recursive: true, force: true });
 });
 
 describe('riff sign-out', () => {
+  test('record cleanup failure retains deletion, still revokes and is not drawn', async () => {
+    const store = memorySecrets({
+      grok: JSON.stringify(planCredential('grok')),
+      codex: JSON.stringify(planCredential('codex')),
+    });
+
+    await mkdir(join(root, 'riff', 'provider'), { recursive: true });
+
+    let called = false;
+    const result = await signOut({
+      provider: 'grok',
+      store,
+      stateDir: root,
+      signal: new AbortController().signal,
+      cancel: () => {},
+      deleted: () => {},
+      fetch: async () => {
+        called = true;
+
+        expect(await store.get('grok')).toBeNull();
+
+        return new Response();
+      },
+    });
+
+    expect(called).toBe(true);
+    expect(result).toEqual({
+      provider: 'grok',
+      revoked: true,
+      recordFailed: true,
+    });
+    expect(signedOutWords(result)).toBe(
+      'Signed out of Grok, and xAI revoked the sign-in. This session has ended; /login to sign in again.',
+    );
+    expect(
+      providerOf(
+        { codex: await store.get('codex'), grok: await store.get('grok') },
+        'grok',
+      ),
+    ).toBe('codex');
+  });
+
+  test.each(['deadline', 'leaving'] as const)(
+    'revocation %s reports failure without restoring the entry',
+    async (reason) => {
+      const store = memorySecrets({
+        grok: JSON.stringify(planCredential('grok')),
+      });
+      const controller = new AbortController();
+      const started = Promise.withResolvers<AbortSignal>();
+
+      jest.useFakeTimers();
+
+      const done = signOut({
+        provider: 'grok',
+        store,
+        stateDir: root,
+        signal: controller.signal,
+        cancel: () => {},
+        deleted: () => {},
+        fetch: (_url, init) => {
+          started.resolve(init?.signal as AbortSignal);
+
+          return new Promise<Response>(() => {});
+        },
+      });
+      const signal = await started.promise;
+
+      if (reason === 'deadline') {
+        jest.advanceTimersByTime(10_000);
+      } else {
+        controller.abort();
+      }
+
+      const result = await done;
+
+      expect(signal.aborted).toBe(true);
+      expect(result).toEqual({
+        provider: 'grok',
+        revoked: false,
+        reason: 'the revocation request failed',
+      });
+      expect(await store.get('grok')).toBeNull();
+    },
+  );
+
   test('ChatGPT cancels at once, deletes under the lock, clears its record and revokes nothing', async () => {
     const store = memorySecrets({
       codex: JSON.stringify(planCredential('codex')),
@@ -31,6 +119,7 @@ describe('riff sign-out', () => {
       provider: 'codex',
       store,
       stateDir: root,
+      signal: new AbortController().signal,
       fetch: () => {
         throw new Error('ChatGPT must not revoke');
       },
@@ -62,6 +151,7 @@ describe('riff sign-out', () => {
         provider: 'grok',
         store,
         stateDir: root,
+        signal: new AbortController().signal,
         cancel: () => {},
         deleted: () => {
           deleted = true;
@@ -110,6 +200,7 @@ describe('riff sign-out', () => {
         provider: 'grok',
         store,
         stateDir: root,
+        signal: new AbortController().signal,
         cancel: () => {},
         deleted: () => {},
         fetch: () => {
@@ -135,6 +226,7 @@ describe('riff sign-out', () => {
       provider: 'grok',
       store,
       stateDir: root,
+      signal: new AbortController().signal,
       cancel: () => {},
       deleted: () => {},
       fetch: () =>
@@ -160,6 +252,7 @@ describe('riff sign-out', () => {
           delete: () => Promise.reject(new Error('fixture deletion failed')),
         },
         stateDir: root,
+        signal: new AbortController().signal,
         cancel: () => {},
         deleted: () => {
           deleted = true;
@@ -193,6 +286,7 @@ describe('riff sign-out', () => {
       provider: 'grok',
       store,
       stateDir: root,
+      signal: new AbortController().signal,
       cancel: () => {},
       deleted: () => {},
       fetch: (_url, init) => {

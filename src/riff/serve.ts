@@ -8,6 +8,7 @@ import process from 'node:process';
 import { Readable } from 'node:stream';
 import { outputStream } from '../acp/stdio.ts';
 import { libfxBackend } from '../platform/libfx.ts';
+import { memorySecrets, systemSecrets } from '../platform/secrets.ts';
 import { chordStateDir } from '../session/state_dir.ts';
 import { connectRiff } from './adapter.ts';
 import { fakeProvider } from './start.ts';
@@ -27,6 +28,19 @@ export function riffBackend(
 }
 
 export async function runRiffAgent(version: string): Promise<void> {
+  const provider = fakeProvider(process.env);
+  const secrets = provider === undefined ? systemSecrets() : memorySecrets();
+
+  try {
+    await secrets.get('codex');
+    await secrets.get('grok');
+  } catch (error) {
+    process.stderr.write(
+      `riff: ${error instanceof Error ? error.message : 'The credential store did not answer.'}\n`,
+    );
+    process.exit(1);
+  }
+
   const backend = riffBackend(await libfxBackend(), process.env);
 
   const info = await getBackendInfo(backend);
@@ -51,7 +65,9 @@ export async function runRiffAgent(version: string): Promise<void> {
     ),
     {
       version,
-      provider: fakeProvider(process.env),
+      provider,
+      secrets,
+      fetch: globalThis.fetch,
       backend,
       stateDir: chordStateDir(),
     },

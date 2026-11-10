@@ -50,6 +50,8 @@ export function credentialOf(raw: string): FxProviderCredentials & {
 export interface CredentialLease {
   read(): Promise<FxProviderCredentials>;
   save(next: FxProviderCredentials): Promise<void>;
+  /** Invalid refreshes clear only the chain this process read. */
+  invalidate(state: 'signed_out' | 'account_changed'): Promise<never>;
 }
 
 export interface CredentialCell {
@@ -186,6 +188,25 @@ export function credentialCell(
             return pending ?? value;
           },
           save: (next) => save(held, next),
+          invalidate: async (state) => {
+            const raw = await store.get(provider);
+
+            checked(raw);
+
+            if (raw === expected) {
+              try {
+                await store.delete(provider);
+              } catch (error) {
+                if (error instanceof SecretStoreTimeout) {
+                  held.track(error.completion);
+                }
+
+                throw error;
+              }
+            }
+
+            return refuse(state);
+          },
         }),
       ),
     logout: () =>

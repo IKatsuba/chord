@@ -17,7 +17,7 @@ import { EFFORTS, MODES, type RiffConfig, type RiffPlan } from './models.ts';
 
 const SIDECAR = z.object({
   provider: z.enum(['codex', 'grok', 'fake']),
-  /** null until riff signs in to an account (CHD-485 part 4). */
+  /** libfx's accountId for a plan, null for the fixture provider. */
   account: z.string().nullable(),
   model: z.string().min(1),
   effort: z.enum(EFFORTS),

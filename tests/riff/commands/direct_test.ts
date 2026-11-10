@@ -10,6 +10,7 @@ import {
   type DirectInvocation,
 } from '../../../src/riff/commands/direct.ts';
 import { commandEffect } from '../../../src/riff/commands/effect.ts';
+import { until } from '../../session/conversation_fake.ts';
 
 const fixturePath = fileURLToPath(
   new URL('./direct_fixture.ts', import.meta.url),
@@ -112,7 +113,7 @@ test('spawn failure drains already-started stages', async () => {
 });
 
 test('stop kills a later stage grandchild and escalates TERM after 800ms', async () => {
-  const ready = Promise.withResolvers<number>();
+  let ready = '';
   const command = runDirect(
     [
       { executable: '/usr/bin/printf', argv: ['/usr/bin/printf', 'x'] },
@@ -121,13 +122,15 @@ test('stop kills a later stage grandchild and escalates TERM after 800ms', async
     {
       cwd: tmpdir(),
       onOutput: (_stream, text) => {
-        ready.resolve(Number(text.trim()));
+        ready += text;
       },
     },
   );
 
   try {
-    const pid = await ready.promise;
+    await until(() => /^\d+\n/.test(ready));
+
+    const pid = Number(ready.trim());
 
     expect(Number.isInteger(pid)).toBe(true);
 

@@ -22,9 +22,13 @@ export function permissionRequested(
   between = false,
 ): Transcript {
   const { turn } = state;
-  // A subagent's request keeps when it came, which a task's row counts from.
-  const permission = asked.subagentId === undefined ? asked : { ...asked, at };
+  // Timed requests and subagent rows count from the ask, not the turn's start.
+  const permission =
+    asked.subagentId === undefined && asked.deadlineAt === undefined
+      ? asked
+      : { ...asked, at };
   const outside = between || taskWaits(state, [permission]).length > 0;
+  const entries = reviewedIn(state.entries, permission);
 
   // An agent may ask with no turn running: a task agent outlives the turn
   // that started it, and an agent's own work, a subagent's or a background
@@ -33,6 +37,7 @@ export function permissionRequested(
   if (turn.status === 'idle' && outside) {
     return {
       ...state,
+      entries,
       turn: {
         status: 'awaiting_permission',
         turnId,
@@ -48,6 +53,7 @@ export function permissionRequested(
   if (turn.status === 'working' && turn.cycle === true && outside) {
     return {
       ...state,
+      entries,
       turn: {
         status: 'awaiting_permission',
         turnId: turn.turnId,
@@ -68,6 +74,7 @@ export function permissionRequested(
   ) {
     return {
       ...state,
+      entries,
       turn: { ...turn, permissions: [...turn.permissions, permission] },
     };
   }
@@ -87,6 +94,7 @@ export function permissionRequested(
 
   return {
     ...state,
+    entries,
     turn: {
       status: 'awaiting_permission',
       turnId: owner,
@@ -94,6 +102,36 @@ export function permissionRequested(
       permissions: [...waiting, permission],
     },
   };
+}
+
+/** A review belongs to the actual asking call, including a nested agent's call. */
+function reviewedIn(
+  entries: readonly Entry[],
+  wait: PermissionWait,
+): readonly Entry[] {
+  const { review, toolCallId } = wait;
+
+  if (review === undefined || toolCallId === undefined) {
+    return entries;
+  }
+
+  const mark = (list: readonly Entry[]): readonly Entry[] => {
+    const index = list.findLastIndex(
+      (entry) => entry.kind === 'tool' && entry.call.id === toolCallId,
+    );
+    const found = list[index];
+
+    return found?.kind === 'tool'
+      ? list.with(index, { ...found, call: { ...found.call, review } })
+      : list;
+  };
+
+  return wait.subagentId === undefined
+    ? mark(entries)
+    : changeSubagent(entries, wait.subagentId, (subagent) => ({
+        ...subagent,
+        entries: mark(subagent.entries),
+      }));
 }
 
 export function permissionSettled(

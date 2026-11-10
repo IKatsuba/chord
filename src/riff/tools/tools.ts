@@ -7,6 +7,7 @@ import type {
   PermissionOption,
   ToolCallUpdate,
   ToolCallContent,
+  RequestPermissionRequest,
 } from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
 import type { FxAgentHostTool, FxToolResult } from 'libfx/node';
@@ -33,6 +34,10 @@ import {
 import { READ_DESCRIPTION, ReadInput, readLines } from './read.ts';
 import { shell, SHELL_DESCRIPTION, ShellInput } from './shell.ts';
 import { SEARCH_DESCRIPTION, SearchInput, searcher } from './search.ts';
+import type { ReviewAction } from '../review/input.ts';
+import type { AutoReview } from '../review/admission.ts';
+import { reviewAction } from '../review/action.ts';
+import { reviewedPermission } from '../review/permission.ts';
 
 /** The session a tool works in. */
 export interface ToolSession {
@@ -71,6 +76,13 @@ export interface ToolSession {
   readonly mode?: () => RiffMode;
   /** What the person has allowed for the rest of the session. */
   readonly grants?: Grants;
+  /** Marks a waiting permission so its refusal is not retained as tool evidence. */
+  readonly permissionWaiting?: (executionId: string) => void;
+  readonly review?: (
+    action: ReviewAction,
+    arguments_: unknown,
+    signal: AbortSignal,
+  ) => Promise<AutoReview>;
   /**
    * Asks the person about a call in the window: the option chosen, or
    * undefined when the ask was cancelled or nobody can answer it. Without
@@ -80,6 +92,7 @@ export interface ToolSession {
     toolCall: ToolCallUpdate,
     options: PermissionOption[],
     signal: AbortSignal,
+    metadata?: RequestPermissionRequest['_meta'],
   ) => Promise<string | undefined>;
 }
 
@@ -130,20 +143,44 @@ async function permit(
 
   await session.announce?.(toolCallId, name, input);
 
+  session.permissionWaiting?.(toolCallId);
+
+  const toolCall: ToolCallUpdate = {
+    toolCallId,
+    ...drawn(directory, name, input, 'real' in reach ? reach.real : undefined),
+    // A read's title names its file already; list and search keep the
+    // directory "this directory" means.
+    ...('real' in reach ? { locations: [] } : {}),
+    ...(proposal === undefined ? {} : { content: proposal.content }),
+  };
+
+  if (mode === 'auto') {
+    const action = reviewAction(reach, directory, proposal);
+    const outcome =
+      action === undefined
+        ? {
+            outcome: 'unavailable' as const,
+            reason: 'The pending action could not be inspected.',
+          }
+        : ((await session.review?.(action, input, signal)) ?? {
+            outcome: 'unavailable' as const,
+            reason: 'The safety reviewer is unavailable.',
+          });
+
+    signal.throwIfAborted();
+
+    // A switch during review drops its verdict and asks under the new mode.
+    if ((session.mode?.() ?? 'auto') === 'auto') {
+      if (outcome.outcome !== 'clear') {
+        await reviewedPermission(session, toolCall, outcome, signal);
+      }
+
+      return;
+    }
+  }
+
   const chosen = await session.ask?.(
-    {
-      toolCallId,
-      ...drawn(
-        directory,
-        name,
-        input,
-        'real' in reach ? reach.real : undefined,
-      ),
-      // A read's title names its file already; list and search keep the
-      // directory "this directory" means.
-      ...('real' in reach ? { locations: [] } : {}),
-      ...(proposal === undefined ? {} : { content: proposal.content }),
-    },
+    toolCall,
     permissionOptions(reach, directory),
     signal,
   );

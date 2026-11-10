@@ -5,6 +5,7 @@ import type {
   ToolCallUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import type { PermissionWait } from './transcript/types.ts';
+import { permissionPresentation } from './permission_review.ts';
 
 /**
  * A permission request the agent is waiting on, held until the person answers.
@@ -93,6 +94,7 @@ export function waitFor(
       ? { rawInput }
       : {}),
     options: request.options,
+    ...permissionPresentation(request.raw._meta),
   };
 }
 

@@ -29,6 +29,48 @@ import {
   withWindow,
 } from '../app/render.tsx';
 
+for (const [columns, rows] of [
+  [120, 40],
+  [80, 24],
+] as const) {
+  for (const [scenario, outcome] of [
+    ['reviewpermission', 'caution'],
+    ['reviewincomplete', 'incomplete'],
+    ['reviewfailed', 'failed'],
+  ] as const) {
+    test(`generic ${outcome} review permission at ${columns}x${rows} retains its review and two keyboard choices`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, scenario);
+          await window.shows('❯ 1. Allow once');
+          await window.shows(`Reviewed: ${outcome}`);
+
+          const frame = window.frame();
+
+          expect(frame).toContain('❯ 1. Allow once');
+          expect(frame).toContain('2. Deny');
+          expect(frame).toContain('denied by itself in 5 minutes');
+          expect(frame).toMatch(/denied in (?:5m 0s|4m \d+s)/);
+
+          if (outcome === 'failed') {
+            expect(frame).toContain('The safety review could not run');
+            expect(frame).toContain('the reviewer did not answer in 30 s');
+          } else {
+            expect(frame).toContain('The safety review held this:');
+          }
+
+          await window.press('2');
+          await window.shows('Review permission: deny.');
+          await window.shows(`Reviewed: ${outcome}`);
+
+          expect(window.frame()).not.toContain('denied by itself');
+          expect(window.frame()).not.toContain('Waiting for permission');
+        },
+        { columns, rows },
+      ));
+  }
+}
+
 test("a permission request shows the agent's options, numbered", () =>
   withWindow(async (window) => {
     await send(window, 'permission');
@@ -966,6 +1008,71 @@ describe('CHD-605 shared permission diffs', () => {
       }
     });
   }
+});
+
+describe('CHD-608 tester: reviewed permission keys and sessions', () => {
+  test('an absent third choice does nothing, then arrows and Enter deny at 80x24', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'reviewpermission');
+        await window.shows('❯ 1. Allow once');
+        await window.press('3');
+
+        expect(window.frame()).toContain('❯ 1. Allow once');
+        expect(window.frame()).toContain('denied by itself in 5 minutes');
+        await window.press(DOWN);
+        await window.shows('❯ 2. Deny');
+        await window.press('\r');
+        await window.shows('Review permission: deny.');
+
+        expect(window.frame()).toContain('Reviewed: caution');
+        expect(window.frame()).not.toContain('Waiting for permission');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('Enter permits once and the next reviewed ask still requires a choice', () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'reviewpermission');
+        await window.shows('❯ 1. Allow once');
+        await window.press('\r');
+        await window.shows('Review permission: allow.');
+        await send(window, 'reviewfailed');
+        await window.shows('The safety review could not run');
+        await window.shows('❯ 1. Allow once');
+        await window.press(ESC);
+        await window.shows('Review permission: deny.');
+
+        expect(window.frame()).not.toContain('Interrupted');
+        expect(window.frame()).not.toContain('denied by itself');
+      },
+      { columns: 80, rows: 24 },
+    ));
+
+  test('main and child keep separate reviewed asks while attention changes', () =>
+    withChild(
+      async (window) => {
+        await openOther(window);
+        await send(window, 'reviewpermission');
+        await window.shows('❯ 1. Allow once');
+        await pickAgent(window, 'other', true);
+        await window.shows('Fake Large with a 1M context window');
+        await send(window, 'reviewfailed');
+        await window.shows('The safety review could not run');
+        await pickAgent(window, 'main', true);
+        await window.shows('The safety review held this:');
+        await window.press('1');
+        await window.shows('Review permission: allow.');
+        await pickAgent(window, 'other', true);
+        await window.shows('The safety review could not run');
+
+        expect(window.frame()).not.toContain('Review permission: allow.');
+        await window.press(ESC);
+        await window.shows('Review permission: deny.');
+      },
+      { columns: 80, rows: 24 },
+    ));
 });
 
 test('the multidiffask fake scenario shows both proposed files and accepts a choice', () =>

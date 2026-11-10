@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type {
   PermissionOption,
   RequestPermissionRequest,
@@ -147,4 +147,38 @@ test('a request with content of its own keeps no raw input', () => {
   expect(wait.content).toStrictEqual([
     { type: 'diff', path: 'notes.txt', newText: 'hi' },
   ]);
+});
+
+describe('CHD-608 tester: permission presentation lifecycle', () => {
+  test('withdrawal invalidates a saved choice while preserving the original deadline', async () => {
+    const bridge = new PermissionBridge();
+    const withdrawn = new AbortController();
+    const deadlineAt = Date.now() + 300_000;
+    const decision = bridge.handler(
+      {
+        ...RAW,
+        _meta: {
+          'chord/permission': {
+            review: { outcome: 'caution', reason: 'held' },
+            deadlineAt,
+          },
+        },
+      },
+      withdrawn.signal,
+    );
+    const request = bridge.pending()[0];
+
+    if (request === undefined) {
+      throw new Error('Expected a waiting permission.');
+    }
+
+    expect(waitFor(request).deadlineAt).toBe(deadlineAt);
+    expect(waitFor(request, 'another-session').deadlineAt).toBe(deadlineAt);
+    withdrawn.abort();
+    request.resolve('yes');
+
+    expect(await decision).toEqual(CANCELLED);
+    expect(bridge.pending()).toEqual([]);
+    bridge.close();
+  });
 });

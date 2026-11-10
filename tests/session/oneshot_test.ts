@@ -8,6 +8,38 @@ import type { ElicitationWait } from '../../src/session/transcript/types.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { said } from '../fixtures/recorder.ts';
 
+test('a review permission is denied by -p even when allow-all is selected', async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-review-headless-'));
+  const updates: SessionUpdate[] = [];
+  let refused = 0;
+  let allowed = 0;
+
+  try {
+    await runOneshot({
+      agent: 'fake',
+      cwd: dir,
+      prompt: 'reviewpermission',
+      agentCommand: fakeAgentCommand(),
+      allowAll: true,
+      onUpdate: (update) => {
+        updates.push(update);
+      },
+      onRefused: () => {
+        refused++;
+      },
+      onAllowed: () => {
+        allowed++;
+      },
+    });
+
+    expect(refused).toBe(1);
+    expect(allowed).toBe(0);
+    expect(said(updates).join('')).toContain('Review permission: deny.');
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
 describe('CHD-1 tester: oneshot elicitation lifecycle', () => {
   test('a Claude tool-call form waits for its async diagnostic, then declines and completes', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-oneshot-question-'));

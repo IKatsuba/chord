@@ -22,6 +22,7 @@ export interface ChatRequest {
   readonly model?: string;
   readonly reasoning_effort?: string;
   readonly messages?: readonly { role?: string; content?: unknown }[];
+  readonly tools?: readonly { function?: { name?: string } }[];
 }
 
 /** A running fake server. */
@@ -75,6 +76,7 @@ function lastUser(request: ChatRequest): string {
 export function serveFakeChat(): FakeChat {
   const requests: ChatRequest[] = [];
   let calls = 0;
+  let reviews = 0;
   let hung = Promise.withResolvers<void>();
   const server = Bun.serve({
     hostname: '127.0.0.1',
@@ -91,6 +93,56 @@ export function serveFakeChat(): FakeChat {
       requests.push(body);
 
       const headers = { 'content-type': 'text/event-stream' };
+
+      if (
+        body.tools?.some(
+          (tool) => tool.function?.name === 'permission_decision',
+        )
+      ) {
+        // Only the pending action selects the fixture verdict. Requests and
+        // untrusted prior output cannot change this deterministic test seam.
+        const pending =
+          said
+            .split('<normalized_action>')[1]
+            ?.split('</normalized_action>')[0] ?? '';
+
+        if (pending.includes('[review:failed]')) {
+          return new Response(
+            answer('Fixture reviewer returned no decision.'),
+            { headers },
+          );
+        }
+
+        const decision = pending.includes('[review:clear]')
+          ? 'clear'
+          : 'caution';
+
+        return new Response(
+          [
+            chunk({
+              role: 'assistant',
+              tool_calls: [
+                {
+                  index: 0,
+                  id: `review_${++reviews}`,
+                  type: 'function',
+                  function: {
+                    name: 'permission_decision',
+                    arguments: JSON.stringify({
+                      decision,
+                      rationale: 'Fixture safety review: caution.',
+                    }),
+                  },
+                },
+              ],
+            }),
+            chunk({}, 'tool_calls'),
+            usage,
+            'data: [DONE]\n\n',
+          ].join(''),
+          { headers },
+        );
+      }
 
       // First, so a path or a query that names another scenario is only an
       // argument.

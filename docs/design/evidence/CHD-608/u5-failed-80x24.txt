@@ -1,0 +1,24 @@
+ › call shell {"command":"printf '[review:failed]'"}
+
+ ⏺ Bash(printf '[review:failed]')
+   ⎿  Reviewed: failed
+
+ ››› Waiting for permission… (9s · denied in 4m 50s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Bash printf '[review:failed]'                                                │
+│ /private/tmp/chord-qa.chd608                                                 │
+│                                                                              │
+│ The safety review could not run (the reviewer returned an invalid decision). │
+│ Allow it yourself, or deny it.                                               │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                fake · default · 1% used

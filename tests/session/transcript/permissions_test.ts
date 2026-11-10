@@ -15,6 +15,47 @@ const ASKED: TranscriptAction[] = [
   { type: 'elicitation_requested', turnId: 't1', elicitation: FORM_WAIT },
 ];
 
+test('a generic permission review stays on its call after the box is answered or withdrawn', () => {
+  for (const answer of [
+    { type: 'chosen', optionId: 'allow' },
+    { type: 'withdrawn' },
+  ] as const) {
+    const state = fold([
+      { type: 'prompt', turnId: 'turn', text: 'request', at: 1000 },
+      {
+        type: 'update',
+        turnId: 'turn',
+        update: {
+          sessionUpdate: 'tool_call',
+          toolCallId: 'tool',
+          title: 'Reviewed action',
+          status: 'pending',
+        },
+      },
+      {
+        type: 'permission_requested',
+        turnId: 'turn',
+        at: 10000,
+        permission: {
+          id: 'ask',
+          toolCallId: 'tool',
+          options: [],
+          deadlineAt: 310000,
+          review: { outcome: 'caution', reason: 'review rationale' },
+        },
+      },
+      { type: 'permission_settled', turnId: 'turn', id: 'ask', answer },
+    ]);
+    const call = state.entries.find((entry) => entry.kind === 'tool');
+
+    expect(call?.kind === 'tool' ? call.call.review : undefined).toEqual({
+      outcome: 'caution',
+      reason: 'review rationale',
+    });
+    expect(state.turn.status).toBe('working');
+  }
+});
+
 test('a form asked for waits apart from the turn, which keeps working', () => {
   const transcript = fold(ASKED);
 

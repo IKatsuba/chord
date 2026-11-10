@@ -44,6 +44,7 @@ export function planFetch(options: {
   readonly plan: 'codex' | 'grok';
   readonly unauthorized?: boolean;
   readonly rejected?: boolean;
+  readonly rejectionStatus?: number;
   readonly tools?: boolean;
 }): PlanFetch {
   const fixture: PlanFetch = {
@@ -74,7 +75,10 @@ export function planFetch(options: {
 
         if (options.rejected) {
           return Promise.resolve(
-            Response.json({ error: 'invalid_grant' }, { status: 400 }),
+            Response.json(
+              { error: 'fixture refresh failure' },
+              { status: options.rejectionStatus ?? 400 },
+            ),
           );
         }
 

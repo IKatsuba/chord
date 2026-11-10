@@ -146,6 +146,8 @@ interface Open {
   used: number | undefined;
   /** Whether a turn of a prompt is running. */
   running: boolean;
+  /** Esc may arrive while prompt admission is still waiting on the store. */
+  cancelled: boolean;
   /** Identity of the turn callbacks may still update. */
   turn: symbol | undefined;
   /** What tools kept for the window of a call, by its id, until it ends. */
@@ -435,6 +437,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       config: { model: config.model, effort: config.effort, mode: config.mode },
       used: undefined,
       running: false,
+      cancelled: false,
       turn: undefined,
       shown,
       calls: new Set(),
@@ -639,6 +642,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       // The reopen's turn is the session's running work: a prompt waits for
       // it, and a close cancels it.
       session.running = true;
+      session.cancelled = false;
       session.turn = Symbol('turn');
       session.client = client;
 
@@ -693,10 +697,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       session.calls = new Set();
 
       session.running = true;
+      session.cancelled = false;
       session.turn = Symbol('turn');
       session.client = client;
 
       try {
+        session.authorization?.reset();
+
         try {
           await session.credential?.check();
         } catch (error) {
@@ -705,6 +712,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           }
 
           throw error;
+        }
+
+        if (session.cancelled || gone) {
+          return { stopReason: 'cancelled' };
         }
 
         const turn = session.agent
@@ -768,6 +779,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     })
     .onNotification('session/cancel', async ({ params }) => {
       if (open?.id === params.sessionId) {
+        open.cancelled = true;
+
         await open.agent.session(open.id).cancel();
       }
     })

@@ -136,19 +136,41 @@ describe('riff plans on an injected fetch', () => {
       expect(client.lines.join('\n')).toContain('saved');
     });
 
-    test(`${plan}: rejected refresh clears the entry and fails authentication`, async () => {
-      const fixture = planFetch({ plan, unauthorized: true, rejected: true });
-      const { client, store } = await open(plan, fixture);
-      const created = await start(client);
-      const answer = await prompt(
-        client,
-        created.result?.['sessionId'] as string,
-      );
+    test.each([400, 429, 500])(
+      `${plan}: failed refresh HTTP %i preserves the entry and fails authentication`,
+      async (rejectionStatus) => {
+        const fixture = planFetch({
+          plan,
+          unauthorized: true,
+          rejected: true,
+          rejectionStatus,
+        });
+        const { client, store } = await open(plan, fixture);
+        const created = await start(client);
+        const before = await store.get(plan);
+        const answer = await prompt(
+          client,
+          created.result?.['sessionId'] as string,
+        );
 
-      expect(answer.error?.code).toBe(-32000);
-      expect(fixture.refreshes).toBe(1);
-      expect(await store.get(plan)).toBeNull();
-    });
+        expect(answer.error?.code).toBe(-32000);
+        expect(fixture.refreshes).toBe(1);
+        expect(await store.get(plan)).toBe(before);
+        expect(
+          client.messages.filter(
+            (message) => message.method === '_chord/credentials',
+          ),
+        ).toEqual([]);
+
+        if (rejectionStatus === 500) {
+          expect(
+            (await prompt(client, created.result?.['sessionId'] as string))
+              .result?.['stopReason'],
+          ).toBe('end_turn');
+          expect(await store.get(plan)).toBe(before);
+        }
+      },
+    );
 
     test(`${plan}: an unsaved rotation survives and retries at the next credential lock`, async () => {
       const fixture = planFetch({ plan, unauthorized: true });
@@ -240,6 +262,50 @@ describe('riff plans on an injected fetch', () => {
       'end_turn',
     );
     expect(fixture.responses).toBe(1);
+  });
+
+  test('cancel while prompt admission reads the store never starts a model request', async () => {
+    const fixture = planFetch({ plan: 'codex' });
+    const backing = memorySecrets({
+      codex: JSON.stringify(planCredential('codex')),
+    });
+    const entered = Promise.withResolvers<void>();
+    const gate = Promise.withResolvers<void>();
+    let hold = false;
+    const store: Secrets = {
+      ...backing,
+      get: async (provider) => {
+        if (hold) {
+          entered.resolve();
+          await gate.promise;
+        }
+
+        return backing.get(provider);
+      },
+    };
+    const { client } = await open('codex', fixture, store);
+    const created = await start(client);
+    const id = created.result?.['sessionId'] as string;
+
+    hold = true;
+
+    const answer = prompt(client, id);
+
+    try {
+      await entered.promise;
+      client.notify('session/cancel', { sessionId: id });
+      // A later request's reply observes that the notification was dispatched.
+      await client.request('session/set_config_option', {
+        sessionId: id,
+        configId: 'effort',
+        value: 'low',
+      });
+    } finally {
+      gate.resolve();
+    }
+
+    expect((await answer).result?.['stopReason']).toBe('cancelled');
+    expect(fixture.urls).toEqual([]);
   });
 
   test('no credential returns both methods; no store returns C1 words', async () => {

@@ -67,16 +67,17 @@ export function planProvider(cell: CredentialCell, provider: SecretProvider) {
                 ? error.code
                 : undefined;
 
+            if (code === 'LIBFX_GROK_ACCOUNT_CHANGED') {
+              await lease.invalidate('account_changed');
+            }
+
             if (
               code === 'LIBFX_CHATGPT_REFRESH_FAILED' ||
-              code === 'LIBFX_GROK_REFRESH_FAILED' ||
-              code === 'LIBFX_GROK_ACCOUNT_CHANGED'
+              code === 'LIBFX_GROK_REFRESH_FAILED'
             ) {
-              await lease.invalidate(
-                code === 'LIBFX_GROK_ACCOUNT_CHANGED'
-                  ? 'account_changed'
-                  : 'signed_out',
-              );
+              // The public code covers transient failures too. The owner's
+              // rule preserves this entry; only an account change clears it.
+              throw new CredentialSignedOut('signed_out');
             }
 
             throw error;
@@ -87,5 +88,11 @@ export function planProvider(cell: CredentialCell, provider: SecretProvider) {
       ),
   };
 
-  return { options, failed: () => failed };
+  return {
+    options,
+    failed: () => failed,
+    reset: () => {
+      failed = undefined;
+    },
+  };
 }

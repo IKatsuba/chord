@@ -1,10 +1,13 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { promisify } from 'node:util';
 import {
   memorySecrets,
   secrets,
+  SecretStoreTimeout,
   type Secrets,
 } from '../../src/platform/secrets.ts';
 import {
@@ -27,6 +30,179 @@ const credential = (token: number, account = 'fixture-account') => ({
   refreshToken: `refresh-${token}`,
   accountId: account,
   expiresAt: token,
+});
+
+describe('CHD-606 tester: credential rotation boundaries', () => {
+  test('failed late write keeps its pending rotation for the next lock', async () => {
+    const root = await directory();
+    const backing = memorySecrets({ codex: JSON.stringify(credential(0)) });
+    const completion = Promise.withResolvers<void>();
+    const states: CredentialState[] = [];
+    let attempts = 0;
+    const store: Secrets = {
+      ...backing,
+      set: async (provider, value) => {
+        attempts++;
+
+        if (attempts === 1) {
+          throw new SecretStoreTimeout(backing.name, completion.promise);
+        }
+
+        await backing.set(provider, value);
+      },
+    };
+    const cell = credentialCell(store, root, 'codex', (state) =>
+      states.push(state),
+    );
+
+    await cell.locked(async (lease) => {
+      await lease.read();
+      await lease.save(credential(1));
+    });
+
+    expect(states).toEqual(['unsaved']);
+    expect(await backing.get('codex')).toBe(JSON.stringify(credential(0)));
+
+    const retry = cell.locked((lease) => lease.read());
+
+    completion.reject(new Error('fixture late write failed'));
+    expect(await retry).toEqual(credential(1));
+    expect(attempts).toBe(2);
+    expect(states).toEqual(['unsaved', 'saved']);
+    expect(await backing.get('codex')).toBe(JSON.stringify(credential(1)));
+  });
+
+  test.each(['newer chain', 'logout', 'other account'] as const)(
+    'an unsaved rotation cannot overwrite %s before retry',
+    async (change) => {
+      const root = await directory();
+      const backing = memorySecrets({ codex: JSON.stringify(credential(0)) });
+      const states: CredentialState[] = [];
+      let writes = 0;
+      const store: Secrets = {
+        ...backing,
+        set: () => {
+          writes++;
+
+          return Promise.reject(new Error('fixture write unavailable'));
+        },
+      };
+      const cell = credentialCell(store, root, 'codex', (state) =>
+        states.push(state),
+      );
+
+      await cell.locked(async (lease) => {
+        await lease.read();
+        await lease.save(credential(1));
+      });
+
+      if (change === 'logout') {
+        await credentialCell(backing, root, 'codex').logout();
+      } else {
+        await backing.set(
+          'codex',
+          JSON.stringify(
+            credential(2, change === 'other account' ? 'other' : undefined),
+          ),
+        );
+      }
+
+      const authoritative = await backing.get('codex');
+      const state =
+        change === 'other account' ? 'account_changed' : 'signed_out';
+
+      await expect(cell.locked((lease) => lease.read())).rejects.toMatchObject({
+        state,
+      });
+      await expect(cell.check()).rejects.toBeInstanceOf(CredentialSignedOut);
+      expect(writes).toBe(1);
+      expect(states).toEqual(['unsaved', state]);
+      expect(await backing.get('codex')).toBe(authoritative);
+    },
+  );
+
+  test('store access failing between prompt checks fails closed and never writes', async () => {
+    const root = await directory();
+    const backing = memorySecrets({ codex: JSON.stringify(credential(0)) });
+    const failure = new Error('fixture store vanished');
+    let absent = false;
+    let writes = 0;
+    const store: Secrets = {
+      ...backing,
+      get: (provider) =>
+        absent ? Promise.reject(failure) : backing.get(provider),
+      set: () => {
+        writes++;
+
+        return Promise.resolve();
+      },
+    };
+    const cell = credentialCell(store, root, 'codex');
+
+    expect(await cell.check()).toEqual(credential(0));
+
+    absent = true;
+
+    await expect(cell.check()).rejects.toBe(failure);
+    expect(writes).toBe(0);
+    expect(await backing.get('codex')).toBe(JSON.stringify(credential(0)));
+  });
+
+  test('two independent processes never spend the same rotating token', async () => {
+    const root = await directory();
+    const entry = join(root, 'fixture.json');
+
+    await writeFile(entry, JSON.stringify(credential(0)));
+
+    const script = `
+      import { readFile, writeFile } from 'node:fs/promises';
+      import { credentialCell } from './src/riff/credentials.ts';
+      import { secrets } from './src/platform/secrets.ts';
+      const [root, entry] = process.argv.slice(1);
+      const cell = credentialCell(secrets({
+        get: () => readFile(entry, 'utf8'),
+        set: ({ value }) => writeFile(entry, value),
+        delete: () => Promise.resolve(false),
+      }, 'fixture store'), root, 'codex');
+      await cell.check();
+      for (let step = 0; step < 4; step++) {
+        await cell.locked(async (lease) => {
+          const value = await lease.read();
+          const token = Number(value.refreshToken.slice('refresh-'.length));
+          process.stdout.write(token + '\\n');
+          await lease.save({
+            accessToken: 'access-' + (token + 1),
+            refreshToken: 'refresh-' + (token + 1),
+            accountId: 'fixture-account', expiresAt: token + 1,
+          });
+        });
+      }
+    `;
+    const completed = await Promise.allSettled(
+      [0, 1].map(() =>
+        promisify(execFile)(process.execPath, ['-e', script, root, entry], {
+          cwd: new URL('../..', import.meta.url),
+          timeout: 10_000,
+        }),
+      ),
+    );
+    const results = completed.map((result) => {
+      if (result.status === 'rejected') {
+        throw result.reason;
+      }
+
+      return result.value;
+    });
+
+    const spent = results
+      .flatMap(({ stdout }) => stdout.trim().split('\n').map(Number))
+      .sort((a, b) => a - b);
+
+    expect(results.map(({ stderr }) => stderr)).toEqual(['', '']);
+    expect(spent).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(JSON.parse(await readFile(entry, 'utf8'))).toEqual(credential(8));
+    expect(await readdir(join(root, 'riff', 'credentials'))).toEqual([]);
+  });
 });
 
 afterEach(async () => {

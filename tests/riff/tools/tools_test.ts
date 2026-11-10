@@ -764,3 +764,211 @@ describe('file mutations at the permission boundary', () => {
     }
   });
 });
+
+describe('CHD-605 tester: mutations while permission waits', () => {
+  for (const tool of ['edit', 'write'] as const) {
+    test(`${tool} refuses a file deleted while its proposed diff waits`, async () => {
+      const root = await realpath(
+        await mkdtemp(join(tmpdir(), 'chord-delete-ask-')),
+      );
+      const finder = openFinder(root);
+      const path = join(root, 'file.txt');
+      const kept: unknown[] = [];
+      const tools = riffTools({
+        directory: root,
+        finder,
+        mode: () => 'ask',
+        showContent: (_id, content) => {
+          kept.push(content);
+        },
+        ask: async (call) => {
+          expect(call.content).toEqual([
+            { type: 'diff', path, oldText: 'before', newText: 'after' },
+          ]);
+          await rm(path);
+
+          return ALLOW;
+        },
+      });
+
+      try {
+        await writeFile(path, 'before');
+        await expect(
+          tools
+            .find((entry) => entry.name === tool)!
+            .execute(
+              tool === 'edit'
+                ? { path: 'file.txt', oldString: 'before', newString: 'after' }
+                : { path: 'file.txt', content: 'after' },
+              {
+                signal: new AbortController().signal,
+                executionId: 'deleted',
+                sessionId: 's',
+              },
+            ) as Promise<unknown>,
+        ).rejects.toThrow(
+          'the file changed since this edit was proposed; read it again',
+        );
+        await expect(readFile(path)).rejects.toMatchObject({ code: 'ENOENT' });
+        expect(kept).toEqual([]);
+      } finally {
+        await finder.destroy();
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+
+    test(`${tool} refuses a symlink swapped to identical bytes outside after asking`, async () => {
+      const root = await realpath(
+        await mkdtemp(join(tmpdir(), 'chord-swap-ask-')),
+      );
+      const outside = await realpath(
+        await mkdtemp(join(tmpdir(), 'chord-swap-out-')),
+      );
+      const finder = openFinder(root);
+      const path = join(root, 'file.txt');
+      const other = join(outside, 'file.txt');
+      const link = join(root, 'link.txt');
+      const kept: unknown[] = [];
+      const tools = riffTools({
+        directory: root,
+        finder,
+        mode: () => 'ask',
+        showContent: (_id, content) => {
+          kept.push(content);
+        },
+        ask: async (call) => {
+          expect(call.title).toContain('link.txt → file.txt');
+          await rm(link);
+          await symlink(other, link);
+
+          return ALLOW;
+        },
+      });
+
+      try {
+        await writeFile(path, 'before');
+        await writeFile(other, 'before');
+        await symlink(path, link);
+        await expect(
+          tools
+            .find((entry) => entry.name === tool)!
+            .execute(
+              tool === 'edit'
+                ? { path: 'link.txt', oldString: 'before', newString: 'after' }
+                : { path: 'link.txt', content: 'after' },
+              {
+                signal: new AbortController().signal,
+                executionId: 'swapped',
+                sessionId: 's',
+              },
+            ) as Promise<unknown>,
+        ).rejects.toThrow('destination changed');
+        expect(await readFile(path, 'utf8')).toBe('before');
+        expect(await readFile(other, 'utf8')).toBe('before');
+        expect(kept).toEqual([]);
+      } finally {
+        await finder.destroy();
+        await rm(root, { recursive: true, force: true });
+        await rm(outside, { recursive: true, force: true });
+      }
+    });
+  }
+
+  test('a new-file write cannot overwrite a file created while its ask waits', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-create-ask-')),
+    );
+    const finder = openFinder(root);
+    const path = join(root, 'new.txt');
+    const kept: unknown[] = [];
+    const tools = riffTools({
+      directory: root,
+      finder,
+      mode: () => 'ask',
+      showContent: (_id, content) => {
+        kept.push(content);
+      },
+      ask: async (call) => {
+        expect(call.content).toEqual([
+          { type: 'diff', path, oldText: null, newText: 'proposed' },
+        ]);
+        await writeFile(path, 'created while waiting');
+
+        return ALLOW;
+      },
+    });
+
+    try {
+      await expect(
+        tools
+          .find((entry) => entry.name === 'write')!
+          .execute(
+            { path: 'new.txt', content: 'proposed' },
+            {
+              signal: new AbortController().signal,
+              executionId: 'created',
+              sessionId: 's',
+            },
+          ) as Promise<unknown>,
+      ).rejects.toThrow(
+        'the file changed since this edit was proposed; read it again',
+      );
+      expect(await readFile(path, 'utf8')).toBe('created while waiting');
+      expect(kept).toEqual([]);
+    } finally {
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test('a repeated multiline string cannot ask or publish a replacement', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-unique-ask-')),
+    );
+    const finder = openFinder(root);
+    const path = join(root, 'file.txt');
+    const kept: unknown[] = [];
+    let asks = 0;
+    const tools = riffTools({
+      directory: root,
+      finder,
+      mode: () => 'ask',
+      showContent: (_id, content) => {
+        kept.push(content);
+      },
+      ask: () => {
+        asks++;
+
+        return Promise.resolve(ALLOW);
+      },
+    });
+
+    try {
+      await writeFile(path, 'first\nsecond\nfirst\nsecond\n');
+      await expect(
+        tools
+          .find((entry) => entry.name === 'edit')!
+          .execute(
+            {
+              path: 'file.txt',
+              oldString: 'first\nsecond',
+              newString: 'replacement',
+            },
+            {
+              signal: new AbortController().signal,
+              executionId: 'ambiguous',
+              sessionId: 's',
+            },
+          ) as Promise<unknown>,
+      ).rejects.toThrow('not unique');
+      expect(await readFile(path, 'utf8')).toBe(
+        'first\nsecond\nfirst\nsecond\n',
+      );
+      expect(asks).toBe(0);
+      expect(kept).toEqual([]);
+    } finally {
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

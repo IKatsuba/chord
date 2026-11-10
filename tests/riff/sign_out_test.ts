@@ -1,9 +1,14 @@
 import { afterEach, beforeEach, describe, expect, jest, test } from 'bun:test';
-import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, stat } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { setImmediate as nextTurn } from 'node:timers/promises';
 import { providerOf } from '../../src/riff/provider.ts';
-import { memorySecrets } from '../../src/platform/secrets.ts';
+import {
+  memorySecrets,
+  SecretStoreTimeout,
+} from '../../src/platform/secrets.ts';
+import { withCredentialLock } from '../../src/riff/credential_lock.ts';
 import { credentialCell } from '../../src/riff/credentials.ts';
 import { planCredential } from '../../src/riff/qa_provider.ts';
 import { readProvider, writeProvider } from '../../src/riff/provider_record.ts';
@@ -13,6 +18,149 @@ let root: string;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'chord-sign-out-'));
+});
+
+describe('tester: sign-out cancellation and late deletion', () => {
+  test('a pre-aborted logout still deletes locally but sends no revocation', async () => {
+    const store = memorySecrets({
+      grok: JSON.stringify(planCredential('grok')),
+    });
+    const controller = new AbortController();
+    const events: string[] = [];
+
+    controller.abort();
+
+    const result = await signOut({
+      provider: 'grok',
+      stateDir: root,
+      store,
+      signal: controller.signal,
+      cancel: () => events.push('cancel'),
+      deleted: () => events.push('deleted'),
+      fetch: () => {
+        throw new Error('pre-aborted revocation must not start');
+      },
+    });
+
+    expect(events).toEqual(['cancel', 'deleted']);
+    expect(await store.get('grok')).toBeNull();
+    expect(result).toEqual({
+      provider: 'grok',
+      revoked: false,
+      reason: 'the revocation request failed',
+    });
+  });
+
+  test('a timed-out delete retains its lock until completion without claiming success', async () => {
+    const store = memorySecrets({
+      grok: JSON.stringify(planCredential('grok')),
+    });
+    const release = Promise.withResolvers<void>();
+    let completion: Promise<void> | undefined;
+    const events: string[] = [];
+
+    try {
+      await expect(
+        signOut({
+          provider: 'grok',
+          stateDir: root,
+          store: {
+            ...store,
+            delete: (provider) => {
+              completion = release.promise.then(() => store.delete(provider));
+
+              return Promise.reject(
+                new SecretStoreTimeout(store.name, completion),
+              );
+            },
+          },
+          signal: new AbortController().signal,
+          cancel: () => events.push('cancel'),
+          deleted: () => events.push('deleted'),
+          fetch: () => {
+            throw new Error('failed local deletion must not revoke');
+          },
+        }),
+      ).rejects.toBeInstanceOf(SecretStoreTimeout);
+      expect(events).toEqual(['cancel']);
+      expect(
+        (
+          await stat(join(root, 'riff', 'credentials', 'grok.lock'))
+        ).isDirectory(),
+      ).toBe(true);
+
+      const after = withCredentialLock(root, 'grok', store.name, () =>
+        store.get('grok'),
+      );
+
+      release.resolve();
+      expect(await after).toBeNull();
+      expect(events).toEqual(['cancel']);
+    } finally {
+      release.resolve();
+      await completion;
+      await withCredentialLock(root, 'grok', store.name, () =>
+        Promise.resolve(),
+      );
+    }
+  });
+
+  test.each(['deadline', 'leaving'] as const)(
+    'revocation %s also bounds a response body that never finishes cancelling',
+    async (reason) => {
+      const store = memorySecrets({
+        grok: JSON.stringify(planCredential('grok')),
+      });
+      const entered = Promise.withResolvers<void>();
+      const release = Promise.withResolvers<void>();
+      const controller = new AbortController();
+      const body = new ReadableStream({
+        cancel: () => {
+          entered.resolve();
+
+          return release.promise;
+        },
+      });
+
+      jest.useFakeTimers();
+
+      const done = signOut({
+        provider: 'grok',
+        stateDir: root,
+        store,
+        signal: controller.signal,
+        cancel: () => {},
+        deleted: () => {},
+        fetch: () => Promise.resolve(new Response(body)),
+      });
+
+      try {
+        await entered.promise;
+
+        if (reason === 'deadline') {
+          jest.advanceTimersByTime(10_000);
+        } else {
+          controller.abort();
+        }
+
+        const settled = await Promise.race([
+          done.then(() => true),
+          nextTurn().then(() => false),
+        ]);
+
+        expect(settled).toBe(true);
+        expect(await done).toEqual({
+          provider: 'grok',
+          revoked: false,
+          reason: 'the revocation request failed',
+        });
+        expect(await store.get('grok')).toBeNull();
+      } finally {
+        release.resolve();
+        await done;
+      }
+    },
+  );
 });
 
 afterEach(async () => {

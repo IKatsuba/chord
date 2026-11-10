@@ -1,0 +1,40 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.chd609-designer-u5-wide
+ █▀     ? for shortcuts · /help
+
+ › call shell {"command": "bun run stream"}
+
+ ⏺ Bash(bun run stream)
+   ⎿  Fixture stream 6/8
+      Fixture stream 7/8
+      Fixture stream 8/8
+      … +6 lines (ctrl+o to expand)
+
+ ⏺ $ bun stream.ts Fixture stream 1/8 Fixture stream 2/8 Fixture stream 3/8 Fixture stream 4/8 Fixture stream 5/8
+   Fixture stream 6/8 Fixture stream 7/8 Fixture stream 8/8
+
+   Exit code 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

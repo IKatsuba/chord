@@ -1,0 +1,40 @@
+[38;2;255;255;255m
+ [2m[39m›[0m[38;2;255;255;255m [39mcall shell {"command": "bun run stream"}[38;2;255;255;255m
+
+ [38;2;78;186;101m⏺[38;2;255;255;255m [1m[39mBash[0m(bun run stream)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mFixture stream 6/8[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mFixture stream 7/8[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mFixture stream 8/8[0m[38;2;255;255;255m
+      [2m[39m… +6 lines (ctrl+o to expand)[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39m$ bun stream.ts Fixture stream 1/8 Fixture stream 2/8 Fixture stream 3/8 Fixture stream 4/8 Fixture stream 5/8 [38;2;255;255;255m
+   [39mFixture stream 6/8 Fixture stream 7/8 Fixture stream 8/8[38;2;255;255;255m
+   [39m [38;2;255;255;255m
+   [39mExit code 0[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcall shell {"command": "bun run stream"}[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mBash[0m(bun run stream)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;193;7mReviewed: caution[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mError: The person denied this call.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mAction held after safety review. Use the review advice to choose a materially different safe action, or explain[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mwhy no safe path remains.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mFixture safety review: caution.[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mRejected Bash bun run stream[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mThe person denied this call. Action held after safety review. Use the review advice to choose a materially different[38;2;255;255;255m
+   [39msafe action, or explain why no safe path remains. Fixture safety review: caution.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcall shell {"command": "bun run stream"}[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mBash[0m(bun run stream)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39m$ bun stream.ts[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mFixture stream 1/8[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39mFixture stream 2/8[0m[38;2;255;255;255m
+
+ [38;2;10;116;112m››[38;2;210;255;228m›[38;2;255;255;255m [38;2;71;231;165mWorking…[38;2;255;255;255m [2m[39m(2s · esc to interrupt)[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;215;0m⏵⏵ auto mode on[39m [2m(shift+tab to cycle)[0m[38;2;255;255;255m                                         [2m[39mfake · default effort · 1% context used[0m[38;2;255;255;255m

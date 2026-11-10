@@ -1,0 +1,24 @@
+   ⎿  Reviewed: caution
+      Error: The person denied this call.
+      Action held after safety review. Use the review advice to choose a
+      materially different safe action, or explain why no safe path remains.
+      Fixture safety review: caution.
+   ⎿  Rejected Bash bun run stream
+
+ ⏺ The person denied this call. Action held after safety review. Use the review
+   advice to choose a materially different safe action, or explain why no safe
+   path remains. Fixture safety review: caution.
+
+ › call shell {"command": "bun run stream"}
+
+ ⏺ Bash(bun run stream)
+   ⎿  $ bun stream.ts
+      Fixture stream 1/8
+      Fixture stream 2/8
+
+ ››› Working… (2s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                fake · default · 1% used

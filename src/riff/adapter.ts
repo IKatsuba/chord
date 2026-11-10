@@ -58,6 +58,7 @@ import {
 } from './credentials.ts';
 import { planProvider, providerOf } from './provider.ts';
 import { readProvider } from './provider_record.ts';
+import { ReviewHistory } from './review/state.ts';
 
 /** What a reopened session says of a turn a dead process left open. */
 export const INTERRUPTED = 'The interrupted turn was cancelled.';
@@ -159,6 +160,7 @@ interface Open {
   calls: Set<string>;
   /** What the person allowed for the rest of the session, in both modes. */
   readonly grants: Grants;
+  readonly reviewHistory: ReviewHistory;
   /** The window, while a turn runs that may ask it. */
   client: AgentContext | undefined;
 }
@@ -464,6 +466,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       shown,
       calls: new Set(),
       grants,
+      reviewHistory: new ReviewHistory(),
       client: undefined,
     };
 
@@ -747,11 +750,26 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           return { stopReason: 'cancelled' };
         }
 
+        session.reviewHistory.prompt(
+          params.prompt
+            .filter((block) => block.type === 'text')
+            .map((block) => block.text)
+            .join('\n'),
+        );
+
         const turn = session.agent
           .session(session.id, { model: { id: model, effort } })
           .prompt(promptOf(params.prompt));
 
         for await (const event of turn) {
+          if (event.type === 'tool_end') {
+            session.reviewHistory.result({
+              id: event.id,
+              tool: event.name,
+              text: event.content ?? '',
+            });
+          }
+
           const update = updateOf(
             event,
             session.calls,

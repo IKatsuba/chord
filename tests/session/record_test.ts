@@ -3041,3 +3041,70 @@ test('CHD-613 records resource identity without text, blob or metadata', () =>
       recordActions(entries).some((action) => action.type === 'prompt'),
     ).toBe(true);
   }));
+
+describe('CHD-613 tester: resource record boundaries', () => {
+  test('duplicate URIs retain their own MIME identity and no nested metadata', () =>
+    withDir(async (dir) => {
+      const recording = new FileRecording(join(dir, 'state'), () => {});
+
+      recording.opened(looked());
+      recording.sent('resource', '', 0, [], 1, undefined, 'active', [
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///same',
+            text: 'private embedded text',
+            mimeType: null,
+            _meta: { private: 'nested secret' },
+          },
+        },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///same',
+            blob: 'c2VjcmV0',
+            mimeType: 'application/octet-stream',
+          },
+          _meta: { private: 'outer secret' },
+        },
+      ]);
+      recording.sent('plain', 'text', 0, [], 2);
+      await recording.flushed();
+
+      const entries = await readPast(recording.path!);
+      const prompts = entries.filter((entry) => entry.type === 'prompt');
+
+      expect(prompts).toEqual([
+        {
+          type: 'prompt',
+          turnId: 'resource',
+          prompt: '',
+          images: 0,
+          at: 1,
+          into: 'active',
+          resources: [
+            { uri: 'file:///same', mimeType: null },
+            { uri: 'file:///same', mimeType: 'application/octet-stream' },
+          ],
+        },
+        {
+          type: 'prompt',
+          turnId: 'plain',
+          prompt: 'text',
+          images: 0,
+          at: 2,
+        },
+      ]);
+
+      const stored = await recordFiles.readFile(recording.path!, 'utf8');
+
+      for (const secret of [
+        'private embedded text',
+        'c2VjcmV0',
+        'nested secret',
+        'outer secret',
+      ]) {
+        expect(stored).not.toContain(secret);
+      }
+    }));
+});

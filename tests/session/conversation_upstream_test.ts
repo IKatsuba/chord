@@ -471,3 +471,96 @@ describe('CHD-613 queued embedded resources', () => {
     });
   }
 });
+
+describe('CHD-613 tester: resource queue isolation', () => {
+  test('withdrawing resources leaves the next turn free of their payload', async () => {
+    const received: unknown[] = [];
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        conversation.send('permission', 'permission', [], [], {
+          turnId: 'active',
+        });
+        await until(() => asked(events));
+        conversation.send('withdrawn', 'withdrawn', [], [], {
+          turnId: 'withdrawn',
+          resources: [
+            {
+              type: 'resource',
+              resource: { uri: 'file:///withdrawn', text: 'withheld payload' },
+            },
+          ],
+        });
+        conversation.send('text', 'text', [], [], { turnId: 'next' });
+        conversation.cancelPrompt('withdrawn');
+        conversation.cancelPrompt('active');
+
+        await until(() => resultOf(events, 'next') !== undefined);
+
+        expect(withdrawn(events)).toEqual([['withdrawn']]);
+        expect(promptsIn(events).map(([text]) => text)).toEqual([
+          'permission',
+          'text',
+        ]);
+        expect(received).toEqual([undefined, undefined]);
+      },
+      (session) => {
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          received.push(args[4]);
+
+          return prompt(...args);
+        };
+
+        return session;
+      },
+    );
+  });
+
+  test('cancelling a running turn still sends the queued resource exactly once', async () => {
+    const resources = [
+      {
+        type: 'resource',
+        resource: { uri: 'file:///queued', blob: 'AQID', mimeType: null },
+        _meta: { source: 'queued' },
+      },
+    ] as const;
+    const received: unknown[] = [];
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        conversation.send('permission', 'permission', [], [], {
+          turnId: 'active',
+        });
+        await until(() => asked(events));
+        conversation.send('text', 'text', [], [], {
+          turnId: 'resource',
+          resources,
+        });
+        conversation.send('text', 'text', [], [], { turnId: 'plain' });
+        conversation.cancelPrompt('active');
+
+        await until(() => resultOf(events, 'plain') !== undefined);
+
+        expect(resultOf(events, 'active')).toMatchObject({
+          result: { status: 'cancelled' },
+        });
+        expect(received).toEqual([undefined, resources, undefined]);
+      },
+      (session) => {
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          received.push(args[4]);
+
+          return prompt(...args);
+        };
+
+        return session;
+      },
+    );
+  });
+});

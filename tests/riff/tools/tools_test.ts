@@ -1,6 +1,13 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { FxAgentHostTool } from 'libfx/node';
-import { mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
+import {
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  symlink,
+  writeFile,
+} from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type Finder, openFinder } from '../../../src/platform/fff.ts';
@@ -108,12 +115,20 @@ describe("riff's tools as libfx takes them", () => {
       sessionId: 'session',
     }) as Promise<string>;
 
-  test('three idempotent tools that write nothing, each with a JSON Schema', () => {
-    expect(Object.keys(tools)).toEqual(['read', 'list', 'search']);
+  test('read tools are idempotent and mutations write, each with a JSON Schema', () => {
+    expect(Object.keys(tools)).toEqual([
+      'read',
+      'list',
+      'search',
+      'edit',
+      'write',
+    ]);
 
     for (const tool of Object.values(tools)) {
-      expect(tool.idempotent).toBe(true);
-      expect(tool.writes).toBe(false);
+      const writes = ['edit', 'write'].includes(tool.name);
+
+      expect(tool.idempotent).toBe(!writes);
+      expect(tool.writes).toBe(writes);
       expect(tool.inputSchema).toMatchObject({
         type: 'object',
         additionalProperties: false,
@@ -623,6 +638,128 @@ describe('tester: concurrent permission answers stay with their calls', () => {
       otherAnswer.resolve(DENY);
       await finder.destroy();
       await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('file mutations at the permission boundary', () => {
+  test('the diff is shown while asking, stale bytes refuse, and no success content is kept', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-mutation-ask-')),
+    );
+    const finder = openFinder(root);
+    const kept: unknown[] = [];
+    const path = join(root, 'a.txt');
+
+    await writeFile(path, 'before');
+
+    const tools = riffTools({
+      directory: root,
+      finder,
+      mode: () => 'ask',
+      showContent: (_id, content) => {
+        kept.push(content);
+      },
+      ask: async (call) => {
+        expect(call.content).toEqual([
+          { type: 'diff', path, oldText: 'before', newText: 'after' },
+        ]);
+        expect(call.locations).toEqual([]);
+        await writeFile(path, 'someone else');
+
+        return ALLOW;
+      },
+    });
+
+    try {
+      await expect(
+        tools
+          .find((tool) => tool.name === 'edit')!
+          .execute(
+            { path: 'a.txt', oldString: 'before', newString: 'after' },
+            {
+              signal: new AbortController().signal,
+              executionId: 'stale',
+              sessionId: 's',
+            },
+          ) as Promise<string>,
+      ).rejects.toThrow(
+        'the file changed since this edit was proposed; read it again',
+      );
+      expect(await readFile(path, 'utf8')).toBe('someone else');
+      expect(kept).toEqual([]);
+    } finally {
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  test('an outside symlink asks on the real destination, and either mutation grant covers both modes', async () => {
+    const root = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-mutation-link-')),
+    );
+    const outside = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-mutation-out-')),
+    );
+    const finder = openFinder(root);
+    const path = join(outside, 'file.txt');
+
+    await writeFile(path, 'before');
+    await symlink(path, join(root, 'link.txt'));
+
+    let count = 0;
+    let mode: RiffMode = 'ask';
+    const kept = new Map<string, unknown>();
+    const tools = riffTools({
+      directory: root,
+      finder,
+      mode: () => mode,
+      grants: new Set(),
+      showContent: (id, content) => {
+        kept.set(id, content);
+      },
+      ask: (call, options) => {
+        count++;
+        expect(call.title).toBe(`Write link.txt → ${path}`);
+        expect(options[1]?.name).toBe(
+          `Allow edits to ${path} for this session`,
+        );
+
+        return Promise.resolve(ALLOW_SESSION);
+      },
+    });
+    const run = (name: string, input: unknown, id: string) =>
+      tools
+        .find((tool) => tool.name === name)!
+        .execute(input, {
+          signal: new AbortController().signal,
+          executionId: id,
+          sessionId: 's',
+        }) as Promise<string>;
+
+    try {
+      await run('write', { path: 'link.txt', content: 'first' }, 'write');
+      await run(
+        'edit',
+        { path: 'link.txt', oldString: 'first', newString: 'second' },
+        'edit-ask',
+      );
+
+      mode = 'auto';
+
+      await run(
+        'edit',
+        { path: 'link.txt', oldString: 'second', newString: 'third' },
+        'edit-auto',
+      );
+      await run('write', { path: 'link.txt', content: 'last' }, 'write-auto');
+      expect(count).toBe(1);
+      expect(kept.size).toBe(4);
+      expect(await readFile(path, 'utf8')).toBe('last');
+    } finally {
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
     }
   });
 });

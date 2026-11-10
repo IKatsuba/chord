@@ -228,3 +228,38 @@ describe('usage', () => {
     ).toBe(108);
   });
 });
+
+describe('file mutation display events', () => {
+  test('structured diffs replace the model patch only on a successful tool end', () => {
+    const diff = [
+      {
+        type: 'diff' as const,
+        path: '/project/a',
+        oldText: 'old',
+        newText: 'new',
+      },
+    ];
+    const event = {
+      type: 'tool_end' as const,
+      id: 'edit',
+      name: 'edit',
+      content: 'patch for model',
+      isError: false,
+    };
+
+    expect(updateOf(event, new Set(), undefined, () => diff)).toMatchObject({
+      content: diff,
+    });
+    expect(
+      updateOf(
+        { ...event, isError: true, content: 'stale' },
+        new Set(),
+        undefined,
+        () => diff,
+      ),
+    ).toMatchObject({
+      status: 'failed',
+      content: [{ type: 'content', content: { type: 'text', text: 'stale' } }],
+    });
+  });
+});

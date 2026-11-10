@@ -14,6 +14,7 @@ import {
   type SessionUpdate,
   type Stream,
   type ToolCallUpdate,
+  type ToolCallContent,
 } from '@agentclientprotocol/sdk/unstable';
 import {
   createFxAgent,
@@ -130,7 +131,7 @@ interface Open {
   /** Whether a turn of a prompt is running. */
   running: boolean;
   /** What tools kept for the window of a call, by its id, until it ends. */
-  readonly shown: Map<string, string>;
+  readonly shown: Map<string, string | ToolCallContent[]>;
   /** The calls this turn has sent the window, so each is sent once. */
   calls: Set<string>;
   /** What the person allowed for the rest of the session, in both modes. */
@@ -240,7 +241,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     const plan: RiffPlan = 'fake';
     const config: RiffConfig = resumed?.sidecar ?? defaultConfig(plan);
     const holder: { open?: Open } = {};
-    const shown = new Map<string, string>();
+    const shown = new Map<string, string | ToolCallContent[]>();
     const grants: Grants = new Set();
     const directory = await realpath(cwd).catch(() => {
       throw RequestError.invalidParams(undefined, `no directory ${cwd}`);
@@ -268,6 +269,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           directory,
           finder,
           show: (id, text) => shown.set(id, text),
+          showContent: (id, content) => shown.set(id, content),
           announce: (id, name, input) => announce(holder.open, id, name, input),
           begin: (id, name, input) => begin(holder.open, id, name, input),
           mode: () => holder.open?.config.mode ?? config.mode,

@@ -1481,3 +1481,75 @@ describe('tester: permission cancellation and reopen', () => {
     ).toBe(false);
   });
 });
+
+describe('riff file mutation display', () => {
+  test('write and edit keep their own applied diff as tool_end content', async () => {
+    const project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-mutations-')),
+    );
+
+    await open();
+
+    try {
+      const answer = await client.request('session/new', {
+        cwd: project,
+        mcpServers: [],
+      });
+      const sessionId = answer.result?.['sessionId'] as string;
+
+      await prompt(
+        sessionId,
+        'call write {"path":"a.txt","content":"hello\\n"}',
+      );
+      await prompt(
+        sessionId,
+        'call edit {"path":"a.txt","oldString":"hello","newString":"welcome"}',
+      );
+
+      const updates = client.updates(sessionId);
+
+      expect(updates).toContainEqual({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_write_1',
+        status: 'completed',
+        content: [
+          {
+            type: 'diff',
+            path: join(project, 'a.txt'),
+            oldText: null,
+            newText: 'hello\n',
+          },
+        ],
+      });
+      expect(updates).toContainEqual({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_edit_2',
+        status: 'completed',
+        content: [
+          {
+            type: 'diff',
+            path: join(project, 'a.txt'),
+            oldText: 'hello\n',
+            newText: 'welcome\n',
+          },
+        ],
+      });
+      expect(updates).toContainEqual(
+        expect.objectContaining({
+          sessionUpdate: 'tool_call',
+          title: 'Write a.txt',
+          kind: 'edit',
+        }),
+      );
+      expect(updates).toContainEqual(
+        expect.objectContaining({
+          sessionUpdate: 'tool_call',
+          title: 'Update a.txt',
+          kind: 'edit',
+        }),
+      );
+    } finally {
+      await rm(project, { recursive: true, force: true });
+    }
+  });
+});

@@ -44,7 +44,10 @@ export interface ToolSession {
    * by the call's id; nothing kept, the window shows the model's.
    */
   readonly show?: (executionId: string, shown: string) => void;
-  readonly update?: (update: ToolCallUpdate) => void | Promise<void>;
+  /** Captures this execution's turn for terminal updates, including display content. */
+  readonly stream?: (
+    executionId: string,
+  ) => (update: ToolCallUpdate) => void | Promise<void>;
   readonly showContent?: (
     executionId: string,
     content: ToolCallContent[],
@@ -189,6 +192,7 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
         );
         signal.throwIfAborted();
         await session.begin?.(executionId, spec.name, input);
+        signal.throwIfAborted();
 
         return await spec.run(call, reach, signal, executionId, proposal);
       }),
@@ -292,9 +296,15 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
       run: (input, _reach, signal, id) => {
         session.showContent?.(id, [{ type: 'terminal', terminalId: id }]);
 
-        return shell(directory, input, signal, id, (update) =>
-          session.update?.(update),
-        );
+        const stream =
+          session.stream?.(id) ??
+          ((update: ToolCallUpdate) => {
+            if (update.content !== undefined && update.content !== null) {
+              session.showContent?.(id, update.content);
+            }
+          });
+
+        return shell(directory, input, signal, id, stream);
       },
     }),
   ];

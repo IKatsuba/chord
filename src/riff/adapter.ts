@@ -130,6 +130,8 @@ interface Open {
   used: number | undefined;
   /** Whether a turn of a prompt is running. */
   running: boolean;
+  /** Identity of the turn callbacks may still update. */
+  turn: symbol | undefined;
   /** What tools kept for the window of a call, by its id, until it ends. */
   readonly shown: Map<string, string | ToolCallContent[]>;
   /** The calls this turn has sent the window, so each is sent once. */
@@ -270,19 +272,32 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           finder,
           show: (id, text) => shown.set(id, text),
           showContent: (id, content) => shown.set(id, content),
-          update: (update) => {
+          stream: () => {
             const session = holder.open;
+            const turn = session?.turn;
+            const client = session?.client;
 
-            if (
-              session?.running === true &&
-              session.client !== undefined &&
-              session.calls.has(update.toolCallId)
-            ) {
-              return notify(session.client, session.id, {
+            return (update) => {
+              if (
+                session === undefined ||
+                turn === undefined ||
+                client === undefined ||
+                session.turn !== turn ||
+                !session.running ||
+                !session.calls.has(update.toolCallId)
+              ) {
+                return;
+              }
+
+              if (update.content !== undefined && update.content !== null) {
+                session.shown.set(update.toolCallId, update.content);
+              }
+
+              return notify(client, session.id, {
                 sessionUpdate: 'tool_call_update',
                 ...update,
               });
-            }
+            };
           },
           announce: (id, name, input) => announce(holder.open, id, name, input),
           begin: (id, name, input) => begin(holder.open, id, name, input),
@@ -330,6 +345,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       config: { model: config.model, effort: config.effort, mode: config.mode },
       used: undefined,
       running: false,
+      turn: undefined,
       shown,
       calls: new Set(),
       grants,
@@ -533,13 +549,17 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       // The reopen's turn is the session's running work: a prompt waits for
       // it, and a close cancels it.
       session.running = true;
+      session.turn = Symbol('turn');
       session.client = client;
 
       try {
         await closeOpenTurn(session, client);
       } finally {
         session.running = false;
+        session.turn = undefined;
         session.client = undefined;
+
+        session.shown.clear();
       }
 
       return { configOptions: configOptions(session.plan, session.config) };
@@ -583,6 +603,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       session.calls = new Set();
 
       session.running = true;
+      session.turn = Symbol('turn');
       session.client = client;
 
       try {
@@ -635,7 +656,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         };
       } finally {
         session.running = false;
+        session.turn = undefined;
         session.client = undefined;
+
+        session.shown.clear();
       }
     })
     .onNotification('session/cancel', async ({ params }) => {

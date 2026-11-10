@@ -84,6 +84,20 @@ export async function shell(
     const end = await run.ended;
 
     send({
+      ...(end.error === undefined
+        ? {}
+        : {
+            content: [
+              { type: 'terminal' as const, terminalId },
+              {
+                type: 'content' as const,
+                content: {
+                  type: 'text' as const,
+                  text: `Shell failed: ${end.error}`,
+                },
+              },
+            ],
+          }),
       _meta: {
         terminal_exit: {
           terminal_id: terminalId,

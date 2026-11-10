@@ -1922,19 +1922,42 @@ creates one under an existing directory. Both propose a diff and refuse
 without writing if the file or its destination changed while approval waited.
 Paths are checked at their real destination; a link outside the session
 directory counts as outside. `shell` runs in the session directory, streams
-output into the transcript, and Esc stops its process group.
+output into the transcript, and Esc stops its process groups.
 
 riff defaults to auto; shift+tab toggles ask and auto, kept per session.
 Ask mode asks for every call without a session grant. Auto admits reads, lists
 and searches inside the session directory, edits and writes on non-sensitive
-paths inside it, and calls covered by a grant. Other calls go to a safety
-review: outside reads, outside or sensitive edits and writes, and every
-shell command without a grant. Sensitive paths include `.git/`, `.ssh/`,
+paths inside it, calls covered by a grant, and the shell commands below.
+Other calls go to a safety review: outside reads, outside or sensitive edits
+and writes, and other shell commands. Sensitive paths include `.git/`, `.ssh/`,
 `.env*`, key files (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_dsa`,
 `id_ecdsa`, `id_ed25519`), shell startup files and `Library/LaunchAgents/`.
 `Allow edits to <path> for this session` covers edit and write at that real
 path; `Allow this exact command for this session` covers only that command
 string, never a prefix. Grants hold in both modes for that session.
+
+Auto admits two command sets adapted from fx v0.0.16, with restricted
+arguments and syntax:
+
+- Read-only commands run without a shell: `printf`, `pwd`, `ls`, supported
+  forms of `git status`, `git diff` and `git log`, and `wc`, `cat`, `head`,
+  `tail` and `grep` as pipe filters, up to 8 stages. They use fixed programs
+  in `/bin` and `/usr/bin`, `PATH=/usr/bin:/bin` and the C locale, with
+  output capped at 64 KiB. Git ignores repository-configured fsmonitor,
+  hooks, filters, pager and textconv. If chord cannot prepare git safely,
+  it refuses the command and tells the model.
+- Reversible commands run through `$SHELL -c`: supported forms of `node -v`,
+  `which`, `git status`, `git remote -v`, `git worktree list`, `git fetch`,
+  package-manager version checks, `npm ci`, `npm`/`bun`/`pnpm`/`yarn`
+  installs, tests and `run <script>`, and `zig build`. These can reach the
+  network, change files and run project scripts. Before each command,
+  chord captures alias and function names from the same non-interactive
+  shell. A matching word or an uncertain capture sends it to review;
+  capture supports bash and zsh, with other shells going to review.
+
+Commands outside these rules, including global installs and anything that
+does not parse, go to review. Session grants take precedence; ask mode
+still asks for every ungranted call.
 
 The reviewer is `gpt-6-luna` on ChatGPT or `grok-4.5` on Grok, using your
 plan. Each review spends a plan request; a failed attempt retries once.

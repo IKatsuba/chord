@@ -17,8 +17,13 @@
   cover exact commands, with cancellation stopping the process group.
   Auto is the default; ask grants hold in both modes. Gated auto calls use
   the plan's safety reviewer; clear runs, otherwise allow once or deny with
-  a 5-minute deadline. All ungranted shell commands are reviewed. Review
-  failures keep auto; there is no automatic switch to ask.
+  a 5-minute deadline. `riff/commands/` admits fx's direct read-only and
+  reversible command sets over unbash; other commands are reviewed.
+  Direct plans use fixed executables, a fixed environment and hardened git;
+  failed git preparation refuses execution. Reversible commands use the
+  user shell after a fresh alias/function-name capture; a match or any
+  uncertainty goes to review. Grants precede admission. Review failures
+  keep auto; there is no automatic switch to ask.
   It is the catalog's first agent; Claude stays the default. Listing reads
   no credentials. `CHORD_RIFF_FAKE_PROVIDER`, set by `--fake` and `--qa`,
   selects only the development provider.

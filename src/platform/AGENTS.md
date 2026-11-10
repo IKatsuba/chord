@@ -1,6 +1,9 @@
 # Runtime rules
 
 - Only this folder calls `Bun.*`; everything else in `src/` calls `node:` built-ins, so moving runtime is this folder's change.
+- `spawnGroup` overlays `env` on the parent environment by default;
+  `inheritEnv: false` uses only `env`. Direct admitted commands require a
+  fixed environment; shell tests must supply their complete fixture one.
 - `secrets.ts` alone calls `Bun.secrets`, through an explicit system/fixture
   choice. Keep one serial queue per process and a 20 s deadline per call.
   A timed-out operation keeps its queue place; await a late write or delete

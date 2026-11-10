@@ -50,6 +50,46 @@ import { serveChord } from '../../../../src/server/server.ts';
 import { LINK_TARGET } from '../../../fixtures/fake_agent/scenarios/settings.ts';
 import { join } from 'node:path';
 
+test('a timed-out reviewed action retains the review and actual denial without inventing execution', async () => {
+  for (const columns of [120, 80]) {
+    const drawn = await draw(
+      <Tool
+        call={{
+          id: 'reviewed',
+          title: 'Run a held action',
+          kind: 'execute',
+          status: 'failed',
+          review: { outcome: 'caution', reason: 'held action' },
+          content: [
+            {
+              type: 'content',
+              content: {
+                type: 'text',
+                text: 'Denied: no answer within 5 minutes.',
+              },
+            },
+          ],
+        }}
+        expanded={false}
+        ended
+        width={columns - 2}
+      />,
+      { columns, rows: 24 },
+    );
+
+    try {
+      const frame = stripAnsi(drawn.frame());
+
+      expect(frame).toContain('Reviewed: caution');
+      expect(frame).toContain('Denied: no answer within 5 minutes.');
+      expect(frame).not.toContain('Exit code');
+      expect(frame).not.toContain('Waiting');
+    } finally {
+      await drawn.unmount();
+    }
+  }
+});
+
 test("a call whose result came only as rawOutput draws it: a string, a shell's output and its failure, an object's JSON (CHD-440)", () =>
   withWindow(
     async (window) => {

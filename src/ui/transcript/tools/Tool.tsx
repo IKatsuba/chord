@@ -189,6 +189,20 @@ export function Tool({
             />
           )}
         </box>
+        {call.review !== undefined && (
+          <Under first>
+            <text
+              {...ROWS}
+              {...fg(
+                call.review.outcome === 'failed'
+                  ? colours.error
+                  : colours.warning,
+              )}
+            >
+              {`Reviewed: ${call.review.outcome}`}
+            </text>
+          </Under>
+        )}
         {proposal !== undefined && (
           <Proposal
             view={proposal}
@@ -212,7 +226,7 @@ export function Tool({
           sent === undefined &&
           call.plan === undefined &&
           lines.map((line, index) => (
-            <Under key={index} first={index === 0}>
+            <Under key={index} first={index === 0 && call.review === undefined}>
               <text
                 {...ROWS}
                 {...selectable}

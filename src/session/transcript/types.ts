@@ -20,6 +20,7 @@ import type { Questions } from '../questions.ts';
 import type { OpenEscape, TerminalCursor } from '../terminal_text.ts';
 import type { TokenUsage } from '../usage.ts';
 import type { Team } from '../../teams.ts';
+import type { PermissionReview } from '../permission_review.ts';
 
 /** One tool call, merged from its `tool_call` and every update to it. */
 export interface ToolCall {
@@ -39,6 +40,8 @@ export interface ToolCall {
    * approved, denied, timedOut or aborted; an unknown string stays ordinary.
    */
   readonly guardian?: string;
+  /** A generic agent's safety review, kept after its permission box closes. */
+  readonly review?: PermissionReview;
   /**
    * The plan its agent put to the person out of it, and their answer once
    * given (CHD-437, CHD-457): drawn under it in place of its content.
@@ -731,7 +734,7 @@ export interface PermissionWait {
   readonly id: string;
   /** The subagent that asks, when the session's own agent does not. */
   readonly subagentId?: string;
-  /** When a subagent's request reached chord, epoch milliseconds. */
+  /** When a subagent's or timed request reached chord, epoch milliseconds. */
   readonly at?: number;
   readonly toolCallId?: string;
   readonly title?: string;
@@ -743,6 +746,9 @@ export interface PermissionWait {
   readonly rawInput?: unknown;
   /** The agent's own options, in the agent's order. */
   readonly options: readonly PermissionOption[];
+  readonly review?: PermissionReview;
+  /** The agent's authoritative permission deadline, Unix milliseconds. */
+  readonly deadlineAt?: number;
   /**
    * What chord's own question is about, in words: for who is asked through
    * another client and sees no box drawn beside the call.

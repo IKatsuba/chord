@@ -94,7 +94,7 @@ test('two 30-second timeouts abort each attempt and return unavailable', async (
 
   expect(await result).toEqual({
     outcome: 'unavailable',
-    reason: 'The safety review timed out.',
+    reason: 'the reviewer did not answer in 30 s',
   });
   expect(signals[1]?.aborted).toBe(true);
 });

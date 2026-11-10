@@ -721,7 +721,10 @@ export function workingLine(
           turn.permissions[0]?.save === undefined
             ? 'Waiting for permission…'
             : 'Waiting for you…',
-        detail: formatElapsed(now - turn.since),
+        detail:
+          turn.permissions[0]?.deadlineAt === undefined
+            ? formatElapsed(now - turn.since)
+            : `${formatElapsed(now - (turn.permissions[0].at ?? turn.since))} · denied in ${formatElapsed(turn.permissions[0].deadlineAt - now)}`,
       };
     case 'working':
       return {

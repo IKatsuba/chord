@@ -458,7 +458,10 @@ export function summary(
       case 'pending':
       case 'running':
         return {
-          lines: ended ? [] : [tone === 'pending' ? 'Waiting…' : 'Running…'],
+          lines:
+            ended || (asked && call.review !== undefined)
+              ? []
+              : [tone === 'pending' ? 'Waiting…' : 'Running…'],
           hidden: 0,
           terminals,
           diffs,
@@ -491,7 +494,9 @@ export function summary(
     FOLDED_KINDS.has(call.kind ?? '') &&
     shown.length > SUMMARY_LINES;
   const kept = [
-    ...(asked && tone === 'pending' ? ['Waiting…'] : []),
+    ...(asked && tone === 'pending' && call.review === undefined
+      ? ['Waiting…']
+      : []),
     ...(folds ? shown.slice(0, SUMMARY_LINES) : shown),
   ];
 

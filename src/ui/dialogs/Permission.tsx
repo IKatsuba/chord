@@ -180,7 +180,28 @@ function AgentPermission({
       />
       <box ref={bottom} flexShrink={0} onSizeChange={measure}>
         <box marginTop={1} flexShrink={0}>
-          <text {...TEXT}>Do you want to proceed?</text>
+          {wait.review === undefined ? (
+            <text {...TEXT}>Do you want to proceed?</text>
+          ) : (
+            <box marginBottom={1} flexShrink={0}>
+              {wait.review.outcome === 'failed' ? (
+                <text {...TEXT} {...fg(colours.error)}>
+                  <Ansi
+                    text={`The safety review could not run (${wait.review.reason}). Allow it yourself, or deny it.`}
+                  />
+                </text>
+              ) : (
+                <>
+                  <text {...TEXT} {...fg(colours.warning)}>
+                    The safety review held this:
+                  </text>
+                  <text {...TEXT}>
+                    <Ansi text={wait.review.reason} />
+                  </text>
+                </>
+              )}
+            </box>
+          )}
         </box>
         <box flexShrink={0}>
           <ChoiceList
@@ -191,7 +212,11 @@ function AgentPermission({
             {...kept}
           />
         </box>
-        {held ? <AttendHint /> : <PermissionHint blank={away} />}
+        {held ? (
+          <AttendHint />
+        ) : (
+          <PermissionHint blank={away} timed={wait.deadlineAt !== undefined} />
+        )}
       </box>
     </box>
   );
@@ -502,13 +527,21 @@ export function AttendHint() {
  * The permission prompt's last line: the key that rejects, when one does;
  * `blank` while the agents list has the keys, so the box keeps its height.
  */
-function PermissionHint({ blank = false }: { blank?: boolean }) {
+function PermissionHint({
+  blank = false,
+  timed = false,
+}: {
+  blank?: boolean;
+  timed?: boolean;
+}) {
   const key = useHintKey('confirm:no');
 
   return key === undefined ? null : (
     <box marginTop={1} flexShrink={0}>
       <text {...TEXT} attributes={DIM}>
-        {blank ? ' ' : `${capital(key)} to reject`}
+        {blank
+          ? ' '
+          : `${capital(key)} to reject${timed ? ' · denied by itself in 5 minutes' : ''}`}
       </text>
     </box>
   );

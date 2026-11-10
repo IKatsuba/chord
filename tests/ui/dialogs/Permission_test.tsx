@@ -29,6 +29,48 @@ import {
   withWindow,
 } from '../app/render.tsx';
 
+for (const [columns, rows] of [
+  [120, 40],
+  [80, 24],
+] as const) {
+  for (const [scenario, outcome] of [
+    ['reviewpermission', 'caution'],
+    ['reviewincomplete', 'incomplete'],
+    ['reviewfailed', 'failed'],
+  ] as const) {
+    test(`generic ${outcome} review permission at ${columns}x${rows} retains its review and two keyboard choices`, () =>
+      withWindow(
+        async (window) => {
+          await send(window, scenario);
+          await window.shows('❯ 1. Allow once');
+          await window.shows(`Reviewed: ${outcome}`);
+
+          const frame = window.frame();
+
+          expect(frame).toContain('❯ 1. Allow once');
+          expect(frame).toContain('2. Deny');
+          expect(frame).toContain('denied by itself in 5 minutes');
+          expect(frame).toMatch(/denied in (?:5m 0s|4m \d+s)/);
+
+          if (outcome === 'failed') {
+            expect(frame).toContain('The safety review could not run');
+            expect(frame).toContain('the reviewer did not answer in 30 s');
+          } else {
+            expect(frame).toContain('The safety review held this:');
+          }
+
+          await window.press('2');
+          await window.shows('Review permission: deny.');
+          await window.shows(`Reviewed: ${outcome}`);
+
+          expect(window.frame()).not.toContain('denied by itself');
+          expect(window.frame()).not.toContain('Waiting for permission');
+        },
+        { columns, rows },
+      ));
+  }
+}
+
 test("a permission request shows the agent's options, numbered", () =>
   withWindow(async (window) => {
     await send(window, 'permission');

@@ -25,6 +25,23 @@ const facts: StatusFacts = {
   hint: '? for shortcuts',
 };
 
+test('review permission countdown uses the original ask and authoritative deadline', () => {
+  const turn: TurnState = {
+    status: 'awaiting_permission',
+    turnId: 'turn',
+    since: 1000,
+    permissions: [{ id: 'ask', at: 10000, deadlineAt: 310000, options: [] }],
+  };
+
+  expect(workingLine(turn, 14000, false, 'esc')).toEqual({
+    label: 'Waiting for permission…',
+    detail: '4s · denied in 4m 56s',
+  });
+  expect(workingLine(turn, 400000, false, 'esc')?.detail).toBe(
+    '6m 30s · denied in 0s',
+  );
+});
+
 /** The line as one string: the left side, a gap, the right side. */
 function text(facts: StatusFacts, width: number): string {
   const { left, right } = statusLine(facts, width);

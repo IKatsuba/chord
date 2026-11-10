@@ -25,7 +25,7 @@ export async function review(
 
     const deadline = new AbortController();
     const timeout = setTimeout(
-      () => deadline.abort(new Error('The safety review timed out.')),
+      () => deadline.abort(new Error('the reviewer did not answer in 30 s')),
       REVIEW_TIMEOUT_MS,
     );
     const active = AbortSignal.any([signal, deadline.signal]);
@@ -44,7 +44,7 @@ export async function review(
       if (formatRetried) {
         return {
           outcome: 'unavailable',
-          reason: 'The safety reviewer returned an invalid decision.',
+          reason: 'the reviewer returned an invalid decision',
         };
       }
 

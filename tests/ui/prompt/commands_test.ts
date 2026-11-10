@@ -444,3 +444,37 @@ test('Tab and Enter on an agent are /new with its name', () => {
     args: 'mine',
   });
 });
+
+describe('CHD-604c tester: new-agent ordering boundaries', () => {
+  test('a settings-owned riff keeps the normal settings order', () => {
+    const listed = [
+      { name: 'mine', title: undefined, start: 'fixture', from: 'settings' },
+      {
+        name: 'riff',
+        title: 'riff override',
+        start: 'fixture',
+        from: 'settings',
+      },
+      { name: 'claude', title: 'Claude', start: 'fixture', from: 'npx' },
+    ] as const;
+
+    expect(
+      agentItems(['claude', 'mine', 'riff'], listed).map(({ name }) => name),
+    ).toStrictEqual(['mine', 'riff', 'claude']);
+  });
+
+  test('an explicit empty list hides riff and duplicate names keep their first place', () => {
+    const listed = [
+      { name: 'riff', title: 'riff', start: 'fixture', from: 'builtin' },
+      { name: 'claude', title: 'Claude', start: 'fixture', from: 'npx' },
+    ] as const;
+    const names = ['riff', 'claude'];
+
+    expect(agentItems(names, listed, [])).toStrictEqual([]);
+    expect(
+      agentItems(names, listed, ['claude', 'missing', 'riff', 'claude']).map(
+        ({ name }) => name,
+      ),
+    ).toStrictEqual(['claude', 'riff']);
+  });
+});

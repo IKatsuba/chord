@@ -22,7 +22,7 @@ export interface CredentialLock {
 
 export async function withCredentialLock<T>(
   stateDir: string,
-  provider: SecretProvider,
+  provider: SecretProvider | 'selection',
   store: string,
   operation: (held: CredentialLock) => Promise<T>,
 ): Promise<T> {

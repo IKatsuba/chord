@@ -57,6 +57,7 @@ import {
   CredentialSignedOut,
 } from './credentials.ts';
 import { planProvider, providerOf } from './provider.ts';
+import { readProvider } from './provider_record.ts';
 
 /** What a reopened session says of a turn a dead process left open. */
 export const INTERRUPTED = 'The interrupted turn was cancelled.';
@@ -234,10 +235,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
         const plan =
           resumed?.sidecar.provider ??
-          providerOf({
-            codex: await secrets.get('codex'),
-            grok: await secrets.get('grok'),
-          });
+          providerOf(
+            {
+              codex: await secrets.get('codex'),
+              grok: await secrets.get('grok'),
+            },
+            await readProvider(options.stateDir),
+          );
 
         if (plan === undefined) {
           throw authRequired();

@@ -1,5 +1,6 @@
 /** riff's credential JSON, kept only in the system store (CHD-485, C1). */
 import pLimit from 'p-limit';
+import { resourceSourceMode } from './resource_fixture.ts';
 
 export type SecretProvider = 'codex' | 'grok';
 
@@ -58,6 +59,15 @@ export class SecretStoreTimeout extends Error {
     super(`The ${store} did not answer in 20 s.`);
 
     this.name = 'SecretStoreTimeout';
+  }
+}
+
+// The ACP refusal already transports unavailable-store errors to the caller.
+class FixtureStoreDisabled extends SecretStoreUnavailable {
+  constructor(store: string) {
+    super(store);
+
+    this.message = 'System credential access is disabled in fixture runs.';
   }
 }
 
@@ -138,8 +148,29 @@ export function secrets(backend: SecretBackend, name: string): Secrets {
 }
 
 /** Only production's explicit store selection reaches Bun.secrets. */
-export function systemSecrets(): Secrets {
-  return secrets(Bun.secrets, secretStoreName());
+export function systemSecrets(
+  backend: () => SecretBackend = () => Bun.secrets,
+): Secrets {
+  const name = secretStoreName();
+  let selected: Secrets | undefined;
+
+  const current = () => {
+    if (
+      resourceSourceMode(process.env['CHORD_RESOURCE_FIXTURE']) === 'fixture'
+    ) {
+      throw new FixtureStoreDisabled(name);
+    }
+
+    return (selected ??= secrets(backend(), name));
+  };
+
+  // A non-riff window can offer /login without selecting any system backend.
+  return {
+    name,
+    get: async (provider) => await current().get(provider),
+    set: async (provider, value) => await current().set(provider, value),
+    delete: async (provider) => await current().delete(provider),
+  };
 }
 
 /** Tests and QA share the same serialization and deadline as production. */

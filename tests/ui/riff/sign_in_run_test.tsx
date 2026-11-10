@@ -4,6 +4,7 @@ import type { Session, Turn } from '../../../src/session/session.ts';
 import {
   memorySecrets,
   SecretStoreUnavailable,
+  systemSecrets,
 } from '../../../src/platform/secrets.ts';
 import { SignInNeeded } from '../../../src/session/sign_in.ts';
 import { openSession } from '../../../src/session/session.ts';
@@ -284,6 +285,32 @@ describe('tester: riff window lifecycle boundaries', () => {
 });
 
 describe('riff sign-in in the window', () => {
+  test('a non-riff window starts under fixture mode without selecting a system credential backend', async () => {
+    let calls = 0;
+    const store = systemSecrets(() => {
+      calls++;
+
+      throw new Error('The system backend must never be selected.');
+    });
+
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'hello');
+        await window.shows('Hello, world.');
+        expect(calls).toBe(0);
+      },
+      {
+        riffAccess: {
+          store,
+          fetch: () => {
+            throw new Error('No network in the fixture.');
+          },
+        },
+      },
+    );
+  });
+
   test('G can retry the new account while browser cleanup still holds the driver', async () => {
     const gate = Promise.withResolvers<void>();
     const backing = memorySecrets({

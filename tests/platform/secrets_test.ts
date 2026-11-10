@@ -5,6 +5,7 @@ import {
   SECRET_SERVICE,
   SECRET_TIMEOUT,
   secrets,
+  systemSecrets,
   secretStoreName,
   SecretStoreTimeout,
   SecretStoreUnavailable,
@@ -21,6 +22,32 @@ const backend = (get: SecretBackend['get']): SecretBackend => ({
   get,
   set: () => Promise.resolve(),
   delete: () => Promise.resolve(true),
+});
+
+test('fixture mode refuses every system operation before selecting its backend', async () => {
+  let calls = 0;
+
+  expect(process.env['CHORD_RESOURCE_FIXTURE']).toBe('true');
+
+  const store = systemSecrets(() => {
+    calls++;
+
+    throw new Error('The system backend must never be selected.');
+  });
+
+  expect(calls).toBe(0);
+
+  for (const operation of [
+    () => store.get('codex'),
+    () => store.set('codex', 'fixture'),
+    () => store.delete('codex'),
+  ]) {
+    await expect(operation()).rejects.toThrow(
+      'System credential access is disabled in fixture runs.',
+    );
+  }
+
+  expect(calls).toBe(0);
 });
 
 describe('CHD-606 tester: late credential-store failures', () => {

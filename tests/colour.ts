@@ -1,9 +1,12 @@
 /**
- * Loaded ahead of every test file (bunfig.toml): chalk's colour off, as it
- * is when stdout is not a terminal, so a test reads the same frame in CI and
- * in a person's terminal. A test that checks colour sets the level itself.
+ * Loaded ahead of every test file (bunfig.toml): fixture resources stay
+ * selected in child processes, and chalk's colour is off so a test reads
+ * the same frame in CI and in a person's terminal. Colour tests opt in.
  */
 import chalk from 'chalk';
+
+// Spawned test processes inherit the same fixture boundary as fake/QA runs.
+process.env['CHORD_RESOURCE_FIXTURE'] = 'true';
 
 chalk.level = 0;
 

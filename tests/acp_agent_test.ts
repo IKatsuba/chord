@@ -4322,3 +4322,109 @@ describe('CHD-613 embedded context', () => {
       }
     }));
 });
+
+describe('CHD-613 tester: upstream resource boundaries', () => {
+  const resource = {
+    type: 'resource',
+    resource: { uri: 'custom:isolated', text: '', mimeType: null },
+    _meta: { source: 'tester' },
+  } as const;
+
+  test('resource-only prompts obey each simultaneous session capability', () => {
+    let opened = 0;
+
+    return onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const ids: string[] = [];
+
+        for (const embeddedContext of [true, false]) {
+          const { result, error } = await client.request('session/new', {
+            cwd,
+            mcpServers: [],
+          });
+
+          expect(error).toBeUndefined();
+          expect(result?._meta).toMatchObject({
+            'chord/acp': { embeddedContext },
+          });
+          ids.push(result?.sessionId as string);
+        }
+
+        for (const index of [1, 0]) {
+          const sessionId = ids[index]!;
+          const { result, error } = await client.request('session/prompt', {
+            sessionId,
+            prompt: [resource],
+          });
+
+          if (index === 1) {
+            expect(error).toMatchObject({
+              code: -32602,
+              message: expect.stringContaining(
+                'fake does not take embedded resources',
+              ),
+            });
+            expect(client.said(sessionId)).toBe('');
+          } else {
+            expect(error).toBeUndefined();
+            expect(result?.stopReason).toBe('end_turn');
+
+            const line = client
+              .said(sessionId)
+              .match(/Received a resource: ([^\n]*)/)?.[1];
+
+            assert(line !== undefined);
+            expect(JSON.parse(line)).toEqual(resource);
+          }
+        }
+      },
+      {
+        open: (options) =>
+          openSession({
+            ...options,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              ...(++opened === 1 ? ['--embedded-context'] : []),
+            ),
+          }),
+      },
+    );
+  });
+
+  test('withdrawing a queued resource leaves no receipt or recorded payload', () =>
+    onAcp(
+      ['--embedded-context'],
+      async ({ client, newSession, prompt, stateDir }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'long');
+
+        await until(() => client.said(sessionId) !== '');
+
+        const queued = client.send('session/prompt', {
+          sessionId,
+          prompt: [resource],
+        });
+
+        client.notify('$/cancel_request', { requestId: queued });
+        expect((await client.answerTo(queued)).result?.stopReason).toBe(
+          'cancelled',
+        );
+        client.notify('$/cancel_request', { requestId: running });
+        await client.answerTo(running);
+        expect((await client.answerTo(prompt(sessionId, 'text'))).error).toBe(
+          undefined,
+        );
+        expect(client.said(sessionId)).not.toContain('Received a resource:');
+
+        await client.request('session/close', { sessionId });
+
+        const records = await readRecords(stateDir);
+
+        assert(records[0] !== undefined);
+        expect(await readFile(records[0].path, 'utf8')).not.toContain(
+          resource.resource.uri,
+        );
+      },
+    ));
+});

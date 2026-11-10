@@ -1,0 +1,40 @@
+ riff · riff · ChatGPT · gpt-6.1-sol · opened by main 3s ago
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+   ⎿  Signed in to ChatGPT with a code. Kept in the macOS Keychain.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ riff ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                                    gpt-6.1-sol · default effort
+    main  fake · Fake Large with a 1M context window · medium  ◦ idle 0s  ✓ new reply
+    riff  riff · gpt-6.1-sol · default                         ◦ idle 0s

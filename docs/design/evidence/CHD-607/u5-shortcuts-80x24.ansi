@@ -1,0 +1,24 @@
+[38;2;255;255;255m [2m[39m──────────────────────────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+  [2m[39menter to send                           ! for bash mode[0m[38;2;255;255;255m
+  [2m[39mtab to send the oldest queued now       backspace to leave bash mode[0m[38;2;255;255;255m
+  [2m[39mshift or \ + enter for a newline        esc to interrupt or stop a command[0m[38;2;255;255;255m
+  [2m[39mctrl + g to edit in $EDITOR             shift + tab to cycle modes[0m[38;2;255;255;255m
+  [2m[39mctrl + v to paste an image              ctrl + o for verbose output[0m[38;2;255;255;255m
+  [2m[39malt + ← → to move by word               ctrl + c to clear input[0m[38;2;255;255;255m
+  [2m[39mcmd + ← → to line start or end          ctrl + d or ctrl + c twice to quit[0m[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents, background     ctrl + x a for what waits on you[0m[38;2;255;255;255m
+  [2m[39mx to close an agent, stop background    ctrl + x b to pick a code block[0m[38;2;255;255;255m
+  [2m[39menter for background, details, a call   c r to copy or put in the prompt[0m[38;2;255;255;255m
+  [2m[39mctrl + r to search prompts              1–9 to pick a choice[0m[38;2;255;255;255m
+  [2m[39mtab enter to take a match               ↑ ↓ or j k to move between choices[0m[38;2;255;255;255m
+  [2m[39mesc to cancel a search                  enter to pick the highlighted choice[0m[38;2;255;255;255m
+  [2m[39mpgup pgdn or wheel to scroll            esc to reject a permission[0m[38;2;255;255;255m
+  [2m[39mshift + ↑ ↓ to scroll a line            esc ← to leave a picker or shortcuts[0m[38;2;255;255;255m
+  [2m[39m── ↓ 7 lines below · pagedown to scroll ──────────────────────────────────────
+[0m[38;2;255;255;255m
+[38;2;108;182;255m╭─[1m riff[0m[38;2;108;182;255m ───────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;2;108;182;255m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;215;0m⏵⏵ auto mode on[39m [2m(shift+tab to cycle)[0m[38;2;255;255;255m            [2m[39mgpt-6.1-sol · default effort[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain[2m  fake · Fake Large with a 1M context window  ◦ idle 0s  ✓ new reply[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[38;2;108;182;255mriff[0;2m  riff · gpt-6.1-sol                          ◦ idle 1s[0m[38;2;255;255;255m

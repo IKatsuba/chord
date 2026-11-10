@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · not signed in
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+
+
+
+
+
+
+
+
+
+ ››› Waiting for the code… (0s)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to ChatGPT with a code                                                                                       │
+│                                                                                                                      │
+│ Open the address, sign in, and enter the code. chord goes on once you have.                                          │
+│                                                                                                                      │
+│   https://example.invalid/codex/code                                                                                 │
+│   Opens example.invalid                                                                                              │
+│                                                                                                                      │
+│   WXYZ-1234                                                                                                          │
+│                                                                                                                      │
+│ The code expires in 16 minutes. If OpenAI's page says device code sign-in is off, turn it on in ChatGPT's security   │
+│ settings, or ask your workspace admin.                                                                               │
+│                                                                                                                      │
+│ ❯ 1. Open the address in the browser                                                                                 │
+│   2. Copy the code                                                                                                   │
+│   3. Copy the address                                                                                                │
+│                                                                                                                      │
+│ Enter to choose · Esc to give up                                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

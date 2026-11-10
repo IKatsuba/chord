@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · ChatGPT · gpt-6.1-sol
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+   ⎿  Signed in to ChatGPT with a code. Kept in the macOS Keychain.
+
+ › hello
+
+ ∴ Thinking…
+
+ ⏺ Hello from a fixture plan.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to riff                                                                                                      │
+│                                                                                                                      │
+│   1. ChatGPT · a ChatGPT plan ✔                                                                                      │
+│ ❯ 2. Grok · a Grok plan                                                                                              │
+│                                                                                                                      │
+│ Enter to choose · Esc to cancel                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                  gpt-6.1-sol · default effort · 1% context used

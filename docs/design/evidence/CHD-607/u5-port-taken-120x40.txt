@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · not signed in
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to ChatGPT in the browser                                                                                    │
+│                                                                                                                      │
+│ localhost:1455 is taken by another program. OpenAI sends the browser back only there, so chord cannot sign in in the │
+│ browser while it is. Sign in with a code, or close that program and try again.                                       │
+│                                                                                                                      │
+│ ❯ 1. Use a code instead                                                                                              │
+│   2. Try the browser again                                                                                           │
+│                                                                                                                      │
+│ Enter to choose · Esc to go back                                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

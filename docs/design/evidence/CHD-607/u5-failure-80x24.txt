@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · not signed in
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to ChatGPT with a code                                               │
+│                                                                              │
+│ The sign-in failed: The fixture sign-in was refused.                         │
+│                                                                              │
+│ ChatGPT accounts and workspaces must turn device code sign-in on in          │
+│ ChatGPT's security settings first.                                           │
+│                                                                              │
+│ ❯ 1. Try again                                                               │
+│   2. Sign in in the browser instead                                          │
+│   3. Choose another plan                                                     │
+│                                                                              │
+│ Enter to choose · Esc to cancel                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

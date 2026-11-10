@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · not signed in
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+
+
+
+
+
+ ››› Reading the sign-in from the macOS Keychain… (0s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to riff                                                              │
+│                                                                              │
+│ The macOS Keychain did not answer in 20 s.                                   │
+│                                                                              │
+│ Esc to cancel                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

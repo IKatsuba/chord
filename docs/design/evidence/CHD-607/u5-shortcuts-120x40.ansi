@@ -1,0 +1,40 @@
+[38;2;255;255;255m [1m[38;2;108;182;255mriff[0;2m · riff · ChatGPT · gpt-6.1-sol · opened by main 4s ago[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mriff needs a sign-in to a ChatGPT or Grok plan[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mSigned in to ChatGPT with a code. Kept in the macOS Keychain.[0m[38;2;255;255;255m
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m[39m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+  [2m[39menter to send                           home end for the top and the bottom    ctrl + x b to pick a code block[0m[38;2;255;255;255m
+  [2m[39mtab to send the oldest queued now       ctrl + c to copy                       c r to copy or put in the prompt[0m[38;2;255;255;255m
+  [2m[39mshift or \ + enter for a newline        / @ @@ for commands, files or agents   1–9 to pick a choice[0m[38;2;255;255;255m
+  [2m[39mctrl + g to edit in $EDITOR             ↑ ↓ to pick a completion               ↑ ↓ or j k to move between choices[0m[38;2;255;255;255m
+  [2m[39mctrl + v to paste an image              tab to complete a command              enter to pick the highlighted choice[0m[38;2;255;255;255m
+  [2m[39malt + ← → to move by word               tab enter to add a file or agent       esc to reject a permission[0m[38;2;255;255;255m
+  [2m[39mcmd + ← → to line start or end          esc to close completions               esc ← to leave a picker or shortcuts[0m[38;2;255;255;255m
+  [2m[39m↑ ↓ for prompts, agents, background     ! for bash mode                        ctrl + a to show all directories[0m[38;2;255;255;255m
+  [2m[39mx to close an agent, stop background    backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms[0m[38;2;255;255;255m
+  [2m[39menter for background, details, a call   esc to interrupt or stop a command     ctrl + c to stop the turn and its form[0m[38;2;255;255;255m
+  [2m[39mctrl + r to search prompts              shift + tab to cycle modes             /vim for vim mode[0m[38;2;255;255;255m
+  [2m[39mtab enter to take a match               ctrl + o for verbose output            /login /logout to sign riff in or out[0m[38;2;255;255;255m
+  [2m[39mesc to cancel a search                  ctrl + c to clear input                ? for shortcuts[0m[38;2;255;255;255m
+  [2m[39mpgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit     any key to quit the crash screen[0m[38;2;255;255;255m
+  [2m[39mshift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you[0m[38;2;255;255;255m
+
+[38;2;108;182;255m╭─[1m riff[0m[38;2;108;182;255m ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;2;108;182;255m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;215;0m⏵⏵ auto mode on[39m [2m(shift+tab to cycle)[0m[38;2;255;255;255m                                                    [2m[39mgpt-6.1-sol · default effort[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [39mmain[2m  fake · Fake Large with a 1M context window · medium  ◦ idle 0s  ✓ new reply[0m[38;2;255;255;255m
+  [38;2;177;185;249m  [1m[38;2;108;182;255mriff[0;2m  riff · gpt-6.1-sol · default                         ◦ idle 1s[0m[38;2;255;255;255m

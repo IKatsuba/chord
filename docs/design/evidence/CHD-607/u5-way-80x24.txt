@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · not signed in
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to ChatGPT                                                           │
+│                                                                              │
+│ ❯ 1. In the browser · chord opens OpenAI's page and listens on               │
+│      localhost:1455 for its answer                                           │
+│   2. With a code · enter a short code on OpenAI's page, in any               │
+│      browser, on any device                                                  │
+│                                                                              │
+│ Enter to choose · Esc to go back                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

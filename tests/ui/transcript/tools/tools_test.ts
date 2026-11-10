@@ -39,6 +39,14 @@ test('a title starting with a verb reads as Verb(arg)', () => {
   });
 });
 
+test('a multiline verb-first command keeps its full argument and only one verb', () => {
+  const command = "printf 'one\ntwo\nthree\nfour\n'; exit 1";
+
+  expect(
+    headline({ id: 'a', title: `Bash ${command}`, kind: 'execute' }),
+  ).toStrictEqual({ name: 'Bash', arg: command });
+});
+
 test('a bare command or description is named by its kind', () => {
   expect(
     headline({ id: 'a', title: '`ls -la`', kind: 'execute' }),

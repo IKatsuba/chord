@@ -8,6 +8,7 @@ import {
   type SessionUpdate,
   type StopReason,
   type ToolCallLocation,
+  type ToolCallContent,
   type ToolKind,
   type Usage,
 } from '@agentclientprotocol/sdk/unstable';
@@ -34,7 +35,8 @@ export function updateOf(
   event: FxSessionTurnEvent,
   started: Set<string>,
   draw: (name: string, input: unknown) => Drawn = byName,
-  shown: (id: string) => string | undefined = () => undefined,
+  shown: (id: string) => string | ToolCallContent[] | undefined = () =>
+    undefined,
 ): SessionUpdate | undefined {
   switch (event.type) {
     case 'text_delta':
@@ -68,7 +70,13 @@ export function updateOf(
       };
     case 'tool_end': {
       // What the tool kept for the window, or what the model was given.
-      const content = shown(event.id) ?? event.content;
+      const kept = shown(event.id);
+      const content =
+        event.isError &&
+        Array.isArray(kept) &&
+        kept.some((item) => item.type === 'diff')
+          ? event.content
+          : (kept ?? event.content);
 
       return {
         sessionUpdate: 'tool_call_update',
@@ -77,9 +85,15 @@ export function updateOf(
         ...(content === undefined
           ? {}
           : {
-              content: [
-                { type: 'content', content: { type: 'text', text: content } },
-              ],
+              content:
+                typeof content === 'string'
+                  ? [
+                      {
+                        type: 'content',
+                        content: { type: 'text', text: content },
+                      },
+                    ]
+                  : content,
             }),
       };
     }

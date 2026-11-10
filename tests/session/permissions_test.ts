@@ -144,4 +144,7 @@ test('a request with content of its own keeps no raw input', () => {
   );
 
   expect('rawInput' in wait).toStrictEqual(false);
+  expect(wait.content).toStrictEqual([
+    { type: 'diff', path: 'notes.txt', newText: 'hi' },
+  ]);
 });

@@ -411,6 +411,7 @@ const SCENARIOS = [
   'markdowncode',
   'graphemes',
   'permission',
+  'multidiffask',
   'plan',
   'planshrink',
   'planshrinkgated',

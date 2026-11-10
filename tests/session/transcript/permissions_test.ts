@@ -501,3 +501,42 @@ describe('CHD-158 tester: multiple waits between turns', () => {
     ]);
   });
 });
+
+test('proposed diff content stays on its permission until answered and is not recorded as applied', () => {
+  const permission = {
+    id: 'diff-ask',
+    title: 'Update a.ts',
+    options: [],
+    content: [
+      {
+        type: 'diff' as const,
+        path: '/project/a.ts',
+        oldText: 'old',
+        newText: 'new',
+      },
+    ],
+  };
+  const waiting = fold([
+    { type: 'prompt', turnId: 't1', text: 'edit', at: 0 },
+    { type: 'permission_requested', turnId: 't1', permission },
+  ]);
+
+  assert(waiting.turn.status === 'awaiting_permission');
+  expect(waiting.turn.permissions[0]?.content).toEqual(permission.content);
+  expect(waiting.entries.some((entry) => entry.kind === 'tool')).toBe(false);
+
+  const answered = fold(
+    [
+      {
+        type: 'permission_settled',
+        turnId: 't1',
+        id: permission.id,
+        answer: { type: 'withdrawn' },
+      },
+    ],
+    waiting,
+  );
+
+  expect(answered.turn.status).toBe('working');
+  expect(answered.entries.some((entry) => entry.kind === 'tool')).toBe(false);
+});

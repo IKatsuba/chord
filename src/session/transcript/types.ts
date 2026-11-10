@@ -737,6 +737,8 @@ export interface PermissionWait {
   readonly title?: string;
   readonly kind?: ToolKind;
   readonly locations?: readonly ToolCallLocation[];
+  /** Proposed changes supplied by the agent, shown before an answer. */
+  readonly content?: readonly ToolCallContent[];
   /** The call's arguments, kept only when the request has no content. */
   readonly rawInput?: unknown;
   /** The agent's own options, in the agent's order. */

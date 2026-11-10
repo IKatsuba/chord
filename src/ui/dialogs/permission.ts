@@ -10,6 +10,8 @@ import type {
   PermissionWait,
   TurnState,
 } from '../../session/transcript/types.ts';
+import type { CodeTones } from '../theme/theme.ts';
+import { diffView, type DiffView } from '../transcript/tools/diff.ts';
 import { wrapLine } from '../transcript/message.ts';
 import type { ScrollStep } from '../transcript/scroll.ts';
 
@@ -132,10 +134,9 @@ export function permissionOutcome(
 }
 
 /** A row of the request the box scrolls, and how it is drawn. */
-export interface RequestRow {
-  readonly text: string;
-  readonly kind: 'title' | 'location' | 'input';
-}
+export type RequestRow =
+  | { readonly text: string; readonly kind: 'title' | 'location' | 'input' }
+  | { readonly kind: 'diff'; readonly view: DiffView };
 
 /** The cells an argument's rows hang in from the box's edge. */
 export const INPUT_INDENT = 2;
@@ -144,18 +145,26 @@ export const INPUT_INDENT = 2;
  * The request laid out in rows of `width` cells, each wrapped, never cut, as
  * `wrapLine` wraps it: the title's first row, pinned above the request so it
  * says what is asked while the rest scrolls, and the request itself, the
- * title's other rows, the locations, then the arguments, two cells in.
+ * title's other rows, the locations, then the arguments and proposed diffs,
+ * two cells in.
  */
 export function requestRows(
   wait: PermissionWait,
   width: number,
   titleWidth = width,
+  tones?: CodeTones,
 ): { readonly pinned: string; readonly rows: readonly RequestRow[] } {
   const wrapped = (text: string, room: number) =>
     text.split('\n').flatMap((line) => wrapLine(line, room));
   const [pinned = '', ...title] = wrapped(
     wait.title ?? 'Tool call',
     Math.max(titleWidth, 1),
+  );
+
+  const diffs = (wait.content ?? []).flatMap((item) =>
+    item.type === 'diff'
+      ? [diffView(item.path, item.oldText, item.newText, true, tones)]
+      : [],
   );
 
   return {
@@ -174,8 +183,44 @@ export function requestRows(
           kind: 'input' as const,
         })),
       ),
+      ...(diffs.length > 0 ? [{ text: '', kind: 'input' as const }] : []),
+      ...diffs.flatMap((view): RequestRow[] => [
+        ...(diffs.length > 1
+          ? wrapped(view.path, width).map((text) => ({
+              kind: 'location' as const,
+              text,
+            }))
+          : []),
+        { kind: 'diff', view },
+      ]),
     ],
   };
+}
+
+/** Physical rows in the request, including the diff renderer's wrapped code. */
+export function requestHeight(
+  rows: readonly RequestRow[],
+  width: number,
+): number {
+  return rows.reduce((total, row) => {
+    if (row.kind !== 'diff') {
+      return total + 1;
+    }
+
+    const room = Math.max(width - INPUT_INDENT - row.view.numberWidth - 3, 1);
+
+    return (
+      total +
+      row.view.rows.reduce(
+        (height, line) =>
+          height +
+          (line.kind === 'gap'
+            ? 1
+            : wrapLine(line.code ?? line.text, room).length),
+        0,
+      )
+    );
+  }, 0);
 }
 
 /**

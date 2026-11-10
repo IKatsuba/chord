@@ -12,6 +12,7 @@ import {
   permissionOutcome,
   requestCount,
   requestRows,
+  requestHeight,
   requestStep,
   requestView,
   requestRule,
@@ -423,4 +424,37 @@ test("a room not laid out yet, Yoga's NaN, shows the request whole, and is never
   expect(laidRoom(Number.POSITIVE_INFINITY, 4)).toBe(4);
   expect(laidRoom(0, 4)).toBe(0);
   expect(laidRoom(7, 4)).toBe(7);
+});
+
+test('request diffs count their wrapped physical rows and label multiple files', () => {
+  const wait: PermissionWait = {
+    id: 'diffs',
+    title: 'Update files',
+    options: [],
+    content: [
+      {
+        type: 'diff',
+        path: '/project/a.ts',
+        oldText: 'old\n',
+        newText: 'new\n',
+      },
+      { type: 'diff', path: '/project/b.ts', newText: 'x'.repeat(100) + '\n' },
+    ],
+  };
+  const { rows } = requestRows(wait, 30);
+
+  expect(rows.filter((row) => row.kind === 'location')).toEqual([
+    { kind: 'location', text: '/project/a.ts' },
+    { kind: 'location', text: '/project/b.ts' },
+  ]);
+  // One gap, two path rows, two old/new rows, and 100 characters in 24 cells.
+  expect(requestHeight(rows, 30)).toBe(10);
+
+  const single = requestRows(
+    { ...wait, content: (wait.content ?? []).slice(0, 1) },
+    30,
+  );
+
+  expect(single.rows.some((row) => row.kind === 'location')).toBe(false);
+  expect(requestHeight(single.rows, 30)).toBe(3);
 });

@@ -9,6 +9,10 @@ export const LIMITS = {
   readBytes: 256 * 1024,
   /** Characters of one line a read returns before cutting it. */
   readLineChars: 2000,
+  /** Bytes of shell output the model receives at most. */
+  shellBytes: 256 * 1024,
+  /** Lines of shell output the model receives at most. */
+  shellLines: 2000,
   /** Bytes file-type looks at to tell a binary file. */
   sniffBytes: 4100,
   /** Entries a list returns when the call names no `limit`. */

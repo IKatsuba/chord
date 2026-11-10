@@ -6,13 +6,18 @@
 import type {
   PermissionOption,
   ToolCallUpdate,
+  ToolCallContent,
 } from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
-import type { FxAgentHostTool } from 'libfx/node';
+import type { FxAgentHostTool, FxToolResult } from 'libfx/node';
 import { realpathSync } from 'node:fs';
+import { basename, dirname } from 'node:path';
 import type { Finder } from '../../platform/fff.ts';
 import type { Drawn } from '../events.ts';
 import type { RiffMode } from '../models.ts';
+import { edit, EDIT_DESCRIPTION, EditInput } from './edit.ts';
+import { apply, type Proposal } from './mutation.ts';
+import { write, WRITE_DESCRIPTION, WriteInput } from './write.ts';
 import { list, LIST_DESCRIPTION, ListInput } from './list.ts';
 import { realOf, resolveIn, shown } from './paths.ts';
 import {
@@ -26,6 +31,7 @@ import {
   type Reach,
 } from './permission.ts';
 import { READ_DESCRIPTION, ReadInput, readLines } from './read.ts';
+import { shell, SHELL_DESCRIPTION, ShellInput } from './shell.ts';
 import { SEARCH_DESCRIPTION, SearchInput, searcher } from './search.ts';
 
 /** The session a tool works in. */
@@ -38,6 +44,14 @@ export interface ToolSession {
    * by the call's id; nothing kept, the window shows the model's.
    */
   readonly show?: (executionId: string, shown: string) => void;
+  /** Captures this execution's turn for terminal updates, including display content. */
+  readonly stream?: (
+    executionId: string,
+  ) => (update: ToolCallUpdate) => void | Promise<void>;
+  readonly showContent?: (
+    executionId: string,
+    content: ToolCallContent[],
+  ) => void;
   /** Makes sure the window has the call, before it is asked about. */
   readonly announce?: (
     executionId: string,
@@ -85,13 +99,16 @@ interface ToolSpec<T> {
   readonly description: string;
   readonly schema: z.ZodType<T>;
   /** What the call reaches, or undefined when it reaches nothing to ask about. */
-  readonly reach: (input: T) => Promise<Reach | undefined>;
+  readonly writes?: boolean;
+  readonly prepare?: (input: T, signal: AbortSignal) => Promise<Proposal>;
+  readonly reach: (input: T, proposal?: Proposal) => Promise<Reach | undefined>;
   readonly run: (
     input: T,
     reach: Reach | undefined,
     signal: AbortSignal,
     executionId: string,
-  ) => Promise<string>;
+    proposal?: Proposal,
+  ) => Promise<string | FxToolResult>;
 }
 
 /** Throws unless the call may run: granted, admitted by the mode, or allowed. */
@@ -102,6 +119,7 @@ async function permit(
   input: unknown,
   reach: Reach | undefined,
   signal: AbortSignal,
+  proposal?: Proposal,
 ): Promise<void> {
   const { directory, grants = new Set() } = session;
   const mode = session.mode?.() ?? 'auto';
@@ -119,11 +137,12 @@ async function permit(
         directory,
         name,
         input,
-        reach.tool === 'read' ? reach.real : undefined,
+        'real' in reach ? reach.real : undefined,
       ),
       // A read's title names its file already; list and search keep the
       // directory "this directory" means.
-      ...(reach.tool === 'read' ? { locations: [] } : {}),
+      ...('real' in reach ? { locations: [] } : {}),
+      ...(proposal === undefined ? {} : { content: proposal.content }),
     },
     permissionOptions(reach, directory),
     signal,
@@ -151,23 +170,69 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
     name: spec.name,
     description: spec.description,
     inputSchema: z.toJSONSchema(spec.schema) as FxAgentHostTool['inputSchema'],
-    idempotent: true,
-    writes: false,
+    idempotent: !spec.writes,
+    writes: spec.writes ?? false,
     // Input the schema refuses is a failed call, not a throw out of execute.
     execute: (input: unknown, { signal, executionId }) =>
       Promise.try(async () => {
+        signal.throwIfAborted();
+
         const call = parsed(spec.schema, input);
-        const reach = await spec.reach(call);
+        const proposal = await spec.prepare?.(call, signal);
+        const reach = await spec.reach(call, proposal);
 
-        await permit(session, executionId, spec.name, input, reach, signal);
+        await permit(
+          session,
+          executionId,
+          spec.name,
+          input,
+          reach,
+          signal,
+          proposal,
+        );
+        signal.throwIfAborted();
         await session.begin?.(executionId, spec.name, input);
+        signal.throwIfAborted();
 
-        return await spec.run(call, reach, signal, executionId);
+        return await spec.run(call, reach, signal, executionId, proposal);
       }),
   };
 }
 
-/** read, list and search over `session`, each asking as its mode says. */
+/** File mutation metadata and the shared permission/effect ordering. */
+function fileTool<T>(
+  session: ToolSession,
+  name: 'edit' | 'write',
+  description: string,
+  schema: z.ZodType<T>,
+  prepare: (input: T, signal: AbortSignal) => Promise<Proposal>,
+): FxAgentHostTool {
+  return hostTool(session, {
+    name,
+    description,
+    schema,
+    prepare,
+    writes: true,
+    reach: (_input, proposal) =>
+      Promise.resolve(
+        proposal === undefined
+          ? undefined
+          : { tool: name, real: proposal.real },
+      ),
+    run: async (_input, _reach, signal, id, proposal) => {
+      if (proposal === undefined) {
+        throw new Error('mutation reached no file');
+      }
+
+      await apply(proposal, signal);
+      session.showContent?.(id, proposal.content);
+
+      return `Updated ${shown(session.directory, proposal.real)}\n${proposal.patch}`;
+    },
+  });
+}
+
+/** riff's host tools over `session`, each asking as its mode says. */
 export function riffTools(session: ToolSession): FxAgentHostTool[] {
   const { directory, finder } = session;
   const search = searcher(finder);
@@ -214,6 +279,33 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
       schema: SearchInput,
       reach: () => Promise.resolve({ tool: 'search' }),
       run: (input, _reach, signal) => search(input, signal),
+    }),
+    fileTool(session, 'edit', EDIT_DESCRIPTION, EditInput, (input, signal) =>
+      edit(resolveIn(directory, input.path), input, signal),
+    ),
+    fileTool(session, 'write', WRITE_DESCRIPTION, WriteInput, (input, signal) =>
+      write(resolveIn(directory, input.path), input, signal),
+    ),
+    hostTool(session, {
+      name: 'shell',
+      description: SHELL_DESCRIPTION,
+      schema: ShellInput,
+      writes: true,
+      reach: (input) =>
+        Promise.resolve({ tool: 'shell', command: input.command }),
+      run: (input, _reach, signal, id) => {
+        session.showContent?.(id, [{ type: 'terminal', terminalId: id }]);
+
+        const stream =
+          session.stream?.(id) ??
+          ((update: ToolCallUpdate) => {
+            if (update.content !== undefined && update.content !== null) {
+              session.showContent?.(id, update.content);
+            }
+          });
+
+        return shell(directory, input, signal, id, stream);
+      },
     }),
   ];
 }
@@ -284,6 +376,42 @@ export function drawn(
               : { line: read.data.offset }),
           },
         ],
+      };
+    }
+    case 'edit':
+    case 'write': {
+      const mutation = (name === 'edit' ? EditInput : WriteInput).safeParse(
+        input,
+      );
+      const verb = name === 'edit' ? 'Update' : 'Write';
+
+      if (!mutation.success) {
+        return { title: verb, kind: 'edit' };
+      }
+
+      const path = resolveIn(directory, mutation.data.path);
+      const target =
+        real ??
+        realOrNone(path) ??
+        realOrNone(dirname(path))?.concat(`/${basename(path)}`);
+      const through =
+        target === undefined || target === path
+          ? ''
+          : ` → ${shown(directory, target)}`;
+
+      return {
+        title: `${verb} ${shown(directory, path)}${through}`,
+        kind: 'edit',
+        locations: [{ path: target ?? path }],
+      };
+    }
+    case 'shell': {
+      const command = ShellInput.safeParse(input);
+
+      return {
+        title: command.success ? `Bash ${command.data.command}` : 'Bash',
+        kind: 'execute',
+        locations: [{ path: directory }],
       };
     }
     case 'list': {

@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
-import { createFxAgent, type FxAgent } from 'libfx/node';
+import { createFxAgent, type FxAgent, type FxAgentHostTool } from 'libfx/node';
 import { mkdtemp, readFile, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -1479,5 +1479,385 @@ describe('tester: permission cancellation and reopen', () => {
         .updates(sessionId)
         .some((update) => update.status === 'in_progress'),
     ).toBe(false);
+  });
+});
+
+describe('riff file mutation display', () => {
+  test('write and edit keep their own applied diff as tool_end content', async () => {
+    const project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-mutations-')),
+    );
+
+    await open();
+
+    try {
+      const answer = await client.request('session/new', {
+        cwd: project,
+        mcpServers: [],
+      });
+      const sessionId = answer.result?.['sessionId'] as string;
+
+      await prompt(
+        sessionId,
+        'call write {"path":"a.txt","content":"hello\\n"}',
+      );
+      await prompt(
+        sessionId,
+        'call edit {"path":"a.txt","oldString":"hello","newString":"welcome"}',
+      );
+
+      const updates = client.updates(sessionId);
+
+      expect(updates).toContainEqual({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_write_1',
+        status: 'completed',
+        content: [
+          {
+            type: 'diff',
+            path: join(project, 'a.txt'),
+            oldText: null,
+            newText: 'hello\n',
+          },
+        ],
+      });
+      expect(updates).toContainEqual({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_edit_2',
+        status: 'completed',
+        content: [
+          {
+            type: 'diff',
+            path: join(project, 'a.txt'),
+            oldText: 'hello\n',
+            newText: 'welcome\n',
+          },
+        ],
+      });
+      expect(updates).toContainEqual(
+        expect.objectContaining({
+          sessionUpdate: 'tool_call',
+          title: 'Write a.txt',
+          kind: 'edit',
+        }),
+      );
+      expect(updates).toContainEqual(
+        expect.objectContaining({
+          sessionUpdate: 'tool_call',
+          title: 'Update a.txt',
+          kind: 'edit',
+        }),
+      );
+    } finally {
+      await rm(project, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('riff shell terminal updates', () => {
+  test('streams one terminal and its exit before the turn answer, keeping model output out of its end content', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const turn = prompt(
+      sessionId,
+      'call shell {"command":"printf stream; exit 3"}',
+    );
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow' },
+    });
+    await turn;
+
+    const updates = client.updates(sessionId);
+
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call',
+        toolCallId: 'call_shell_1',
+        title: 'Bash printf stream; exit 3',
+        kind: 'execute',
+      }),
+    );
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_shell_1',
+        _meta: {
+          terminal_output_delta: {
+            terminal_id: 'call_shell_1',
+            data: 'stream',
+          },
+        },
+      }),
+    );
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_shell_1',
+        _meta: {
+          terminal_exit: {
+            terminal_id: 'call_shell_1',
+            exit_code: 3,
+            signal: null,
+          },
+        },
+      }),
+    );
+    expect(updates).toContainEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call_shell_1',
+      status: 'failed',
+      content: [{ type: 'terminal', terminalId: 'call_shell_1' }],
+    });
+    expect(client.said(sessionId)).toContain('stream\nExit code 3');
+
+    const count = updates.length;
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'auto',
+    });
+    expect(client.updates(sessionId)).toHaveLength(count);
+  });
+});
+
+describe('shell error and turn ownership regressions', () => {
+  test('a deleted working directory keeps the startup cause beside its terminal', async () => {
+    const project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-shell-error-')),
+    );
+
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: project,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await rm(project, { recursive: true, force: true });
+
+    const turn = prompt(sessionId, 'call shell {"command":"printf never"}');
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow' },
+    });
+    await turn;
+
+    const failed = client
+      .updates(sessionId)
+      .find((update) => update.status === 'failed');
+
+    expect(failed).toMatchObject({
+      toolCallId: 'call_shell_1',
+      content: [
+        { type: 'terminal', terminalId: 'call_shell_1' },
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: expect.stringContaining('Shell failed:'),
+          },
+        },
+      ],
+    });
+    expect(client.said(sessionId)).toContain('Shell failed:');
+  });
+
+  test('an abandoned shell cannot send delayed output or exit to a new turn reusing its id', async () => {
+    const project = await realpath(
+      await mkdtemp(join(tmpdir(), 'chord-riff-shell-turn-')),
+    );
+    const oldDone = Promise.withResolvers<void>();
+    const controller = new AbortController();
+    const jobs: Promise<unknown>[] = [];
+    let first = true;
+    const oldCommand =
+      'printf READY; while test ! -e release; do sleep 0.01; done; printf OLD';
+    const newCommand =
+      'printf NEW; while test ! -e finish; do sleep 0.01; done';
+    let cancel = () => {};
+
+    await open(true, {
+      createAgent: (options) => {
+        const made = createFxAgent(options);
+        const tool = (options?.tools as readonly FxAgentHostTool[]).find(
+          (tool) => tool.name === 'shell',
+        )!;
+
+        return Object.assign(Object.create(made) as FxAgent, {
+          session: (sessionId: string) => ({
+            // Deliberately model libfx abandoning a still-running host callback:
+            // the turn answers now, while the shell's gated output comes later.
+            cancel: () => {
+              cancel();
+
+              return Promise.resolve();
+            },
+            prompt: () => {
+              const isFirst = first;
+
+              first = false;
+
+              const ended = Promise.withResolvers<void>();
+              let cancelled = false;
+
+              cancel = () => {
+                cancelled = true;
+
+                ended.resolve();
+              };
+
+              const work = Promise.resolve().then(() =>
+                tool.execute(
+                  { command: isFirst ? oldCommand : newCommand },
+                  {
+                    signal: controller.signal,
+                    executionId: 'reused-shell',
+                    sessionId,
+                  },
+                ),
+              );
+
+              jobs.push(
+                work
+                  .finally(() => {
+                    if (isFirst) {
+                      oldDone.resolve();
+                    }
+
+                    ended.resolve();
+                  })
+                  .catch(() => undefined),
+              );
+
+              return {
+                messageId: 'turn',
+                accepted: Promise.resolve({ sessionId, messageId: 'turn' }),
+                result: ended.promise.then(() => ({
+                  messageId: 'turn',
+                  stopReason: cancelled ? 'cancelled' : 'end_turn',
+                  usage: {},
+                })),
+                [Symbol.asyncIterator]: () => ({
+                  next: async () => {
+                    await ended.promise;
+
+                    return { done: true, value: undefined };
+                  },
+                }),
+              };
+            },
+          }),
+        });
+      },
+    });
+
+    try {
+      const answer = await client.request('session/new', {
+        cwd: project,
+        mcpServers: [],
+      });
+      const sessionId = answer.result?.['sessionId'] as string;
+      const firstTurn = prompt(
+        sessionId,
+        `call shell ${JSON.stringify({ command: oldCommand })}`,
+      );
+      const asked = await client.until(
+        (message) => message.method === 'session/request_permission',
+      );
+
+      client.respond(asked.id!, {
+        outcome: { outcome: 'selected', optionId: 'allow' },
+      });
+      await until(() =>
+        client
+          .updates(sessionId)
+          .some((update) =>
+            String(
+              JSON.stringify(
+                (update._meta as Record<string, unknown> | undefined)?.[
+                  'terminal_output_delta'
+                ],
+              ),
+            ).includes('READY'),
+          ),
+      );
+      client.notify('session/cancel', { sessionId });
+      expect((await firstTurn).result?.['stopReason']).toBe('cancelled');
+
+      const boundary = client.updates(sessionId).length;
+      const nextTurn = prompt(
+        sessionId,
+        'call shell {"command":"printf NEW; while test ! -e finish; do sleep 0.01; done"}',
+      );
+      const nextAsk = await client.until(
+        (message) =>
+          message.method === 'session/request_permission' &&
+          message.id !== asked.id,
+      );
+
+      client.respond(nextAsk.id!, {
+        outcome: { outcome: 'selected', optionId: 'allow' },
+      });
+      await until(() =>
+        client
+          .updates(sessionId)
+          .slice(boundary)
+          .some((update) =>
+            String(
+              JSON.stringify(
+                (update._meta as Record<string, unknown> | undefined)?.[
+                  'terminal_output_delta'
+                ],
+              ),
+            ).includes('NEW'),
+          ),
+      );
+      await writeFile(join(project, 'release'), '');
+      await oldDone.promise;
+
+      const current = client.updates(sessionId).slice(boundary);
+
+      expect(
+        current.filter((update) => update.sessionUpdate === 'tool_call'),
+      ).toContainEqual(expect.objectContaining({ toolCallId: 'reused-shell' }));
+      expect(JSON.stringify(current)).not.toContain('OLD');
+      expect(
+        current.some(
+          (update) =>
+            (update._meta as Record<string, unknown> | undefined)?.[
+              'terminal_exit'
+            ] !== undefined,
+        ),
+      ).toBe(false);
+      await writeFile(join(project, 'finish'), '');
+      await nextTurn;
+      expect(
+        client
+          .updates(sessionId)
+          .slice(boundary)
+          .filter(
+            (update) =>
+              (update._meta as Record<string, unknown> | undefined)?.[
+                'terminal_exit'
+              ] !== undefined,
+          ),
+      ).toHaveLength(1);
+    } finally {
+      controller.abort(new Error('fixture cleanup'));
+      await Promise.all(jobs);
+      await writeFile(join(project, 'release'), '').catch(() => undefined);
+      await writeFile(join(project, 'finish'), '').catch(() => undefined);
+      await rm(project, { recursive: true, force: true });
+    }
   });
 });

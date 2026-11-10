@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx[38;2;255;255;255m
+   [39mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mWrite[0m(.env.review-incomplete)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;193;7mReviewed: incomplete[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mError: The person denied this call.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mAction held because the evidence is incomplete; reduce the action or supporting evidence to fit the review[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mlimits, or choose a materially different fully inspectable actio[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mRejected Write .env.review-incomplete[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mThe person denied this call. Action held because the evidence is incomplete; reduce the action or supporting [38;2;255;255;255m
+   [39mevidence to fit the review limits, or choose a materially different fully inspectable action. The pending action's [38;2;255;255;255m
+   [39mdiff exceeds the 64 KiB review limit.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcall shell {"command":"printf '[review:failed]'"}[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mBash[0m(printf '[review:failed]')[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mReviewed: failed[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mError: Denied: no answer within 5 minutes.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mSafety reviewer unavailable; action held. Continue with a different safe action or retry later.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mthe reviewer returned an invalid decision[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mDenied: no answer within 5 minutes. Safety reviewer unavailable; action held. Continue with a different safe action [38;2;255;255;255m
+   [39mor retry later. the reviewer returned an invalid decision[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;215;0m⏵⏵ auto mode on[39m [2m(shift+tab to cycle)[0m[38;2;255;255;255m                                         [2m[39mfake · default effort · 1% context used[0m[38;2;255;255;255m

@@ -1,0 +1,40 @@
+   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+   xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"}
+
+ ⏺ Write(.env.review-incomplete)
+   ⎿  Reviewed: incomplete
+      Error: The person denied this call.
+      Action held because the evidence is incomplete; reduce the action or supporting evidence to fit the review
+      limits, or choose a materially different fully inspectable actio
+   ⎿  Rejected Write .env.review-incomplete
+
+ ⏺ The person denied this call. Action held because the evidence is incomplete; reduce the action or supporting
+   evidence to fit the review limits, or choose a materially different fully inspectable action. The pending action's
+   diff exceeds the 64 KiB review limit.
+
+ › call shell {"command":"printf '[review:failed]'"}
+
+ ⏺ Bash(printf '[review:failed]')
+   ⎿  Reviewed: failed
+
+ ››› Waiting for permission… (41s · denied in 4m 18s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Bash printf '[review:failed]'                                                                                        │
+│ /private/tmp/chord-qa.chd608                                                                                         │
+│                                                                                                                      │
+│ The safety review could not run (the reviewer returned an invalid decision). Allow it yourself, or deny it.          │
+│                                                                                                                      │
+│ ❯ 1. Allow once                                                                                                      │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject · denied by itself in 5 minutes                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

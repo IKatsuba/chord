@@ -1,0 +1,24 @@
+ › call shell {"command":"printf '[review:caution]'"}
+
+ ⏺ Bash(printf '[review:caution]')
+   ⎿  Reviewed: caution
+
+ ››› Waiting for permission… (17s · denied in 4m 42s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Bash printf '[review:caution]'                                               │
+│ /private/tmp/chord-qa.chd608                                                 │
+│                                                                              │
+│ The safety review held this:                                                 │
+│ Fixture safety review: caution.                                              │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                   fake · default effort

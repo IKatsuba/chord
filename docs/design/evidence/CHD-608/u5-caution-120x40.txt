@@ -1,0 +1,40 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.chd608
+ █▀     ? for shortcuts · /help
+
+ › call shell {"command":"printf '[review:caution]'"}
+
+ ⏺ Bash(printf '[review:caution]')
+   ⎿  Reviewed: caution
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (7s · denied in 4m 52s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Bash printf '[review:caution]'                                                                                       │
+│ /private/tmp/chord-qa.chd608                                                                                         │
+│                                                                                                                      │
+│ The safety review held this:                                                                                         │
+│ Fixture safety review: caution.                                                                                      │
+│                                                                                                                      │
+│ ❯ 1. Allow once                                                                                                      │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject · denied by itself in 5 minutes                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                                           fake · default effort

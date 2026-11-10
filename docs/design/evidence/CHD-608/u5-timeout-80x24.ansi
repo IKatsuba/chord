@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mRejected Write .env.review-incomplete[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mThe person denied this call. Action held because the evidence is incomplete;[38;2;255;255;255m
+   [39mreduce the action or supporting evidence to fit the review limits, or choose[38;2;255;255;255m
+   [39ma materially different fully inspectable action. The pending action's diff [38;2;255;255;255m
+   [39mexceeds the 64 KiB review limit.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcall shell {"command":"printf '[review:failed]'"}[38;2;255;255;255m
+
+ [38;2;255;107;128m⏺[38;2;255;255;255m [1m[39mBash[0m(printf '[review:failed]')[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mReviewed: failed[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mError: Denied: no answer within 5 minutes.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mSafety reviewer unavailable; action held. Continue with a different[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128msafe action or retry later.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;255;107;128mthe reviewer returned an invalid decision[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mDenied: no answer within 5 minutes. Safety reviewer unavailable; action [38;2;255;255;255m
+   [39mheld. Continue with a different safe action or retry later. the reviewer [38;2;255;255;255m
+   [39mreturned an invalid decision[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [38;2;255;215;0m⏵⏵ auto mode on[39m [2m(shift+tab to cycle)[0m[38;2;255;255;255m                [2m[39mfake · default · 1% used[0m[38;2;255;255;255m

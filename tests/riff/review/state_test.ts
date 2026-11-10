@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { ReviewHistory } from '../../../src/riff/review/state.ts';
 
 test('review history retains user requests and only the current turn results', () => {
@@ -79,5 +79,48 @@ test('empty text prompts do not grow retained request history', () => {
     current: '',
     first: 'first',
     recent: [],
+  });
+});
+
+describe('CHD-608 tester: review history isolation', () => {
+  test('separate sessions keep requests, denials and tool results independent', () => {
+    const first = new ReviewHistory();
+    const second = new ReviewHistory();
+
+    first.prompt('first session');
+    second.prompt('second session');
+    first.permission('same-call');
+    first.result({ id: 'same-call', tool: 'read', text: 'denied' });
+    second.result({ id: 'same-call', tool: 'read', text: 'actual output' });
+
+    expect(first.snapshot().results).toEqual([]);
+    expect(second.snapshot().requests.current).toBe('second session');
+    expect(second.snapshot().results[0]?.text).toBe('actual output');
+
+    first.prompt('next turn');
+    first.result({ id: 'same-call', tool: 'read', text: 'new turn output' });
+
+    expect(first.snapshot().results[0]?.text).toBe('new turn output');
+    expect(second.snapshot().results[0]?.text).toBe('actual output');
+  });
+
+  test('small results reach the count limit and omission totals reset per turn', () => {
+    const history = new ReviewHistory();
+
+    history.prompt('request');
+
+    for (let i = 0; i < 40; i++) {
+      history.result({ id: String(i), tool: 'read', text: String(i) });
+    }
+
+    expect(history.snapshot().results.map(({ id }) => id)).toEqual(
+      Array.from({ length: 16 }, (_, index) => String(39 - index)),
+    );
+    expect(history.snapshot().omittedResults).toBe(24);
+
+    history.prompt('next');
+
+    expect(history.snapshot().results).toEqual([]);
+    expect(history.snapshot().omittedResults).toBe(0);
   });
 });

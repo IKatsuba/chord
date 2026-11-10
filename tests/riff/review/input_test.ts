@@ -133,3 +133,83 @@ describe('review input', () => {
     expect(cut.endsWith('🙂')).toBe(true);
   });
 });
+
+describe('CHD-608 tester: review evidence boundaries', () => {
+  test('counts action limits in UTF-8 bytes independently for each field', () => {
+    const command = '🙂'.repeat(16384);
+    const cwd = 'a'.repeat(65536);
+
+    expect(
+      reviewInput({ action: { ...shell, command, cwd }, requests, results: [] })
+        .outcome,
+    ).toBe('ready');
+
+    for (const action of [
+      { ...shell, command: command + 'x' },
+      { ...mutation, diff: command + 'x' },
+      { tool: 'read', real: command + 'x' },
+    ] as const) {
+      const result = reviewInput({ action, requests, results: [] });
+
+      expect(result.outcome).toBe('incomplete');
+      expect('text' in result).toBe(false);
+    }
+  });
+
+  test('spends the shared request budget on current, first, then newest recent', () => {
+    const result = reviewInput({
+      action: shell,
+      requests: {
+        current: 'c'.repeat(400),
+        first: 'f'.repeat(400),
+        recent: ['n'.repeat(400), 'old request'],
+      },
+      results: [],
+    });
+
+    if (result.outcome !== 'ready') {
+      throw new Error(result.reason);
+    }
+
+    expect(result.text).toContain(
+      `<current_request>${'c'.repeat(400)}</current_request>`,
+    );
+    expect(result.text).toContain(
+      `<first_root_user_request>${'f'.repeat(400)}</first_root_user_request>`,
+    );
+
+    const recent = [
+      ...result.text.matchAll(/<recent_request>(.*?)<\/recent_request>/g),
+    ];
+
+    expect(Buffer.byteLength(recent[0]?.[1] ?? '')).toBe(224);
+    expect(recent[0]?.[1]).toContain('...[evidence omitted]...');
+    expect(result.text).not.toContain('old request');
+  });
+
+  test('keeps branch Unicode intact and reports previously omitted results', () => {
+    const result = reviewInput({
+      action: shell,
+      requests,
+      branch: '🙂'.repeat(100),
+      results: Array.from({ length: 20 }, (_, index) => ({
+        id: String(index),
+        tool: 'read',
+        text: String(index),
+      })),
+      omittedResults: 7,
+    });
+
+    if (result.outcome !== 'ready') {
+      throw new Error(result.reason);
+    }
+
+    const branch =
+      result.text.match(/<current_branch>(.*?)<\/current_branch>/)?.[1] ?? '';
+
+    expect(Buffer.byteLength(branch)).toBeLessThanOrEqual(255);
+    expect(branch).not.toContain('\ufffd');
+    expect(result.text).toContain('<omitted_results>11</omitted_results>');
+    expect(result.text).not.toContain('<id>16</id>');
+  });
+});

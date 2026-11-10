@@ -232,7 +232,7 @@ function fileTool<T>(
   });
 }
 
-/** read, list and search over `session`, each asking as its mode says. */
+/** riff's host tools over `session`, each asking as its mode says. */
 export function riffTools(session: ToolSession): FxAgentHostTool[] {
   const { directory, finder } = session;
   const search = searcher(finder);

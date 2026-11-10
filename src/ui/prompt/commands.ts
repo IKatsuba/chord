@@ -199,9 +199,10 @@ export function teamItems(
 /**
  * The agents `/new` offers, by name, as chord can start them in the window,
  * each described as `chord agents` lists it in `listed`; one it does not
- * list, as `--agent-command` names, by its name alone. Those the settings
- * files start come first, then own CLIs PATH has, then the registry's, and
- * own CLIs PATH lacks last, so what will start is on top. With the
+ * list, as `--agent-command` names, by its name alone. riff comes first,
+ * as on the start screen (CHD-485), then those the settings files start,
+ * then own CLIs PATH has, then the registry's, and own CLIs PATH lacks
+ * last, so what will start is on top. With the
  * `offeredAgents` setting, its known names alone and in its order, as the
  * person chose them; `names` is then only what a typed `/new` may start.
  */
@@ -230,7 +231,7 @@ export function agentItems(
     const agent = listed.find((each) => each.name === name);
 
     return {
-      rank: agent === undefined ? 0 : readiness(agent),
+      rank: agent === undefined ? 1 : readiness(agent),
       item: itemOf(name, agent),
     };
   });
@@ -240,12 +241,14 @@ export function agentItems(
 
 function readiness({ from, found }: ListedAgent): number {
   switch (from) {
-    case 'settings':
+    case 'builtin':
       return 0;
+    case 'settings':
+      return 1;
     case 'cli':
-      return found === true ? 1 : found === false ? 3 : 2;
+      return found === true ? 2 : found === false ? 4 : 3;
     default:
-      return 2;
+      return 3;
   }
 }
 

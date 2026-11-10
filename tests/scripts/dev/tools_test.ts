@@ -19,6 +19,7 @@ import {
   check,
   chord,
   chordOnRiff,
+  chordWithRiff,
   lint,
   qaPlace,
   type Run,
@@ -123,8 +124,6 @@ describe('chordOnRiff', () => {
           'process.env.CHORD_RESOURCE_FIXTURE:"true"',
           'src/main.tsx',
           'riff',
-          '--agent-command',
-          quote([bun, join(root, 'src', 'main.tsx'), '--riff-agent']),
           '-p',
           'hi',
         ],
@@ -153,6 +152,72 @@ describe('chordOnRiff', () => {
       ),
     ).rejects.toBe(failure);
     expect(stopped).toBe(true);
+  });
+});
+
+describe('chordWithRiff (CHD-604c)', () => {
+  /** `chordWithRiff` with a recorded run and a provider that says when it stops. */
+  async function served(
+    fake: boolean,
+    args: readonly string[],
+    fixtureResources?: boolean,
+  ) {
+    const order: string[] = [];
+    const ran: [readonly string[], Readonly<Record<string, string>>][] = [];
+    const status = await chordWithRiff(
+      fake,
+      args,
+      fixtureResources,
+      (argv, env) => {
+        order.push('run');
+        ran.push([argv, env]);
+
+        return Promise.resolve(5);
+      },
+      () => {
+        order.push('serve');
+
+        return Promise.resolve({
+          url: 'http://localhost:1/v1',
+          stop: () => {
+            order.push('stop');
+
+            return Promise.resolve();
+          },
+        });
+      },
+    );
+
+    return { status, order, ran };
+  }
+
+  test("--fake runs the fake agent with riff's provider served around it", async () => {
+    const recorded = faked();
+
+    chord(true, ['-p', 'hi'], recorded.run);
+
+    expect(await served(true, ['-p', 'hi'])).toStrictEqual({
+      status: 5,
+      order: ['serve', 'run', 'stop'],
+      ran: [
+        [
+          recorded.ran[0]!,
+          { CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1' },
+        ],
+      ],
+    });
+  });
+
+  test('--qa without --fake serves it too, on fixture resources', async () => {
+    const recorded = faked();
+
+    chord(false, ['-C', '/tmp/chord-qa'], recorded.run, true);
+
+    const { ran } = await served(false, ['-C', '/tmp/chord-qa'], true);
+
+    expect(ran).toStrictEqual([
+      [recorded.ran[0]!, { CHORD_RIFF_FAKE_PROVIDER: 'http://localhost:1/v1' }],
+    ]);
   });
 });
 

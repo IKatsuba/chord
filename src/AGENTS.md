@@ -12,7 +12,8 @@
 - No console calls in `session/`, `acp/`, `server/` or `riff/`: stdout may
   carry ACP.
 - `riff/` serves one ACP session per process on the hidden `--riff-agent`
-  flag; its tools are read, list and search. It stays out of the agent list
-  until sign-in lands.
+  flag; its tools are read, list and search. It is listed only with nonempty
+  `CHORD_RIFF_FAKE_PROVIDER`, which `bun dev chord --fake` and `--qa` set for
+  development; production stays hidden until sign-in lands.
   Sessions use libfx's `local()` store under chord's state directory, with
   a sidecar per session; chord's record remains what was shown.

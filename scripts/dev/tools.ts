@@ -80,9 +80,8 @@ async function serveFakeProvider(): Promise<FakeProvider> {
 
 /**
  * chord from source on riff, `args` after it, with React's production build
- * and fixture resources. riff is in no agent list yet, so it is named with
- * its own start as the agent command, as `--fake` names the fake agent; its
- * provider is the fake Chat Completions server of its tests, served here
+ * and fixture resources. Its provider, which also lists riff (CHD-485), is
+ * the fake Chat Completions server of its tests, served here
  * while chord runs, whose scenarios answer by the prompt's words
  * (`call read {"path":"a.txt"}` calls a tool).
  */
@@ -91,9 +90,7 @@ export async function chordOnRiff(
   run: RunServing = spawnServing,
   serve: () => Promise<FakeProvider> = serveFakeProvider,
 ): Promise<number> {
-  const { FAKE_PROVIDER_ENV } = await import('../../src/riff/serve.ts');
-  const { riffAgentStart } = await import('../../src/riff/start.ts');
-  const { command } = riffAgentStart();
+  const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
   const provider = await serve();
 
   try {
@@ -106,8 +103,6 @@ export async function chordOnRiff(
         'process.env.CHORD_RESOURCE_FIXTURE:"true"',
         'src/main.tsx',
         'riff',
-        '--agent-command',
-        quote([...command]),
         ...args,
       ],
       { [FAKE_PROVIDER_ENV]: provider.url },
@@ -124,12 +119,43 @@ export function chord(
   run: Run = spawn,
   fixtureResources = false,
 ): number {
+  return run(chordArgv(fake, args, fixtureResources));
+}
+
+/**
+ * `chord` with riff's fake provider served while it runs, which lists riff
+ * and lets it be picked: what `--fake` and `--qa` start (CHD-604c).
+ */
+export async function chordWithRiff(
+  fake: boolean,
+  args: readonly string[],
+  fixtureResources = false,
+  run: RunServing = spawnServing,
+  serve: () => Promise<FakeProvider> = serveFakeProvider,
+): Promise<number> {
+  const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
+  const provider = await serve();
+
+  try {
+    return await run(chordArgv(fake, args, fixtureResources), {
+      [FAKE_PROVIDER_ENV]: provider.url,
+    });
+  } finally {
+    await provider.stop();
+  }
+}
+
+function chordArgv(
+  fake: boolean,
+  args: readonly string[],
+  fixtureResources: boolean,
+): string[] {
   const agent = quote([
     process.execPath,
     join(root, 'tests', 'fixtures', 'fake_agent', 'main.ts'),
   ]);
 
-  return run([
+  return [
     process.execPath,
     '--define',
     'process.env.NODE_ENV:"production"',
@@ -139,7 +165,7 @@ export function chord(
     'src/main.tsx',
     ...(fake ? ['fake', '--agent-command', agent] : []),
     ...args,
-  ]);
+  ];
 }
 
 /** `dir`, a capture's directory, made afresh: emptied if it was there. */

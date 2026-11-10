@@ -200,7 +200,8 @@ size and reads the screen back as text. For captures, use
 `bun dev chord --fake --qa <name>`: it recreates the fixed `/tmp/chord-qa.<name>`,
 never a directory from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa`;
 an empty name is treated as no `--qa`. For riff on its fake provider, use
-`bun dev chord --fake --qa <name> riff`; both flags come before `riff`.
+`bun dev chord --fake --qa <name> riff`. Both flags list riff for development
+on its fake provider and come before `riff`.
 
 ```sh
 tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord --fake --qa capture'

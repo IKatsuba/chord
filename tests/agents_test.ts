@@ -20,6 +20,7 @@ import {
 import { CLI_AGENTS } from '../src/clis.ts';
 import { REGISTRY_AGENTS } from '../src/registry.ts';
 import { frozenAgents } from '../scripts/dev/registry.ts';
+import { FAKE_PROVIDER_ENV, riffAgentStart } from '../src/riff/start.ts';
 
 test('the default agent is one chord knows', () => {
   expect(findAgent(DEFAULT_AGENT) !== undefined).toBeTruthy();
@@ -790,6 +791,190 @@ describe('chord agents --json (CHD-598)', () => {
       expect(
         agents.filter(({ startable }) => !startable).map(({ name }) => name),
       ).toStrictEqual(['codex']);
+    }
+  });
+});
+
+describe('riff in the agent list (CHD-604c)', () => {
+  const off = {};
+  const on = { [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1' };
+  const none: (command: string) => Promise<string | undefined> = () =>
+    Promise.resolve(undefined);
+  const riffRow = {
+    name: 'riff',
+    title: "chord's own agent · on a ChatGPT or Grok plan",
+    start: startLine(riffAgentStart()),
+    from: 'builtin',
+  } as const;
+
+  test('off the fake provider nothing knows riff', async () => {
+    expect(findAgent('riff', off)).toBeUndefined();
+    expect(listAgents(off).map(({ name }) => name)).not.toContain('riff');
+    expect(
+      (await listedAgents({}, none, off)).map(({ name }) => name),
+    ).not.toContain('riff');
+    expect(findAgent('riff', { [FAKE_PROVIDER_ENV]: '' })).toBeUndefined();
+  });
+
+  test("on it riff is the catalog's first row, built in", async () => {
+    expect(findAgent('riff', on)?.runner).toBe('builtin');
+    expect(listAgents(on)[0]?.name).toBe('riff');
+    expect(listAgents(on).slice(1)).toStrictEqual([...listAgents(off)]);
+
+    const looked: string[] = [];
+    const listed = await listedAgents(
+      {},
+      (command) => {
+        looked.push(command);
+
+        return Promise.resolve(undefined);
+      },
+      on,
+    );
+
+    expect(listed[0]).toStrictEqual(riffRow);
+    // chord itself is not looked for on PATH.
+    expect(looked).not.toContain(riffAgentStart().command[0]);
+  });
+
+  test('a settings command for riff wins, as for any agent', async () => {
+    const [first] = await listedAgents({ riff: 'my-riff' }, none, on);
+
+    expect(first).toStrictEqual({
+      name: 'riff',
+      title: riffRow.title,
+      start: 'my-riff',
+      from: 'settings',
+    });
+  });
+
+  test("offered first without the setting; the setting's order wins", async () => {
+    const listed = await listedAgents({}, none, on);
+
+    expect(offeredAgents(listed, undefined).agents[0]?.name).toBe('riff');
+    expect(
+      offeredAgents(listed, ['claude', 'riff']).agents.map(({ name }) => name),
+    ).toStrictEqual(['claude', 'riff']);
+  });
+
+  test('chord agents says built in; --json says builtin, found null', () => {
+    const table = agentTable([riffRow]);
+
+    expect(table).toContain('built in');
+    expect(table.startsWith('riff')).toBeTruthy();
+    expect(
+      agentsJson({
+        listed: [riffRow],
+        offered: undefined,
+        preferred: DEFAULT_AGENT,
+        problems: [],
+        refused: new Set(),
+      }),
+    ).toStrictEqual({
+      version: 1,
+      preferred: 'claude',
+      agents: [
+        {
+          name: 'riff',
+          title: riffRow.title,
+          via: 'builtin',
+          found: null,
+          offered: true,
+          startable: true,
+        },
+      ],
+      problems: [],
+    });
+  });
+
+  test('claude stays the default', () => {
+    expect(DEFAULT_AGENT).toBe('claude');
+  });
+});
+
+describe('CHD-604c tester: fake-only catalog boundaries', () => {
+  const lookup = (command: string) =>
+    Promise.resolve(command === 'agent' ? '/fixture/bin/agent' : undefined);
+
+  test('an explicit offered list names riff only when its provider is set', async () => {
+    for (const provider of [undefined, '', 'http://localhost:1/v1']) {
+      const listed = await listedAgents({}, lookup, {
+        [FAKE_PROVIDER_ENV]: provider,
+      });
+      const offered = offeredAgents(listed, ['riff', 'claude', 'riff']);
+      const enabled = provider !== undefined && provider !== '';
+
+      expect(offered.agents.map(({ name }) => name)).toStrictEqual(
+        enabled ? ['riff', 'claude'] : ['claude'],
+      );
+      expect(offered.unknown).toStrictEqual(enabled ? [] : ['riff']);
+      expect(DEFAULT_AGENT).toBe('claude');
+    }
+  });
+
+  test('enabling riff preserves every other JSON field and agent entry', async () => {
+    const commands = { mine: 'fixture-agent --token fixture-secret' };
+    const snapshot = async (enabled: boolean) =>
+      agentsJson({
+        listed: await listedAgents(commands, lookup, {
+          [FAKE_PROVIDER_ENV]: enabled ? 'http://localhost:1/v1' : undefined,
+        }),
+        offered: undefined,
+        preferred: DEFAULT_AGENT,
+        problems: [
+          {
+            file: '/fixture/settings.json',
+            kind: 'validation',
+            message: 'fixture settings problem',
+          },
+        ],
+        refused: new Set(['mine']),
+      });
+    const before = await snapshot(false);
+    const after = await snapshot(true);
+
+    expect({
+      ...after,
+      agents: after.agents.filter(({ name }) => name !== 'riff'),
+    }).toStrictEqual({ ...before, agents: [...before.agents] });
+    expect(Object.keys(after).sort()).toStrictEqual([
+      'agents',
+      'preferred',
+      'problems',
+      'version',
+    ]);
+    expect(JSON.stringify(after)).not.toContain('fixture-secret');
+    expect(after.agents[0]).toMatchObject({
+      name: 'riff',
+      via: 'builtin',
+      found: null,
+      offered: true,
+      startable: true,
+    });
+  });
+
+  test('an explicit list can leave built-in riff unoffered without changing the preference', async () => {
+    const listed = await listedAgents({}, lookup, {
+      [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+    });
+
+    for (const offered of [[], ['claude']]) {
+      const json = agentsJson({
+        listed,
+        offered,
+        preferred: DEFAULT_AGENT,
+        problems: [],
+        refused: new Set(),
+      });
+
+      expect(json.preferred).toBe('claude');
+      expect(json.agents.find(({ name }) => name === 'riff')).toMatchObject({
+        via: 'builtin',
+        found: null,
+        offered: false,
+        startable: true,
+      });
+      expect(json.problems).toStrictEqual([]);
     }
   });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { spawnSync } from 'node:child_process';
+import { execFile, spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import process from 'node:process';
@@ -20,6 +20,8 @@ import stripAnsi from 'strip-ansi';
 import { type AgentsJson, agentTable, listedAgents } from '../src/agents.ts';
 import { fakeAgentCommand } from './fixtures/fake.ts';
 import { TRACEBACK_ERROR } from './fixtures/fake_agent/options.ts';
+import { HELLO, serveFakeChat } from './fixtures/riff/fake_chat.ts';
+import { FAKE_PROVIDER_ENV } from '../src/riff/start.ts';
 
 /** The tokens each of the fake agent's turns reports. */
 const TURN_TOKENS = {
@@ -1609,4 +1611,142 @@ describe('CHD-493 U8 tester: recorded runtime precedes startup validation', () =
     );
     expect(result.stderr).not.toContain('missing-record-u8');
   });
+});
+
+describe('riff by name on its fake provider alone (CHD-604c)', () => {
+  /**
+   * chord from source with `args` in a directory of its own, the fake
+   * provider at `provider` or none; asynchronous, as the provider is served
+   * by this process.
+   */
+  async function chord(args: string[], provider?: string) {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-riff-listed-'));
+    const env: Record<string, string | undefined> = {
+      ...process.env,
+      HOME: dir,
+      XDG_STATE_HOME: join(dir, 'state'),
+      XDG_CONFIG_HOME: join(dir, 'config'),
+      NO_COLOR: '1',
+      [FAKE_PROVIDER_ENV]: provider,
+    };
+
+    if (provider === undefined) {
+      delete env[FAKE_PROVIDER_ENV];
+    }
+
+    try {
+      return await new Promise<{
+        code: number;
+        stdout: string;
+        stderr: string;
+      }>((resolve) => {
+        const child = execFile(
+          process.execPath,
+          [
+            fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+            ...args,
+            '-C',
+            dir,
+          ],
+          { env, encoding: 'utf8' },
+          (error, stdout, stderr) => {
+            resolve({
+              code: typeof error?.code === 'number' ? error.code : 0,
+              stdout,
+              stderr,
+            });
+          },
+        );
+
+        // -p reads piped stdin to its end before the turn.
+        child.stdin?.end();
+      });
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  }
+
+  test('without it, chord agents lists no riff and chord riff is unknown', async () => {
+    const json = JSON.parse(
+      (await chord(['agents', '--json'])).stdout,
+    ) as AgentsJson;
+    const table = await chord(['agents']);
+    const riff = await chord(['riff', '-p', 'hi']);
+
+    expect(json.agents.map(({ name }) => name)).not.toContain('riff');
+    expect(table.stdout).not.toMatch(/^riff /m);
+    expect(riff.code).not.toBe(0);
+    expect(riff.stderr).toContain(
+      'Unknown agent "riff". `chord agents` lists them.',
+    );
+  });
+
+  test('with it, riff is listed first, built in, and starts by name', async () => {
+    const fake = serveFakeChat();
+
+    try {
+      const json = await chord(['agents', '--json'], fake.url);
+      const table = await chord(['agents'], fake.url);
+      const parsed = JSON.parse(json.stdout) as AgentsJson;
+      const riff = await chord(['riff', '-p', 'hi'], fake.url);
+
+      expect(json.code).toBe(0);
+      expect(parsed.version).toBe(1);
+      expect(parsed.preferred).toBe('claude');
+      expect(parsed.agents[0]).toStrictEqual({
+        name: 'riff',
+        title: "chord's own agent · on a ChatGPT or Grok plan",
+        via: 'builtin',
+        found: null,
+        offered: true,
+        startable: true,
+      });
+      expect(table.stdout.split('\n')[0]).toMatch(/^riff .* built in /);
+      expect(riff).toMatchObject({ code: 0, stdout: `${HELLO}\n` });
+    } finally {
+      await fake.stop();
+    }
+  });
+});
+
+describe('CHD-604c tester: named riff outside the fake provider', () => {
+  for (const provider of [undefined, '']) {
+    test(`riff is unknown with ${provider === undefined ? 'no' : 'an empty'} provider`, async () => {
+      const dir = await mkdtemp(join(tmpdir(), 'chord-riff-boundary-'));
+
+      try {
+        const result = spawnSync(
+          process.execPath,
+          [
+            fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
+            'riff',
+            '-p',
+            'hi',
+            '-C',
+            dir,
+          ],
+          {
+            encoding: 'utf8',
+            input: '',
+            timeout: 15_000,
+            env: {
+              ...process.env,
+              HOME: dir,
+              XDG_CONFIG_HOME: join(dir, 'config'),
+              XDG_STATE_HOME: join(dir, 'state'),
+              [FAKE_PROVIDER_ENV]: provider,
+            },
+          },
+        );
+
+        expect(result.error).toBeUndefined();
+        expect(result.status).toBe(2);
+        expect(result.stderr).toContain(
+          'Unknown agent "riff". `chord agents` lists them.',
+        );
+      } finally {
+        await rm(dir, { recursive: true });
+      }
+    });
+  }
 });

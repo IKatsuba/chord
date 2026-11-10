@@ -666,10 +666,15 @@ There is no `session/set_model` method: use the model config option.
 are not served; unsupported requests get -32601. Use chord's steering
 extension below.
 
-Prompts take text, resource links and images where the agent supports
-them. `initialize` advertises images; the session answer's
-`_meta["chord/acp"].image` tells whether that agent takes them. Unsupported
-images, audio and embedded resources are refused with -32602.
+Prompts take text, resource links, images and embedded `resource` blocks
+where the agent supports them. `initialize` advertises
+`promptCapabilities.image` and `embeddedContext`; each `session/new`,
+`session/load` and `session/resume` answer's `_meta["chord/acp"]` reports
+that agent's `image` and `embeddedContext` as booleans. Text and blob
+resources go unchanged after text and images, before links; queued
+prompts keep them. chord sets no resource size limit. Its session record
+keeps only each resource's `uri` and `mimeType`, never its content.
+The window's `@` mentions still send `resource_link` blocks.
 
 chord sends `session/update`, calls `session/request_permission` for
 permissions and plan approvals, and relays `elicitation/create` and
@@ -694,7 +699,7 @@ client. Errors answering elicitation cancel it.
 Filesystem and terminal requests are not relayed to the client; agents
 use their own tools on the same machine. Sign in to the agent separately;
 a sign-in failure says what to run. Agent-specific limits on usage,
-images, MCP transports and resuming still apply.
+images, embedded resources, MCP transports and resuming still apply.
 
 Sessions use the window's records and can reopen in either interface.
 `load` and `resume` refuse an id already open in this process with -32602;
@@ -890,9 +895,9 @@ steers its own entry, even with other prompts queued ahead. The result is
 `{ delivery: "sent" }` only when sent into a running turn; otherwise
 `{ delivery: "queued" }`. A queued steer runs as its own turn with no
 request waiting for its result, `origin: "client"` and no echo of its
-words. Resource links and supported images travel with the text. A
-refused steer returns to the queue; a refused send or gone session is
--32002.
+words. Resource links, supported images and embedded resources travel
+with the text. A refused steer returns to the queue; a refused send or
+gone session is -32002.
 
 **`_chord/agents/send`** takes `{ sessionId, prompt }` for a long-lived
 child's composite id, with the same content blocks. It answers
@@ -929,9 +934,18 @@ main or the named long-lived child. It returns
 `ran_ms`. Unknown sessions or monitor ids are -32002; it cannot stop
 another session's monitor.
 
-Malformed extension parameters and unsupported prompt blocks or images
-are -32602. Unknown or closed main sessions are -32002. Requests while
-chord is shutting down are -32603. Unknown extension methods are -32601.
+Malformed extension parameters, unsupported images, audio and other
+unsupported prompt blocks are -32602. An agent without `embeddedContext`
+refuses the whole prompt with -32602 and
+`<agent> does not take embedded resources`; nothing is sent. This applies
+to `session/prompt`, `_chord/session/steer` and `_chord/agents/send`.
+riff takes text resources but refuses blobs with
+`riff takes no binary resources`. Through `chord acp riff`, that is
+-32603: chord reports every agent's failed turn as -32603 with its words.
+A text resource without a text block is refused by riff with -32603 and
+`prompt is empty`. Unknown or closed main sessions are -32002. Requests
+while chord is shutting down are -32603. Unknown extension methods are
+-32601.
 
 `session/load` and `session/resume` may return `_meta["chord/left_open"]`,
 an array of children left open in the record, each with `name`, `runtime`

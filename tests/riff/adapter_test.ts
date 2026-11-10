@@ -2542,3 +2542,30 @@ describe('CHD-613 tester: binary refusal boundaries', () => {
     });
   }
 });
+
+describe('riff instructions at session start', () => {
+  test('the model gets the base text, the session AGENTS.md and the user file', async () => {
+    const directory = await realpath(await mkdtemp(join(stateDir, 'work-')));
+
+    await mkdir(join(stateDir, 'chord'), { recursive: true });
+    await writeFile(join(directory, 'AGENTS.md'), 'project rule 7');
+    await writeFile(join(stateDir, 'chord', 'AGENTS.md'), 'user rule 9');
+    await open(true, { configHome: stateDir });
+
+    const answer = await client.request('session/new', {
+      cwd: directory,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'hello');
+
+    const system = fake.requests[0]?.messages?.find(
+      (message) => message.role === 'system',
+    );
+
+    expect(JSON.stringify(system?.content)).toContain('project rule 7');
+    expect(JSON.stringify(system?.content)).toContain('user rule 9');
+    expect(JSON.stringify(system?.content)).toContain('You are riff');
+  });
+});

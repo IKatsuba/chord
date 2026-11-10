@@ -48,6 +48,7 @@ describe('chord --riff-agent', () => {
         env: {
           [FAKE_PROVIDER_ENV]: fake.url,
           XDG_STATE_HOME: state,
+          XDG_CONFIG_HOME: state,
           ...(chosen === undefined ? {} : { [BACKEND_ENV]: chosen }),
         },
         cwd: process.cwd(),

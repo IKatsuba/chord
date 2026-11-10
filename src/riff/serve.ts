@@ -6,6 +6,7 @@ import { ndJsonStream } from '@agentclientprotocol/sdk/unstable';
 import { type FxNodeBackendOptions, getBackendInfo } from 'libfx/node';
 import process from 'node:process';
 import { Readable } from 'node:stream';
+import { xdgConfig } from 'xdg-basedir';
 import { outputStream } from '../acp/stdio.ts';
 import { libfxBackend } from '../platform/libfx.ts';
 import { chordStateDir } from '../session/state_dir.ts';
@@ -61,6 +62,7 @@ export async function runRiffAgent(
       fetch: access.fetch,
       backend,
       stateDir: chordStateDir(),
+      ...(xdgConfig === undefined ? {} : { configHome: xdgConfig }),
     },
   );
 

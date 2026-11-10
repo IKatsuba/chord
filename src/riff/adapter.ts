@@ -42,6 +42,7 @@ import {
   setOption,
   windowOf,
 } from './models.ts';
+import { readInstructions } from './instructions.ts';
 import { RIFF } from './start.ts';
 import type { Grants } from './tools/permission.ts';
 import { drawn, riffTools } from './tools/tools.ts';
@@ -85,6 +86,8 @@ export interface RiffOptions {
   readonly backend: FxNodeBackendOptions;
   /** chord's state directory, where riff keeps its sessions. */
   readonly stateDir: string;
+  /** chord's config home, for the user's `AGENTS.md`; none reads none. */
+  readonly configHome?: string;
   /** Complete shell environment for in-process fixtures; inherited when omitted. */
   readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
@@ -409,10 +412,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         },
       });
 
+    const instructions = await readInstructions({
+      directory,
+      configHome: options.configHome,
+    });
     const finder = (options.openFinder ?? openFinder)(directory);
     const fx = (options.createAgent ?? createFxAgent)({
       ...options.backend,
       name: RIFF,
+      instructions,
       durability: store.durability,
       ...selectedProvider,
       fetch: options.fetch ?? globalThis.fetch,

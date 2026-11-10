@@ -4,6 +4,7 @@
  * chord delegates repository config parsing to trusted git (see git_config.ts),
  * uses node process APIs and separates preparation from the pure command plan.
  */
+import { Buffer } from 'node:buffer';
 import { execFile } from 'node:child_process';
 import { stat, realpath } from 'node:fs/promises';
 import process from 'node:process';
@@ -109,12 +110,20 @@ function captured(
   cwd: string,
   env: Record<string, string>,
   maxBuffer = 4096,
+  input?: Buffer,
+  signal?: AbortSignal,
 ): Promise<string | null> {
   return new Promise((resolve) => {
-    execFile(
+    const child = execFile(
       executable,
       args,
-      { cwd, env, maxBuffer, encoding: 'buffer' },
+      {
+        cwd,
+        env,
+        maxBuffer,
+        encoding: 'buffer',
+        ...(signal === undefined ? {} : { signal }),
+      },
       (error, stdout) => {
         if (error) {
           return resolve(null);
@@ -127,7 +136,32 @@ function captured(
         }
       },
     );
+
+    child.stdin?.on('error', () => {});
+
+    child.stdin?.end(input);
   });
+}
+
+/**
+ * git parses the same bounded bytes the loader inspected, never reopening a path.
+ * Parsing from / avoids discovery of repository metadata unrelated to the input.
+ */
+export function parseGitConfig(
+  executable: string,
+  bytes: Buffer,
+  environment: Record<string, string>,
+  signal?: AbortSignal,
+): Promise<string | null> {
+  return captured(
+    executable,
+    ['config', '--file', '-', '--no-includes', '--null', '--list'],
+    '/',
+    environment,
+    2 * 1024 * 1024,
+    bytes,
+    signal,
+  );
 }
 
 function prelude(ready: SafeGit): string[] {
@@ -173,7 +207,10 @@ export function gitInvocation(
 export async function prepareGit(
   cwd: string,
   source: NodeJS.ProcessEnv = process.env,
+  signal?: AbortSignal,
 ): Promise<GitPreparation> {
+  signal?.throwIfAborted();
+
   const executable = await trustedExecutable();
 
   if (executable === null) {
@@ -184,7 +221,17 @@ export async function prepareGit(
   let version = checkedVersions.get(executable);
 
   if (version === undefined) {
-    const output = await captured(executable, ['--version'], '/', environment);
+    const output = await captured(
+      executable,
+      ['--version'],
+      '/',
+      environment,
+      4096,
+      undefined,
+      signal,
+    );
+
+    signal?.throwIfAborted();
 
     version = classifyGitVersion(output ?? '');
 
@@ -205,16 +252,14 @@ export async function prepareGit(
 
   try {
     layout = await discoverRepository(cwd);
-    filterNames = await repositoryFilters(layout, environment['HOME'], (path) =>
-      captured(
-        executable,
-        ['config', '--file', path, '--no-includes', '--null', '--list'],
-        cwd,
-        environment,
-        2 * 1024 * 1024,
-      ),
+    filterNames = await repositoryFilters(
+      layout,
+      environment['HOME'],
+      (_path, bytes) => parseGitConfig(executable, bytes, environment, signal),
     );
   } catch {
+    signal?.throwIfAborted();
+
     return { kind: 'refused', reason: 'repo_config_unavailable' };
   }
 
@@ -228,7 +273,12 @@ export async function prepareGit(
     [...prelude(ready), 'rev-parse', '--absolute-git-dir'],
     cwd,
     environment,
+    4096,
+    undefined,
+    signal,
   );
+
+  signal?.throwIfAborted();
 
   if (layout === null) {
     return reported === null

@@ -1,5 +1,6 @@
 import { afterEach, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
 import {
   mkdtemp,
@@ -11,12 +12,17 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import {
+  discoverRepository,
+  repositoryFilters,
+} from '../../../src/riff/commands/git_config.ts';
 import { commandEffect } from '../../../src/riff/commands/effect.ts';
 import {
   prepareGit,
   gitInvocation,
   gitEnvironment,
   classifyGitVersion,
+  parseGitConfig,
 } from '../../../src/riff/commands/safe_git.ts';
 
 const owned: string[] = [];
@@ -270,4 +276,67 @@ test('total bytes and file-count limits include every conditional file', async (
     kind: 'refused',
     reason: 'repo_config_unavailable',
   });
+});
+
+test('a replaced config pathname cannot change the exact bounded parser input', async () => {
+  const r = await repository();
+  const config = join(r.cwd, '.git', 'config');
+
+  await writeFile(config, '[filter "bounded"]\n clean = malicious\n');
+
+  const layout = await discoverRepository(r.cwd);
+  const controller = new AbortController();
+  const deadline = setTimeout(() => controller.abort(), 2000);
+  let replaced = false;
+
+  try {
+    const names = await repositoryFilters(
+      layout,
+      r.home,
+      async (path, bytes) => {
+        if (path === config) {
+          await rm(config);
+          await symlink('/dev/zero', config);
+
+          replaced = true;
+        }
+
+        return parseGitConfig(
+          '/usr/bin/git',
+          bytes,
+          gitEnvironment(r.env),
+          controller.signal,
+        );
+      },
+    );
+
+    expect(replaced).toBe(true);
+    expect(names).toEqual(['bounded']);
+  } finally {
+    clearTimeout(deadline);
+    controller.abort();
+  }
+});
+
+test('malformed bounded bytes fail git parsing without reopening any config', async () => {
+  const r = await repository();
+
+  expect(
+    await parseGitConfig(
+      '/usr/bin/git',
+      Buffer.from('[bad'),
+      gitEnvironment(r.env),
+    ),
+  ).toBeNull();
+});
+
+test('already cancelled git preparation launches no probe', async () => {
+  const r = await repository();
+  const controller = new AbortController();
+  const reason = new Error('cancel preparation');
+
+  controller.abort(reason);
+  await expect(prepareGit(r.cwd, r.env, controller.signal)).rejects.toBe(
+    reason,
+  );
 });

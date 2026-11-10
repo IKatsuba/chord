@@ -172,7 +172,7 @@ export async function discoverRepository(
 export async function repositoryFilters(
   layout: GitLayout | null,
   home: string | undefined,
-  parseFile: (path: string) => Promise<string | null>,
+  parseFile: (path: string, bytes: Buffer) => Promise<string | null>,
 ): Promise<string[]> {
   const names = new Set<string>();
   let files = 0;
@@ -199,7 +199,7 @@ export async function repositoryFilters(
     }
 
     // git's no-includes list emits key LF value NUL, preserving repeated keys.
-    const parsed = await parseFile(path);
+    const parsed = await parseFile(path, bytes);
 
     if (parsed === null) {
       throw new Error('Config parse failed');

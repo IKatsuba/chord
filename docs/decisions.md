@@ -8344,8 +8344,9 @@ The attributed port of fx v0.0.16's `safe_git` needs every filter driver
 named by repository config, including every conditional include whether
 its condition matches or not. fx's indexer reads and parses config text
 itself. The owner's delegate chose git's maintained parser instead: the
-trusted executable runs `git config --file <file> --no-includes --null
---list` for each bounded config file. The attributed loader follows every
+trusted executable runs `git config --file - --no-includes --null --list`
+on the exact bounded bytes through stdin, so a pathname replacement cannot
+change parser input. Include paths remain relative to the original file. The attributed loader follows every
 `include.path` and `includeIf` path with fx's limits: 1 MiB across files,
 64 files and include depth 10. A parse error or unavailable file refuses
 preparation. This keeps git's syntax in git, with no new parser dependency;

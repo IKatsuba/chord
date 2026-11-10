@@ -22,6 +22,67 @@ import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import type { CredentialNotice } from '../../../src/session/credentials.ts';
 
 describe('tester: riff window lifecycle boundaries', () => {
+  test.each(['riff', 'fake'])(
+    'an initially signed-out riff can open a new %s after cancelling sign-in',
+    async (runtime) => {
+      const server = serveChord();
+      const store = memorySecrets();
+      let opens = 0;
+
+      try {
+        await withWindow(
+          async (window) => {
+            await window.shows('Sign in to riff');
+            await window.press(ESC);
+            await window.shows('Not signed in. /login');
+            await send(window, `/new ${runtime}`);
+            await until(
+              'the new command is handled',
+              () =>
+                opens === 2 ||
+                window.frame().includes('This session is closing'),
+            );
+            expect(window.frame()).not.toContain('This session is closing');
+            expect(opens).toBe(2);
+            await window.shows(
+              runtime === 'riff' ? 'Sign in to riff' : '╭─ fake ',
+            );
+          },
+          {
+            agent: 'riff',
+            columns: 80,
+            rows: 24,
+            whileStarting: true,
+            server,
+            runtimes: ['riff', 'fake'],
+            startupOf: () => ({ agentCommand: fakeAgentCommand() }),
+            riffAccess: {
+              store,
+              fetch: fixtureSignOut(store),
+              run: fixtureSignIn('waiting'),
+            },
+            openWith: (options) => {
+              opens++;
+
+              if (options.agent === 'fake') {
+                return openSession(options);
+              }
+
+              return Promise.reject(
+                new SignInNeeded({
+                  message: 'fixture sign-in required',
+                  ways: [],
+                }),
+              );
+            },
+          },
+        );
+      } finally {
+        await server.close();
+      }
+    },
+  );
+
   test.each(['close', 'clear'] as const)(
     '%s of a signing-in child preserves its sibling session and live agent',
     async (action) => {
@@ -184,6 +245,8 @@ describe('tester: riff window lifecycle boundaries', () => {
             ),
           ).toEqual(['cancelled', 'cancelled']);
           expect(await store.get('codex')).toBeNull();
+          await send(window, '/new fake');
+          await window.shows('╭─ fake ');
         },
         {
           agent: 'riff',

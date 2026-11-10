@@ -2,6 +2,7 @@ import type {
   AvailableCommand,
   CompleteElicitationNotification,
   ContentBlock,
+  EmbeddedResource as AcpEmbeddedResource,
   McpServer,
   PromptResponse,
   SessionNotification,
@@ -58,6 +59,11 @@ import { asSignIn } from './sign_in.ts';
 import { startFailed, type StartStep } from './start_failure.ts';
 import { tokensOf } from './usage.ts';
 import type { TurnFigures } from './turn_costs.ts';
+
+/** An SDK embedded resource with its content-block discriminator. */
+export type EmbeddedResource = AcpEmbeddedResource & {
+  readonly type: 'resource';
+};
 
 /**
  * One step of a session's past: what the transcript drew, or a turn's tokens,
@@ -234,7 +240,8 @@ export interface Session {
     listener: (notice: CredentialNotice) => void,
   ): () => void;
   /**
-   * Sends a prompt, with images after its text, then a `resource_link` for
+   * Sends a prompt, with images and embedded resources after its text, then
+   * a `resource_link` for
    * each of the `mentions` that is a file `@` offers in the session's
    * directory; the text names them already.
    */
@@ -243,6 +250,7 @@ export interface Session {
     attachments?: readonly Attachment[],
     mentions?: readonly string[],
     links?: readonly ResourceLink[],
+    resources?: readonly EmbeddedResource[],
   ): Turn;
   /** What the agent has said of the session besides its turns. */
   agentState(): AgentState;
@@ -251,6 +259,8 @@ export interface Session {
    * it gave in `initialize` say.
    */
   takesImages(): boolean;
+  /** Whether initialize advertises embedded resources in prompts. */
+  takesEmbeddedContext(): boolean;
   /**
    * Whether the agent takes a prompt into the turn it is running, as its
    * `initialize` answer advertises `_session/steering`.
@@ -285,6 +295,7 @@ export interface Session {
     mentions?: readonly string[],
     went?: (links: readonly ResourceLink[]) => void,
     links?: readonly ResourceLink[],
+    resources?: readonly EmbeddedResource[],
   ): Promise<SteerOutcome>;
   /**
    * chord's own MCP server as the agent was given it, under the name it went
@@ -682,8 +693,14 @@ export async function openSession(
 
       return () => listeners.delete(listener);
     },
-    prompt: (text, attachments = [], mentions = [], links = []) => {
-      const blocks = promptBlocks(text, attachments);
+    prompt: (
+      text,
+      attachments = [],
+      mentions = [],
+      links = [],
+      resources = [],
+    ) => {
+      const blocks = [...promptBlocks(text, attachments), ...resources];
       let cancelled = false;
       /** Whether the prompt has gone to the agent, which a cancel then tells. */
       let gone = false;
@@ -758,12 +775,22 @@ export async function openSession(
     agentState: () => state,
     takesImages: () =>
       connection.init.agentCapabilities?.promptCapabilities?.image === true,
+    takesEmbeddedContext: () =>
+      connection.init.agentCapabilities?.promptCapabilities?.embeddedContext ===
+      true,
     steers: () => connection.steering,
     forks: () =>
       Boolean(connection.init.agentCapabilities?.sessionCapabilities?.fork),
     cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     startsOwnCycles: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
-    steer: async (text, attachments = [], mentions = [], went, given = []) => {
+    steer: async (
+      text,
+      attachments = [],
+      mentions = [],
+      went,
+      given = [],
+      resources = [],
+    ) => {
       const found =
         mentions.length === 0 ? [] : await mentionLinks(mentions, cwd);
       const links = [...found, ...given];
@@ -772,7 +799,7 @@ export async function openSession(
 
       const { outcome } = await connection.steer({
         sessionId: id,
-        prompt: [...promptBlocks(text, attachments), ...links],
+        prompt: [...promptBlocks(text, attachments), ...resources, ...links],
         _meta: { steering: { idleBehavior: 'promptRequired' } },
       });
 

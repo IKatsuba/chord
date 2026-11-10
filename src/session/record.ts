@@ -12,7 +12,7 @@ import { notFound } from '../not_found.ts';
 import type { ResourceLink } from '../files.ts';
 import { shellContext, splitContext, withContext } from './context.ts';
 import type { ConversationEvent, Recording } from './conversation.ts';
-import type { PastAction, Session } from './session.ts';
+import type { EmbeddedResource, PastAction, Session } from './session.ts';
 import { monitorsPast } from './monitors.ts';
 import { guardianReview } from './guardian_review.ts';
 import { withoutSecrets } from './questions.ts';
@@ -86,6 +86,11 @@ export type RecordEntry =
       readonly prompt: string;
       readonly images: number;
       readonly links?: readonly ResourceLink[];
+      /** Payloads stay out of the record, as image data does. */
+      readonly resources?: readonly {
+        readonly uri: string;
+        readonly mimeType?: string | null;
+      }[];
       readonly from?: MessageFrom;
       readonly into?: string;
     }
@@ -1293,6 +1298,7 @@ export class FileRecording implements Recording {
     at: number,
     from?: MessageFrom,
     into?: string,
+    resources: readonly EmbeddedResource[] = [],
   ): void {
     if (this.#path === undefined) {
       return;
@@ -1311,6 +1317,14 @@ export class FileRecording implements Recording {
       prompt,
       images,
       ...(links.length === 0 ? {} : { links }),
+      ...(resources.length === 0
+        ? {}
+        : {
+            resources: resources.map(({ resource: { uri, mimeType } }) => ({
+              uri,
+              ...(mimeType === undefined ? {} : { mimeType }),
+            })),
+          }),
       ...(from === undefined ? {} : { from }),
       ...(into === undefined ? {} : { into }),
     });

@@ -3001,3 +3001,43 @@ describe("chord's aside ahead of a prompt", () => {
     expect(promptLine(`${aside('A run.')}\n\nhello there`)).toBe('hello there');
   });
 });
+
+test('CHD-613 records resource identity without text, blob or metadata', () =>
+  withDir(async (dir) => {
+    const recording = new FileRecording(join(dir, 'state'), () => {});
+
+    recording.opened(looked());
+    recording.sent('resources', 'text', 0, [], 42, undefined, undefined, [
+      {
+        type: 'resource',
+        resource: {
+          uri: 'file:///text',
+          text: 'private payload',
+          mimeType: 'text/plain',
+        },
+        _meta: { secret: 'metadata' },
+      },
+      { type: 'resource', resource: { uri: 'file:///blob', blob: 'AAEC' } },
+    ]);
+    await recording.flushed();
+
+    const entries = await readPast(recording.path!);
+
+    expect(entries.find((entry) => entry.type === 'prompt')).toEqual({
+      type: 'prompt',
+      turnId: 'resources',
+      prompt: 'text',
+      at: 42,
+      images: 0,
+      resources: [
+        { uri: 'file:///text', mimeType: 'text/plain' },
+        { uri: 'file:///blob' },
+      ],
+    });
+    expect(JSON.stringify(entries)).not.toContain('private payload');
+    expect(JSON.stringify(entries)).not.toContain('AAEC');
+    expect(JSON.stringify(entries)).not.toContain('metadata');
+    expect(
+      recordActions(entries).some((action) => action.type === 'prompt'),
+    ).toBe(true);
+  }));

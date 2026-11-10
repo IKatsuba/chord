@@ -37,6 +37,7 @@ import {
 } from './starting.ts';
 import type {
   Attachment,
+  EmbeddedResource,
   OpenSessionOptions,
   Session,
   SteerOutcome,
@@ -250,7 +251,8 @@ export interface Recording {
   /** A session is up, its past already played out; it is recorded from now. */
   opened(session: Session): void;
   /**
-   * A prompt went to the agent: its text, then `images` images, then `links`,
+   * A prompt went to the agent: its text, then `images` images, resources
+   * and `links`,
    * who sent it when it is a message, and the running turn it went `into`
    * when it started none. One that never went is not heard of, nor is its
    * turn's end.
@@ -263,6 +265,7 @@ export interface Recording {
     at: number,
     from?: MessageFrom,
     into?: string,
+    resources?: readonly EmbeddedResource[],
   ): void;
   /** Each event the conversation reports, in order. */
   heard(event: ConversationEvent): void;
@@ -295,6 +298,7 @@ interface Prompt {
   readonly mentions: readonly string[];
   /** Links the caller gave, going after those found for the mentions. */
   readonly links?: readonly ResourceLink[];
+  readonly resources?: readonly EmbeddedResource[];
   /** Set on a message from another agent, or chord. */
   readonly from?: MessageFrom;
   /** The team part that goes ahead of a team agent's first message. */
@@ -1081,7 +1085,7 @@ export class Conversation {
    * that one, and is reported `queued` until its turn comes. Refused (false)
    * before the session is up and once closing. `prompt` is what the agent
    * gets, when it is more than the `text` the transcript shows, such as held
-   * shell output ahead of it; `attachments` go after it, and a link to each
+   * shell output ahead of it; `attachments` and `resources` go after it, and a link to each
    * of the `mentions` that is a file, then `links` as given. `turnId` is
    * the caller's to choose when it must know the turn before it is emitted,
    * which is before this returns.
@@ -1094,9 +1098,11 @@ export class Conversation {
     {
       turnId = crypto.randomUUID(),
       links,
+      resources,
     }: {
       readonly turnId?: string;
       readonly links?: readonly ResourceLink[];
+      readonly resources?: readonly EmbeddedResource[];
     } = {},
   ): boolean {
     const session = this.#session;
@@ -1113,6 +1119,7 @@ export class Conversation {
       attachments,
       mentions,
       ...(links === undefined ? {} : { links }),
+      ...(resources === undefined ? {} : { resources }),
     };
 
     this.#enqueue(session, next);
@@ -1476,6 +1483,7 @@ export class Conversation {
           next.mentions,
           (found) => (links = found),
           next.links,
+          next.resources,
         );
         // Never into a session /clear opened since, or once closing.
         const outgoing = () =>
@@ -1600,6 +1608,7 @@ export class Conversation {
       at,
       next.from,
       into,
+      next.resources,
     );
     this.#flushedFirst();
     // The turn may have answered while the steer was out, the queue held.
@@ -3669,6 +3678,7 @@ export class Conversation {
         next.attachments,
         next.mentions,
         next.links,
+        next.resources,
       );
 
       this.#turn = { id: turnId, turn };
@@ -3710,6 +3720,8 @@ export class Conversation {
           links,
           at,
           next.from,
+          undefined,
+          next.resources,
         );
         this.#flushedFirst();
       }

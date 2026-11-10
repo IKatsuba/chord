@@ -400,3 +400,74 @@ describe('CHD-574 tester: cancellation keeps other work independent', () => {
       });
     }));
 });
+
+describe('CHD-613 queued embedded resources', () => {
+  for (const steer of [false, true]) {
+    test(`keeps whole resource blocks through ${steer ? 'a steer' : 'the next turn'}`, async () => {
+      const resources = [
+        {
+          type: 'resource',
+          resource: { uri: 'file:///text', text: 'private text' },
+        },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///blob',
+            blob: 'AAEC',
+            mimeType: 'application/octet-stream',
+          },
+        },
+      ] as const;
+      const received: unknown[] = [];
+
+      await onFake(
+        ['--steering', 'claude'],
+        async (conversation, events) => {
+          const active = steer ? 'texttillsteeredheld' : 'permission';
+
+          conversation.send(active, active, [], [], { turnId: 'active' });
+          await until(() =>
+            steer ? saidIn(events).includes('Hello') : asked(events),
+          );
+          conversation.send('text', 'text', [], [], {
+            turnId: 'resources',
+            resources,
+          });
+
+          if (steer) {
+            expect(conversation.steerQueued('resources')).toBe('sent');
+            await until(() => received.length === 1);
+          }
+
+          conversation.cancelPrompt('active');
+          await until(
+            () =>
+              resultOf(events, 'resources') !== undefined ||
+              (steer && promptsIn(events).length === 2),
+          );
+          expect(received).toEqual([resources]);
+        },
+        (session) => {
+          const prompt = session.prompt.bind(session);
+          const inject = session.steer.bind(session);
+
+          session.prompt = (...args) => {
+            if (args[4] !== undefined) {
+              received.push(args[4]);
+            }
+
+            return prompt(...args);
+          };
+
+          session.steer = (...args) => {
+            received.push(args[5]);
+
+            return inject(...args);
+          };
+
+          return session;
+        },
+      );
+    });
+  }
+});

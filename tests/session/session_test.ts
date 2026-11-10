@@ -2118,3 +2118,53 @@ describe('CHD-101 U1 tester: fork lifecycle and isolation', () => {
     }
   });
 });
+
+describe('CHD-613 embedded resources', () => {
+  test('a prompt preserves resource blocks between images and links', () =>
+    withSession(async (session) => {
+      const gate = join(session.cwd, '.fake-gate');
+      const resources = [
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///text',
+            text: 'private text',
+            mimeType: 'text/plain',
+          },
+        },
+        {
+          type: 'resource',
+          resource: { uri: 'file:///blob', blob: 'AAEC' },
+          _meta: { source: 'client' },
+        },
+      ] as const;
+      const link = {
+        type: 'resource_link',
+        uri: 'file:///link',
+        name: 'link',
+      } as const;
+
+      await mkdir(gate);
+      await writeFile(join(gate, 'capture-prompt'), '');
+
+      const turn = session.prompt(
+        'text',
+        [{ mediaType: 'image/png', data: 'AA==' }],
+        [],
+        [link],
+        resources,
+      );
+
+      await turn.result;
+
+      expect(
+        JSON.parse(await readFile(join(gate, 'prompt.json'), 'utf8')),
+      ).toEqual([
+        { type: 'text', text: 'text' },
+        { type: 'image', mimeType: 'image/png', data: 'AA==' },
+        ...resources,
+        link,
+      ]);
+      expect(session.takesEmbeddedContext()).toBe(false);
+    }));
+});

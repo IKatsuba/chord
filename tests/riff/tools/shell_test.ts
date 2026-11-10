@@ -557,3 +557,121 @@ test('CHD-609 actual reviewed shell execution uses only fixture startup and envi
     await s.close();
   }
 });
+
+describe('CHD-609 tester: direct admission lifecycle', () => {
+  test('a direct command failure returns its real exit without review fallback', async () => {
+    const s = await commandSession();
+
+    try {
+      const result = await s.run('ls -- no-such-fixture-entry');
+
+      expect(result.isError).toBe(true);
+      expect(result.text).toContain('no-such-fixture-entry');
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+      expect(
+        meta(s.updates.at(-1)!, 'terminal_exit')?.exit_code,
+      ).toBeGreaterThan(0);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('unsafe git in a later stage holds the entire pipeline before streaming', async () => {
+    const s = await commandSession();
+
+    try {
+      s.git('init', '-q');
+      s.git('config', 'filter.a=b.clean', 'unused');
+      await expect(
+        s.run("printf '%s' 'must-not-stream' | git status"),
+      ).rejects.toThrow('chord did not run this git command');
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 0 });
+      expect(s.updates).toEqual([]);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('an exact shell grant remains authoritative when safe git would refuse', async () => {
+    const command = 'git status --ignored';
+    const s = await commandSession('auto', new Set([`shell:${command}`]));
+
+    try {
+      s.git('init', '-q');
+      s.git('config', 'filter.a=b.clean', 'unused');
+
+      const result = await s.run(command);
+
+      expect(result.isError).toBe(false);
+      expect(s.counts).toEqual({ ask: 0, review: 0, begin: 1 });
+      expect(meta(s.updates.at(-1)!, 'terminal_exit')?.exit_code).toBe(0);
+    } finally {
+      await s.close();
+    }
+  });
+
+  test('cancellation at begin cannot start an admitted direct command', async () => {
+    const root = await directory();
+    const home = join(root, 'home');
+
+    await mkdir(home);
+
+    const finder = openFinder(root);
+    const controller = new AbortController();
+    const reason = new Error('cancel before direct launch');
+    const updates: ToolCallUpdate[] = [];
+    const counts = { begin: 0, review: 0, ask: 0 };
+    const grants = new Set<string>();
+    const tools = riffTools({
+      directory: root,
+      finder,
+      grants,
+      commandEnvironment: {
+        HOME: home,
+        XDG_CONFIG_HOME: home,
+        GIT_CONFIG_NOSYSTEM: '1',
+        SHELL: '/bin/sh',
+        CHORD_RESOURCE_FIXTURE: 'true',
+      },
+      mode: () => 'auto',
+      begin: () => {
+        counts.begin++;
+        controller.abort(reason);
+      },
+      stream: () => (update) => {
+        updates.push(update);
+      },
+      review: () => {
+        counts.review++;
+
+        return Promise.resolve({ outcome: 'clear' });
+      },
+      ask: () => {
+        counts.ask++;
+
+        return Promise.resolve(DENY);
+      },
+    });
+    const tool = tools.find((tool) => tool.name === 'shell')!;
+
+    try {
+      await expect(
+        tool.execute(
+          { command: "printf '%s' 'never-launched'" },
+          {
+            signal: controller.signal,
+            executionId: 'cancel-direct',
+            sessionId: 'fixture',
+          },
+        ),
+      ).rejects.toBe(reason);
+      expect(counts).toEqual({ begin: 1, review: 0, ask: 0 });
+      expect(updates).toEqual([]);
+      expect(grants.size).toBe(0);
+    } finally {
+      controller.abort();
+      await finder.destroy();
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

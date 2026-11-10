@@ -1,5 +1,12 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -12,6 +19,33 @@ let root: string;
 
 beforeEach(async () => {
   root = await mkdtemp(join(tmpdir(), 'chord-provider-'));
+});
+
+describe('tester: provider record failure and concurrency', () => {
+  test('failed replacement removes its temporary record and propagates the failure', async () => {
+    await mkdir(join(root, 'riff', 'provider'), { recursive: true });
+    await expect(writeProvider(root, 'grok')).rejects.toThrow();
+    expect((await readdir(join(root, 'riff'))).sort()).toEqual([
+      'credentials',
+      'provider',
+    ]);
+    expect(await readdir(join(root, 'riff', 'credentials'))).toEqual([]);
+    await expect(readProvider(root)).rejects.toThrow();
+  });
+
+  test('concurrent logout of an old selection cannot erase a newly selected plan', async () => {
+    await writeProvider(root, 'grok');
+    await Promise.all([
+      clearProvider(root, 'grok'),
+      writeProvider(root, 'codex'),
+    ]);
+    expect(await readProvider(root)).toBe('codex');
+    expect((await readdir(join(root, 'riff'))).sort()).toEqual([
+      'credentials',
+      'provider',
+    ]);
+    expect(await readdir(join(root, 'riff', 'credentials'))).toEqual([]);
+  });
 });
 
 afterEach(async () => {

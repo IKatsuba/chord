@@ -15,6 +15,10 @@
   single log of the caught error and passes every other console error on.
 - A string an agent sent goes through `theme/Ansi.tsx` unless something cleaned it: OpenTUI's text draws escape bytes as text.
 - Choose colours by role from `theme/theme.ts`.
+- riff's sign-in box belongs to its conversation and attempt. Ignore late
+  callbacks and cancel effects when that conversation ends. Keep the transcript
+  through sign-in; clear stale model/config when signed out. Keep recovery
+  choices and their printed keys reachable at 80x24.
 - Float transient completions (including `@@`), history search, help and
   command pickers over the transcript above the prompt (CHD-545). Keep the
   transcript's height, scroll and following state; opening and closing must

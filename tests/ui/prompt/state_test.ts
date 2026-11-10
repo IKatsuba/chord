@@ -117,6 +117,7 @@ test("a / opens the list of chord's commands and the agent's", () => {
     'fork',
     'greet',
     'help',
+    'login',
     'mcp',
     'model',
     'new',
@@ -140,6 +141,7 @@ test("a / opens the list of chord's commands and the agent's", () => {
     'exit',
     'fork',
     'help',
+    'login',
     'mcp',
     'model',
     'new',
@@ -217,7 +219,7 @@ test("the list's keys are its own while it is open", () => {
   expect(keyCommand('', up, shut, '/')).toStrictEqual(undefined);
   expect(
     commandMenu(reduceApp(shut, { type: 'draft_edited' }), '/')?.items.length,
-  ).toStrictEqual(17);
+  ).toStrictEqual(18);
 });
 
 test('Esc closes the list before it interrupts the turn', () => {

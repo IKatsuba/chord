@@ -6,7 +6,7 @@ import process from 'node:process';
 import wrapAnsi from 'wrap-ansi';
 import { CLI_AGENTS, type CliAgent } from './clis.ts';
 import { REGISTRY_AGENTS, type RegistryAgent } from './registry.ts';
-import { RIFF, riffAgentStart, riffOffered } from './riff/start.ts';
+import { RIFF, riffAgentStart } from './riff/start.ts';
 import { type SettingsProblem, unknownOfferedMessage } from './settings.ts';
 
 /**
@@ -112,15 +112,14 @@ function riffAgent(): KnownAgent {
   };
 }
 
-/** The process's environment, which decides whether riff is listed. */
+/** Kept as an explicit fixture input to the catalog's public callers. */
 type Env = Readonly<Record<string, string | undefined>>;
 
 /**
- * The agents chord knows, riff first where `env` offers it: the one
- * place that decides whether riff is listed, started by name and offered.
+ * The agents chord knows, riff first. Listing never reads a credential store.
  */
-function catalog(env: Env): readonly KnownAgent[] {
-  return riffOffered(env) ? [riffAgent(), ...AGENTS] : AGENTS;
+function catalog(_env: Env): readonly KnownAgent[] {
+  return [riffAgent(), ...AGENTS];
 }
 
 /**
@@ -133,8 +132,7 @@ export function takesMcpServers(agent: string, set?: boolean): boolean {
 }
 
 /**
- * Every agent chord can start by name: riff where it is offered, the
- * registry's, then the table's.
+ * Every agent chord can start by name: riff, the registry's, then the table's.
  */
 export function listAgents(env: Env = process.env): readonly KnownAgent[] {
   return catalog(env);
@@ -261,8 +259,8 @@ export interface ListedAgent {
 }
 
 /**
- * Every agent chord can start, as `chord agents` lists them: riff where
- * `env` offers it, the registry's and the table's, each on the settings files' command where they give one,
+ * Every agent chord can start, as `chord agents` lists them: riff,
+ * the registry's and the table's, each on the settings files' command where they give one,
  * then the names only the settings files define, in their order.
  */
 export async function listedAgents(

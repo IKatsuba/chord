@@ -1322,6 +1322,54 @@ Lead it.
     await host.sessions.closeAll();
   });
 
+  test('/new opens an idle child after an established main agent exits', async () => {
+    const exited = Promise.withResolvers<void>();
+    let first = true;
+    const { host, key, heard } = await withMain(
+      {},
+      {},
+      {
+        open: () => {
+          const session = held();
+
+          if (first) {
+            first = false;
+
+            return Promise.resolve({ ...session, exited: exited.promise });
+          }
+
+          return Promise.resolve(session);
+        },
+      },
+    );
+
+    try {
+      exited.resolve();
+      await until(() =>
+        heard.some(([, event]) => event.type === 'disconnected'),
+      );
+
+      const parent = host.conversationAt(key);
+
+      expect(parent?.launchSignal.aborted).toBe(true);
+      expect(parent?.session).toBeDefined();
+
+      const shown = await host.newTyped('', () => {});
+
+      expect(shown).toMatchObject({
+        kind: 'ran',
+        call: { tool: 'open_agent', input: { agent: 'fake', typed: '/new' } },
+      });
+      expect(host.sessions.agents.children).toHaveLength(1);
+      expect(host.conversationAt(key)).toBe(parent);
+      expect(
+        host.early.get(host.sessions.agents.children[0]!.key) ?? [],
+      ).toEqual([]);
+    } finally {
+      await host.sessions.closeAll();
+    }
+  });
+
   test("/team stop says what it did before main is told, in the host's words", async () => {
     const order: string[] = [];
     const { host, key, open } = await withMain();

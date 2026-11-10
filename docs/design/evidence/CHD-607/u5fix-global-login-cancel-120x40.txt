@@ -1,0 +1,40 @@
+ riff · riff · not signed in · opened by main 1s ago
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+   ⎿  Not signed in. /login to sign in, or /new for another agent.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ riff ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main  fake · Fake Large with a 1M context window · medium  ◦ idle 0s     ✓ new reply
+    riff  riff                                                 ◦ signed out

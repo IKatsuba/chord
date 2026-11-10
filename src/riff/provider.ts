@@ -11,11 +11,18 @@ import {
   CredentialSignedOut,
 } from './credentials.ts';
 
-/** Part 4's provisional selection, in one pure function; resume uses its sidecar. */
-export function providerOf(entries: {
-  readonly codex: string | null;
-  readonly grok: string | null;
-}): SecretProvider | undefined {
+/** Prefer the last sign-in when still stored; resume uses its sidecar. */
+export function providerOf(
+  entries: {
+    readonly codex: string | null;
+    readonly grok: string | null;
+  },
+  record: SecretProvider | undefined = undefined,
+): SecretProvider | undefined {
+  if (record !== undefined && entries[record] !== null) {
+    return record;
+  }
+
   return entries.codex !== null
     ? 'codex'
     : entries.grok !== null

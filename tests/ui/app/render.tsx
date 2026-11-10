@@ -33,6 +33,7 @@ import {
 import type { Copy } from '../../../src/ui/app/selection.ts';
 import type { WindowedState } from '../../../src/ui/app/state.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
+import type { RiffAccess } from '../../../src/ui/riff/sign_in_run.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { draw } from '../harness.tsx';
 
@@ -118,6 +119,7 @@ export async function withWindow(
   body: (window: Window) => Promise<void>,
   {
     agent = 'fake',
+    riffAccess,
     configHome,
     rows,
     columns,
@@ -164,6 +166,7 @@ export async function withWindow(
   }: {
     /** The agent the window runs, as `chord <agent>` names it, on the fake. */
     agent?: string;
+    riffAccess?: RiffAccess;
     /** chord's user directory, given the window's own directory; none by default. */
     configHome?: (dir: string) => string;
     rows?: number;
@@ -274,6 +277,7 @@ export async function withWindow(
     keybindings === undefined ? undefined : readKeybindings(keybindings);
   const app = await draw(
     <App
+      riffAccess={riffAccess}
       resources={resources}
       teamSelection={teamSelection}
       selectionPolicy={selectionPolicy}

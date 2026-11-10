@@ -26,6 +26,7 @@ export interface AgentState {
 
 /** The fields of `session/new`'s answer, and its kin's, that state comes from. */
 export interface SessionAnswer {
+  readonly _meta?: unknown;
   readonly configOptions?: readonly SessionConfigOption[] | null;
   readonly modes?: SessionModeState | null;
   readonly models?: unknown;

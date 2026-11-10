@@ -41,6 +41,7 @@ owner's consent.
 ```sh
 bun install                    # the dependencies, as bun.lock pins them
 bun dev chord [agent]           # run from source
+bun dev chord riff              # sign in to a ChatGPT or Grok plan
 bun dev chord --fake            # run against the scripted test agent
 bun dev chord --fake riff       # riff on its fake provider
 bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
@@ -200,8 +201,9 @@ size and reads the screen back as text. For captures, use
 `bun dev chord --fake --qa <name>`: it recreates the fixed `/tmp/chord-qa.<name>`,
 never a directory from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa`;
 an empty name is treated as no `--qa`. For riff on its fake provider, use
-`bun dev chord --fake --qa <name> riff`. Both flags list riff for development
-on its fake provider and come before `riff`.
+`bun dev chord --fake --qa <name> riff`. Both flags select riff's fake
+provider and come before `riff`. `CHORD_RIFF_QA_SIGN_IN` selects offline
+sign-in outcomes documented in the guide; never use a live sign-in for QA.
 
 ```sh
 tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord --fake --qa capture'

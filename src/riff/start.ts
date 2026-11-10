@@ -18,8 +18,7 @@ export const RIFF = 'riff';
 
 /**
  * The fake Chat Completions server's base URL. Only tests, selftest, --fake
- * and --qa set it, never settings: it is the one provider riff has until it
- * can sign in (CHD-485 part 4).
+ * and --qa set it, never settings. Production uses the stored plan sign-in.
  */
 export const FAKE_PROVIDER_ENV = 'CHORD_RIFF_FAKE_PROVIDER';
 
@@ -29,16 +28,6 @@ export function fakeProvider(
   const baseUrl = env[FAKE_PROVIDER_ENV];
 
   return baseUrl === undefined || baseUrl === '' ? undefined : { baseUrl };
-}
-
-/**
- * Whether chord lists and offers riff: only on its fake provider, as a
- * listed riff could not yet sign in anywhere else (CHD-607).
- */
-export function riffOffered(
-  env: Readonly<Record<string, string | undefined>>,
-): boolean {
-  return fakeProvider(env) !== undefined;
 }
 
 /** The binary alone when compiled; from source, Bun with `main.tsx`. */

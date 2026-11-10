@@ -1,0 +1,24 @@
+                            ▀▄  
+                            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            ▀▀  
+                   v0.68.0 · /tmp/chord-qa.chd607-main-picker
+
+          Select agent
+
+              1.  riff · chord's own agent · on a ChatGPT or Grok plan
+              2.  agoragentic-acp · Agoragentic
+              3.  auggie · Auggie CLI
+              4.  autohand · Autohand Code
+              5.  bob · Bob
+          ❯   6.  claude · Claude Agent
+              7.  cline · Cline
+              8.  codebuddy-code · Codebuddy Code
+              9.  codex · Codex
+              10. deepagents · DeepAgents
+              11. dimcode · DimCode
+            ↓ 12. dirac · Dirac
+              … +17 more
+
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+

@@ -16,6 +16,7 @@ import type { KeyCommand } from './state.ts';
 import { NORMAL_KEYS } from '../prompt/vim.ts';
 
 export interface Shortcut {
+  readonly signIn?: readonly string[];
   /** The key as the panel names it, in Claude Code's spelling: `ctrl + o`. */
   readonly key: string;
   /** The rest of the line after the key: `to quit`. */
@@ -367,6 +368,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
     does: 'to pick a choice',
     commands: [],
     choices: [...'123456789'],
+    signIn: [...'123456789'],
   },
   {
     key: '↑ ↓ or j k',
@@ -376,6 +378,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
     // and the pickers follow it; a side effect of the widget, not a key
     // worth a line of its own.
     choices: ['↑', '↓', 'j', 'k', 'ctrl + k'],
+    signIn: ['↑', '↓', 'j', 'k', 'ctrl + k'],
   },
   {
     key: 'enter',
@@ -383,6 +386,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: [],
     // ink-select-input reads any Enter, whatever is held with it.
     choices: ['enter', 'shift + enter', 'alt + enter'],
+    signIn: ['enter', 'shift + enter', 'alt + enter'],
   },
   {
     key: 'esc',
@@ -395,6 +399,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
   // monitor's detail as esc does (CHD-481).
   {
     key: 'esc ←',
+    signIn: ['esc'],
     does: 'to leave a picker or shortcuts',
     commands: [
       'close_help',
@@ -460,6 +465,11 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'backspace',
       'shift + backspace',
     ],
+  },
+  {
+    key: '/login /logout',
+    does: 'to sign riff in or out',
+    commands: [],
   },
   {
     key: '?',

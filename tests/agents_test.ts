@@ -807,19 +807,21 @@ describe('riff in the agent list (CHD-604c)', () => {
     from: 'builtin',
   } as const;
 
-  test('off the fake provider nothing knows riff', async () => {
-    expect(findAgent('riff', off)).toBeUndefined();
-    expect(listAgents(off).map(({ name }) => name)).not.toContain('riff');
+  test('off the fake provider riff is available without reading a credential', async () => {
+    expect(findAgent('riff', off)?.runner).toBe('builtin');
+    expect(listAgents(off)[0]?.name).toBe('riff');
     expect(
       (await listedAgents({}, none, off)).map(({ name }) => name),
-    ).not.toContain('riff');
-    expect(findAgent('riff', { [FAKE_PROVIDER_ENV]: '' })).toBeUndefined();
+    ).toContain('riff');
+    expect(findAgent('riff', { [FAKE_PROVIDER_ENV]: '' })?.runner).toBe(
+      'builtin',
+    );
   });
 
   test("on it riff is the catalog's first row, built in", async () => {
     expect(findAgent('riff', on)?.runner).toBe('builtin');
     expect(listAgents(on)[0]?.name).toBe('riff');
-    expect(listAgents(on).slice(1)).toStrictEqual([...listAgents(off)]);
+    expect(listAgents(on)).toStrictEqual(listAgents(off));
 
     const looked: string[] = [];
     const listed = await listedAgents(
@@ -892,27 +894,27 @@ describe('riff in the agent list (CHD-604c)', () => {
   });
 });
 
-describe('CHD-604c tester: fake-only catalog boundaries', () => {
+describe('CHD-604c tester: catalog environment boundaries', () => {
   const lookup = (command: string) =>
     Promise.resolve(command === 'agent' ? '/fixture/bin/agent' : undefined);
 
-  test('an explicit offered list names riff only when its provider is set', async () => {
+  test('an explicit offered list names riff once with or without a fake provider', async () => {
     for (const provider of [undefined, '', 'http://localhost:1/v1']) {
       const listed = await listedAgents({}, lookup, {
         [FAKE_PROVIDER_ENV]: provider,
       });
       const offered = offeredAgents(listed, ['riff', 'claude', 'riff']);
-      const enabled = provider !== undefined && provider !== '';
 
-      expect(offered.agents.map(({ name }) => name)).toStrictEqual(
-        enabled ? ['riff', 'claude'] : ['claude'],
-      );
-      expect(offered.unknown).toStrictEqual(enabled ? [] : ['riff']);
+      expect(offered.agents.map(({ name }) => name)).toStrictEqual([
+        'riff',
+        'claude',
+      ]);
+      expect(offered.unknown).toStrictEqual([]);
       expect(DEFAULT_AGENT).toBe('claude');
     }
   });
 
-  test('enabling riff preserves every other JSON field and agent entry', async () => {
+  test('the fake provider preserves the complete catalog JSON', async () => {
     const commands = { mine: 'fixture-agent --token fixture-secret' };
     const snapshot = async (enabled: boolean) =>
       agentsJson({
@@ -933,10 +935,8 @@ describe('CHD-604c tester: fake-only catalog boundaries', () => {
     const before = await snapshot(false);
     const after = await snapshot(true);
 
-    expect({
-      ...after,
-      agents: after.agents.filter(({ name }) => name !== 'riff'),
-    }).toStrictEqual({ ...before, agents: [...before.agents] });
+    expect(after).toStrictEqual(before);
+    expect(after.agents.filter(({ name }) => name === 'riff')).toHaveLength(1);
     expect(Object.keys(after).sort()).toStrictEqual([
       'agents',
       'preferred',

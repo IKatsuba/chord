@@ -233,7 +233,7 @@ describe('riff L2 refusal in the window', () => {
           await send(window, 'hello');
           await window.shows('Hello from a fixture plan.');
           await send(window, 'again');
-          await window.shows('Sign in to a plan for riff.');
+          await window.shows('run chord riff to sign in.');
 
           const frame = window.frame();
 

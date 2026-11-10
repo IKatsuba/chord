@@ -12,6 +12,7 @@ import {
 import { libfxBackend } from '../../src/platform/libfx.ts';
 import { connectRiff, type Riff } from '../../src/riff/adapter.ts';
 import { riffStore } from '../../src/riff/store.ts';
+import { writeProvider } from '../../src/riff/provider_record.ts';
 import { clientOverStreams, type AcpClient } from '../fixtures/acp_client.ts';
 import { until } from '../session/conversation_fake.ts';
 import {
@@ -23,6 +24,47 @@ import {
 let root: string | undefined;
 let riff: Riff | undefined;
 let end: (() => void) | undefined;
+
+describe('CHD-607 recorded plan admission', () => {
+  test('new uses the recorded stored plan; resume retains its sidecar after record changes', async () => {
+    root = await mkdtemp(join(tmpdir(), 'chord-recorded-plan-'));
+
+    await writeProvider(root, 'grok');
+
+    const fixture = planFetch({ plan: 'grok' });
+    const backing = memorySecrets({
+      codex: JSON.stringify(planCredential('codex')),
+      grok: JSON.stringify(planCredential('grok')),
+    });
+    const first = await open('grok', fixture, backing);
+    const created = await start(first.client);
+    const id = created.result?.['sessionId'] as string;
+
+    expect(created.error).toBeUndefined();
+    expect(created.result?.['configOptions']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'model', currentValue: 'grok-4.7' }),
+      ]),
+    );
+    end?.();
+    await riff?.finished;
+    await writeProvider(root, 'codex');
+
+    const second = await open('grok', fixture, backing);
+    const resumed = await second.client.request('session/resume', {
+      sessionId: id,
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+
+    expect(resumed.error).toBeUndefined();
+    expect(resumed.result?.['configOptions']).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'model', currentValue: 'grok-4.7' }),
+      ]),
+    );
+  });
+});
 
 async function open(
   plan: 'codex' | 'grok',
@@ -459,7 +501,7 @@ describe('riff plans on an injected fetch', () => {
     expect((await start(next.client)).error).toMatchObject({
       code: -32603,
       message:
-        "chord keeps your sign-in in the system's credential store, and none answered: no Secret Service (gnome-keyring or KeePassXC). Start one and try again.",
+        "chord keeps your sign-in in the system's credential store, and none answered: no Secret Service (gnome-keyring or KeePassXC). Start one and try again. run chord riff to sign in.",
     });
     expect(fixture.urls).toEqual([]);
   });

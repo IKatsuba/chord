@@ -46,7 +46,8 @@ then the picker.
 
 ## Why chord
 
-- **Any agent, one interface.** 36 agents out of the box, from the
+- **Any agent, one interface.** riff, chord's own agent on a ChatGPT or
+  Grok plan, beside agents from the
   [ACP Registry](https://agentclientprotocol.com) and their own CLIs. Switch
   agents without relearning keys.
 - **Agents that work together.** Open a second agent beside the one you talk
@@ -131,8 +132,10 @@ The package is a small shim around a prebuilt binary for macOS and Linux,
 arm64 and x64; the macOS binaries are signed and notarised. `chord upgrade`
 updates it through the package manager that installed it.
 
-chord starts each agent for you (through `npx` or `uvx`, or the agent's own
-CLI where it has one), so the agent's own login is all it needs: sign in to
+`chord riff` runs chord's own agent on your ChatGPT or Grok plan. Sign in
+in chord's box, in the browser or with a device code; `/login` switches
+plans and `/logout` signs out. Credentials stay in the system store.
+For other agents, chord starts `npx`, `uvx` or their own CLI; sign in to
 Claude Code, Codex or Gemini as you normally would.
 
 Build from source with [Bun](https://bun.sh) 1.4.4 or newer. Compilation
@@ -149,6 +152,7 @@ bun dev compile --install   # into ~/.local/bin/chord
 
 ```sh
 chord                  # choose an agent in this directory
+chord riff             # chord's own agent; sign in to a ChatGPT or Grok plan
 chord gemini -C ~/src/app
 chord agents           # agents, startup commands and own CLI availability
 chord agents --json    # versioned agent list for scripts
@@ -197,7 +201,7 @@ recorded.
 
 ## Supported agents
 
-Claude Code, Codex, Gemini CLI, Copilot, Cursor, OpenCode, Cline, Qwen Code,
+riff, Claude Code, Codex, Gemini CLI, Copilot, Cursor, OpenCode, Cline, Qwen Code,
 Kimi Code, Kiro, Goose, Junie, Factory Droid, Auggie, Kilo, bob, Devin, fx
 and more: `chord agents` prints the full list, and any other ACP agent runs
 with `chord --agent-command "my-agent --acp"`.

@@ -27,6 +27,27 @@ const AGENT = [
 const names = (items: readonly { name: string }[]) =>
   items.map(({ name }) => name);
 
+test('login is global and logout is listed only on riff', () => {
+  expect(commandItems([]).find(({ name }) => name === 'login')).toMatchObject({
+    description: 'Sign in to a ChatGPT or Grok plan for riff',
+  });
+  expect(commandItems([]).some(({ name }) => name === 'logout')).toBe(false);
+  expect(
+    commandItems([], true).find(({ name }) => name === 'logout'),
+  ).toMatchObject({ description: "Sign out of riff's plan" });
+  expect(submitted('/logout')).toEqual({ type: 'send', text: '/logout' });
+  expect(submitted('/logout', undefined, true)).toEqual({
+    type: 'chord',
+    name: 'logout',
+    args: '',
+  });
+  expect(
+    commandItems([{ name: 'logout', description: 'Agent logout' }]).find(
+      ({ name }) => name === 'logout',
+    )?.owner,
+  ).toBe('agent');
+});
+
 test("the list is chord's commands and the agent's, by name", () => {
   const items = commandItems(AGENT);
 
@@ -40,6 +61,7 @@ test("the list is chord's commands and the agent's, by name", () => {
     'fork',
     'help',
     'init',
+    'login',
     'mcp',
     'model',
     'new',
@@ -71,6 +93,7 @@ test("the list is chord's commands and the agent's, by name", () => {
     'exit',
     'fork',
     'help',
+    'login',
     'mcp',
     'model',
     'new',

@@ -57,6 +57,7 @@ import {
   CredentialSignedOut,
 } from './credentials.ts';
 import { planProvider, providerOf } from './provider.ts';
+import { readProvider } from './provider_record.ts';
 
 /** What a reopened session says of a turn a dead process left open. */
 export const INTERRUPTED = 'The interrupted turn was cancelled.';
@@ -167,9 +168,13 @@ type SelectedProvider =
   | { readonly plan: SecretProvider; readonly cell: CredentialCell };
 
 const authRequired = () =>
-  new RequestError(-32000, 'Sign in to a plan for riff.', {
-    authMethods: riffInit('').authMethods,
-  });
+  new RequestError(
+    -32000,
+    'Sign in to a plan for riff; run chord riff to sign in.',
+    {
+      authMethods: riffInit('').authMethods,
+    },
+  );
 
 export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const store = options.store ?? riffStore(options.stateDir);
@@ -234,10 +239,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
         const plan =
           resumed?.sidecar.provider ??
-          providerOf({
-            codex: await secrets.get('codex'),
-            grok: await secrets.get('grok'),
-          });
+          providerOf(
+            {
+              codex: await secrets.get('codex'),
+              grok: await secrets.get('grok'),
+            },
+            await readProvider(options.stateDir),
+          );
 
         if (plan === undefined) {
           throw authRequired();
@@ -279,7 +287,18 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         error instanceof SecretStoreUnavailable ||
         error instanceof SecretStoreTimeout
       ) {
-        throw new RequestError(-32603, error.message);
+        throw new RequestError(
+          -32603,
+          `${error.message} run chord riff to sign in.`,
+          {
+            riffStore: {
+              state:
+                error instanceof SecretStoreTimeout ? 'timeout' : 'unavailable',
+              name: error.store,
+              message: error.message,
+            },
+          },
+        );
       }
 
       throw error;
@@ -628,6 +647,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       return {
         sessionId: session.id,
         configOptions: configOptions(session.plan, session.config),
+        _meta: { 'chord/riffProvider': session.plan },
       };
     })
     .onRequest('session/resume', async ({ params, client }) => {
@@ -659,7 +679,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         session.shown.clear();
       }
 
-      return { configOptions: configOptions(session.plan, session.config) };
+      return {
+        configOptions: configOptions(session.plan, session.config),
+        _meta: { 'chord/riffProvider': session.plan },
+      };
     })
     .onRequest('session/set_config_option', async ({ params }) => {
       const session = opened(params.sessionId);

@@ -12,6 +12,7 @@ import {
   createRendererClipboardAdapter,
 } from '@opentui/core';
 import process from 'node:process';
+import { riffWindowAccess } from './riff/window_access.ts';
 import { text as readText } from 'node:stream/consumers';
 import { Readable, type Writable } from 'node:stream';
 import { join, resolve } from 'node:path';
@@ -525,6 +526,10 @@ export const cli = chordCommand().action(async (options, named) => {
 
   const window = (
     <App
+      riffAccess={riffWindowAccess(process.env)}
+      {...(process.env['CHORD_RIFF_FAKE_PROVIDER']
+        ? { openUrl: () => Promise.resolve(undefined) }
+        : {})}
       open={startServices.openSession}
       resources={resources.read}
       teamSelection={first.teamSelection}

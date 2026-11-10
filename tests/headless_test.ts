@@ -5,6 +5,7 @@ import { tmpdir } from 'node:os';
 import process from 'node:process';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { quote } from 'shell-quote';
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import {
   failureOf,
@@ -1613,7 +1614,7 @@ describe('CHD-493 U8 tester: recorded runtime precedes startup validation', () =
   });
 });
 
-describe('riff by name on its fake provider alone (CHD-604c)', () => {
+describe('riff by name with explicit fixture access (CHD-604c)', () => {
   /**
    * chord from source with `args` in a directory of its own, the fake
    * provider at `provider` or none; asynchronous, as the provider is served
@@ -1666,18 +1667,36 @@ describe('riff by name on its fake provider alone (CHD-604c)', () => {
     }
   }
 
-  test('without it, chord agents lists no riff and chord riff is unknown', async () => {
+  test('without a fake provider, riff is listed and a named command uses the fake ACP override', async () => {
     const json = JSON.parse(
       (await chord(['agents', '--json'])).stdout,
     ) as AgentsJson;
     const table = await chord(['agents']);
-    const riff = await chord(['riff', '-p', 'hi']);
+    const riff = await chord([
+      'riff',
+      '--agent-command',
+      quote(fakeAgentCommand()),
+      '-p',
+      'hi',
+    ]);
 
-    expect(json.agents.map(({ name }) => name)).not.toContain('riff');
-    expect(table.stdout).not.toMatch(/^riff /m);
-    expect(riff.code).not.toBe(0);
-    expect(riff.stderr).toContain(
-      'Unknown agent "riff". `chord agents` lists them.',
+    expect(json.agents[0]?.name).toBe('riff');
+    expect(json.preferred).toBe('claude');
+    expect(table.stdout.split('\n')[0]).toMatch(/^riff .* built in /);
+    expect(riff).toMatchObject({
+      code: 0,
+      stdout: 'Hello, world. This reply came in chunks.\n',
+    });
+  });
+
+  test('a spawned riff without a provider fixture refuses system credentials before touching Bun.secrets', async () => {
+    expect(process.env['CHORD_RESOURCE_FIXTURE']).toBe('true');
+
+    const result = await chord(['riff', '-p', 'hi']);
+
+    expect(result.code).not.toBe(0);
+    expect(result.stderr).toContain(
+      'System credential access is disabled in fixture runs.',
     );
   });
 
@@ -1711,7 +1730,7 @@ describe('riff by name on its fake provider alone (CHD-604c)', () => {
 
 describe('CHD-604c tester: named riff outside the fake provider', () => {
   for (const provider of [undefined, '']) {
-    test(`riff is unknown with ${provider === undefined ? 'no' : 'an empty'} provider`, async () => {
+    test(`riff uses an explicit fake ACP command with ${provider === undefined ? 'no' : 'an empty'} provider`, async () => {
       const dir = await mkdtemp(join(tmpdir(), 'chord-riff-boundary-'));
 
       try {
@@ -1720,6 +1739,8 @@ describe('CHD-604c tester: named riff outside the fake provider', () => {
           [
             fileURLToPath(new URL('../src/main.tsx', import.meta.url)),
             'riff',
+            '--agent-command',
+            quote(fakeAgentCommand()),
             '-p',
             'hi',
             '-C',
@@ -1740,10 +1761,11 @@ describe('CHD-604c tester: named riff outside the fake provider', () => {
         );
 
         expect(result.error).toBeUndefined();
-        expect(result.status).toBe(2);
-        expect(result.stderr).toContain(
-          'Unknown agent "riff". `chord agents` lists them.',
+        expect(result.status).toBe(0);
+        expect(result.stdout).toBe(
+          'Hello, world. This reply came in chunks.\n',
         );
+        expect(result.stderr).toBe('');
       } finally {
         await rm(dir, { recursive: true });
       }

@@ -748,8 +748,9 @@ describe('CHD-544 tester: every offered fixture command starts', () => {
         offeredAgents(listed, undefined).agents,
         'zeroclaw',
       );
-      const offered = listed.filter(({ name }) =>
-        choices.some(({ value }) => value === name),
+      const offered = listed.filter(
+        ({ name, from }) =>
+          from !== 'builtin' && choices.some(({ value }) => value === name),
       );
 
       expect(new Set(offered.map(({ from }) => from))).toStrictEqual(

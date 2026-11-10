@@ -23,6 +23,8 @@ export type ChordCommand =
   | 'team'
   | 'theme'
   | 'vim'
+  | 'login'
+  | 'logout'
   | 'exit';
 
 export interface CommandItem {
@@ -37,6 +39,12 @@ export interface CommandItem {
 }
 
 const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
+  {
+    name: 'login',
+    description: 'Sign in to a ChatGPT or Grok plan for riff',
+    owner: 'chord',
+  },
+  { name: 'logout', description: "Sign out of riff's plan", owner: 'chord' },
   {
     name: 'clear',
     description: 'Start a new session with an empty transcript',
@@ -113,8 +121,13 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
  */
 export function commandItems(
   agent: readonly AvailableCommand[],
+  riff = false,
 ): CommandItem[] {
-  const ours = new Set<string>(CHORD_COMMANDS.map(({ name }) => name));
+  const ours = new Set<string>(
+    CHORD_COMMANDS.filter((command) => command.name !== 'logout' || riff).map(
+      ({ name }) => name,
+    ),
+  );
   const theirs = agent
     .filter(({ name }) => !ours.has(name))
     .map(({ name, description }): CommandItem => {
@@ -129,9 +142,10 @@ export function commandItems(
       };
     });
 
-  return [...CHORD_COMMANDS, ...theirs].sort((a, b) =>
-    a.name.localeCompare(b.name),
-  );
+  return [
+    ...CHORD_COMMANDS.filter((command) => command.name !== 'logout' || riff),
+    ...theirs,
+  ].sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /**
@@ -360,7 +374,11 @@ export type Submitted =
  * draft that names one of chord's commands runs it, whatever follows the name;
  * anything else, an agent's command among it, goes to the agent as written.
  */
-export function submitted(draft: string, highlighted?: CommandItem): Submitted {
+export function submitted(
+  draft: string,
+  highlighted?: CommandItem,
+  riff = false,
+): Submitted {
   // A team's run needs its job after the name, which is still to be typed.
   if (highlighted?.verb === 'run') {
     return { type: 'complete', text: completion(highlighted) };
@@ -379,7 +397,9 @@ export function submitted(draft: string, highlighted?: CommandItem): Submitted {
 
   const typed = /^\/(\S+)(?:\s+([\s\S]*))?$/.exec(draft.trim());
   const name = highlighted?.name ?? typed?.[1];
-  const ours = CHORD_COMMANDS.find((command) => command.name === name);
+  const ours = CHORD_COMMANDS.find(
+    (command) => command.name === name && (name !== 'logout' || riff),
+  );
 
   if (ours) {
     return {

@@ -844,10 +844,18 @@ export class Conversation {
    * or after `SETTLE_LIMIT_MS`, so what it cost to the end is said
    * (`retired_usage`) and kept in its record; settles when it has closed.
    */
-  clear(firstPart?: TeamPart): Promise<void> {
+  clear(firstPart?: TeamPart, restart = true): Promise<void> {
     const opening = this.#opening;
 
-    if (!opening || this.#closing) {
+    if (this.#closing) {
+      return Promise.resolve();
+    }
+
+    if (!opening) {
+      if (restart) {
+        this.start();
+      }
+
       return Promise.resolve();
     }
 
@@ -1007,7 +1015,11 @@ export class Conversation {
       ),
       monitors,
     );
-    this.start();
+
+    // Logout keeps the reset conversation idle until an explicit sign-in.
+    if (restart) {
+      this.start();
+    }
 
     return retired.then(
       () => {},

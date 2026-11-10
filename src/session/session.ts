@@ -10,7 +10,11 @@ import type {
 import process from 'node:process';
 import { type Agent, openAgent } from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
-import { credentialNotice, type CredentialNotice } from './credentials.ts';
+import {
+  credentialNotice,
+  type CredentialNotice,
+  riffProvider,
+} from './credentials.ts';
 import { agentStart, findAgent } from '../agents.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
@@ -164,6 +168,7 @@ export { CLAUDE_ADAPTER };
 
 /** One agent process and one ACP session in it, until `close()`. */
 export interface Session {
+  readonly riffProvider?: 'codex' | 'grok' | undefined;
   readonly agent: string;
   readonly cwd: string;
   /**
@@ -592,6 +597,7 @@ export async function openSession(
     const error = asSignIn(
       startFailed(refused, step, pinned),
       connection.init.authMethods,
+      agent === 'riff',
     );
 
     try {
@@ -632,6 +638,7 @@ export async function openSession(
 
   return {
     agent,
+    ...(agent === 'riff' ? { riffProvider: riffProvider(answer._meta) } : {}),
     cwd,
     id,
     ...(chordPassed === undefined ? {} : { chordServer: chordPassed }),

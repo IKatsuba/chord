@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · not signed in
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for the browser… (0s)
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to ChatGPT in the browser                                                                                    │
+│                                                                                                                      │
+│ chord opened this address. Sign in there; chord goes on when OpenAI sends the browser back to localhost:1455.        │
+│                                                                                                                      │
+│   https://example.invalid/codex/browser?state=fixture&code_challenge=fixturefixturefixturefixturefixturefixturefix   │
+│   turefixturefixturefixturefixturefixturefixturefixturefixturefixturefixturefixturefixturefixturefixturefixturefix   │
+│   turefixturefixturefixturefixturefixture                                                                            │
+│   Opens example.invalid                                                                                              │
+│                                                                                                                      │
+│ ❯ 1. Open it again                                                                                                   │
+│   2. Copy the address                                                                                                │
+│   3. Use a code instead                                                                                              │
+│                                                                                                                      │
+│ Enter to choose · Esc to give up                                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

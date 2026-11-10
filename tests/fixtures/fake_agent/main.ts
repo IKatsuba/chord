@@ -489,6 +489,8 @@ const SCENARIOS = [
   'twins',
   'permissionsteer',
   'reviewpermission',
+  'reviewincomplete',
+  'reviewfailed',
   'mcpask',
   'bigask',
   'bigasktwice',

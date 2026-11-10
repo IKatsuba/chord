@@ -8303,3 +8303,37 @@ The live terms pages could not be fetched here; the owner read them
   `xai.ts`), which sign in with the same clients: no terms line in the box,
   no experimental mark, and the guide does not quote libfx's statement, as
   neither fx's nor Mastra's sign-in mentions terms.
+
+## 2026-11-10 — CHD-608: isolated auto reviews on libfx's public surface
+
+libfx 0.0.16's `createFxEngine` owns one conversation; it exposes no reset
+or new-session method. Its instructions are limited to 64 KiB, below the
+maximum review data plus policy. It retries provider failures internally
+and documents no permanent-provider-error discriminator: `FxErrorSummary`
+has an optional, untyped code; the documented model-capability codes do
+not identify an unserved model or a content filter.
+
+- **Options:** create an engine for each review; use a memory-durable
+  `createFxAgent` with a session per review; or wait for upstream APIs.
+  For failures, observe HTTP status through the passed fetch, match error
+  text, or leave all failures unavailable until a documented signal exists.
+- **Choice (main's provisional CHD-608 decisions):** a fresh engine for
+  each review attempt, closed before the review returns or retries. The
+  adapted policy is instructions; XML-escaped review data is the user
+  message. libfx's retries run inside each 30-second attempt; chord retries
+  one failed attempt. All failures are unavailable and ask the person;
+  there is no automatic auto-to-ask transition in this slice. No status
+  interception, message matching or library workaround.
+- **Trial:** fake fetches for ChatGPT and Grok, native and Wasm, each made
+  exactly one model request when `permission_decision.execute` cancelled
+  its turn. First native creation/close took 8.73/0.56 ms; first Wasm took
+  17.95/0.06 ms. Four native batches of 64 fresh, closed engines made 64
+  requests each; process RSS after forced GC was 28.91, 32.02, 33.20 and
+  30.27 MiB. This bounded trial plateaued; RSS is not an isolated measure
+  of retained core memory. No real model or credential store was reached.
+
+The input builder uses `escape-html` 1.0.3 (MIT), with `strip-ansi` for
+terminal escapes, rather than its own encoders. Its encoding runs under
+Bun and in a standalone compiled Bun binary. Host executions can outlive
+libfx's parent cancellation race, so riff explicitly owns and drains
+review jobs before releasing a turn or closing its session.

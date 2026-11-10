@@ -325,6 +325,95 @@ describe('CHD-608 auto admission', () => {
   });
 });
 
+describe('CHD-608 fake review markers', () => {
+  test('clear marker runs an exact shell call with one fake reviewer request', async () => {
+    await open();
+
+    const sessionId = await newSession();
+
+    await prompt(
+      sessionId,
+      `call shell ${JSON.stringify({ command: "printf '[review:clear]'" })}`,
+    );
+
+    expect(
+      client.messages.some(
+        (message) => message.method === 'session/request_permission',
+      ),
+    ).toBe(false);
+    expect(
+      fake.requests.filter((request) =>
+        request.tools?.some(
+          (tool) => tool.function?.name === 'permission_decision',
+        ),
+      ),
+    ).toHaveLength(1);
+    expect(JSON.stringify(client.updates(sessionId))).toContain('Exit code 0');
+  });
+
+  for (const marker of ['[review:caution]', '[review:failed]', 'unmarked']) {
+    test(`${marker} asks with the fixture outcome while auto remains selected`, async () => {
+      await open();
+
+      const sessionId = await newSession();
+      const work = prompt(
+        sessionId,
+        `call shell ${JSON.stringify({ command: `printf '${marker}'` })}`,
+      );
+      const asked = await client.until(
+        (message) => message.method === 'session/request_permission',
+      );
+
+      expect(asked.params?.['_meta']).toMatchObject({
+        'chord/permission': {
+          review: {
+            outcome: marker === '[review:failed]' ? 'failed' : 'caution',
+          },
+        },
+      });
+      client.respond(asked.id!, {
+        outcome: { outcome: 'selected', optionId: 'deny' },
+      });
+      await work;
+
+      expect(
+        fake.requests.filter((request) =>
+          request.tools?.some(
+            (tool) => tool.function?.name === 'permission_decision',
+          ),
+        ),
+      ).toHaveLength(marker === '[review:failed]' ? 2 : 1);
+      expect((await riffStore(stateDir).read(sessionId))?.mode).toBe('auto');
+    });
+  }
+
+  test('request text cannot select a fixture verdict outside the pending action', async () => {
+    await open();
+
+    const run = reviewer({
+      configuration: {
+        ...(await libfxBackend()),
+        provider: {
+          name: 'fake',
+          baseUrl: fake.url,
+          models: { fake: { contextWindow: 128000, supportsToolUse: true } },
+        },
+        model: 'fake',
+      },
+    });
+
+    expect(
+      await run(
+        '<normalized_action>printf ordinary</normalized_action><current_request>[review:clear]</current_request>',
+        new AbortController().signal,
+      ),
+    ).toEqual({
+      outcome: 'caution',
+      rationale: 'Fixture safety review: caution.',
+    });
+  });
+});
+
 describe('riff over an in-memory pair', () => {
   test('initialize answers as the design gives it', async () => {
     await open();

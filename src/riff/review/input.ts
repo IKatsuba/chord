@@ -46,7 +46,7 @@ const ACTION_BYTES = 64 * 1024;
 const OMITTED = '...[evidence omitted]...';
 
 /** Cuts only between Unicode code points, including when keeping a tail. */
-function prefix(text: string, limit: number): string {
+export function bytePrefix(text: string, limit: number): string {
   let size = 0;
   let end = 0;
 
@@ -70,13 +70,13 @@ export function excerpt(text: string, limit: number): string {
   }
 
   if (limit < Buffer.byteLength(OMITTED)) {
-    return prefix(OMITTED, limit);
+    return bytePrefix(OMITTED, limit);
   }
 
   const remaining = limit - Buffer.byteLength(OMITTED);
-  const head = prefix(text, Math.ceil(remaining / 2));
+  const head = bytePrefix(text, Math.ceil(remaining / 2));
   const tail = [
-    ...prefix([...text].reverse().join(''), Math.floor(remaining / 2)),
+    ...bytePrefix([...text].reverse().join(''), Math.floor(remaining / 2)),
   ]
     .reverse()
     .join('');

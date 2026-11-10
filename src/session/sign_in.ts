@@ -1,7 +1,7 @@
 /**
- * A start that failed because the agent needs a login: chord does not sign
- * agents in (CHD-435), so it says so with the agent's own words and the ways
- * in the agent offers, read from the protocol, never from the text.
+ * Login refusals keep the agent's own words and protocol-provided ways in,
+ * never guesses from error text. Riff signs in through chord's window;
+ * other agents provide their own external sign-in (CHD-435).
  */
 import type { AuthMethod } from '@agentclientprotocol/sdk/unstable';
 import { riffStoreFailure, type RiffStoreFailure } from './credentials.ts';
@@ -108,7 +108,7 @@ export function signInOf(error: unknown): SignIn | undefined {
   return undefined;
 }
 
-/** chord's own line, the way on: the sign-in is the agent's, outside chord. */
+/** Keeps failures actionable through riff's window or an external agent's CLI. */
 export function wayOn(agent: string): string {
   if (agent === 'riff') {
     return 'run chord riff to sign in';

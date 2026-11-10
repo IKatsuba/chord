@@ -1,5 +1,17 @@
 import { describe, expect, test } from 'bun:test';
-import { credentialNotice } from '../../src/session/credentials.ts';
+import {
+  credentialNotice,
+  riffProvider,
+} from '../../src/session/credentials.ts';
+
+test('riff provider metadata accepts only a public plan name', () => {
+  expect(riffProvider({ 'chord/riffProvider': 'grok' })).toBe('grok');
+  expect(
+    riffProvider({ 'chord/riffProvider': 'codex', token: 'fixture' }),
+  ).toBe('codex');
+  expect(riffProvider({ 'chord/riffProvider': 'fake' })).toBeUndefined();
+  expect(riffProvider(undefined)).toBeUndefined();
+});
 
 describe('riff credential status boundary', () => {
   test('keeps only provider and state, never credential fields', () => {

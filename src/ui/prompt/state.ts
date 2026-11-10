@@ -47,6 +47,7 @@ export interface KeptDraft {
 
 /** The session's part of the prompt: switching sessions swaps all of it. */
 export interface PromptSession {
+  readonly riffAgent?: boolean;
   /** Prompts sent while a turn ran, oldest first, until each one's starts. */
   readonly queue: readonly Queued[];
   /** `!` on an empty prompt: the box takes a shell command, not a prompt. */
@@ -660,7 +661,10 @@ export function commandMenu(
         )
       : query === undefined
         ? matchAgents(state.agents ?? [], named ?? '')
-        : matchCommands(commandItems(state.transcript.commands), query);
+        : matchCommands(
+            commandItems(state.transcript.commands, state.riffAgent === true),
+            query,
+          );
 
   if (items.length === 0) {
     return undefined;

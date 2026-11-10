@@ -27,6 +27,8 @@ export interface CommandsOptions {
 
 /** What the commands do to the sessions; see `useSessions`. */
 export interface CommandsSessions {
+  login?(): void;
+  logout?(): void;
   conversation(): Conversation | undefined;
   takeBackQueue(typed: string): void;
   /** Stops the command running in the session in front, if one runs. */
@@ -87,6 +89,10 @@ export function useCommands(
   /** Runs one of chord's own slash commands. */
   const run = (command: ChordCommand, args = '') => {
     switch (command) {
+      case 'login':
+        return sessions.login?.();
+      case 'logout':
+        return sessions.logout?.();
       case 'new': {
         const typed = ['new', args].filter(Boolean).join(' ');
         const key = sessions.frontKey();

@@ -38,6 +38,27 @@ function context(state = ready, more: Partial<KeyContext> = {}): KeyContext {
 const typing = (text: string, state = ready) =>
   reduceApp(state, { type: 'draft_set', text, cursor: endOf(text) });
 
+test('the riff box owns Esc and typing without interrupting a turn', () => {
+  expect(keySteps('', escape, context(busy, { riffBox: true }))).toEqual([
+    { type: 'chord_key' },
+  ]);
+  expect(keySteps('x', plain, context(busy, { riffBox: true }))).toEqual([
+    { type: 'chord_key' },
+  ]);
+  expect(submitSteps('hello', context(ready, { riffBox: true }))).toEqual([]);
+  expect(submitSteps('hello', context(ready, { riffSignedOut: true }))).toEqual(
+    [
+      {
+        type: 'dispatch',
+        action: {
+          type: 'sessions_noted',
+          message: 'riff is not signed in: /login',
+        },
+      },
+    ],
+  );
+});
+
 const dispatched = (action: AppAction): Step => ({ type: 'dispatch', action });
 
 test('esc while a turn runs interrupts it', () => {

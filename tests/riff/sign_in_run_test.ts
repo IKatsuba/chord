@@ -325,6 +325,72 @@ function setup(provider: SecretProvider, way: 'browser' | 'code') {
 }
 
 describe('riff sign-in driver over libfx', () => {
+  test('a failed save retries the new account without rereading the old entry; a second failure stays in G', async () => {
+    const run = setup('codex', 'code');
+    const old = { ...planCredential('codex'), accountId: 'old-account' };
+
+    await run.store.set('codex', JSON.stringify(old));
+
+    let reads = 0;
+    let writes = 0;
+    const save = await runSignIn({
+      ...run.options,
+      emit: (_id, step) => run.steps.push(step),
+      store: {
+        ...run.store,
+        get: (provider) => {
+          reads++;
+
+          return run.store.get(provider);
+        },
+        set: (provider, value) =>
+          ++writes <= 2
+            ? Promise.reject(new Error('fixture store failed'))
+            : run.store.set(provider, value),
+      },
+    });
+
+    assert(save !== undefined);
+    expect(run.steps.at(-1)?.kind).toBe('no_store');
+    expect(await readProvider(root)).toBeUndefined();
+    expect(await save.retry(5, new AbortController().signal)).toBe(false);
+    expect(run.steps.at(-1)?.kind).toBe('no_store');
+    expect(JSON.parse((await run.store.get('codex')) ?? '{}').accountId).toBe(
+      'old-account',
+    );
+    expect(await save.retry(6, new AbortController().signal)).toBe(true);
+    expect(JSON.parse((await run.store.get('codex')) ?? '{}').accountId).toBe(
+      'fixture-account',
+    );
+    expect(await readProvider(root)).toBe('codex');
+    expect(reads).toBe(1);
+    expect(Object.keys(save).sort()).toEqual(['discard', 'retry']);
+    expect(JSON.stringify(run.steps)).not.toContain('fixture-refresh');
+  });
+
+  test('Esc discards a pending new credential and a later retry cannot save it', async () => {
+    const run = setup('codex', 'code');
+    let writes = 0;
+    const save = await runSignIn({
+      ...run.options,
+      store: {
+        ...run.store,
+        set: () => {
+          writes++;
+
+          return Promise.reject(new Error('fixture store failed'));
+        },
+      },
+    });
+
+    assert(save !== undefined);
+    run.controller.abort();
+    expect(await save.retry(5, new AbortController().signal)).toBe(false);
+    expect(writes).toBe(1);
+    expect(await run.store.get('codex')).toBeNull();
+    expect(await readProvider(root)).toBeUndefined();
+  });
+
   for (const provider of ['codex', 'grok'] as const) {
     test(`${provider}: browser binds before the address, ignores stale state, and saves under the lock`, async () => {
       const run = setup(provider, 'browser');

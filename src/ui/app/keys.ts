@@ -161,6 +161,8 @@ export interface Typed {
 
 /** What a key is read against. */
 export interface KeyContext {
+  readonly riffBox?: boolean;
+  readonly riffSignedOut?: boolean;
   /** The session in front, as the window was last drawn. */
   readonly state: AppState;
   readonly history: History;
@@ -439,6 +441,10 @@ export function newerSteps(context: KeyContext): Step[] {
  * picked, a line continued, a command run, or the prompt sent.
  */
 export function submitSteps(value: string, context: KeyContext): Step[] {
+  if (context.riffBox) {
+    return [];
+  }
+
   const { state, history, home } = context;
   const { draft, cursor } = state;
 
@@ -478,7 +484,11 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
   }
 
   const menu = state.completionHidden ? undefined : commandMenu(state, draft);
-  const action = submitted(value, menu?.items[menu.highlighted]);
+  const action = submitted(
+    value,
+    menu?.items[menu.highlighted],
+    state.riffAgent === true,
+  );
 
   if (action.type === 'send' && context.submitting) {
     return [];
@@ -505,6 +515,15 @@ export function submitSteps(value: string, context: KeyContext): Step[] {
         command: action.name,
         args: action.args,
       },
+    ];
+  }
+
+  if (context.riffSignedOut) {
+    return [
+      dispatch({
+        type: 'sessions_noted',
+        message: 'riff is not signed in: /login',
+      }),
     ];
   }
 
@@ -589,6 +608,20 @@ export function keySteps(
   key: KeyPress,
   context: KeyContext,
 ): Step[] {
+  if (context.riffBox) {
+    if (key.ctrl && input === 'd') {
+      return [{ type: 'quit' }];
+    }
+
+    if (key.ctrl && input === 'c') {
+      return context.state.quitArmed
+        ? [{ type: 'quit' }]
+        : [dispatch({ type: 'quit_armed' })];
+    }
+
+    return [{ type: 'chord_key' }];
+  }
+
   const { state } = context;
 
   // Esc is the splash's one way into the window early, and the window never

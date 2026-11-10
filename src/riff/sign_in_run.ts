@@ -17,6 +17,103 @@ import type { SignInProgress, SignInWay } from './sign_in.ts';
 
 export const BROWSER_DEADLINE = 10 * 60_000;
 
+/** The credential stays in this closure; the window can only save or drop it. */
+export interface SignInSave {
+  retry(attempt: number, signal: AbortSignal): Promise<boolean>;
+  discard(): void;
+}
+
+export function credentialSave(
+  options: SignInRun,
+  credential: FxProviderCredentials,
+): SignInSave {
+  let json: string | undefined = JSON.stringify(
+    credentialOf(JSON.stringify(credential)),
+  );
+  const { provider, way, store, stateDir } = options;
+  const discard = () => {
+    json = undefined;
+
+    options.signal.removeEventListener('abort', discard);
+  };
+
+  options.signal.addEventListener('abort', discard, { once: true });
+
+  return {
+    discard,
+    retry: async (attempt, signal) => {
+      const emit = (step: SignInProgress) => {
+        if (!signal.aborted && json !== undefined) {
+          options.emit(attempt, step);
+        }
+      };
+
+      signal.addEventListener('abort', discard, { once: true });
+
+      try {
+        signal.throwIfAborted();
+
+        if (json === undefined) {
+          return false;
+        }
+
+        emit({ kind: 'saving', provider, way });
+        await withCredentialLock(
+          stateDir,
+          provider,
+          store.name,
+          async (held) => {
+            signal.throwIfAborted();
+
+            if (json === undefined) {
+              throw new Error('The sign-in was cancelled.');
+            }
+
+            try {
+              // A new sign-in intentionally replaces any earlier account.
+              // Retrying never selects the old credential by reading it.
+              await store.set(provider, json);
+            } catch (error) {
+              if (error instanceof SecretStoreTimeout) {
+                held.track(error.completion);
+              }
+
+              throw error;
+            }
+
+            signal.throwIfAborted();
+            await writeProvider(stateDir, provider);
+          },
+        );
+
+        emit({ kind: 'success', provider, way, store: store.name });
+        discard();
+
+        return true;
+      } catch (error) {
+        if (!signal.aborted) {
+          emit({
+            kind:
+              error instanceof SecretStoreTimeout ? 'store_slow' : 'no_store',
+            provider,
+            store: store.name,
+            message:
+              error instanceof Error
+                ? error.message
+                : 'The sign-in could not be saved.',
+          });
+        }
+
+        return false;
+      } finally {
+        if (signal !== options.signal) {
+          signal.removeEventListener('abort', discard);
+        }
+      }
+    },
+  };
+}
+
 async function startBrowser(provider: SecretProvider) {
   if (provider === 'codex') {
     const started = await chatgpt.startSignIn();
@@ -60,8 +157,10 @@ const errorCode = (error: unknown): string =>
     ? error.code
     : '';
 
-export async function runSignIn(options: SignInRun): Promise<void> {
-  const { provider, way, store, stateDir } = options;
+export async function runSignIn(
+  options: SignInRun,
+): Promise<SignInSave | void> {
+  const { provider, way, store } = options;
   const deadline = new AbortController();
   const signal = AbortSignal.any([options.signal, deadline.signal]);
   const expired = new Error('The browser did not come back in 10 minutes.');
@@ -223,30 +322,15 @@ export async function runSignIn(options: SignInRun): Promise<void> {
 
     clearTimeout(timer);
     signal.throwIfAborted();
-    emit({ ...base, kind: 'saving' });
 
-    const json = JSON.stringify(credentialOf(JSON.stringify(credential)));
+    const save = credentialSave(options, credential);
 
-    await withCredentialLock(stateDir, provider, store.name, async (held) => {
-      signal.throwIfAborted();
-      await store.get(provider);
-      signal.throwIfAborted();
-
-      try {
-        await store.set(provider, json);
-      } catch (error) {
-        if (error instanceof SecretStoreTimeout) {
-          held.track(error.completion);
-        }
-
-        throw error;
-      }
-
-      signal.throwIfAborted();
-      await writeProvider(stateDir, provider);
-    });
-
-    emit({ ...base, kind: 'success', store: store.name });
+    if (
+      !(await save.retry(options.attempt, options.signal)) &&
+      !options.signal.aborted
+    ) {
+      return save;
+    }
   } catch (error) {
     if (options.signal.aborted) {
       return;

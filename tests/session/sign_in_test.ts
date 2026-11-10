@@ -21,6 +21,25 @@ const METHODS = [
   { id: 'empty', name: ' ', description: '' },
 ];
 
+describe('riff window sign-in boundary', () => {
+  test('only riff classifies its structured store failure as G', () => {
+    const store = {
+      state: 'unavailable' as const,
+      name: 'Secret Service',
+      message: 'fixture store recovery',
+    };
+    const error = new RequestError(
+      -32603,
+      'fixture store recovery; run chord riff to sign in.',
+      { riffStore: store },
+    );
+
+    expect(signInOf(asSignIn(error, METHODS))).toBeUndefined();
+    expect(signInOf(asSignIn(error, METHODS, true))?.store).toEqual(store);
+    expect(wayOn('riff')).toBe('run chord riff to sign in');
+  });
+});
+
 test("authRequired is a sign-in, in the agent's words, with the ways in it offers", () => {
   const refused = RequestError.authRequired(undefined, 'run `agent login`');
   const error = asSignIn(refused, METHODS);

@@ -148,6 +148,8 @@ interface Open {
   running: boolean;
   /** Esc may arrive while prompt admission is still waiting on the store. */
   cancelled: boolean;
+  /** No libfx turn exists yet for a cancel to reach during store admission. */
+  admitting: boolean;
   /** Identity of the turn callbacks may still update. */
   turn: symbol | undefined;
   /** What tools kept for the window of a call, by its id, until it ends. */
@@ -438,6 +440,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       used: undefined,
       running: false,
       cancelled: false,
+      admitting: false,
       turn: undefined,
       shown,
       calls: new Set(),
@@ -698,6 +701,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
       session.running = true;
       session.cancelled = false;
+      session.admitting = true;
       session.turn = Symbol('turn');
       session.client = client;
 
@@ -713,6 +717,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
           throw error;
         }
+
+        session.admitting = false;
 
         if (session.cancelled || gone) {
           return { stopReason: 'cancelled' };
@@ -771,6 +777,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         };
       } finally {
         session.running = false;
+        session.admitting = false;
         session.turn = undefined;
         session.client = undefined;
 
@@ -781,7 +788,9 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       if (open?.id === params.sessionId) {
         open.cancelled = true;
 
-        await open.agent.session(open.id).cancel();
+        if (!open.admitting) {
+          await open.agent.session(open.id).cancel();
+        }
       }
     })
     .onRequest('session/close', async ({ params }) => {

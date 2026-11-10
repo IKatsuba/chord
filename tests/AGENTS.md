@@ -28,6 +28,10 @@
   file system.
 - Never reach a real model, agent or resource provider. Inject fixture resource
   access explicitly; omitted access is disabled, never an official fallback.
+  `colour.ts` sets `CHORD_RESOURCE_FIXTURE=true` for spawned processes to
+  inherit; retain it when supplying a child environment. The system credential
+  store refuses every operation under that flag; inject fixture secrets and
+  sign-in effects instead.
   Fake/QA launches use fixture collectors even if real provider CLIs exist.
   riff uses the local fake Chat Completions provider in `fixtures/riff/`;
   `CHORD_RIFF_FAKE_PROVIDER` sets its URL, and `CHORD_RIFF_BACKEND=wasm`

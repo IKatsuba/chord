@@ -51,6 +51,7 @@ bun dev compile --install   # compiles into ~/.local/bin/chord
 
 ```sh
 chord                 # choose an agent here
+chord riff            # chord's own agent, on a ChatGPT or Grok plan
 chord codex           # any agent `chord agents` lists
 chord gemini -C ~/src/app
 chord --continue      # the default agent's latest session here, again
@@ -81,7 +82,9 @@ as the art gives way; resizing keeps the highlight. With full art, at most
 14 list rows show; `… +N more` counts hidden rows above and below.
 
 By default, agents whose own CLI is not on PATH are hidden; npx/uvx entries
-and settings-defined names stay. Set `offeredAgents` in your user settings,
+and settings-defined names stay. riff is first, labelled
+`riff · chord's own agent · on a ChatGPT or Grok plan`; Claude Code stays
+the default selection. Set `offeredAgents` in your user settings,
 for example `["claude", "codex", "my-agent"]`, to choose what `Select agent`
 and `/new` completion offer, in that order. Repeats keep their first place.
 A listed CLI missing from PATH stays as `not on PATH`; choosing it refuses
@@ -568,6 +571,45 @@ Forks close on quit and are not reopened automatically. `/resume` or
 `chord -r <id>` opens a fork later as a session of its own. Its record starts
 at the divider: the copied source transcript is only in the original view,
 while the agent retains the fork's conversation context.
+
+## riff sign-in and sign-out
+
+`chord riff` runs chord's own agent on a ChatGPT or Grok plan. When it needs
+sign-in, chord opens a box: choose the provider, then browser or device
+code. ↑/↓ or j/k and Enter choose; 1–9 picks a numbered choice. Esc follows
+the step's printed action. The box offers opening and copying the address,
+and copying a device code; the code has an expiry countdown. Failures,
+expiry and cancellation each show their own recovery choices.
+
+Browser sign-in listens only while waiting, for at most 10 minutes:
+ChatGPT uses `localhost:1455`, Grok a free port on `127.0.0.1`. If 1455 is
+taken, chord says so and offers device code. Credentials stay only in
+macOS Keychain, Secret Service on Linux or Windows Credential Manager.
+Without the system store, riff cannot start; the box names the store and
+offers `Try the store again`. Store calls time out after 20 seconds.
+
+`/login` is listed for every agent. On riff it opens the box in place,
+marking the current provider with ✔. Successful sign-in starts a new
+session in place and keeps the transcript above. Cancelling keeps the
+existing session. On another agent, `/login` opens riff as `/new riff`
+does. `?` lists `/login /logout` with the sign-in keys.
+
+`/logout` is chord's command only on riff. After confirmation it deletes
+that provider's local sign-in, cancels this window's riff turns and its
+children's turns, and ends the session signed out. ChatGPT tokens are not
+revoked; the confirmation says so. Grok's refresh token is then revoked at xAI; a
+failure is reported after the local sign-out. Use `/login` to sign in again
+or `/new` for another agent. Other windows discover a removed sign-in or
+changed account at their next prompt and open the sign-in box. The failed
+prompt and transcript stay; the prompt is not resent after sign-in.
+
+A new riff session uses the last provider signed in to if still stored,
+otherwise the available plan, preferring ChatGPT when both are stored.
+Resume uses its recorded provider and account. A failed refresh keeps the
+stored entry. The status line reports unsaved refreshes, successful saves,
+removal and account changes for the current session. `-p` and `chord acp`
+open no sign-in box: a missing sign-in reports the failure with
+`run chord riff to sign in`.
 
 ## `chord acp`
 
@@ -1702,7 +1744,9 @@ effort or mode on stderr; `--model` is for the window. `--agent-command`,
 `--model`, `--effort` and `--permission-mode` speak for the main agent;
 children start on their own agent's settings or the values their caller gives.
 
-chord knows the agents the [ACP Registry](https://agentclientprotocol.com/registry)
+`chord agents` lists riff first, as `built in`, without checking sign-in.
+Its `--json` entry has `via: "builtin"`; the format stays at version 1.
+chord also knows the agents the [ACP Registry](https://agentclientprotocol.com/registry)
 offers through npx or uvx, with all pins refreshed together: `claude` and
 `codex` for Claude's and Codex's adapters, every other one by its registry
 id, including `bob` and `github-copilot-cli` (Copilot). It starts one as
@@ -1776,14 +1820,13 @@ serve ACP sessions: it is not an ACP agent, or not at this version. If
 zeroclaw needs an agent alias, set `[acp] default_agent = "<alias>"` in
 ZeroClaw's config, or start it with `zeroclaw acp --agent <alias>`.
 
-chord does not sign agents in. If a new or resumed session needs a login,
-its `did not start` row keeps the agent's words and lists any sign-in methods
-it offers, each as `name · description`. Sign in with the agent's own CLI in
-a terminal, or set its API key where it offers one, then start chord again.
+For agents other than riff, chord leaves sign-in to their own CLI. If a
+new or resumed session needs a login, its `did not start` row keeps the
+agent's words and lists any sign-in methods it offers, each as
+`name · description`. Sign in with the agent's own CLI in a terminal, or set its API key where it offers one, then start chord again.
 The same guidance goes to `-p`'s stderr and to a lead whose child failed to
 start. Sign-in guidance appears only for ACP's `authRequired` error.
-For sigit, sign in from its own CLI: `/login <email> <password>` typed in
-chord goes to the agent as prompt text and lands in chord's session record.
+For sigit, sign in from its own CLI; `/login` in chord opens riff.
 
 `dimcode` may start up to 18 other CLIs it finds on PATH through its own
 `agent` tool, with their approvals bypassed and on your accounts. Their
@@ -1829,12 +1872,10 @@ for the test agent, `--fake riff` for riff on its fake provider), `test`,
 `registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
 `selftest <binary>` and `release [version]`. `chord --qa [name]` recreates
 `/tmp/chord-qa.<name>` for captures, or `/tmp/chord-qa` without a name; an
-empty name disables it. Both `--fake` and `--qa` list riff on its fake
-provider for development: first in `Select agent` and `/new` unless
-`offeredAgents` sets their order. A settings command ranks riff with other
-settings agents in `/new`; Claude Code stays the default. Use
-`bun dev chord --fake --qa capture riff` for riff captures: both flags
-must come before `riff`.
+empty name disables it. Both `--fake` and `--qa` run riff on its fake
+provider. A settings command ranks riff with other settings agents in
+`/new`. For riff captures, use `bun dev chord --fake --qa capture riff`:
+both flags must come before `riff`.
 
 With `--qa`, `CHORD_RIFF_QA_STATE` selects a credential fixture:
 `signed-in`, `signed-out`, `no-store`, `timeout`, `unsaved`, `saved`,
@@ -1847,16 +1888,12 @@ first prompt succeed and refuse the next. `timeout` waits the real 20 s
 bound. Fake and QA launches use an in-memory credential store and fake
 providers; they never reach the system store or a live provider.
 
-riff's plan credentials belong only in the system store: macOS Keychain,
-Secret Service on Linux or Windows Credential Manager. An unavailable store
-refuses startup with its name and a recovery step; a timeout names the
-store and the 20 s bound. A new session uses the stored plan, preferring
-ChatGPT when both exist; resume uses its recorded plan and account.
-Missing credentials or an account change refuse the next prompt with
-`authRequired` (-32000). A failed refresh keeps the stored entry.
-The status line reports an unsaved refresh, a successful save, removal or
-an account change for the current riff session. Real sign-in is not yet
-available.
+`CHORD_RIFF_QA_SIGN_IN` selects the offline sign-in outcome for `--fake`
+or `--qa`: `waiting` (default), `success`, `failure`, `denied`, `expired`
+or `port-taken` (ChatGPT browser only). For example,
+`CHORD_RIFF_QA_STATE=signed-out CHORD_RIFF_QA_SIGN_IN=success bun dev chord --fake --qa sign-in riff`
+starts signed out and completes the chosen sign-in with fixture credentials.
+The fixture uses an example address and code; it contacts no sign-in endpoint.
 
 riff has `read`, `list`, `search`, `edit`, `write` and `shell` tools.
 `edit` replaces one unique exact string; `write` replaces a whole file or

@@ -75,7 +75,11 @@
   `CHORD_RIFF_QA_STORE` is `darwin`, `linux` or `win32` (default: host).
   These use in-memory secrets and fake fetches, never `Bun.secrets` or a
   live provider. `removed` and `account-changed` refuse the second prompt;
-  `timeout` uses the real 20 s store deadline.
+  `timeout` uses the real 20 s store deadline. Fake/QA sign-in uses
+  `CHORD_RIFF_QA_SIGN_IN`: `waiting` (default), `success`, `failure`, `denied`,
+  `expired` or `port-taken` (ChatGPT browser only). Start with
+  `CHORD_RIFF_QA_STATE=signed-out` to choose a provider and way. These sign-in
+  fixtures use example addresses and codes, with no sign-in endpoint.
   A prompt that is exactly a scenario name (`text`, `texttillsteered`,
   `credentialsunsaved`, `credentialssaved`, `credentialssignedout`,
   `credentialsaccountchanged`,

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  riff                chord's own agent · on a ChatGPT or Grok plan
+  fake
+  cursor              Cursor
+  fx                  fx
+  opencode            OpenCode
+  agoragentic-acp     Agoragentic
+  auggie              Auggie CLI
+  autohand            Autohand Code
+  bob                 Bob
+  claude              Claude Agent
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /new                                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort

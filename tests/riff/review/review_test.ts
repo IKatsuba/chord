@@ -73,7 +73,11 @@ test('two 30-second timeouts abort each attempt and return unavailable', async (
         retried.resolve();
       }
 
-      return new Promise(() => {});
+      return new Promise((_resolve, reject) => {
+        signal.addEventListener('abort', () => reject(signal.reason), {
+          once: true,
+        });
+      });
     },
     'input',
     new AbortController().signal,
@@ -93,6 +97,56 @@ test('two 30-second timeouts abort each attempt and return unavailable', async (
     reason: 'The safety review timed out.',
   });
   expect(signals[1]?.aborted).toBe(true);
+});
+
+test('a timed-out attempt retains ownership through teardown before retry', async () => {
+  jest.useFakeTimers();
+
+  const teardown = Promise.withResolvers<void>();
+  const aborted = Promise.withResolvers<void>();
+  let attempts = 0;
+  let complete = false;
+  const result = review(
+    async (_input, signal) => {
+      attempts++;
+
+      if (attempts === 1) {
+        await new Promise<void>((resolve) => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              aborted.resolve();
+              resolve();
+            },
+            { once: true },
+          );
+        });
+
+        await teardown.promise;
+
+        throw signal.reason;
+      }
+
+      return { outcome: 'clear' };
+    },
+    'input',
+    new AbortController().signal,
+  ).then((outcome) => {
+    complete = true;
+
+    return outcome;
+  });
+
+  jest.advanceTimersByTime(30_000);
+
+  await aborted.promise;
+
+  expect(attempts).toBe(1);
+  expect(complete).toBe(false);
+  teardown.resolve();
+
+  expect(await result).toEqual({ outcome: 'clear' });
+  expect(attempts).toBe(2);
 });
 
 test('cancellation interrupts the review without retrying or yielding a verdict', async () => {

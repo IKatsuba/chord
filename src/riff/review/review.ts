@@ -29,20 +29,13 @@ export async function review(
       REVIEW_TIMEOUT_MS,
     );
     const active = AbortSignal.any([signal, deadline.signal]);
-    let remove: (() => void) | undefined;
 
     try {
-      const cancelled = new Promise<never>((_resolve, reject) => {
-        const abort = () => reject(active.reason);
+      // The attempt owns its engine through close. Abort requests teardown;
+      // retrying or returning before it settles would abandon that engine.
+      const decision = await attempt(input, active);
 
-        active.addEventListener('abort', abort, { once: true });
-
-        remove = () => active.removeEventListener('abort', abort);
-      });
-
-      const decision = await Promise.race([attempt(input, active), cancelled]);
-
-      signal.throwIfAborted();
+      active.throwIfAborted();
 
       if (decision !== undefined) {
         return decision;
@@ -69,7 +62,6 @@ export async function review(
       transportRetried = true;
     } finally {
       clearTimeout(timeout);
-      remove?.();
     }
   }
 }

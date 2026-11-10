@@ -1,5 +1,5 @@
 import { expect, test } from 'bun:test';
-import type { FxFetch } from 'libfx/node';
+import { createFxEngine, type FxFetch } from 'libfx/node';
 import { libfxBackend } from '../../../src/platform/libfx.ts';
 import { reviewer } from '../../../src/riff/review/engine.ts';
 import { planCredential, planFetch } from '../../fixtures/riff/plan_fetch.ts';
@@ -135,4 +135,58 @@ test('a model response proposing two decisions is malformed even when cancellati
     'unavailable',
   );
   expect(fixture.responses).toBe(2);
+});
+
+test('cancellation during engine creation waits to close the late engine before returning', async () => {
+  const creating = Promise.withResolvers<void>();
+  const release = Promise.withResolvers<void>();
+  const controller = new AbortController();
+  let closed = false;
+  let settled = false;
+  let requests = 0;
+  const run = reviewer({
+    configuration: {
+      ...(await libfxBackend()),
+      provider: 'codex',
+      model: 'gpt-6-luna',
+      credentials: () => planCredential('codex'),
+      fetch: () => {
+        requests++;
+
+        return Promise.reject(new Error('No request expected'));
+      },
+    },
+    createEngine: async (options) => {
+      creating.resolve();
+      await release.promise;
+
+      const engine = await createFxEngine(options);
+
+      return {
+        ...engine,
+        close: async () => {
+          await engine.close();
+
+          closed = true;
+        },
+      };
+    },
+  });
+  const outcome = run('pending', controller.signal).catch((error: unknown) => {
+    settled = true;
+
+    return error;
+  });
+
+  await creating.promise;
+
+  controller.abort(new Error('fixture cancelled'));
+
+  expect(settled).toBe(false);
+  expect(closed).toBe(false);
+  release.resolve();
+
+  expect(await outcome).toBeInstanceOf(Error);
+  expect(closed).toBe(true);
+  expect(requests).toBe(0);
 });

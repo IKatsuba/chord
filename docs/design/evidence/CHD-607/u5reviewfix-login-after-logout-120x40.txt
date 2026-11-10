@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · not signed in
+ ▄▀▀▀   /tmp/chord-qa.chd607-look
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff needs a sign-in to a ChatGPT or Grok plan
+   ⎿  Signed in to ChatGPT with a code. Kept in the macOS Keychain.
+
+ ⏺ New riff session · Grok
+   ⎿  Signed in to Grok with a code. Kept in the macOS Keychain.
+
+ › /logout
+   ⎿  Signed out of Grok, and xAI revoked the sign-in. This session has ended; /login to sign in again.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Sign in to riff                                                                                                      │
+│                                                                                                                      │
+│ ❯ 1. ChatGPT · a ChatGPT plan                                                                                        │
+│   2. Grok · a Grok plan                                                                                              │
+│                                                                                                                      │
+│ Enter to choose · Esc to cancel                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

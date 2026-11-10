@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · gpt-6.1-sol
+ ▄▀▀▀   /tmp/chord-qa.chd606-designer-u4-unsaved-linux-codex
+ ▀▀     ? for shortcuts · /help
+
+ › hello
+
+ ∴ Thinking…
+
+ ⏺ Hello from a fixture plan.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft stays here                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ChatGPT sign-in refreshed but not saved; will retry.   gpt-6.1-sol · 1% used

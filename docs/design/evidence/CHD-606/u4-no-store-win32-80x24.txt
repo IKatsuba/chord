@@ -1,0 +1,24 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff
+ ▄▀▀▀   /tmp/chord-qa.chd606-designer-u4-no-store-win32-codex
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ riff did not start: it refused session/new: chord keeps your sign-in in the
+   system's credential store, and none answered: no Windows Credential Manager.
+   Enable the Credential Manager service and try again.
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

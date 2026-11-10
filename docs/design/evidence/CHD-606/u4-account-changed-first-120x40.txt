@@ -1,0 +1,40 @@
+ ▀▄     chord v0.68.0
+ ▀▀▀▄   riff · gpt-6.1-sol
+ ▄▀▀▀   /tmp/chord-qa.chd606-designer-u4-account-changed-linux-codex
+ ▀▀     ? for shortcuts · /help
+
+ › hello
+
+ ∴ Thinking…
+
+ ⏺ Hello from a fixture plan.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                  gpt-6.1-sol · default effort · 1% context used

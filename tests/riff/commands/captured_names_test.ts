@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
-import { mkdtemp, mkdir, writeFile, rm, readFile } from 'node:fs/promises';
+import { constants, readFileSync } from 'node:fs';
+import {
+  access,
+  mkdtemp,
+  mkdir,
+  writeFile,
+  rm,
+  readFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -21,6 +28,14 @@ afterEach(async () => {
 });
 
 async function fixture(shell: 'bash' | 'zsh') {
+  if (shell === 'zsh') {
+    await access('/bin/zsh', constants.X_OK).catch((cause: unknown) => {
+      throw new Error('zsh tests require the executable shell /bin/zsh', {
+        cause,
+      });
+    });
+  }
+
   const root = await mkdtemp(join(tmpdir(), 'chord-capture-'));
 
   owned.push(root);
@@ -143,7 +158,7 @@ for (const shell of ['bash', 'zsh'] as const) {
 test('unknown shell and failed executable defer to review', async () => {
   const f = await fixture('bash');
 
-  for (const shell of ['/bin/sh', '/missing/bash']) {
+  for (const shell of ['/bin/sh', '/missing/bash', '/missing/zsh']) {
     expect(
       await capturedNamesAllow('npm test', {
         cwd: f.root,
@@ -152,6 +167,20 @@ test('unknown shell and failed executable defer to review', async () => {
       }),
     ).toBe(false);
   }
+});
+
+test('non-executable zsh defers to review', async () => {
+  const f = await fixture('bash');
+  const shell = join(f.root, 'zsh');
+
+  await writeFile(shell, '#!/bin/sh\nexit 0\n', { mode: 0o600 });
+  expect(
+    await capturedNamesAllow('npm test', {
+      cwd: f.root,
+      signal: live(),
+      environment: { ...f.environment, SHELL: shell },
+    }),
+  ).toBe(false);
 });
 
 test('turn cancellation stops a capture and its startup child', async () => {

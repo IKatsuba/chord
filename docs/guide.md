@@ -502,7 +502,7 @@ agent does not take is a `chord: could not start in <mode> mode, …` or
 runs as the agent chose. `--dangerously-skip-permissions`, only with `-p` and never a setting,
 allows permissions instead, each with a `chord: allowed <title>.` line
 on stderr; reviewed asks are always denied. With both flags, the mode is
-asked for before the turn.
+asked for and whatever the agent still asks is allowed, except reviewed asks.
 `--output-format json` prints one object at the end instead: `result`,
 `session_id` (which `--resume` takes), `stop_reason`, `is_error`, and `usage`
 and `total_cost_usd` when the agent reports them. An agent that reports its

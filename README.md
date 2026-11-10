@@ -76,6 +76,8 @@ Each permission the agent asks for is a choice under the transcript, answered
 with a number or the arrows. Proposed diffs scroll above the choices.
 Between turns, it leaves your typing alone:
 ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
+riff defaults to auto: a safety review can clear a call or ask you to allow
+it once or deny it; an unanswered review ask is denied after 5 minutes.
 
 <img src="docs/images/permission.png" alt="The permission prompt: Allow, Always allow, Deny" width="900">
 

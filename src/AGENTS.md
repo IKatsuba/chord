@@ -15,6 +15,10 @@
   flag; its tools are read, list, search, edit, write and shell. Edit and write
   share a real-path session grant and refuse a changed proposal; shell grants
   cover exact commands, with cancellation stopping the process group.
+  Auto is the default; ask grants hold in both modes. Gated auto calls use
+  the plan's safety reviewer; clear runs, otherwise allow once or deny with
+  a 5-minute deadline. All ungranted shell commands are reviewed. Review
+  failures keep auto; there is no automatic switch to ask.
   It is the catalog's first agent; Claude stays the default. Listing reads
   no credentials. `CHORD_RIFF_FAKE_PROVIDER`, set by `--fake` and `--qa`,
   selects only the development provider.

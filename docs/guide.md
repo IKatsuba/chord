@@ -453,8 +453,9 @@ the keys and draft in the prompt. Its asker row ends ` · between turns`, and
 reads `● permission asked between turns · ctrl+x a to answer`, or
 `● input asked between turns · ctrl+x a to answer` for a form, question or
 link.
-If `session:attention` is unbound, the box takes the keys at once. The
-request waits until answered; closing the session or quitting rejects it.
+If `session:attention` is unbound, the box takes the keys at once. A
+request without a deadline waits until answered; closing the session or
+quitting rejects it.
 A request still open when its turn ends, including a task's, is held
 the same way: the keys return to the prompt and the box stays between turns.
 It keeps its asking mark in the status line and agents list, reachable by
@@ -499,9 +500,9 @@ turn in that mode, and `--effort`, or `effort`, on that effort; one the
 agent does not take is a `chord: could not start in <mode> mode, …` or
 `chord: could not start on <effort> effort, …` line on stderr, and the turn
 runs as the agent chose. `--dangerously-skip-permissions`, only with `-p` and never a setting,
-allows every permission instead, each with a `chord: allowed <title>.` line
-on stderr; with both, the mode is asked for and whatever the agent still asks
-is allowed.
+allows permissions instead, each with a `chord: allowed <title>.` line
+on stderr; reviewed asks are always denied. With both flags, the mode is
+asked for before the turn.
 `--output-format json` prints one object at the end instead: `result`,
 `session_id` (which `--resume` takes), `stop_reason`, `is_error`, and `usage`
 and `total_cost_usd` when the agent reports them. An agent that reports its
@@ -673,11 +674,17 @@ images, audio and embedded resources are refused with -32602.
 chord sends `session/update`, calls `session/request_permission` for
 permissions and plan approvals, and relays `elicitation/create` and
 `elicitation/complete`. chord's own asks carry a title and content
-describing the choice. Permissions have no timeout; errors and unknown
-choices refuse them. `--permission-mode` is a starting value, and there is
-no `--dangerously-skip-permissions` here. An unanswered ask waits until
-answered or cancelled. A plan answer cannot carry the window's note on
-"keep planning"; send that as the next prompt.
+describing the choice. Errors and unknown choices refuse them. Ordinary
+permissions have no timeout; riff's review asks are denied after 5 minutes.
+`--permission-mode` is a starting value; there is no
+`--dangerously-skip-permissions` here. A plan answer cannot carry the
+window's note on "keep planning"; send that as the next prompt.
+
+Any agent can supply optional permission presentation in
+`_meta["chord/permission"]`: `review` has an `outcome` (`caution`,
+`incomplete` or `failed`) and a `reason`; `deadlineAt` is Unix time in
+milliseconds. The window shows the review and deadline; the requesting
+agent enforces the timeout. Invalid optional fields are ignored.
 
 A URL-mode elicitation reaches the client raw, with no HTTP/HTTPS check.
 The client must check the scheme itself, unlike the window. A request-scoped
@@ -1903,15 +1910,34 @@ Paths are checked at their real destination; a link outside the session
 directory counts as outside. `shell` runs in the session directory, streams
 output into the transcript, and Esc stops its process group.
 
-Ask mode asks for every call without a session grant. Auto asks for reads
-outside the session directory, edits and writes outside it or on sensitive
-paths, and every shell command without a grant. Sensitive paths include
-`.git/`, `.ssh/`, `.env*`, key files (`*.pem`, `*.key`, `*.p12`, `*.pfx`,
-`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`), shell startup files and
-`Library/LaunchAgents/`. `Allow edits to <path> for this session` covers
-both edit and write at that real path; `Allow this exact command for this
-session` covers only that command string, never a prefix. Grants hold in
-both modes for that session.
+riff defaults to auto; shift+tab toggles ask and auto, kept per session.
+Ask mode asks for every call without a session grant. Auto admits reads, lists
+and searches inside the session directory, edits and writes on non-sensitive
+paths inside it, and calls covered by a grant. Other calls go to a safety
+review: outside reads, outside or sensitive edits and writes, and every
+shell command without a grant. Sensitive paths include `.git/`, `.ssh/`,
+`.env*`, key files (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_dsa`,
+`id_ecdsa`, `id_ed25519`), shell startup files and `Library/LaunchAgents/`.
+`Allow edits to <path> for this session` covers edit and write at that real
+path; `Allow this exact command for this session` covers only that command
+string, never a prefix. Grants hold in both modes for that session.
+
+The reviewer is `gpt-6-luna` on ChatGPT or `grok-4.5` on Grok, using your
+plan. Each review spends a plan request; a failed attempt retries once.
+Its policy, adapted from fx, checks for prompt injection, malicious activity
+and destructive or irreversible actions. A clear review runs the call
+without a prompt. A caution, input beyond the review's caps, a failed review
+or the limit of 64 reviews per turn asks you instead. A failed review leaves
+the mode on auto.
+
+The box shows `The safety review held this:` and the reason, or why the
+review could not run, with only `Allow once` and `Deny`. These choices grant
+nothing for later calls. The working line counts down to denial after
+5 minutes; a timeout tells the model the call was denied. The transcript
+keeps `Reviewed: caution`, `Reviewed: incomplete` or `Reviewed: failed` on
+the call. In `-p`, reviewed asks are denied even with
+`--dangerously-skip-permissions`. `chord acp` forwards them to its client,
+with the same 5-minute deadline.
 
 `bun dev compile` installs all target packages and checks the pinned libfx
 layout for each target it builds; a mismatch names the package and version

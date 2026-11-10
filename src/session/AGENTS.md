@@ -18,6 +18,10 @@ These rules also cover `src/acp/`.
   task reports lose delivery authority immediately. The next surviving prompt
   carries any team part exactly once; a withdrawn prompt does not spend it.
 - The window's and `acp`'s sessions are recorded; `-p`'s are not.
+- `_meta["chord/permission"]` carries optional review outcome/reason and
+  `deadlineAt` for any agent; ignore invalid fields. Preserve it through
+  transcript reduction and ACP forwarding. `-p` denies reviewed asks even
+  with `--dangerously-skip-permissions`; the requesting agent owns timeout.
 - Nothing here or in `src/acp/` imports from `src/ui/` or React.
   `agents_host.ts` owns main, children, teams and their MCP view; it imports
   `src/server/` for runtime probes, MCP types and the settings-box claim.

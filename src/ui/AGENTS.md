@@ -19,6 +19,10 @@
   callbacks and cancel effects when that conversation ends. Keep the transcript
   through sign-in; clear stale model/config when signed out. Keep recovery
   choices and their printed keys reachable at 80x24.
+- Permission review reasons, transcript outcomes and deadline countdowns
+  come from generic `chord/permission` metadata, never an agent-name check.
+  Keep the reason, choices and timeout hint visible at 80x24; scroll the
+  proposed action above them.
 - Float transient completions (including `@@`), history search, help and
   command pickers over the transcript above the prompt (CHD-545). Keep the
   transcript's height, scroll and following state; opening and closing must

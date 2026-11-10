@@ -119,3 +119,83 @@ test.each([
 ])('raw source gaps retain fx review: %s', (command) => {
   expect(commandEffect(command).kind).toBe('review');
 });
+
+describe('tester: command admission boundaries and bypass variants', () => {
+  test.each([
+    'npm install "2">&1',
+    'npm install 2> &1',
+    'npm install 2>&"1"',
+    'npm install 2>&1 2>&1',
+    '2>&1 npm install',
+    'git status && npm test # hidden tail',
+    'git fetch origin "ext::sh"',
+    'git fetch --multiple origin "probe://host/repo"',
+    'git fetch origin -- "probe.v2+x::payload"',
+    'git fetch "--upload-pack=payload" origin',
+    'git fetch --up=payload origin',
+    'npm install "--global"',
+    'npm install --prefix="target"',
+    'npm install --location="global"',
+    'bun test "x##"',
+    'npm run "react@^18"',
+    'npm run "$(printf build)"',
+    'npm run =node',
+    'printf x |\t# hidden stage\nwc -c',
+    'printf x |\r\nwc -c',
+    'printf x || wc -c',
+    'printf x |& wc -c',
+    'printf x | wc -c &',
+  ])('reviews a bypass variant: %s', (command) => {
+    expect(commandEffect(command).kind).toBe('review');
+    expect(knownReversibleAutoCommand(command)).toBe(false);
+  });
+
+  test('a quoted separator remains a fetch operand, never another stage', () => {
+    expect(commandEffect('git fetch "&&" node -v')).toEqual({
+      kind: 'reversible',
+      prepareGit: false,
+    });
+    expect(knownReversibleAutoCommand('git fetch "&&" node -v')).toBe(true);
+    expect(commandEffect('git fetch "&&" git status --prune').kind).toBe(
+      'review',
+    );
+  });
+
+  test('limits command bytes rather than Unicode characters', () => {
+    const command = 'ls ' + 'é'.repeat(4094) + 'a';
+
+    expect(new TextEncoder().encode(command)).toHaveLength(8192);
+    expect(commandEffect(command).kind).toBe('direct');
+    expect(commandEffect(command + 'b').kind).toBe('review');
+  });
+
+  test.each(['ls --', 'git diff --', 'git log --'])(
+    'bounds literal operands independently of their spelling: %s',
+    (prefix) => {
+      const operands = Array.from({ length: 64 }, (_, i) => `-file${i}`);
+      const command = `${prefix} ${operands.join(' ')}`;
+      const result = commandEffect(command);
+
+      expect(result.kind).toBe('direct');
+
+      if (result.kind === 'direct') {
+        expect(result.stages[0]!.argv.slice(-64)).toEqual(operands);
+      }
+
+      expect(commandEffect(command + ' extra').kind).toBe('review');
+    },
+  );
+
+  test('keeps quoted shell operators as literal direct operands', () => {
+    expect(commandEffect("printf '%s' '$(touch sentinel);|>&#'")).toEqual({
+      kind: 'direct',
+      stages: [
+        {
+          executable: '/usr/bin/printf',
+          argv: ['/usr/bin/printf', '%s', '$(touch sentinel);|>&#'],
+          git: false,
+        },
+      ],
+    });
+  });
+});

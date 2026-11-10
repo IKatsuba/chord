@@ -80,7 +80,7 @@ const KIND_NAMES: Record<ToolKind, string> = {
 const CODE_SPAN = /^`([^`]+)`$/;
 
 /** A capitalised verb, then what it acts on: `Read README.md`. */
-const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/;
+const VERB_FIRST = /^([A-Z][A-Za-z]*) (.+)$/s;
 
 /**
  * ACP sends a free-text title (`Read README.md`, `` `ls -la` ``), so the

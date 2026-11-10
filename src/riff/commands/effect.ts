@@ -53,6 +53,7 @@ export function commandEffect(
     const prepareGit =
       (platform === 'darwin' || platform === 'linux') &&
       sourceOk(source, true) &&
+      validDirectShellShape(source) &&
       line.join === null &&
       stage !== undefined &&
       directShape(stage) &&
@@ -366,7 +367,7 @@ function reversibleRunner(w: string[]): boolean {
 }
 
 function direct(source: string, line: Line | null): boolean {
-  if (!line || !sourceOk(source, true)) {
+  if (!line || !sourceOk(source, true) || !validDirectShellShape(source)) {
     return false;
   }
 
@@ -763,4 +764,68 @@ function canonicalStage(stage: Stage): DirectStage {
     argv: [executable, ...canonical],
     git: command === 'git',
   };
+}
+
+/** fx's raw-source guard also sees comments and separators omitted by the AST. */
+function validDirectShellShape(source: string): boolean {
+  const command = source.replace(/^[ \t\n]+|[ \t\n]+$/g, '');
+
+  if (!command.isWellFormed() || /[\0\r]/.test(command)) {
+    return false;
+  }
+
+  let single = false;
+  let double = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const char = command[i]!;
+
+    if (single) {
+      if (char === "'") {
+        single = false;
+      }
+
+      continue;
+    }
+
+    if (double) {
+      if (char === '"') {
+        double = false;
+
+        continue;
+      }
+
+      if ('$`\\\n'.includes(char)) {
+        return false;
+      }
+
+      continue;
+    }
+
+    if (char === "'") {
+      single = true;
+
+      continue;
+    }
+
+    if (char === '"') {
+      double = true;
+
+      continue;
+    }
+
+    if ('$`*?[~\\#;\n(){}&>'.includes(char)) {
+      return false;
+    }
+
+    if (char === '|' && command[i + 1] === '|') {
+      return false;
+    }
+
+    if (char === '<' && '()<<&'.includes(command[i + 1] ?? '\0')) {
+      return false;
+    }
+  }
+
+  return !single && !double;
 }

@@ -110,3 +110,12 @@ test('git preparation precedes reversible fallback only after direct shell shape
     });
   }
 });
+
+test.each([
+  'printf x |\n wc -c',
+  'printf x | #comment\n wc -c',
+  'git status | # hidden comment\n wc -c',
+  'git status --ignored #comment',
+])('raw source gaps retain fx review: %s', (command) => {
+  expect(commandEffect(command).kind).toBe('review');
+});

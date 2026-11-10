@@ -336,7 +336,7 @@ however far back; code in tool output, expanded summaries or the plan box
 is pickable only while on screen. An open fence cannot be picked.
 
 Tool-call headlines show every line, wrapped to the width with no cap:
-a Bash heredoc is visible in full in the transcript. Continuation rows
+`Bash(<command>)` keeps a multiline command or heredoc whole. Continuation rows
 start under the name, at column 3, and `⎿` results follow the last row.
 A call awaiting your permission has a still, dim `⏺` and `Waiting…` above
 any output it already has. Otherwise its agent's status decides: `in_progress`
@@ -418,10 +418,11 @@ interrupting a turn takes Esc twice from insert mode; an open list, picker
 or panel still closes on the first Esc.
 
 Permission requests appear over the prompt box: 1–9 picks an answer,
-↑/↓ moves the highlight, Enter picks it, and Esc rejects. A long request
-scrolls under its pinned title; long lines wrap, and the choices and key
-hint stay whole inside the box. The request takes the room left, at most
-half the window's rows. The transcript gives way first, then the agents
+↑/↓ moves the highlight, Enter picks it, and Esc rejects. Proposed diffs
+show inside the request, with a path above each when there are several.
+A long request scrolls under its pinned title; long lines wrap, and choices
+and key hints stay whole inside the box. The request takes the room left,
+at most half the window's rows. The transcript gives way first, then the agents
 list folds into `… +N more`, and only then does the request body shrink.
 With three answers and no asker row, it gets 6 rows at 80×24 and 20 at
 120×40.
@@ -1834,6 +1835,24 @@ provider for development: first in `Select agent` and `/new` unless
 settings agents in `/new`; Claude Code stays the default. Use
 `bun dev chord --fake --qa capture riff` for riff captures: both flags
 must come before `riff`.
+
+riff has `read`, `list`, `search`, `edit`, `write` and `shell` tools.
+`edit` replaces one unique exact string; `write` replaces a whole file or
+creates one under an existing directory. Both propose a diff and refuse
+without writing if the file or its destination changed while approval waited.
+Paths are checked at their real destination; a link outside the session
+directory counts as outside. `shell` runs in the session directory, streams
+output into the transcript, and Esc stops its process group.
+
+Ask mode asks for every call without a session grant. Auto asks for reads
+outside the session directory, edits and writes outside it or on sensitive
+paths, and every shell command without a grant. Sensitive paths include
+`.git/`, `.ssh/`, `.env*`, key files (`*.pem`, `*.key`, `*.p12`, `*.pfx`,
+`id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`), shell startup files and
+`Library/LaunchAgents/`. `Allow edits to <path> for this session` covers
+both edit and write at that real path; `Allow this exact command for this
+session` covers only that command string, never a prefix. Grants hold in
+both modes for that session.
 
 `bun dev compile` installs all target packages and checks the pinned libfx
 layout for each target it builds; a mismatch names the package and version

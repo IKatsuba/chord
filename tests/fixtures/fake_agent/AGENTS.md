@@ -16,8 +16,8 @@
   `overlap`, `overlaptwo`, `overlapfail`,
   `unordered`, `edit`, `rewrite`, `headlines`, `heredoc`, `longcommand`,
   `mcpnote`, `codexmcpnote`),
-  `permissions.ts` (`permission`, `permissionsteer`, `twins`, `mcpask`,
-  `bigask`, `bigasktwice`, `overlapask`, `overlapasksteer`, `mainbetween`,
+  `permissions.ts` (`permission`, `multidiffask`, `permissionsteer`, `twins`,
+  `mcpask`, `bigask`, `bigasktwice`, `overlapask`, `overlapasksteer`, `mainbetween`,
   `leftask`, `mainbetweentwice`, `bigaskleft`, `permissionmeta`, `strangerask`),
   `plans.ts` (`plan`, `planshrink`, `planshrinkgated`, `proposal`,
   `cursorplan`, `cursorplanearly`, `cursorplanbad`, `grokplan`,
@@ -77,7 +77,7 @@
   `taskwait`, `taskask`, `taskaskstays`, `taskstayshold`, `taskchildhold`,
   `mcpnote`, `codexmcpnote`, `markdown`, `markdownwrap`, `markdowncode`,
   `permission`,
-  `permissionsteer`, `permissionmeta`, `strangerask`,
+  `multidiffask`, `permissionsteer`, `permissionmeta`, `strangerask`,
   `callchildtwo`, `agentnames`, `agentmentions`, `agenttitled`, `agentother`,
   `agentstitled`, `agentsquiet`,
   `agentsheldgated`, `agentclear`, `agentlate`, `agentclearonly`, `latesay`,
@@ -159,6 +159,7 @@
   `askcodexwait` codex's with a wait of 300 ms, withdrawn 50 ms after it
   runs out, as codex-acp withdraws it once it does, and each says what came back, and
   an accepted link is followed by `elicitation/complete`;
+  `multidiffask` asks for two proposed file diffs in one permission request;
   `permissionsteer` asks for a write as `permission` does, with Allow and
   Deny; its next step after the write waits for a steered message;
   `mainbetween` asks for a write after its answer, and `mainbetweentwice`

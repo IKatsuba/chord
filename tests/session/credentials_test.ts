@@ -36,3 +36,31 @@ describe('riff credential status boundary', () => {
     }
   });
 });
+
+describe('CHD-606 tester: malformed credential notices', () => {
+  test('rejects wrong envelope and value types without reading credential text', () => {
+    for (const params of [
+      null,
+      false,
+      'saved',
+      ['grok', 'saved'],
+      { provider: 'grok', state: null },
+      { provider: 'grok', state: ['saved'] },
+      { provider: { accessToken: 'fixture' }, state: 'saved' },
+      { provider: 'codex', state: 'SAVED' },
+    ]) {
+      expect(
+        credentialNotice({ method: '_chord/credentials', params }),
+      ).toBeUndefined();
+    }
+
+    expect(
+      credentialNotice(
+        JSON.stringify({
+          method: '_chord/credentials',
+          params: { provider: 'grok', state: 'saved' },
+        }),
+      ),
+    ).toBeUndefined();
+  });
+});

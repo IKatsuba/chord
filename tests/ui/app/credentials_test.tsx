@@ -2,7 +2,10 @@ import { describe, expect, test } from 'bun:test';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { ready, send, until, withWindow } from './render.tsx';
+import type { CredentialNotice } from '../../../src/session/credentials.ts';
+import { openSession } from '../../../src/session/session.ts';
+import { frontState, type WindowedState } from '../../../src/ui/app/state.ts';
+import { CTRL_O, ready, send, until, withWindow } from './render.tsx';
 
 describe('riff credential status notices in the window', () => {
   for (const [columns, rows] of [
@@ -46,6 +49,96 @@ describe('riff credential status notices in the window', () => {
           { agent: 'riff', columns, rows },
         ));
     }
+  }
+});
+
+describe('CHD-606 tester: credential notice authority', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`a non-riff agent cannot set a credential notice at ${columns}x${rows}`, async () => {
+      let state: WindowedState | undefined;
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'credentialsaccountchanged');
+          await window.shows('Credential fixture ready.');
+          await mkdir(join(window.dir, '.fake-gate'), { recursive: true });
+          await writeFile(join(window.dir, '.fake-gate', 'release'), '');
+          await until(
+            'the non-riff turn ended after sending its notification',
+            () =>
+              state !== undefined &&
+              frontState(state).transcript.turn.status === 'idle',
+          );
+
+          expect(state?.window.sessionsNote).toBeUndefined();
+          expect(window.frame()).not.toContain('account changed');
+          expect(window.frame()).toContain('Credential fixture ready.');
+        },
+        {
+          agent: 'fake',
+          columns,
+          rows,
+          onState: (all) => {
+            state = all;
+          },
+        },
+      );
+    });
+
+    test(`a cleared session cannot overwrite its replacement's notice or draft at ${columns}x${rows}`, async () => {
+      const callbacks: ((notice: CredentialNotice) => void)[] = [];
+      let state: WindowedState | undefined;
+
+      await withWindow(
+        async (window) => {
+          await ready(window);
+          await until(
+            'first credential subscriber',
+            () => callbacks.length === 1,
+          );
+          await send(window, '/clear');
+          await until(
+            'replacement credential subscriber',
+            () => callbacks.length === 2,
+          );
+          await ready(window);
+          await window.type('replacement draft');
+          callbacks[1]?.({ provider: 'grok', state: 'saved' });
+          await window.shows('Grok sign-in saved.');
+          callbacks[0]?.({ provider: 'codex', state: 'account_changed' });
+          await window.press(CTRL_O);
+
+          expect(state?.window.sessionsNote).toBe('Grok sign-in saved.');
+          expect(window.frame()).toContain('replacement draft');
+          expect(window.frame()).not.toContain('ChatGPT account changed');
+        },
+        {
+          agent: 'riff',
+          columns,
+          rows,
+          onState: (all) => {
+            state = all;
+          },
+          openWith: async (options) => {
+            const session = await openSession(options);
+            const subscribe = session.subscribeCredentials?.bind(session);
+
+            return {
+              ...session,
+              subscribeCredentials: (listener) => {
+                callbacks.push(listener);
+
+                return subscribe?.(listener) ?? (() => {});
+              },
+            };
+          },
+        },
+      );
+    });
   }
 });
 

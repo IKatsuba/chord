@@ -32,6 +32,43 @@ beforeEach(() => {
   spyOn(Bun.secrets, 'delete').mockImplementation(forbidden);
 });
 
+describe('CHD-606 tester: QA provider network isolation', () => {
+  test('both fixture plans answer through their injected fetch without global fetch or a system-store factory', async () => {
+    let systemCalls = 0;
+    const network = spyOn(globalThis, 'fetch').mockRejectedValue(
+      new Error('Global network reached by QA.'),
+    );
+
+    for (const provider of ['codex', 'grok']) {
+      const access = riffAccess(
+        {
+          [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+          [QA_ENV]: '1',
+          [QA_STATE_ENV]: 'signed-in',
+          [QA_PROVIDER_ENV]: provider,
+        },
+        () => {
+          systemCalls++;
+
+          throw new Error('System-store factory reached by QA.');
+        },
+      );
+      const response = await access.fetch(
+        provider === 'codex'
+          ? 'https://registry.npmjs.org/@openai/codex/latest'
+          : 'https://x.ai/cli/stable',
+        {},
+      );
+
+      expect(response.ok).toBe(true);
+      await response.text();
+    }
+
+    expect(network).not.toHaveBeenCalled();
+    expect(systemCalls).toBe(0);
+  });
+});
+
 afterEach(() => {
   mock.restore();
   expect(realCalls).toBe(0);

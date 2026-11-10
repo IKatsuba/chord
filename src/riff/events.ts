@@ -71,7 +71,12 @@ export function updateOf(
     case 'tool_end': {
       // What the tool kept for the window, or what the model was given.
       const kept = shown(event.id);
-      const content = event.isError ? event.content : (kept ?? event.content);
+      const content =
+        event.isError &&
+        Array.isArray(kept) &&
+        kept.some((item) => item.type === 'diff')
+          ? event.content
+          : (kept ?? event.content);
 
       return {
         sessionUpdate: 'tool_call_update',

@@ -122,10 +122,11 @@ describe("riff's tools as libfx takes them", () => {
       'search',
       'edit',
       'write',
+      'shell',
     ]);
 
     for (const tool of Object.values(tools)) {
-      const writes = ['edit', 'write'].includes(tool.name);
+      const writes = ['edit', 'write', 'shell'].includes(tool.name);
 
       expect(tool.idempotent).toBe(!writes);
       expect(tool.writes).toBe(writes);

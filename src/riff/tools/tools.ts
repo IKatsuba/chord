@@ -9,7 +9,7 @@ import type {
   ToolCallContent,
 } from '@agentclientprotocol/sdk/unstable';
 import { z } from '@zod/zod';
-import type { FxAgentHostTool } from 'libfx/node';
+import type { FxAgentHostTool, FxToolResult } from 'libfx/node';
 import { realpathSync } from 'node:fs';
 import { basename, dirname } from 'node:path';
 import type { Finder } from '../../platform/fff.ts';
@@ -31,6 +31,7 @@ import {
   type Reach,
 } from './permission.ts';
 import { READ_DESCRIPTION, ReadInput, readLines } from './read.ts';
+import { shell, SHELL_DESCRIPTION, ShellInput } from './shell.ts';
 import { SEARCH_DESCRIPTION, SearchInput, searcher } from './search.ts';
 
 /** The session a tool works in. */
@@ -43,6 +44,7 @@ export interface ToolSession {
    * by the call's id; nothing kept, the window shows the model's.
    */
   readonly show?: (executionId: string, shown: string) => void;
+  readonly update?: (update: ToolCallUpdate) => void | Promise<void>;
   readonly showContent?: (
     executionId: string,
     content: ToolCallContent[],
@@ -103,7 +105,7 @@ interface ToolSpec<T> {
     signal: AbortSignal,
     executionId: string,
     proposal?: Proposal,
-  ) => Promise<string>;
+  ) => Promise<string | FxToolResult>;
 }
 
 /** Throws unless the call may run: granted, admitted by the mode, or allowed. */
@@ -280,6 +282,21 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
     fileTool(session, 'write', WRITE_DESCRIPTION, WriteInput, (input, signal) =>
       write(resolveIn(directory, input.path), input, signal),
     ),
+    hostTool(session, {
+      name: 'shell',
+      description: SHELL_DESCRIPTION,
+      schema: ShellInput,
+      writes: true,
+      reach: (input) =>
+        Promise.resolve({ tool: 'shell', command: input.command }),
+      run: (input, _reach, signal, id) => {
+        session.showContent?.(id, [{ type: 'terminal', terminalId: id }]);
+
+        return shell(directory, input, signal, id, (update) =>
+          session.update?.(update),
+        );
+      },
+    }),
   ];
 }
 
@@ -376,6 +393,15 @@ export function drawn(
         title: `${verb} ${shown(directory, path)}${through}`,
         kind: 'edit',
         locations: [{ path: target ?? path }],
+      };
+    }
+    case 'shell': {
+      const command = ShellInput.safeParse(input);
+
+      return {
+        title: command.success ? `Bash ${command.data.command}` : 'Bash',
+        kind: 'execute',
+        locations: [{ path: directory }],
       };
     }
     case 'list': {

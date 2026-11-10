@@ -270,6 +270,20 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           finder,
           show: (id, text) => shown.set(id, text),
           showContent: (id, content) => shown.set(id, content),
+          update: (update) => {
+            const session = holder.open;
+
+            if (
+              session?.running === true &&
+              session.client !== undefined &&
+              session.calls.has(update.toolCallId)
+            ) {
+              return notify(session.client, session.id, {
+                sessionUpdate: 'tool_call_update',
+                ...update,
+              });
+            }
+          },
           announce: (id, name, input) => announce(holder.open, id, name, input),
           begin: (id, name, input) => begin(holder.open, id, name, input),
           mode: () => holder.open?.config.mode ?? config.mode,

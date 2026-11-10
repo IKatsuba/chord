@@ -1553,3 +1553,75 @@ describe('riff file mutation display', () => {
     }
   });
 });
+
+describe('riff shell terminal updates', () => {
+  test('streams one terminal and its exit before the turn answer, keeping model output out of its end content', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const turn = prompt(
+      sessionId,
+      'call shell {"command":"printf stream; exit 3"}',
+    );
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow' },
+    });
+    await turn;
+
+    const updates = client.updates(sessionId);
+
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call',
+        toolCallId: 'call_shell_1',
+        title: 'Bash printf stream; exit 3',
+        kind: 'execute',
+      }),
+    );
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_shell_1',
+        _meta: {
+          terminal_output_delta: {
+            terminal_id: 'call_shell_1',
+            data: 'stream',
+          },
+        },
+      }),
+    );
+    expect(updates).toContainEqual(
+      expect.objectContaining({
+        sessionUpdate: 'tool_call_update',
+        toolCallId: 'call_shell_1',
+        _meta: {
+          terminal_exit: {
+            terminal_id: 'call_shell_1',
+            exit_code: 3,
+            signal: null,
+          },
+        },
+      }),
+    );
+    expect(updates).toContainEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'call_shell_1',
+      status: 'failed',
+      content: [{ type: 'terminal', terminalId: 'call_shell_1' }],
+    });
+    expect(client.said(sessionId)).toContain('stream\nExit code 3');
+
+    const count = updates.length;
+
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: 'auto',
+    });
+    expect(client.updates(sessionId)).toHaveLength(count);
+  });
+});

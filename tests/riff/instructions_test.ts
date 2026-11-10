@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -102,6 +103,31 @@ describe('riff instructions', () => {
     });
 
     expect(text).not.toContain('Instructions from');
+  });
+
+  test('a FIFO named AGENTS.md is skipped, never waited on', async () => {
+    const made = spawnSync('mkfifo', [join(root, 'AGENTS.md')]);
+
+    expect(made.status).toBe(0);
+
+    const text = await readInstructions({
+      directory: root,
+      configHome: undefined,
+    });
+
+    expect(text).not.toContain('Instructions from');
+  });
+
+  test('a file far over the cap is read only up to it', async () => {
+    await writeFile(join(root, 'AGENTS.md'), 'y'.repeat(4 * 1024 * 1024));
+
+    const text = await readInstructions({
+      directory: root,
+      configHome: undefined,
+    });
+
+    expect(bytes(text)).toBeLessThanOrEqual(INSTRUCTIONS_CAP);
+    expect(text.endsWith(TRUNCATED_NOTE)).toBe(true);
   });
 
   test('long instructions are cut at 32 KiB with the note', async () => {

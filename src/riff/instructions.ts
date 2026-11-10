@@ -3,7 +3,8 @@
  * the repository's root down to the session's directory, then the user's
  * own `AGENTS.md` in chord's config directory, read once at session start.
  */
-import { readFile, stat } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { open, stat } from 'node:fs/promises';
 import { dirname, join, relative, sep } from 'node:path';
 import { notFound } from '../not_found.ts';
 
@@ -110,19 +111,54 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
+/**
+ * `file`'s text, at most the cap's bytes of it: only a regular file, so a
+ * FIFO or a device by that name never holds the session's start.
+ */
 async function readOptional(file: string): Promise<string | undefined> {
+  let handle;
+
   try {
-    return await readFile(file, 'utf8');
+    if (!(await stat(file)).isFile()) {
+      return undefined;
+    }
+
+    // Non-blocking, should the path become a FIFO after the stat.
+    handle = await open(file, constants.O_RDONLY | constants.O_NONBLOCK);
   } catch (error) {
-    // A folder by that name, or no file, is no instructions.
-    if (
-      notFound(error) ||
-      (error instanceof Error && 'code' in error && error.code === 'EISDIR')
-    ) {
+    if (notFound(error)) {
       return undefined;
     }
 
     throw error;
+  }
+
+  try {
+    if (!(await handle.stat()).isFile()) {
+      return undefined;
+    }
+
+    // One byte over the cap is enough for the cut to add its note.
+    const buffer = new Uint8Array(INSTRUCTIONS_CAP + 1);
+    let filled = 0;
+
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(
+        buffer,
+        filled,
+        buffer.length - filled,
+      );
+
+      if (bytesRead === 0) {
+        break;
+      }
+
+      filled += bytesRead;
+    }
+
+    return new TextDecoder().decode(buffer.subarray(0, filled));
+  } finally {
+    await handle.close();
   }
 }
 

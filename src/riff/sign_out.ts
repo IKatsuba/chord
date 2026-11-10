@@ -132,7 +132,7 @@ export async function signOut(options: SignOutOptions): Promise<SignOutResult> {
       cut.promise,
     ]);
 
-    await response.body?.cancel();
+    await Promise.race([response.body?.cancel(), cut.promise]);
 
     return result(
       response.ok

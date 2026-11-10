@@ -1,4 +1,4 @@
-import { afterEach, expect, test } from 'bun:test';
+import { afterEach, describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { Buffer } from 'node:buffer';
 import { execFileSync } from 'node:child_process';
@@ -12,6 +12,8 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { quote } from 'shell-quote';
+import { runDirect } from '../../../src/riff/commands/direct.ts';
 import {
   discoverRepository,
   repositoryFilters,
@@ -339,4 +341,151 @@ test('already cancelled git preparation launches no probe', async () => {
   await expect(prepareGit(r.cwd, r.env, controller.signal)).rejects.toBe(
     reason,
   );
+});
+
+describe('tester: hostile repository config and include boundaries', () => {
+  test('dirty attributed files cannot launch filters, fsmonitor or diff programs', async () => {
+    const r = await repository();
+    const marker = join(r.root, 'ran-program');
+    const touch = quote(['/usr/bin/touch', marker]);
+
+    await writeFile(
+      join(r.cwd, '.gitattributes'),
+      '*.txt filter=probe diff=probe\n',
+    );
+    await writeFile(join(r.cwd, 'tracked.txt'), 'before\n');
+    r.git('add', '.');
+    r.git(
+      '-c',
+      'user.name=Fixture',
+      '-c',
+      'user.email=fixture@example.invalid',
+      'commit',
+      '-qm',
+      'Fixture',
+    );
+    await writeFile(join(r.cwd, 'tracked.txt'), 'after\n');
+
+    r.git('config', 'core.fsmonitor', touch);
+    r.git('config', 'filter.probe.clean', `${touch}; /bin/cat`);
+    r.git('config', 'filter.probe.smudge', `${touch}; /bin/cat`);
+    r.git('config', 'diff.external', `${touch}; exit 0`);
+    r.git('config', 'diff.probe.textconv', `${touch}; /bin/cat`);
+    r.git('config', 'core.pager', touch);
+
+    const prepared = await prepareGit(r.cwd, {
+      ...r.env,
+      GIT_DIR: join(r.root, 'wrong-repository'),
+      GIT_WORK_TREE: r.root,
+      GIT_EXTERNAL_DIFF: touch,
+      GIT_CONFIG_COUNT: '1',
+      GIT_CONFIG_KEY_0: 'core.fsmonitor',
+      GIT_CONFIG_VALUE_0: touch,
+    });
+
+    assert.equal(prepared.kind, 'ready');
+    expect(prepared.ready.filterNames).toContain('probe');
+
+    for (const command of [
+      'git status -s',
+      'git diff --stat',
+      'git log -n 1 --stat',
+    ]) {
+      const plan = commandEffect(command);
+
+      assert.equal(plan.kind, 'direct');
+
+      const running = runDirect(
+        plan.stages.map((stage) => gitInvocation(prepared.ready, stage)),
+        { cwd: r.cwd },
+      );
+
+      expect(await running.ended).toEqual({ code: 0 });
+      expect(await readFile(marker).catch(() => null)).toBeNull();
+    }
+
+    // The harmless marker verifies that the fixture can trigger a configured program.
+    r.git('status', '--porcelain');
+    expect(await readFile(marker, 'utf8')).toBe('');
+  });
+
+  test('relative includes stay anchored and tilde includes use fixture HOME', async () => {
+    const r = await repository();
+    const nested = join(r.cwd, '.git', 'nested');
+
+    await mkdir(nested);
+    await writeFile(join(nested, 'first'), '[include]\n path = second\n');
+    await writeFile(
+      join(nested, 'second'),
+      '[filter "relative.Driver"]\n clean = unused\n',
+    );
+    await writeFile(
+      join(r.home, 'drivers'),
+      '[filter "home.Driver"]\n process = unused\n',
+    );
+    r.git('config', '--add', 'include.path', 'nested/first');
+    r.git('config', '--add', 'include.path', '~/drivers');
+
+    const prepared = await prepareGit(r.cwd, r.env);
+
+    assert.equal(prepared.kind, 'ready');
+    expect([...prepared.ready.filterNames].sort()).toEqual([
+      'home.Driver',
+      'relative.Driver',
+    ]);
+  });
+
+  test.each([10, 11])('include depth %s obeys the bound', async (depth) => {
+    const r = await repository();
+    const gitDir = join(r.cwd, '.git');
+
+    for (let i = 1; i <= depth; i++) {
+      await writeFile(
+        join(gitDir, `depth-${i}`),
+        i === depth
+          ? '[filter "deep"]\n clean = unused\n'
+          : `[include]\n path = depth-${i + 1}\n`,
+      );
+    }
+
+    r.git('config', 'include.path', 'depth-1');
+
+    const prepared = await prepareGit(r.cwd, r.env);
+
+    if (depth === 10) {
+      assert.equal(prepared.kind, 'ready');
+      expect(prepared.ready.filterNames).toEqual(['deep']);
+    } else {
+      expect(prepared).toEqual({
+        kind: 'refused',
+        reason: 'repo_config_unavailable',
+      });
+    }
+  });
+
+  test('an included FIFO is refused without waiting for a writer', async () => {
+    const r = await repository();
+    const fifo = join(r.cwd, '.git', 'config-pipe');
+
+    execFileSync('/usr/bin/mkfifo', [fifo]);
+    r.git('config', 'include.path', 'config-pipe');
+    expect(await prepareGit(r.cwd, r.env)).toEqual({
+      kind: 'refused',
+      reason: 'repo_config_unavailable',
+    });
+  });
+
+  test('an empty filter name is refused even in an inactive conditional include', async () => {
+    const r = await repository();
+
+    await writeFile(
+      join(r.cwd, '.git', 'inactive'),
+      '[filter ""]\n clean = unused\n',
+    );
+    r.git('config', 'includeIf.onbranch:never-matches.path', 'inactive');
+    expect(await prepareGit(r.cwd, r.env)).toEqual({
+      kind: 'refused',
+      reason: 'unsupported_filter_name',
+    });
+  });
 });

@@ -997,6 +997,13 @@ function promptOf(blocks: readonly ContentBlock[]): FxSessionPromptInput {
       case 'resource_link':
         return { type: 'text', text: `${block.name}: ${block.uri}` };
       case 'resource':
+        if ('blob' in block.resource) {
+          throw RequestError.invalidParams(
+            undefined,
+            'riff takes no binary resources',
+          );
+        }
+
         return {
           type: 'resource',
           resource: {

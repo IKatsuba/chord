@@ -2312,3 +2312,63 @@ describe('CHD-608 tester: fake review boundaries', () => {
     ).toHaveLength(1);
   });
 });
+
+describe('CHD-613 riff embedded resources', () => {
+  test('refuses a mixed prompt with a blob before reaching the provider and accepts the next prompt', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const { error } = await client.request('session/prompt', {
+      sessionId,
+      prompt: [
+        { type: 'text', text: 'held text' },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'custom:blob',
+            blob: 'AAEC',
+            mimeType: 'application/octet-stream',
+          },
+        },
+      ],
+    });
+
+    expect(error?.code).toBe(-32602);
+    expect(error?.message).toContain('riff takes no binary resources');
+    expect(fake.requests).toHaveLength(0);
+    expect((await prompt(sessionId, 'text')).result?.stopReason).toBe(
+      'end_turn',
+    );
+    expect(fake.requests).toHaveLength(1);
+  });
+
+  test('keeps embedded context advertised and sends text resources to the fake provider', async () => {
+    await open();
+
+    expect(
+      riffInit('1.2.3').agentCapabilities?.promptCapabilities?.embeddedContext,
+    ).toBe(true);
+
+    const sessionId = await newSession();
+    const { result, error } = await client.request('session/prompt', {
+      sessionId,
+      prompt: [
+        { type: 'text', text: 'Read the embedded resource.' },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'custom:text',
+            text: 'embedded text fixture',
+            mimeType: 'text/plain',
+          },
+        },
+      ],
+    });
+
+    expect(error).toBeUndefined();
+    expect(result?.stopReason).toBe('end_turn');
+    expect(JSON.stringify(fake.requests.at(-1)?.messages)).toContain(
+      'embedded text fixture',
+    );
+  });
+});

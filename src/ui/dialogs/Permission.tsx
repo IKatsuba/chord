@@ -21,6 +21,7 @@ import type {
 import { capital } from '../shortcuts/state.ts';
 import { useColours, useHintKey } from '../app/context.ts';
 import { borderOf, ChoiceList, type KeptChoice } from '../pickers/Pickers.tsx';
+import { DiffRows } from '../transcript/tools/Tool.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
 import { BOLD, CUT, DIM, fg, TEXT } from '../theme/text.ts';
 import { askerParts } from './asker.ts';
@@ -35,6 +36,7 @@ import {
   requestView,
   INPUT_INDENT,
   requestRows,
+  requestHeight,
   requestRule,
   saveChoices,
 } from './permission.ts';
@@ -233,16 +235,22 @@ function Request({
   const area = useRef<BoxRenderable | null>(null);
   const [room, setRoom] = useState(Number.POSITIVE_INFINITY);
   const [top, setTop] = useState(0);
-  const whole = requestRows(wait, width);
+  const whole = requestRows(wait, width, width, colours.code);
+  const wholeHeight = requestHeight(whole.rows, width);
   // A room of one row, or of none where a short window has taken them all,
   // says what is hidden beside the pinned row (CHD-464), whose title then
   // wraps to the cells the count leaves: as many as its widest count
   // leaves, so the rows stay put while the count changes as it scrolls.
   const { pinned, rows } =
-    room <= 1 && whole.rows.length > room
-      ? requestRows(wait, width, width - countRoom(whole.rows.length) - 1)
+    room <= 1 && wholeHeight > room
+      ? requestRows(
+          wait,
+          width,
+          width - countRoom(wholeHeight) - 1,
+          colours.code,
+        )
       : whole;
-  const total = rows.length;
+  const total = requestHeight(rows, width);
   const overflows = total > room;
   const shown = requestView(total, room, top);
   const hidden = hiddenRows(total, shown.top, shown.shown);
@@ -353,24 +361,33 @@ function Request({
             }
           }}
         >
-          {rows.map((row, index) => (
-            <box
-              key={index}
-              flexShrink={0}
-              paddingLeft={row.kind === 'input' ? INPUT_INDENT : 0}
-            >
-              <text
-                {...CUT}
-                {...(row.kind === 'title'
-                  ? { ...fg(colours.permission), attributes: BOLD }
-                  : row.kind === 'location'
-                    ? { attributes: DIM }
-                    : {})}
+          {rows.map((row, index) =>
+            row.kind === 'diff' ? (
+              <box key={index} flexShrink={0} paddingLeft={INPUT_INDENT}>
+                <DiffRows
+                  view={row.view}
+                  width={Math.max(width - INPUT_INDENT, 1)}
+                />
+              </box>
+            ) : (
+              <box
+                key={index}
+                flexShrink={0}
+                paddingLeft={row.kind === 'input' ? INPUT_INDENT : 0}
               >
-                <Ansi text={row.text === '' ? ' ' : row.text} />
-              </text>
-            </box>
-          ))}
+                <text
+                  {...CUT}
+                  {...(row.kind === 'title'
+                    ? { ...fg(colours.permission), attributes: BOLD }
+                    : row.kind === 'location'
+                      ? { attributes: DIM }
+                      : {})}
+                >
+                  <Ansi text={row.text === '' ? ' ' : row.text} />
+                </text>
+              </box>
+            ),
+          )}
         </scrollbox>
         {shown.below && (
           <Rule text={requestRule('↓', hidden.below, downKey, width)} />

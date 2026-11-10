@@ -86,6 +86,7 @@ export function waitFor(
     ...(title ? { title } : {}),
     ...(kind ? { kind } : {}),
     ...(locations ? { locations } : {}),
+    ...(content && content.length > 0 ? { content } : {}),
     // An MCP tool's request is its name alone, with the arguments only here;
     // a request with content says what it does without them.
     ...((content ?? []).length === 0 && rawInput !== undefined

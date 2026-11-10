@@ -37,6 +37,7 @@ test("a permission request shows the agent's options, numbered", () =>
     const frame = window.frame();
 
     expect(frame).toContain('Write notes.txt');
+    expect(frame).toMatch(/1 \+ notes/);
     expect(frame).toContain('❯ 1. Allow');
     expect(frame).toContain('  2. Always allow');
     expect(frame).toContain('  3. Deny');
@@ -837,3 +838,132 @@ test('↓ on the last choice goes into the agents list rather than round, and �
 /** The row the box above the prompt starts on: the first border drawn. */
 const boxTop = (frame: string) =>
   frame.split('\n').findIndex((row) => row.startsWith('╭'));
+
+describe('CHD-605 shared permission diffs', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`two proposed file diffs keep their paths and choices at ${columns}x${rows}`, async () => {
+      const drawn = await draw(
+        <PermissionPrompt
+          wait={{
+            id: 'two-files',
+            title: 'Update files',
+            options: [
+              { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+              { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+            ],
+            content: [
+              {
+                type: 'diff',
+                path: '/project/first.ts',
+                oldText: 'old value\n',
+                newText: 'new value\n',
+              },
+              {
+                type: 'diff',
+                path: '/project/second.ts',
+                oldText: null,
+                newText: 'created value\n',
+              },
+            ],
+          }}
+          width={columns - 4}
+          active
+          onChoose={() => {}}
+        />,
+        { columns, rows },
+      );
+
+      try {
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame).toContain('/project/first.ts');
+        expect(frame).toContain('/project/second.ts');
+        expect(frame).toMatch(/1 - old value/);
+        expect(frame).toMatch(/1 \+ new value/);
+        expect(frame).toMatch(/1 \+ created value/);
+        expect(frame).toContain('1. Allow');
+        expect(frame).toContain('2. Deny');
+        expect(frame).not.toContain('Updated ');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+
+    test(`a tall proposed diff scrolls to its final wrapped line with choices pinned at ${columns}x${rows}`, async () => {
+      const scroller: { current: RequestScroller | undefined } = {
+        current: undefined,
+      };
+      const oldText =
+        Array.from({ length: 30 }, (_, index) => `old line ${index + 1}`).join(
+          '\n',
+        ) + '\n';
+      const newText =
+        Array.from({ length: 30 }, (_, index) => `new line ${index + 1}`).join(
+          '\n',
+        ) +
+        '\n' +
+        'wide '.repeat(35) +
+        'FINAL_NEW\n';
+      const drawn = await draw(
+        <box flexGrow={1}>
+          <PermissionPrompt
+            wait={{
+              id: 'tall-diff',
+              title: 'Update changes.ts',
+              options: [
+                { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+                {
+                  optionId: 'always',
+                  name: 'Always allow',
+                  kind: 'allow_always',
+                },
+                { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+              ],
+              content: [
+                { type: 'diff', path: '/project/changes.ts', oldText, newText },
+              ],
+            }}
+            width={columns - 4}
+            active
+            onChoose={() => {}}
+            scroller={scroller}
+          />
+        </box>,
+        { columns, rows },
+      );
+
+      try {
+        await until('diff scroll rule', () =>
+          drawn.frame().includes('pagedown to scroll'),
+        );
+        expect(stripAnsi(drawn.frame())).toMatch(/1 - old line 1/);
+        expect(stripAnsi(drawn.frame())).not.toContain('FINAL_NEW');
+        scroller.current?.('bottom');
+        await drawn.write('');
+        await until('last diff line', () =>
+          drawn.frame().includes('FINAL_NEW'),
+        );
+
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame).toContain('Update changes.ts');
+        expect(frame).toContain('1. Allow');
+        expect(frame).toContain('2. Always allow');
+        expect(frame).toContain('3. Deny');
+        expect(frame).toContain('Esc to reject');
+        expect(frame).toContain('pageup to scroll');
+        expect(frame).not.toContain('pagedown to scroll');
+        scroller.current?.('top');
+        await drawn.write('');
+        await until('first diff line again', () =>
+          /1 - old line 1/.test(stripAnsi(drawn.frame())),
+        );
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});

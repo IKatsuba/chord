@@ -144,3 +144,59 @@ describe('what an ask offers', () => {
     );
   });
 });
+
+describe('CHD-605 tester: grants cover only the approved reach', () => {
+  test('a shell grant covers neither a shorter nor a longer command string', () => {
+    const command = 'printf hello';
+    const grants = new Set([grantKey({ tool: 'shell', command }, '/p/app')]);
+
+    for (const mode of ['ask', 'auto'] as const) {
+      expect(asks(mode, { tool: 'shell', command }, '/p/app', grants)).toBe(
+        false,
+      );
+
+      for (const other of [
+        'printf',
+        'printf hell',
+        'printf hello world',
+        'printf hello\n',
+        ' printf hello',
+        'printf  hello',
+      ]) {
+        expect(
+          asks(mode, { tool: 'shell', command: other }, '/p/app', grants),
+        ).toBe(true);
+      }
+    }
+  });
+
+  test('an outside mutation grant covers both operations on that file alone', () => {
+    const real = '/outside/notes.txt';
+    const grants = new Set([grantKey({ tool: 'write', real }, '/p/app')]);
+
+    for (const mode of ['ask', 'auto'] as const) {
+      for (const tool of ['edit', 'write'] as const) {
+        expect(asks(mode, { tool, real }, '/p/app', grants)).toBe(false);
+
+        for (const other of ['/outside', `${real}.bak`, `${real}/child`]) {
+          expect(asks(mode, { tool, real: other }, '/p/app', grants)).toBe(
+            true,
+          );
+        }
+      }
+
+      expect(asks(mode, { tool: 'read', real }, '/p/app', grants)).toBe(true);
+    }
+  });
+
+  test('a grant in one session cannot admit the same reach in another', () => {
+    const reach = { tool: 'write', real: '/p/app/.env.local' } as const;
+    const first = new Set([grantKey(reach, '/p/app')]);
+    const second = new Set<string>();
+
+    for (const mode of ['ask', 'auto'] as const) {
+      expect(asks(mode, reach, '/p/app', first)).toBe(false);
+      expect(asks(mode, reach, '/p/app', second)).toBe(true);
+    }
+  });
+});

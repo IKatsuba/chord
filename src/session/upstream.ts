@@ -30,7 +30,7 @@ import type { ElicitationReply } from './elicitations.ts';
 import { FILLED } from './enrich.ts';
 import { modelConfigId } from './models.ts';
 import { modeConfigId } from './modes.ts';
-import type { Attachment } from './session.ts';
+import type { Attachment, EmbeddedResource } from './session.ts';
 import { TASK_META } from './transcript/subagents.ts';
 import type { MessageFrom, PlanAnswer, PlanWait } from './transcript/types.ts';
 
@@ -694,20 +694,23 @@ export interface UpstreamPrompt {
   readonly text: string;
   readonly attachments: readonly Attachment[];
   readonly links: readonly ResourceLink[];
+  readonly resources: readonly EmbeddedResource[];
 }
 
 /**
- * A prompt's blocks, or why it is refused: `resource` and `audio` go unadvertised,
- * and an image to an agent that takes none says so in the window's words.
+ * A prompt's blocks, or why the agent's advertised capabilities refuse it.
+ * Audio and unknown kinds stay unsupported.
  */
 export function promptOf(
   blocks: readonly ContentBlock[],
   agent: string,
   takesImages: boolean,
+  takesEmbeddedContext = false,
 ): UpstreamPrompt | { readonly refused: string } {
   const texts: string[] = [];
   const attachments: Attachment[] = [];
   const links: ResourceLink[] = [];
+  const resources: EmbeddedResource[] = [];
 
   for (const block of blocks) {
     switch (block.type) {
@@ -723,6 +726,14 @@ export function promptOf(
         attachments.push({ mediaType: block.mimeType, data: block.data });
 
         break;
+      case 'resource':
+        if (!takesEmbeddedContext) {
+          return { refused: `${agent} does not take embedded resources` };
+        }
+
+        resources.push(block);
+
+        break;
       case 'resource_link':
         links.push(block);
 
@@ -732,5 +743,5 @@ export function promptOf(
     }
   }
 
-  return { text: texts.join('\n'), attachments, links };
+  return { text: texts.join('\n'), attachments, links, resources };
 }

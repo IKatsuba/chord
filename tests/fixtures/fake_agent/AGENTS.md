@@ -487,12 +487,14 @@
   character as `\uXXXX`. Shell output sent ahead of a prompt gets a
   `Received` line naming each command and its first line of output, and
   each image in a turn's or steered prompt gets
-  `Received an image: <mime>, <n> bytes`, and each `resource_link` gets
-  `Received a link: <name>, <uri>`;
+  `Received an image: <mime>, <n> bytes`, each `resource_link` gets
+  `Received a link: <name>, <uri>`, and each `resource` gets
+  `Received a resource: <JSON>` for the whole block.
   `--no-images` or `CHORD_FAKE_NO_IMAGES=1` says in `promptCapabilities`
-  that it takes none. Any
-  other scenario's turn that ends on its own reports usage as Claude's adapter does: a
-  `usage_update` with the context used so far (2,000 tokens a turn), the
+  that it takes none. `--embedded-context` or
+  `CHORD_FAKE_EMBEDDED_CONTEXT=1` advertises `embeddedContext` (off by default).
+  Other turns that end on their own report usage: a `usage_update` with
+  the context used so far (2,000 tokens a turn), the
   model's window and the session's cost ($0.0125 a turn), and the turn's
   tokens in its answer; `--no-usage` or `CHORD_FAKE_NO_USAGE=1` reports none,
   and `--tokens-only` or `CHORD_FAKE_TOKENS_ONLY=1` only the tokens, no cost
@@ -541,10 +543,11 @@
   `--steering claude`, `--steering codex24` or `--steering codex`
   (`CHORD_FAKE_STEERING`) advertises `_session/steering`: during a turn it
   answers `injected`, read at the next step or the end with
-  `Read the message from <sender>.`, then images' and links' `Received`
-  lines. With no turn, `claude` and `codex24` honor `promptRequired` where
-  asked; otherwise they start a turn and answer `startedNewTurn` before
-  it speaks. `codex` ignores `promptRequired`, as codex-acp before 2.4 did,
+  `Read the message from <sender>.`, then images', links' and resources'
+  `Received` lines. With no turn, `claude` and `codex24` honor
+  `promptRequired` where asked; otherwise they start a turn and answer
+  `startedNewTurn` before it speaks. `codex` ignores `promptRequired`,
+  as codex-acp before 2.4 did,
   covering an adapter that advertises steering but starts an idle turn.
   Without the flag the method is unadvertised and refused. `--steer-refuse`
   (`CHORD_FAKE_STEER_REFUSE=1`) answers every steer `promptRequired`.

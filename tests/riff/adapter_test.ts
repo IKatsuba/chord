@@ -2312,3 +2312,160 @@ describe('CHD-608 tester: fake review boundaries', () => {
     ).toHaveLength(1);
   });
 });
+
+describe('CHD-613 riff embedded resources', () => {
+  test('refuses a mixed prompt with a blob before reaching the provider and accepts the next prompt', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const { error } = await client.request('session/prompt', {
+      sessionId,
+      prompt: [
+        { type: 'text', text: 'held text' },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'custom:blob',
+            blob: 'AAEC',
+            mimeType: 'application/octet-stream',
+          },
+        },
+      ],
+    });
+
+    expect(error?.code).toBe(-32602);
+    expect(error?.message).toContain('riff takes no binary resources');
+    expect(fake.requests).toHaveLength(0);
+    expect((await prompt(sessionId, 'text')).result?.stopReason).toBe(
+      'end_turn',
+    );
+    expect(fake.requests).toHaveLength(1);
+  });
+
+  test('keeps embedded context advertised and sends text resources to the fake provider', async () => {
+    await open();
+
+    expect(
+      riffInit('1.2.3').agentCapabilities?.promptCapabilities?.embeddedContext,
+    ).toBe(true);
+
+    const sessionId = await newSession();
+    const { result, error } = await client.request('session/prompt', {
+      sessionId,
+      prompt: [
+        { type: 'text', text: 'Read the embedded resource.' },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'custom:text',
+            text: 'embedded text fixture',
+            mimeType: 'text/plain',
+          },
+        },
+      ],
+    });
+
+    expect(error).toBeUndefined();
+    expect(result?.stopReason).toBe('end_turn');
+    expect(JSON.stringify(fake.requests.at(-1)?.messages)).toContain(
+      'embedded text fixture',
+    );
+  });
+
+  test('a rejected resource prompt never enters later safety review evidence', async () => {
+    const markers = ['REJECTED_RESOURCE_FIRST', 'REJECTED_RESOURCE_RECENT'];
+    const target = join(stateDir, 'reviewed.txt');
+    const inputs: string[] = [];
+
+    await writeFile(target, 'fixture output\n');
+    await open(true, {
+      review: (input) => {
+        inputs.push(input);
+
+        return Promise.resolve({ outcome: 'clear' });
+      },
+    });
+
+    const sessionId = await newSession();
+    const valid = `call read ${JSON.stringify({ path: target })}`;
+
+    for (const marker of markers) {
+      const requests = fake.requests.length;
+      const rejected = await client.request('session/prompt', {
+        sessionId,
+        prompt: [
+          { type: 'text', text: marker },
+          { type: 'resource', resource: { uri: 'custom:blob', blob: 'AAEC' } },
+        ],
+      });
+
+      expect(rejected.error?.code).toBe(-32602);
+      expect(fake.requests).toHaveLength(requests);
+      expect((await prompt(sessionId, valid)).result?.stopReason).toBe(
+        'end_turn',
+      );
+    }
+
+    expect(inputs).toHaveLength(2);
+
+    for (const input of inputs) {
+      expect(input).toContain('<current_request>call read');
+      expect(input).toContain('<first_root_user_request>call read');
+
+      for (const marker of markers) {
+        expect(input).not.toContain(marker);
+      }
+    }
+  });
+});
+
+describe('CHD-613 tester: binary refusal boundaries', () => {
+  for (const mixed of [false, true]) {
+    test(`${mixed ? 'mixed resources' : 'a resource-only prompt'} with an empty blob is refused without retaining any context`, async () => {
+      await open();
+
+      const sessionId = await newSession();
+      const { error } = await client.request('session/prompt', {
+        sessionId,
+        prompt: [
+          ...(mixed
+            ? [
+                { type: 'text', text: 'REJECTED_MIXED_PROMPT' },
+                {
+                  type: 'resource',
+                  resource: {
+                    uri: 'custom:rejected-text',
+                    text: 'REJECTED_EMBEDDED_CONTEXT',
+                  },
+                },
+              ]
+            : []),
+          {
+            type: 'resource',
+            resource: { uri: 'custom:empty-blob', blob: '', mimeType: null },
+          },
+        ],
+      });
+
+      expect(error).toMatchObject({
+        code: -32602,
+        message: expect.stringContaining('riff takes no binary resources'),
+      });
+      expect(fake.requests).toHaveLength(0);
+      expect((await prompt(sessionId, 'ordinary valid prompt')).error).toBe(
+        undefined,
+      );
+      expect(fake.requests).toHaveLength(1);
+
+      const sent = JSON.stringify(fake.requests[0]?.messages);
+
+      for (const marker of [
+        'REJECTED_MIXED_PROMPT',
+        'REJECTED_EMBEDDED_CONTEXT',
+        'custom:empty-blob',
+      ]) {
+        expect(sent).not.toContain(marker);
+      }
+    });
+  }
+});

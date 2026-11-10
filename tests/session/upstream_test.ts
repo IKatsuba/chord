@@ -828,6 +828,7 @@ describe("a prompt's blocks", () => {
         text: 'a\nb',
         attachments: [{ mediaType: 'image/png', data: 'AAAA' }],
         links: [link],
+        resources: [],
       },
     );
   });
@@ -913,5 +914,52 @@ describe('CHD-574 tester: mapper session boundaries', () => {
         selected,
       ),
     ).toEqual({ optionId: 'toString' });
+  });
+});
+
+describe('CHD-613 prompt resources', () => {
+  const resources = [
+    {
+      type: 'resource',
+      resource: { uri: 'custom:text', text: '', mimeType: null },
+      _meta: { source: 'client' },
+    },
+    {
+      type: 'resource',
+      resource: { uri: 'custom:blob', blob: 'opaque, not checked' },
+    },
+  ] as const;
+
+  test('keeps whole text and blob blocks when embedded context is advertised', () => {
+    expect(promptOf(resources, 'fake', true, true)).toEqual({
+      text: '',
+      attachments: [],
+      links: [],
+      resources: [...resources],
+    });
+  });
+
+  test('refuses a whole prompt when any resource is unsupported', () => {
+    for (const resource of resources) {
+      expect(
+        promptOf(
+          [{ type: 'text', text: 'held' }, resource],
+          'fake',
+          true,
+          false,
+        ),
+      ).toEqual({ refused: 'fake does not take embedded resources' });
+    }
+  });
+
+  test('embedded context does not allow audio or an unknown block kind', () => {
+    for (const block of [
+      { type: 'audio', data: '', mimeType: 'audio/wav' },
+      { type: 'unknown' },
+    ]) {
+      expect(
+        promptOf([block as ContentBlock], 'fake', true, true),
+      ).toHaveProperty('refused');
+    }
   });
 });

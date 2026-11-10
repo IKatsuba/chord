@@ -3001,3 +3001,110 @@ describe("chord's aside ahead of a prompt", () => {
     expect(promptLine(`${aside('A run.')}\n\nhello there`)).toBe('hello there');
   });
 });
+
+test('CHD-613 records resource identity without text, blob or metadata', () =>
+  withDir(async (dir) => {
+    const recording = new FileRecording(join(dir, 'state'), () => {});
+
+    recording.opened(looked());
+    recording.sent('resources', 'text', 0, [], 42, undefined, undefined, [
+      {
+        type: 'resource',
+        resource: {
+          uri: 'file:///text',
+          text: 'private payload',
+          mimeType: 'text/plain',
+        },
+        _meta: { secret: 'metadata' },
+      },
+      { type: 'resource', resource: { uri: 'file:///blob', blob: 'AAEC' } },
+    ]);
+    await recording.flushed();
+
+    const entries = await readPast(recording.path!);
+
+    expect(entries.find((entry) => entry.type === 'prompt')).toEqual({
+      type: 'prompt',
+      turnId: 'resources',
+      prompt: 'text',
+      at: 42,
+      images: 0,
+      resources: [
+        { uri: 'file:///text', mimeType: 'text/plain' },
+        { uri: 'file:///blob' },
+      ],
+    });
+    expect(JSON.stringify(entries)).not.toContain('private payload');
+    expect(JSON.stringify(entries)).not.toContain('AAEC');
+    expect(JSON.stringify(entries)).not.toContain('metadata');
+    expect(
+      recordActions(entries).some((action) => action.type === 'prompt'),
+    ).toBe(true);
+  }));
+
+describe('CHD-613 tester: resource record boundaries', () => {
+  test('duplicate URIs retain their own MIME identity and no nested metadata', () =>
+    withDir(async (dir) => {
+      const recording = new FileRecording(join(dir, 'state'), () => {});
+
+      recording.opened(looked());
+      recording.sent('resource', '', 0, [], 1, undefined, 'active', [
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///same',
+            text: 'private embedded text',
+            mimeType: null,
+            _meta: { private: 'nested secret' },
+          },
+        },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///same',
+            blob: 'c2VjcmV0',
+            mimeType: 'application/octet-stream',
+          },
+          _meta: { private: 'outer secret' },
+        },
+      ]);
+      recording.sent('plain', 'text', 0, [], 2);
+      await recording.flushed();
+
+      const entries = await readPast(recording.path!);
+      const prompts = entries.filter((entry) => entry.type === 'prompt');
+
+      expect(prompts).toEqual([
+        {
+          type: 'prompt',
+          turnId: 'resource',
+          prompt: '',
+          images: 0,
+          at: 1,
+          into: 'active',
+          resources: [
+            { uri: 'file:///same', mimeType: null },
+            { uri: 'file:///same', mimeType: 'application/octet-stream' },
+          ],
+        },
+        {
+          type: 'prompt',
+          turnId: 'plain',
+          prompt: 'text',
+          images: 0,
+          at: 2,
+        },
+      ]);
+
+      const stored = await recordFiles.readFile(recording.path!, 'utf8');
+
+      for (const secret of [
+        'private embedded text',
+        'c2VjcmV0',
+        'nested secret',
+        'outer secret',
+      ]) {
+        expect(stored).not.toContain(secret);
+      }
+    }));
+});

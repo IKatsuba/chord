@@ -55,6 +55,10 @@ export const UNPRICED_MODEL =
   ARGS.includes('--unpriced-model') ||
   process.env.CHORD_FAKE_UNPRICED_MODEL === '1';
 
+export const EMBEDDED_CONTEXT =
+  ARGS.includes('--embedded-context') ||
+  process.env.CHORD_FAKE_EMBEDDED_CONTEXT === '1';
+
 export const NO_IMAGES =
   ARGS.includes('--no-images') || process.env.CHORD_FAKE_NO_IMAGES === '1';
 

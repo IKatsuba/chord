@@ -3,6 +3,7 @@
  * models and efforts, mentions, an agent that exits or never answers, its
  * close, the MCP servers it is given and Claude's prompt suggestions.
  */
+import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { execFile } from 'node:child_process';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
@@ -2117,4 +2118,148 @@ describe('CHD-101 U1 tester: fork lifecycle and isolation', () => {
       await rm(dir, { recursive: true });
     }
   });
+});
+
+describe('CHD-613 embedded resources', () => {
+  test('a prompt preserves resource blocks between images and links', () =>
+    withSession(async (session) => {
+      const gate = join(session.cwd, '.fake-gate');
+      const resources = [
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///text',
+            text: 'private text',
+            mimeType: 'text/plain',
+          },
+        },
+        {
+          type: 'resource',
+          resource: { uri: 'file:///blob', blob: 'AAEC' },
+          _meta: { source: 'client' },
+        },
+      ] as const;
+      const link = {
+        type: 'resource_link',
+        uri: 'file:///link',
+        name: 'link',
+      } as const;
+
+      await mkdir(gate);
+      await writeFile(join(gate, 'capture-prompt'), '');
+
+      const turn = session.prompt(
+        'text',
+        [{ mediaType: 'image/png', data: 'AA==' }],
+        [],
+        [link],
+        resources,
+      );
+
+      await turn.result;
+
+      expect(
+        JSON.parse(await readFile(join(gate, 'prompt.json'), 'utf8')),
+      ).toEqual([
+        { type: 'text', text: 'text' },
+        { type: 'image', mimeType: 'image/png', data: 'AA==' },
+        ...resources,
+        link,
+      ]);
+      expect(session.takesEmbeddedContext()).toBe(false);
+    }));
+});
+
+describe('CHD-613 embedded resource fixture', () => {
+  const collectUpdates = (session: Session) => {
+    const values: SessionUpdate[] = [];
+    const stop = session.subscribe((update) => values.push(update));
+
+    return { values, stop };
+  };
+
+  const resources = [
+    {
+      type: 'resource',
+      resource: {
+        uri: 'file:///text',
+        text: 'fixture text',
+        mimeType: 'text/plain',
+      },
+      _meta: { source: 'fixture' },
+    },
+    { type: 'resource', resource: { uri: 'file:///blob', blob: 'AAEC' } },
+  ] as const;
+
+  test('advertises opt-in support and reports whole blocks in a prompt', () =>
+    withSession(
+      async (session) => {
+        expect(session.takesEmbeddedContext()).toBe(true);
+
+        const updates = collectUpdates(session);
+        const turn = session.prompt('text', [], [], [], resources);
+
+        try {
+          await turn.result;
+          expect(
+            said(updates.values)
+              .join('')
+              .split('\n')
+              .flatMap((line) =>
+                line.startsWith('Received a resource: ')
+                  ? [
+                      JSON.parse(
+                        line.slice('Received a resource: '.length),
+                      ) as unknown,
+                    ]
+                  : [],
+              ),
+          ).toEqual([...resources]);
+        } finally {
+          updates.stop();
+        }
+      },
+      undefined,
+      '--embedded-context',
+    ));
+
+  test('reports whole blocks received by a running turn through steering', () =>
+    withSession(
+      async (session) => {
+        const updates = collectUpdates(session);
+        const turn = session.prompt('texttillsteeredheld');
+
+        try {
+          await until(() => said(updates.values).join('').includes('Hello'));
+          expect(
+            await session.steer('text', [], [], undefined, [], resources),
+          ).toBe('injected');
+          await until(() =>
+            said(updates.values).join('').includes('file:///blob'),
+          );
+          expect(
+            said(updates.values)
+              .join('')
+              .split('\n')
+              .flatMap((line) =>
+                line.startsWith('Received a resource: ')
+                  ? [
+                      JSON.parse(
+                        line.slice('Received a resource: '.length),
+                      ) as unknown,
+                    ]
+                  : [],
+              ),
+          ).toEqual([...resources]);
+        } finally {
+          await turn.cancel();
+          await turn.result;
+          updates.stop();
+        }
+      },
+      undefined,
+      '--embedded-context',
+      '--steering',
+      'claude',
+    ));
 });

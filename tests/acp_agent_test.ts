@@ -176,7 +176,7 @@ describe('initialize', () => {
             promptCapabilities: {
               image: true,
               audio: false,
-              embeddedContext: false,
+              embeddedContext: true,
             },
             mcpCapabilities: { http: true, sse: true },
             sessionCapabilities: { list: {}, resume: {}, close: {} },
@@ -3560,6 +3560,59 @@ describe('agents/send and agents/close (CHD-575)', () => {
     return { title: first[0], id: first[1].id };
   };
 
+  for (const embeddedContext of [false, true]) {
+    test(`CHD-613 agents/send ${embeddedContext ? 'passes' : 'refuses'} embedded resources`, () =>
+      onAcp(
+        embeddedContext ? ['--embedded-context'] : [],
+        async ({ client, newSession, prompt }) => {
+          const sessionId = await newSession();
+
+          await client.answerTo(prompt(sessionId, 'agenttitled'));
+
+          const { title, id } = await firstChild(client);
+
+          await until(
+            () =>
+              client.said(id).includes('came in chunks') &&
+              children(client).get(title)?.state === 'idle',
+            20_000,
+          );
+
+          const resource = {
+            type: 'resource',
+            resource: { uri: 'custom:child', blob: 'opaque' },
+            _meta: { source: 'client' },
+          };
+          const { result, error } = await client.request(SEND, {
+            sessionId: id,
+            prompt: [{ type: 'text', text: 'text' }, resource],
+          });
+
+          if (embeddedContext) {
+            expect(error).toBeUndefined();
+            expect(result).toEqual({ delivery: 'sent' });
+            await until(() => client.said(id).includes('Received a resource:'));
+
+            const line = client
+              .said(id)
+              .match(/Received a resource: ([^\n]*)/)?.[1];
+
+            assert(line !== undefined);
+            expect(JSON.parse(line)).toEqual(resource);
+          } else {
+            expect(error).toMatchObject({
+              code: -32602,
+              message: expect.stringContaining(
+                'fake does not take embedded resources',
+              ),
+            });
+            expect(client.said(id)).not.toContain('Received a resource:');
+          }
+        },
+        server(),
+      ));
+  }
+
   /** Starts after the first `plain` go through only once `gate` exists. */
   const gatedAfter = (plain: number, gate: string) => {
     let opened = 0;
@@ -4069,4 +4122,309 @@ describe('the way out', () => {
         [],
       );
     }));
+});
+
+describe('CHD-613 embedded context', () => {
+  const resources = [
+    {
+      type: 'resource',
+      resource: {
+        uri: 'custom:text',
+        text: 'embedded text',
+        mimeType: 'text/plain',
+      },
+      _meta: { source: 'client' },
+    },
+    {
+      type: 'resource',
+      resource: {
+        uri: 'custom:blob',
+        blob: 'opaque, not checked',
+        mimeType: null,
+      },
+    },
+  ] as const;
+  const received = (client: AcpClient, sessionId: string) =>
+    [...client.said(sessionId).matchAll(/Received a resource: ([^\n]*)/g)].map(
+      (match) => JSON.parse(match[1]!) as unknown,
+    );
+
+  for (const embeddedContext of [false, true]) {
+    const flags = embeddedContext ? ['--embedded-context'] : [];
+
+    test(`new, load and resume report embedded context ${embeddedContext}`, () => {
+      let previous = '';
+
+      return onAcp(
+        flags,
+        async ({ client, cwd }) => {
+          for (const method of [
+            'session/new',
+            'session/load',
+            'session/resume',
+          ]) {
+            const { result, error } = await client.request(method, {
+              cwd,
+              mcpServers: [],
+              ...(method === 'session/new' ? {} : { sessionId: previous }),
+            });
+
+            expect(error).toBeUndefined();
+            expect(result?._meta).toMatchObject({
+              'chord/acp': { image: true, embeddedContext },
+            });
+
+            await client.request('session/close', {
+              sessionId:
+                method === 'session/new' ? result?.sessionId : previous,
+            });
+          }
+        },
+        {
+          state: async (stateDir, cwd) => {
+            previous = await recordSession({
+              stateDir,
+              cwd,
+              command: fakeAgentCommand(),
+              prompts: ['text'],
+            });
+          },
+        },
+      );
+    });
+
+    test(`prompt and steer ${embeddedContext ? 'pass' : 'refuse'} whole resources`, () =>
+      onAcp(
+        [...flags, '--steering', 'claude'],
+        async ({ client, cwd, newSession, prompt }) => {
+          const sessionId = await newSession();
+          const gate = join(cwd, '.fake-gate');
+
+          await mkdir(gate);
+          await writeFile(join(gate, 'capture-prompt'), '');
+
+          const { result, error } = await client.request('session/prompt', {
+            sessionId,
+            prompt: [{ type: 'text', text: 'text' }, ...resources],
+          });
+
+          if (!embeddedContext) {
+            expect(error).toMatchObject({
+              code: -32602,
+              message: expect.stringContaining(
+                'fake does not take embedded resources',
+              ),
+            });
+            expect(client.said(sessionId)).toBe('');
+            await expect(
+              readFile(join(gate, 'prompt.json')),
+            ).rejects.toMatchObject({ code: 'ENOENT' });
+            expect(
+              (
+                await client.request('_chord/session/steer', {
+                  sessionId,
+                  prompt: [...resources],
+                })
+              ).error,
+            ).toMatchObject({
+              code: -32602,
+              message: expect.stringContaining(
+                'fake does not take embedded resources',
+              ),
+            });
+
+            return;
+          }
+
+          expect(error).toBeUndefined();
+          expect(result?.stopReason).toBe('end_turn');
+          expect(
+            JSON.parse(await readFile(join(gate, 'prompt.json'), 'utf8')),
+          ).toEqual([{ type: 'text', text: 'text' }, ...resources]);
+          expect(received(client, sessionId)).toEqual([...resources]);
+
+          const before = client.said(sessionId).length;
+          const running = prompt(sessionId, 'texttillsteeredheld');
+
+          await until(() =>
+            client.said(sessionId).slice(before).includes('came in chunks'),
+          );
+          expect(
+            (
+              await client.request('_chord/session/steer', {
+                sessionId,
+                prompt: [...resources],
+              })
+            ).result,
+          ).toEqual({ delivery: 'sent' });
+          await until(
+            () => received(client, sessionId).length === resources.length * 2,
+          );
+          expect(received(client, sessionId)).toEqual([
+            ...resources,
+            ...resources,
+          ]);
+
+          client.notify('session/cancel', { sessionId });
+          await client.answerTo(running);
+        },
+      ));
+  }
+
+  test('queued resources reach the next prompt intact', () =>
+    onAcp(
+      ['--embedded-context', '--steering', 'claude'],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'texttillsteered');
+
+        await until(() => client.said(sessionId).includes('came in chunks'));
+
+        const queued = client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: 'text' }, ...resources],
+        });
+
+        expect(received(client, sessionId)).toEqual([]);
+        expect(
+          (
+            await client.request('_chord/session/steer', {
+              sessionId,
+              prompt: [{ type: 'text', text: 'finish' }],
+            })
+          ).result,
+        ).toEqual({ delivery: 'sent' });
+        await client.answerTo(running);
+        expect((await client.answerTo(queued)).result?.stopReason).toBe(
+          'end_turn',
+        );
+        expect(received(client, sessionId)).toEqual([...resources]);
+      },
+    ));
+
+  test('extension methods reject incomplete resource shapes', () =>
+    onAcp(['--embedded-context'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      for (const resource of [
+        { uri: 'custom:missing' },
+        { text: 'no URI' },
+        { uri: 'custom:wrong', blob: 1 },
+      ]) {
+        expect(
+          (
+            await client.request('_chord/session/steer', {
+              sessionId,
+              prompt: [{ type: 'resource', resource }],
+            })
+          ).error?.code,
+        ).toBe(-32602);
+      }
+    }));
+});
+
+describe('CHD-613 tester: upstream resource boundaries', () => {
+  const resource = {
+    type: 'resource',
+    resource: { uri: 'custom:isolated', text: '', mimeType: null },
+    _meta: { source: 'tester' },
+  } as const;
+
+  test('resource-only prompts obey each simultaneous session capability', () => {
+    let opened = 0;
+
+    return onAcp(
+      [],
+      async ({ client, cwd }) => {
+        const ids: string[] = [];
+
+        for (const embeddedContext of [true, false]) {
+          const { result, error } = await client.request('session/new', {
+            cwd,
+            mcpServers: [],
+          });
+
+          expect(error).toBeUndefined();
+          expect(result?._meta).toMatchObject({
+            'chord/acp': { embeddedContext },
+          });
+          ids.push(result?.sessionId as string);
+        }
+
+        for (const index of [1, 0]) {
+          const sessionId = ids[index]!;
+          const { result, error } = await client.request('session/prompt', {
+            sessionId,
+            prompt: [resource],
+          });
+
+          if (index === 1) {
+            expect(error).toMatchObject({
+              code: -32602,
+              message: expect.stringContaining(
+                'fake does not take embedded resources',
+              ),
+            });
+            expect(client.said(sessionId)).toBe('');
+          } else {
+            expect(error).toBeUndefined();
+            expect(result?.stopReason).toBe('end_turn');
+
+            const line = client
+              .said(sessionId)
+              .match(/Received a resource: ([^\n]*)/)?.[1];
+
+            assert(line !== undefined);
+            expect(JSON.parse(line)).toEqual(resource);
+          }
+        }
+      },
+      {
+        open: (options) =>
+          openSession({
+            ...options,
+            agentCommand: fakeAgentCommand(
+              undefined,
+              ...(++opened === 1 ? ['--embedded-context'] : []),
+            ),
+          }),
+      },
+    );
+  });
+
+  test('withdrawing a queued resource leaves no receipt or recorded payload', () =>
+    onAcp(
+      ['--embedded-context'],
+      async ({ client, newSession, prompt, stateDir }) => {
+        const sessionId = await newSession();
+        const running = prompt(sessionId, 'long');
+
+        await until(() => client.said(sessionId) !== '');
+
+        const queued = client.send('session/prompt', {
+          sessionId,
+          prompt: [resource],
+        });
+
+        client.notify('$/cancel_request', { requestId: queued });
+        expect((await client.answerTo(queued)).result?.stopReason).toBe(
+          'cancelled',
+        );
+        client.notify('$/cancel_request', { requestId: running });
+        await client.answerTo(running);
+        expect((await client.answerTo(prompt(sessionId, 'text'))).error).toBe(
+          undefined,
+        );
+        expect(client.said(sessionId)).not.toContain('Received a resource:');
+
+        await client.request('session/close', { sessionId });
+
+        const records = await readRecords(stateDir);
+
+        assert(records[0] !== undefined);
+        expect(await readFile(records[0].path, 'utf8')).not.toContain(
+          resource.resource.uri,
+        );
+      },
+    ));
 });

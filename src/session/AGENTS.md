@@ -6,7 +6,8 @@ These rules also cover `src/acp/`.
 - Enrichers are pure, with ACP's shape on both sides; name what chord filled under `_meta`'s `chord/filled`.
 - `transcript/` is a pure reducer, one module per kind of update.
 - Session records (`record.ts`) are a stored format: older records must still
-  read back. Legacy `windows/` files are ignored and left untouched.
+  read back. Embedded resources retain only `uri` and `mimeType`, never
+  content. Legacy `windows/` files are ignored and left untouched.
 - MCP servers go through `servers.ts` on new, fork, load and resume: stdio always,
   HTTP, SSE and ACP only when advertised. The agent's `mcpServers: false`
   setting holds every server back, chord's own included; its setting of
@@ -18,6 +19,10 @@ These rules also cover `src/acp/`.
   task reports lose delivery authority immediately. The next surviving prompt
   carries any team part exactly once; a withdrawn prompt does not spend it.
 - The window's and `acp`'s sessions are recorded; `-p`'s are not.
+- `acp` accepts embedded resources only when the agent advertises
+  `embeddedContext`; otherwise refuse the whole prompt before sending it.
+  Ordinary, queued and steered prompts preserve resource blocks after images
+  and before links. The window's file mentions remain `resource_link` blocks.
 - `_meta["chord/permission"]` carries optional review outcome/reason and
   `deadlineAt` for any agent; ignore invalid fields. Preserve it through
   transcript reduction and ACP forwarding. `-p` denies reviewed asks even

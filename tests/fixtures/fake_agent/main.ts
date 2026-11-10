@@ -286,6 +286,7 @@ import {
   DIMCODE_PERMISSION,
   MCP_TRANSPORTS,
   NO_IMAGES,
+  EMBEDDED_CONTEXT,
   NO_MODES,
   NO_COST,
   NO_USAGE,
@@ -685,7 +686,9 @@ function receivedLines(prompt: readonly acp.ContentBlock[]): string[] {
         ]
       : block.type === 'resource_link'
         ? [`Received a link: ${block.name}, ${block.uri}\n\n`]
-        : [],
+        : block.type === 'resource'
+          ? [`Received a resource: ${JSON.stringify(block)}\n\n`]
+          : [],
   );
 }
 
@@ -1310,7 +1313,10 @@ const connection = acp
           agentCapabilities: {
             loadSession: !NO_LOAD,
             mcpCapabilities: MCP_TRANSPORTS,
-            promptCapabilities: { image: !NO_IMAGES },
+            promptCapabilities: {
+              image: !NO_IMAGES,
+              embeddedContext: EMBEDDED_CONTEXT,
+            },
             sessionCapabilities: {
               list: {},
               ...(RESUME_ONLY ? { resume: {} } : {}),

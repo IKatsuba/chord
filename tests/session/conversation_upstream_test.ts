@@ -400,3 +400,167 @@ describe('CHD-574 tester: cancellation keeps other work independent', () => {
       });
     }));
 });
+
+describe('CHD-613 queued embedded resources', () => {
+  for (const steer of [false, true]) {
+    test(`keeps whole resource blocks through ${steer ? 'a steer' : 'the next turn'}`, async () => {
+      const resources = [
+        {
+          type: 'resource',
+          resource: { uri: 'file:///text', text: 'private text' },
+        },
+        {
+          type: 'resource',
+          resource: {
+            uri: 'file:///blob',
+            blob: 'AAEC',
+            mimeType: 'application/octet-stream',
+          },
+        },
+      ] as const;
+      const received: unknown[] = [];
+
+      await onFake(
+        ['--steering', 'claude'],
+        async (conversation, events) => {
+          const active = steer ? 'texttillsteeredheld' : 'permission';
+
+          conversation.send(active, active, [], [], { turnId: 'active' });
+          await until(() =>
+            steer ? saidIn(events).includes('Hello') : asked(events),
+          );
+          conversation.send('text', 'text', [], [], {
+            turnId: 'resources',
+            resources,
+          });
+
+          if (steer) {
+            expect(conversation.steerQueued('resources')).toBe('sent');
+            await until(() => received.length === 1);
+          }
+
+          conversation.cancelPrompt('active');
+          await until(
+            () =>
+              resultOf(events, 'resources') !== undefined ||
+              (steer && promptsIn(events).length === 2),
+          );
+          expect(received).toEqual([resources]);
+        },
+        (session) => {
+          const prompt = session.prompt.bind(session);
+          const inject = session.steer.bind(session);
+
+          session.prompt = (...args) => {
+            if (args[4] !== undefined) {
+              received.push(args[4]);
+            }
+
+            return prompt(...args);
+          };
+
+          session.steer = (...args) => {
+            received.push(args[5]);
+
+            return inject(...args);
+          };
+
+          return session;
+        },
+      );
+    });
+  }
+});
+
+describe('CHD-613 tester: resource queue isolation', () => {
+  test('withdrawing resources leaves the next turn free of their payload', async () => {
+    const received: unknown[] = [];
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        conversation.send('permission', 'permission', [], [], {
+          turnId: 'active',
+        });
+        await until(() => asked(events));
+        conversation.send('withdrawn', 'withdrawn', [], [], {
+          turnId: 'withdrawn',
+          resources: [
+            {
+              type: 'resource',
+              resource: { uri: 'file:///withdrawn', text: 'withheld payload' },
+            },
+          ],
+        });
+        conversation.send('text', 'text', [], [], { turnId: 'next' });
+        conversation.cancelPrompt('withdrawn');
+        conversation.cancelPrompt('active');
+
+        await until(() => resultOf(events, 'next') !== undefined);
+
+        expect(withdrawn(events)).toEqual([['withdrawn']]);
+        expect(promptsIn(events).map(([text]) => text)).toEqual([
+          'permission',
+          'text',
+        ]);
+        expect(received).toEqual([undefined, undefined]);
+      },
+      (session) => {
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          received.push(args[4]);
+
+          return prompt(...args);
+        };
+
+        return session;
+      },
+    );
+  });
+
+  test('cancelling a running turn still sends the queued resource exactly once', async () => {
+    const resources = [
+      {
+        type: 'resource',
+        resource: { uri: 'file:///queued', blob: 'AQID', mimeType: null },
+        _meta: { source: 'queued' },
+      },
+    ] as const;
+    const received: unknown[] = [];
+
+    await onFake(
+      [],
+      async (conversation, events) => {
+        conversation.send('permission', 'permission', [], [], {
+          turnId: 'active',
+        });
+        await until(() => asked(events));
+        conversation.send('text', 'text', [], [], {
+          turnId: 'resource',
+          resources,
+        });
+        conversation.send('text', 'text', [], [], { turnId: 'plain' });
+        conversation.cancelPrompt('active');
+
+        await until(() => resultOf(events, 'plain') !== undefined);
+
+        expect(resultOf(events, 'active')).toMatchObject({
+          result: { status: 'cancelled' },
+        });
+        expect(received).toEqual([undefined, resources, undefined]);
+      },
+      (session) => {
+        const prompt = session.prompt.bind(session);
+
+        session.prompt = (...args) => {
+          received.push(args[4]);
+
+          return prompt(...args);
+        };
+
+        return session;
+      },
+    );
+  });
+});

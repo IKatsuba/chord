@@ -46,6 +46,21 @@ const BLOCKS = z
         mimeType: z.string(),
       }),
       z.looseObject({
+        type: z.literal('resource'),
+        resource: z.union([
+          z.looseObject({
+            uri: z.string(),
+            mimeType: z.string().nullish(),
+            text: z.string(),
+          }),
+          z.looseObject({
+            uri: z.string(),
+            mimeType: z.string().nullish(),
+            blob: z.string(),
+          }),
+        ]),
+      }),
+      z.looseObject({
         type: z.literal('resource_link'),
         uri: z.string(),
         name: z.string(),
@@ -53,7 +68,10 @@ const BLOCKS = z
       z.looseObject({
         type: z
           .string()
-          .refine((type) => !['text', 'image', 'resource_link'].includes(type)),
+          .refine(
+            (type) =>
+              !['text', 'image', 'resource', 'resource_link'].includes(type),
+          ),
       }),
     ]),
   )

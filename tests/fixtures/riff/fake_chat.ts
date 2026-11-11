@@ -1,7 +1,8 @@
 /**
  * A fake OpenAI Chat Completions server on localhost for riff's tests,
  * through libfx's custom provider (CHD-485, "Tests"). The last user message
- * picks the scenario: one naming `hang` streams a word and then nothing until
+ * picks the scenario by the word it starts with, never one further on: one
+ * starting `hang` streams a word and then nothing until
  * the request is dropped, `long` ends cut at the output limit, `fail` is
  * refused with a 400, `think` reasons before it answers, `tool` calls the
  * host tool `mark` once and answers once it has its result, `call <tool>
@@ -144,9 +145,13 @@ export function serveFakeChat(): FakeChat {
         );
       }
 
+      // A scenario is read only at the start of the prompt: a team's or a
+      // skill's text further on may name any word without picking one.
+      const opens = (word: string) => said.trimStart().startsWith(word);
+
       // First, so a path or a query that names another scenario is only an
       // argument.
-      const call = /call (\w+) (\{.*\})/.exec(said);
+      const call = /^\s*call (\w+) (\{.*\})/.exec(said);
 
       if (call !== null) {
         // The tool has answered when its result is the last message.
@@ -178,14 +183,14 @@ export function serveFakeChat(): FakeChat {
         );
       }
 
-      if (said.includes('fail')) {
+      if (opens('fail')) {
         return Response.json(
           { error: { message: 'the fake refuses', type: 'invalid_request' } },
           { status: 400 },
         );
       }
 
-      if (said.includes('hang')) {
+      if (opens('hang')) {
         const encoder = new TextEncoder();
 
         return new Response(
@@ -202,7 +207,7 @@ export function serveFakeChat(): FakeChat {
       }
 
       if (
-        said.includes('tool') &&
+        opens('tool') &&
         !body.messages?.some(({ role }) => role === 'tool')
       ) {
         return new Response(
@@ -226,11 +231,11 @@ export function serveFakeChat(): FakeChat {
         );
       }
 
-      if (said.includes('long')) {
+      if (opens('long')) {
         return new Response(answer('Cut', 'length'), { headers });
       }
 
-      if (said.includes('think')) {
+      if (opens('think')) {
         return new Response(
           chunk({ role: 'assistant', reasoning_content: 'Thinking it over.' }) +
             answer(HELLO),

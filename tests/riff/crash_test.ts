@@ -67,7 +67,7 @@ describe('a turn a crashed riff left open (T2)', () => {
 
     dead.send('session/prompt', {
       sessionId,
-      prompt: [{ type: 'text', text: 'call the tool' }],
+      prompt: [{ type: 'text', text: 'tool, then the answer' }],
     });
 
     // The child publishes it whole, once its tool runs.

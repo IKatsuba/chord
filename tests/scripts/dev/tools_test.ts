@@ -11,6 +11,7 @@ import {
   symlink,
   writeFile,
 } from 'node:fs/promises';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -233,6 +234,64 @@ describe('chordWithRiff (CHD-604c)', () => {
   });
 });
 
+describe("a fake or QA run's state (CHD-616)", () => {
+  const provider = () =>
+    Promise.resolve({
+      url: 'http://localhost:1/v1',
+      stop: () => Promise.resolve(),
+    });
+
+  test('riff and chord are given the state place, made if missing', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'chord-state-'));
+    const envs: Readonly<Record<string, string>>[] = [];
+    const record = (
+      _argv: readonly string[],
+      env: Readonly<Record<string, string>>,
+    ) => {
+      envs.push(env);
+
+      return Promise.resolve(0);
+    };
+
+    try {
+      await chordOnRiff([], record, provider, true, join(dir, 'riff'));
+      await chordWithRiff(
+        true,
+        [],
+        undefined,
+        record,
+        provider,
+        join(dir, 'chord'),
+      );
+
+      expect(envs.map((env) => env['XDG_STATE_HOME'])).toStrictEqual([
+        join(dir, 'riff'),
+        join(dir, 'chord'),
+      ]);
+      expect(existsSync(join(dir, 'riff'))).toBe(true);
+      expect(existsSync(join(dir, 'chord'))).toBe(true);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('none given, the environment keeps its own', async () => {
+    const envs: Readonly<Record<string, string>>[] = [];
+
+    await chordOnRiff(
+      [],
+      (_argv, env) => {
+        envs.push(env);
+
+        return Promise.resolve(0);
+      },
+      provider,
+    );
+
+    expect(envs[0]).not.toHaveProperty('XDG_STATE_HOME');
+  });
+});
+
 describe('spawnServing', () => {
   test("answers the command's status, with the env added, while this process still runs", async () => {
     let ticked = false;
@@ -396,6 +455,23 @@ test('qaPlace makes a capture directory afresh, emptying one left from before (C
     expect(await readdir(dir)).toStrictEqual([]);
   } finally {
     await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("qaPlace makes a capture's state beside it afresh too (CHD-616)", async () => {
+  const dir = `/tmp/chord-qa.tools-test-${process.pid}`;
+  const state = `${dir}.state`;
+
+  try {
+    qaPlace(dir, state);
+    await writeFile(join(state, 'left.json'), '{}');
+    qaPlace(dir, state);
+
+    expect(await readdir(state)).toStrictEqual([]);
+    expect(await readdir(dir)).toStrictEqual([]);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+    await rm(state, { recursive: true, force: true });
   }
 });
 

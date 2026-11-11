@@ -90,9 +90,11 @@ export async function chordOnRiff(
   run: RunServing = spawnServing,
   serve: () => Promise<FakeProvider> = serveFakeProvider,
   qa = false,
+  state?: string,
 ): Promise<number> {
   const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
   const { QA_ENV } = await import('../../src/riff/qa.ts');
+  const kept = stateEnv(state);
   const provider = await serve();
 
   try {
@@ -107,11 +109,30 @@ export async function chordOnRiff(
         'riff',
         ...args,
       ],
-      { [FAKE_PROVIDER_ENV]: provider.url, [QA_ENV]: qa ? '1' : '' },
+      {
+        [FAKE_PROVIDER_ENV]: provider.url,
+        [QA_ENV]: qa ? '1' : '',
+        ...kept,
+      },
     );
   } finally {
     await provider.stop();
   }
+}
+
+/**
+ * chord's state kept in `state`, made if missing, instead of the person's
+ * own: a fake or QA run writes its records and riff's store there
+ * (CHD-616). Nothing given, the child keeps the environment's.
+ */
+function stateEnv(state: string | undefined): Record<string, string> {
+  if (state === undefined) {
+    return {};
+  }
+
+  mkdirSync(state, { recursive: true });
+
+  return { XDG_STATE_HOME: state };
 }
 
 /** chord from source with React's production build, on the fake agent if `fake`. */
@@ -134,15 +155,18 @@ export async function chordWithRiff(
   fixtureResources = false,
   run: RunServing = spawnServing,
   serve: () => Promise<FakeProvider> = serveFakeProvider,
+  state?: string,
 ): Promise<number> {
   const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
   const { QA_ENV } = await import('../../src/riff/qa.ts');
+  const kept = stateEnv(state);
   const provider = await serve();
 
   try {
     return await run(chordArgv(fake, args, fixtureResources), {
       [FAKE_PROVIDER_ENV]: provider.url,
       [QA_ENV]: fixtureResources ? '1' : '',
+      ...kept,
     });
   } finally {
     await provider.stop();
@@ -172,10 +196,12 @@ function chordArgv(
   ];
 }
 
-/** `dir`, a capture's directory, made afresh: emptied if it was there. */
-export function qaPlace(dir: string): void {
-  rmSync(dir, { recursive: true, force: true });
-  mkdirSync(dir, { recursive: true });
+/** A capture's places, its directory and its state, made afresh: emptied if there. */
+export function qaPlace(...dirs: readonly string[]): void {
+  for (const dir of dirs) {
+    rmSync(dir, { recursive: true, force: true });
+    mkdirSync(dir, { recursive: true });
+  }
 }
 
 /**

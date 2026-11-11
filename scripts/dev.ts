@@ -39,18 +39,24 @@ export interface DevActions {
     options: ReleaseOptions,
     version: string | undefined,
   ): void | Promise<void>;
+  /** `state` holds chord's state in place of the person's (CHD-616). */
   chord(
     fake: boolean,
     args: readonly string[],
     fixtureResources?: boolean,
+    state?: string,
   ): void | Promise<void>;
   /**
    * chord on riff and its fake provider, `args` chord's after the agent:
    * `bun dev chord --fake riff`.
    */
-  riff(args: readonly string[], qa?: boolean): void | Promise<void>;
-  /** Makes `dir`, a capture's directory for `chord --qa`, afresh. */
-  qa(dir: string): void | Promise<void>;
+  riff(
+    args: readonly string[],
+    qa?: boolean,
+    state?: string,
+  ): void | Promise<void>;
+  /** Makes `dir` and `state`, a capture's places for `chord --qa`, afresh. */
+  qa(dir: string, state: string): void | Promise<void>;
   test(args: readonly string[]): void | Promise<void>;
 }
 
@@ -73,6 +79,21 @@ export function qaDir(name: string | true): string {
 
   return `/tmp/chord-qa.${name}`;
 }
+
+/**
+ * Where a `--qa` run keeps chord's state: beside its directory, made afresh
+ * with it, never the person's own; not in it, where the @ file picker would
+ * list it in captures (CHD-616).
+ */
+export function qaState(dir: string): string {
+  return `${dir}.state`;
+}
+
+/**
+ * Where a `--fake` run without `--qa` keeps chord's state: one fixed place,
+ * kept from run to run, never the person's own (CHD-616).
+ */
+export const FAKE_STATE = '/tmp/chord-fake';
 
 const RUN: DevActions = {
   compile: async (options) =>
@@ -113,20 +134,28 @@ const RUN: DevActions = {
 
     await dying(() => runRelease(release(), stages, options, process, version));
   },
-  chord: async (fake, args, fixtureResources) => {
+  chord: async (fake, args, fixtureResources, state) => {
     const tools = await import('./dev/tools.ts');
 
     process.exitCode =
       fake || fixtureResources === true
-        ? await tools.chordWithRiff(fake, args, fixtureResources)
+        ? await tools.chordWithRiff(
+            fake,
+            args,
+            fixtureResources,
+            undefined,
+            undefined,
+            state,
+          )
         : tools.chord(fake, args, undefined, fixtureResources);
   },
-  riff: async (args, qa) => {
+  riff: async (args, qa, state) => {
     process.exitCode = await (
       await import('./dev/tools.ts')
-    ).chordOnRiff(args, undefined, undefined, qa);
+    ).chordOnRiff(args, undefined, undefined, qa, state);
   },
-  qa: async (dir) => (await import('./dev/tools.ts')).qaPlace(dir),
+  qa: async (dir, state) =>
+    (await import('./dev/tools.ts')).qaPlace(dir, state),
   test: async (args) => {
     process.exitCode = (await import('./dev/tools.ts')).test(args);
   },
@@ -195,17 +224,19 @@ export function devCommand(actions: DevActions = RUN) {
 
             if (qa === undefined) {
               return riff
-                ? actions.riff(given.slice(1))
-                : actions.chord(fake, given);
+                ? actions.riff(given.slice(1), false, FAKE_STATE)
+                : fake
+                  ? actions.chord(fake, given, undefined, FAKE_STATE)
+                  : actions.chord(fake, given);
             }
 
             const dir = qaDir(qa);
 
-            await actions.qa(dir);
+            await actions.qa(dir, qaState(dir));
 
             return riff
-              ? actions.riff(['-C', dir, ...given.slice(1)], true)
-              : actions.chord(fake, ['-C', dir, ...given], true);
+              ? actions.riff(['-C', dir, ...given.slice(1)], true, qaState(dir))
+              : actions.chord(fake, ['-C', dir, ...given], true, qaState(dir));
           }),
       )
       .command(

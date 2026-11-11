@@ -36,6 +36,8 @@ import {
 import { READ_DESCRIPTION, ReadInput, readLines } from './read.ts';
 import { shell, SHELL_DESCRIPTION, ShellInput } from './shell.ts';
 import { SEARCH_DESCRIPTION, SearchInput, searcher } from './search.ts';
+import { loadSkill, SKILL_DESCRIPTION, SkillInput } from './skill.ts';
+import type { Skill } from '../skills.ts';
 import type { ReviewAction } from '../review/input.ts';
 import type { AutoReview } from '../review/admission.ts';
 import { reviewAction } from '../review/action.ts';
@@ -46,6 +48,8 @@ export interface ToolSession {
   /** The session's directory, as its real path. */
   readonly directory: string;
   readonly finder: Finder;
+  /** The skills discovered at the session's start, which `skill` loads. */
+  readonly skills?: readonly Skill[];
   /** Complete shell/probe environment; tests supply fixture HOME and startup files. */
   readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
@@ -380,6 +384,21 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
         );
       },
     }),
+    hostTool(session, {
+      name: 'skill',
+      description: SKILL_DESCRIPTION,
+      schema: SkillInput,
+      // Main's answer on CHD-610: the skill tool never asks, in any mode; it
+      // reads only inside a discovered skill's folder, by real path.
+      reach: () => Promise.resolve(undefined),
+      run: async (input, _reach, signal, id) => {
+        const loaded = await loadSkill(session.skills ?? [], input, signal);
+
+        session.show?.(id, loaded.shown);
+
+        return loaded.text;
+      },
+    }),
   ];
 }
 
@@ -504,6 +523,15 @@ export function drawn(
         title: searched.success ? `Search ${searched.data.query}` : 'Search',
         kind: 'search',
         locations: [{ path: directory }],
+      };
+    }
+    case 'skill': {
+      const loaded = SkillInput.safeParse(input);
+
+      // No locations: the SKILL.md path is not the point of the row.
+      return {
+        title: loaded.success ? `Skill ${loaded.data.name}` : 'Skill',
+        kind: 'read',
       };
     }
     default:

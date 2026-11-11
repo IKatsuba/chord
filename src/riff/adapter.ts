@@ -43,6 +43,7 @@ import {
   windowOf,
 } from './models.ts';
 import { readInstructions } from './instructions.ts';
+import { discoverSkills, skillsSection } from './skills.ts';
 import { RIFF } from './start.ts';
 import type { Grants } from './tools/permission.ts';
 import { drawn, riffTools } from './tools/tools.ts';
@@ -88,6 +89,8 @@ export interface RiffOptions {
   readonly stateDir: string;
   /** chord's config home, for the user's `AGENTS.md`; none reads none. */
   readonly configHome?: string;
+  /** The home directory, for the user's skills; none reads none. */
+  readonly home?: string;
   /** Complete shell environment for in-process fixtures; inherited when omitted. */
   readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
@@ -423,11 +426,24 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
     });
 
+    const skills = await discoverSkills({
+      directory,
+      home: options.home,
+    }).catch((error: unknown) => {
+      throw RequestError.internalError(
+        undefined,
+        `riff could not read its skills: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+
+    const listed = skillsSection(skills);
+
     const finder = (options.openFinder ?? openFinder)(directory);
     const fx = (options.createAgent ?? createFxAgent)({
       ...options.backend,
       name: RIFF,
-      instructions,
+      instructions:
+        listed === undefined ? instructions : [instructions, listed],
       durability: store.durability,
       ...selectedProvider,
       fetch: options.fetch ?? globalThis.fetch,
@@ -437,6 +453,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         riffTools({
           directory,
           finder,
+          skills,
           ...(options.commandEnvironment === undefined
             ? {}
             : { commandEnvironment: options.commandEnvironment }),

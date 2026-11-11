@@ -15,6 +15,7 @@ import {
   QA_STORE_ENV,
 } from '../../src/riff/qa.ts';
 import { FAKE_PROVIDER_ENV } from '../../src/riff/start.ts';
+import { memorySecrets } from '../../src/platform/secrets.ts';
 
 let realCalls = 0;
 
@@ -135,5 +136,45 @@ describe('riff fixture store isolation', () => {
 
       await expect(access.secrets.get('codex')).rejects.toThrow(remedy);
     }
+  });
+});
+
+describe("riff's own files by launch", () => {
+  const user = () => ({ home: '/fixture/home', configHome: '/fixture/config' });
+  const noStore = () => {
+    throw new Error('System store reached.');
+  };
+
+  test('a real launch reads the home skills and the user AGENTS.md', () => {
+    expect(riffAccess({}, memorySecrets, user).user).toEqual(user());
+  });
+
+  test('--fake and every --qa launch read neither', () => {
+    let reached = 0;
+    const counted = () => {
+      reached++;
+
+      return user();
+    };
+
+    expect(
+      riffAccess(
+        { [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1' },
+        noStore,
+        counted,
+      ).user,
+    ).toEqual({});
+    expect(
+      riffAccess(
+        {
+          [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+          [QA_ENV]: '1',
+          [QA_STATE_ENV]: 'signed-in',
+        },
+        noStore,
+        counted,
+      ).user,
+    ).toEqual({});
+    expect(reached).toBe(0);
   });
 });

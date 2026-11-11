@@ -2590,3 +2590,63 @@ describe('riff instructions refusal', () => {
     );
   });
 });
+
+describe('riff skills at session start', () => {
+  test('the instructions list a project skill and the skill tool loads it, drawn in one line', async () => {
+    const directory = await realpath(await mkdtemp(join(stateDir, 'work-')));
+    const skill = join(directory, '.agents', 'skills', 'notes');
+
+    await mkdir(skill, { recursive: true });
+    await writeFile(
+      join(skill, 'SKILL.md'),
+      '---\nname: release-notes\ndescription: Writes release notes\n---\n\nStep one\n',
+    );
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: directory,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'call skill {"name":"release-notes"}');
+
+    const system = fake.requests[0]?.messages?.find(
+      (message) => message.role === 'system',
+    );
+
+    expect(JSON.stringify(system?.content)).toContain(
+      '- release-notes: Writes release notes',
+    );
+    expect(
+      fake.requests[0]?.tools?.map((tool) => tool.function?.name),
+    ).toContain('skill');
+
+    const updates = client.updates(sessionId);
+    const call = updates.find((update) => update.sessionUpdate === 'tool_call');
+
+    expect(call).toMatchObject({
+      title: 'Skill release-notes',
+      kind: 'read',
+      rawInput: { name: 'release-notes' },
+    });
+    expect(call).not.toHaveProperty('locations');
+    expect(updates).toContainEqual({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: call?.['toolCallId'],
+      status: 'completed',
+      content: [
+        {
+          type: 'content',
+          content: {
+            type: 'text',
+            text: 'Loaded skill release-notes (6 lines)',
+          },
+        },
+      ],
+    });
+    // The model reads the skill's text, in no ask.
+    expect(client.said(sessionId)).toContain('Step one');
+    expect(JSON.stringify(updates)).not.toContain('request_permission');
+  });
+});

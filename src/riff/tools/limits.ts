@@ -29,4 +29,8 @@ export const LIMITS = {
   searchContext: 10,
   /** How long one search may run before it answers with what it found. */
   searchMs: 10_000,
+  /** Bytes of one skill file the `skill` tool reads at most, to page it. */
+  skillBytes: 4 * 1024 * 1024,
+  /** Resources a skill's first page names at most. */
+  skillResources: 100,
 } as const;

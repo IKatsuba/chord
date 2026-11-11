@@ -2035,7 +2035,7 @@ describe('CHD-568 U4-U6 tester: answering and withdrawing changes', () => {
 test("an edit's Updated line names the file from the session's directory, through a link too (CHD-611)", async () => {
   const drawn = await draw(
     <PathViews.Provider
-      value={pathView('/tmp/home/src/app', '/tmp/home', (path) =>
+      value={pathView('/tmp/qa-home/src/app', '/tmp/qa-home', (path) =>
         path.replace(/^\/tmp\//u, '/private/tmp/'),
       )}
     >
@@ -2048,7 +2048,7 @@ test("an edit's Updated line names the file from the session's directory, throug
           content: [
             {
               type: 'diff',
-              path: '/private/tmp/home/src/app/greet.ts',
+              path: '/private/tmp/qa-home/src/app/greet.ts',
               oldText: 'Hello\n',
               newText: 'Hi\n',
             },

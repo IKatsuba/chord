@@ -461,7 +461,7 @@ test('request diffs count their wrapped physical rows and label multiple files',
 });
 
 test("a command's location reads `in <dir>` as the header names it (CHD-611)", () => {
-  const paths = pathView('/tmp/home/src/app', '/tmp/home', (path) =>
+  const paths = pathView('/tmp/qa-home/src/app', '/tmp/qa-home', (path) =>
     path.replace(/^\/tmp\//u, '/private/tmp/'),
   );
   const ask = (kind: 'execute' | 'edit', path: string) => ({
@@ -473,7 +473,7 @@ test("a command's location reads `in <dir>` as the header names it (CHD-611)", (
   });
 
   expect(
-    locationsShown(ask('execute', '/private/tmp/home/src/app'), paths),
+    locationsShown(ask('execute', '/private/tmp/qa-home/src/app'), paths),
   ).toEqual(['in ~/src/app']);
   expect(locationsShown(ask('execute', '/srv'), paths)).toEqual(['in /srv']);
   // Another kind's location, and a command's without a view, as it came.

@@ -1097,7 +1097,7 @@ test('the multidiffask fake scenario shows both proposed files and accepts a cho
 test("a command's box says where it runs, ~-shortened, by the session's paths (CHD-611)", async () => {
   const drawn = await draw(
     <PathViews.Provider
-      value={pathView('/tmp/home/src/app', '/tmp/home', (path) =>
+      value={pathView('/tmp/qa-home/src/app', '/tmp/qa-home', (path) =>
         path.replace(/^\/tmp\//u, '/private/tmp/'),
       )}
     >
@@ -1106,7 +1106,7 @@ test("a command's box says where it runs, ~-shortened, by the session's paths (C
           id: 'p',
           title: 'Bash bun test',
           kind: 'execute',
-          locations: [{ path: '/private/tmp/home/src/app' }],
+          locations: [{ path: '/private/tmp/qa-home/src/app' }],
           options: [
             { optionId: 'a', name: 'Allow', kind: 'allow_once' },
             { optionId: 'r', name: 'Deny', kind: 'reject_once' },

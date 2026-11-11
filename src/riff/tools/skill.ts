@@ -35,8 +35,9 @@ export type SkillInput = z.infer<typeof SkillInput>;
 export const SKILL_DESCRIPTION = [
   'Load a skill listed in the instructions by its name: its SKILL.md, then',
   'any of the files it names with `resource`, relative to the skill. At',
-  `most ${LIMITS.readLines} lines or ${LIMITS.readBytes / 1024} KiB come at`,
-  'once; when more is left, the answer says which `offset` reads on. Only',
+  `most ${LIMITS.readLines} lines or ${LIMITS.readBytes / 1024} KiB of the`,
+  `file come at once, and a line over ${LIMITS.readLineChars} characters is`,
+  'cut; when more is left, the answer says which `offset` reads on. Only',
   "files inside the skill's own folder are read.",
 ].join(' ');
 
@@ -112,19 +113,20 @@ export async function loadSkill(
 
   const page: string[] = [];
   let used = 0;
+  let cut = false;
 
-  for (const line of lines.slice(first - 1)) {
+  for (const whole of lines.slice(first - 1)) {
+    // As `read` does: a long line is cut, so every line fits a page.
+    const line = cutLine(whole);
     const cost = new TextEncoder().encode(line).length + 1;
 
-    if (
-      page.length === LIMITS.readLines ||
-      (page.length > 0 && used + cost > LIMITS.readBytes)
-    ) {
+    if (page.length === LIMITS.readLines || used + cost > LIMITS.readBytes) {
       break;
     }
 
     page.push(line);
 
+    cut ||= line !== whole;
     used += cost;
   }
 
@@ -134,6 +136,12 @@ export async function loadSkill(
     page.join('\n'),
     '</skill_content>',
   ];
+
+  if (cut) {
+    parts.push(
+      `Lines over ${LIMITS.readLineChars} characters were cut where they end in …; nothing reads past the cut.`,
+    );
+  }
 
   if (last < total) {
     parts.push(
@@ -176,4 +184,18 @@ async function resourcesOf(directory: string): Promise<string[]> {
     )
     .sort()
     .slice(0, LIMITS.skillResources);
+}
+
+/** `line` within the read's characters, ending in `…` when cut. */
+function cutLine(line: string): string {
+  if (line.length <= LIMITS.readLineChars) {
+    return line;
+  }
+
+  // Never half of a surrogate pair at the cut.
+  const kept = line
+    .slice(0, LIMITS.readLineChars)
+    .replace(/[\uD800-\uDBFF]$/u, '');
+
+  return `${kept}…`;
 }

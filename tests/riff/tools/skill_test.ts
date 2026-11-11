@@ -100,6 +100,37 @@ describe("riff's skill tool", () => {
     expect(next.text).not.toContain('More from line');
   });
 
+  test('an oversized first line is cut, the page stays within its bytes', async () => {
+    // Four bytes a character, a whole MiB on one line.
+    await writeFile(
+      join(skills[0]!.directory, 'wide.md'),
+      `${'😀'.repeat(256 * 1024)}\nnext\n`,
+    );
+
+    const loaded = await loadSkill(
+      skills,
+      { name: 'notes', resource: 'wide.md' },
+      live(),
+    );
+    const body = loaded.text.slice(
+      loaded.text.indexOf('>\n') + 2,
+      loaded.text.indexOf('\n</skill_content>'),
+    );
+
+    expect(new TextEncoder().encode(body).length).toBeLessThanOrEqual(
+      LIMITS.readBytes,
+    );
+    expect(body).toEndWith('…\nnext');
+    expect(body).not.toContain('\uFFFD');
+    expect(body.split('\n')[0]!.length).toBeLessThanOrEqual(
+      LIMITS.readLineChars + 1,
+    );
+    expect(loaded.text).toContain(
+      `Lines over ${LIMITS.readLineChars} characters were cut`,
+    );
+    expect(loaded.shown).toBe('Loaded skill notes, wide.md (2 lines)');
+  });
+
   test('an unknown name fails', async () => {
     await expect(
       loadSkill(skills, { name: 'relase-notes' }, live()),

@@ -287,8 +287,9 @@ describe("a fake or QA run's state (CHD-616)", () => {
             .map((entry) => entry.name)
         : [];
     let out = '';
-    // Each child's process group, riff's own process with it: none outlives
-    // the test.
+    // Each child's process group: none outlives the test. riff's agent keeps
+    // a group of its own and ends when chord's end closes its stdin
+    // (src/riff/serve.ts).
     const groups: number[] = [];
     const end = (group: number) => {
       try {

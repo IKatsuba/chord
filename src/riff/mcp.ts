@@ -20,6 +20,7 @@ import {
 } from '@modelcontextprotocol/sdk/types.js';
 import type { FxAgentHostTool } from 'libfx/node';
 import { createMcpAdapter, type McpAdapter, type McpClient } from 'libfx/mcp';
+import { SERVER_NAME } from '../server/server.ts';
 
 /** The longest prefix chord gives a server, its `__` included. */
 export const PREFIX_CHARS = 27;
@@ -27,6 +28,13 @@ export const PREFIX_CHARS = 27;
 /** libfx's limit on a tool's name, and the characters it keeps. */
 const NAME_CHARS = 64;
 const NAME = /^[A-Za-z0-9_-]+$/u;
+
+/** chord's own server's tools that only read. */
+export const READ_ONLY: ReadonlySet<string> = new Set([
+  'list_agents',
+  'get_budgets',
+  'list_monitors',
+]);
 
 /** How long a server has to connect and list its tools. */
 export const CONNECT_MS = 30_000;
@@ -310,6 +318,17 @@ export async function openMcp(
           await adapter.close().catch(() => {});
 
           return { server, reason: problem };
+        }
+
+        // chord's own server, by the name it reports and nothing else: its
+        // read-only tools may run twice (owner, CHD-485), as libfx lets a
+        // host mark them.
+        if (client.getServerVersion?.()?.name === SERVER_NAME) {
+          for (const [index, tool] of adapter.tools.entries()) {
+            if (READ_ONLY.has(String(wrapped.listed[index]?.name))) {
+              tool.idempotent = true;
+            }
+          }
         }
 
         return { server, adapter, listed: wrapped.listed };

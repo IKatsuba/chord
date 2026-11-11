@@ -628,3 +628,18 @@ test('control characters in team and member names report list_teams problems (CH
     });
   }
 });
+
+test('the fake riff team has riff as its lead and its member (CHD-610)', async () => {
+  const read = parseTeam(
+    'riff',
+    await readFile(
+      fileURLToPath(new URL('./fixtures/teams/fake/riff.md', import.meta.url)),
+      'utf8',
+    ),
+    ['riff'],
+  );
+
+  assert('team' in read, 'problem' in read ? read.problem : '');
+  expect(read.team.lead.agent).toBe('riff');
+  expect(read.team.members.map((member) => member.agent)).toEqual(['riff']);
+});

@@ -336,6 +336,17 @@ describe('an agent set to take no MCP servers is given none, whatever it adverti
 });
 
 describe('riff takes no SSE server (CHD-610)', () => {
+  test("chord's own server goes to riff over HTTP like any agent's", () => {
+    expect(
+      serversFor(
+        'riff',
+        riffInit('1.2.3').agentCapabilities?.mcpCapabilities ?? undefined,
+        [],
+        CHORD,
+      ).servers,
+    ).toEqual([CHORD]);
+  });
+
   test('an SSE server is held back from riff with the usual reason', () => {
     const given = serversFor(
       'riff',

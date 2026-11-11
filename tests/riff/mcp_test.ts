@@ -106,6 +106,36 @@ describe('riff MCP prefixes', () => {
   });
 });
 
+describe("chord's own MCP server for riff", () => {
+  test('its read-only tools are idempotent, by the name the server reports and nothing else', async () => {
+    const own = serveFakeMcp('chord', 'chord');
+    const lookalike = serveFakeMcp('not-chord', 'chord');
+
+    cleanups.push(
+      () => own.close(),
+      () => lookalike.close(),
+    );
+
+    // The server chord gives may go as `chord-2`; a user's may take `chord`.
+    const tools = await opened([
+      { type: 'http', name: 'chord-2', url: own.url, headers: [] },
+      { type: 'http', name: 'chord', url: lookalike.url, headers: [] },
+    ]);
+
+    expect(
+      tools.tools
+        .filter((tool) => tool.idempotent)
+        .map((tool) => tool.name)
+        .sort(),
+    ).toEqual([
+      'chord-2__get_budgets',
+      'chord-2__list_agents',
+      'chord-2__list_monitors',
+    ]);
+    expect(tools.tools).toHaveLength(10);
+  });
+});
+
 describe('riff MCP transports', () => {
   test('stdio and streamable HTTP as the SDK makes them; no SSE', () => {
     expect(transportOf(stdio('n', 'ok'), '/')).toBeInstanceOf(

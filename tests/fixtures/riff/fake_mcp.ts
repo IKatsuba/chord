@@ -10,10 +10,11 @@ import { z } from '@zod/zod';
 import { serve } from '../../../src/platform/serve.ts';
 
 /**
- * How the fake behaves: plainly, with a tool name libfx would change, or
- * with tools that ask the person through the client.
+ * How the fake behaves: plainly, with a tool name libfx would change, with
+ * tools that ask the person through the client, or with chord's own tool
+ * names.
  */
-export type FakeMcpMode = 'ok' | 'badname' | 'ask';
+export type FakeMcpMode = 'ok' | 'badname' | 'ask' | 'chord';
 
 /** The fake server, its tools registered. */
 export function fakeMcpServer(
@@ -44,6 +45,19 @@ export function fakeMcpServer(
 
   if (mode === 'ask') {
     asking(server);
+  }
+
+  if (mode === 'chord') {
+    for (const tool of [
+      'list_agents',
+      'get_budgets',
+      'list_monitors',
+      'send_message',
+    ]) {
+      server.registerTool(tool, { description: `chord's ${tool}.` }, () => ({
+        content: [{ type: 'text', text: tool }],
+      }));
+    }
   }
 
   if (extra !== undefined) {

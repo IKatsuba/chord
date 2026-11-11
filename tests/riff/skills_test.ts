@@ -302,3 +302,41 @@ describe('CHD-610 tester: skill discovery boundaries', () => {
     expect(validName('😀'.repeat(65))).toBe(false);
   });
 });
+
+describe('CHD-610 tester: skipped skill containment', () => {
+  test('a project path prefix does not admit a linked sibling skill', async () => {
+    const sibling = `${project}-private`;
+
+    await mkdir(sibling);
+    await writeFile(join(sibling, 'SKILL.md'), md('outside', 'Secret rules'));
+    await mkdir(join(project, '.agents', 'skills'), { recursive: true });
+    await symlink(sibling, join(project, '.agents', 'skills', 'outside'));
+
+    const found = await findSkills({ directory: project, home: undefined });
+
+    expect(found.skills).toEqual([]);
+    expect(found.skipped).toEqual([
+      {
+        name: 'outside',
+        reason: 'its folder links outside the project, to ../project-private',
+      },
+    ]);
+  });
+
+  test('a skipped project link cannot hide a valid home skill with that name', async () => {
+    const outside = join(root, 'outside');
+
+    await mkdir(outside);
+    await writeFile(join(outside, 'SKILL.md'), md('shared', 'Outside rules'));
+    await mkdir(join(project, '.agents', 'skills'), { recursive: true });
+    await symlink(outside, join(project, '.agents', 'skills', 'shared'));
+    await skill(home, 'shared', md('shared', 'Allowed home rules'));
+
+    const found = await findSkills({ directory: project, home });
+
+    expect(found.skills).toHaveLength(1);
+    expect(found.skills[0]?.description).toBe('Allowed home rules');
+    expect(found.skipped).toHaveLength(1);
+    expect(found.skipped[0]?.name).toBe('shared');
+  });
+});

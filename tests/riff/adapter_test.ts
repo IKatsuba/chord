@@ -18,6 +18,8 @@ import {
   rm,
   writeFile,
 } from 'node:fs/promises';
+import { agentStart } from '../../src/agents.ts';
+import { openAgent } from '../../src/acp/connection.ts';
 import { tmpdir } from 'node:os';
 import { basename, join } from 'node:path';
 import {
@@ -3102,5 +3104,185 @@ describe('riff relays MCP elicitations to the window', () => {
       ),
     ).toBe(false);
     expect(JSON.stringify(client.updates(sessionId))).toContain('elicitation');
+  });
+});
+
+describe('CHD-610 tester: MCP permission ownership', () => {
+  const pendingAsks = () =>
+    client.messages.filter(
+      (message) => message.method === 'session/request_permission',
+    );
+
+  async function session(mode: 'ask' | 'auto' = 'ask') {
+    const calls = join(stateDir, 'mcp-calls');
+    const answer = await client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [
+        {
+          name: 'notes',
+          command: process.execPath,
+          args: [
+            join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts'),
+            'ok',
+          ],
+          env: [{ name: 'CALLS_FILE', value: calls }],
+        },
+      ],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    expect(answer.error).toBeUndefined();
+    await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'mode',
+      value: mode,
+    });
+
+    return { sessionId, calls };
+  }
+
+  async function askedCall(sessionId: string, title: string) {
+    const seen = new Set(pendingAsks().map((message) => message.id));
+    const work = prompt(
+      sessionId,
+      `call notes__save_note ${JSON.stringify({ title })}`,
+    );
+    const ask = await client.until(
+      (message) =>
+        message.method === 'session/request_permission' &&
+        !seen.has(message.id),
+    );
+
+    return { work, ask };
+  }
+
+  test('a tool grant in one live session never admits another session', async () => {
+    await open();
+
+    const first = await session();
+    let secondAsks = 0;
+    const second = await openAgent({
+      command: agentStart('riff').command,
+      env: {
+        CHORD_RIFF_FAKE_PROVIDER: fake.url,
+        CHORD_RESOURCE_FIXTURE: 'true',
+        HOME: stateDir,
+        XDG_CONFIG_HOME: stateDir,
+        XDG_STATE_HOME: join(stateDir, 'second'),
+      },
+      cwd: process.cwd(),
+      onTraffic: () => {},
+      onPermission: () => {
+        secondAsks++;
+
+        return Promise.resolve({ outcome: { outcome: 'cancelled' } });
+      },
+      onElicitation: () => Promise.resolve({ action: 'decline' }),
+      stop: { exitMs: 300, termMs: 300, killMs: 2000 },
+    });
+
+    try {
+      const other = await second.newSession({
+        cwd: process.cwd(),
+        mcpServers: [
+          {
+            name: 'notes',
+            command: process.execPath,
+            args: [
+              join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts'),
+              'ok',
+            ],
+            env: [{ name: 'CALLS_FILE', value: first.calls }],
+          },
+        ],
+      });
+
+      await second.setConfigOption({
+        sessionId: other.sessionId,
+        configId: 'mode',
+        value: 'ask',
+      });
+
+      const allowed = await askedCall(first.sessionId, 'first');
+
+      client.respond(allowed.ask.id!, {
+        outcome: { outcome: 'selected', optionId: 'allow_session' },
+      });
+      await allowed.work;
+      await second.prompt({
+        sessionId: other.sessionId,
+        prompt: [
+          { type: 'text', text: 'call notes__save_note {"title":"second"}' },
+        ],
+      });
+
+      const before = pendingAsks().length;
+
+      await prompt(first.sessionId, 'call notes__save_note {"title":"third"}');
+
+      expect(secondAsks).toBe(1);
+      expect(pendingAsks()).toHaveLength(before);
+      expect(await readFile(first.calls, 'utf8')).toBe('first\nthird\n');
+    } finally {
+      await second.close();
+    }
+  });
+
+  test('cancelling an MCP ask ignores a late grant and the next turn asks again', async () => {
+    await open();
+
+    const { sessionId, calls } = await session();
+    const cancelled = await askedCall(sessionId, 'cancelled');
+
+    client.notify('session/cancel', { sessionId });
+    expect((await cancelled.work).result?.['stopReason']).toBe('cancelled');
+    client.respond(cancelled.ask.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow_session' },
+    });
+
+    const next = await askedCall(sessionId, 'next');
+
+    client.respond(next.ask.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow' },
+    });
+    await next.work;
+
+    expect(await readFile(calls, 'utf8')).toBe('next\n');
+  });
+
+  test('an unavailable MCP review denies without granting the next call', async () => {
+    let reviews = 0;
+
+    await open(true, {
+      review: () => {
+        reviews++;
+
+        return Promise.resolve({
+          outcome: 'unavailable',
+          reason: 'Fixture review unavailable.',
+        });
+      },
+    });
+
+    const { sessionId, calls } = await session('auto');
+    const denied = await askedCall(sessionId, 'denied');
+
+    client.respond(denied.ask.id!, {
+      outcome: { outcome: 'selected', optionId: 'deny' },
+    });
+    await denied.work;
+
+    const next = await askedCall(sessionId, 'allowed');
+
+    client.respond(next.ask.id!, {
+      outcome: { outcome: 'selected', optionId: 'allow' },
+    });
+    await next.work;
+
+    expect(reviews).toBe(2);
+    expect(await readFile(calls, 'utf8')).toBe('allowed\n');
+    expect(JSON.stringify(client.updates(sessionId))).toContain(
+      'The person denied this call.',
+    );
   });
 });

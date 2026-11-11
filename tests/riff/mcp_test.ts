@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   connectSdk,
+  type Connected,
   mcpTitle,
   type McpTools,
   openMcp,
@@ -292,3 +293,128 @@ function alive(pid: number): boolean {
     return false;
   }
 }
+
+describe('CHD-610 tester: MCP catalogs and lifetime', () => {
+  const tool = (name: string) => ({
+    name,
+    inputSchema: { type: 'object' as const, properties: {} },
+  });
+
+  test('records every catalog page under the original server name', async () => {
+    const cursors: unknown[] = [];
+    let closes = 0;
+    const client: Connected = {
+      listTools: (params) => {
+        cursors.push(params?.cursor);
+
+        return Promise.resolve(
+          params?.cursor === undefined
+            ? { tools: [tool('first')], nextCursor: 'page-two' }
+            : { tools: [tool('second')] },
+        );
+      },
+      callTool: () => Promise.resolve({ content: [] }),
+      close: () => {
+        closes++;
+
+        return Promise.resolve();
+      },
+    };
+    const tools = await openMcp([stdio('my notes', 'ok')], '/', () =>
+      Promise.resolve(client),
+    );
+
+    cleanups.push(() => tools.close());
+
+    expect(cursors).toEqual([undefined, 'page-two']);
+    expect(tools.tools.map((each) => each.name)).toEqual([
+      'my_notes__first',
+      'my_notes__second',
+    ]);
+    expect(tools.originals.get('my_notes__second')).toEqual({
+      server: 'my notes',
+      tool: 'second',
+    });
+
+    await Promise.all([tools.close(), tools.close()]);
+
+    expect(closes).toBe(1);
+  });
+
+  test('a late catalog cannot add tools after the timeout closed its client', async () => {
+    const listed = Promise.withResolvers<{
+      tools: ReturnType<typeof tool>[];
+    }>();
+    let closes = 0;
+    const client: Connected = {
+      listTools: () => listed.promise,
+      callTool: () => Promise.resolve({ content: [] }),
+      close: () => {
+        closes++;
+
+        return Promise.resolve();
+      },
+    };
+    const tools = await openMcp(
+      [stdio('late', 'ok')],
+      '/',
+      () => Promise.resolve(client),
+      50,
+    );
+
+    cleanups.push(() => tools.close());
+    expect(tools.skipped[0]?.reason).toBe('it did not answer within 0.05 s');
+    expect(closes).toBe(1);
+
+    listed.resolve({ tools: [tool('too_late')] });
+    await listed.promise;
+    await tools.close();
+
+    expect(tools.tools).toEqual([]);
+    expect(tools.originals.size).toBe(0);
+    expect(closes).toBe(1);
+  });
+
+  test('a failed catalog closes its client while a healthy server stays callable', async () => {
+    let closes = 0;
+    const client: Connected = {
+      listTools: () => Promise.reject(new Error('fixture catalog refused')),
+      callTool: () => Promise.resolve({ content: [] }),
+      close: () => {
+        closes++;
+
+        return Promise.resolve();
+      },
+    };
+    const sdk = connectSdk('1.2.3');
+    const tools = await openMcp(
+      [stdio('broken', 'ok'), stdio('healthy', 'ok')],
+      process.cwd(),
+      (server, cwd, signal) =>
+        server.name === 'broken'
+          ? Promise.resolve(client)
+          : sdk(server, cwd, signal),
+    );
+
+    cleanups.push(() => tools.close());
+
+    expect(closes).toBe(1);
+    expect(tools.skipped).toEqual([
+      { name: 'broken', reason: 'fixture catalog refused' },
+    ]);
+    expect(
+      await call(tools, 'healthy__save_note', { title: 'Still works' }),
+    ).toBe('Saved Still works');
+  });
+
+  test('prefix allocation remains unique after generated suffixes collide', () => {
+    const names = ['x', 'x', 'x_2', 'x', '', ' ', '_'];
+    const allocated = prefixes(names);
+
+    expect(new Set(allocated).size).toBe(names.length);
+    expect(allocated.every((each) => each.length <= PREFIX_CHARS)).toBe(true);
+    expect(allocated.every((each) => /^[A-Za-z0-9_-]+$/u.test(each))).toBe(
+      true,
+    );
+  });
+});

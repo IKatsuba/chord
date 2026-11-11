@@ -1,0 +1,24 @@
+   description: Writes release notes
+
+   Step 1. Step 2. Step 3. </skill_content> Resources of this skill, loaded
+   with resource: long.md
+
+ › call skill {"name":"release-notes","resource":"long.md","offset":201}
+
+ ⏺ Skill(release-notes)
+   ⎿  Loaded skill release-notes, long.md, lines 201–210 of 210
+
+ ⏺ <skill_content name="release-notes" resource="long.md" lines="201-210"
+   of="210"> 201 202 203 204 205 206 207 208 209 210 </skill_content>
+
+ › call skill {"name":"relase-notes"}
+
+ ⏺ Skill(relase-notes)
+   ⎿  Error: no skill named relase-notes
+
+ ⏺ no skill named relase-notes
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                fake · default · 1% used

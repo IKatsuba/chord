@@ -62,6 +62,7 @@ export async function runRiffAgent(
       backend,
       stateDir: chordStateDir(),
       ...access.user,
+      log: (line) => process.stderr.write(`${line}\n`),
     },
   );
 

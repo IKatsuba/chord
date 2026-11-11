@@ -9,6 +9,7 @@ import {
   type AgentContext,
   type ContentBlock,
   type InitializeResponse,
+  type McpServer,
   type PermissionOption,
   RequestError,
   type SessionUpdate,
@@ -44,6 +45,14 @@ import {
 } from './models.ts';
 import { readInstructions } from './instructions.ts';
 import { discoverSkills, skillsSection } from './skills.ts';
+import {
+  type Connect,
+  connectSdk,
+  mcpTitle,
+  type McpTools,
+  openMcp,
+  skippedNote,
+} from './mcp.ts';
 import { RIFF } from './start.ts';
 import type { Grants } from './tools/permission.ts';
 import { drawn, riffTools } from './tools/tools.ts';
@@ -91,6 +100,10 @@ export interface RiffOptions {
   readonly configHome?: string;
   /** The home directory, for the user's skills; none reads none. */
   readonly home?: string;
+  /** Connects an MCP server: the SDK's client but in tests. */
+  readonly connectMcp?: Connect;
+  /** A line for riff's log, stderr in the binary; none in tests. */
+  readonly log?: (line: string) => void;
   /** Complete shell environment for in-process fixtures; inherited when omitted. */
   readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
@@ -159,6 +172,10 @@ interface Open {
   /** The session's directory, as its real path: where its tools work. */
   readonly directory: string;
   readonly finder: Finder;
+  /** The session's MCP servers' tools, and their original names. */
+  readonly mcp: McpTools;
+  /** chord's notes for the window ahead of the next prompt's reply. */
+  readonly notices: string[];
   readonly credential: CredentialCell | undefined;
   readonly authorization: ReturnType<typeof planProvider> | undefined;
   config: RiffConfig;
@@ -233,6 +250,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
    */
   const start = async (
     cwd: string,
+    servers: readonly McpServer[],
     client: AgentContext,
     resumed?: {
       readonly id: string;
@@ -297,7 +315,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         provider = { plan, cell };
       }
 
-      return made(provider, cwd, resumed);
+      return made(provider, cwd, servers, resumed);
     })();
 
     try {
@@ -337,9 +355,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const made = async (
     provider: SelectedProvider,
     cwd: string,
+    servers: readonly McpServer[],
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
-    const session = await create(provider, cwd, resumed);
+    const session = await create(provider, cwd, servers, resumed);
 
     try {
       await save(session);
@@ -363,6 +382,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const create = async (
     provider: SelectedProvider,
     cwd: string,
+    servers: readonly McpServer[],
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
     const plan: RiffPlan = provider.plan;
@@ -437,6 +457,16 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     });
 
     const listed = skillsSection(skills);
+    const mcp = await openMcp(
+      servers,
+      directory,
+      options.connectMcp ?? connectSdk(options.version),
+    );
+    const notices = mcp.skipped.map(skippedNote);
+
+    for (const notice of notices) {
+      options.log?.(`riff: ${notice}`);
+    }
 
     const finder = (options.openFinder ?? openFinder)(directory);
     const fx = (options.createAgent ?? createFxAgent)({
@@ -448,9 +478,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       ...selectedProvider,
       fetch: options.fetch ?? globalThis.fetch,
       model: config.model,
-      tools:
-        options.tools ??
-        riffTools({
+      tools: options.tools ?? [
+        ...riffTools({
           directory,
           finder,
           skills,
@@ -529,6 +558,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           ask: (toolCall, permissionOptions, signal, metadata) =>
             ask(holder.open, toolCall, permissionOptions, signal, metadata),
         }),
+        ...mcp.tools,
+      ],
       hooks: {
         onEvent: (event) => {
           if (
@@ -546,7 +577,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     try {
       id = resumed?.id ?? (await fx.newSessionId());
     } catch (error) {
-      await closeBoth(fx, finder);
+      await closeBoth(fx, finder, mcp);
 
       throw error;
     }
@@ -554,7 +585,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     // The connection went while the session was being made: nobody will
     // close it but this.
     if (gone) {
-      await closeBoth(fx, finder);
+      await closeBoth(fx, finder, mcp);
 
       throw RequestError.internalError(undefined, 'the connection closed');
     }
@@ -565,6 +596,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       agent: fx,
       directory,
       finder,
+      mcp,
+      notices,
       credential,
       authorization,
       config: { model: config.model, effort: config.effort, mode: config.mode },
@@ -653,14 +686,19 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   /** Ends the session's libfx agent and its finder. */
   const closeOpen = async (session: Open) => {
     try {
-      await closeBoth(session.agent, session.finder);
+      await closeBoth(session.agent, session.finder, session.mcp);
     } finally {
       await finishReviews(session);
     }
   };
 
-  const drawIn = (session: Open) => (name: string, input: unknown) =>
-    drawn(session.directory, name, input);
+  const drawIn = (session: Open) => (name: string, input: unknown) => {
+    const original = session.mcp.originals.get(name);
+
+    return original === undefined
+      ? drawn(session.directory, name, input)
+      : { title: mcpTitle(original), kind: 'other' as const };
+  };
 
   /**
    * Sends the window a call the turn's events have not sent yet: a tool
@@ -764,7 +802,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const connection = agent({ name: RIFF })
     .onRequest('initialize', () => riffInit(options.version))
     .onRequest('session/new', async ({ params, client }) => {
-      const session = await start(params.cwd, client);
+      const session = await start(params.cwd, params.mcpServers, client);
 
       return {
         sessionId: session.id,
@@ -779,7 +817,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         throw RequestError.sessionNotFound(params.sessionId);
       }
 
-      const session = await start(params.cwd, client, {
+      const session = await start(params.cwd, params.mcpServers ?? [], client, {
         id: params.sessionId,
         sidecar,
       });
@@ -881,6 +919,16 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         );
 
         session.reviews = new ReviewTurn(session.safetyReview);
+
+        // chord's own notes go to the window alone, never to libfx's history.
+        const notes = session.notices.splice(0);
+
+        if (notes.length > 0) {
+          await notify(client, session.id, {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: `${notes.join('\n')}\n\n` },
+          });
+        }
 
         const turn = session.agent
           .session(session.id, { model: { id: model, effort } })
@@ -1007,11 +1055,19 @@ async function ask(
 }
 
 /**
- * Ends a libfx agent and its finder together: the finder neither waits on a
- * close that waits on a turn nor is skipped by one that fails.
+ * Ends a libfx agent, its finder and its MCP clients together: none waits
+ * on a close that waits on a turn nor is skipped by one that fails.
  */
-async function closeBoth(agent: FxAgent, finder: Finder): Promise<void> {
-  const [closed] = await Promise.allSettled([agent.close(), finder.destroy()]);
+async function closeBoth(
+  agent: FxAgent,
+  finder: Finder,
+  mcp: McpTools,
+): Promise<void> {
+  const [closed] = await Promise.allSettled([
+    agent.close(),
+    finder.destroy(),
+    mcp.close(),
+  ]);
 
   if (closed.status === 'rejected') {
     throw closed.reason;

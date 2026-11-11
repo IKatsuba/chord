@@ -2650,3 +2650,75 @@ describe('riff skills at session start', () => {
     expect(JSON.stringify(updates)).not.toContain('request_permission');
   });
 });
+
+describe('riff MCP servers in a session', () => {
+  const STDIO = join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts');
+  const stdio = (name: string, mode: string, pidFile?: string) => ({
+    name,
+    command: process.execPath,
+    args: [STDIO, mode],
+    env: pidFile === undefined ? [] : [{ name: 'PID_FILE', value: pidFile }],
+  });
+
+  test('a call is titled by its original names; a skipped server is noted ahead of the reply; close ends the server', async () => {
+    const pidFile = join(stateDir, 'pid');
+    const logged: string[] = [];
+
+    await open(true, { log: (line) => logged.push(line) });
+
+    const answer = await client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [stdio('my notes', 'ok', pidFile), stdio('broken', 'crash')],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toStartWith('riff: MCP server broken was not started: ');
+
+    await prompt(sessionId, 'call my_notes__save_note {"title":"Deploy"}');
+
+    const updates = client.updates(sessionId);
+    const said = updates.findIndex(
+      (update) => update.sessionUpdate === 'agent_message_chunk',
+    );
+    const call = updates.findIndex(
+      (update) => update.sessionUpdate === 'tool_call',
+    );
+
+    expect(JSON.stringify(updates[said])).toContain(
+      'MCP server broken was not started: ',
+    );
+    expect(JSON.stringify(updates[said])).toContain(
+      'notes: no database at ./notes.db',
+    );
+    expect(said).toBeLessThan(call);
+    expect(updates[call]).toMatchObject({
+      title: 'mcp__my notes__save_note',
+      kind: 'other',
+      rawInput: { title: 'Deploy' },
+    });
+    expect(JSON.stringify(updates)).toContain('Saved Deploy');
+
+    // The note is the window's, never the model's history.
+    expect(JSON.stringify(fake.requests)).not.toContain('was not started');
+
+    // Shown once: the next prompt has no note.
+    await prompt(sessionId, 'hello');
+    expect(
+      JSON.stringify(client.updates(sessionId)).split('was not started'),
+    ).toHaveLength(2);
+
+    const pid = Number(await readFile(pidFile, 'utf8'));
+
+    await client.request('session/close', { sessionId });
+    await until(() => {
+      try {
+        process.kill(pid, 0);
+
+        return false;
+      } catch {
+        return true;
+      }
+    });
+  });
+});

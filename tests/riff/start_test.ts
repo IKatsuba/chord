@@ -128,3 +128,25 @@ describe("the fake provider's model list (CHD-611)", () => {
     ).toThrow('CHORD_RIFF_FAKE_MODELS takes codex or grok, not gpt-6.1-sol');
   });
 });
+
+describe('CHD-611 tester: fake model override boundaries', () => {
+  test('invalid model overrides are inert when no fake provider was selected', () => {
+    for (const provider of [undefined, '']) {
+      expect(
+        fakeProvider({
+          [FAKE_PROVIDER_ENV]: provider,
+          [FAKE_MODELS_ENV]: 'invalid-plan',
+        }),
+      ).toBeUndefined();
+    }
+  });
+
+  test('a blank model override keeps the fake-only default', () => {
+    expect(
+      fakeProvider({
+        [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+        [FAKE_MODELS_ENV]: '',
+      }),
+    ).toEqual({ baseUrl: 'http://localhost:1/v1' });
+  });
+});

@@ -170,3 +170,52 @@ describe('riff skills in the instructions', () => {
     expect(text).toMatch(/\(\d+ more skills are not listed\.\)$/u);
   });
 });
+
+describe('CHD-610 tester: skill discovery boundaries', () => {
+  test('duplicate names within the project use folder order before user skills', async () => {
+    await skill(project, 'z-last', md('shared', 'Later project'));
+    await skill(project, 'a-first', md('shared', 'First project'));
+    await skill(home, 'shared', md('shared', 'User copy'));
+
+    const found = await discoverSkills({ directory: project, home });
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.description).toBe('First project');
+    expect(found[0]?.directory).toEndWith('/a-first');
+  });
+
+  test('a nested session reads its own skills, with no ancestor fallback', async () => {
+    const nested = join(project, 'nested');
+
+    await mkdir(nested);
+    await skill(project, 'parent', md('parent', 'Parent only'));
+    await skill(nested, 'child', md('child', 'Child only'));
+
+    expect(
+      (await discoverSkills({ directory: nested, home: undefined })).map(
+        (each) => each.name,
+      ),
+    ).toEqual(['child']);
+  });
+
+  test('discovery lists metadata without inlining the body', async () => {
+    await skill(
+      project,
+      'notes',
+      `${md('notes', 'A summary')}private-body-marker`,
+    );
+
+    const found = await discoverSkills({ directory: project, home: undefined });
+    const listed = skillsSection(found);
+
+    expect(listed).toContain('notes: A summary');
+    expect(listed).not.toContain('private-body-marker');
+  });
+
+  test('the name limit counts UTF-8 bytes', () => {
+    expect(validName('界'.repeat(85))).toBe(true);
+    expect(validName('界'.repeat(86))).toBe(false);
+    expect(validName('😀'.repeat(64))).toBe(true);
+    expect(validName('😀'.repeat(65))).toBe(false);
+  });
+});

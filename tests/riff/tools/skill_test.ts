@@ -178,3 +178,128 @@ describe("riff's skill tool", () => {
     ).rejects.toThrow();
   });
 });
+
+describe('CHD-610 tester: skill resource boundaries', () => {
+  test('byte-limited pages resume without omitting or duplicating a line', async () => {
+    const directory = skills[0]!.directory;
+    const line = '界'.repeat(1000);
+    const count = 120;
+
+    await writeFile(
+      join(directory, 'bytes.md'),
+      Array(count).fill(line).join('\n'),
+    );
+
+    const first = await loadSkill(
+      skills,
+      { name: 'notes', resource: 'bytes.md' },
+      live(),
+    );
+    const body = first.text.slice(
+      first.text.indexOf('>\n') + 2,
+      first.text.indexOf('\n</skill_content>'),
+    );
+    const returned = body.split('\n').length;
+
+    expect(new TextEncoder().encode(body).length).toBeLessThanOrEqual(
+      LIMITS.readBytes,
+    );
+    expect(returned).toBeLessThan(count);
+    expect(first.text).toContain(
+      `call skill again with offset ${returned + 1}`,
+    );
+
+    const next = await loadSkill(
+      skills,
+      { name: 'notes', resource: 'bytes.md', offset: returned + 1 },
+      live(),
+    );
+    const remainder = next.text.slice(
+      next.text.indexOf('>\n') + 2,
+      next.text.indexOf('\n</skill_content>'),
+    );
+
+    expect(returned + remainder.split('\n').length).toBe(count);
+    expect(next.text).not.toContain('More from line');
+  });
+
+  test('a cut at an odd surrogate boundary keeps a whole character', async () => {
+    await writeFile(
+      join(skills[0]!.directory, 'surrogate.md'),
+      `x${'😀'.repeat(LIMITS.readLineChars)}\n`,
+    );
+
+    const loaded = await loadSkill(
+      skills,
+      { name: 'notes', resource: 'surrogate.md' },
+      live(),
+    );
+    const body = loaded.text.slice(
+      loaded.text.indexOf('>\n') + 2,
+      loaded.text.indexOf('\n</skill_content>'),
+    );
+
+    expect(body).toBe(`x${'😀'.repeat(999)}…`);
+    expect(body).not.toContain('�');
+    expect(loaded.text).toContain('nothing reads past the cut');
+  });
+
+  test('directory links cannot reach a sibling with the same path prefix', async () => {
+    const directory = skills[0]!.directory;
+    const sibling = `${directory}-private`;
+
+    await mkdir(sibling);
+    await writeFile(join(sibling, 'secret.md'), 'outside marker');
+    await symlink(sibling, join(directory, 'escape'));
+
+    await expect(
+      loadSkill(
+        skills,
+        { name: 'notes', resource: 'escape/secret.md' },
+        live(),
+      ),
+    ).rejects.toThrow("outside the skill's folder; not read");
+  });
+
+  test('a linked SKILL.md outside the discovered folder is refused', async () => {
+    const directory = join(root, 'linked-main');
+
+    await mkdir(directory);
+    await symlink(join(root, 'secret.txt'), join(directory, 'SKILL.md'));
+
+    await expect(
+      loadSkill(
+        [{ name: 'linked', description: '', directory }],
+        { name: 'linked' },
+        live(),
+      ),
+    ).rejects.toThrow("outside the skill's folder; not read");
+  });
+
+  test('an over-limit resource refuses without poisoning the next load', async () => {
+    await writeFile(
+      join(skills[0]!.directory, 'large.md'),
+      'x'.repeat(LIMITS.skillBytes + 1),
+    );
+
+    await expect(
+      loadSkill(skills, { name: 'notes', resource: 'large.md' }, live()),
+    ).rejects.toThrow('over 4 MiB; not read');
+
+    expect((await loadSkill(skills, { name: 'notes' }, live())).shown).toBe(
+      'Loaded skill notes (6 lines)',
+    );
+  });
+
+  test('cancellation after dispatch leaves independent loads usable', async () => {
+    const controller = new AbortController();
+    const pending = loadSkill(skills, { name: 'notes' }, controller.signal);
+
+    controller.abort();
+
+    await expect(pending).rejects.toThrow();
+    expect((await loadSkill(skills, { name: 'notes' }, live())).shown).toBe(
+      'Loaded skill notes (6 lines)',
+    );
+  });
+});

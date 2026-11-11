@@ -2078,9 +2078,16 @@ needs. `docs/decisions.md` records why the stack is what it is.
 for the test agent, `--fake riff` for riff on its fake provider), `test`,
 `compile` (`--all` or `--install`), `npm`,
 `registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
-`selftest <binary>` and `release [version]`. `chord --qa [name]` recreates
-`/tmp/chord-qa.<name>` for captures, or `/tmp/chord-qa` without a name; an
-empty name disables it. Both `--fake` and `--qa` run riff on its fake
+`selftest <binary>` and `release [version]`. `bun dev chord --qa [name]`
+recreates `/tmp/chord-qa.<name>` for captures and its sibling
+`/tmp/chord-qa.<name>.state` for chord's state. Without a name, these are
+`/tmp/chord-qa` and `/tmp/chord-qa.state`; an empty name disables QA.
+`--fake` without `--qa`, for chord or riff, uses `/tmp/chord-fake`, made if
+missing and kept across runs so fake sessions resume. `--qa` takes precedence.
+These runs set only `XDG_STATE_HOME`: records, riff's store, sidecars and
+provider record stay out of your own state; config, data and cache are
+unchanged. Plain `bun dev chord` keeps your XDG state.
+Both `--fake` and `--qa` run riff on its fake
 provider. A settings command ranks riff with other settings agents in
 `/new`. For riff captures, use `bun dev chord --fake --qa capture riff`:
 both flags must come before `riff`.

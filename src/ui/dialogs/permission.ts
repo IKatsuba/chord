@@ -3,6 +3,7 @@
  * component. ink-select-input moves the highlight and reads 1–9, ↑/↓, j/k
  * and Enter; this module says what is on the list and what a pick answers.
  */
+import { type PathView, shownDirectory } from '../transcript/tools/paths.ts';
 import type { PermissionOption } from '@agentclientprotocol/sdk/unstable';
 import stringWidth from 'string-width';
 import type {
@@ -85,12 +86,22 @@ function allows(option: PermissionOption): boolean {
  * title already (`Write notes.txt`), and a second line saying `notes.txt`
  * only repeats it.
  */
-export function locationsShown(wait: PermissionWait): string[] {
+export function locationsShown(
+  wait: PermissionWait,
+  paths?: PathView,
+): string[] {
   const title = wait.title ?? '';
 
-  return (wait.locations ?? [])
-    .map((location) => location.path)
-    .filter((path) => !title.endsWith(path));
+  return (
+    (wait.locations ?? [])
+      .map((location) => location.path)
+      .filter((path) => !title.endsWith(path))
+      // A command's location is where it runs, said as the header says it
+      // (CHD-611); the wire keeps ACP's absolute path.
+      .map((path) =>
+        wait.kind === 'execute' ? `in ${shownDirectory(path, paths)}` : path,
+      )
+  );
 }
 
 /**
@@ -153,6 +164,7 @@ export function requestRows(
   width: number,
   titleWidth = width,
   tones?: CodeTones,
+  paths?: PathView,
 ): { readonly pinned: string; readonly rows: readonly RequestRow[] } {
   const wrapped = (text: string, room: number) =>
     text.split('\n').flatMap((line) => wrapLine(line, room));
@@ -171,7 +183,7 @@ export function requestRows(
     pinned,
     rows: [
       ...title.map((text) => ({ text, kind: 'title' as const })),
-      ...locationsShown(wait).flatMap((path) =>
+      ...locationsShown(wait, paths).flatMap((path) =>
         wrapped(path, width).map((text) => ({
           text,
           kind: 'location' as const,

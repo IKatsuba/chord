@@ -126,9 +126,12 @@ export function diffView(
   };
 }
 
-/** `Updated src/a.ts with 2 additions and 1 removal`. */
-export function diffHeadline(view: DiffView): string {
-  return `Updated ${view.path} with ${plural(view.added, 'addition')} and ${plural(
+/**
+ * `Updated src/a.ts with 2 additions and 1 removal`, the file named as
+ * `path` gives it: the window's short form of `view.path`.
+ */
+export function diffHeadline(view: DiffView, path = view.path): string {
+  return `Updated ${path} with ${plural(view.added, 'addition')} and ${plural(
     view.removed,
     'removal',
   )}`;

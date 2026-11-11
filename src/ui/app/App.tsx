@@ -46,6 +46,7 @@ import type { ChordServer } from '../../server/server.ts';
 import { agentOf, noAgents } from '../../session/window_agents.ts';
 import { programStatus } from '../../status.ts';
 import { promptLine } from '../../session/record.ts';
+import { pathView } from '../transcript/tools/paths.ts';
 import { type EditorMode, homePath } from '../../settings.ts';
 import { runShell, type ShellOptions, type ShellProcess } from '../../shell.ts';
 import { subagentPath } from '../../session/subagents.ts';
@@ -182,6 +183,7 @@ import { useTimers } from './timers.ts';
 import {
   AgentColours,
   ChordServerName,
+  PathViews,
   type CodeActions,
   CodeBlockActions,
   type DrawnBlock,
@@ -1224,6 +1226,8 @@ export function App({
 
   const { waits, armed } = sessions.lines();
   const directory = homePath(here.cwd, home);
+  // Read once per directory: the links its paths and home resolve to.
+  const paths = useMemo(() => pathView(here.cwd, home), [here.cwd, home]);
   const firstPrompt = state.transcript.entries.find(
     (entry) => entry.kind === 'user',
   );
@@ -1492,681 +1496,703 @@ export function App({
         <ChordServerName.Provider
           value={conversation()?.session?.chordServer?.name}
         >
-          <Keys.Provider value={state.keys}>
-            <CodeBlockActions.Provider value={codeActions}>
-              {splashing && (
-                <Splash
-                  agent={frontAgent}
-                  armed={armed}
-                  closing={state.connection.status === 'closing'}
-                  columns={columns}
-                  rows={rows}
-                />
-              )}
-              {/* Under the splash the window is laid out but not drawn, so the
+          <PathViews.Provider value={paths}>
+            <Keys.Provider value={state.keys}>
+              <CodeBlockActions.Provider value={codeActions}>
+                {splashing && (
+                  <Splash
+                    agent={frontAgent}
+                    armed={armed}
+                    closing={state.connection.status === 'closing'}
+                    columns={columns}
+                    rows={rows}
+                  />
+                )}
+                {/* Under the splash the window is laid out but not drawn, so the
         keys pressed meanwhile land in it as if typed there. */}
-              <box
-                // Always given, so a window shown again is not left hidden.
-                visible={!splashing}
-                width={columns}
-                height={rows}
-                {...mouse}
-              >
-                {/* Only this box gives way when the window is full. Everything else and
+                <box
+                  // Always given, so a window shown again is not left hidden.
+                  visible={!splashing}
+                  width={columns}
+                  height={rows}
+                  {...mouse}
+                >
+                  {/* Only this box gives way when the window is full. Everything else and
         every entry is pinned with flexShrink={0}, because OpenTUI boxes shrink by
         default and Yoga would squeeze entries and the prompt box instead of
         letting the transcript run past the view, to be scrolled back to. */}
-                {/* Its basis is nothing, so when the rows under it run out it
+                  {/* Its basis is nothing, so when the rows under it run out it
         has none to keep, and a permission request taller than what is left
         gives way only after the transcript is gone (CHD-246). */}
-                <Clip
-                  ref={transcriptArea}
-                  flexGrow={1}
-                  flexShrink={1}
-                  flexBasis={0}
-                  paddingX={1}
-                  // Rows the transcript has are rows the folded list may have.
-                  renderAfter={() => {
-                    if (
-                      folded &&
-                      (transcriptArea.current?.getLayout().height ?? 0) > 0
-                    ) {
-                      setFolded(false);
-                    }
-                  }}
-                >
-                  {/* Following, the transcript hangs from the top while it fits,
+                  <Clip
+                    ref={transcriptArea}
+                    flexGrow={1}
+                    flexShrink={1}
+                    flexBasis={0}
+                    paddingX={1}
+                    // Rows the transcript has are rows the folded list may have.
+                    renderAfter={() => {
+                      if (
+                        folded &&
+                        (transcriptArea.current?.getLayout().height ?? 0) > 0
+                      ) {
+                        setFolded(false);
+                      }
+                    }}
+                  >
+                    {/* Following, the transcript hangs from the top while it fits,
           the header on the window's first row, and once it overflows it sits on the bottom and new rows push the old
           ones up; scrolled back, it hangs from the row on top, so new rows
           land below the view and nothing on screen moves. */}
-                  <Clip
-                    ref={viewport}
-                    flexGrow={1}
-                    flexShrink={1}
-                    justifyContent={
-                      state.scroll.following ? 'flex-end' : 'flex-start'
-                    }
-                  >
-                    <box
-                      ref={content}
-                      flexShrink={0}
-                      onSizeChange={measure}
-                      renderAfter={measure}
+                    <Clip
+                      ref={viewport}
+                      flexGrow={1}
+                      flexShrink={1}
+                      justifyContent={
+                        state.scroll.following ? 'flex-end' : 'flex-start'
+                      }
                     >
-                      {/* The transcript's start, drawn only with its first
+                      <box
+                        ref={content}
+                        flexShrink={0}
+                        onSizeChange={measure}
+                        renderAfter={measure}
+                      >
+                        {/* The transcript's start, drawn only with its first
               entry, as the entries above the window are not mounted. */}
-                      {first > 0 ? null : child ? (
-                        <ChildLine
-                          child={{
-                            ...child,
-                            runtime: riff.enabled
-                              ? `riff · ${riff.state.signedOut || riff.state.provider === undefined ? 'not signed in' : providerName(riff.state.provider)}`
-                              : child.runtime,
-                          }}
-                          model={
-                            riff.enabled && riff.state.signedOut
-                              ? undefined
-                              : state.models === undefined
-                                ? child.model
-                                : (state.startedModel ?? child.model)
-                          }
-                        />
-                      ) : (
-                        <Header
-                          facts={{
-                            version: manifest.version,
-                            agent: riff.enabled
-                              ? `riff · ${riff.state.signedOut ? 'not signed in' : riff.state.provider === undefined ? 'not signed in' : providerName(riff.state.provider)}`
-                              : frontAgent,
-                            model:
+                        {first > 0 ? null : child ? (
+                          <ChildLine
+                            child={{
+                              ...child,
+                              runtime: riff.enabled
+                                ? `riff · ${riff.state.signedOut || riff.state.provider === undefined ? 'not signed in' : providerName(riff.state.provider)}`
+                                : child.runtime,
+                            }}
+                            model={
                               riff.enabled && riff.state.signedOut
                                 ? undefined
-                                : state.startedModel,
-                            directory,
-                            helpKey: hintKey(state.keys, 'help:toggle'),
-                            resumed: state.resumed && {
-                              lastUsedAt: state.resumed.lastUsedAt,
-                              // The agent's title, after a child's name, as
-                              // its /resume row said (CHD-445). Without one, a
-                              // child is known by its name, as its first
-                              // prompt is its parent's; an agent's replay is
-                              // all there is of a session chord has no record
-                              // of.
-                              ...(state.resumed.title === undefined
-                                ? {
-                                    title:
-                                      state.resumed.name ??
-                                      state.resumed.prompt ??
-                                      (firstPrompt?.kind === 'user'
-                                        ? promptLine(firstPrompt.text)
-                                        : undefined),
-                                  }
-                                : {
-                                    title: sessionLabel({
-                                      prompt: state.resumed.prompt ?? '',
-                                      name: state.resumed.name,
-                                      title: state.resumed.title,
+                                : state.models === undefined
+                                  ? child.model
+                                  : (state.startedModel ?? child.model)
+                            }
+                          />
+                        ) : (
+                          <Header
+                            facts={{
+                              version: manifest.version,
+                              agent: riff.enabled
+                                ? `riff · ${riff.state.signedOut ? 'not signed in' : riff.state.provider === undefined ? 'not signed in' : providerName(riff.state.provider)}`
+                                : frontAgent,
+                              model:
+                                riff.enabled && riff.state.signedOut
+                                  ? undefined
+                                  : state.startedModel,
+                              directory,
+                              helpKey: hintKey(state.keys, 'help:toggle'),
+                              resumed: state.resumed && {
+                                lastUsedAt: state.resumed.lastUsedAt,
+                                // The agent's title, after a child's name, as
+                                // its /resume row said (CHD-445). Without one, a
+                                // child is known by its name, as its first
+                                // prompt is its parent's; an agent's replay is
+                                // all there is of a session chord has no record
+                                // of.
+                                ...(state.resumed.title === undefined
+                                  ? {
+                                      title:
+                                        state.resumed.name ??
+                                        state.resumed.prompt ??
+                                        (firstPrompt?.kind === 'user'
+                                          ? promptLine(firstPrompt.text)
+                                          : undefined),
+                                    }
+                                  : {
+                                      title: sessionLabel({
+                                        prompt: state.resumed.prompt ?? '',
+                                        name: state.resumed.name,
+                                        title: state.resumed.title,
+                                      }),
+                                      titled: true,
                                     }),
-                                    titled: true,
-                                  }),
-                            },
-                          }}
-                          columns={columns}
-                        />
-                      )}
-                      {first === 0 &&
-                        state.connection.status === 'failed' &&
-                        !(
-                          riff.enabled && state.connection.signIn !== undefined
-                        ) && (
-                          <>
-                            <Failure
-                              text={`${shownAgent} did not start: ${stepWords(
-                                state.connection.message,
-                                state.connection.failure,
-                              )}`}
-                            />
-                            {state.connection.signIn !== undefined ? (
-                              <SignInBlock
-                                agent={shownAgent}
-                                signIn={state.connection.signIn}
-                                pinned={state.connection.failure?.pinned}
-                              />
-                            ) : (
-                              state.connection.failure !== undefined && (
-                                <StartFailureBlock
-                                  agent={shownAgent}
-                                  failure={state.connection.failure}
-                                />
-                              )
-                            )}
-                          </>
+                              },
+                            }}
+                            columns={columns}
+                          />
                         )}
-                      {state.transcript.entries
-                        .slice(first)
-                        .map((entry, at) => {
-                          const index = first + at;
-                          const group = agentGroup(
-                            state.transcript.entries,
-                            index,
-                          );
-
-                          // Each entry keeps a box of its own, an empty one for a
-                          // subagent its group draws, so scrolling counts entries
-                          // as the transcript does.
-                          return (
-                            <box key={index} ref={place(index)} flexShrink={0}>
-                              {riff.state.notices
-                                .filter((notice) => notice.at === index)
-                                .map((notice, at) => (
-                                  <RiffNotice
-                                    key={`riff-${at}`}
-                                    notice={notice}
-                                  />
-                                ))}
-                              {entry.kind === 'error' &&
-                              riff.state.hiddenErrors.includes(
-                                entry.turnId,
-                              ) ? null : group === undefined ? (
-                                // Its code blocks named by its place, as the
-                                // transcript lists them (CHD-394).
-                                <ListedEntry.Provider
-                                  value={
-                                    listedText(entry) === undefined
-                                      ? undefined
-                                      : index
-                                  }
-                                >
-                                  <TranscriptEntry
-                                    entry={entry}
-                                    turn={state.transcript.turn}
-                                    agent={shownAgent}
-                                    expanded={state.expanded}
-                                    width={columns - TRANSCRIPT_INSET}
-                                  />
-                                </ListedEntry.Provider>
+                        {first === 0 &&
+                          state.connection.status === 'failed' &&
+                          !(
+                            riff.enabled &&
+                            state.connection.signIn !== undefined
+                          ) && (
+                            <>
+                              <Failure
+                                text={`${shownAgent} did not start: ${stepWords(
+                                  state.connection.message,
+                                  state.connection.failure,
+                                )}`}
+                              />
+                              {state.connection.signIn !== undefined ? (
+                                <SignInBlock
+                                  agent={shownAgent}
+                                  signIn={state.connection.signIn}
+                                  pinned={state.connection.failure?.pinned}
+                                />
                               ) : (
-                                group.length > 0 && (
-                                  <Agents
-                                    agents={group}
-                                    turn={state.transcript.turn}
+                                state.connection.failure !== undefined && (
+                                  <StartFailureBlock
                                     agent={shownAgent}
-                                    open={state.expanded}
-                                    width={columns - TRANSCRIPT_INSET}
+                                    failure={state.connection.failure}
                                   />
                                 )
                               )}
-                            </box>
-                          );
-                        })}
-                      {riff.state.notices
-                        .filter(
-                          (notice) =>
-                            notice.at >= state.transcript.entries.length,
-                        )
-                        .map((notice, at) => (
-                          <RiffNotice key={`riff-end-${at}`} notice={notice} />
+                            </>
+                          )}
+                        {state.transcript.entries
+                          .slice(first)
+                          .map((entry, at) => {
+                            const index = first + at;
+                            const group = agentGroup(
+                              state.transcript.entries,
+                              index,
+                            );
+
+                            // Each entry keeps a box of its own, an empty one for a
+                            // subagent its group draws, so scrolling counts entries
+                            // as the transcript does.
+                            return (
+                              <box
+                                key={index}
+                                ref={place(index)}
+                                flexShrink={0}
+                              >
+                                {riff.state.notices
+                                  .filter((notice) => notice.at === index)
+                                  .map((notice, at) => (
+                                    <RiffNotice
+                                      key={`riff-${at}`}
+                                      notice={notice}
+                                    />
+                                  ))}
+                                {entry.kind === 'error' &&
+                                riff.state.hiddenErrors.includes(
+                                  entry.turnId,
+                                ) ? null : group === undefined ? (
+                                  // Its code blocks named by its place, as the
+                                  // transcript lists them (CHD-394).
+                                  <ListedEntry.Provider
+                                    value={
+                                      listedText(entry) === undefined
+                                        ? undefined
+                                        : index
+                                    }
+                                  >
+                                    <TranscriptEntry
+                                      entry={entry}
+                                      turn={state.transcript.turn}
+                                      agent={shownAgent}
+                                      expanded={state.expanded}
+                                      width={columns - TRANSCRIPT_INSET}
+                                    />
+                                  </ListedEntry.Provider>
+                                ) : (
+                                  group.length > 0 && (
+                                    <Agents
+                                      agents={group}
+                                      turn={state.transcript.turn}
+                                      agent={shownAgent}
+                                      open={state.expanded}
+                                      width={columns - TRANSCRIPT_INSET}
+                                    />
+                                  )
+                                )}
+                              </box>
+                            );
+                          })}
+                        {riff.state.notices
+                          .filter(
+                            (notice) =>
+                              notice.at >= state.transcript.entries.length,
+                          )
+                          .map((notice, at) => (
+                            <RiffNotice
+                              key={`riff-end-${at}`}
+                              notice={notice}
+                            />
+                          ))}
+                        {recordedReceipts(state.transcript).map((call) => (
+                          <RecordedReceipt
+                            key={call.asked}
+                            call={call}
+                            historical={state.resumed !== undefined}
+                            width={columns - TRANSCRIPT_INSET}
+                          />
                         ))}
-                      {recordedReceipts(state.transcript).map((call) => (
-                        <RecordedReceipt
-                          key={call.asked}
-                          call={call}
-                          historical={state.resumed !== undefined}
-                          width={columns - TRANSCRIPT_INSET}
-                        />
-                      ))}
-                    </box>
-                    {/* Takes the rows a short transcript leaves, so that it stays
+                      </box>
+                      {/* Takes the rows a short transcript leaves, so that it stays
             on top; it has none to take once the transcript overflows, and
             flex-end then puts the overflow above the view. */}
-                    <box flexGrow={1} flexShrink={1} />
+                      <box flexGrow={1} flexShrink={1} />
+                    </Clip>
+                    <Below scroll={state.scroll} width={columns - 2} />
                   </Clip>
-                  <Below scroll={state.scroll} width={columns - 2} />
-                </Clip>
-                {!riff.box && (
-                  <Working
-                    turn={state.transcript.turn}
-                    asking={
-                      inputAsked ??
-                      (planAsked === undefined ? undefined : { plan: true })
-                    }
-                    compacting={state.transcript.entries.some((entry) =>
-                      inSpinner(entry, state.transcript.turn),
-                    )}
-                  />
-                )}
-                {state.transcript.plan.length > 0 && (
-                  <Plan
-                    plan={state.transcript.plan}
-                    limit={planRowLimit(rows)}
-                    running={state.transcript.turn.status !== 'idle'}
-                  />
-                )}
-                {state.queue.length > 0 && (
-                  <Queue queue={state.queue} limit={queueRowLimit(rows)} />
-                )}
-                {/* One box above the prompt at a time: the background view
-        opened over a request waiting takes its place until it closes
-        (CHD-462). */}
-                {asked && (
-                  <PermissionPrompt
-                    key={asked.id}
-                    wait={asked}
-                    hidden={viewing}
-                    asker={
-                      asked.subagentId === undefined
-                        ? []
-                        : subagentPath(
-                            state.transcript.entries,
-                            asked.subagentId,
-                          )
-                    }
-                    {...(childShown === undefined ? {} : { child: childShown })}
-                    between={between}
-                    held={held}
-                    away={listFocus}
-                    width={columns - 4}
-                    changeOverflows={settingsChangeOverflows(
-                      state.transcript.entries,
-                      asked.save?.asked,
-                      columns - TRANSCRIPT_INSET,
-                      state.scroll.view,
-                    )}
-                    active={listening && !listFocus && !viewing}
-                    onChoose={(optionId) =>
-                      conversation()?.choose(asked.id, optionId)
-                    }
-                    kept={keptChoice(asked.id)}
-                    scroller={requestScroller}
-                    givesWay={listFolded}
-                    onOverflow={(overflows) =>
-                      dispatch({
-                        type: 'request_overflowed',
-                        id: asked.id,
-                        overflows,
-                      })
-                    }
-                  />
-                )}
-                {!asked && planAsked && (
-                  <PlanBox
-                    key={planAsked.wait.id}
-                    wait={planAsked.wait}
-                    agent={shownAgent}
-                    width={columns}
-                    hidden={viewing}
-                    away={listFocus}
-                    active={listening && !listFocus && !viewing}
-                    scroller={requestScroller}
-                    onOverflow={(overflows) =>
-                      dispatch({
-                        type: 'request_overflowed',
-                        id: planAsked.wait.id,
-                        overflows,
-                      })
-                    }
-                    onAnswer={(answer) =>
-                      conversation()?.answerPlan(planAsked.wait.id, answer)
-                    }
-                    kept={
-                      state.planning?.id === planAsked.wait.id
-                        ? state.planning.box
-                        : undefined
-                    }
-                    onChange={(box) =>
-                      dispatch({
-                        type: 'in_session',
-                        key: all.front,
-                        action: {
-                          type: 'plan_box_changed',
-                          id: planAsked.wait.id,
-                          box,
-                        },
-                      })
-                    }
-                    {...leaving}
-                  />
-                )}
-                {state.backgroundView && (
-                  <BackgroundView
-                    hidden={!viewing}
-                    items={backgroundItems}
-                    focus={state.backgroundView.focus}
-                    detail={state.backgroundView.detail}
-                    {...(detailWork === undefined ? {} : { work: detailWork })}
-                    at={state.backgroundView}
-                    hint={state.backgroundView.hint}
-                    columns={columns}
-                    rows={rows}
-                    scroller={backgroundScroller}
-                  />
-                )}
-                {held && inputDialog}
-                {inputDialog !== undefined && !held && inputDialog}
-                {/* Over the transcript's bottom rows, not in their place
-        (CHD-545). */}
-                <Overlay
-                  columns={columns}
-                  list={(room) =>
-                    riff.box ? null : state.search ? (
-                      <SearchLine search={state.search} />
-                    ) : finder ? (
-                      <FileList
-                        finder={finder}
-                        onRoom={completionRoom}
-                        rows={menuRows}
-                        room={room}
-                        agentColours={mentionColours}
-                      />
-                    ) : menu ? (
-                      <CommandList
-                        menu={menu}
-                        rows={menuRows}
-                        room={room}
-                        width={columns}
-                        onRoom={completionRoom}
-                      />
-                    ) : state.help ? (
-                      <Shortcuts
-                        width={columns}
-                        room={room}
-                        scroller={panelScroller}
-                        onOverflow={(overflows) =>
-                          dispatch({ type: 'panel_overflowed', overflows })
-                        }
-                      />
-                    ) : null
-                  }
-                  picker={(room) =>
-                    riff.box && riffAccess !== undefined ? (
-                      <SignInBox
-                        state={riff.state}
-                        store={riffAccess.store.name}
-                        width={columns}
-                        room={room}
-                        onChoose={riff.choose}
-                        onBack={riff.back}
-                      />
-                    ) : pickerShown ? (
-                      <>
-                        {picking && (
-                          <ModelPicker
-                            models={state.models}
-                            rows={menuRows}
-                            room={room}
-                            agent={shownAgent}
-                            active={listening}
-                            onPick={sessions.pickModel}
-                          />
-                        )}
-                        {configuring && (
-                          <ConfigPicker
-                            options={state.options}
-                            option={configOption(state)}
-                            from={state.configPicker?.from}
-                            rows={menuRows}
-                            room={room}
-                            agent={shownAgent}
-                            active={listening}
-                            onOpen={(id) =>
-                              dispatch({ type: 'config_option_opened', id })
-                            }
-                            onPick={sessions.pickOption}
-                          />
-                        )}
-                        {resumingShown && state.resumePicker && (
-                          <ResumePicker
-                            // A fresh list for each scope, its highlight on the first row.
-                            key={String(state.resumePicker.everywhere)}
-                            picker={state.resumePicker}
-                            open={sessions.openChildren()}
-                            rows={menuRows}
-                            room={room}
-                            agent={frontAgent}
-                            home={home}
-                            active={listening}
-                            gap={false}
-                            onPick={(chosen) => sessions.pickResume(chosen)}
-                          />
-                        )}
-                        {theming && (
-                          <ThemePicker
-                            current={state.theme}
-                            background={background}
-                            room={room}
-                            active={listening}
-                            onMove={(theme) =>
-                              dispatch({ type: 'theme_previewed', theme })
-                            }
-                            onPick={commands.keepTheme}
-                          />
-                        )}
-                        {noticing && notice !== undefined && (
-                          <NoticeBox
-                            columns={columns}
-                            room={room}
-                            active={listening}
-                            onAnswer={(dismissed) => {
-                              if (dismissed) {
-                                sessions.dismissNotice(notice);
-                              }
-
-                              dispatch({ type: 'notice_closed' });
-                            }}
-                          />
-                        )}
-                        {listingTeams && state.teamsPicker && (
-                          <TeamsPicker
-                            listing={state.teamsPicker}
-                            rows={menuRows}
-                            room={room}
-                            columns={columns - 4}
-                            active={listening}
-                            onPick={(found) => {
-                              const text = pickedDraft(found);
-
-                              if (text === undefined) {
-                                return;
-                              }
-
-                              dispatch({ type: 'teams_picker_closed' });
-                              showDraft(text, endOf(text));
-                            }}
-                          />
-                        )}
-                        {listingMcp && (
-                          <McpPanel
-                            servers={here.mcpServers}
-                            ignored={here.mcpIgnored}
-                            heldBack={conversation()?.session?.heldBack ?? []}
-                            agent={shownAgent}
-                            windowRows={rows}
-                            room={room}
-                            starting={
-                              conversation()?.session === undefined &&
-                              state.connection.status === 'starting'
-                            }
-                            {...(server === undefined
-                              ? {}
-                              : {
-                                  chord: chordRow(
-                                    conversation()?.session?.chordServer,
-                                    child !== undefined,
-                                    conversation()?.session?.heldBack.some(
-                                      (each) =>
-                                        each.own && each.takes.length === 0,
-                                    ) === true,
-                                  ),
-                                })}
-                          />
-                        )}
-                      </>
-                    ) : null
-                  }
-                />
-                {inputDialog !== undefined && !held && !viewing ? null : (
-                  <PromptInput
-                    key={
-                      state.search ? `search:${state.search.match}` : inputKey
-                    }
-                    value={boxText}
-                    cursor={found === undefined ? cursor : endOf(boxText)}
-                    rows={promptRows(rows)}
-                    chords={liveChords(state, draft, cursor)}
-                    {...(state.search && found !== undefined
-                      ? { highlight: state.search.query }
-                      : {})}
-                    // The list's ↑ and ↓ are the window's, as a recalled prompt's are
-                    // history's: the textarea leaves them alone.
-                    walking={
-                      walking(history, typedText(state.bash, draft)) ||
-                      (!state.completionHidden &&
-                        (menu !== undefined || finder !== undefined))
-                    }
-                    bash={
-                      found === undefined
-                        ? state.bash
-                        : foundCommand !== undefined
-                    }
-                    // The input lets go of the keys an effect after the permission
-                    // prompt or the model picker is drawn; a key in between is not the
-                    // draft's either.
-                    onChange={(value) =>
-                      (!asked || held) &&
-                      planAsked === undefined &&
-                      !choosing &&
-                      !chordKey.current &&
-                      play(changeSteps(value, context()))
-                    }
-                    // While a permission is asked or a model picked, the keys are that
-                    // list's, not the draft's.
-                    focus={boxKeys && state.vim?.mode !== 'normal'}
-                    {...(childShown === undefined ? {} : { agent: childShown })}
-                    width={columns}
-                    // A press on the box gives the list's keys back to it, the
-                    // row's ❯ going and the child picked staying the box's
-                    // (CHD-384): OpenTUI has already put its focus there.
-                    onPressed={() =>
-                      state.agentsFocus &&
-                      dispatch({ type: 'agents_focused', focused: false })
-                    }
-                    // Normal mode's cursor stands only where the box would
-                    // otherwise have the keys, so no dialog's own input loses them.
-                    normal={boxKeys && state.vim?.mode === 'normal'}
-                    onCursorChange={(at) => {
-                      if (
-                        (!asked || held) &&
-                        !choosing &&
-                        !chordKey.current &&
-                        !cutting.current
-                      ) {
-                        setCursor(at);
+                  {!riff.box && (
+                    <Working
+                      turn={state.transcript.turn}
+                      asking={
+                        inputAsked ??
+                        (planAsked === undefined ? undefined : { plan: true })
                       }
-                    }}
-                    onSubmit={submit}
-                    onPaste={(text) => play(emptyPasteSteps(text, context()))}
-                    wordCut={(before) =>
-                      placeholderBefore(before, state.images)
-                    }
-                    onOlder={() => play(olderSteps(context()))}
-                    onNewer={() => play(newerSteps(context()))}
-                  />
-                )}
-                <box flexDirection='row' paddingX={2} height={1} flexShrink={0}>
-                  {state.pendingKeys === undefined ? (
-                    <StatusLine
-                      state={
-                        riff.enabled && riff.state.signedOut
-                          ? {
-                              ...initialAppState,
-                              connection: { status: 'ready' },
-                              keys: state.keys,
-                              theme: state.theme,
-                              draft: state.draft,
-                              ...(state.sessionsNote === undefined
-                                ? {}
-                                : { sessionsNote: state.sessionsNote }),
-                            }
-                          : state
-                      }
-                      agent={shownAgent}
-                      // The shown session's, main's or the picked child's, read
-                      // where the list's row reads it.
-                      effort={
-                        riff.enabled && riff.state.signedOut
-                          ? undefined
-                          : sessions.conversation()?.session?.efforts()?.current
-                      }
-                      // While the list has the keys, the line says what they
-                      // do; its rows show what waits.
-                      waits={listFocus ? undefined : waits}
-                      armed={armed}
-                      draft={draft}
-                      width={columns - 4}
-                      {...(listFocus
-                        ? {
-                            hint: summaryFocused
-                              ? summaryHint(columns - 4)
-                              : agentsHint(
-                                  columns - 4,
-                                  hintKey(state.keys, 'agents:close'),
-                                ),
-                          }
-                        : state.codePick !== undefined
-                          ? {
-                              // A picked block's keys (CHD-394 §3).
-                              hint: pickHint(
-                                state.keys,
-                                pickedBlock()?.run !== undefined,
-                                columns - 4,
-                              ),
-                            }
-                          : state.completionHidden && (menu || finder)
-                            ? { hint: 'not enough space' }
-                            : {})}
-                    />
-                  ) : (
-                    <LeaderLine
-                      held={state.pendingKeys}
-                      bindings={pendingBindings(state, draft, cursor)}
-                      width={columns - 4}
+                      compacting={state.transcript.entries.some((entry) =>
+                        inSpinner(entry, state.transcript.turn),
+                      )}
                     />
                   )}
-                </box>
-                <box
-                  ref={agentsBox}
-                  flexBasis={canFold && folded ? agentsFloor : agentsFull}
-                  minHeight={agentsFloor}
-                  flexShrink={canFold && folded ? 0 : 1}
-                  overflow='hidden'
-                  onSizeChange={() => {
-                    const height =
-                      agentsBox.current?.getLayout().height ??
-                      Number.POSITIVE_INFINITY;
-
-                    setAgentsRoom(height);
-
-                    if (canFold && height <= agentsFloor) {
-                      setFolded(true);
+                  {state.transcript.plan.length > 0 && (
+                    <Plan
+                      plan={state.transcript.plan}
+                      limit={planRowLimit(rows)}
+                      running={state.transcript.turn.status !== 'idle'}
+                    />
+                  )}
+                  {state.queue.length > 0 && (
+                    <Queue queue={state.queue} limit={queueRowLimit(rows)} />
+                  )}
+                  {/* One box above the prompt at a time: the background view
+        opened over a request waiting takes its place until it closes
+        (CHD-462). */}
+                  {asked && (
+                    <PermissionPrompt
+                      key={asked.id}
+                      wait={asked}
+                      hidden={viewing}
+                      asker={
+                        asked.subagentId === undefined
+                          ? []
+                          : subagentPath(
+                              state.transcript.entries,
+                              asked.subagentId,
+                            )
+                      }
+                      {...(childShown === undefined
+                        ? {}
+                        : { child: childShown })}
+                      between={between}
+                      held={held}
+                      away={listFocus}
+                      width={columns - 4}
+                      changeOverflows={settingsChangeOverflows(
+                        state.transcript.entries,
+                        asked.save?.asked,
+                        columns - TRANSCRIPT_INSET,
+                        state.scroll.view,
+                      )}
+                      active={listening && !listFocus && !viewing}
+                      onChoose={(optionId) =>
+                        conversation()?.choose(asked.id, optionId)
+                      }
+                      kept={keptChoice(asked.id)}
+                      scroller={requestScroller}
+                      givesWay={listFolded}
+                      onOverflow={(overflows) =>
+                        dispatch({
+                          type: 'request_overflowed',
+                          id: asked.id,
+                          overflows,
+                        })
+                      }
+                    />
+                  )}
+                  {!asked && planAsked && (
+                    <PlanBox
+                      key={planAsked.wait.id}
+                      wait={planAsked.wait}
+                      agent={shownAgent}
+                      width={columns}
+                      hidden={viewing}
+                      away={listFocus}
+                      active={listening && !listFocus && !viewing}
+                      scroller={requestScroller}
+                      onOverflow={(overflows) =>
+                        dispatch({
+                          type: 'request_overflowed',
+                          id: planAsked.wait.id,
+                          overflows,
+                        })
+                      }
+                      onAnswer={(answer) =>
+                        conversation()?.answerPlan(planAsked.wait.id, answer)
+                      }
+                      kept={
+                        state.planning?.id === planAsked.wait.id
+                          ? state.planning.box
+                          : undefined
+                      }
+                      onChange={(box) =>
+                        dispatch({
+                          type: 'in_session',
+                          key: all.front,
+                          action: {
+                            type: 'plan_box_changed',
+                            id: planAsked.wait.id,
+                            box,
+                          },
+                        })
+                      }
+                      {...leaving}
+                    />
+                  )}
+                  {state.backgroundView && (
+                    <BackgroundView
+                      hidden={!viewing}
+                      items={backgroundItems}
+                      focus={state.backgroundView.focus}
+                      detail={state.backgroundView.detail}
+                      {...(detailWork === undefined
+                        ? {}
+                        : { work: detailWork })}
+                      at={state.backgroundView}
+                      hint={state.backgroundView.hint}
+                      columns={columns}
+                      rows={rows}
+                      scroller={backgroundScroller}
+                    />
+                  )}
+                  {held && inputDialog}
+                  {inputDialog !== undefined && !held && inputDialog}
+                  {/* Over the transcript's bottom rows, not in their place
+        (CHD-545). */}
+                  <Overlay
+                    columns={columns}
+                    list={(room) =>
+                      riff.box ? null : state.search ? (
+                        <SearchLine search={state.search} />
+                      ) : finder ? (
+                        <FileList
+                          finder={finder}
+                          onRoom={completionRoom}
+                          rows={menuRows}
+                          room={room}
+                          agentColours={mentionColours}
+                        />
+                      ) : menu ? (
+                        <CommandList
+                          menu={menu}
+                          rows={menuRows}
+                          room={room}
+                          width={columns}
+                          onRoom={completionRoom}
+                        />
+                      ) : state.help ? (
+                        <Shortcuts
+                          width={columns}
+                          room={room}
+                          scroller={panelScroller}
+                          onOverflow={(overflows) =>
+                            dispatch({ type: 'panel_overflowed', overflows })
+                          }
+                        />
+                      ) : null
                     }
-                  }}
-                >
-                  <AgentsList
-                    rows={listRows}
-                    limit={agentsLimit}
+                    picker={(room) =>
+                      riff.box && riffAccess !== undefined ? (
+                        <SignInBox
+                          state={riff.state}
+                          store={riffAccess.store.name}
+                          width={columns}
+                          room={room}
+                          onChoose={riff.choose}
+                          onBack={riff.back}
+                        />
+                      ) : pickerShown ? (
+                        <>
+                          {picking && (
+                            <ModelPicker
+                              models={state.models}
+                              rows={menuRows}
+                              room={room}
+                              agent={shownAgent}
+                              active={listening}
+                              onPick={sessions.pickModel}
+                            />
+                          )}
+                          {configuring && (
+                            <ConfigPicker
+                              options={state.options}
+                              option={configOption(state)}
+                              from={state.configPicker?.from}
+                              rows={menuRows}
+                              room={room}
+                              agent={shownAgent}
+                              active={listening}
+                              onOpen={(id) =>
+                                dispatch({ type: 'config_option_opened', id })
+                              }
+                              onPick={sessions.pickOption}
+                            />
+                          )}
+                          {resumingShown && state.resumePicker && (
+                            <ResumePicker
+                              // A fresh list for each scope, its highlight on the first row.
+                              key={String(state.resumePicker.everywhere)}
+                              picker={state.resumePicker}
+                              open={sessions.openChildren()}
+                              rows={menuRows}
+                              room={room}
+                              agent={frontAgent}
+                              home={home}
+                              active={listening}
+                              gap={false}
+                              onPick={(chosen) => sessions.pickResume(chosen)}
+                            />
+                          )}
+                          {theming && (
+                            <ThemePicker
+                              current={state.theme}
+                              background={background}
+                              room={room}
+                              active={listening}
+                              onMove={(theme) =>
+                                dispatch({ type: 'theme_previewed', theme })
+                              }
+                              onPick={commands.keepTheme}
+                            />
+                          )}
+                          {noticing && notice !== undefined && (
+                            <NoticeBox
+                              columns={columns}
+                              room={room}
+                              active={listening}
+                              onAnswer={(dismissed) => {
+                                if (dismissed) {
+                                  sessions.dismissNotice(notice);
+                                }
+
+                                dispatch({ type: 'notice_closed' });
+                              }}
+                            />
+                          )}
+                          {listingTeams && state.teamsPicker && (
+                            <TeamsPicker
+                              listing={state.teamsPicker}
+                              rows={menuRows}
+                              room={room}
+                              columns={columns - 4}
+                              active={listening}
+                              onPick={(found) => {
+                                const text = pickedDraft(found);
+
+                                if (text === undefined) {
+                                  return;
+                                }
+
+                                dispatch({ type: 'teams_picker_closed' });
+                                showDraft(text, endOf(text));
+                              }}
+                            />
+                          )}
+                          {listingMcp && (
+                            <McpPanel
+                              servers={here.mcpServers}
+                              ignored={here.mcpIgnored}
+                              heldBack={conversation()?.session?.heldBack ?? []}
+                              agent={shownAgent}
+                              windowRows={rows}
+                              room={room}
+                              starting={
+                                conversation()?.session === undefined &&
+                                state.connection.status === 'starting'
+                              }
+                              {...(server === undefined
+                                ? {}
+                                : {
+                                    chord: chordRow(
+                                      conversation()?.session?.chordServer,
+                                      child !== undefined,
+                                      conversation()?.session?.heldBack.some(
+                                        (each) =>
+                                          each.own && each.takes.length === 0,
+                                      ) === true,
+                                    ),
+                                  })}
+                            />
+                          )}
+                        </>
+                      ) : null
+                    }
+                  />
+                  {inputDialog !== undefined && !held && !viewing ? null : (
+                    <PromptInput
+                      key={
+                        state.search ? `search:${state.search.match}` : inputKey
+                      }
+                      value={boxText}
+                      cursor={found === undefined ? cursor : endOf(boxText)}
+                      rows={promptRows(rows)}
+                      chords={liveChords(state, draft, cursor)}
+                      {...(state.search && found !== undefined
+                        ? { highlight: state.search.query }
+                        : {})}
+                      // The list's ↑ and ↓ are the window's, as a recalled prompt's are
+                      // history's: the textarea leaves them alone.
+                      walking={
+                        walking(history, typedText(state.bash, draft)) ||
+                        (!state.completionHidden &&
+                          (menu !== undefined || finder !== undefined))
+                      }
+                      bash={
+                        found === undefined
+                          ? state.bash
+                          : foundCommand !== undefined
+                      }
+                      // The input lets go of the keys an effect after the permission
+                      // prompt or the model picker is drawn; a key in between is not the
+                      // draft's either.
+                      onChange={(value) =>
+                        (!asked || held) &&
+                        planAsked === undefined &&
+                        !choosing &&
+                        !chordKey.current &&
+                        play(changeSteps(value, context()))
+                      }
+                      // While a permission is asked or a model picked, the keys are that
+                      // list's, not the draft's.
+                      focus={boxKeys && state.vim?.mode !== 'normal'}
+                      {...(childShown === undefined
+                        ? {}
+                        : { agent: childShown })}
+                      width={columns}
+                      // A press on the box gives the list's keys back to it, the
+                      // row's ❯ going and the child picked staying the box's
+                      // (CHD-384): OpenTUI has already put its focus there.
+                      onPressed={() =>
+                        state.agentsFocus &&
+                        dispatch({ type: 'agents_focused', focused: false })
+                      }
+                      // Normal mode's cursor stands only where the box would
+                      // otherwise have the keys, so no dialog's own input loses them.
+                      normal={boxKeys && state.vim?.mode === 'normal'}
+                      onCursorChange={(at) => {
+                        if (
+                          (!asked || held) &&
+                          !choosing &&
+                          !chordKey.current &&
+                          !cutting.current
+                        ) {
+                          setCursor(at);
+                        }
+                      }}
+                      onSubmit={submit}
+                      onPaste={(text) => play(emptyPasteSteps(text, context()))}
+                      wordCut={(before) =>
+                        placeholderBefore(before, state.images)
+                      }
+                      onOlder={() => play(olderSteps(context()))}
+                      onNewer={() => play(newerSteps(context()))}
+                    />
+                  )}
+                  <box
+                    flexDirection='row'
+                    paddingX={2}
+                    height={1}
+                    flexShrink={0}
+                  >
+                    {state.pendingKeys === undefined ? (
+                      <StatusLine
+                        state={
+                          riff.enabled && riff.state.signedOut
+                            ? {
+                                ...initialAppState,
+                                connection: { status: 'ready' },
+                                keys: state.keys,
+                                theme: state.theme,
+                                draft: state.draft,
+                                ...(state.sessionsNote === undefined
+                                  ? {}
+                                  : { sessionsNote: state.sessionsNote }),
+                              }
+                            : state
+                        }
+                        agent={shownAgent}
+                        // The shown session's, main's or the picked child's, read
+                        // where the list's row reads it.
+                        effort={
+                          riff.enabled && riff.state.signedOut
+                            ? undefined
+                            : sessions.conversation()?.session?.efforts()
+                                ?.current
+                        }
+                        // While the list has the keys, the line says what they
+                        // do; its rows show what waits.
+                        waits={listFocus ? undefined : waits}
+                        armed={armed}
+                        draft={draft}
+                        width={columns - 4}
+                        {...(listFocus
+                          ? {
+                              hint: summaryFocused
+                                ? summaryHint(columns - 4)
+                                : agentsHint(
+                                    columns - 4,
+                                    hintKey(state.keys, 'agents:close'),
+                                  ),
+                            }
+                          : state.codePick !== undefined
+                            ? {
+                                // A picked block's keys (CHD-394 §3).
+                                hint: pickHint(
+                                  state.keys,
+                                  pickedBlock()?.run !== undefined,
+                                  columns - 4,
+                                ),
+                              }
+                            : state.completionHidden && (menu || finder)
+                              ? { hint: 'not enough space' }
+                              : {})}
+                      />
+                    ) : (
+                      <LeaderLine
+                        held={state.pendingKeys}
+                        bindings={pendingBindings(state, draft, cursor)}
+                        width={columns - 4}
+                      />
+                    )}
+                  </box>
+                  <box
+                    ref={agentsBox}
+                    flexBasis={canFold && folded ? agentsFloor : agentsFull}
+                    minHeight={agentsFloor}
+                    flexShrink={canFold && folded ? 0 : 1}
+                    overflow='hidden'
+                    onSizeChange={() => {
+                      const height =
+                        agentsBox.current?.getLayout().height ??
+                        Number.POSITIVE_INFINITY;
+
+                      setAgentsRoom(height);
+
+                      if (canFold && height <= agentsFloor) {
+                        setFolded(true);
+                      }
+                    }}
+                  >
+                    <AgentsList
+                      rows={listRows}
+                      limit={agentsLimit}
+                      width={columns - 4}
+                      focused={listFocus && !summaryFocused}
+                      view={state.agentsView}
+                    />
+                  </box>
+                  <SummaryLine
+                    items={backgroundItems}
                     width={columns - 4}
-                    focused={listFocus && !summaryFocused}
-                    view={state.agentsView}
+                    focused={listFocus && summaryFocused}
                   />
                 </box>
-                <SummaryLine
-                  items={backgroundItems}
-                  width={columns - 4}
-                  focused={listFocus && summaryFocused}
-                />
-              </box>
-            </CodeBlockActions.Provider>
-          </Keys.Provider>
+              </CodeBlockActions.Provider>
+            </Keys.Provider>
+          </PathViews.Provider>
         </ChordServerName.Provider>
       </AgentColours.Provider>
     </Colours.Provider>

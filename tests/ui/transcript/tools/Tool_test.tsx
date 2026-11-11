@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { draw } from '../../harness.tsx';
+import { PathViews } from '../../../../src/ui/app/context.ts';
+import { pathView } from '../../../../src/ui/transcript/tools/paths.ts';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import {
@@ -2027,5 +2029,45 @@ describe('CHD-568 U4-U6 tester: answering and withdrawing changes', () => {
         await server.close();
       }
     });
+  }
+});
+
+test("an edit's Updated line names the file from the session's directory, through a link too (CHD-611)", async () => {
+  const drawn = await draw(
+    <PathViews.Provider
+      value={pathView('/tmp/home/src/app', '/tmp/home', (path) =>
+        path.replace(/^\/tmp\//u, '/private/tmp/'),
+      )}
+    >
+      <Tool
+        call={{
+          id: 'edit',
+          title: 'Update greet.ts',
+          kind: 'edit',
+          status: 'completed',
+          content: [
+            {
+              type: 'diff',
+              path: '/private/tmp/home/src/app/greet.ts',
+              oldText: 'Hello\n',
+              newText: 'Hi\n',
+            },
+          ],
+        }}
+        expanded={false}
+        ended
+        width={78}
+      />
+    </PathViews.Provider>,
+    { columns: 80, rows: 24 },
+  );
+
+  try {
+    const frame = stripAnsi(drawn.frame());
+
+    expect(frame).toContain('Updated greet.ts with 1 addition and 1 removal');
+    expect(frame).not.toContain('/private/tmp');
+  } finally {
+    await drawn.unmount();
   }
 });

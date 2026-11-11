@@ -1,6 +1,7 @@
 import { expect, test } from 'bun:test';
 import type { PermissionOption } from '@agentclientprotocol/sdk/unstable';
 import type { PermissionWait } from '../../../src/session/transcript/types.ts';
+import { pathView } from '../../../src/ui/transcript/tools/paths.ts';
 import {
   askedPermission,
   choicesFor,
@@ -457,4 +458,27 @@ test('request diffs count their wrapped physical rows and label multiple files',
 
   expect(single.rows.some((row) => row.kind === 'location')).toBe(false);
   expect(requestHeight(single.rows, 30)).toBe(3);
+});
+
+test("a command's location reads `in <dir>` as the header names it (CHD-611)", () => {
+  const paths = pathView('/tmp/home/src/app', '/tmp/home', (path) =>
+    path.replace(/^\/tmp\//u, '/private/tmp/'),
+  );
+  const ask = (kind: 'execute' | 'edit', path: string) => ({
+    id: 'p',
+    title: 'Bash bun test',
+    kind,
+    locations: [{ path }],
+    options: [],
+  });
+
+  expect(
+    locationsShown(ask('execute', '/private/tmp/home/src/app'), paths),
+  ).toEqual(['in ~/src/app']);
+  expect(locationsShown(ask('execute', '/srv'), paths)).toEqual(['in /srv']);
+  // Another kind's location, and a command's without a view, as it came.
+  expect(locationsShown(ask('edit', '/srv/a.ts'), paths)).toEqual([
+    '/srv/a.ts',
+  ]);
+  expect(locationsShown(ask('execute', '/srv'))).toEqual(['in /srv']);
 });

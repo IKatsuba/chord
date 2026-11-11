@@ -13,10 +13,18 @@ import {
   fixtureSignIn,
   fixtureSignOut,
 } from '../../../src/riff/sign_in_fixture.ts';
-import { CTRL_D, ESC, ready, send, until, withWindow } from '../app/render.tsx';
+import {
+  CTRL_C,
+  CTRL_D,
+  ESC,
+  ready,
+  send,
+  until,
+  withWindow,
+} from '../app/render.tsx';
 import { credentialSave } from '../../../src/riff/sign_in_run.ts';
 import { serveChord } from '../../../src/server/server.ts';
-import type { WindowedState } from '../../../src/ui/app/state.ts';
+import { frontState, type WindowedState } from '../../../src/ui/app/state.ts';
 import type { Caller } from '../../../src/server/tools.ts';
 import { planCredential } from '../../../src/riff/qa_provider.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -1041,6 +1049,93 @@ describe('a new riff start after a cancelled sign-in (CHD-615)', () => {
             },
           },
         );
+      });
+    }
+  }
+});
+
+describe('CHD-615 tester: cancelled late starts and fresh store failures', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const failure of ['timeout', 'unavailable'] as const) {
+      test(`a late failure stays cancelled, then a fresh ${failure} is actionable at ${columns}x${rows}`, async () => {
+        const store = memorySecrets();
+        const late = Promise.withResolvers<void>();
+        let state: WindowedState | undefined;
+        let opens = 0;
+
+        try {
+          await withWindow(
+            async (window) => {
+              await window.shows('ChatGPT · a ChatGPT plan');
+              await window.press(ESC);
+              await send(window, '/clear');
+              await until('the held second start', () => opens === 2);
+              await window.shows('Reading the sign-in');
+              await window.press(ESC);
+
+              late.resolve();
+
+              await until(
+                'the cancelled start failed',
+                () =>
+                  state !== undefined &&
+                  frontState(state).connection.status === 'failed',
+              );
+              await window.type('draft stays after late refusal');
+
+              expect(window.frame()).not.toContain('Sign in to riff');
+              expect(window.frame()).not.toContain('Reading the sign-in');
+
+              await window.press(CTRL_C);
+              await send(window, '/clear');
+              await until('the fresh third start', () => opens === 3);
+              await window.shows('Try the store again');
+
+              expect(window.frame()).toContain('Sign in to riff');
+              expect(window.frame()).not.toContain('Reading the sign-in');
+            },
+            {
+              agent: 'riff',
+              columns,
+              rows,
+              whileStarting: true,
+              onState: (all) => {
+                state = all;
+              },
+              riffAccess: {
+                store,
+                fetch: fixtureSignOut(store),
+                run: fixtureSignIn('waiting'),
+              },
+              openWith: async () => {
+                const attempt = ++opens;
+
+                if (attempt === 2) {
+                  await late.promise;
+                }
+
+                throw new SignInNeeded({
+                  message: 'Fixture sign-in required.',
+                  ways: [],
+                  ...(attempt < 3
+                    ? {}
+                    : {
+                        store: {
+                          name: store.name,
+                          state: failure,
+                          message: 'Fixture store did not answer.',
+                        },
+                      }),
+                });
+              },
+            },
+          );
+        } finally {
+          late.resolve();
+        }
       });
     }
   }

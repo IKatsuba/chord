@@ -2692,6 +2692,15 @@ describe('riff MCP servers in a session', () => {
       'notes: no database at ./notes.db',
     );
     expect(said).toBeLessThan(call);
+
+    // The note and the reply are messages of their own.
+    const ids = updates
+      .filter((update) => update.sessionUpdate === 'agent_message_chunk')
+      .map((update) => update['messageId']);
+
+    expect(ids.every((id) => typeof id === 'string')).toBe(true);
+    expect(String(ids[0])).toStartWith('chord-note-');
+    expect(new Set(ids).size).toBe(2);
     expect(updates[call]).toMatchObject({
       title: 'mcp__my notes__save_note',
       kind: 'other',

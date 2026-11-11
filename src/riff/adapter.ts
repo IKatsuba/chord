@@ -30,6 +30,7 @@ import { realpath } from 'node:fs/promises';
 import { type Finder, openFinder } from '../platform/fff.ts';
 import {
   type HookUsage,
+  messageIds,
   stopReasonOf,
   updateOf,
   usageOf,
@@ -660,7 +661,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
     session.calls = new Set();
 
+    const ids = messageIds();
+
     for await (const event of turn) {
+      const messageId = ids(event);
       const update = updateOf(
         event,
         session.calls,
@@ -669,7 +673,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
 
       if (update !== undefined) {
-        await notify(client, session.id, update);
+        await notify(client, session.id, withId(update, messageId));
       }
     }
 
@@ -679,6 +683,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       await notify(client, session.id, {
         sessionUpdate: 'agent_message_chunk',
         content: { type: 'text', text: INTERRUPTED },
+        messageId: `chord-note-${crypto.randomUUID()}`,
       });
     }
   };
@@ -923,16 +928,18 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         // chord's own notes go to the window alone, never to libfx's history.
         const notes = session.notices.splice(0);
 
-        if (notes.length > 0) {
+        for (const note of notes) {
           await notify(client, session.id, {
             sessionUpdate: 'agent_message_chunk',
-            content: { type: 'text', text: `${notes.join('\n')}\n\n` },
+            content: { type: 'text', text: note },
+            messageId: `chord-note-${crypto.randomUUID()}`,
           });
         }
 
         const turn = session.agent
           .session(session.id, { model: { id: model, effort } })
           .prompt(input);
+        const ids = messageIds();
 
         for await (const event of turn) {
           if (event.type === 'tool_end') {
@@ -943,6 +950,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
             });
           }
 
+          const messageId = ids(event);
           const update = updateOf(
             event,
             session.calls,
@@ -951,7 +959,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           );
 
           if (update !== undefined) {
-            await notify(client, session.id, update);
+            await notify(client, session.id, withId(update, messageId));
           }
         }
 
@@ -1110,4 +1118,15 @@ function promptOf(blocks: readonly ContentBlock[]): FxSessionPromptInput {
         throw RequestError.invalidParams(undefined, 'riff takes no audio');
     }
   });
+}
+
+/** `update` with its assistant message's id, when it is a reply's text. */
+function withId(
+  update: SessionUpdate,
+  messageId: string | undefined,
+): SessionUpdate {
+  return messageId === undefined ||
+    update.sessionUpdate !== 'agent_message_chunk'
+    ? update
+    : { ...update, messageId };
 }

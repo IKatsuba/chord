@@ -291,6 +291,23 @@ export async function openMcp(
       continue;
     }
 
+    // Prefixes differ, yet `a` with `b__c` and `a__b` with `c` both make
+    // `a__b__c`: the later server is refused, so no name means two tools.
+    const taken = each.adapter.tools.find((tool) => originals.has(tool.name));
+
+    if (taken !== undefined) {
+      const other = originals.get(taken.name)!;
+
+      await each.adapter.close().catch(() => {});
+
+      skipped.push({
+        name: each.server.name,
+        reason: `its tool ${JSON.stringify(taken.name)} has the name of server ${other.server}'s ${other.tool}`,
+      });
+
+      continue;
+    }
+
     adapters.push(each.adapter);
 
     for (const [index, tool] of each.adapter.tools.entries()) {

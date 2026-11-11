@@ -191,6 +191,38 @@ describe('riff MCP servers against the fake', () => {
     expect(tools.skipped[1]?.reason).toContain('"list notes"');
   });
 
+  test('a later server whose prefixed name is taken by another is refused whole', async () => {
+    const first = serveFakeMcp('a', 'ok', 'note__save');
+    const second = serveFakeMcp('b', 'ok', 'save');
+
+    cleanups.push(
+      () => first.close(),
+      () => second.close(),
+    );
+
+    // `my` with `note__save` and `my__note` with `save` both make
+    // `my__note__save`.
+    const tools = await opened([
+      { type: 'http', name: 'my', url: first.url, headers: [] },
+      { type: 'http', name: 'my__note', url: second.url, headers: [] },
+    ]);
+
+    expect(tools.tools.map((tool) => tool.name)).toEqual([
+      'my__save_note',
+      'my__note__save',
+    ]);
+    expect(tools.originals.get('my__note__save')).toEqual({
+      server: 'my',
+      tool: 'note__save',
+    });
+    expect(tools.skipped).toEqual([
+      {
+        name: 'my__note',
+        reason: `its tool "my__note__save" has the name of server my's note__save`,
+      },
+    ]);
+  });
+
   test('a server that never answers is skipped at the bound and its process ended', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-mcp-'));
     const pidFile = join(dir, 'pid');

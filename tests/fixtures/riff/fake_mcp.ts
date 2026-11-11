@@ -18,6 +18,8 @@ export function fakeMcpServer(
   mode: FakeMcpMode = 'ok',
   /** Hears each call of `save_note` before it answers. */
   calls?: (title: string) => Promise<void>,
+  /** One more tool's name, answering `ok`. */
+  extra?: string,
 ): McpServer {
   const server = new McpServer({ name, version: '1.0.0' });
 
@@ -36,6 +38,12 @@ export function fakeMcpServer(
       return { content: [{ type: 'text', text: `Saved ${title}` }] };
     },
   );
+
+  if (extra !== undefined) {
+    server.registerTool(extra, { description: 'Another tool.' }, () => ({
+      content: [{ type: 'text', text: 'ok' }],
+    }));
+  }
 
   if (mode === 'badname') {
     server.registerTool(
@@ -59,6 +67,7 @@ export interface ServedMcp {
 export function serveFakeMcp(
   name = 'notes',
   mode: FakeMcpMode = 'ok',
+  extra?: string,
 ): ServedMcp {
   const authorizations: (string | null)[] = [];
   const transports = new Map<
@@ -95,7 +104,7 @@ export function serveFakeMcp(
         },
       });
 
-      await fakeMcpServer(name, mode).connect(transport);
+      await fakeMcpServer(name, mode, undefined, extra).connect(transport);
 
       return transport.handleRequest(request, { parsedBody: body });
     },

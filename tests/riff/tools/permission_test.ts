@@ -236,7 +236,7 @@ describe('MCP calls ask', () => {
       permissionOptions(call('my notes', 'save_note', {}), '/p')[1],
     ).toEqual({
       optionId: 'allow_session',
-      name: 'Allow every save_note call of my notes for this session',
+      name: 'Allow my notes - save_note for this session',
       kind: 'allow_always',
     });
   });

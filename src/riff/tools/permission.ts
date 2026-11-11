@@ -103,7 +103,8 @@ export function permissionOptions(
 
       break;
     case 'mcp':
-      grant = `Allow every ${reach.name} call of ${reach.server} for this session`;
+      // As the call's row names it, `<server> - <tool>`.
+      grant = `Allow ${reach.server} - ${reach.name} for this session`;
 
       break;
     default:

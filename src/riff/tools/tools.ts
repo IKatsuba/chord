@@ -181,6 +181,8 @@ async function permit(
     // directory "this directory" means.
     ...('real' in reach ? { locations: [] } : {}),
     ...(proposal === undefined ? {} : { content: proposal.content }),
+    // The box draws an MCP call's arguments from it, as for any agent's.
+    ...(reach.tool === 'mcp' ? { rawInput: input } : {}),
   };
 
   if (mode === 'auto') {

@@ -2793,12 +2793,16 @@ describe('riff MCP calls ask', () => {
     const asked = await answered(sessionId, 'First', 'allow_session');
 
     expect(asked.params).toMatchObject({
-      toolCall: { title: 'mcp__my notes__save_note', kind: 'other' },
+      toolCall: {
+        title: 'mcp__my notes__save_note',
+        kind: 'other',
+        rawInput: { title: 'First' },
+      },
       options: [
         { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
         {
           optionId: 'allow_session',
-          name: 'Allow every save_note call of my notes for this session',
+          name: 'Allow my notes - save_note for this session',
           kind: 'allow_always',
         },
         { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
@@ -2862,7 +2866,10 @@ describe('riff MCP calls ask', () => {
     const asked = await answered(sessionId, 'Held', 'allow');
 
     expect(asked.params).toMatchObject({
-      toolCall: { title: 'mcp__my notes__save_note' },
+      toolCall: {
+        title: 'mcp__my notes__save_note',
+        rawInput: { title: 'Held' },
+      },
       options: [
         { name: 'Allow once', kind: 'allow_once' },
         { name: 'Deny', kind: 'reject_once' },

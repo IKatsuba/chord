@@ -39,25 +39,31 @@ export async function readInstructions(
     `${BASE_INSTRUCTIONS}\n\nSession directory: ${sources.directory}`,
   ];
 
-  for (const folder of await foldersOf(sources.directory)) {
-    const file = join(folder, FILE);
-    const text = await readOptional(file);
-
-    if (text !== undefined) {
-      parts.push(section(file, text));
-    }
-  }
+  const files = (await foldersOf(sources.directory)).map((folder) =>
+    join(folder, FILE),
+  );
+  let cut = false;
 
   if (sources.configHome !== undefined) {
-    const file = join(sources.configHome, 'chord', FILE);
-    const text = await readOptional(file);
+    files.push(join(sources.configHome, 'chord', FILE));
+  }
 
-    if (text !== undefined) {
-      parts.push(section(file, text));
+  for (const file of files) {
+    const read = await readOptional(file).catch((error: unknown) => {
+      // The file's name and the reason, for the start's refusal.
+      throw new Error(
+        `${file}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+
+    if (read !== undefined) {
+      parts.push(section(file, read.text));
+
+      cut ||= read.cut;
     }
   }
 
-  return capped(parts.join('\n\n'), INSTRUCTIONS_CAP);
+  return capped(parts.join('\n\n'), INSTRUCTIONS_CAP, cut);
 }
 
 /**
@@ -115,7 +121,9 @@ async function exists(path: string): Promise<boolean> {
  * `file`'s text, at most the cap's bytes of it: only a regular file, so a
  * FIFO or a device by that name never holds the session's start.
  */
-async function readOptional(file: string): Promise<string | undefined> {
+async function readOptional(
+  file: string,
+): Promise<{ readonly text: string; readonly cut: boolean } | undefined> {
   let handle;
 
   try {
@@ -156,7 +164,12 @@ async function readOptional(file: string): Promise<string | undefined> {
       filled += bytesRead;
     }
 
-    return new TextDecoder().decode(buffer.subarray(0, filled));
+    const cut = filled > INSTRUCTIONS_CAP;
+
+    return {
+      text: whole(buffer.subarray(0, Math.min(filled, INSTRUCTIONS_CAP)), cut),
+      cut,
+    };
   } finally {
     await handle.close();
   }
@@ -166,11 +179,21 @@ function section(file: string, text: string): string {
   return `Instructions from ${file}:\n\n${text.trimEnd()}`;
 }
 
-/** `text` within `cap` UTF-8 bytes, cut on a character with the note. */
-export function capped(text: string, cap: number): string {
+/** `bytes` as text; when `cut`, without a character the cut split. */
+function whole(bytes: Uint8Array, cut: boolean): string {
+  const text = new TextDecoder().decode(bytes);
+
+  return cut ? text.replace(/\uFFFD$/u, '') : text;
+}
+
+/**
+ * `text` within `cap` UTF-8 bytes, cut on a character with the note; with
+ * the note too when `cut` says a source was already cut short.
+ */
+export function capped(text: string, cap: number, cut = false): string {
   const encoder = new TextEncoder();
 
-  if (encoder.encode(text).length <= cap) {
+  if (!cut && encoder.encode(text).length <= cap) {
     return text;
   }
 
@@ -178,7 +201,7 @@ export function capped(text: string, cap: number): string {
   const room = cap - encoder.encode(tail).length;
   const bytes = encoder.encode(text).subarray(0, room);
   // A cut inside a character leaves a replacement mark: drop it.
-  const kept = new TextDecoder().decode(bytes).replace(/�$/u, '').trimEnd();
+  const kept = whole(bytes, true).trimEnd();
 
   return `${kept}${tail}`;
 }

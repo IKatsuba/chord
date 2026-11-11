@@ -412,10 +412,17 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         },
       });
 
+    // An unreadable AGENTS.md refuses the start, naming the file and why.
     const instructions = await readInstructions({
       directory,
       configHome: options.configHome,
+    }).catch((error: unknown) => {
+      throw RequestError.internalError(
+        undefined,
+        `riff could not read its instructions: ${error instanceof Error ? error.message : String(error)}`,
+      );
     });
+
     const finder = (options.openFinder ?? openFinder)(directory);
     const fx = (options.createAgent ?? createFxAgent)({
       ...options.backend,

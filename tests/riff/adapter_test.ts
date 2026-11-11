@@ -9,6 +9,7 @@ import {
 import { reviewer } from '../../src/riff/review/engine.ts';
 import { reviewInput } from '../../src/riff/review/input.ts';
 import {
+  chmod,
   mkdir,
   mkdtemp,
   readFile,
@@ -2567,5 +2568,25 @@ describe('riff instructions at session start', () => {
     expect(JSON.stringify(system?.content)).toContain('project rule 7');
     expect(JSON.stringify(system?.content)).toContain('user rule 9');
     expect(JSON.stringify(system?.content)).toContain('You are riff');
+  });
+});
+
+describe('riff instructions refusal', () => {
+  test('an unreadable AGENTS.md refuses session/new naming the file and why', async () => {
+    const directory = await realpath(await mkdtemp(join(stateDir, 'work-')));
+    const file = join(directory, 'AGENTS.md');
+
+    await writeFile(file, 'unreadable');
+    await chmod(file, 0o000);
+    await open(true);
+
+    const answer = await client.request('session/new', {
+      cwd: directory,
+      mcpServers: [],
+    });
+
+    expect(answer.error?.message).toContain(
+      `riff could not read its instructions: ${file}: EACCES`,
+    );
   });
 });

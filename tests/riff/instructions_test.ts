@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, realpath, rm, writeFile } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  realpath,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -141,6 +148,33 @@ describe('riff instructions', () => {
     expect(bytes(text)).toBeLessThanOrEqual(INSTRUCTIONS_CAP);
     expect(text.endsWith(TRUNCATED_NOTE)).toBe(true);
     expect(text.startsWith(BASE_INSTRUCTIONS)).toBe(true);
+  });
+
+  test('rules dropped by the read cut keep the note, even if trailing space shrinks the rest', async () => {
+    await writeFile(
+      join(root, 'AGENTS.md'),
+      `rule one\n${' '.repeat(40 * 1024)}rule two`,
+    );
+
+    const text = await readInstructions({
+      directory: root,
+      configHome: undefined,
+    });
+
+    expect(text).toContain('rule one');
+    expect(text).not.toContain('rule two');
+    expect(text.endsWith(TRUNCATED_NOTE)).toBe(true);
+  });
+
+  test('an unreadable file fails the read, naming the file and why', async () => {
+    const file = join(root, 'AGENTS.md');
+
+    await writeFile(file, 'secret');
+    await chmod(file, 0o000);
+
+    await expect(
+      readInstructions({ directory: root, configHome: undefined }),
+    ).rejects.toThrow(`${file}: EACCES`);
   });
 
   test('a cut never splits a character', () => {

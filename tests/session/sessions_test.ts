@@ -4,7 +4,7 @@ import {
 } from '../../src/session/team_selection.ts';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { shellContext, withContext } from '../../src/session/context.ts';
@@ -25,6 +25,7 @@ import {
   earlierSessions,
   elsewhereRefusal,
   latestSession,
+  readRecords,
   recordedAgent,
   recordsOnce,
   resumeCommand,
@@ -1360,5 +1361,89 @@ describe('CHD-557 tester: startup snapshots settle once and stay local', () => {
 
     expect(await firstStart()).toStrictEqual([record('a')]);
     expect(await recordsOnce(read)()).toStrictEqual([record('b')]);
+  });
+});
+
+describe("the records' list reads a large store a few records at a time (CHD-615)", () => {
+  test('it reads every record, never more than a few at once, a line at a time', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-many-records-'));
+    const dir = join(stateDir, 'records');
+    const files = 40;
+    const recorded = (index: number) =>
+      lines(
+        { ...HEADER, sessionId: `id-${index}` },
+        {
+          type: 'prompt',
+          turnId: `turn-${index}`,
+          at: index,
+          prompt: `prompt ${index}`,
+          images: 0,
+        },
+      );
+    let reading = 0;
+    let most = 0;
+
+    // Each record's lines come one by one, the others free to run between
+    // them, as a file's do from disk.
+    async function* read(path: string): AsyncIterable<string> {
+      const index = Number(path.slice(dir.length + 1, -'.jsonl'.length));
+
+      reading++;
+
+      most = Math.max(most, reading);
+
+      try {
+        for (const line of recorded(index).split('\n')) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+
+          yield line;
+        }
+      } finally {
+        reading--;
+      }
+    }
+
+    try {
+      await mkdir(dir);
+
+      for (let index = 0; index < files; index++) {
+        await writeFile(join(dir, `${index}.jsonl`), recorded(index));
+      }
+
+      const records = await readRecords(stateDir, read);
+
+      expect(records.map((one) => one.sessionId).toSorted()).toStrictEqual(
+        Array.from({ length: files }, (_, index) => `id-${index}`).toSorted(),
+      );
+      expect(most).toBeGreaterThan(1);
+      expect(most).toBeLessThanOrEqual(8);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  test("a record's file is read to its last line, \\r\\n endings too", async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-record-lines-'));
+    const prompt = (at: number): RecordEntry => ({
+      type: 'prompt',
+      turnId: `turn-${at}`,
+      at,
+      prompt: `prompt ${at}`,
+      images: 0,
+    });
+
+    try {
+      await mkdir(join(stateDir, 'records'));
+      await writeFile(
+        join(stateDir, 'records', 'a.jsonl'),
+        lines(HEADER, prompt(2), prompt(7)).replaceAll('\n', '\r\n'),
+      );
+
+      expect(await readRecords(stateDir)).toMatchObject([
+        { sessionId: 'abc', prompt: 'prompt 2', lastUsedAt: 7 },
+      ]);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
   });
 });

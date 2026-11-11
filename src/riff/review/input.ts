@@ -7,6 +7,13 @@ export type ReviewAction =
   | { readonly tool: 'shell'; readonly command: string; readonly cwd: string }
   | { readonly tool: 'read'; readonly real: string }
   | {
+      readonly tool: 'mcp';
+      readonly server: string;
+      readonly name: string;
+      /** The call's arguments as JSON. */
+      readonly arguments: string;
+    }
+  | {
       readonly tool: 'edit' | 'write';
       readonly real: string;
       readonly existed: boolean;
@@ -122,7 +129,11 @@ export function reviewInput(evidence: ReviewEvidence): ReviewInput {
     rows.push(field('current_branch', excerpt(evidence.branch, 255)));
   }
 
-  if (evidence.action.tool === 'shell' || evidence.action.tool === 'read') {
+  if (
+    evidence.action.tool === 'shell' ||
+    evidence.action.tool === 'read' ||
+    evidence.action.tool === 'mcp'
+  ) {
     let remaining = 1024;
     const requests = [
       ['current_request', evidence.requests.current],

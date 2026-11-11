@@ -2664,7 +2664,11 @@ describe('riff MCP servers in a session', () => {
     const pidFile = join(stateDir, 'pid');
     const logged: string[] = [];
 
-    await open(true, { log: (line) => logged.push(line) });
+    // A clear review admits the call; asks are U4's tests.
+    await open(true, {
+      log: (line) => logged.push(line),
+      review: () => Promise.resolve({ outcome: 'clear' }),
+    });
 
     const answer = await client.request('session/new', {
       cwd: process.cwd(),
@@ -2729,5 +2733,142 @@ describe('riff MCP servers in a session', () => {
         return true;
       }
     });
+  });
+});
+
+describe('riff MCP calls ask', () => {
+  const STDIO = join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts');
+  const notes = {
+    name: 'my notes',
+    command: process.execPath,
+    args: [STDIO, 'ok'],
+    env: [],
+  };
+
+  async function mcpSession(mode?: 'ask'): Promise<string> {
+    const answer = await client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [notes],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    if (mode !== undefined) {
+      await client.request('session/set_config_option', {
+        sessionId,
+        configId: 'mode',
+        value: mode,
+      });
+    }
+
+    return sessionId;
+  }
+
+  const asks = () =>
+    client.messages.filter(
+      (message) => message.method === 'session/request_permission',
+    );
+
+  async function answered(sessionId: string, title: string, optionId: string) {
+    const seen = new Set(asks().map((message) => message.id));
+    const work = prompt(
+      sessionId,
+      `call my_notes__save_note ${JSON.stringify({ title })}`,
+    );
+    const asked = await client.until(
+      (message) =>
+        message.method === 'session/request_permission' &&
+        !seen.has(message.id),
+    );
+
+    client.respond(asked.id!, { outcome: { outcome: 'selected', optionId } });
+    await work;
+
+    return asked;
+  }
+
+  test('in ask mode every call asks; the session grant covers that tool of that server', async () => {
+    await open();
+
+    const sessionId = await mcpSession('ask');
+    const asked = await answered(sessionId, 'First', 'allow_session');
+
+    expect(asked.params).toMatchObject({
+      toolCall: { title: 'mcp__my notes__save_note', kind: 'other' },
+      options: [
+        { optionId: 'allow', name: 'Allow', kind: 'allow_once' },
+        {
+          optionId: 'allow_session',
+          name: 'Allow every save_note call of my notes for this session',
+          kind: 'allow_always',
+        },
+        { optionId: 'deny', name: 'Deny', kind: 'reject_once' },
+      ],
+    });
+    expect(JSON.stringify(client.updates(sessionId))).toContain('Saved First');
+
+    const before = asks().length;
+
+    await prompt(sessionId, 'call my_notes__save_note {"title":"Second"}');
+
+    expect(asks()).toHaveLength(before);
+    expect(JSON.stringify(client.updates(sessionId))).toContain('Saved Second');
+  });
+
+  test('a denied call never reaches its server', async () => {
+    await open();
+
+    const sessionId = await mcpSession('ask');
+
+    await answered(sessionId, 'Never', 'deny');
+
+    const text = JSON.stringify(client.updates(sessionId));
+
+    expect(text).toContain('The person denied this call.');
+    expect(text).not.toContain('Saved Never');
+  });
+
+  test('under auto the call is reviewed as an MCP action: clear runs, caution asks', async () => {
+    const inputs: string[] = [];
+    let verdict: 'clear' | 'caution' = 'clear';
+
+    await open(true, {
+      review: (input) => {
+        inputs.push(input);
+
+        return Promise.resolve(
+          verdict === 'clear'
+            ? { outcome: 'clear' }
+            : { outcome: 'caution', rationale: 'Fixture caution.' },
+        );
+      },
+    });
+
+    const sessionId = await mcpSession();
+
+    await prompt(sessionId, 'call my_notes__save_note {"title":"Clear"}');
+
+    expect(asks()).toHaveLength(0);
+    expect(inputs[0]).toContain('<normalized_action>');
+    expect(inputs[0]).toContain('my notes');
+    expect(inputs[0]).toContain('save_note');
+    expect(inputs[0]).toContain(
+      '<arguments>{&quot;title&quot;:&quot;Clear&quot;}</arguments>',
+    );
+    expect(inputs[0]).toContain('<current_request>call my_notes__save_note');
+    expect(JSON.stringify(client.updates(sessionId))).toContain('Saved Clear');
+
+    verdict = 'caution';
+
+    const asked = await answered(sessionId, 'Held', 'allow');
+
+    expect(asked.params).toMatchObject({
+      toolCall: { title: 'mcp__my notes__save_note' },
+      options: [
+        { name: 'Allow once', kind: 'allow_once' },
+        { name: 'Deny', kind: 'reject_once' },
+      ],
+      _meta: { 'chord/permission': { review: { outcome: 'caution' } } },
+    });
+    expect(JSON.stringify(client.updates(sessionId))).toContain('Saved Held');
   });
 });

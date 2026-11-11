@@ -479,11 +479,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       ...selectedProvider,
       fetch: options.fetch ?? globalThis.fetch,
       model: config.model,
-      tools: options.tools ?? [
-        ...riffTools({
+      tools:
+        options.tools ??
+        riffTools({
           directory,
           finder,
           skills,
+          mcp,
           ...(options.commandEnvironment === undefined
             ? {}
             : { commandEnvironment: options.commandEnvironment }),
@@ -559,8 +561,6 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           ask: (toolCall, permissionOptions, signal, metadata) =>
             ask(holder.open, toolCall, permissionOptions, signal, metadata),
         }),
-        ...mcp.tools,
-      ],
       hooks: {
         onEvent: (event) => {
           if (

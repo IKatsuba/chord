@@ -16,6 +16,8 @@ export type FakeMcpMode = 'ok' | 'badname';
 export function fakeMcpServer(
   name = 'notes',
   mode: FakeMcpMode = 'ok',
+  /** Hears each call of `save_note` before it answers. */
+  calls?: (title: string) => Promise<void>,
 ): McpServer {
   const server = new McpServer({ name, version: '1.0.0' });
 
@@ -28,7 +30,11 @@ export function fakeMcpServer(
         tags: z.array(z.string()).optional(),
       },
     },
-    ({ title }) => ({ content: [{ type: 'text', text: `Saved ${title}` }] }),
+    async ({ title }) => {
+      await calls?.(title);
+
+      return { content: [{ type: 'text', text: `Saved ${title}` }] };
+    },
   );
 
   if (mode === 'badname') {

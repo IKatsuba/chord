@@ -38,6 +38,7 @@ import { shell, SHELL_DESCRIPTION, ShellInput } from './shell.ts';
 import { SEARCH_DESCRIPTION, SearchInput, searcher } from './search.ts';
 import { loadSkill, SKILL_DESCRIPTION, SkillInput } from './skill.ts';
 import type { Skill } from '../skills.ts';
+import { mcpTitle, type McpTools, type Original } from '../mcp.ts';
 import type { ReviewAction } from '../review/input.ts';
 import type { AutoReview } from '../review/admission.ts';
 import { reviewAction } from '../review/action.ts';
@@ -48,6 +49,8 @@ export interface ToolSession {
   /** The session's directory, as its real path. */
   readonly directory: string;
   readonly finder: Finder;
+  /** The session's MCP tools as libfx's adapter made them, which ask. */
+  readonly mcp?: Pick<McpTools, 'tools' | 'originals'>;
   /** The skills discovered at the session's start, which `skill` loads. */
   readonly skills?: readonly Skill[];
   /** Complete shell/probe environment; tests supply fixture HOME and startup files. */
@@ -142,6 +145,7 @@ async function permit(
   reach: Reach | undefined,
   signal: AbortSignal,
   proposal?: Proposal,
+  draw?: Drawn,
 ): Promise<readonly DirectInvocation[] | 'shell' | undefined> {
   const { directory, grants = new Set() } = session;
   let mode = session.mode?.() ?? 'auto';
@@ -171,7 +175,8 @@ async function permit(
 
   const toolCall: ToolCallUpdate = {
     toolCallId,
-    ...drawn(directory, name, input, 'real' in reach ? reach.real : undefined),
+    ...(draw ??
+      drawn(directory, name, input, 'real' in reach ? reach.real : undefined)),
     // A read's title names its file already; list and search keep the
     // directory "this directory" means.
     ...('real' in reach ? { locations: [] } : {}),
@@ -264,6 +269,43 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
           proposal,
           direct === 'shell' ? undefined : direct,
         );
+      }),
+  };
+}
+
+/**
+ * An MCP tool of libfx's adapter behind riff's admission: it asks, or is
+ * reviewed under auto, before the adapter calls its server.
+ */
+function mcpTool(
+  session: ToolSession,
+  tool: FxAgentHostTool,
+  original: Original,
+): FxAgentHostTool {
+  return {
+    ...tool,
+    execute: (input, context) =>
+      Promise.try(async () => {
+        const { signal, executionId } = context;
+
+        signal.throwIfAborted();
+
+        await permit(
+          session,
+          executionId,
+          tool.name,
+          input,
+          { tool: 'mcp', server: original.server, name: original.tool, input },
+          signal,
+          undefined,
+          { title: mcpTitle(original), kind: 'other' },
+        );
+
+        signal.throwIfAborted();
+        await session.begin?.(executionId, tool.name, input);
+        signal.throwIfAborted();
+
+        return await tool.execute(input, context);
       }),
   };
 }
@@ -398,6 +440,11 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
 
         return loaded.text;
       },
+    }),
+    ...(session.mcp?.tools ?? []).flatMap((tool) => {
+      const original = session.mcp?.originals.get(tool.name);
+
+      return original === undefined ? [] : [mcpTool(session, tool, original)];
     }),
   ];
 }

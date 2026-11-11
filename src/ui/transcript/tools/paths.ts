@@ -7,7 +7,7 @@
  * reads as short as the header says it.
  */
 import { realpathSync } from 'node:fs';
-import { isAbsolute, relative, sep } from 'node:path';
+import { isAbsolute, join, relative, sep } from 'node:path';
 
 /** The session's directory and the home directory, as given and real. */
 export interface PathView {
@@ -78,12 +78,30 @@ export function shownFile(path: string, view: PathView | undefined): string {
   return fromHome(path, view) ?? path;
 }
 
-/** A directory as the header names one: from `~`, else whole. */
+/**
+ * A directory as the header names one: at or under the session's directory,
+ * by either form, from that directory as given; then from `~`, else whole.
+ */
 export function shownDirectory(
   path: string,
   view: PathView | undefined,
 ): string {
-  return view === undefined || !isAbsolute(path)
-    ? path
-    : (fromHome(path, view) ?? path);
+  if (view === undefined || !isAbsolute(path)) {
+    return path;
+  }
+
+  const [given] = view.cwds;
+  let named = path;
+
+  for (const cwd of view.cwds) {
+    const rel = under(cwd, path);
+
+    if (rel !== undefined && given !== undefined) {
+      named = join(given, rel);
+
+      break;
+    }
+  }
+
+  return fromHome(named, view) ?? named;
 }

@@ -41,6 +41,16 @@ describe('paths as the window draws them (CHD-611)', () => {
     );
   });
 
+  test('the session directory through its link reads as the header writes it', () => {
+    const outside = pathView('/tmp/qa', '/Users/someone', linked);
+
+    expect(shownDirectory('/private/tmp/qa', outside)).toBe('/tmp/qa');
+    expect(shownDirectory('/private/tmp/qa/src', outside)).toBe('/tmp/qa/src');
+    expect(shownDirectory('/private/tmp/other', outside)).toBe(
+      '/private/tmp/other',
+    );
+  });
+
   test('a directory is named as the header names one', () => {
     expect(shownDirectory('/private/tmp/home/src/app', view)).toBe('~/src/app');
     expect(shownDirectory('/tmp/home', view)).toBe('~');

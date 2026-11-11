@@ -1,0 +1,40 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.u3
+ █▀     ? for shortcuts · /help
+
+ › call notes__save_note {"title":"Deploy checklist","tags":["ops"]}
+
+ ⏺ MCP server broken was not started: MCP error -32000: Connection closed
+
+   ┌───────────────────────────[copy]─┐
+   │ starting notes                   │
+   │ notes: no database at ./notes.db │
+   └──────────────────────────────────┘
+
+ ⏺ notes - save_note (MCP)(title: "Deploy checklist", tags: ["ops"])
+   ⎿  Saved Deploy checklist
+   ⎿  Allowed mcp__notes__save_note · Allow
+
+ ⏺ Saved Deploy checklist
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                                          fake · default effort · 1% context used

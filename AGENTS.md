@@ -204,6 +204,7 @@ an empty name is treated as no `--qa`. For riff on its fake provider, use
 `bun dev chord --fake --qa <name> riff`. Both flags select riff's fake
 provider and come before `riff`. `CHORD_RIFF_QA_SIGN_IN` selects offline
 sign-in outcomes documented in the guide; never use a live sign-in for QA.
+Fake/QA riff reads no user `AGENTS.md` or home skills.
 
 ```sh
 tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord --fake --qa capture'

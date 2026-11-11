@@ -12,9 +12,13 @@
 - No console calls in `session/`, `acp/`, `server/` or `riff/`: stdout may
   carry ACP.
 - `riff/` serves one ACP session per process on the hidden `--riff-agent`
-  flag; its tools are read, list, search, edit, write and shell. Edit and write
-  share a real-path session grant and refuse a changed proposal; shell grants
-  cover exact commands, with cancellation stopping the process group.
+  flag; its tools are read, list, search, edit, write, shell and skill, plus
+  the session's stdio and streamable HTTP MCP tools; SSE is held back.
+  Skill never asks; every ungranted MCP call asks in ask mode and is reviewed
+  in auto, including chord's own tools. MCP grants cover one server's tool
+  with any arguments. Edit and write share a real-path session grant and
+  refuse a changed proposal; shell grants cover exact commands, with
+  cancellation stopping the process group.
   Auto is the default; ask grants hold in both modes. Gated auto calls use
   the plan's safety reviewer; clear runs, otherwise allow once or deny with
   a 5-minute deadline. `riff/commands/` admits fx's direct read-only and
@@ -29,6 +33,13 @@
   selects only the development provider.
   Sessions use libfx's `local()` store under chord's state directory, with
   a sidecar per session; chord's record remains what was shown.
+  At start, read base instructions, repository-root-to-session `AGENTS.md`
+  files, then the user's chord `AGENTS.md`, capped at 32 KiB with a note;
+  unreadable files refuse the session. Outside git, read only the session's
+  project file. No `CLAUDE.md`. Discover `.agents/skills/*/SKILL.md` in the
+  session directory and home; project names win. Skip invalid metadata and
+  links outside the session directory or home with a visible reason.
+  Fake/QA reads neither user instructions nor home skills.
 - riff's window owns sign-in through libfx; `-p` and `acp` report the
   failure with `run chord riff to sign in`. Plan credentials use
   `platform/secrets.ts` only. Sign-in, refresh and logout share a per-provider

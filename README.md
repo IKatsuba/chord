@@ -138,6 +138,8 @@ updates it through the package manager that installed it.
 `chord riff` runs chord's own agent on your ChatGPT or Grok plan. Sign in
 in chord's box, in the browser or with a device code; `/login` switches
 plans and `/logout` signs out. Credentials stay in the system store.
+riff reads `AGENTS.md` instructions, loads `.agents/skills/` skills on
+demand, and uses your configured MCP servers and chord's team tools.
 For other agents, chord starts `npx`, `uvx` or their own CLI; sign in to
 Claude Code, Codex or Gemini as you normally would.
 

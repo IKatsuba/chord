@@ -612,6 +612,25 @@ removal and account changes for the current session. `-p` and `chord acp`
 open no sign-in box: a missing sign-in reports the failure with
 `run chord riff to sign in`.
 
+## riff instructions and skills
+
+At session start, riff reads chord's base instructions, then `AGENTS.md`
+files from the git repository root down to the session directory, then
+`~/.config/chord/AGENTS.md`. Outside a repository, only the session
+directory's project file is read. Instructions are capped at 32 KiB with
+a truncation note. An unreadable file stops the session with its path and
+reason. riff reads no `CLAUDE.md`; it is instructed to read deeper
+`AGENTS.md` files when working in those folders.
+
+Skills are `SKILL.md` files in `<session directory>/.agents/skills/*/` and
+`~/.agents/skills/*/`; a project skill wins on a name clash. Their names
+and descriptions enter the instructions. The `skill` tool loads one by
+name, then its resources, with `offset` paging; it never asks permission.
+Resources must stay inside the skill's folder. Invalid metadata or a link
+outside the session directory (project skills) or home (home skills) skips
+the skill with `Skill <name> was not loaded: <reason>` in the transcript.
+`--fake` and `--qa` read no home skills or user `AGENTS.md`.
+
 ## `chord acp`
 
 `chord acp [agent]` serves ACP v1 on stdin and stdout, without a window.
@@ -1261,6 +1280,13 @@ server that is wrong is named with its file and left out, and the others
 still count; a `.mcp.json` that is not a JSON object is named and ignored.
 `/mcp` says under its list how many servers each file lost that way.
 `-p` passes the same servers.
+
+riff takes stdio and streamable HTTP servers. SSE servers are held back
+with the usual notice because the MCP SDK cannot bound their connection
+time. A failed start shows `MCP server <name> was not started: <reason>`,
+with the stderr tail when available. Calls use the original server and
+tool names, titled `mcp__<server>__<tool>`. MCP elicitations open chord's
+form or link prompt. Interrupted MCP calls are not rerun on resume.
 
 Beside them, every session the window opens gets an MCP server of chord's
 own, named `chord` (or `chord-2`, … where a passed user server has that name),
@@ -1916,7 +1942,8 @@ or `port-taken` (ChatGPT browser only). For example,
 starts signed out and completes the chosen sign-in with fixture credentials.
 The fixture uses an example address and code; it contacts no sign-in endpoint.
 
-riff has `read`, `list`, `search`, `edit`, `write` and `shell` tools.
+riff has `read`, `list`, `search`, `edit`, `write`, `shell` and `skill` tools,
+plus the session's MCP tools.
 `edit` replaces one unique exact string; `write` replaces a whole file or
 creates one under an existing directory. Both propose a diff and refuse
 without writing if the file or its destination changed while approval waited.
@@ -1925,16 +1952,23 @@ directory counts as outside. `shell` runs in the session directory, streams
 output into the transcript, and Esc stops its process groups.
 
 riff defaults to auto; shift+tab toggles ask and auto, kept per session.
-Ask mode asks for every call without a session grant. Auto admits reads, lists
-and searches inside the session directory, edits and writes on non-sensitive
-paths inside it, calls covered by a grant, and the shell commands below.
+Ask mode asks for every call without a session grant except `skill`, which
+never asks. Auto admits reads, lists and searches inside the session
+directory, edits and writes on non-sensitive paths inside it, calls
+covered by a grant, and the shell commands below.
 Other calls go to a safety review: outside reads, outside or sensitive edits
-and writes, and other shell commands. Sensitive paths include `.git/`, `.ssh/`,
-`.env*`, key files (`*.pem`, `*.key`, `*.p12`, `*.pfx`, `id_rsa`, `id_dsa`,
-`id_ecdsa`, `id_ed25519`), shell startup files and `Library/LaunchAgents/`.
+and writes, every MCP call, and other shell commands. Sensitive paths
+include `.git/`, `.ssh/`, `.env*`, key files (`*.pem`, `*.key`, `*.p12`,
+`*.pfx`, `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`), shell startup files
+and `Library/LaunchAgents/`.
 `Allow edits to <path> for this session` covers edit and write at that real
 path; `Allow this exact command for this session` covers only that command
 string, never a prefix. Grants hold in both modes for that session.
+
+`Allow <server> - <tool> for this session` covers that MCP tool with any
+arguments. chord's own tools follow the same rules: a riff lead in ask
+mode asks you before each `open_agent`, `send_message` or other chord MCP
+call without a grant; auto reviews them.
 
 Auto admits two command sets adapted from fx v0.0.16, with restricted
 arguments and syntax:
@@ -1957,7 +1991,7 @@ arguments and syntax:
 
 Commands outside these rules, including global installs and anything that
 does not parse, go to review. Session grants take precedence; ask mode
-still asks for every ungranted call.
+still asks for every ungranted call except `skill`.
 
 The reviewer is `gpt-6-luna` on ChatGPT or `grok-4.5` on Grok, using your
 plan. Each review spends a plan request; a failed attempt retries once.

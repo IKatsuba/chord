@@ -35,11 +35,13 @@
   Fake/QA launches use fixture collectors even if real provider CLIs exist.
   riff uses the local fake Chat Completions provider in `fixtures/riff/`;
   `CHORD_RIFF_FAKE_PROVIDER` sets its URL, and `CHORD_RIFF_BACKEND=wasm`
-  forces WebAssembly. Neither is a setting. `call <tool> <json>` prompts
-  exercise a tool on the fake provider. In the pending action only,
-  `[review:clear]` selects clear and `[review:failed]` selects a failed
-  review; other review calls return caution. These markers in requests or
-  prior results never select the verdict. `fixtures/riff/tree.ts` supplies
+  forces WebAssembly. Neither is a setting. Only the start of the prompt
+  selects a scenario: `call`, `tool`, `hang`, `long`, `fail` or `think`.
+  `call <tool> <json>` exercises a tool; words later in a prompt never
+  select a scenario. The riff team fixture is `fixtures/teams/fake/riff.md`.
+  In the pending action only, `[review:clear]` selects clear and
+  `[review:failed]` selects a failed review; other review calls return caution.
+  These markers in requests or prior results never select the verdict. `fixtures/riff/tree.ts` supplies
   fff's git and non-git file-set cases. Credential tests inject `Secrets`
   and fake plan fetches; never call `Bun.secrets`. QA credential states use
   `CHORD_RIFF_QA=1` with a fake provider URL and `CHORD_RIFF_QA_STATE`;

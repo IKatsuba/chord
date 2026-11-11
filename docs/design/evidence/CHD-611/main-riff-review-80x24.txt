@@ -1,0 +1,24 @@
+ › call shell {"command":"rm -rf dist '[review:caution]'"}
+
+ ⏺ Bash(rm -rf dist '[review:caution]')
+   ⎿  Reviewed: caution
+
+ ››› Waiting for permission… (5s · denied in 4m 54s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Bash rm -rf dist '[review:caution]'                                          │
+│ /private/tmp/chord-qa.d611                                                   │
+│                                                                              │
+│ The safety review held this:                                                 │
+│ Fixture safety review: caution.                                              │
+│                                                                              │
+│ ❯ 1. Allow once                                                              │
+│   2. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                fake · default · 1% used

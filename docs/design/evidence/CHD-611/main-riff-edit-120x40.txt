@@ -1,0 +1,40 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.d611
+ █▀     ? for shortcuts · /help
+
+ › call write {"path":"greet.ts","content":"export const greet = \"Hello\";\n"}
+
+ ⏺ Write(greet.ts)
+   ⎿  Updated /private/tmp/chord-qa.d611/greet.ts with 1 addition and 0 removals
+      1 + export const greet = "Hello";
+
+ ⏺ Updated greet.ts
+   Index: /private/tmp/chord-qa.d611/greet.ts
+
+   --- /private/tmp/chord-qa.d611/greet.ts +++ /private/tmp/chord-qa.d611/greet.ts @@ -0,0 +1,1 @@ +export const greet
+   = "Hello";
+
+ › call edit {"path":"greet.ts","oldString":"Hello","newString":"Hi"}
+
+ ⏺ Update(greet.ts)
+   ⎿  Updated /private/tmp/chord-qa.d611/greet.ts with 1 addition and 1 removal
+      1 - export const greet = "Hello";
+      1 + export const greet = "Hi";
+
+ ⏺ Updated greet.ts
+   Index: /private/tmp/chord-qa.d611/greet.ts
+
+   --- /private/tmp/chord-qa.d611/greet.ts +++ /private/tmp/chord-qa.d611/greet.ts @@ -1,1 +1,1 @@ -export const greet
+   = "Hello"; +export const greet = "Hi";
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

@@ -42,6 +42,7 @@ import {
 import {
   configOptions,
   defaultConfig,
+  planModels,
   type RiffConfig,
   type RiffPlan,
   setOption,
@@ -91,6 +92,8 @@ export const INTERRUPTED = 'The interrupted turn was cancelled.';
 /** The fake Chat Completions server riff runs on in tests. */
 export interface FakeProvider {
   readonly baseUrl: string;
+  /** The plan whose model list it presents; its own `fake` when none. */
+  readonly models?: 'codex' | 'grok';
 }
 
 export interface RiffOptions {
@@ -179,6 +182,8 @@ export function riffInit(version: string): InitializeResponse {
 interface Open {
   readonly id: string;
   readonly plan: RiffPlan;
+  /** Whose model list it offers: `plan`'s, or the fake's chosen plan's. */
+  readonly offered: RiffPlan;
   readonly agent: FxAgent;
   /** The session's directory, as its real path: where its tools work. */
   readonly directory: string;
@@ -403,12 +408,15 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
     const plan: RiffPlan = provider.plan;
+    // The list the session offers: its plan's, or the one the fake presents.
+    const offered: RiffPlan =
+      provider.plan === 'fake' ? (provider.fake.models ?? 'fake') : plan;
     const credential = provider.plan === 'fake' ? undefined : provider.cell;
     const authorization =
       credential === undefined || provider.plan === 'fake'
         ? undefined
         : planProvider(credential, provider.plan);
-    const config: RiffConfig = resumed?.sidecar ?? defaultConfig(plan);
+    const config: RiffConfig = resumed?.sidecar ?? defaultConfig(offered);
     const holder: { open?: Open } = {};
     const shown = new Map<string, string | ToolCallContent[]>();
     const grants: Grants = new Set();
@@ -422,12 +430,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
             provider: {
               name: 'fake',
               baseUrl: provider.fake.baseUrl,
-              models: {
-                fake: {
-                  contextWindow: windowOf(plan, 'fake'),
-                  supportsToolUse: true,
-                },
-              },
+              models: Object.fromEntries(
+                planModels(offered).map(({ id, window }) => [
+                  id,
+                  { contextWindow: window, supportsToolUse: true },
+                ]),
+              ),
             },
           }
         : authorization?.options;
@@ -673,6 +681,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     holder.open = {
       id,
       plan,
+      offered,
       agent: fx,
       directory,
       finder,
@@ -897,7 +906,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
       return {
         sessionId: session.id,
-        configOptions: configOptions(session.plan, session.config),
+        configOptions: configOptions(session.offered, session.config),
         _meta: { 'chord/riffProvider': session.plan },
       };
     })
@@ -933,14 +942,14 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       }
 
       return {
-        configOptions: configOptions(session.plan, session.config),
+        configOptions: configOptions(session.offered, session.config),
         _meta: { 'chord/riffProvider': session.plan },
       };
     })
     .onRequest('session/set_config_option', async ({ params }) => {
       const session = opened(params.sessionId);
       const next = setOption(
-        session.plan,
+        session.offered,
         session.config,
         params.configId,
         params.value,
@@ -957,7 +966,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
       await save(session);
 
-      return { configOptions: configOptions(session.plan, next) };
+      return { configOptions: configOptions(session.offered, next) };
     })
     .onRequest('session/prompt', async ({ params, client }) => {
       const session = opened(params.sessionId);
@@ -1059,7 +1068,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           await notify(client, session.id, {
             sessionUpdate: 'usage_update',
             used: session.used,
-            size: windowOf(session.plan, model),
+            size: windowOf(session.offered, model),
           });
         }
 
@@ -1073,7 +1082,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
           await notify(client, session.id, {
             sessionUpdate: 'config_option_update',
-            configOptions: configOptions(session.plan, session.config),
+            configOptions: configOptions(session.offered, session.config),
           });
         }
 

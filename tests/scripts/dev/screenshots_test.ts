@@ -105,11 +105,29 @@ describe('CHD-564 the title page shots', () => {
   });
 
   test('every other shot is named, on the prompt', () => {
-    for (const { name, args, first } of SHOTS) {
-      if (name !== 'start') {
+    for (const { name, args, first, riff } of SHOTS) {
+      if (name !== 'start' && riff === undefined) {
         expect(args).toBeUndefined();
         expect(first).toBeUndefined();
       }
+    }
+  });
+
+  test("riff's shots start riff, and wait for its own first screen", () => {
+    const riffs = SHOTS.filter(({ riff }) => riff !== undefined);
+
+    expect(riffs.map(({ name }) => name)).toEqual([
+      'riff-sign-in',
+      'riff-session',
+      'riff-ask',
+      'riff-review',
+      'riff-skill',
+      'riff-model',
+    ]);
+
+    for (const { args, first } of riffs) {
+      expect(args).toEqual(['riff']);
+      expect(first).toBeDefined();
     }
   });
 });

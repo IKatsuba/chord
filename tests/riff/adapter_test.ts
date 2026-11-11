@@ -29,6 +29,7 @@ import {
   riffInit,
 } from '../../src/riff/adapter.ts';
 import { riffStore, type Sidecar } from '../../src/riff/store.ts';
+import { planModels } from '../../src/riff/models.ts';
 import { until } from '../session/conversation_fake.ts';
 import { openFinder } from '../../src/platform/fff.ts';
 import { libfxBackend } from '../../src/platform/libfx.ts';
@@ -2550,6 +2551,40 @@ describe('CHD-613 tester: binary refusal boundaries', () => {
       }
     });
   }
+});
+
+describe("a fake provider presenting a plan's model list (CHD-611)", () => {
+  test("session/new offers the ChatGPT plan's list and the turn asks for its default", async () => {
+    await open(true, {
+      provider: { baseUrl: fake.url, models: 'codex' },
+    });
+
+    const answer = await client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+    const model = (
+      answer.result?.['configOptions'] as {
+        id: string;
+        currentValue: string;
+        options: { value: string }[];
+      }[]
+    ).find((option) => option.id === 'model');
+    const ids = planModels('codex').map(({ id }) => id);
+
+    expect(model?.currentValue).toBe(ids[0]);
+    expect(model?.options.map(({ value }) => value)).toEqual(ids);
+
+    await prompt(sessionId, 'hello');
+
+    expect(fake.requests[0]?.model).toBe(ids[0]);
+    expect(
+      client
+        .updates(sessionId)
+        .find((update) => update.sessionUpdate === 'usage_update'),
+    ).toMatchObject({ size: planModels('codex')[0]?.window });
+  });
 });
 
 describe('riff instructions at session start', () => {

@@ -342,3 +342,33 @@ describe('CHD-610 tester: skipped skill containment', () => {
     expect(found.skipped[0]?.name).toBe('shared');
   });
 });
+
+describe('CHD-610 tester: portable unreadable skill errors', () => {
+  test('an unreadable linked project skill names its logical SKILL.md once', async () => {
+    const physical = join(project, 'shared', 'notes');
+    const logical = join(project, '.agents', 'skills', 'notes');
+
+    await mkdir(physical, { recursive: true });
+    await mkdir(join(project, '.agents', 'skills'), { recursive: true });
+    await writeFile(join(physical, 'SKILL.md'), md('notes', 'Rules'));
+    await symlink(physical, logical);
+    await chmod(join(physical, 'SKILL.md'), 0o000);
+
+    await expect(
+      discoverSkills({ directory: project, home: undefined }),
+    ).rejects.toThrow(
+      new Error(`${join(logical, 'SKILL.md')}: permission denied`),
+    );
+  });
+
+  test('an unreadable home skill uses the same refusal as a project skill', async () => {
+    const directory = await skill(home, 'locked', md('locked', 'Home rules'));
+    const file = join(directory, 'SKILL.md');
+
+    await chmod(file, 0o000);
+
+    await expect(discoverSkills({ directory: project, home })).rejects.toThrow(
+      new Error(`${file}: permission denied`),
+    );
+  });
+});

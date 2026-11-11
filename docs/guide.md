@@ -781,8 +781,8 @@ saving remains unavailable.
 riff runs in a separate process. If that process crashes, chord reports
 the agent gone with its stderr tail. If the native engine cannot load,
 riff uses WebAssembly; if neither backend loads, startup fails with the
-reasons. A provider error ends the prompt with its error; Esc cancels
-work that is still running.
+reasons. libfx may retry provider failures; Esc cancels a turn that is
+still running. If the turn ends with an error, chord reports it.
 
 ## `chord acp`
 

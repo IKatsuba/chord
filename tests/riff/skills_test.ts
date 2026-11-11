@@ -12,9 +12,11 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   discoverSkills,
+  findSkills,
   type Skill,
   skillMetadata,
   skillsSection,
+  skippedSkillNote,
   validName,
 } from '../../src/riff/skills.ts';
 
@@ -93,17 +95,76 @@ describe('riff skill discovery', () => {
     expect(found[0]?.description).toBe('');
   });
 
-  test('a linked skill folder is its real path', async () => {
+  test('a skill folder linked inside the project is its real path', async () => {
+    const kept = join(project, 'shared', 'linked');
+
+    await mkdir(kept, { recursive: true });
+    await writeFile(join(kept, 'SKILL.md'), md('linked', 'Via a link'));
+    await mkdir(join(project, '.agents', 'skills'), { recursive: true });
+    await symlink(kept, join(project, '.agents', 'skills', 'linked'));
+
+    const found = await findSkills({ directory: project, home: undefined });
+
+    expect(found.skills[0]?.directory).toBe(kept);
+    expect(found.skipped).toEqual([]);
+  });
+
+  test('a project skill linking out of the project, or a home one out of home, is skipped with where it points', async () => {
     const elsewhere = join(root, 'elsewhere');
 
     await mkdir(elsewhere);
-    await writeFile(join(elsewhere, 'SKILL.md'), md('linked', 'Via a link'));
+    await writeFile(join(elsewhere, 'SKILL.md'), md('outside', 'Via a link'));
     await mkdir(join(project, '.agents', 'skills'), { recursive: true });
-    await symlink(elsewhere, join(project, '.agents', 'skills', 'linked'));
+    await mkdir(join(home, '.agents', 'skills'), { recursive: true });
+    await symlink(elsewhere, join(project, '.agents', 'skills', 'away'));
+    await symlink(elsewhere, join(home, '.agents', 'skills', 'roaming'));
 
-    const found = await discoverSkills({ directory: project, home: undefined });
+    // A folder inside whose SKILL.md alone links out.
+    const half = await skill(project, 'half', 'unused');
 
-    expect(found[0]?.directory).toBe(elsewhere);
+    await rm(join(half, 'SKILL.md'));
+    await symlink(join(elsewhere, 'SKILL.md'), join(half, 'SKILL.md'));
+
+    const found = await findSkills({ directory: project, home });
+
+    expect(found.skills).toEqual([]);
+    expect(found.skipped).toEqual([
+      {
+        name: 'away',
+        reason: 'its folder links outside the project, to ../elsewhere',
+      },
+      {
+        name: 'half',
+        reason:
+          'its SKILL.md links outside the project, to ../elsewhere/SKILL.md',
+      },
+      {
+        name: 'roaming',
+        reason: 'its folder links outside home, to ../elsewhere',
+      },
+    ]);
+    expect(skippedSkillNote(found.skipped[0]!)).toBe(
+      'Skill away was not loaded: its folder links outside the project, to ../elsewhere',
+    );
+  });
+
+  test('invalid metadata is skipped with its reason, by the folder name', async () => {
+    await skill(project, 'bad-yaml', '---\nname: [\n---\n');
+    await skill(project, 'bad-name', md('a/b', 'slash'));
+    await skill(project, 'no-name', '---\ndescription: d\n---\n');
+    await skill(project, 'list-text', '---\nname: x\ndescription: [1]\n---\n');
+
+    const found = await findSkills({ directory: project, home: undefined });
+
+    expect(found.skipped).toEqual([
+      { name: 'bad-name', reason: 'its name "a/b" is not a valid skill name' },
+      {
+        name: 'bad-yaml',
+        reason: 'its SKILL.md frontmatter is not valid YAML',
+      },
+      { name: 'list-text', reason: 'its description is not text' },
+      { name: 'no-name', reason: 'its SKILL.md frontmatter has no name' },
+    ]);
   });
 
   test('an unreadable SKILL.md fails discovery, naming it', async () => {

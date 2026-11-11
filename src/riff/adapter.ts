@@ -45,7 +45,7 @@ import {
   windowOf,
 } from './models.ts';
 import { readInstructions } from './instructions.ts';
-import { discoverSkills, skillsSection } from './skills.ts';
+import { findSkills, skillsSection, skippedSkillNote } from './skills.ts';
 import {
   type Connect,
   connectSdk,
@@ -449,7 +449,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
     });
 
-    const skills = await discoverSkills({
+    const { skills, skipped } = await findSkills({
       directory,
       home: options.home,
     }).catch((error: unknown) => {
@@ -465,7 +465,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       directory,
       options.connectMcp ?? connectSdk(options.version),
     );
-    const notices = mcp.skipped.map(skippedNote);
+    const notices = [
+      ...skipped.map(skippedSkillNote),
+      ...mcp.skipped.map(skippedNote),
+    ];
 
     for (const notice of notices) {
       options.log?.(`riff: ${notice}`);

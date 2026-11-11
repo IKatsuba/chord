@@ -12,7 +12,8 @@ import { VFile } from 'vfile';
 import { matter } from 'vfile-matter';
 import { constants } from 'node:fs';
 import { open, readdir, realpath, stat } from 'node:fs/promises';
-import { basename, isAbsolute, join } from 'node:path';
+import { basename, isAbsolute, join, relative } from 'node:path';
+import { isInside } from './tools/paths.ts';
 import { notFound } from '../not_found.ts';
 
 /** One discovered skill. */
@@ -38,33 +39,59 @@ const HEAD_BYTES = 64 * 1024;
 /** fx's limit on a skill's name. */
 const NAME_BYTES = 256;
 
+/** A skill riff did not load, by its folder's name or its own, and why. */
+export interface SkippedSkill {
+  readonly name: string;
+  readonly reason: string;
+}
+
+/** The skills discovered, and those left out with a reason. */
+export interface FoundSkills {
+  readonly skills: Skill[];
+  readonly skipped: SkippedSkill[];
+}
+
+/** The skills, without the reasons for those left out. */
+export async function discoverSkills(sources: SkillSources): Promise<Skill[]> {
+  return (await findSkills(sources)).skills;
+}
+
 /**
  * The skills in the project's root, then the home's; a name found twice
- * keeps the first, so the project wins. A skill whose `SKILL.md` is
- * missing or whose metadata is invalid is left out.
+ * keeps the first, so the project wins. A folder without a `SKILL.md` is
+ * no skill; one that links out of its place (main, CHD-610: a project
+ * skill stays in the session's directory, a home skill in the home) or
+ * whose metadata is invalid is skipped with its reason.
  */
-export async function discoverSkills(sources: SkillSources): Promise<Skill[]> {
-  const roots = [join(sources.directory, ROOT)];
-
-  if (sources.home !== undefined) {
-    roots.push(join(sources.home, ROOT));
-  }
-
+export async function findSkills(sources: SkillSources): Promise<FoundSkills> {
+  const places = [
+    { base: sources.directory, where: 'the project' },
+    ...(sources.home === undefined
+      ? []
+      : [{ base: sources.home, where: 'home' }]),
+  ];
   const found = new Map<string, Skill>();
+  const skipped: SkippedSkill[] = [];
 
-  for (const root of roots) {
-    for (const skill of await skillsIn(root)) {
-      if (!found.has(skill.name)) {
-        found.set(skill.name, skill);
+  for (const place of places) {
+    for (const each of await skillsIn(place.base, place.where)) {
+      if ('reason' in each) {
+        skipped.push(each);
+      } else if (!found.has(each.name)) {
+        found.set(each.name, each);
       }
     }
   }
 
-  return [...found.values()];
+  return { skills: [...found.values()], skipped };
 }
 
-/** The skills of one root, in folder-name order. */
-async function skillsIn(root: string): Promise<Skill[]> {
+/** The skills of one place's root, in folder-name order. */
+async function skillsIn(
+  base: string,
+  where: string,
+): Promise<(Skill | SkippedSkill)[]> {
+  const root = join(base, ROOT);
   let names: string[];
 
   try {
@@ -77,10 +104,12 @@ async function skillsIn(root: string): Promise<Skill[]> {
     throw named(root, error);
   }
 
-  const skills: Skill[] = [];
+  // Inside is judged on real paths: the place itself may be reached by one.
+  const inside = await realpath(base);
+  const skills: (Skill | SkippedSkill)[] = [];
 
   for (const name of names) {
-    const skill = await skillAt(join(root, name));
+    const skill = await skillAt(join(root, name), inside, where);
 
     if (skill !== undefined) {
       skills.push(skill);
@@ -91,11 +120,18 @@ async function skillsIn(root: string): Promise<Skill[]> {
 }
 
 /**
- * The skill in `folder`; none when it is no folder or has no `SKILL.md`.
- * One that cannot be read refuses the start, as an `AGENTS.md` does.
+ * The skill in `folder`; none when it is no folder or has no `SKILL.md`,
+ * skipped when it or its `SKILL.md` resolves outside `inside`. One that
+ * cannot be read refuses the start, as an `AGENTS.md` does.
  */
-async function skillAt(folder: string): Promise<Skill | undefined> {
+async function skillAt(
+  folder: string,
+  inside: string,
+  where: string,
+): Promise<Skill | SkippedSkill | undefined> {
+  const name = basename(folder);
   let directory: string;
+  let file: string;
   let head: string | undefined;
 
   try {
@@ -105,7 +141,23 @@ async function skillAt(folder: string): Promise<Skill | undefined> {
       return undefined;
     }
 
-    head = await readHead(join(directory, 'SKILL.md'));
+    if (!isInside(inside, directory)) {
+      return {
+        name,
+        reason: `its folder links outside ${where}, to ${relative(inside, directory)}`,
+      };
+    }
+
+    file = await realpath(join(directory, 'SKILL.md'));
+
+    if (!isInside(inside, file)) {
+      return {
+        name,
+        reason: `its SKILL.md links outside ${where}, to ${relative(inside, file)}`,
+      };
+    }
+
+    head = await readHead(file);
   } catch (error) {
     if (absent(error)) {
       return undefined;
@@ -118,9 +170,11 @@ async function skillAt(folder: string): Promise<Skill | undefined> {
     return undefined;
   }
 
-  const metadata = skillMetadata(head, basename(folder));
+  const metadata = metadataOf(head, name);
 
-  return metadata === undefined ? undefined : { ...metadata, directory };
+  return 'reason' in metadata
+    ? { name, reason: metadata.reason }
+    : { ...metadata, directory };
 }
 
 /** The start of a regular file, or undefined when there is none. */
@@ -154,34 +208,59 @@ export function skillMetadata(
   text: string,
   folder: string,
 ): { readonly name: string; readonly description: string } | undefined {
+  const metadata = metadataOf(text, folder);
+
+  return 'reason' in metadata ? undefined : metadata;
+}
+
+/** As `skillMetadata`, with the reason when the metadata is invalid. */
+export function metadataOf(
+  text: string,
+  folder: string,
+):
+  | { readonly name: string; readonly description: string }
+  | { readonly reason: string } {
   const file = new VFile(new TextEncoder().encode(text));
   const read = file.value;
 
   try {
     matter(file, { strip: true });
   } catch {
-    return undefined;
+    return { reason: 'its SKILL.md frontmatter is not valid YAML' };
   }
 
   // vfile-matter reads a file with none as an empty mapping; only whether it
   // stripped anything tells the two apart.
   if (file.value === read) {
-    return validName(folder) ? { name: folder, description: '' } : undefined;
+    return validName(folder)
+      ? { name: folder, description: '' }
+      : { reason: 'its folder name is not a valid skill name' };
   }
 
   const data = file.data.matter as Record<string, unknown> | undefined;
   const name = data?.['name'];
   const description = data?.['description'] ?? '';
 
-  if (
-    typeof name !== 'string' ||
-    typeof description !== 'string' ||
-    !validName(name)
-  ) {
-    return undefined;
+  if (typeof name !== 'string') {
+    return { reason: 'its SKILL.md frontmatter has no name' };
+  }
+
+  if (!validName(name)) {
+    return {
+      reason: `its name ${JSON.stringify(name)} is not a valid skill name`,
+    };
+  }
+
+  if (typeof description !== 'string') {
+    return { reason: 'its description is not text' };
   }
 
   return { name, description: description.trim() };
+}
+
+/** chord's note in the window for a skill riff did not load. */
+export function skippedSkillNote(skipped: SkippedSkill): string {
+  return `Skill ${skipped.name} was not loaded: ${skipped.reason}`;
 }
 
 /** fx's rule: one path segment of printable text, at most 256 bytes. */

@@ -11,6 +11,7 @@ import { reviewInput } from '../../src/riff/review/input.ts';
 import {
   chmod,
   mkdir,
+  symlink,
   mkdtemp,
   readFile,
   realpath,
@@ -18,7 +19,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import {
   connectRiff,
   type Riff,
@@ -2592,6 +2593,41 @@ describe('riff instructions refusal', () => {
 });
 
 describe('riff skills at session start', () => {
+  test('a skill linking out of the project is noted once ahead of the reply, never to the model', async () => {
+    const directory = await realpath(await mkdtemp(join(stateDir, 'work-')));
+    const elsewhere = await realpath(await mkdtemp(join(stateDir, 'away-')));
+
+    await writeFile(
+      join(elsewhere, 'SKILL.md'),
+      '---\nname: release-notes\ndescription: d\n---\n',
+    );
+    await mkdir(join(directory, '.agents', 'skills'), { recursive: true });
+    await symlink(
+      elsewhere,
+      join(directory, '.agents', 'skills', 'release-notes'),
+    );
+    await open();
+
+    const answer = await client.request('session/new', {
+      cwd: directory,
+      mcpServers: [],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+
+    await prompt(sessionId, 'hello');
+    await prompt(sessionId, 'hello');
+
+    const said = client
+      .updates(sessionId)
+      .filter((update) => update.sessionUpdate === 'agent_message_chunk');
+    const note = `Skill release-notes was not loaded: its folder links outside the project, to ../${basename(elsewhere)}`;
+
+    expect(said[0]).toMatchObject({ content: { type: 'text', text: note } });
+    expect(String(said[0]?.['messageId'])).toStartWith('chord-note-');
+    expect(JSON.stringify(said).split('was not loaded')).toHaveLength(2);
+    expect(JSON.stringify(fake.requests)).not.toContain('release-notes');
+  });
+
   test('the instructions list a project skill and the skill tool loads it, drawn in one line', async () => {
     const directory = await realpath(await mkdtemp(join(stateDir, 'work-')));
     const skill = join(directory, '.agents', 'skills', 'notes');

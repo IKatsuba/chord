@@ -1,0 +1,40 @@
+      were not valid JSON, so fx did not run the call. The conversation shows its arguments as {}.","deta
+
+ ⏺ {"error":{"type":"tool_execution_failed","tool_name":"chord__send_message","message":"Tool arguments were not valid 
+   JSON, so fx did not run the call. The conversation shows its arguments as {}.","details":{"failure":"syntax_error",
+   "received_bytes":5,"error_offset":1},"suggestion":"Reissue the call with valid JSON. Parsing failed at error_offset;
+   escape quotes, backslashes, and newlines inside strings."}}
+
+ › call chord__open_agent {"member":"helper"}
+
+ ⏺ Open(helper)
+   ⎿  Error: MCP error -32602: Input validation error: Invalid arguments for tool open_agent: Invalid input: expected
+      string, received undefined at prompt
+   ⎿  Allowed mcp__chord__open_agent · Allow
+
+ ⏺ MCP error -32602: Input validation error: Invalid arguments for tool open_agent: Invalid input: expected string, 
+   received undefined at prompt
+
+ › call chord__open_agent {"member":"helper","prompt":"write hi.txt"}
+
+ ⏺ Open(helper) · riff · fake · ask
+   ⎿  write hi.txt
+   ⎿  Allowed mcp__chord__open_agent · Allow chord - open_agent for this session
+
+ ⏺ { "id": "81703dd6", "name": "helper", "agent": "riff", "model": "fake", "mode": "ask" }
+
+ › call chord__send_message {"to":"helper","text":"write it now"}
+
+ → to @helper
+   ⎿  write it now
+   ⎿  Allowed mcp__chord__send_message · Allow chord - send_message for this session
+
+ ⏺ { "delivered": "sent", "to": "helper" }
+
+╭─ riff ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                                          fake · default effort · 1% context used
+    main       riff · fake · default         ◦ idle 1m
+    riff       team · riff · fake · default  ◦ idle 5s
+    └─ helper  riff · fake · default         ◦ idle 5s  ✓ new reply

@@ -31,6 +31,8 @@ export interface DevActions {
   screenshots(names: readonly string[]): void | Promise<void>;
   social(): void | Promise<void>;
   memory(options: MemoryOptions): void | Promise<void>;
+  /** The owner's live check of riff's model list for `plan`. */
+  riffModels(plan: 'codex' | 'grok', out: string): void | Promise<void>;
   selftest(binary: string, arch: string | undefined): void | Promise<void>;
   release(
     stages: readonly Stage[],
@@ -82,6 +84,23 @@ const RUN: DevActions = {
     (await import('./dev/screenshots.ts')).screenshots(names),
   social: async () => (await import('./dev/social.ts')).social(),
   memory: async (options) => (await import('./dev/memory.ts')).memory(options),
+  riffModels: async (plan, out) => {
+    const { riffModels } = await import('./dev/riff_models.ts');
+    const { systemSecrets } = await import('../src/platform/secrets.ts');
+    const { libfxBackend } = await import('../src/platform/libfx.ts');
+    const { chordStateDir } = await import('../src/session/state_dir.ts');
+
+    await riffModels({
+      plan,
+      // The owner's own sign-in: this command is never run by a test.
+      secrets: systemSecrets(),
+      fetch: globalThis.fetch,
+      backend: await libfxBackend(),
+      stateDir: chordStateDir(),
+      out,
+      say: (line) => process.stdout.write(`${line}\n`),
+    });
+  },
   selftest: async (binary, arch) => {
     const { dying, release } = await import('./dev/release/lib.ts');
     const { selftest } = await import('./dev/release/selftest.ts');
@@ -243,6 +262,29 @@ export function devCommand(actions: DevActions = RUN) {
           )
           .arguments('[names...:string]')
           .action((_options, ...names) => actions.screenshots(names)),
+      )
+      .command(
+        'riff-models',
+        new Command()
+          .description(
+            "The owner's live check of riff's model list: one turn of 'Reply with the word ok.' on the stored ChatGPT (codex) or Grok (grok) sign-in, as chord riff made it, printing each model the plan's endpoint lists, with its context window and reasoning levels, as libfx's engine fetched them. It spends the plan; never run by a test.",
+          )
+          .type('plan', new EnumType(['codex', 'grok']))
+          .arguments('<plan:plan>')
+          .option(
+            '--out <file:string>',
+            'Where the raw responses are written.',
+            {
+              default: 'dist/riff-models-<plan>.json',
+            },
+          )
+          .example('ChatGPT', 'bun dev riff-models codex')
+          .action(({ out }, plan) =>
+            actions.riffModels(
+              plan as 'codex' | 'grok',
+              out.replace('<plan>', plan),
+            ),
+          ),
       )
       .command(
         'social',

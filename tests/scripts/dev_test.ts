@@ -23,6 +23,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     screenshots: record('screenshots'),
     social: record('social'),
     memory: record('memory'),
+    riffModels: record('riffModels'),
     selftest: record('selftest'),
     release: record('release'),
     chord: record('chord'),
@@ -254,6 +255,24 @@ test('--help lists every command', () => {
   ]) {
     expect(help).toMatch(new RegExp(`^  ${name} `, 'm'));
   }
+});
+
+describe('riff-models', () => {
+  test('takes a plan, and writes under dist/ by default', async () => {
+    expect(await parsed(['riff-models', 'codex'])).toStrictEqual([
+      ['riffModels', 'codex', 'dist/riff-models-codex.json'],
+    ]);
+    expect(
+      await parsed(['riff-models', 'grok', '--out', '/tmp/models.json']),
+    ).toStrictEqual([['riffModels', 'grok', '/tmp/models.json']]);
+  });
+
+  test('refuses to run without a plan, or with another one', async () => {
+    await expect(parsed(['riff-models'])).rejects.toThrow(ValidationError);
+    await expect(parsed(['riff-models', 'fake'])).rejects.toThrow(
+      ValidationError,
+    );
+  });
 });
 
 test('an unknown command is refused', async () => {

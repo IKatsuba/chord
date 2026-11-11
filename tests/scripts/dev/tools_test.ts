@@ -287,10 +287,23 @@ describe("a fake or QA run's state (CHD-616)", () => {
             .map((entry) => entry.name)
         : [];
     let out = '';
-    // As spawnServing does, on a stand-in for the person's own places.
+    // Each child's process group, riff's own process with it: none outlives
+    // the test.
+    const groups: number[] = [];
+    const end = (group: number) => {
+      try {
+        process.kill(-group, 'SIGKILL');
+      } catch {
+        // Gone already.
+      }
+    };
+
+    // As spawnServing does, on a stand-in for the person's own places, ended
+    // well inside the test's timeout, so the provider's stop still runs.
     const run: RunServing = async ([command, ...args], env) => {
       const child = spawnChild(command ?? '', args, {
         cwd: root,
+        detached: true,
         stdio: ['ignore', 'pipe', 'ignore'],
         env: {
           ...process.env,
@@ -303,11 +316,27 @@ describe("a fake or QA run's state (CHD-616)", () => {
         },
       });
 
+      const group = child.pid;
+
+      if (group !== undefined) {
+        groups.push(group);
+      }
+
       child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString()));
 
-      const [status] = (await once(child, 'exit')) as [number | null];
+      const deadline = setTimeout(() => {
+        if (group !== undefined) {
+          end(group);
+        }
+      }, 30_000);
 
-      return status ?? 1;
+      try {
+        const [status] = (await once(child, 'exit')) as [number | null];
+
+        return status ?? 1;
+      } finally {
+        clearTimeout(deadline);
+      }
     };
 
     try {
@@ -318,6 +347,7 @@ describe("a fake or QA run's state (CHD-616)", () => {
       expect(files(join(person, 'state'))).toStrictEqual([]);
       expect(files(join(state, 'chord', 'riff', 'sidecars'))).toHaveLength(1);
     } finally {
+      groups.forEach(end);
       rmSync(person, { recursive: true, force: true });
     }
   });

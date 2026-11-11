@@ -23,5 +23,6 @@ members:
 2. helper does it and tells the lead.
 
 Run it with `bun dev chord --fake --qa <name> riff`: riff's fake provider
-answers every turn, and its `call <tool> <json>` prompts reach chord's own
-tools (`call chord__send_message {...}`), each asking first.
+answers every turn, and its tool-call prompts reach chord's own tools
+under the `chord__` prefix, each asking first. This text names no such
+prompt itself: the fake would run one it finds in a team's prompt.

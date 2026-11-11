@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'bun:test';
 import { RequestError } from '@agentclientprotocol/sdk/unstable';
+import type { FxSessionTurnEvent } from 'libfx/node';
 import {
+  messageIds,
   stopReasonOf,
   updateOf,
   usageOf,
@@ -261,5 +263,29 @@ describe('file mutation display events', () => {
       status: 'failed',
       content: [{ type: 'content', content: { type: 'text', text: 'stale' } }],
     });
+  });
+});
+
+describe("riff's assistant message ids", () => {
+  test('text runs on under one id; any other event starts the next message', () => {
+    let made = 0;
+    const ids = messageIds(() => `m${++made}`);
+    const text = { type: 'text_delta', delta: 'a' } as const;
+    const tool = {
+      type: 'tool_start',
+      id: 't',
+      name: 'read',
+      input: {},
+    } as unknown as FxSessionTurnEvent;
+    const thought = { type: 'reasoning_delta', delta: 'r' } as const;
+
+    expect([
+      ids(text),
+      ids(text),
+      ids(tool),
+      ids(text),
+      ids(thought),
+      ids(text),
+    ]).toEqual(['m1', 'm1', undefined, 'm2', undefined, 'm3']);
   });
 });

@@ -1,0 +1,24 @@
+   ⎿  write hi.txt
+
+ ⏺ Hello from riff.
+
+ ← from @riff
+   ⎿  write it now
+
+ ⏺ Hello from riff.
+
+ › call chord__send_message {"to":"riff","text":"hi.txt is written"}
+
+ → to @riff
+   ⎿  hi.txt is written
+   ⎿  Allowed mcp__chord__send_message · Allow
+
+ ⏺ { "delivered": "sent", "to": "riff" }
+
+╭─ helper · riff ──────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)  fake · default effort · 1% context used
+    main       riff · fake · default         ◦ idle 50s
+    riff       team · riff · fake · default  ◦ idle 5s   ✓ new reply
+    └─ helper  riff · fake · default         ◦ idle 5s

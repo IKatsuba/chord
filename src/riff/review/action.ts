@@ -14,6 +14,13 @@ export function reviewAction(
       return { tool: 'shell', command: reach.command, cwd: directory };
     case 'read':
       return { tool: 'read', real: reach.real };
+    case 'mcp':
+      return {
+        tool: 'mcp',
+        server: reach.server,
+        name: reach.name,
+        arguments: JSON.stringify(reach.input ?? {}),
+      };
     case 'edit':
     case 'write': {
       if (proposal === undefined) {

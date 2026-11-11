@@ -123,6 +123,7 @@ describe("riff's tools as libfx takes them", () => {
       'edit',
       'write',
       'shell',
+      'skill',
     ]);
 
     for (const tool of Object.values(tools)) {
@@ -975,5 +976,18 @@ describe('CHD-605 tester: mutations while permission waits', () => {
       await finder.destroy();
       await rm(root, { recursive: true, force: true });
     }
+  });
+});
+
+describe('how riff draws a skill call', () => {
+  test('skill: "Skill <name>", kind read, no locations', () => {
+    expect(drawn('/p/app', 'skill', { name: 'release-notes' })).toEqual({
+      title: 'Skill release-notes',
+      kind: 'read',
+    });
+    expect(drawn('/p/app', 'skill', {})).toEqual({
+      title: 'Skill',
+      kind: 'read',
+    });
   });
 });

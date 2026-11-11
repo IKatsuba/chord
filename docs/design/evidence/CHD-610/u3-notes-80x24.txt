@@ -1,0 +1,24 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.u3
+ █▀     ? for shortcuts · /help
+
+ › hello
+
+ ⏺ MCP server broken was not started: MCP error -32000: Connection closed
+
+   ┌───────────────────────────[copy]─┐
+   │ starting notes                   │
+   │ notes: no database at ./notes.db │
+   └──────────────────────────────────┘
+
+ ⏺ MCP server odd was not started: its tool "list notes" has a name riff cannot
+   call as it is
+
+ ⏺ Hello from riff.
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                fake · default · 1% used

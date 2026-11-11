@@ -83,7 +83,7 @@ describe('tester: riff startup protocol contract', () => {
             audio: false,
             embeddedContext: true,
           },
-          mcpCapabilities: { http: true, sse: true },
+          mcpCapabilities: { http: true, sse: false },
           sessionCapabilities: { resume: {}, close: {} },
         },
       });

@@ -32,3 +32,22 @@ test('review actions use resolved paths, shell cwd and jsdiff line counts', () =
   });
   expect(reviewAction({ tool: 'list' }, '/project')).toBeUndefined();
 });
+
+test('an MCP call is reviewed by its server, tool and JSON arguments', () => {
+  expect(
+    reviewAction(
+      {
+        tool: 'mcp',
+        server: 'notes',
+        name: 'save_note',
+        input: { title: 'a' },
+      },
+      '/real/project',
+    ),
+  ).toEqual({
+    tool: 'mcp',
+    server: 'notes',
+    name: 'save_note',
+    arguments: '{"title":"a"}',
+  });
+});

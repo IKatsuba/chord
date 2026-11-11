@@ -67,7 +67,7 @@ describe('a turn a crashed riff left open (T2)', () => {
 
     dead.send('session/prompt', {
       sessionId,
-      prompt: [{ type: 'text', text: 'call the tool' }],
+      prompt: [{ type: 'text', text: 'tool, then the answer' }],
     });
 
     // The child publishes it whole, once its tool runs.
@@ -129,5 +129,103 @@ describe('a turn a crashed riff left open (T2)', () => {
     ).toStrictEqual([
       expect.objectContaining({ toolCallId: 'call_mark', status: 'failed' }),
     ]);
+  });
+});
+
+describe('an MCP call a crashed riff left open (T2)', () => {
+  test('reopening never calls the server again', async () => {
+    const fake = serveFakeChat();
+    const state = await mkdtemp(join(tmpdir(), 'chord-riff-crash-'));
+    const ready = join(state, 'ready');
+    const calls = join(state, 'calls');
+    const STDIO = join(import.meta.dir, '../fixtures/riff/mcp_stdio.ts');
+    const server = (env: { name: string; value: string }[]) => ({
+      name: 'notes',
+      command: process.execPath,
+      args: [STDIO, 'ok'],
+      env: [{ name: 'CALLS_FILE', value: calls }, ...env],
+    });
+
+    cleanups.push(async () => {
+      await fake.stop();
+      await rm(state, { recursive: true, force: true });
+    });
+
+    const child = spawn(
+      process.execPath,
+      [CHILD, join(state, 'state'), fake.url, ready, 'mcp'],
+      { stdio: ['pipe', 'pipe', 'inherit'] },
+    );
+
+    cleanups.push(async () => {
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill('SIGKILL');
+        await new Promise((resolve) => child.once('exit', resolve));
+      }
+    });
+
+    const dead = new AcpClient((line) => child.stdin.write(line), child.stdout);
+
+    await dead.request('initialize', { protocolVersion: 1 });
+
+    const created = await dead.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [server([{ name: 'BLOCK_FILE', value: ready }])],
+    });
+    const sessionId = created.result?.['sessionId'] as string;
+
+    dead.send('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'call notes__save_note {"title":"x"}' }],
+    });
+
+    // The server publishes its pid whole, once the call reaches it.
+    await until(() => existsSync(ready), 30_000);
+
+    const blocked = Number(await readFile(ready, 'utf8'));
+
+    // The server outlives a killed riff; it is ended here, not left.
+    cleanups.push(() => {
+      try {
+        process.kill(blocked, 'SIGKILL');
+      } catch {
+        // Gone already.
+      }
+
+      return Promise.resolve();
+    });
+
+    child.kill('SIGKILL');
+    await new Promise((resolve) => child.once('exit', resolve));
+
+    expect(await readFile(calls, 'utf8')).toBe('x\n');
+
+    const requests = fake.requests.length;
+    const pair = clientOverStreams();
+    const riff = connectRiff(ndJsonStream(pair.output, pair.input), {
+      version: '0.0.0',
+      provider: { baseUrl: fake.url },
+      backend: await libfxBackend(),
+      stateDir: join(state, 'state'),
+      review: () => Promise.resolve({ outcome: 'clear' }),
+    });
+
+    cleanups.push(async () => {
+      pair.end();
+      await riff.finished;
+    });
+
+    await pair.client.request('initialize', { protocolVersion: 1 });
+
+    const resumed = await pair.client.request('session/resume', {
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: [server([])],
+    });
+
+    expect(resumed.error).toBeUndefined();
+    expect(fake.requests.length - requests).toBe(0);
+    expect(await readFile(calls, 'utf8')).toBe('x\n');
+    expect(pair.client.said(sessionId)).toBe(INTERRUPTED);
   });
 });

@@ -127,6 +127,28 @@ const AUTH_CODES: ReadonlySet<string | number> = new Set([
   '401',
 ]);
 
+/**
+ * The id of each assistant message of a turn, by its events: text runs on
+ * under one id until any other event, and the next text starts a new one,
+ * so the window keeps riff's messages apart from each other and from
+ * chord's own notes (ACP's `messageId`).
+ */
+export function messageIds(
+  make: () => string = () => crypto.randomUUID(),
+): (event: FxSessionTurnEvent) => string | undefined {
+  let current: string | undefined;
+
+  return (event) => {
+    if (event.type === 'text_delta') {
+      return (current ??= make());
+    }
+
+    current = undefined;
+
+    return undefined;
+  };
+}
+
 /** The prompt's stop reason, or the error it is answered with. */
 export function stopReasonOf(ended: Ended): StopReason {
   const reason = STOP_REASONS[ended.stopReason];

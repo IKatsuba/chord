@@ -1,7 +1,9 @@
 /** Explicit system/fixture choice for the child; QA never opens the keychain. */
 import { z } from '@zod/zod';
 import type { FxFetch } from 'libfx/node';
+import { homedir } from 'node:os';
 import process from 'node:process';
+import { xdgConfig } from 'xdg-basedir';
 import {
   memorySecrets,
   secrets,
@@ -28,23 +30,53 @@ const STATE = z.enum([
   'account-changed',
 ]);
 
+/**
+ * Where riff reads the person's own files: the home's skills and the config
+ * home's `AGENTS.md`; none in a fixture launch.
+ */
+export interface UserFiles {
+  readonly home?: string;
+  readonly configHome?: string;
+}
+
+/** The person's own places, as a real launch reads them. */
+function systemUserFiles(): UserFiles {
+  return {
+    home: homedir(),
+    ...(xdgConfig === undefined ? {} : { configHome: xdgConfig }),
+  };
+}
+
 /** Called only by the launcher; system access must be explicitly selected. */
 export function riffAccess(
   env: Readonly<Record<string, string | undefined>>,
   system: () => Secrets = systemSecrets,
+  user: () => UserFiles = systemUserFiles,
 ): {
   readonly provider: ReturnType<typeof fakeProvider>;
   readonly secrets: Secrets;
   readonly fetch: FxFetch;
+  /** `--fake` and `--qa` never fall back to the person's own files. */
+  readonly user: UserFiles;
 } {
   const provider = fakeProvider(env);
 
   if (provider === undefined) {
-    return { provider, secrets: system(), fetch: globalThis.fetch };
+    return {
+      provider,
+      secrets: system(),
+      fetch: globalThis.fetch,
+      user: user(),
+    };
   }
 
   if (env[QA_ENV] !== '1' || !env[QA_STATE_ENV]) {
-    return { provider, secrets: memorySecrets(), fetch: globalThis.fetch };
+    return {
+      provider,
+      secrets: memorySecrets(),
+      fetch: globalThis.fetch,
+      user: {},
+    };
   }
 
   const state = STATE.parse(env[QA_STATE_ENV]);
@@ -104,5 +136,5 @@ export function riffAccess(
     return response;
   };
 
-  return { provider: undefined, secrets: store, fetch };
+  return { provider: undefined, secrets: store, fetch, user: {} };
 }

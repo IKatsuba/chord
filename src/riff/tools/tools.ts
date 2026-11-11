@@ -36,6 +36,9 @@ import {
 import { READ_DESCRIPTION, ReadInput, readLines } from './read.ts';
 import { shell, SHELL_DESCRIPTION, ShellInput } from './shell.ts';
 import { SEARCH_DESCRIPTION, SearchInput, searcher } from './search.ts';
+import { loadSkill, SKILL_DESCRIPTION, SkillInput } from './skill.ts';
+import type { Skill } from '../skills.ts';
+import { mcpTitle, type McpTools, type Original } from '../mcp.ts';
 import type { ReviewAction } from '../review/input.ts';
 import type { AutoReview } from '../review/admission.ts';
 import { reviewAction } from '../review/action.ts';
@@ -46,6 +49,10 @@ export interface ToolSession {
   /** The session's directory, as its real path. */
   readonly directory: string;
   readonly finder: Finder;
+  /** The session's MCP tools as libfx's adapter made them, which ask. */
+  readonly mcp?: Pick<McpTools, 'tools' | 'originals'>;
+  /** The skills discovered at the session's start, which `skill` loads. */
+  readonly skills?: readonly Skill[];
   /** Complete shell/probe environment; tests supply fixture HOME and startup files. */
   readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
@@ -138,6 +145,7 @@ async function permit(
   reach: Reach | undefined,
   signal: AbortSignal,
   proposal?: Proposal,
+  draw?: Drawn,
 ): Promise<readonly DirectInvocation[] | 'shell' | undefined> {
   const { directory, grants = new Set() } = session;
   let mode = session.mode?.() ?? 'auto';
@@ -167,11 +175,14 @@ async function permit(
 
   const toolCall: ToolCallUpdate = {
     toolCallId,
-    ...drawn(directory, name, input, 'real' in reach ? reach.real : undefined),
+    ...(draw ??
+      drawn(directory, name, input, 'real' in reach ? reach.real : undefined)),
     // A read's title names its file already; list and search keep the
     // directory "this directory" means.
     ...('real' in reach ? { locations: [] } : {}),
     ...(proposal === undefined ? {} : { content: proposal.content }),
+    // The box draws an MCP call's arguments from it, as for any agent's.
+    ...(reach.tool === 'mcp' ? { rawInput: input } : {}),
   };
 
   if (mode === 'auto') {
@@ -260,6 +271,43 @@ function hostTool<T>(session: ToolSession, spec: ToolSpec<T>): FxAgentHostTool {
           proposal,
           direct === 'shell' ? undefined : direct,
         );
+      }),
+  };
+}
+
+/**
+ * An MCP tool of libfx's adapter behind riff's admission: it asks, or is
+ * reviewed under auto, before the adapter calls its server.
+ */
+function mcpTool(
+  session: ToolSession,
+  tool: FxAgentHostTool,
+  original: Original,
+): FxAgentHostTool {
+  return {
+    ...tool,
+    execute: (input, context) =>
+      Promise.try(async () => {
+        const { signal, executionId } = context;
+
+        signal.throwIfAborted();
+
+        await permit(
+          session,
+          executionId,
+          tool.name,
+          input,
+          { tool: 'mcp', server: original.server, name: original.tool, input },
+          signal,
+          undefined,
+          { title: mcpTitle(original), kind: 'other' },
+        );
+
+        signal.throwIfAborted();
+        await session.begin?.(executionId, tool.name, input);
+        signal.throwIfAborted();
+
+        return await tool.execute(input, context);
       }),
   };
 }
@@ -379,6 +427,26 @@ export function riffTools(session: ToolSession): FxAgentHostTool[] {
           session.commandEnvironment,
         );
       },
+    }),
+    hostTool(session, {
+      name: 'skill',
+      description: SKILL_DESCRIPTION,
+      schema: SkillInput,
+      // Main's answer on CHD-610: the skill tool never asks, in any mode; it
+      // reads only inside a discovered skill's folder, by real path.
+      reach: () => Promise.resolve(undefined),
+      run: async (input, _reach, signal, id) => {
+        const loaded = await loadSkill(session.skills ?? [], input, signal);
+
+        session.show?.(id, loaded.shown);
+
+        return loaded.text;
+      },
+    }),
+    ...(session.mcp?.tools ?? []).flatMap((tool) => {
+      const original = session.mcp?.originals.get(tool.name);
+
+      return original === undefined ? [] : [mcpTool(session, tool, original)];
     }),
   ];
 }
@@ -504,6 +572,15 @@ export function drawn(
         title: searched.success ? `Search ${searched.data.query}` : 'Search',
         kind: 'search',
         locations: [{ path: directory }],
+      };
+    }
+    case 'skill': {
+      const loaded = SkillInput.safeParse(input);
+
+      // No locations: the SKILL.md path is not the point of the row.
+      return {
+        title: loaded.success ? `Skill ${loaded.data.name}` : 'Skill',
+        kind: 'read',
       };
     }
     default:

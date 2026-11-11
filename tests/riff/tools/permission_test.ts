@@ -200,3 +200,44 @@ describe('CHD-605 tester: grants cover only the approved reach', () => {
     }
   });
 });
+
+describe('MCP calls ask', () => {
+  const call = (server: string, name: string, input: unknown) =>
+    ({ tool: 'mcp', server, name, input }) as const;
+
+  test('every call asks in both modes until that tool of that server is granted', () => {
+    const grants = new Set<string>();
+    const first = call('notes', 'save_note', { title: 'a' });
+
+    expect(asks('ask', first, '/p', grants)).toBe(true);
+    expect(asks('auto', first, '/p', grants)).toBe(true);
+
+    grants.add(grantKey(first, '/p'));
+
+    expect(
+      asks('auto', call('notes', 'save_note', { title: 'b' }), '/p', grants),
+    ).toBe(false);
+    expect(asks('ask', call('notes', 'delete_note', {}), '/p', grants)).toBe(
+      true,
+    );
+    expect(asks('ask', call('other', 'save_note', {}), '/p', grants)).toBe(
+      true,
+    );
+  });
+
+  test('a grant key cannot be forged by a name holding the separator', () => {
+    expect(grantKey(call('a__b', 'c', {}), '/p')).not.toBe(
+      grantKey(call('a', 'b__c', {}), '/p'),
+    );
+  });
+
+  test('option 2 names the tool and its server', () => {
+    expect(
+      permissionOptions(call('my notes', 'save_note', {}), '/p')[1],
+    ).toEqual({
+      optionId: 'allow_session',
+      name: 'Allow my notes - save_note for this session',
+      kind: 'allow_always',
+    });
+  });
+});

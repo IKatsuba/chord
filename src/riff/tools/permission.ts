@@ -17,7 +17,14 @@ export type Reach =
   | { readonly tool: 'read'; readonly real: string }
   | { readonly tool: 'edit' | 'write'; readonly real: string }
   | { readonly tool: 'shell'; readonly command: string }
-  | { readonly tool: 'list' | 'search' };
+  | { readonly tool: 'list' | 'search' }
+  /** An MCP call, by its server's and tool's own names. */
+  | {
+      readonly tool: 'mcp';
+      readonly server: string;
+      readonly name: string;
+      readonly input: unknown;
+    };
 
 /** The session's grants: a set of keys, kept while the session lives. */
 export type Grants = Set<string>;
@@ -32,6 +39,9 @@ export function grantKey(reach: Reach, directory: string): string {
       return `edit:${reach.real}`;
     case 'shell':
       return `shell:${reach.command}`;
+    case 'mcp':
+      // One tool of one server, whatever its arguments.
+      return `mcp:${JSON.stringify([reach.server, reach.name])}`;
     default:
       return `${reach.tool}:${directory}`;
   }
@@ -53,7 +63,9 @@ export function asks(
   }
 
   switch (reach.tool) {
+    // Every MCP call asks as shell does: nothing admits one unreviewed.
     case 'shell':
+    case 'mcp':
       return true;
     case 'edit':
     case 'write':
@@ -88,6 +100,11 @@ export function permissionOptions(
       break;
     case 'shell':
       grant = 'Allow this exact command for this session';
+
+      break;
+    case 'mcp':
+      // As the call's row names it, `<server> - <tool>`.
+      grant = `Allow ${reach.server} - ${reach.name} for this session`;
 
       break;
     default:

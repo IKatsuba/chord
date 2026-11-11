@@ -1,0 +1,40 @@
+   ⎿  go
+
+ ⏺ Hello from riff.
+
+ › call chord__open_agent {"member":"helper","prompt":"write hi.txt"}
+
+ ⏺ Open(helper) · riff · fake · ask
+   ⎿  write hi.txt
+   ⎿  Allowed mcp__chord__open_agent · Allow chord - open_agent for this session
+
+ ⏺ { "id": "ca38a126", "name": "helper", "agent": "riff", "model": "fake", "mode": "ask" }
+
+ › call chord__send_message {"to":"helper","text":"write it now"}
+
+ → to @helper
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ riff asks                                                                                                            │
+│ mcp__chord__send_message                                                                                             │
+│   to: helper                                                                                                         │
+│   text: write it now                                                                                                 │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Allow chord - send_message for this session                                                                     │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ riff ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                                          fake · default effort · 1% context used
+    main       riff · fake · default         ◦ idle 29s
+    riff       team · riff · fake · default  ● permission 4s
+    └─ helper  riff · fake · default         ◦ idle 11s       ✓ new reply

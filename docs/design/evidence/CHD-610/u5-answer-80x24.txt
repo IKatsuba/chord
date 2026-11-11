@@ -1,0 +1,24 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.u5
+ █▀     ? for shortcuts · /help
+
+ › call notes__confirm {}
+
+ ⏺ notes - confirm (MCP)
+   ⎿  {"action":"accept","content":{"name":"web"}}
+   ⎿  Allowed mcp__notes__confirm · Allow
+
+ ⏺ riff asked: Set up the deploy target
+   ⎿  Answered · 1 field
+
+ ⏺ {"action":"accept","content":{"name":"web"}}
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)  fake · default effort · 1% context used

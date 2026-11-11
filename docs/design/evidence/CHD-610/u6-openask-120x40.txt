@@ -1,0 +1,40 @@
+ riff · team · riff · ChatGPT · fake · opened by @main 16s ago
+
+ ⏺ riff's instructions for the lead · 23 lines (ctrl+o to expand)
+
+ ← from @main
+   ⎿  go
+
+ ⏺ Hello from riff.
+
+ › call chord__open_agent {"member":"helper","prompt":"write hi.txt"}
+
+ ⏺ Open(helper)
+   ⎿  Waiting…
+
+
+
+
+
+ ››› Waiting for permission… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ riff asks                                                                                                            │
+│ mcp__chord__open_agent                                                                                               │
+│   member: helper                                                                                                     │
+│   prompt: write hi.txt                                                                                               │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Allow chord - open_agent for this session                                                                       │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭─ riff ───────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                                          fake · default effort · 1% context used
+    main  riff · fake · default         ◦ idle 16s
+    riff  team · riff · fake · default  ● permission 4s

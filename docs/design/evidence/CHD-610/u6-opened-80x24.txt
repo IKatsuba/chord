@@ -1,0 +1,24 @@
+ ⏺ riff's instructions for the lead · 23 lines (ctrl+o to expand)
+
+ ← from @main
+   ⎿  go
+
+ ⏺ Hello from riff.
+
+ › call chord__open_agent {"member":"helper","prompt":"write hi.txt"}
+
+ ⏺ Open(helper) · riff · fake · ask
+   ⎿  write hi.txt
+   ⎿  Allowed mcp__chord__open_agent · Allow chord - open_agent for this
+      session
+
+ ⏺ { "id": "3827e853", "name": "helper", "agent": "riff", "model": "fake",
+   "mode": "ask" }
+
+╭─ riff ───────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)  fake · default effort · 1% context used
+    main       riff · fake · default         ◦ idle 24s
+    riff       team · riff · fake · default  ◦ idle 7s
+    └─ helper  riff · fake · default         ◦ idle 6s   ✓ new reply

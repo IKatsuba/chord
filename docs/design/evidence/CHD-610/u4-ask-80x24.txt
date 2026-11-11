@@ -1,0 +1,24 @@
+ › call notes__save_note {"title":"Deploy checklist","tags":["ops"]}
+
+ ⏺ notes - save_note (MCP)(title: "Deploy checklist", tags: ["ops"])
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ mcp__notes__save_note                                                        │
+│   title: Deploy checklist                                                    │
+│   tags: ["ops"]                                                              │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Allow notes - save_note for this session                                │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                    fake · default effort

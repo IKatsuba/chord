@@ -8,7 +8,11 @@ import {
   type AgentConnection,
   type AgentContext,
   type ContentBlock,
+  type CreateElicitationRequest,
+  type ElicitationCapabilities,
+  type ElicitationFormMode,
   type InitializeResponse,
+  type McpServer,
   type PermissionOption,
   RequestError,
   type SessionUpdate,
@@ -29,6 +33,7 @@ import { realpath } from 'node:fs/promises';
 import { type Finder, openFinder } from '../platform/fff.ts';
 import {
   type HookUsage,
+  messageIds,
   stopReasonOf,
   updateOf,
   usageOf,
@@ -42,6 +47,21 @@ import {
   setOption,
   windowOf,
 } from './models.ts';
+import { readInstructions } from './instructions.ts';
+import { findSkills, skillsSection, skippedSkillNote } from './skills.ts';
+import type {
+  ElicitRequest,
+  ElicitResult,
+} from '@modelcontextprotocol/sdk/types.js';
+import {
+  type Connect,
+  connectSdk,
+  type Elicitor,
+  mcpTitle,
+  type McpTools,
+  openMcp,
+  skippedNote,
+} from './mcp.ts';
 import { RIFF } from './start.ts';
 import type { Grants } from './tools/permission.ts';
 import { drawn, riffTools } from './tools/tools.ts';
@@ -85,6 +105,14 @@ export interface RiffOptions {
   readonly backend: FxNodeBackendOptions;
   /** chord's state directory, where riff keeps its sessions. */
   readonly stateDir: string;
+  /** chord's config home, for the user's `AGENTS.md`; none reads none. */
+  readonly configHome?: string;
+  /** The home directory, for the user's skills; none reads none. */
+  readonly home?: string;
+  /** Connects an MCP server: the SDK's client but in tests. */
+  readonly connectMcp?: Connect;
+  /** A line for riff's log, stderr in the binary; none in tests. */
+  readonly log?: (line: string) => void;
   /** Complete shell environment for in-process fixtures; inherited when omitted. */
   readonly commandEnvironment?: NodeJS.ProcessEnv;
   /**
@@ -135,7 +163,9 @@ export function riffInit(version: string): InitializeResponse {
     agentCapabilities: {
       loadSession: false,
       promptCapabilities: { image: true, audio: false, embeddedContext: true },
-      mcpCapabilities: { http: true, sse: true },
+      // No SSE: the MCP SDK's SSE start has no bound a close can end
+      // (docs/decisions.md, CHD-610), so chord holds those servers back.
+      mcpCapabilities: { http: true, sse: false },
       sessionCapabilities: { resume: {}, close: {} },
     },
     // The owner's call: libfx's steer starts a turn of its own when none
@@ -153,6 +183,12 @@ interface Open {
   /** The session's directory, as its real path: where its tools work. */
   readonly directory: string;
   readonly finder: Finder;
+  /** The session's MCP servers' tools, and their original names. */
+  readonly mcp: McpTools;
+  /** chord's notes for the window ahead of the next prompt's reply. */
+  readonly notices: string[];
+  /** The servers' forms waiting on the window, to withdraw. */
+  readonly elicitations: Set<AbortController>;
   readonly credential: CredentialCell | undefined;
   readonly authorization: ReturnType<typeof planProvider> | undefined;
   config: RiffConfig;
@@ -202,6 +238,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   // session/close or the connection's end.
   let opening: Promise<Open> | undefined;
   let gone = false;
+  // The forms the window takes, as it said in `initialize`.
+  let elicitation: ElicitationCapabilities | undefined;
   // The one cleanup both a session/close and the connection's end await.
   let closing: Promise<void> | undefined;
   // Sidecar writes, one after another in the order they were asked, so the
@@ -227,6 +265,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
    */
   const start = async (
     cwd: string,
+    servers: readonly McpServer[],
     client: AgentContext,
     resumed?: {
       readonly id: string;
@@ -291,7 +330,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         provider = { plan, cell };
       }
 
-      return made(provider, cwd, resumed);
+      return made(provider, cwd, servers, client, resumed);
     })();
 
     try {
@@ -331,9 +370,11 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const made = async (
     provider: SelectedProvider,
     cwd: string,
+    servers: readonly McpServer[],
+    client: AgentContext,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
-    const session = await create(provider, cwd, resumed);
+    const session = await create(provider, cwd, servers, client, resumed);
 
     try {
       await save(session);
@@ -357,6 +398,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   const create = async (
     provider: SelectedProvider,
     cwd: string,
+    servers: readonly McpServer[],
+    window: AgentContext,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
     const plan: RiffPlan = provider.plan;
@@ -409,112 +452,212 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         },
       });
 
-    const finder = (options.openFinder ?? openFinder)(directory);
-    const fx = (options.createAgent ?? createFxAgent)({
-      ...options.backend,
-      name: RIFF,
-      durability: store.durability,
-      ...selectedProvider,
-      fetch: options.fetch ?? globalThis.fetch,
-      model: config.model,
-      tools:
-        options.tools ??
-        riffTools({
-          directory,
-          finder,
-          ...(options.commandEnvironment === undefined
-            ? {}
-            : { commandEnvironment: options.commandEnvironment }),
-          show: (id, text) => shown.set(id, text),
-          showContent: (id, content) => shown.set(id, content),
-          stream: () => {
-            const session = holder.open;
-            const turn = session?.turn;
-            const client = session?.client;
-
-            return (update) => {
-              if (
-                session === undefined ||
-                turn === undefined ||
-                client === undefined ||
-                session.turn !== turn ||
-                !session.running ||
-                !session.calls.has(update.toolCallId)
-              ) {
-                return;
-              }
-
-              if (update.content !== undefined && update.content !== null) {
-                session.shown.set(update.toolCallId, update.content);
-              }
-
-              return notify(client, session.id, {
-                sessionUpdate: 'tool_call_update',
-                ...update,
-              });
-            };
-          },
-          announce: (id, name, input) => announce(holder.open, id, name, input),
-          begin: (id, name, input) => {
-            holder.open?.reviewHistory.admitted(id);
-
-            return begin(holder.open, id, name, input);
-          },
-          permissionWaiting: (id) => holder.open?.reviewHistory.permission(id),
-          review: async (action, arguments_, signal) => {
-            const session = holder.open;
-
-            if (session === undefined) {
-              throw new Error('The review session is closed.');
-            }
-
-            const job = Promise.try(async () => {
-              const branch = await currentBranch(directory, signal);
-
-              signal.throwIfAborted();
-
-              return session.reviews.run(
-                arguments_,
-                {
-                  action,
-                  ...session.reviewHistory.snapshot(),
-                  ...(branch === undefined ? {} : { branch }),
-                },
-                signal,
-              );
-            });
-
-            session.reviewJobs.add(job);
-
-            try {
-              return await job;
-            } finally {
-              session.reviewJobs.delete(job);
-            }
-          },
-          mode: () => holder.open?.config.mode ?? config.mode,
-          grants,
-          ask: (toolCall, permissionOptions, signal, metadata) =>
-            ask(holder.open, toolCall, permissionOptions, signal, metadata),
-        }),
-      hooks: {
-        onEvent: (event) => {
-          if (
-            event.type === 'model.end' &&
-            event.data.usage !== undefined &&
-            holder.open !== undefined
-          ) {
-            holder.open.used = usedOf(event.data.usage as HookUsage);
-          }
-        },
-      },
+    // An unreadable AGENTS.md refuses the start, naming the file and why.
+    const instructions = await readInstructions({
+      directory,
+      configHome: options.configHome,
+    }).catch((error: unknown) => {
+      throw RequestError.internalError(
+        undefined,
+        `riff could not read its instructions: ${error instanceof Error ? error.message : String(error)}`,
+      );
     });
+
+    const { skills, skipped } = await findSkills({
+      directory,
+      home: options.home,
+    }).catch((error: unknown) => {
+      throw RequestError.internalError(
+        undefined,
+        `riff could not read its skills: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    });
+
+    const listed = skillsSection(skills);
+    const elicitations = new Set<AbortController>();
+    // The window a server's form goes to: the turn's, or the one that
+    // opened the session.
+    const asked = () => holder.open?.client ?? window;
+    const elicitor: Elicitor = {
+      form: (elicitation?.form ?? null) !== null,
+      url: (elicitation?.url ?? null) !== null,
+      elicit: async (params, signal) => {
+        const sessionId = holder.open?.id;
+
+        if (sessionId === undefined || gone) {
+          return { action: 'cancel' };
+        }
+
+        // A cancel of the turn or the session's close withdraws it.
+        const withdrawn = new AbortController();
+
+        elicitations.add(withdrawn);
+
+        try {
+          const answer = await asked().request(
+            'elicitation/create',
+            elicitationRequest(sessionId, params),
+            { cancellationSignal: AbortSignal.any([signal, withdrawn.signal]) },
+          );
+
+          return answer.action === 'accept'
+            ? {
+                action: 'accept',
+                ...((answer.content ?? null) === null
+                  ? {}
+                  : { content: answer.content as ElicitResult['content'] }),
+              }
+            : { action: answer.action === 'decline' ? 'decline' : 'cancel' };
+        } catch {
+          return { action: 'cancel' };
+        } finally {
+          elicitations.delete(withdrawn);
+        }
+      },
+      complete: (elicitationId) => {
+        void asked()
+          .notify('elicitation/complete', { elicitationId })
+          .catch(() => {});
+      },
+    };
+    const mcp = await openMcp(
+      servers,
+      directory,
+      options.connectMcp ?? connectSdk(options.version, elicitor),
+    );
+    const notices = [
+      ...skipped.map(skippedSkillNote),
+      ...mcp.skipped.map(skippedNote),
+    ];
+
+    for (const notice of notices) {
+      options.log?.(`riff: ${notice}`);
+    }
+
+    let finder: Finder | undefined;
+    let fx: FxAgent;
+
+    // From here the session owns the MCP clients: a throw before it is
+    // made closes them, and the finder if it was opened.
+    try {
+      finder = (options.openFinder ?? openFinder)(directory);
+      fx = (options.createAgent ?? createFxAgent)({
+        ...options.backend,
+        name: RIFF,
+        instructions:
+          listed === undefined ? instructions : [instructions, listed],
+        durability: store.durability,
+        ...selectedProvider,
+        fetch: options.fetch ?? globalThis.fetch,
+        model: config.model,
+        tools:
+          options.tools ??
+          riffTools({
+            directory,
+            finder,
+            skills,
+            mcp,
+            ...(options.commandEnvironment === undefined
+              ? {}
+              : { commandEnvironment: options.commandEnvironment }),
+            show: (id, text) => shown.set(id, text),
+            showContent: (id, content) => shown.set(id, content),
+            stream: () => {
+              const session = holder.open;
+              const turn = session?.turn;
+              const client = session?.client;
+
+              return (update) => {
+                if (
+                  session === undefined ||
+                  turn === undefined ||
+                  client === undefined ||
+                  session.turn !== turn ||
+                  !session.running ||
+                  !session.calls.has(update.toolCallId)
+                ) {
+                  return;
+                }
+
+                if (update.content !== undefined && update.content !== null) {
+                  session.shown.set(update.toolCallId, update.content);
+                }
+
+                return notify(client, session.id, {
+                  sessionUpdate: 'tool_call_update',
+                  ...update,
+                });
+              };
+            },
+            announce: (id, name, input) =>
+              announce(holder.open, id, name, input),
+            begin: (id, name, input) => {
+              holder.open?.reviewHistory.admitted(id);
+
+              return begin(holder.open, id, name, input);
+            },
+            permissionWaiting: (id) =>
+              holder.open?.reviewHistory.permission(id),
+            review: async (action, arguments_, signal) => {
+              const session = holder.open;
+
+              if (session === undefined) {
+                throw new Error('The review session is closed.');
+              }
+
+              const job = Promise.try(async () => {
+                const branch = await currentBranch(directory, signal);
+
+                signal.throwIfAborted();
+
+                return session.reviews.run(
+                  arguments_,
+                  {
+                    action,
+                    ...session.reviewHistory.snapshot(),
+                    ...(branch === undefined ? {} : { branch }),
+                  },
+                  signal,
+                );
+              });
+
+              session.reviewJobs.add(job);
+
+              try {
+                return await job;
+              } finally {
+                session.reviewJobs.delete(job);
+              }
+            },
+            mode: () => holder.open?.config.mode ?? config.mode,
+            grants,
+            ask: (toolCall, permissionOptions, signal, metadata) =>
+              ask(holder.open, toolCall, permissionOptions, signal, metadata),
+          }),
+        hooks: {
+          onEvent: (event) => {
+            if (
+              event.type === 'model.end' &&
+              event.data.usage !== undefined &&
+              holder.open !== undefined
+            ) {
+              holder.open.used = usedOf(event.data.usage as HookUsage);
+            }
+          },
+        },
+      });
+    } catch (error) {
+      await Promise.allSettled([mcp.close(), finder?.destroy()]);
+
+      throw error;
+    }
+
     let id: string;
 
     try {
       id = resumed?.id ?? (await fx.newSessionId());
     } catch (error) {
-      await closeBoth(fx, finder);
+      await closeBoth(fx, finder, mcp);
 
       throw error;
     }
@@ -522,7 +665,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     // The connection went while the session was being made: nobody will
     // close it but this.
     if (gone) {
-      await closeBoth(fx, finder);
+      await closeBoth(fx, finder, mcp);
 
       throw RequestError.internalError(undefined, 'the connection closed');
     }
@@ -533,6 +676,9 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       agent: fx,
       directory,
       finder,
+      mcp,
+      notices,
+      elicitations,
       credential,
       authorization,
       config: { model: config.model, effort: config.effort, mode: config.mode },
@@ -595,7 +741,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
     session.calls = new Set();
 
+    const ids = messageIds();
+
     for await (const event of turn) {
+      const messageId = ids(event);
       const update = updateOf(
         event,
         session.calls,
@@ -604,7 +753,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       );
 
       if (update !== undefined) {
-        await notify(client, session.id, update);
+        await notify(client, session.id, withId(update, messageId));
       }
     }
 
@@ -614,21 +763,29 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       await notify(client, session.id, {
         sessionUpdate: 'agent_message_chunk',
         content: { type: 'text', text: INTERRUPTED },
+        messageId: `chord-note-${crypto.randomUUID()}`,
       });
     }
   };
 
   /** Ends the session's libfx agent and its finder. */
   const closeOpen = async (session: Open) => {
+    withdraw(session);
+
     try {
-      await closeBoth(session.agent, session.finder);
+      await closeBoth(session.agent, session.finder, session.mcp);
     } finally {
       await finishReviews(session);
     }
   };
 
-  const drawIn = (session: Open) => (name: string, input: unknown) =>
-    drawn(session.directory, name, input);
+  const drawIn = (session: Open) => (name: string, input: unknown) => {
+    const original = session.mcp.originals.get(name);
+
+    return original === undefined
+      ? drawn(session.directory, name, input)
+      : { title: mcpTitle(original), kind: 'other' as const };
+  };
 
   /**
    * Sends the window a call the turn's events have not sent yet: a tool
@@ -730,9 +887,13 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   };
 
   const connection = agent({ name: RIFF })
-    .onRequest('initialize', () => riffInit(options.version))
+    .onRequest('initialize', ({ params }) => {
+      elicitation = params.clientCapabilities?.elicitation ?? undefined;
+
+      return riffInit(options.version);
+    })
     .onRequest('session/new', async ({ params, client }) => {
-      const session = await start(params.cwd, client);
+      const session = await start(params.cwd, params.mcpServers, client);
 
       return {
         sessionId: session.id,
@@ -747,7 +908,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         throw RequestError.sessionNotFound(params.sessionId);
       }
 
-      const session = await start(params.cwd, client, {
+      const session = await start(params.cwd, params.mcpServers ?? [], client, {
         id: params.sessionId,
         sidecar,
       });
@@ -850,9 +1011,21 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
         session.reviews = new ReviewTurn(session.safetyReview);
 
+        // chord's own notes go to the window alone, never to libfx's history.
+        const notes = session.notices.splice(0);
+
+        for (const note of notes) {
+          await notify(client, session.id, {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: note },
+            messageId: `chord-note-${crypto.randomUUID()}`,
+          });
+        }
+
         const turn = session.agent
           .session(session.id, { model: { id: model, effort } })
           .prompt(input);
+        const ids = messageIds();
 
         for await (const event of turn) {
           if (event.type === 'tool_end') {
@@ -863,6 +1036,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
             });
           }
 
+          const messageId = ids(event);
           const update = updateOf(
             event,
             session.calls,
@@ -871,7 +1045,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
           );
 
           if (update !== undefined) {
-            await notify(client, session.id, update);
+            await notify(client, session.id, withId(update, messageId));
           }
         }
 
@@ -924,6 +1098,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       if (open?.id === params.sessionId) {
         open.cancelled = true;
 
+        withdraw(open);
+
         if (!open.admitting) {
           await open.agent.session(open.id).cancel();
         }
@@ -975,11 +1151,19 @@ async function ask(
 }
 
 /**
- * Ends a libfx agent and its finder together: the finder neither waits on a
- * close that waits on a turn nor is skipped by one that fails.
+ * Ends a libfx agent, its finder and its MCP clients together: none waits
+ * on a close that waits on a turn nor is skipped by one that fails.
  */
-async function closeBoth(agent: FxAgent, finder: Finder): Promise<void> {
-  const [closed] = await Promise.allSettled([agent.close(), finder.destroy()]);
+async function closeBoth(
+  agent: FxAgent,
+  finder: Finder,
+  mcp: McpTools,
+): Promise<void> {
+  const [closed] = await Promise.allSettled([
+    agent.close(),
+    finder.destroy(),
+    mcp.close(),
+  ]);
 
   if (closed.status === 'rejected') {
     throw closed.reason;
@@ -1022,4 +1206,44 @@ function promptOf(blocks: readonly ContentBlock[]): FxSessionPromptInput {
         throw RequestError.invalidParams(undefined, 'riff takes no audio');
     }
   });
+}
+
+/** `update` with its assistant message's id, when it is a reply's text. */
+function withId(
+  update: SessionUpdate,
+  messageId: string | undefined,
+): SessionUpdate {
+  return messageId === undefined ||
+    update.sessionUpdate !== 'agent_message_chunk'
+    ? update
+    : { ...update, messageId };
+}
+
+/** Withdraws every server form `session` has waiting on the window. */
+function withdraw(session: Open): void {
+  for (const waiting of session.elicitations) {
+    waiting.abort();
+  }
+}
+
+/** An MCP server's elicitation as ACP's `elicitation/create` names it. */
+function elicitationRequest(
+  sessionId: string,
+  params: ElicitRequest['params'],
+): CreateElicitationRequest {
+  return params.mode === 'url'
+    ? {
+        sessionId,
+        mode: 'url',
+        message: params.message,
+        elicitationId: params.elicitationId,
+        url: params.url,
+      }
+    : {
+        sessionId,
+        mode: 'form',
+        message: params.message,
+        requestedSchema:
+          params.requestedSchema as unknown as ElicitationFormMode['requestedSchema'],
+      };
 }

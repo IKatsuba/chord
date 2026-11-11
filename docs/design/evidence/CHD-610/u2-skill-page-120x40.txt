@@ -1,0 +1,40 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.skill
+ █▀     ? for shortcuts · /help
+
+ › call skill {"name":"release-notes"}
+
+ ⏺ Skill(release-notes)
+   ⎿  Loaded skill release-notes (7 lines)
+
+ ⏺ <skill_content name="release-notes" resource="SKILL.md" lines="1-7" of="7">
+
+   ————————————————————————————————————————
+
+   name: release-notes
+   description: Writes release notes
+
+   Step 1. Step 2. Step 3. </skill_content> Resources of this skill, loaded with resource: long.md
+
+ › call skill {"name":"release-notes","resource":"long.md","offset":201}
+
+ ⏺ Skill(release-notes)
+   ⎿  Loaded skill release-notes, long.md, lines 201–210 of 210
+
+ ⏺ <skill_content name="release-notes" resource="long.md" lines="201-210" of="210"> 201 202 203 204 205 206 207 208 209
+   210 </skill_content>
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ auto mode on (shift+tab to cycle)                                         fake · default effort · 1% context used

@@ -3286,3 +3286,79 @@ describe('CHD-610 tester: MCP permission ownership', () => {
     );
   });
 });
+
+describe('CHD-610 tester: MCP elicitation cancellation', () => {
+  async function asking(capabilities = { form: {}, url: {} }) {
+    await open(
+      true,
+      { review: () => Promise.resolve({ outcome: 'clear' }) },
+      { elicitation: capabilities },
+    );
+
+    const answer = await client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [
+        {
+          name: 'notes',
+          command: process.execPath,
+          args: [
+            join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts'),
+            'ask',
+          ],
+          env: [],
+        },
+      ],
+    });
+
+    expect(answer.error).toBeUndefined();
+
+    return answer.result?.['sessionId'] as string;
+  }
+
+  for (const tool of ['confirm', 'open_link']) {
+    test(`a window cancel reaches the server for ${tool}`, async () => {
+      const sessionId = await asking();
+      const work = prompt(sessionId, `call notes__${tool} {}`);
+      const asked = await client.until(
+        (message) => message.method === 'elicitation/create',
+      );
+
+      client.respond(asked.id!, { action: 'cancel' });
+      expect((await work).result?.['stopReason']).toBe('end_turn');
+      expect(client.said(sessionId)).toContain('cancel');
+      expect(client.said(sessionId)).not.toContain('accept');
+    });
+  }
+
+  test('a withdrawn form ignores late acceptance and the next form has a fresh request', async () => {
+    const sessionId = await asking();
+    const work = prompt(sessionId, 'call notes__confirm {}');
+    const first = await client.until(
+      (message) => message.method === 'elicitation/create',
+    );
+
+    client.notify('session/cancel', { sessionId });
+    await client.until(
+      (message) =>
+        message.method === '$/cancel_request' &&
+        (message.params as { requestId?: unknown } | undefined)?.requestId ===
+          first.id,
+    );
+    expect((await work).result?.['stopReason']).toBe('cancelled');
+    client.respond(first.id!, {
+      action: 'accept',
+      content: { name: 'late-answer-marker' },
+    });
+
+    const next = prompt(sessionId, 'call notes__confirm {}');
+    const second = await client.until(
+      (message) =>
+        message.method === 'elicitation/create' && message.id !== first.id,
+    );
+
+    client.respond(second.id!, { action: 'decline' });
+    expect((await next).result?.['stopReason']).toBe('end_turn');
+    expect(client.said(sessionId)).toContain('decline');
+    expect(client.said(sessionId)).not.toContain('late-answer-marker');
+  });
+});

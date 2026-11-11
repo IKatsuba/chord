@@ -141,7 +141,11 @@ export async function openReal(
   }
 }
 
-function reason(error: unknown): string {
+/**
+ * Why a file call failed, from its error's code where it has one: the
+ * same words on every platform, with no path in them.
+ */
+export function reason(error: unknown): string {
   const code = (error as { code?: unknown }).code;
 
   if (code === 'ENOENT') {

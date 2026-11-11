@@ -166,7 +166,7 @@ describe('riff skill discovery', () => {
     });
 
     await expect(found).rejects.toThrow(
-      `${directory}: ${file}: the file changed while it was opened`,
+      `${file}: the file changed while it was opened; read it again`,
     );
   });
 
@@ -197,7 +197,9 @@ describe('riff skill discovery', () => {
     await expect(
       discoverSkills({ directory: project, home: undefined }),
     ).rejects.toThrow(
-      `${join(project, '.agents', 'skills', 'locked')}: EACCES`,
+      new Error(
+        `${join(project, '.agents', 'skills', 'locked', 'SKILL.md')}: permission denied`,
+      ),
     );
   });
 });

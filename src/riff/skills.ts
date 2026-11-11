@@ -12,7 +12,7 @@ import { VFile } from 'vfile';
 import { matter } from 'vfile-matter';
 import { lstat, readdir, realpath, stat } from 'node:fs/promises';
 import { basename, isAbsolute, join, relative } from 'node:path';
-import { isInside, openReal } from './tools/paths.ts';
+import { isInside, openReal, reason } from './tools/paths.ts';
 import { notFound } from '../not_found.ts';
 
 /** One discovered skill. */
@@ -137,9 +137,12 @@ async function skillAt(
   beforeOpen?: () => Promise<void>,
 ): Promise<Skill | SkippedSkill | undefined> {
   const name = basename(folder);
+  const main = join(folder, 'SKILL.md');
   let directory: string;
   let file: string;
   let head: string | undefined;
+  // The path a failure is about, named once in its reason.
+  let at = folder;
 
   try {
     directory = await realpath(folder);
@@ -155,6 +158,7 @@ async function skillAt(
       };
     }
 
+    at = main;
     file = await realpath(join(directory, 'SKILL.md'));
 
     if (!isInside(inside, file)) {
@@ -164,13 +168,13 @@ async function skillAt(
       };
     }
 
-    head = await readHead(file, beforeOpen);
+    head = await readHead(file, main, beforeOpen);
   } catch (error) {
     if (absent(error)) {
       return undefined;
     }
 
-    throw named(folder, error);
+    throw named(at, error);
   }
 
   if (head === undefined) {
@@ -187,6 +191,7 @@ async function skillAt(
 /** The start of a regular file, or undefined when there is none. */
 async function readHead(
   file: string,
+  label: string,
   beforeOpen?: () => Promise<void>,
 ): Promise<string | undefined> {
   if (!(await lstat(file)).isFile()) {
@@ -195,7 +200,9 @@ async function readHead(
 
   // `file` is the real path checked to be inside: opened as that very file,
   // so a link swapped in at its last name is refused, never followed.
+  // openReal's refusals name `label` already, in its own platform-free words.
   const { handle } = await openReal(file, {
+    label,
     exact: true,
     ...(beforeOpen === undefined ? {} : { beforeOpen }),
   });
@@ -348,8 +355,15 @@ function absent(error: unknown): boolean {
   );
 }
 
+/**
+ * `path`'s failure, worded from its code so every platform says the same:
+ * macOS fails an unreadable file's realpath, Linux only its open, which
+ * openReal has already worded and named.
+ */
 function named(path: string, error: unknown): Error {
-  return new Error(
-    `${path}: ${error instanceof Error ? error.message : String(error)}`,
-  );
+  if (error instanceof Error && !('code' in error)) {
+    return error;
+  }
+
+  return new Error(`${path}: ${reason(error)}`);
 }

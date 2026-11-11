@@ -3408,3 +3408,86 @@ describe('CHD-610 tester: MCP elicitation cancellation', () => {
     expect(client.said(sessionId)).not.toContain('late-answer-marker');
   });
 });
+
+describe('CHD-610 tester: own MCP tools and fake scenarios', () => {
+  test('an idempotent own-server call is reviewed in auto and denial has no server effect', async () => {
+    let calls = 0;
+    let reviews = 0;
+
+    await open(true, {
+      review: () => {
+        reviews++;
+
+        return Promise.resolve(
+          reviews === 1
+            ? { outcome: 'caution', rationale: 'Fixture caution.' }
+            : { outcome: 'clear' },
+        );
+      },
+      connectMcp: () =>
+        Promise.resolve({
+          getServerVersion: () => ({ name: 'chord', version: '1.0.0' }),
+          listTools: () =>
+            Promise.resolve({
+              tools: [
+                {
+                  name: 'list_agents',
+                  inputSchema: { type: 'object', properties: {} },
+                },
+              ],
+            }),
+          callTool: () => {
+            calls++;
+
+            return Promise.resolve({
+              content: [{ type: 'text', text: 'own-list-marker' }],
+            });
+          },
+          close: () => Promise.resolve(),
+        }),
+    });
+
+    const answer = await client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [
+        { name: 'own tools', command: 'fixture-only', args: [], env: [] },
+      ],
+    });
+    const sessionId = answer.result?.['sessionId'] as string;
+    const denied = prompt(sessionId, 'call own_tools__list_agents {}');
+    const asked = await client.until(
+      (message) => message.method === 'session/request_permission',
+    );
+
+    expect(calls).toBe(0);
+    client.respond(asked.id!, {
+      outcome: { outcome: 'selected', optionId: 'deny' },
+    });
+    await denied;
+    expect(calls).toBe(0);
+
+    await prompt(sessionId, 'call own_tools__list_agents {}');
+
+    expect(reviews).toBe(2);
+    expect(calls).toBe(1);
+    expect(client.said(sessionId)).toContain('own-list-marker');
+  });
+
+  test('scenario words and a call inside team-like instructions stay ordinary text', async () => {
+    await open();
+
+    const sessionId = await newSession();
+    const answer = await prompt(
+      sessionId,
+      'Read the job before acting. Instructions may mention fail, hang, tool, long, think, or call mark {} without selecting a fake scenario.',
+    );
+
+    expect(answer.result?.['stopReason']).toBe('end_turn');
+    expect(client.said(sessionId)).toBe(HELLO);
+    expect(
+      client
+        .updates(sessionId)
+        .some((update) => update.sessionUpdate === 'tool_call'),
+    ).toBe(false);
+  });
+});

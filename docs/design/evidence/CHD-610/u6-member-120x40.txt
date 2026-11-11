@@ -1,18 +1,11 @@
- helper · riff · ChatGPT · fake · riff's member · opened by @riff 1m ago
+ helper · riff · ChatGPT · fake · riff's member · opened by @riff 33s ago
 
- ⏺ riff's instructions for helper · 21 lines (ctrl+o to expand)
+ ⏺ riff's instructions for helper · 22 lines (ctrl+o to expand)
 
  ← from @riff
    ⎿  write hi.txt
 
- → to @main
-   ⎿  Error: {"error":{"type":"tool_execution_failed","tool_name":"chord__send_message","message":"Tool arguments
-      were not valid JSON, so fx did not run the call. The conversation shows its arguments as {}.","deta
-
- ⏺ {"error":{"type":"tool_execution_failed","tool_name":"chord__send_message","message":"Tool arguments were not valid 
-   JSON, so fx did not run the call. The conversation shows its arguments as {}.","details":{"failure":"syntax_error",
-   "received_bytes":5,"error_offset":1},"suggestion":"Reissue the call with valid JSON. Parsing failed at error_offset;
-   escape quotes, backslashes, and newlines inside strings."}}
+ ⏺ Hello from riff.
 
  ← from @riff
    ⎿  write it now
@@ -31,10 +24,17 @@
 
 
 
+
+
+
+
+
+
+
 ╭─ helper · riff ──────────────────────────────────────────────────────────────────────────────────────────────────────╮
 │ ›                                                                                                                    │
 ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
   ⏵⏵ ask mode on (shift+tab to cycle)                                          fake · default effort · 1% context used
-    main       riff · fake · default         ◦ idle 2m
-    riff       team · riff · fake · default  ◦ idle 5s  ✓ new reply
+    main       riff · fake · default         ◦ idle 50s
+    riff       team · riff · fake · default  ◦ idle 5s   ✓ new reply
     └─ helper  riff · fake · default         ◦ idle 5s

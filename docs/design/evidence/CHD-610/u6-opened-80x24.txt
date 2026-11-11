@@ -1,18 +1,18 @@
- ⏺ {"error":{"type":"tool_execution_failed","tool_name":"chord__send_message",
-   "message":"Tool arguments were not valid JSON, so fx did not run the call. 
-   The conversation shows its arguments as {}.","details":{"failure":
-   "syntax_error","received_bytes":5,"error_offset":1},"suggestion":"Reissue 
-   the call with valid JSON. Parsing failed at error_offset; escape quotes, 
-   backslashes, and newlines inside strings."}}
+ ⏺ riff's instructions for the lead · 23 lines (ctrl+o to expand)
+
+ ← from @main
+   ⎿  go
+
+ ⏺ Hello from riff.
 
  › call chord__open_agent {"member":"helper","prompt":"write hi.txt"}
 
  ⏺ Open(helper) · riff · fake · ask
    ⎿  write hi.txt
-   ⎿  Allowed mcp__chord__open_agent · Allow chord - open_agent for this 
+   ⎿  Allowed mcp__chord__open_agent · Allow chord - open_agent for this
       session
 
- ⏺ { "id": "de2831aa", "name": "helper", "agent": "riff", "model": "fake", 
+ ⏺ { "id": "3827e853", "name": "helper", "agent": "riff", "model": "fake",
    "mode": "ask" }
 
 ╭─ riff ───────────────────────────────────────────────────────────────────────╮
@@ -21,4 +21,4 @@
   ⏵⏵ ask mode on (shift+tab to cycle)  fake · default effort · 1% context used
     main       riff · fake · default         ◦ idle 24s
     riff       team · riff · fake · default  ◦ idle 7s
-    └─ helper  riff · fake · default         ◦ idle 7s   ✓ new reply
+    └─ helper  riff · fake · default         ◦ idle 6s   ✓ new reply

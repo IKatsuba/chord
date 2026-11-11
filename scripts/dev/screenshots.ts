@@ -47,6 +47,17 @@ import {
 /** The repository, for paths the shots name before `ROOT` is set. */
 const ROOT_DIR = new URL('../..', import.meta.url).pathname;
 
+/** Environment names by which tools tell an AI agent runs them. */
+const AGENT_MARKERS = [
+  'AI_AGENT',
+  'CLAUDECODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CODEX_SANDBOX',
+  'CODEX_THREAD_ID',
+  'CURSOR_AGENT',
+  'GEMINI_CLI',
+] as const;
+
 /** What a shot does to the window before it is taken. */
 type Step =
   | { readonly type: string }
@@ -601,6 +612,9 @@ async function capture(shot: Shot): Promise<string> {
     ];
     const chord = (args: readonly string[]) =>
       `exec env ${quote([
+        // Whoever takes the shots may be an agent: tools such as bun test
+        // print less when their environment says one runs them.
+        ...AGENT_MARKERS.flatMap((name) => ['-u', name]),
         ...env,
         ...(shot.env ?? []),
         process.execPath,

@@ -69,3 +69,55 @@ describe('paths as the window draws them (CHD-611)', () => {
     expect(shownDirectory('/a', undefined)).toBe('/a');
   });
 });
+
+describe('CHD-611 tester: display path boundaries', () => {
+  test('relative spelling is preserved, including parent segments and tilde text', () => {
+    for (const path of [
+      '',
+      '.',
+      '..',
+      '../notes.txt',
+      './src/../a.ts',
+      '~/notes.txt',
+    ]) {
+      expect(shownFile(path, view)).toBe(path);
+      expect(shownDirectory(path, view)).toBe(path);
+    }
+  });
+
+  test('a sibling sharing the home prefix stays absolute', () => {
+    const path = '/tmp/qa-home-other/notes.txt';
+
+    expect(shownFile(path, view)).toBe(path);
+    expect(shownDirectory(path, view)).toBe(path);
+  });
+
+  test('home and session roots have distinct file and directory spellings', () => {
+    const same = pathView('/tmp/qa-home', '/tmp/qa-home', (path) => path);
+
+    expect(shownFile('/tmp/qa-home', same)).toBe('.');
+    expect(shownDirectory('/tmp/qa-home', same)).toBe('~');
+    expect(shownFile('/tmp/qa-home/a.ts', same)).toBe('a.ts');
+    expect(shownDirectory('/tmp/qa-home/src', same)).toBe('~/src');
+  });
+
+  test('independent session views do not share their bases', () => {
+    const first = pathView('/fixture/one', undefined, (path) => path);
+    const second = pathView('/fixture/two', undefined, (path) => path);
+
+    expect(shownFile('/fixture/one/a.ts', first)).toBe('a.ts');
+    expect(shownFile('/fixture/one/a.ts', second)).toBe('/fixture/one/a.ts');
+    expect(shownDirectory('/fixture/two', first)).toBe('/fixture/two');
+    expect(first.cwds).toEqual(['/fixture/one']);
+    expect(second.cwds).toEqual(['/fixture/two']);
+  });
+
+  test('spaces and Unicode remain intact after shortening', () => {
+    expect(
+      shownFile('/private/tmp/qa-home/src/app/notes/été one.ts', view),
+    ).toBe('notes/été one.ts');
+    expect(
+      shownDirectory('/private/tmp/qa-home/src/app/build output', view),
+    ).toBe('~/src/app/build output');
+  });
+});

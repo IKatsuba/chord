@@ -2071,3 +2071,53 @@ test("an edit's Updated line names the file from the session's directory, throug
     await drawn.unmount();
   }
 });
+
+describe('CHD-611 tester: independent path views leave tool data unchanged', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`two session views draw their own diff paths at ${columns}x${rows}`, async () => {
+      const calls: ToolCall[] = ['one', 'two'].map((name) => ({
+        id: name,
+        title: 'Update file',
+        kind: 'edit',
+        status: 'completed',
+        locations: [{ path: `/fixture/${name}/${name}.ts` }],
+        content: [
+          {
+            type: 'diff',
+            path: `/fixture/${name}/${name}.ts`,
+            oldText: 'old\n',
+            newText: 'new\n',
+          },
+        ],
+      }));
+      const before = structuredClone(calls);
+      const drawn = await draw(
+        <box flexDirection='column'>
+          {calls.map((call) => (
+            <PathViews.Provider
+              key={call.id}
+              value={pathView(`/fixture/${call.id}`, undefined, (path) => path)}
+            >
+              <Tool call={call} expanded={false} ended width={columns - 2} />
+            </PathViews.Provider>
+          ))}
+        </box>,
+        { columns, rows },
+      );
+
+      try {
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame).toContain('Updated one.ts with 1 addition and 1 removal');
+        expect(frame).toContain('Updated two.ts with 1 addition and 1 removal');
+        expect(frame).not.toContain('/fixture/');
+        expect(calls).toEqual(before);
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+});

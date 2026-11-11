@@ -1,0 +1,24 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.u5
+ █▀     ? for shortcuts · /help
+
+ › call notes__confirm {}
+
+ ⏺ notes - confirm (MCP)
+   ⎿  Running…
+   ⎿  Allowed mcp__notes__confirm · Allow
+
+ ››› Waiting for your input… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ riff asks for input                                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│ ❯ * Project name                                                             │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ Type to fill in · ↑↓ to move · Esc to cancel                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                    fake · default effort

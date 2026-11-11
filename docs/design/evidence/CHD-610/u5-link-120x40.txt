@@ -1,0 +1,40 @@
+ █▄     chord v0.68.0
+ ▀██▄   riff · ChatGPT · fake
+ ▄██▀   /tmp/chord-qa.u5
+ █▀     ? for shortcuts · /help
+
+ › call notes__open_link {}
+
+ ⏺ notes - open_link (MCP)
+   ⎿  Running…
+   ⎿  Allowed mcp__notes__open_link · Allow
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ riff asks you to open a link                                                                                         │
+│ Sign in to notes                                                                                                     │
+│                                                                                                                      │
+│   https://example.invalid/sign-in                                                                                    │
+│   Opens example.invalid                                                                                              │
+│                                                                                                                      │
+│ ❯ 1. Open in the browser                                                                                             │
+│   2. Decline                                                                                                         │
+│                                                                                                                      │
+│ Enter to choose · Esc to cancel                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                                                            fake · default effort

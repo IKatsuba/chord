@@ -396,7 +396,7 @@ describe('tester: CHD-411 forwarding boundaries', () => {
 
     expect(forwarded).toStrictEqual([args]);
     expect(await parsed(['chord', '--fake', ...args])).toStrictEqual([
-      ['chord', true, args],
+      ['chord', true, args, undefined, '/tmp/chord-fake'],
     ]);
   });
 

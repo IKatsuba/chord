@@ -1,6 +1,7 @@
 /**
  * riff's MCP servers (CHD-485, "MCP, chord's own tools, skills and
- * instructions"): the session's ACP `mcpServers`, each through an
+ * instructions"): the session's ACP `mcpServers`, stdio and streamable
+ * HTTP (riff advertises no SSE; docs/decisions.md, CHD-610), each through an
  * `@modelcontextprotocol/sdk` client of chord's and `libfx/mcp`'s adapter.
  * chord gives each server a prefix of its own and keeps every tool's
  * original names, so the window titles a call `mcp__<server>__<tool>`;
@@ -8,7 +9,6 @@
  */
 import type { McpServer } from '@agentclientprotocol/sdk/unstable';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
@@ -94,15 +94,14 @@ export function mcpTitle(original: Original): string {
 
 /** An ACP server's transport, as the SDK makes it. */
 export function transportOf(server: McpServer, cwd: string): Transport {
-  if ('type' in server && (server.type === 'http' || server.type === 'sse')) {
+  if ('type' in server && server.type === 'http') {
     const headers = Object.fromEntries(
       server.headers.map((header) => [header.name, header.value]),
     );
-    const url = new URL(server.url);
 
-    return server.type === 'http'
-      ? new StreamableHTTPClientTransport(url, { requestInit: { headers } })
-      : new SSEClientTransport(url, { requestInit: { headers } });
+    return new StreamableHTTPClientTransport(new URL(server.url), {
+      requestInit: { headers },
+    });
   }
 
   if ('command' in server) {

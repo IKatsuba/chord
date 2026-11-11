@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, test } from 'bun:test';
 import type { McpServer } from '@agentclientprotocol/sdk/unstable';
-import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { mkdtemp, readFile, realpath, rm } from 'node:fs/promises';
@@ -108,7 +107,7 @@ describe('riff MCP prefixes', () => {
 });
 
 describe('riff MCP transports', () => {
-  test('stdio, streamable HTTP and SSE, as the SDK makes them', () => {
+  test('stdio and streamable HTTP as the SDK makes them; no SSE', () => {
     expect(transportOf(stdio('n', 'ok'), '/')).toBeInstanceOf(
       StdioClientTransport,
     );
@@ -118,12 +117,12 @@ describe('riff MCP transports', () => {
         '/',
       ),
     ).toBeInstanceOf(StreamableHTTPClientTransport);
-    expect(
+    expect(() =>
       transportOf(
         { type: 'sse', name: 'n', url: 'http://127.0.0.1:1/sse', headers: [] },
         '/',
       ),
-    ).toBeInstanceOf(SSEClientTransport);
+    ).toThrow('riff takes no sse server');
   });
 });
 

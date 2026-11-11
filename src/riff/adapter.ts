@@ -155,7 +155,9 @@ export function riffInit(version: string): InitializeResponse {
     agentCapabilities: {
       loadSession: false,
       promptCapabilities: { image: true, audio: false, embeddedContext: true },
-      mcpCapabilities: { http: true, sse: true },
+      // No SSE: the MCP SDK's SSE start has no bound a close can end
+      // (docs/decisions.md, CHD-610), so chord holds those servers back.
+      mcpCapabilities: { http: true, sse: false },
       sessionCapabilities: { resume: {}, close: {} },
     },
     // The owner's call: libfx's steer starts a turn of its own when none

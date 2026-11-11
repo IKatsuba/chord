@@ -8351,3 +8351,19 @@ change parser input. Include paths remain relative to the original file. The att
 64 files and include depth 10. A parse error or unavailable file refuses
 preparation. This keeps git's syntax in git, with no new parser dependency;
 these probes parse data and never execute repository-configured programs.
+
+## 2026-11-11 — CHD-610: riff takes no SSE MCP servers (main)
+
+riff reaches the session's MCP servers through `@modelcontextprotocol/sdk`
+1.32.2's client, bounded at 30 s per server. Its SSE transport does not
+fit that bound: `SSEClientTransport.start()` settles only on the server's
+`endpoint` event or an EventSource error, `Client.connect()` passes its
+signal on only after `start()`, and `close()` closes the EventSource
+without rejecting the pending `start()`. A server that answers the stream
+but never sends its endpoint holds `session/new` forever, and nothing in
+the SDK's public API ends it. Bounding it through the transport's `fetch`
+option, or abandoning the pending start, were rejected as working around
+the library. riff therefore advertises `mcpCapabilities.sse: false`, and
+`serversFor` holds SSE servers back from it with the usual reason; stdio
+and streamable HTTP, whose starts are bounded, stay. No upstream issue is
+filed for now.

@@ -1,0 +1,40 @@
+ ▄██▀   /tmp/chord-qa.d611
+ █▀     ? for shortcuts · /help
+
+ › edit
+
+ ⏺ Edit(src/greeting.ts)
+   ⎿  Updated src/greeting.ts with 2 additions and 1 removal
+      1 + /** Greets someone by name. */
+      2   export function greet(name: string): string {
+      2 -   return "hello " + name;
+      3 +   return `hello, ${name}`;
+      4   }
+
+ ⏺ Edited.
+
+ › bashask
+
+ ⏺ Run(./deploy.sh)
+   ⎿  Waiting…
+      building…
+      built in 1.2s
+
+ ››› Waiting for permission… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Run ./deploy.sh                                                                                                      │
+│   command: ["./deploy.sh"]                                                                                           │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Yes                                                                                                             │
+│   2. Yes, and don't ask again for this command                                                                       │
+│   3. No, and tell Codex what to do differently                                                                       │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

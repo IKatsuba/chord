@@ -1,0 +1,40 @@
+
+   --- /private/tmp/chord-qa.d611/greet.ts +++ /private/tmp/chord-qa.d611/greet.ts @@ -1,1 +1,1 @@ -export const greet
+   = "Hello"; +export const greet = "Hi";
+
+ › call shell {"command":"rm -rf dist '[review:caution]'"}
+
+ ⏺ Bash(rm -rf dist '[review:caution]')
+   ⎿  Reviewed: caution
+      Error: The person denied this call.
+      Action held after safety review. Use the review advice to choose a materially different safe action, or explain
+      why no safe path remains.
+      Fixture safety review: caution.
+   ⎿  Rejected Bash rm -rf dist '[review:caution]'
+
+ ⏺ The person denied this call. Action held after safety review. Use the review advice to choose a materially different
+   safe action, or explain why no safe path remains. Fixture safety review: caution.
+
+ › call shell {"command":"ls"}
+
+ ⏺ Bash(ls)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (4s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Bash ls                                                                                                              │
+│ /private/tmp/chord-qa.d611                                                                                           │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Allow this exact command for this session                                                                       │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)                                          fake · default effort · 1% context used

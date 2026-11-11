@@ -1,0 +1,24 @@
+
+ › call shell {"command":"ls"}
+
+ ⏺ Bash(ls)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Bash ls                                                                      │
+│ /private/tmp/chord-qa.d611                                                   │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Allow this exact command for this session                               │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ⏵⏵ ask mode on (shift+tab to cycle)  fake · default effort · 1% context used

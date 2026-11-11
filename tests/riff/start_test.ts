@@ -4,7 +4,12 @@ import manifest from '../../package.json' with { type: 'json' };
 import { agentStart, findAgent, listAgents } from '../../src/agents.ts';
 import { openAgent } from '../../src/acp/connection.ts';
 import { riffInit } from '../../src/riff/adapter.ts';
-import { FAKE_PROVIDER_ENV, RIFF_AGENT_FLAG } from '../../src/riff/start.ts';
+import {
+  FAKE_MODELS_ENV,
+  FAKE_PROVIDER_ENV,
+  fakeProvider,
+  RIFF_AGENT_FLAG,
+} from '../../src/riff/start.ts';
 
 const STOP = { exitMs: 300, termMs: 300, killMs: 2000 } as const;
 
@@ -91,5 +96,57 @@ describe('tester: riff startup protocol contract', () => {
     } finally {
       await agent.close();
     }
+  });
+});
+
+describe("the fake provider's model list (CHD-611)", () => {
+  test('beside the fake provider, it names the plan whose list it presents', () => {
+    expect(
+      fakeProvider({
+        [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+        [FAKE_MODELS_ENV]: 'codex',
+      }),
+    ).toEqual({ baseUrl: 'http://localhost:1/v1', models: 'codex' });
+    expect(
+      fakeProvider({ [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1' }),
+    ).toEqual({ baseUrl: 'http://localhost:1/v1' });
+  });
+
+  test('outside --fake and --qa it is ignored', () => {
+    expect(fakeProvider({ [FAKE_MODELS_ENV]: 'codex' })).toBeUndefined();
+    expect(
+      fakeProvider({ [FAKE_PROVIDER_ENV]: '', [FAKE_MODELS_ENV]: 'grok' }),
+    ).toBeUndefined();
+  });
+
+  test('a name that is no plan is refused', () => {
+    expect(() =>
+      fakeProvider({
+        [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+        [FAKE_MODELS_ENV]: 'gpt-6.1-sol',
+      }),
+    ).toThrow('CHORD_RIFF_FAKE_MODELS takes codex or grok, not gpt-6.1-sol');
+  });
+});
+
+describe('CHD-611 tester: fake model override boundaries', () => {
+  test('invalid model overrides are inert when no fake provider was selected', () => {
+    for (const provider of [undefined, '']) {
+      expect(
+        fakeProvider({
+          [FAKE_PROVIDER_ENV]: provider,
+          [FAKE_MODELS_ENV]: 'invalid-plan',
+        }),
+      ).toBeUndefined();
+    }
+  });
+
+  test('a blank model override keeps the fake-only default', () => {
+    expect(
+      fakeProvider({
+        [FAKE_PROVIDER_ENV]: 'http://localhost:1/v1',
+        [FAKE_MODELS_ENV]: '',
+      }),
+    ).toEqual({ baseUrl: 'http://localhost:1/v1' });
   });
 });

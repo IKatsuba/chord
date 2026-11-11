@@ -30,7 +30,8 @@
  */
 import { spawnSync } from 'node:child_process';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { AnsiUp } from 'ansi_up';
 import puppeteer from 'puppeteer-core';
@@ -38,6 +39,25 @@ import { quote } from 'shell-quote';
 import sliceAnsi from 'slice-ansi';
 import stripAnsi from 'strip-ansi';
 import { TAGLINE } from '../../src/ui/app/start_layout.ts';
+import { FAKE_MODELS_ENV, FAKE_PROVIDER_ENV } from '../../src/riff/start.ts';
+import {
+  type FakeScene,
+  serveFakeChat,
+} from '../../tests/fixtures/riff/fake_chat.ts';
+
+/** The repository, for paths the shots name before `ROOT` is set. */
+const ROOT_DIR = fileURLToPath(new URL('../..', import.meta.url));
+
+/** Environment names by which tools tell an AI agent runs them. */
+const AGENT_MARKERS = [
+  'AI_AGENT',
+  'CLAUDECODE',
+  'CLAUDE_CODE_ENTRYPOINT',
+  'CODEX_SANDBOX',
+  'CODEX_THREAD_ID',
+  'CURSOR_AGENT',
+  'GEMINI_CLI',
+] as const;
 
 /** What a shot does to the window before it is taken. */
 type Step =
@@ -70,7 +90,52 @@ export interface Shot {
   readonly steps: readonly Step[];
   /** Whether the project has the `bugfix` team saved; it has by default. */
   readonly team?: boolean;
+  /** A shot of riff, on its fake provider and fake sign-in, never live. */
+  readonly riff?: RiffShot;
 }
+
+/**
+ * What a riff shot plays: the fake provider's scene, whatever the prompt
+ * says, under the ChatGPT plan's model names, so the prompt typed is a
+ * person's sentence and the model shown a plan's.
+ */
+export interface RiffShot {
+  readonly scene?: FakeScene;
+  /** The project's files, by their path in it. */
+  readonly files?: Readonly<Record<string, string>>;
+  /** The settings' MCP servers, by name. */
+  readonly mcpServers?: Readonly<Record<string, unknown>>;
+}
+
+/** The project riff's session shot edits and tests. */
+const GREETING = {
+  'greet.ts': 'export const greet = (name: string) => `Hello, ${name}!`;\n',
+  'greet.test.ts': [
+    "import { expect, test } from 'bun:test';",
+    "import { greet } from './greet.ts';",
+    '',
+    "test('greets by name', () => {",
+    "  expect(greet('Ada')).toBe('Hi, Ada!');",
+    '});',
+    '',
+  ].join('\n'),
+};
+
+/** The skill riff's skill shot loads. */
+const RELEASE_NOTES = [
+  '---',
+  'name: release-notes',
+  "description: Writes a release's notes from its merged pull requests",
+  '---',
+  '',
+  '# Release notes',
+  '',
+  '1. List the pull requests merged since the last tag.',
+  '2. Group them as features, fixes and chores.',
+  '3. Write one line each, in the past tense, with its number.',
+  '4. Lead with what a person notices first.',
+  '',
+].join('\n');
 
 /** A prompt typed and sent. */
 function prompt(text: string): Step[] {
@@ -169,6 +234,143 @@ export const SHOTS: readonly Shot[] = [
       { respawn: ['--resume'] },
       { until: 'Resume a session' },
     ],
+  },
+  {
+    // Signed out, ChatGPT chosen, then the code: the fake sign-in waits on
+    // its example address and code.
+    name: 'riff-sign-in',
+    scenario: 'text',
+    args: ['riff'],
+    first: 'Sign in to riff',
+    env: [
+      'CHORD_RIFF_QA=1',
+      'CHORD_RIFF_QA_STATE=signed-out',
+      'CHORD_RIFF_QA_SIGN_IN=waiting',
+    ],
+    riff: {},
+    steps: [
+      // The box draws before it takes keys.
+      { wait: 1500 },
+      { keys: ['Enter'] },
+      { until: 'Sign in to ChatGPT' },
+      { wait: 500 },
+      { keys: ['Down', 'Enter'] },
+      { until: 'WXYZ-1234' },
+    ],
+  },
+  {
+    name: 'riff-session',
+    scenario: 'text',
+    args: ['riff'],
+    // The header says `? for shortcuts` before the session is open.
+    first: 'auto mode on',
+    riff: {
+      files: GREETING,
+      scene: {
+        calls: [
+          {
+            name: 'edit',
+            arguments: {
+              path: 'greet.ts',
+              oldString: 'Hello',
+              newString: 'Hi',
+            },
+          },
+          { name: 'shell', arguments: { command: 'bun test' } },
+        ],
+        reply: 'greet now says Hi, and its test passes.',
+        review: 'clear',
+      },
+    },
+    steps: [
+      ...prompt('Make the greeting say Hi and run the tests'),
+      { until: 'its test passes' },
+      { until: 'context used' },
+    ],
+  },
+  {
+    name: 'riff-ask',
+    scenario: 'text',
+    args: ['riff'],
+    // The header says `? for shortcuts` before the session is open.
+    first: 'auto mode on',
+    riff: {
+      files: GREETING,
+      scene: {
+        calls: [{ name: 'shell', arguments: { command: 'bun test' } }],
+        reply: 'The tests pass.',
+      },
+    },
+    steps: [
+      // Ask mode, the next of auto.
+      { keys: ['BTab'] },
+      { until: 'ask mode on' },
+      ...prompt('Run the tests'),
+      { until: 'Do you want to proceed?' },
+    ],
+  },
+  {
+    name: 'riff-review',
+    scenario: 'text',
+    args: ['riff'],
+    // The header says `? for shortcuts` before the session is open.
+    first: 'auto mode on',
+    riff: {
+      files: GREETING,
+      scene: {
+        calls: [{ name: 'shell', arguments: { command: 'rm -rf dist' } }],
+        reply: 'The old build is gone.',
+        review: 'caution',
+        rationale:
+          'It deletes dist/ for good; nothing in the request says the build there is no longer needed.',
+      },
+    },
+    steps: [
+      ...prompt('Clear out the old build'),
+      { until: 'The safety review held this' },
+    ],
+  },
+  {
+    name: 'riff-skill',
+    scenario: 'text',
+    args: ['riff'],
+    // The header says `? for shortcuts` before the session is open.
+    first: 'auto mode on',
+    riff: {
+      files: { '.agents/skills/release-notes/SKILL.md': RELEASE_NOTES },
+      mcpServers: {
+        notes: {
+          command: process.execPath,
+          args: [join(ROOT_DIR, 'tests', 'fixtures', 'riff', 'mcp_stdio.ts')],
+        },
+      },
+      scene: {
+        calls: [
+          { name: 'skill', arguments: { name: 'release-notes' } },
+          {
+            name: 'notes__save_note',
+            arguments: { title: 'Release notes 0.69', tags: ['release'] },
+          },
+        ],
+        reply: 'The notes for 0.69 are written and saved as a note.',
+        review: 'clear',
+      },
+    },
+    steps: [
+      ...prompt('Write the release notes for 0.69 and save them as a note'),
+      { until: 'saved as a note' },
+      { until: 'context used' },
+    ],
+  },
+  {
+    // Taken once M1 has checked the ChatGPT list against the plan.
+    name: 'riff-model',
+    scenario: 'text',
+    args: ['riff'],
+    // The header says `? for shortcuts` before the session is open.
+    first: 'auto mode on',
+    riff: {},
+    steps: [...prompt('/model'), { until: 'gpt-6-luna' }],
   },
   {
     // A reply's code blocks, each with its [copy], and [run] on a command.
@@ -308,6 +510,7 @@ async function world(
   dir: string,
   team: boolean,
   theme: 'dark' | 'light',
+  riff: RiffShot | undefined,
 ): Promise<string> {
   const home = join(dir, 'home');
   const project = join(home, 'src', 'app');
@@ -335,8 +538,16 @@ async function world(
         claude: { command: fake, model: 'claude-opus-5-5' },
         codex: { command: fake, model: 'gpt-6.1-sol' },
       },
+      ...(riff?.mcpServers === undefined
+        ? {}
+        : { mcpServers: riff.mcpServers }),
     }),
   );
+
+  for (const [path, text] of Object.entries(riff?.files ?? {})) {
+    await mkdir(dirname(join(project, path)), { recursive: true });
+    await writeFile(join(project, path), text);
+  }
 
   if (team) {
     // The shots' own team, beside this script, on the two names the
@@ -360,8 +571,21 @@ async function capture(shot: Shot): Promise<string> {
   await rm(dir, { recursive: true, force: true });
   await mkdir(dir, { recursive: true });
 
+  const stops: (() => Promise<void>)[] = [];
+
   try {
-    const home = await world(dir, shot.team ?? true, shot.theme ?? 'dark');
+    const home = await world(
+      dir,
+      shot.team ?? true,
+      shot.theme ?? 'dark',
+      shot.riff,
+    );
+    // riff's fake provider, on the scene the shot plays.
+    const served =
+      shot.riff === undefined ? undefined : serveFakeChat(shot.riff.scene);
+
+    stops.push(async () => await served?.stop());
+
     const env = [
       `HOME=${home}`,
       `XDG_CONFIG_HOME=${join(home, '.config')}`,
@@ -379,6 +603,9 @@ async function capture(shot: Shot): Promise<string> {
       'CHORD_FAKE_CHILD_MODEL=gpt-6.1-sol',
       // A fork stays on its source's model, main's in the fork shot.
       'CHORD_FAKE_FORK_MODEL=claude-opus-5-5',
+      ...(served === undefined
+        ? []
+        : [`${FAKE_PROVIDER_ENV}=${served.url}`, `${FAKE_MODELS_ENV}=codex`]),
       `CHORD_FAKE_SAID=${JSON.stringify({
         agentchild: 'Run the parser tests and fix what fails',
         permission: 'Say in the README what changed',
@@ -386,11 +613,18 @@ async function capture(shot: Shot): Promise<string> {
     ];
     const chord = (args: readonly string[]) =>
       `exec env ${quote([
+        // Whoever takes the shots may be an agent: tools such as bun test
+        // print less when their environment says one runs them.
+        ...AGENT_MARKERS.flatMap((name) => ['-u', name]),
         ...env,
         ...(shot.env ?? []),
         process.execPath,
         '--define',
         'process.env.NODE_ENV:"production"',
+        // riff's shots: fixture access only, never the system's store.
+        ...(served === undefined
+          ? []
+          : ['--define', 'process.env.CHORD_RESOURCE_FIXTURE:"true"']),
         join(ROOT, 'src', 'main.tsx'),
         ...args,
         '-C',
@@ -440,6 +674,11 @@ async function capture(shot: Shot): Promise<string> {
     return tmux('capture-pane', '-p', '-e', '-t', 'shot');
   } finally {
     spawnSync('tmux', ['-L', SOCKET, 'kill-server']);
+
+    for (const stop of stops) {
+      await stop();
+    }
+
     await rm(dir, { recursive: true, force: true });
   }
 }

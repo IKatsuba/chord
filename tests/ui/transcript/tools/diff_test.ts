@@ -228,3 +228,14 @@ test('a coloured row keeps a tab as two spaces', () => {
     '  x := 1',
   );
 });
+
+test('the Updated line names the file as given, its own path by default (CHD-611)', () => {
+  const view = diffView('/p/app/a.ts', 'a\n', 'b\n', true);
+
+  expect(diffHeadline(view)).toBe(
+    'Updated /p/app/a.ts with 1 addition and 1 removal',
+  );
+  expect(diffHeadline(view, 'a.ts')).toBe(
+    'Updated a.ts with 1 addition and 1 removal',
+  );
+});

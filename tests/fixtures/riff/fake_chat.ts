@@ -26,6 +26,24 @@ export interface ChatRequest {
   readonly tools?: readonly { function?: { name?: string } }[];
 }
 
+/**
+ * A scene the fake plays whatever the prompt says, so a screenshot's typed
+ * prompt can be a person's sentence: its tool calls one per request, then
+ * its reply.
+ */
+export interface FakeScene {
+  readonly calls: readonly {
+    readonly name: string;
+    readonly arguments: object;
+  }[];
+  /** The answer once every call has its result. */
+  readonly reply: string;
+  /** The safety review's verdict on every gated call; caution when none. */
+  readonly review?: 'clear' | 'caution';
+  /** What the review says of it, in place of the fixture's own words. */
+  readonly rationale?: string;
+}
+
 /** A running fake server. */
 export interface FakeChat {
   /** The base URL libfx's custom provider takes. */
@@ -74,7 +92,7 @@ function lastUser(request: ChatRequest): string {
     : JSON.stringify(said?.content ?? '');
 }
 
-export function serveFakeChat(): FakeChat {
+export function serveFakeChat(scene?: FakeScene): FakeChat {
   const requests: ChatRequest[] = [];
   let calls = 0;
   let reviews = 0;
@@ -114,9 +132,9 @@ export function serveFakeChat(): FakeChat {
           );
         }
 
-        const decision = pending.includes('[review:clear]')
-          ? 'clear'
-          : 'caution';
+        const decision =
+          scene?.review ??
+          (pending.includes('[review:clear]') ? 'clear' : 'caution');
 
         return new Response(
           [
@@ -131,8 +149,46 @@ export function serveFakeChat(): FakeChat {
                     name: 'permission_decision',
                     arguments: JSON.stringify({
                       decision,
-                      rationale: 'Fixture safety review: caution.',
+                      rationale:
+                        scene?.rationale ?? 'Fixture safety review: caution.',
                     }),
+                  },
+                },
+              ],
+            }),
+            chunk({}, 'tool_calls'),
+            usage,
+            'data: [DONE]\n\n',
+          ].join(''),
+          { headers },
+        );
+      }
+
+      if (scene !== undefined) {
+        // The scene's next call is the one after as many results as came
+        // back since the person's prompt.
+        const since = body.messages ?? [];
+        const done = since
+          .slice(since.findLastIndex(({ role }) => role === 'user') + 1)
+          .filter(({ role }) => role === 'tool').length;
+        const next = scene.calls[done];
+
+        if (next === undefined) {
+          return new Response(answer(scene.reply), { headers });
+        }
+
+        return new Response(
+          [
+            chunk({
+              role: 'assistant',
+              tool_calls: [
+                {
+                  index: 0,
+                  id: `call_${next.name}_${++calls}`,
+                  type: 'function',
+                  function: {
+                    name: next.name,
+                    arguments: JSON.stringify(next.arguments),
                   },
                 },
               ],

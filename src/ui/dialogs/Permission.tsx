@@ -8,6 +8,7 @@ import { useTerminalDimensions } from '@opentui/react';
 import {
   type RefObject,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -19,7 +20,7 @@ import type {
   Subagent,
 } from '../../session/transcript/types.ts';
 import { capital } from '../shortcuts/state.ts';
-import { useColours, useHintKey } from '../app/context.ts';
+import { PathViews, useColours, useHintKey } from '../app/context.ts';
 import { borderOf, ChoiceList, type KeptChoice } from '../pickers/Pickers.tsx';
 import { DiffRows } from '../transcript/tools/Tool.tsx';
 import { Ansi } from '../theme/Ansi.tsx';
@@ -260,7 +261,8 @@ function Request({
   const area = useRef<BoxRenderable | null>(null);
   const [room, setRoom] = useState(Number.POSITIVE_INFINITY);
   const [top, setTop] = useState(0);
-  const whole = requestRows(wait, width, width, colours.code);
+  const paths = useContext(PathViews);
+  const whole = requestRows(wait, width, width, colours.code, paths);
   const wholeHeight = requestHeight(whole.rows, width);
   // A room of one row, or of none where a short window has taken them all,
   // says what is hidden beside the pinned row (CHD-464), whose title then
@@ -273,6 +275,7 @@ function Request({
           width,
           width - countRoom(wholeHeight) - 1,
           colours.code,
+          paths,
         )
       : whole;
   const total = requestHeight(rows, width);

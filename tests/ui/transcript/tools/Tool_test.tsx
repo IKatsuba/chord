@@ -2,6 +2,8 @@ import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { draw } from '../../harness.tsx';
+import { PathViews } from '../../../../src/ui/app/context.ts';
+import { pathView } from '../../../../src/ui/transcript/tools/paths.ts';
 import stringWidth from 'string-width';
 import stripAnsi from 'strip-ansi';
 import {
@@ -2025,6 +2027,96 @@ describe('CHD-568 U4-U6 tester: answering and withdrawing changes', () => {
         );
       } finally {
         await server.close();
+      }
+    });
+  }
+});
+
+test("an edit's Updated line names the file from the session's directory, through a link too (CHD-611)", async () => {
+  const drawn = await draw(
+    <PathViews.Provider
+      value={pathView('/tmp/qa-home/src/app', '/tmp/qa-home', (path) =>
+        path.replace(/^\/tmp\//u, '/private/tmp/'),
+      )}
+    >
+      <Tool
+        call={{
+          id: 'edit',
+          title: 'Update greet.ts',
+          kind: 'edit',
+          status: 'completed',
+          content: [
+            {
+              type: 'diff',
+              path: '/private/tmp/qa-home/src/app/greet.ts',
+              oldText: 'Hello\n',
+              newText: 'Hi\n',
+            },
+          ],
+        }}
+        expanded={false}
+        ended
+        width={78}
+      />
+    </PathViews.Provider>,
+    { columns: 80, rows: 24 },
+  );
+
+  try {
+    const frame = stripAnsi(drawn.frame());
+
+    expect(frame).toContain('Updated greet.ts with 1 addition and 1 removal');
+    expect(frame).not.toContain('/private/tmp');
+  } finally {
+    await drawn.unmount();
+  }
+});
+
+describe('CHD-611 tester: independent path views leave tool data unchanged', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`two session views draw their own diff paths at ${columns}x${rows}`, async () => {
+      const calls: ToolCall[] = ['one', 'two'].map((name) => ({
+        id: name,
+        title: 'Update file',
+        kind: 'edit',
+        status: 'completed',
+        locations: [{ path: `/fixture/${name}/${name}.ts` }],
+        content: [
+          {
+            type: 'diff',
+            path: `/fixture/${name}/${name}.ts`,
+            oldText: 'old\n',
+            newText: 'new\n',
+          },
+        ],
+      }));
+      const before = structuredClone(calls);
+      const drawn = await draw(
+        <box flexDirection='column'>
+          {calls.map((call) => (
+            <PathViews.Provider
+              key={call.id}
+              value={pathView(`/fixture/${call.id}`, undefined, (path) => path)}
+            >
+              <Tool call={call} expanded={false} ended width={columns - 2} />
+            </PathViews.Provider>
+          ))}
+        </box>,
+        { columns, rows },
+      );
+
+      try {
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame).toContain('Updated one.ts with 1 addition and 1 removal');
+        expect(frame).toContain('Updated two.ts with 1 addition and 1 removal');
+        expect(frame).not.toContain('/fixture/');
+        expect(calls).toEqual(before);
+      } finally {
+        await drawn.unmount();
       }
     });
   }

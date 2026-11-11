@@ -1,3 +1,4 @@
+import type { PathView } from '../transcript/tools/paths.ts';
 import { createContext, useContext, useMemo } from 'react';
 import type { Renderable, RGBA } from '@opentui/core';
 import {
@@ -146,6 +147,12 @@ export const AgentColours = createContext<Readonly<Record<string, string>>>({});
  * passed. A call to it is chord's own from its first update (CHD-415).
  */
 export const ChordServerName = createContext<string | undefined>(undefined);
+
+/**
+ * The session's directory and home, by which the window draws a file or a
+ * directory short (CHD-611); none draws each as it came.
+ */
+export const PathViews = createContext<PathView | undefined>(undefined);
 
 /** The colour of the agent `name`; none for one with no colour. */
 export function useAgentColour(name: string): string | undefined {

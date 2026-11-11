@@ -13,6 +13,7 @@ import stripAnsi from 'strip-ansi';
 import type { PlanAsk, ToolCall } from '../../../session/transcript/types.ts';
 import {
   ChordServerName,
+  PathViews,
   CodeIds,
   paint,
   useAgentColour,
@@ -34,6 +35,7 @@ import {
 } from '../Reply.tsx';
 import { type ArrowTone, outArrow, wrapLine } from '../message.ts';
 import { diffHeadline, type DiffView } from './diff.ts';
+import { shownFile } from './paths.ts';
 import {
   agentRows,
   bodyChange,
@@ -751,7 +753,7 @@ const DIFF_MARKS = { added: '+', removed: '-', context: ' ' } as const;
 function Diff({
   view,
   first,
-  headline = diffHeadline(view),
+  headline,
   width,
 }: {
   view: DiffView;
@@ -761,13 +763,15 @@ function Diff({
   /** Cells beside the `⎿`, which each row's code is wrapped to. */
   width?: number;
 }) {
+  const paths = useContext(PathViews);
+  const line = headline ?? diffHeadline(view, shownFile(view.path, paths));
   const selectable = useSelectable();
 
   return (
     <>
       <Under first={first}>
         <text {...FILL} {...selectable} attributes={DIM}>
-          {headline}
+          {line}
         </text>
       </Under>
       {view.rows.length > 0 && (

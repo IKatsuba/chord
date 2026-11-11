@@ -22,12 +22,33 @@ export const RIFF = 'riff';
  */
 export const FAKE_PROVIDER_ENV = 'CHORD_RIFF_FAKE_PROVIDER';
 
+/**
+ * The plan whose model list the fake provider presents, `codex` or `grok`,
+ * so screenshots show a plan's names; read only beside the fake provider,
+ * never settings.
+ */
+export const FAKE_MODELS_ENV = 'CHORD_RIFF_FAKE_MODELS';
+
 export function fakeProvider(
   env: Readonly<Record<string, string | undefined>>,
 ): FakeProvider | undefined {
   const baseUrl = env[FAKE_PROVIDER_ENV];
 
-  return baseUrl === undefined || baseUrl === '' ? undefined : { baseUrl };
+  if (baseUrl === undefined || baseUrl === '') {
+    return undefined;
+  }
+
+  const models = env[FAKE_MODELS_ENV];
+
+  if (models === undefined || models === '') {
+    return { baseUrl };
+  }
+
+  if (models !== 'codex' && models !== 'grok') {
+    throw new Error(`${FAKE_MODELS_ENV} takes codex or grok, not ${models}`);
+  }
+
+  return { baseUrl, models };
 }
 
 /** The binary alone when compiled; from source, Bun with `main.tsx`. */

@@ -31,6 +31,7 @@
 import { spawnSync } from 'node:child_process';
 import { mkdir, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { AnsiUp } from 'ansi_up';
 import puppeteer from 'puppeteer-core';
@@ -45,7 +46,7 @@ import {
 } from '../../tests/fixtures/riff/fake_chat.ts';
 
 /** The repository, for paths the shots name before `ROOT` is set. */
-const ROOT_DIR = new URL('../..', import.meta.url).pathname;
+const ROOT_DIR = fileURLToPath(new URL('../..', import.meta.url));
 
 /** Environment names by which tools tell an AI agent runs them. */
 const AGENT_MARKERS = [

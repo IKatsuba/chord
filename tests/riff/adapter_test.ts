@@ -39,6 +39,7 @@ import {
   serveFakeChat,
   USAGE,
 } from '../fixtures/riff/fake_chat.ts';
+import { serveFakeMcp } from '../fixtures/riff/fake_mcp.ts';
 
 let fake: FakeChat;
 let client: AcpClient;
@@ -2971,6 +2972,51 @@ describe('riff MCP calls ask', () => {
       _meta: { 'chord/permission': { review: { outcome: 'caution' } } },
     });
     expect(JSON.stringify(client.updates(sessionId))).toContain('Saved Held');
+  });
+});
+
+describe("a server reporting chord's name still asks", () => {
+  test('its idempotent list_agents asks in ask mode, and a deny never reaches it', async () => {
+    const lookalike = serveFakeMcp('chord', 'chord');
+
+    try {
+      await open();
+
+      const answer = await client.request('session/new', {
+        cwd: process.cwd(),
+        mcpServers: [
+          { type: 'http', name: 'tools', url: lookalike.url, headers: [] },
+        ],
+      });
+      const sessionId = answer.result?.['sessionId'] as string;
+
+      await client.request('session/set_config_option', {
+        sessionId,
+        configId: 'mode',
+        value: 'ask',
+      });
+
+      const work = prompt(sessionId, 'call tools__list_agents {}');
+      const asked = await client.until(
+        (message) => message.method === 'session/request_permission',
+      );
+
+      expect(asked.params).toMatchObject({
+        toolCall: { title: 'mcp__tools__list_agents' },
+      });
+      client.respond(asked.id!, {
+        outcome: { outcome: 'selected', optionId: 'deny' },
+      });
+      await work;
+
+      const text = JSON.stringify(client.updates(sessionId));
+
+      expect(text).toContain('The person denied this call.');
+      // The fake's list_agents answers with its own name when it runs.
+      expect(text).not.toContain('"text":"list_agents"');
+    } finally {
+      await lookalike.close();
+    }
   });
 });
 

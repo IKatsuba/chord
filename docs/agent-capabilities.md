@@ -1,7 +1,7 @@
 # What every agent can do (CHD-433)
 
 Every agent chord can start, read for what it can do over ACP and how: the
-25 in the ACP Registry, at the versions `src/registry.ts` pins (fetched
+built-in riff, the 25 in the ACP Registry, at the versions `src/registry.ts` pins (fetched
 2026-11-01, refreshed by CHD-561), and the 11 CLIs in `src/clis.ts`, at
 the release current when they were read. Section 1 is the summary, agents as
 rows; section 2 is what chord itself uses of each capability and what it
@@ -17,7 +17,8 @@ were read only. CHD-561 refreshed the registry pins and the Claude 0.99.1
 and Codex 2.5.0 findings named below from source, not observation. Other
 findings retain their stated reading versions; a newer pin does not verify
 them again. Live CHD-561 checks are recorded separately in
-[the design](design/CHD-561.md).
+[the design](design/CHD-561.md). riff was read in chord at `a0db5059`
+for CHD-611; its model ids and windows have not been verified on live plans.
 
 For an agent whose licence limits reverse-engineering (bob, cursor, nova,
 auggie, factory-droid, poolside), the owner's rule of 2026-10-18, recorded on
@@ -43,6 +44,7 @@ columns; section 3 uses them too.
 
 | Agent | Protocol version | SDK | Surfaces |
 | --- | --- | --- | --- |
+| riff | 1 c [rf1] | SDK ^2.2.0 c [rf1] | v1 + config, resume, close, elicitation c [rf1] |
 | agoragentic-acp | echoes the client's, 1 c [ag1] | none, own JSON-RPC c [ag2] | `initialize` only c [ag3] |
 | auggie | 1 c | SDK 0.14.1 c [au1] | v1 + unstable c [au2] |
 | autohand | 1, the client's echoed c [ah1] | SDK 0.12.0 c [ah2] | v1 + unstable c [ah3] |
@@ -84,6 +86,7 @@ columns; section 3 uses them too.
 
 | Agent | New | Load | Resume | List | Fork | Delete · close |
 | --- | --- | --- | --- | --- | --- | --- |
+| riff | ✓ signed-in plan c [rf2] | ✗ chord replays its record c [rf2] | ✓ no replay c [rf2] | ✗ chord lists its records c [rf2] | ✗ c [rf2] | ✗ · ✓ c [rf2] |
 | agoragentic-acp | ✗ Method not found c [ag4] | ✗ c | ✗ c | ✗ c | ✗ c | ✗ · ✗ c |
 | auggie | ✓; `authRequired` c [au3] | ✓ no plans c [au4] | ✗ c | ✓ cwd filter c [au4] | ✗ c | ✗ · ✗ c |
 | autohand | ✓; `authRequired` r [ah4] | ✓ text only r [ah5] | ◐ the CLI's ids only r [ah6] | ◐ lists turns c [ah6] | ◐ this process only r [ah6] | ✗ · ✗ c |
@@ -125,6 +128,7 @@ columns; section 3 uses them too.
 
 | Agent | Modes | Models | Config options | Effort |
 | --- | --- | --- | --- | --- |
+| riff | ask · auto, option only c [rf3] | ✓ config only, live list unverified c [rf3] | model · effort · mode c [rf3] | ✓ `thought_level`, five values c [rf3] |
 | agoragentic-acp | ✗ c | ✗ c | ✗ c | ✗ c |
 | auggie | default · ask c [au5] | ✓ legacy, may be null c [au5] | ✗ c | ✗ over ACP c [au5] |
 | autohand | ✓ six, legacy r [ah7] | ✓ legacy, next run r [ah7] | ✓ nine selects r [ah7] | ◐ no `thought_level` r [ah8] |
@@ -166,6 +170,7 @@ columns; section 3 uses them too.
 
 | Agent | Text | Image | Audio | Resource | Resource link |
 | --- | --- | --- | --- | --- | --- |
+| riff | ✓ c [rf4] | ✓ data + MIME c [rf4] | ✗ refused c [rf4] | ◐ text only, blobs refused c [rf4] | ◐ name + URI text c [rf4] |
 | agoragentic-acp | ✗ no `session/prompt` c [ag4] | ✗ c | ✗ c | ✗ c | ✗ c |
 | auggie | ✓ c [au6] | ✓ c [au6] | ✗ dropped c [au6] | ✗ dropped c [au6] | ◐ `file://` path only c [au6] |
 | autohand | ✓ c | ◐ never reaches the model c [ah9] | ✗ placeholder text c [ah9] | ✓ inlined c [ah10] | ✓ read, inlined c [ah10] |
@@ -207,6 +212,7 @@ columns; section 3 uses them too.
 
 | Agent | Kinds | `rawInput` | `rawOutput` | Content: text · diff · terminal | Locations | Status lifecycle |
 | --- | --- | --- | --- | --- | --- | --- |
+| riff | read · edit · search · execute · other c [rf5] | ✓ c [rf5] | ✗ c [rf5] | ✓ · ✓ · ✓ c [rf5] | ✓ files and cwd c [rf5] | pending → in_progress → completed/failed c [rf5] |
 | agoragentic-acp | ✗ no updates sent c [ag5] | ✗ c | ✗ c | ✗ · ✗ · ✗ c | ✗ c | ✗ c |
 | auggie | 7 standard kinds c [au7] | ✓ c [au7] | ✓ output only here c [au7] | ◐ · ✓ · ✗ c [au7] | ✓ read, edit c [au7] | pending → completed c [au8] |
 | autohand | 8 from a name map c [ah11] | ✓ c [ah11] | ✓ result text c [ah11] | ✓ · ✗ · ◐ c [ah12] | ◐ path as given c [ah11] | pending → completed/failed c [ah13] |
@@ -248,6 +254,7 @@ columns; section 3 uses them too.
 
 | Agent | Permission options | On cancel or timeout | Elicitation: form · URL | Plan |
 | --- | --- | --- | --- | --- |
+| riff | once · session · deny; reviewed once · deny c [rf6] | deny; review asks 5 min, ask mode untimed c [rf6] | ✓ · ✓ MCP servers only c [rf7] | ✗ c [rf5] |
 | agoragentic-acp | ✗ no requests sent c [ag5] | ✗ c | ✗ · ✗ c | ✗ c |
 | auggie | once · reject c [au9] | error denies c [au9] | ✗ · ✗ c | ✓ task-list tools c [au10] |
 | autohand | once · always · reject, opt-in r [ah14] | ?; chord's SDK refuses all r [ah14] | ✗ · ✗ r | ✓ todo and plan tools r [ah15] |
@@ -289,6 +296,7 @@ columns; section 3 uses them too.
 
 | Agent | Cancel stops | Steering | Subagents | Usage: meter · answer · cost |
 | --- | --- | --- | --- | --- |
+| riff | turn, tools, shell groups, MCP forms c [rf8] | ✗ explicitly unsupported c [rf8] | ✗ native; chord tasks and teams c [rf8] | ✓ · ✓ · ✗ estimate in chord c [rf9] |
 | agoragentic-acp | ✗ error line with no id c [ag6] | ✗ c | ✗ c | ✗ · ✗ · ✗ c |
 | auggie | the whole loop c [au11] | ✗; a prompt runs twice c [au11] | as one call c [au12] | ✗ · ✗ · ✗ c |
 | autohand | kills the CLI run r [ah16] | ✗ queued r [ah16] | ✗ r | ✗ · ✗ · ✗ r [ah17] |
@@ -330,6 +338,7 @@ columns; section 3 uses them too.
 
 | Agent | Available commands | Session title | Login (`authenticate`) | Client `fs` · `terminal` | MCP: stdio · http · sse |
 | --- | --- | --- | --- | --- | --- |
+| riff | ✗ chord adds commands c [rf10] | ✗ chord uses first prompt c [rf10] | ✗ window signs in c [rf10] | ✗ · ✗ c [rf10] | ✓ · ✓ · ✗ c [rf7] |
 | agoragentic-acp | ✗ c [ag5] | ✗ c | ✗ malformed method c [ag7] | ✗ · ✗ c [ag5] | ✗ · ✗ · ✗ c |
 | auggie | ✓ before a prompt c [au13] | ✗ c [au14] | **needed** c [au15] | ✗ · ✗ c [au15] | ✓ · ◐ · ◐ c [au16] |
 | autohand | ✓ 24 by default c [ah18] | ✗ on purpose c [ah19] | **needed**, terminal-auth r [ah20] | ◐ · ◐ if declared c [ah21] | ✗ · ✗ · ✗ dropped c [ah22] |
@@ -371,6 +380,7 @@ columns; section 3 uses them too.
 
 | Agent | Agent capabilities advertised | Client capabilities read |
 | --- | --- | --- |
+| riff | image, embeddedContext, http, resume, close c [rf1] | elicitation form · URL c [rf7] |
 | agoragentic-acp | `loadSession: false` only c [ag8] | none c [ag9] |
 | auggie | load, image, list c [au17] | `terminal-auth` only c [au15] |
 | autohand | load, list, resume, fork, http… c [ah23] | fs, terminal, terminal-auth c [ah24] |
@@ -416,6 +426,7 @@ rest.
 
 | Agent | Extensions | Opt-in needed | chord uses |
 | --- | --- | --- | --- |
+| riff | credential notices, provider, permission review, terminal `_meta` c [rf11] | no opt-in for these four | all four c [rf11] |
 | agoragentic-acp | MCP `tools/*` and 3 more c [ag10] | MCP calls on the ACP pipe | none |
 | auggie | history, terminal-auth, indexing | ext method, `_meta`, flag | none |
 | autohand | terminal-auth, terminal `_meta` | `_meta`, env | none |
@@ -637,6 +648,117 @@ person's own prompts.
 Each part gives the version read and where from, then A, B and C in the
 summary's codes with a footnote per cell, what chord does with it today, and
 the sources.
+
+### Built in
+
+#### riff
+
+- Name: riff
+- Run as: `chord riff`; chord starts its own ACP child process
+- Install: included in chord
+
+Read in chord at `a0db5059` (CHD-611), with libfx 0.0.16. These are code
+findings; no live plan was used for this reading. The shipped per-plan
+model ids and context windows remain unverified.
+
+**Footnotes.**
+
+- **rf1 (A1–A3, B1).** `src/riff/adapter.ts`'s `riffInit` answers protocol
+  1, the chord version, ChatGPT and Grok auth-method descriptions,
+  `loadSession: false`, image and embedded context, HTTP MCP, resume and
+  close. Audio and SSE are false. It imports the unstable surface of
+  `@agentclientprotocol/sdk` (^2.2.0 in `package.json`).
+- **rf2 (B3–B8).** `connectRiff` in `src/riff/adapter.ts` serves one session
+  per process: new, resume and close; no load, list, fork or delete handler.
+  New requires a stored plan credential. `src/riff/store.ts` keeps libfx's
+  conversation and provider/account/model/effort/mode sidecar. Resume
+  cancels a journaled open turn before resuming and emits the interrupted
+  notice. chord supplies transcript replay and record listing outside the
+  riff adapter. Session grants are in memory and are not restored.
+- **rf3 (B9–B12).** `src/riff/models.ts` offers three select options:
+  `model` (category `model`), `effort` (`thought_level`) and `mode` (`mode`).
+  Modes are `ask` and default `auto`; efforts `default`, `low`, `medium`,
+  `high`, `xhigh`. There is no `session/set_model` or `session/set_mode`
+  handler. `session/set_config_option` saves the option; model/effort apply
+  to the next prompt. `LIBFX_MODEL_UNSUPPORTED_EFFORT` resets effort to
+  default and sends `config_option_update` before the error. The model list
+  is static and explicitly unverified against live plans.
+- **rf4 (B13).** `promptOf` in `src/riff/adapter.ts` forwards text and image
+  data/MIME, converts a resource link to `name: uri` text, and passes a text
+  resource's URI and text to libfx. Audio and binary resources are refused
+  with -32602. A resource without text fails in libfx, not by fetching its
+  URI. No client file read supplies a link's contents.
+- **rf5 (B14, B17).** `src/riff/events.ts` maps text, reasoning, tool start
+  and tool end; `src/riff/tools/tools.ts` announces a pending call with
+  `rawInput`, then in-progress before its effect. `drawn` assigns read,
+  edit, search, execute or other with file/cwd locations; skill has no
+  location. Text and proposed/finished diffs use `content`, not
+  `rawOutput`. Shell supplies terminal content and streamed terminal
+  metadata (`src/riff/tools/shell.ts`). There is no plan update or plan
+  tool in riff's tool set.
+- **rf6 (B15).** `src/riff/tools/permission.ts` asks for Allow, a session
+  grant and Deny. Grants name one real path, exact command, directory's
+  list/search, or one server/tool with any arguments; edit/write share a
+  grant. Ask mode includes reads; skill never asks. Auto admits inside
+  reads and non-sensitive mutations and classified shell commands, and
+  reviews every ungranted MCP call. `src/riff/review/permission.ts` asks
+  Allow once/Deny after caution, incomplete evidence or unavailable review,
+  with a 5-minute deadline. Cancellation, error or an unknown option denies.
+  `src/headless.ts` denies reviewed asks even with skip-permissions;
+  `chord acp` forwards them. Review failure keeps auto.
+- **rf7 (B16, B26, B2).** `src/riff/mcp.ts` connects stdio and streamable
+  HTTP with the MCP SDK and libfx adapter. SSE is refused before startup
+  through capability filtering. Failed servers are skipped with a note and
+  available stderr tail. Form and URL requests are registered only when
+  the client advertises the mode; `src/riff/adapter.ts` relays them as
+  `elicitation/create`, and URL completion as `elicitation/complete`.
+  Startup elicitations receive cancel; pending requests are withdrawn on
+  cancellation. There is no native ask-user-question tool. chord's own MCP server uses this
+  same path and permission checks; its three read-only tools are marked
+  idempotent, not exempted from asks/reviews.
+- **rf8 (B18–B19).** `session/cancel` cancels libfx's turn and withdraws MCP
+  elicitations; tools receive abort signals. Shell stops its process groups;
+  list/search cancellation stops the finder Worker. Initialization declares
+  `_meta.steering.supported: false`, and there is no steering handler. A
+  concurrent prompt fails rather than joining the turn. riff emits no native
+  subagent updates; chord's MCP task agents and teams work as for other
+  runtimes (`src/riff/adapter.ts`, `src/riff/tools/shell.ts`,
+  `src/platform/fff.ts`, `src/server/`).
+- **rf9 (B20–B21).** `src/riff/events.ts` supplies answer usage with total,
+  input, output, reasoning and cache tokens when libfx reports them. The
+  adapter emits `usage_update` after the turn: last model-request tokens
+  from the `model.end` hook, size from `src/riff/models.ts`. riff reports
+  no cost; `costFromTokens` in `src/session/enrichers.ts` supplies chord's
+  API-price estimate where a model price is known.
+- **rf10 (B22–B25).** No available-command, title or authenticate handler
+  exists in `src/riff/adapter.ts`. The window owns `/login` and `/logout`
+  and the sign-in box; noninteractive auth failures say to run chord to
+  sign in. The adapter's tools use its filesystem and processes directly,
+  never the client's `fs` or `terminal` methods. chord's title fallback
+  uses the first prompt, as for other untitled sessions.
+- **rf11 (C).** The adapter sends `_chord/credentials` with provider/state
+  changes and `chord/riffProvider` metadata on new/resume. Review asks carry
+  `_meta['chord/permission']` with outcome, reason and deadline; terminal
+  updates use `terminal_info`, `terminal_output_delta` and `terminal_exit`.
+  These feed chord's status/header, review box and terminal output without
+  another opt-in (`src/riff/adapter.ts`, `src/riff/review/permission.ts`,
+  `src/riff/tools/shell.ts`).
+
+**In chord.** The first picker row, with Claude still the default; it needs
+no external CLI. Model and effort pickers work through the config options.
+Instructions are base text, repository-root-to-session `AGENTS.md`, then the
+user's chord `AGENTS.md`, capped at 32 KiB with a note; outside git only the
+session's project file is read. Unreadable instructions stop startup. Skills
+come from `.agents/skills/*/SKILL.md` in the session directory and home;
+project names win, and `skill` loads bodies/resources on demand. Invalid
+metadata and links outside those places are skipped with a visible reason
+(`src/riff/instructions.ts`, `src/riff/skills.ts`, `src/riff/tools/skill.ts`).
+Fake/QA reads no user instructions or home skills (`src/riff/qa.ts`). See the
+[guide](guide.md#riff) for sign-in, tools, permission rules and failures.
+
+**Sources.** chord at `a0db5059`, the source paths above; libfx 0.0.16 as
+pinned in `package.json`. Model ids/windows, real plan responses and model
+availability were not checked live for this reading.
 
 ### In the ACP Registry
 

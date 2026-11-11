@@ -573,12 +573,19 @@ Forks close on quit and are not reopened automatically. `/resume` or
 at the divider: the copied source transcript is only in the original view,
 while the agent retains the fork's conversation context.
 
-## riff sign-in and sign-out
+## riff
 
-`chord riff` runs chord's own agent on a ChatGPT or Grok plan. When it needs
-sign-in, chord opens a box: choose the provider, then browser or device
-code. ↑/↓ or j/k and Enter choose; 1–9 picks a numbered choice. Esc follows
-the step's printed action. The box offers opening and copying the address,
+`chord riff` runs chord's own coding agent on a ChatGPT or Grok plan,
+with no separate agent CLI to install. It is the startup picker's first
+row, labelled `riff · chord's own agent · on a ChatGPT or Grok plan`.
+Claude Code remains the default. `/new riff` opens it beside the current
+agent; `agents.riff` in settings sets its starting model, effort and mode.
+
+### Sign in and out
+
+When riff needs sign-in, chord opens a box: choose the provider, then
+browser or device code. ↑/↓ or j/k and Enter choose; 1–9 picks a numbered
+choice. Esc follows the step's printed action. The box offers opening and copying the address,
 and copying a device code; the code has an expiry countdown. Failures,
 expiry and cancellation each show their own recovery choices.
 
@@ -598,10 +605,11 @@ does. `?` lists `/login /logout` with the sign-in keys.
 `/logout` is chord's command only on riff. After confirmation it deletes
 that provider's local sign-in, cancels this window's riff turns and its
 children's turns, and ends the session signed out. ChatGPT tokens are not
-revoked; the confirmation says so. Grok's refresh token is then revoked at xAI; a
-failure is reported after the local sign-out. Use `/login` to sign in again
-or `/new` for another agent. Other windows discover a removed sign-in or
-changed account at their next prompt and open the sign-in box. The failed
+revoked; the confirmation says so. Grok's refresh token is then revoked
+at xAI; a failure is reported after the local sign-out. Use `/login` to
+sign in again or `/new` for another agent. Other windows discover a
+removed sign-in or changed account at their next prompt and open the
+sign-in box. The failed
 prompt and transcript stay; the prompt is not resent after sign-in.
 
 A new riff session uses the last provider signed in to if still stored,
@@ -612,13 +620,132 @@ removal and account changes for the current session. `-p` and `chord acp`
 open no sign-in box: a missing sign-in reports the failure with
 `run chord riff to sign in`.
 
-## riff instructions and skills
+### The session
+
+riff keeps its conversation under chord's state directory. `--continue`,
+`--resume` and `/resume` bring it back with its provider, account, model,
+effort and mode; chord's record supplies the transcript you see. Session
+permission grants last only while that agent session is open. riff has no
+conversation fork. Messages sent while it works queue for a later turn;
+it does not take steering into a running turn.
+
+Esc interrupts the turn and its tools, including a running shell's process
+groups and an MCP form waiting for input. On resume, a journaled turn left
+open by a crash is cancelled, with `The interrupted turn was cancelled.`;
+its model requests and tools are not rerun. A prompt accepted just before
+its turn was journaled can run once on resume, with read-only calls;
+edits, writes, shell and non-idempotent MCP calls cannot rerun this way.
+
+Replies, thoughts, tool calls and diffs use chord's usual transcript.
+The context gauge uses the last model request's tokens and the listed
+model's window. `/cost` uses chord's API-price estimate from tokens when
+that model has a price; it is not a statement of plan charges.
+
+### Tools
+
+riff has `read`, `list`, `search`, `edit`, `write`, `shell` and `skill` tools,
+plus the session's MCP tools.
+`edit` replaces one unique exact string; `write` replaces a whole file or
+creates one under an existing directory. Both propose a diff and refuse
+without writing if the file or its destination changed while approval waited.
+Paths are checked at their real destination; a link outside the session
+directory counts as outside. `shell` runs in the session directory, streams
+output into the transcript, and Esc stops its process groups.
+
+`read` reads text with line ranges; it refuses binary files. `list` and
+`search` reach only the session directory, through fff. `list` matches
+files by glob (`*` crosses `/`), or directories by fuzzy query; `search`
+finds text or regular expressions, with pages for more results. Results
+keep fff's order and ignore behavior: tracked files matching ignore rules
+and symlinks are left out, `.git/info/exclude` is not read, and outside git
+dotfiles and `node_modules` are left out. Read an outside file with `read`
+and permission instead.
+
+### Ask and auto
+
+riff defaults to auto; shift+tab toggles ask and auto, kept per session.
+Ask mode asks for every call without a session grant except `skill`, which
+never asks. Ask-mode prompts have no timeout. Auto admits reads, lists
+and searches inside the session directory, edits and writes on non-sensitive paths inside it, calls
+covered by a grant, and the shell commands below.
+Other calls go to a safety review: outside reads, outside or sensitive edits
+and writes, every MCP call, and other shell commands. Sensitive paths
+include `.git/`, `.ssh/`, `.env*`, key files (`*.pem`, `*.key`, `*.p12`,
+`*.pfx`, `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`), shell startup files
+and `Library/LaunchAgents/`.
+`Allow edits to <path> for this session` covers edit and write at that real
+path; `Allow this exact command for this session` covers only that command
+string, never a prefix. `Allow <server> - <tool> for this session` covers
+that MCP tool with any arguments. Grants hold in both modes for that session.
+
+Auto admits two command sets adapted from fx v0.0.16, with restricted
+arguments and syntax:
+
+- Read-only commands run without a shell: `printf`, `pwd`, `ls`, supported
+  forms of `git status`, `git diff` and `git log`, and `wc`, `cat`, `head`,
+  `tail` and `grep` as pipe filters, up to 8 stages. They use fixed programs
+  in `/bin` and `/usr/bin`, `PATH=/usr/bin:/bin` and the C locale, with
+  output capped at 64 KiB. Git ignores repository-configured fsmonitor,
+  hooks, filters, pager and textconv. If chord cannot prepare git safely,
+  it refuses the command and tells the model.
+- Reversible commands run through `$SHELL -c`: supported forms of `node -v`,
+  `which`, `git status`, `git remote -v`, `git worktree list`, `git fetch`,
+  package-manager version checks, `npm ci`, `npm`/`bun`/`pnpm`/`yarn`
+  installs, tests and `run <script>`, and `zig build`. These can reach the
+  network, change files and run project scripts. Before each command,
+  chord captures alias and function names from the same non-interactive
+  shell. A matching word or an uncertain capture sends it to review;
+  capture supports bash and zsh, with other shells going to review.
+
+Commands outside these rules, including global installs and anything that
+does not parse, go to review. Session grants take precedence; ask mode
+still asks for every ungranted call except `skill`.
+
+The reviewer is `gpt-6-luna` on ChatGPT or `grok-4.5` on Grok, using your
+plan. Each attempt has 30 seconds; transport failures/timeouts and malformed
+decisions each get one retry. A caution is final. Reviews use plan requests.
+The review sees the pending action, relevant request text, prior tool results
+marked untrusted and the branch when available. Its policy, adapted from fx,
+checks for prompt injection, malicious activity and destructive or
+irreversible actions. A clear review runs the call
+without a prompt. A caution, input beyond the review's caps, a failed review
+or the limit of 64 reviews per turn asks you instead. A failed review leaves
+the mode on auto.
+
+The box shows `The safety review held this:` and the reason, or why the
+review could not run, with only `Allow once` and `Deny`. These choices grant
+nothing for later calls. The working line counts down to denial after
+5 minutes; a timeout tells the model the call was denied. The transcript
+keeps `Reviewed: caution`, `Reviewed: incomplete` or `Reviewed: failed` on
+the call. In `-p`, reviewed asks are denied even with
+`--dangerously-skip-permissions`. `chord acp` forwards them to its client,
+with the same 5-minute deadline.
+
+### MCP and teams
+
+riff takes stdio and streamable HTTP servers. SSE servers are held back
+with the usual notice because the MCP SDK cannot bound their connection
+time. A failed start shows `MCP server <name> was not started: <reason>`,
+with the stderr tail when available. Calls use the original server and
+tool names, titled `mcp__<server>__<tool>`. MCP elicitations open chord's
+form or link prompt. Interrupted non-idempotent MCP calls are not rerun
+on resume.
+
+riff receives the [configured MCP servers](#settings), including chord's
+own server when enabled. It can spawn tasks, open agents, exchange messages,
+run monitors and work as a child, team member or lead. A riff lead in ask
+mode asks before each ungranted chord tool call, including `open_agent`
+and `send_message`; auto reviews them as it does every MCP call.
+`list_agents`, `get_budgets` and `list_monitors` are marked read-only for
+crash recovery; that does not exempt them from permission checks.
+
+### Instructions and skills
 
 At session start, riff reads chord's base instructions, then `AGENTS.md`
 files from the git repository root down to the session directory, then
-`~/.config/chord/AGENTS.md`. Outside a repository, only the session
-directory's project file is read. Instructions are capped at 32 KiB with
-a truncation note. An unreadable file stops the session with its path and
+the user config file (`~/.config/chord/AGENTS.md` by default). Outside a
+repository, only the session directory's project file is read. Instructions
+are capped at 32 KiB with a truncation note. An unreadable file stops the session with its path and
 reason. riff reads no `CLAUDE.md`; it is instructed to read deeper
 `AGENTS.md` files when working in those folders.
 
@@ -630,6 +757,32 @@ Resources must stay inside the skill's folder. Invalid metadata or a link
 outside the session directory (project skills) or home (home skills) skips
 the skill with `Skill <name> was not loaded: <reason>` in the transcript.
 `--fake` and `--qa` read no home skills or user `AGENTS.md`.
+
+### Model and effort
+
+`/model` chooses from the current plan's list; `/config` offers effort:
+`default`, `low`, `medium`, `high` or `xhigh`. Model and effort changes apply
+to the next turn and keep the conversation. A model that rejects an effort
+ends that turn with `LIBFX_MODEL_UNSUPPORTED_EFFORT`; riff resets effort
+to `default`. Mode changes take effect during the session.
+
+The model ids and context windows in the list have not yet been checked
+against the live ChatGPT and Grok plans. The list is shipped with chord,
+not fetched from the plan, so an offered model or effort may be refused.
+
+### Failures
+
+If a refresh fails during a turn, its prompt fails and sign-in opens;
+the stored entry stays. The failed prompt is not resent. A removed or
+changed credential is detected before the next prompt. If a credential
+rotation cannot be saved, the status line reports it; sign in again if
+saving remains unavailable.
+
+riff runs in a separate process. If that process crashes, chord reports
+the agent gone with its stderr tail. If the native engine cannot load,
+riff uses WebAssembly; if neither backend loads, startup fails with the
+reasons. A provider error ends the prompt with its error; Esc cancels
+work that is still running.
 
 ## `chord acp`
 
@@ -1280,13 +1433,6 @@ server that is wrong is named with its file and left out, and the others
 still count; a `.mcp.json` that is not a JSON object is named and ignored.
 `/mcp` says under its list how many servers each file lost that way.
 `-p` passes the same servers.
-
-riff takes stdio and streamable HTTP servers. SSE servers are held back
-with the usual notice because the MCP SDK cannot bound their connection
-time. A failed start shows `MCP server <name> was not started: <reason>`,
-with the stderr tail when available. Calls use the original server and
-tool names, titled `mcp__<server>__<tool>`. MCP elicitations open chord's
-form or link prompt. Interrupted MCP calls are not rerun on resume.
 
 Beside them, every session the window opens gets an MCP server of chord's
 own, named `chord` (or `chord-2`, … where a passed user server has that name),
@@ -1941,74 +2087,6 @@ or `port-taken` (ChatGPT browser only). For example,
 `CHORD_RIFF_QA_STATE=signed-out CHORD_RIFF_QA_SIGN_IN=success bun dev chord --fake --qa sign-in riff`
 starts signed out and completes the chosen sign-in with fixture credentials.
 The fixture uses an example address and code; it contacts no sign-in endpoint.
-
-riff has `read`, `list`, `search`, `edit`, `write`, `shell` and `skill` tools,
-plus the session's MCP tools.
-`edit` replaces one unique exact string; `write` replaces a whole file or
-creates one under an existing directory. Both propose a diff and refuse
-without writing if the file or its destination changed while approval waited.
-Paths are checked at their real destination; a link outside the session
-directory counts as outside. `shell` runs in the session directory, streams
-output into the transcript, and Esc stops its process groups.
-
-riff defaults to auto; shift+tab toggles ask and auto, kept per session.
-Ask mode asks for every call without a session grant except `skill`, which
-never asks. Auto admits reads, lists and searches inside the session
-directory, edits and writes on non-sensitive paths inside it, calls
-covered by a grant, and the shell commands below.
-Other calls go to a safety review: outside reads, outside or sensitive edits
-and writes, every MCP call, and other shell commands. Sensitive paths
-include `.git/`, `.ssh/`, `.env*`, key files (`*.pem`, `*.key`, `*.p12`,
-`*.pfx`, `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`), shell startup files
-and `Library/LaunchAgents/`.
-`Allow edits to <path> for this session` covers edit and write at that real
-path; `Allow this exact command for this session` covers only that command
-string, never a prefix. Grants hold in both modes for that session.
-
-`Allow <server> - <tool> for this session` covers that MCP tool with any
-arguments. chord's own tools follow the same rules: a riff lead in ask
-mode asks you before each `open_agent`, `send_message` or other chord MCP
-call without a grant; auto reviews them.
-
-Auto admits two command sets adapted from fx v0.0.16, with restricted
-arguments and syntax:
-
-- Read-only commands run without a shell: `printf`, `pwd`, `ls`, supported
-  forms of `git status`, `git diff` and `git log`, and `wc`, `cat`, `head`,
-  `tail` and `grep` as pipe filters, up to 8 stages. They use fixed programs
-  in `/bin` and `/usr/bin`, `PATH=/usr/bin:/bin` and the C locale, with
-  output capped at 64 KiB. Git ignores repository-configured fsmonitor,
-  hooks, filters, pager and textconv. If chord cannot prepare git safely,
-  it refuses the command and tells the model.
-- Reversible commands run through `$SHELL -c`: supported forms of `node -v`,
-  `which`, `git status`, `git remote -v`, `git worktree list`, `git fetch`,
-  package-manager version checks, `npm ci`, `npm`/`bun`/`pnpm`/`yarn`
-  installs, tests and `run <script>`, and `zig build`. These can reach the
-  network, change files and run project scripts. Before each command,
-  chord captures alias and function names from the same non-interactive
-  shell. A matching word or an uncertain capture sends it to review;
-  capture supports bash and zsh, with other shells going to review.
-
-Commands outside these rules, including global installs and anything that
-does not parse, go to review. Session grants take precedence; ask mode
-still asks for every ungranted call except `skill`.
-
-The reviewer is `gpt-6-luna` on ChatGPT or `grok-4.5` on Grok, using your
-plan. Each review spends a plan request; a failed attempt retries once.
-Its policy, adapted from fx, checks for prompt injection, malicious activity
-and destructive or irreversible actions. A clear review runs the call
-without a prompt. A caution, input beyond the review's caps, a failed review
-or the limit of 64 reviews per turn asks you instead. A failed review leaves
-the mode on auto.
-
-The box shows `The safety review held this:` and the reason, or why the
-review could not run, with only `Allow once` and `Deny`. These choices grant
-nothing for later calls. The working line counts down to denial after
-5 minutes; a timeout tells the model the call was denied. The transcript
-keeps `Reviewed: caution`, `Reviewed: incomplete` or `Reviewed: failed` on
-the call. In `-p`, reviewed asks are denied even with
-`--dangerously-skip-permissions`. `chord acp` forwards them to its client,
-with the same 5-minute deadline.
 
 `bun dev compile` installs all target packages and checks the pinned libfx
 layout for each target it builds; a mismatch names the package and version

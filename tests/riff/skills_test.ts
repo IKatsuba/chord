@@ -148,6 +148,28 @@ describe('riff skill discovery', () => {
     );
   });
 
+  test('a SKILL.md swapped for a link out after the check is refused, never read', async () => {
+    const elsewhere = join(root, 'elsewhere');
+    const directory = await skill(project, 'notes', md('notes', 'Inside'));
+    const file = join(directory, 'SKILL.md');
+
+    await mkdir(elsewhere);
+    await writeFile(join(elsewhere, 'SKILL.md'), md('outside', 'Secret'));
+
+    const found = findSkills({
+      directory: project,
+      home: undefined,
+      beforeOpen: async () => {
+        await rm(file);
+        await symlink(join(elsewhere, 'SKILL.md'), file);
+      },
+    });
+
+    await expect(found).rejects.toThrow(
+      `${directory}: ${file}: the file changed while it was opened`,
+    );
+  });
+
   test('invalid metadata is skipped with its reason, by the folder name', async () => {
     await skill(project, 'bad-yaml', '---\nname: [\n---\n');
     await skill(project, 'bad-name', md('a/b', 'slash'));

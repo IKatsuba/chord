@@ -10,10 +10,9 @@
  */
 import { VFile } from 'vfile';
 import { matter } from 'vfile-matter';
-import { constants } from 'node:fs';
-import { open, readdir, realpath, stat } from 'node:fs/promises';
+import { lstat, readdir, realpath, stat } from 'node:fs/promises';
 import { basename, isAbsolute, join, relative } from 'node:path';
-import { isInside } from './tools/paths.ts';
+import { isInside, openReal } from './tools/paths.ts';
 import { notFound } from '../not_found.ts';
 
 /** One discovered skill. */
@@ -29,6 +28,8 @@ export interface SkillSources {
   readonly directory: string;
   /** The home directory; none reads no user skills. */
   readonly home: string | undefined;
+  /** Before each `SKILL.md` is opened: where tests swap it. */
+  readonly beforeOpen?: () => Promise<void>;
 }
 
 const ROOT = join('.agents', 'skills');
@@ -74,7 +75,11 @@ export async function findSkills(sources: SkillSources): Promise<FoundSkills> {
   const skipped: SkippedSkill[] = [];
 
   for (const place of places) {
-    for (const each of await skillsIn(place.base, place.where)) {
+    for (const each of await skillsIn(
+      place.base,
+      place.where,
+      sources.beforeOpen,
+    )) {
       if ('reason' in each) {
         skipped.push(each);
       } else if (!found.has(each.name)) {
@@ -90,6 +95,7 @@ export async function findSkills(sources: SkillSources): Promise<FoundSkills> {
 async function skillsIn(
   base: string,
   where: string,
+  beforeOpen?: () => Promise<void>,
 ): Promise<(Skill | SkippedSkill)[]> {
   const root = join(base, ROOT);
   let names: string[];
@@ -109,7 +115,7 @@ async function skillsIn(
   const skills: (Skill | SkippedSkill)[] = [];
 
   for (const name of names) {
-    const skill = await skillAt(join(root, name), inside, where);
+    const skill = await skillAt(join(root, name), inside, where, beforeOpen);
 
     if (skill !== undefined) {
       skills.push(skill);
@@ -128,6 +134,7 @@ async function skillAt(
   folder: string,
   inside: string,
   where: string,
+  beforeOpen?: () => Promise<void>,
 ): Promise<Skill | SkippedSkill | undefined> {
   const name = basename(folder);
   let directory: string;
@@ -157,7 +164,7 @@ async function skillAt(
       };
     }
 
-    head = await readHead(file);
+    head = await readHead(file, beforeOpen);
   } catch (error) {
     if (absent(error)) {
       return undefined;
@@ -178,18 +185,22 @@ async function skillAt(
 }
 
 /** The start of a regular file, or undefined when there is none. */
-async function readHead(file: string): Promise<string | undefined> {
-  if (!(await stat(file)).isFile()) {
+async function readHead(
+  file: string,
+  beforeOpen?: () => Promise<void>,
+): Promise<string | undefined> {
+  if (!(await lstat(file)).isFile()) {
     return undefined;
   }
 
-  const handle = await open(file, constants.O_RDONLY | constants.O_NONBLOCK);
+  // `file` is the real path checked to be inside: opened as that very file,
+  // so a link swapped in at its last name is refused, never followed.
+  const { handle } = await openReal(file, {
+    exact: true,
+    ...(beforeOpen === undefined ? {} : { beforeOpen }),
+  });
 
   try {
-    if (!(await handle.stat()).isFile()) {
-      return undefined;
-    }
-
     const buffer = new Uint8Array(HEAD_BYTES);
     const { bytesRead } = await handle.read(buffer, 0, buffer.length, 0);
 

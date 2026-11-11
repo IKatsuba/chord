@@ -186,3 +186,98 @@ describe('riff instructions', () => {
     expect(capped('short', 151)).toBe('short');
   });
 });
+
+describe('CHD-610 tester: instruction boundaries', () => {
+  test('the nearest repository excludes outer repository instructions', async () => {
+    const outer = join(root, 'outer');
+    const inner = join(outer, 'nested');
+    const directory = join(inner, 'src');
+
+    await mkdir(join(outer, '.git'), { recursive: true });
+    await mkdir(directory, { recursive: true });
+    await writeFile(join(inner, '.git'), 'gitdir: fixture');
+    await writeFile(join(outer, 'AGENTS.md'), 'outer-only rule');
+    await writeFile(join(inner, 'AGENTS.md'), 'nested-root rule');
+    await writeFile(join(directory, 'AGENTS.md'), 'nested-session rule');
+
+    const text = await readInstructions({ directory, configHome: undefined });
+
+    expect(text).not.toContain('outer-only rule');
+    expect(text.indexOf('nested-root rule')).toBeLessThan(
+      text.indexOf('nested-session rule'),
+    );
+    expect(await foldersOf(directory)).toStrictEqual([inner, directory]);
+  });
+
+  test('parallel session directories keep their own rules', async () => {
+    const directories = [join(root, 'one'), join(root, 'two')];
+
+    for (const [index, directory] of directories.entries()) {
+      await mkdir(directory);
+      await writeFile(join(directory, 'AGENTS.md'), `session-rule-${index}`);
+    }
+
+    const texts = await Promise.all(
+      directories.map((directory) =>
+        readInstructions({ directory, configHome: undefined }),
+      ),
+    );
+
+    expect(texts[0]).toContain('session-rule-0');
+    expect(texts[0]).not.toContain('session-rule-1');
+    expect(texts[1]).toContain('session-rule-1');
+    expect(texts[1]).not.toContain('session-rule-0');
+  });
+
+  test('a later session read sees changed instructions', async () => {
+    const file = join(root, 'AGENTS.md');
+    const sources = { directory: root, configHome: undefined };
+
+    await writeFile(file, 'original-rule');
+
+    const first = await readInstructions(sources);
+
+    await writeFile(file, 'replacement-rule');
+
+    const next = await readInstructions(sources);
+
+    expect(first).toContain('original-rule');
+    expect(first).not.toContain('replacement-rule');
+    expect(next).toContain('replacement-rule');
+    expect(next).not.toContain('original-rule');
+  });
+
+  test('the aggregate cap includes multibyte rules and the final note', async () => {
+    const directory = join(root, 'src');
+    const configHome = join(root, 'config');
+
+    await mkdir(join(root, '.git'));
+    await mkdir(directory);
+    await mkdir(join(configHome, 'chord'), { recursive: true });
+    await writeFile(join(root, 'AGENTS.md'), '😀'.repeat(5000));
+    await writeFile(join(directory, 'AGENTS.md'), '界'.repeat(5000));
+    await writeFile(join(configHome, 'chord', 'AGENTS.md'), 'last-user-rule');
+
+    const text = await readInstructions({ directory, configHome });
+
+    expect(bytes(text)).toBeLessThanOrEqual(INSTRUCTIONS_CAP);
+    expect(text).not.toContain('�');
+    expect(text.endsWith(TRUNCATED_NOTE)).toBe(true);
+    expect(text.split(TRUNCATED_NOTE)).toHaveLength(2);
+    expect(text).not.toContain('last-user-rule');
+  });
+
+  test('an unreadable user file refuses even when project text fills the cap', async () => {
+    const configHome = join(root, 'config');
+    const file = join(configHome, 'chord', 'AGENTS.md');
+
+    await mkdir(join(configHome, 'chord'), { recursive: true });
+    await writeFile(join(root, 'AGENTS.md'), 'x'.repeat(INSTRUCTIONS_CAP * 2));
+    await writeFile(file, 'unreadable-user-rule');
+    await chmod(file, 0o000);
+
+    await expect(
+      readInstructions({ directory: root, configHome }),
+    ).rejects.toThrow(`${file}: EACCES`);
+  });
+});

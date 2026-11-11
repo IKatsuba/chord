@@ -469,110 +469,124 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       options.log?.(`riff: ${notice}`);
     }
 
-    const finder = (options.openFinder ?? openFinder)(directory);
-    const fx = (options.createAgent ?? createFxAgent)({
-      ...options.backend,
-      name: RIFF,
-      instructions:
-        listed === undefined ? instructions : [instructions, listed],
-      durability: store.durability,
-      ...selectedProvider,
-      fetch: options.fetch ?? globalThis.fetch,
-      model: config.model,
-      tools:
-        options.tools ??
-        riffTools({
-          directory,
-          finder,
-          skills,
-          mcp,
-          ...(options.commandEnvironment === undefined
-            ? {}
-            : { commandEnvironment: options.commandEnvironment }),
-          show: (id, text) => shown.set(id, text),
-          showContent: (id, content) => shown.set(id, content),
-          stream: () => {
-            const session = holder.open;
-            const turn = session?.turn;
-            const client = session?.client;
+    let finder: Finder | undefined;
+    let fx: FxAgent;
 
-            return (update) => {
-              if (
-                session === undefined ||
-                turn === undefined ||
-                client === undefined ||
-                session.turn !== turn ||
-                !session.running ||
-                !session.calls.has(update.toolCallId)
-              ) {
-                return;
+    // From here the session owns the MCP clients: a throw before it is
+    // made closes them, and the finder if it was opened.
+    try {
+      finder = (options.openFinder ?? openFinder)(directory);
+      fx = (options.createAgent ?? createFxAgent)({
+        ...options.backend,
+        name: RIFF,
+        instructions:
+          listed === undefined ? instructions : [instructions, listed],
+        durability: store.durability,
+        ...selectedProvider,
+        fetch: options.fetch ?? globalThis.fetch,
+        model: config.model,
+        tools:
+          options.tools ??
+          riffTools({
+            directory,
+            finder,
+            skills,
+            mcp,
+            ...(options.commandEnvironment === undefined
+              ? {}
+              : { commandEnvironment: options.commandEnvironment }),
+            show: (id, text) => shown.set(id, text),
+            showContent: (id, content) => shown.set(id, content),
+            stream: () => {
+              const session = holder.open;
+              const turn = session?.turn;
+              const client = session?.client;
+
+              return (update) => {
+                if (
+                  session === undefined ||
+                  turn === undefined ||
+                  client === undefined ||
+                  session.turn !== turn ||
+                  !session.running ||
+                  !session.calls.has(update.toolCallId)
+                ) {
+                  return;
+                }
+
+                if (update.content !== undefined && update.content !== null) {
+                  session.shown.set(update.toolCallId, update.content);
+                }
+
+                return notify(client, session.id, {
+                  sessionUpdate: 'tool_call_update',
+                  ...update,
+                });
+              };
+            },
+            announce: (id, name, input) =>
+              announce(holder.open, id, name, input),
+            begin: (id, name, input) => {
+              holder.open?.reviewHistory.admitted(id);
+
+              return begin(holder.open, id, name, input);
+            },
+            permissionWaiting: (id) =>
+              holder.open?.reviewHistory.permission(id),
+            review: async (action, arguments_, signal) => {
+              const session = holder.open;
+
+              if (session === undefined) {
+                throw new Error('The review session is closed.');
               }
 
-              if (update.content !== undefined && update.content !== null) {
-                session.shown.set(update.toolCallId, update.content);
-              }
+              const job = Promise.try(async () => {
+                const branch = await currentBranch(directory, signal);
 
-              return notify(client, session.id, {
-                sessionUpdate: 'tool_call_update',
-                ...update,
+                signal.throwIfAborted();
+
+                return session.reviews.run(
+                  arguments_,
+                  {
+                    action,
+                    ...session.reviewHistory.snapshot(),
+                    ...(branch === undefined ? {} : { branch }),
+                  },
+                  signal,
+                );
               });
-            };
-          },
-          announce: (id, name, input) => announce(holder.open, id, name, input),
-          begin: (id, name, input) => {
-            holder.open?.reviewHistory.admitted(id);
 
-            return begin(holder.open, id, name, input);
-          },
-          permissionWaiting: (id) => holder.open?.reviewHistory.permission(id),
-          review: async (action, arguments_, signal) => {
-            const session = holder.open;
+              session.reviewJobs.add(job);
 
-            if (session === undefined) {
-              throw new Error('The review session is closed.');
-            }
-
-            const job = Promise.try(async () => {
-              const branch = await currentBranch(directory, signal);
-
-              signal.throwIfAborted();
-
-              return session.reviews.run(
-                arguments_,
-                {
-                  action,
-                  ...session.reviewHistory.snapshot(),
-                  ...(branch === undefined ? {} : { branch }),
-                },
-                signal,
-              );
-            });
-
-            session.reviewJobs.add(job);
-
-            try {
-              return await job;
-            } finally {
-              session.reviewJobs.delete(job);
+              try {
+                return await job;
+              } finally {
+                session.reviewJobs.delete(job);
+              }
+            },
+            mode: () => holder.open?.config.mode ?? config.mode,
+            grants,
+            ask: (toolCall, permissionOptions, signal, metadata) =>
+              ask(holder.open, toolCall, permissionOptions, signal, metadata),
+          }),
+        hooks: {
+          onEvent: (event) => {
+            if (
+              event.type === 'model.end' &&
+              event.data.usage !== undefined &&
+              holder.open !== undefined
+            ) {
+              holder.open.used = usedOf(event.data.usage as HookUsage);
             }
           },
-          mode: () => holder.open?.config.mode ?? config.mode,
-          grants,
-          ask: (toolCall, permissionOptions, signal, metadata) =>
-            ask(holder.open, toolCall, permissionOptions, signal, metadata),
-        }),
-      hooks: {
-        onEvent: (event) => {
-          if (
-            event.type === 'model.end' &&
-            event.data.usage !== undefined &&
-            holder.open !== undefined
-          ) {
-            holder.open.used = usedOf(event.data.usage as HookUsage);
-          }
         },
-      },
-    });
+      });
+    } catch (error) {
+      await Promise.allSettled([mcp.close(), finder?.destroy()]);
+
+      throw error;
+    }
+
     let id: string;
 
     try {

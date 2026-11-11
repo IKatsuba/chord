@@ -2736,6 +2736,58 @@ describe('riff MCP servers in a session', () => {
   });
 });
 
+describe('riff MCP servers when the session cannot be made', () => {
+  test.each(['finder', 'agent'])(
+    'a %s that throws closes the servers already started',
+    async (failing) => {
+      const pidFile = join(stateDir, 'pid');
+
+      await open(true, {
+        ...(failing === 'finder'
+          ? {
+              openFinder: () => {
+                throw new Error('fixture finder failure');
+              },
+            }
+          : {
+              createAgent: () => {
+                throw new Error('fixture agent failure');
+              },
+            }),
+      });
+
+      const answer = await client.request('session/new', {
+        cwd: process.cwd(),
+        mcpServers: [
+          {
+            name: 'notes',
+            command: process.execPath,
+            args: [
+              join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts'),
+              'ok',
+            ],
+            env: [{ name: 'PID_FILE', value: pidFile }],
+          },
+        ],
+      });
+
+      expect(answer.error).toBeDefined();
+
+      const pid = Number(await readFile(pidFile, 'utf8'));
+
+      await until(() => {
+        try {
+          process.kill(pid, 0);
+
+          return false;
+        } catch {
+          return true;
+        }
+      });
+    },
+  );
+});
+
 describe('riff MCP calls ask', () => {
   const STDIO = join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts');
   const notes = {

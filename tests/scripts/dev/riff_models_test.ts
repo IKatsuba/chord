@@ -145,3 +145,77 @@ describe('riff-models copying', () => {
     expect(listed('not json')).toEqual([]);
   });
 });
+
+describe('CHD-611 tester: model evidence boundaries', () => {
+  test('a non-JSON catalog keeps status and text without copying request credentials', async () => {
+    const caught: { url: string; status: number; body: unknown }[] = [];
+    const url = 'https://fixture.invalid/v1/models';
+    const init = { headers: { Authorization: 'Bearer fixture-secret-marker' } };
+    const response = new Response('catalog temporarily unavailable', {
+      status: 503,
+      headers: { 'x-fixture': 'unchanged' },
+    });
+    const fetch = copying((givenUrl, givenInit) => {
+      expect(givenUrl).toBe(url);
+      expect(givenInit).toBe(init);
+
+      return Promise.resolve(response);
+    }, caught);
+
+    expect(await fetch(url, init)).toBe(response);
+    expect(response.bodyUsed).toBe(false);
+    expect(response.headers.get('x-fixture')).toBe('unchanged');
+    expect(caught).toEqual([
+      { url, status: 503, body: 'catalog temporarily unavailable' },
+    ]);
+    expect(JSON.stringify(caught)).not.toContain('fixture-secret-marker');
+    expect(await response.text()).toBe('catalog temporarily unavailable');
+  });
+
+  test('turn responses stay unread and absent from catalog evidence', async () => {
+    const caught: { url: string; status: number; body: unknown }[] = [];
+    const response = new Response('fixture turn stream');
+    const fetch = copying(() => Promise.resolve(response), caught);
+
+    expect(await fetch('https://fixture.invalid/v1/responses', {})).toBe(
+      response,
+    );
+    expect(response.bodyUsed).toBe(false);
+    expect(caught).toEqual([]);
+    expect(await response.text()).toBe('fixture turn stream');
+  });
+
+  test('a rejected fetch preserves its error and adds no evidence', async () => {
+    const failure = new Error('fixture network failure');
+    const caught: { url: string; status: number; body: unknown }[] = [];
+    const fetch = copying(() => Promise.reject(failure), caught);
+
+    await expect(fetch('https://fixture.invalid/v1/models', {})).rejects.toBe(
+      failure,
+    );
+    expect(caught).toEqual([]);
+  });
+
+  test('an unsigned Grok fixture creates no raw file and sends no request', async () => {
+    let calls = 0;
+    const out = join(dir, 'no-sign-in.json');
+
+    await expect(
+      riffModels({
+        plan: 'grok',
+        secrets: memorySecrets(),
+        fetch: () => {
+          calls++;
+
+          return Promise.reject(new Error('Unexpected fixture fetch.'));
+        },
+        backend: await libfxBackend(),
+        stateDir: dir,
+        out,
+        say: () => {},
+      }),
+    ).rejects.toThrow();
+    expect(calls).toBe(0);
+    await expect(readFile(out, 'utf8')).rejects.toThrow('ENOENT');
+  });
+});

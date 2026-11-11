@@ -352,6 +352,7 @@ describe('tester: migrated command boundaries', () => {
       release: unexpected,
       chord: unexpected,
       riff: unexpected,
+      riffModels: unexpected,
       qa: unexpected,
       test: unexpected,
     };
@@ -744,5 +745,27 @@ describe('tester: CHD-577 channel argument boundaries', () => {
         'publish',
       ]),
     ).rejects.toThrow(ValidationError);
+  });
+});
+
+describe('CHD-611 tester: model-check command arguments', () => {
+  test('Grok gets its own default output and an explicit path keeps spaces', async () => {
+    expect(await parsed(['riff-models', 'grok'])).toEqual([
+      ['riffModels', 'grok', 'dist/riff-models-grok.json'],
+    ]);
+    expect(
+      await parsed([
+        'riff-models',
+        'codex',
+        '--out',
+        'evidence/model list.json',
+      ]),
+    ).toEqual([['riffModels', 'codex', 'evidence/model list.json']]);
+  });
+
+  test('an extra positional argument is refused before any action', async () => {
+    await expect(parsed(['riff-models', 'codex', 'extra'])).rejects.toThrow(
+      ValidationError,
+    );
   });
 });

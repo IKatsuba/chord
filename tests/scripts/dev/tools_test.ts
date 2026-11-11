@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
-import { spawnSync } from 'node:child_process';
+import { spawn as spawnChild, spawnSync } from 'node:child_process';
+import { once } from 'node:events';
 import {
   cp,
   mkdtemp,
@@ -11,7 +12,7 @@ import {
   symlink,
   writeFile,
 } from 'node:fs/promises';
-import { existsSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import process from 'node:process';
@@ -24,6 +25,7 @@ import {
   lint,
   qaPlace,
   type Run,
+  type RunServing,
   spawn,
   spawnServing,
   test as suite,
@@ -272,6 +274,51 @@ describe("a fake or QA run's state (CHD-616)", () => {
       expect(existsSync(join(dir, 'chord'))).toBe(true);
     } finally {
       rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test("riff's child keeps its state where it is given, leaving the person's untouched", async () => {
+    const person = mkdtempSync(join(tmpdir(), 'chord-person-'));
+    const state = join(person, 'fake');
+    const files = (dir: string): string[] =>
+      existsSync(dir)
+        ? readdirSync(dir, { recursive: true, withFileTypes: true })
+            .filter((entry) => entry.isFile())
+            .map((entry) => entry.name)
+        : [];
+    let out = '';
+    // As spawnServing does, on a stand-in for the person's own places.
+    const run: RunServing = async ([command, ...args], env) => {
+      const child = spawnChild(command ?? '', args, {
+        cwd: root,
+        stdio: ['ignore', 'pipe', 'ignore'],
+        env: {
+          ...process.env,
+          HOME: join(person, 'home'),
+          XDG_STATE_HOME: join(person, 'state'),
+          XDG_CONFIG_HOME: join(person, 'config'),
+          XDG_DATA_HOME: join(person, 'data'),
+          XDG_CACHE_HOME: join(person, 'cache'),
+          ...env,
+        },
+      });
+
+      child.stdout.on('data', (chunk: Buffer) => (out += chunk.toString()));
+
+      const [status] = (await once(child, 'exit')) as [number | null];
+
+      return status ?? 1;
+    };
+
+    try {
+      expect(
+        await chordOnRiff(['-p', 'hi'], run, undefined, false, state),
+      ).toBe(0);
+      expect(out).toContain('Hello from riff.');
+      expect(files(join(person, 'state'))).toStrictEqual([]);
+      expect(files(join(state, 'chord', 'riff', 'sidecars'))).toHaveLength(1);
+    } finally {
+      rmSync(person, { recursive: true, force: true });
     }
   });
 

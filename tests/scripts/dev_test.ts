@@ -845,21 +845,4 @@ describe("a fake or QA run keeps chord's state off the person's (CHD-616)", () =
       rmSync(`${dir}.state`, { recursive: true, force: true });
     }
   });
-
-  test('--fake alone keeps it in /tmp/chord-fake and leaves the person nothing', () => {
-    const person = mkdtempSync(join(tmpdir(), 'chord-person-'));
-    const sidecars = '/tmp/chord-fake/chord/riff/sidecars';
-    const before = new Set(files(sidecars));
-
-    try {
-      run(person, ['chord', '--fake', 'riff', '-p', 'hi']);
-
-      expect(files(join(person, 'state'))).toStrictEqual([]);
-      expect(files(sidecars).filter((file) => !before.has(file))).toHaveLength(
-        1,
-      );
-    } finally {
-      rmSync(person, { recursive: true, force: true });
-    }
-  });
 });

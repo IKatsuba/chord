@@ -176,7 +176,7 @@ describe('riff MCP servers against the fake', () => {
       'starting notes\nnotes: no database at ./notes.db',
     );
     expect(skippedNote(tools.skipped[0]!)).toBe(
-      `MCP server broken was not started: ${tools.skipped[0]!.reason}\nstarting notes\nnotes: no database at ./notes.db`,
+      `MCP server broken was not started: ${tools.skipped[0]!.reason}\n\n\`\`\`\nstarting notes\nnotes: no database at ./notes.db\n\`\`\``,
     );
   });
 

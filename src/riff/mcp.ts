@@ -358,5 +358,9 @@ function saidOf(error: unknown): string | undefined {
 export function skippedNote(skipped: Skipped): string {
   const sentence = `MCP server ${skipped.name} was not started: ${skipped.reason}`;
 
-  return skipped.said === undefined ? sentence : `${sentence}\n${skipped.said}`;
+  // Fenced, so the window keeps its lines and reads nothing in it as
+  // markdown.
+  return skipped.said === undefined
+    ? sentence
+    : `${sentence}\n\n\`\`\`\n${skipped.said}\n\`\`\``;
 }

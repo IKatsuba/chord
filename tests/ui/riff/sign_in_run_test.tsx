@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
+import { join } from 'node:path';
 import type { Session, Turn } from '../../../src/session/session.ts';
 import {
   memorySecrets,
@@ -977,5 +978,70 @@ describe('riff sign-in in the window', () => {
         },
       );
     });
+  }
+});
+
+describe('a new riff start after a cancelled sign-in (CHD-615)', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    for (const command of ['/resume', '/new', '/clear']) {
+      test(`${command} opens the sign-in on its plans, not a store read that never ends, at ${columns}x${rows}`, async () => {
+        const store = memorySecrets();
+        let opens = 0;
+
+        await withWindow(
+          async (window) => {
+            await window.shows('Sign in to riff');
+            await window.press(ESC);
+            await window.shows('Not signed in. /login');
+            await send(window, command);
+
+            if (command === '/resume') {
+              await window.shows('Resume a session');
+              await window.press('\r');
+            }
+
+            await until('the new start has failed', () => opens === 2);
+            await window.shows('ChatGPT · a ChatGPT plan');
+            expect(window.frame()).not.toContain('Reading the sign-in');
+          },
+          {
+            agent: 'riff',
+            columns,
+            rows,
+            whileStarting: true,
+            riffAccess: {
+              store,
+              fetch: fixtureSignOut(store),
+              run: fixtureSignIn('waiting'),
+            },
+            readRecords: (stateDir) =>
+              Promise.resolve([
+                {
+                  path: join(stateDir, 'earlier.jsonl'),
+                  sessionId: 'earlier',
+                  agent: 'riff',
+                  cwd: join(stateDir, '..'),
+                  lastUsedAt: Date.now() - 60_000,
+                  prompt: 'an earlier riff session',
+                },
+              ]),
+            openWith: () => {
+              opens++;
+
+              return Promise.reject(
+                new SignInNeeded({
+                  message:
+                    'Sign in to a plan for riff; run chord riff to sign in.',
+                  ways: [],
+                }),
+              );
+            },
+          },
+        );
+      });
+    }
   }
 });

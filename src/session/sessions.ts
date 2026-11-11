@@ -4,10 +4,18 @@
  * agent's id for it (`--resume <id>`), or every one there or in any
  * directory (`/resume`).
  */
+import pLimit from 'p-limit';
+import { createReadStream } from 'node:fs';
+import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { readdir, readFile } from 'node:fs/promises';
+import { createInterface } from 'node:readline';
 import { notFound } from '../not_found.ts';
-import { parseRecord, promptLine, recordsDir } from './record.ts';
+import {
+  parseRecord,
+  promptLine,
+  type RecordEntry,
+  recordsDir,
+} from './record.ts';
 import { recordedSelection } from './team_selection.ts';
 
 /** An earlier session to open again, and what chord knows of it. */
@@ -71,8 +79,12 @@ export interface SessionRecord {
 /**
  * Session records with a prompt or an admitted selected attempt. The list
  * reads their header, prompts, receipt and titles; the past opens on demand.
+ * `lines` reads a record's file a line at a time.
  */
-export async function readRecords(stateDir: string): Promise<SessionRecord[]> {
+export async function readRecords(
+  stateDir: string,
+  lines: (path: string) => AsyncIterable<string> = recordLines,
+): Promise<SessionRecord[]> {
   const dir = recordsDir(stateDir);
   const paths: string[] = [];
 
@@ -90,18 +102,41 @@ export async function readRecords(stateDir: string): Promise<SessionRecord[]> {
     throw error;
   }
 
+  // A person's records run to thousands of files and gigabytes: read whole
+  // and all at once, they held the window for half a minute and gigabytes
+  // of memory (CHD-615). A few at a time, a line at a time, holds a line.
+  const limit = pLimit(RECORDS_READ_AT_ONCE);
   const read = await Promise.all(
-    paths.map(async (path) => {
-      try {
-        return summaryOf(path, await readFile(path, 'utf8'));
-      } catch {
-        // Gone since the directory was read, or unreadable: not offered.
-        return undefined;
-      }
-    }),
+    paths.map((path) =>
+      limit(async () => {
+        try {
+          const summary = summarise(path);
+
+          for await (const line of lines(path)) {
+            summary.line(line);
+          }
+
+          return summary.done();
+        } catch {
+          // Gone since the directory was read, or unreadable: not offered.
+          return undefined;
+        }
+      }),
+    ),
   );
 
   return read.filter((record) => record !== undefined);
+}
+
+/** How many records the list reads at once. */
+const RECORDS_READ_AT_ONCE = 8;
+
+/** A record's file, a line at a time. */
+function recordLines(path: string): AsyncIterable<string> {
+  return createInterface({
+    input: createReadStream(path, { encoding: 'utf8' }),
+    crlfDelay: Infinity,
+  });
 }
 
 /**
@@ -122,112 +157,143 @@ export function summaryOf(
   path: string,
   text: string,
 ): SessionRecord | undefined {
-  const lines = text.split('\n');
-  const [header] = parseRecord(lines[0] ?? '');
-  // Written by `JSON.stringify` with `type` first, so a prompt's line is
-  // known without parsing every update.
-  const prompts = parseRecord(
-    lines.filter((line) => line.startsWith('{"type":"prompt"')).join('\n'),
-  ).filter((entry) => entry.type === 'prompt');
-  const first = prompts.at(0);
-  const last = prompts.at(-1);
+  const summary = summarise(path);
 
-  if (header?.type !== 'session') {
-    return undefined;
+  for (const line of text.split('\n')) {
+    summary.line(line);
   }
 
-  const receipts =
-    first === undefined
-      ? parseRecord(
-          lines
-            .filter((line) => line.startsWith('{"type":"served"'))
-            .join('\n'),
-        ).flatMap((entry) => {
-          if (entry.type !== 'served' || entry.call.tool !== 'run_team') {
-            return [];
-          }
+  return summary.done();
+}
 
-          const receipt = recordedSelection(entry.call);
+/**
+ * What a record says of its session, gathered as its lines are read: its
+ * header, first and last prompt, last receipt, last opening and title.
+ * Written by `JSON.stringify` with `type` first, so a line's kind is known
+ * without parsing every update.
+ */
+type PromptEntry = Extract<RecordEntry, { type: 'prompt' }>;
+type OpenedEntry = Extract<RecordEntry, { type: 'opened' }>;
 
-          return receipt === undefined ? [] : [receipt];
-        })
-      : [];
-  const receipt = receipts.at(-1);
-
-  if (first === undefined && receipt === undefined) {
-    return undefined;
-  }
-
-  const opened =
-    first === undefined
-      ? parseRecord(
-          lines
-            .filter((line) => line.startsWith('{"type":"opened"'))
-            .join('\n'),
-        )
-          .filter((entry) => entry.type === 'opened')
-          .at(-1)
-      : undefined;
-
-  // A task is known by its spawn_task title alone, as its caller named it,
-  // not by its agent's own (the owner, Q200).
-  const title = header.task === undefined ? recordedTitle(lines) : undefined;
+function summarise(path: string): {
+  line(line: string): void;
+  done(): SessionRecord | undefined;
+} {
+  let header: RecordEntry | undefined;
+  let read = false;
+  let first: PromptEntry | undefined;
+  let last: PromptEntry | undefined;
+  let receipt: ReturnType<typeof recordedSelection>;
+  let opened: OpenedEntry | undefined;
+  const title = recordedTitle();
 
   return {
-    path,
-    sessionId: header.sessionId,
-    agent: header.agent,
-    cwd: header.cwd,
-    lastUsedAt: last?.at ?? opened?.at ?? header.at,
-    prompt:
-      first === undefined
-        ? `Team attempt: ${receipt!.saved.name}`
-        : promptLine(first.prompt),
-    ...(header.parent === undefined ? {} : { parent: header.parent }),
-    ...(header.name === undefined ? {} : { name: header.name }),
-    ...(title === undefined ? {} : { title }),
-    ...(header.task === undefined ? {} : { task: true }),
+    line: (line) => {
+      if (!read) {
+        read = true;
+        [header] = parseRecord(line);
+      }
+
+      if (line.startsWith('{"type":"prompt"')) {
+        const [entry] = parseRecord(line);
+
+        if (entry?.type === 'prompt') {
+          first ??= entry;
+          last = entry;
+        }
+      } else if (
+        line.startsWith('{"type":"served"') &&
+        line.includes('"run_team"')
+      ) {
+        const [entry] = parseRecord(line);
+
+        if (entry?.type === 'served' && entry.call.tool === 'run_team') {
+          receipt = recordedSelection(entry.call) ?? receipt;
+        }
+      } else if (line.startsWith('{"type":"opened"')) {
+        const [entry] = parseRecord(line);
+
+        if (entry?.type === 'opened') {
+          opened = entry;
+        }
+      } else {
+        title.line(line);
+      }
+    },
+    done: () => {
+      if (header?.type !== 'session') {
+        return undefined;
+      }
+
+      if (first === undefined && receipt === undefined) {
+        return undefined;
+      }
+
+      // A task is known by its spawn_task title alone, as its caller named
+      // it, not by its agent's own (the owner, Q200).
+      const named = header.task === undefined ? title.done() : undefined;
+
+      return {
+        path,
+        sessionId: header.sessionId,
+        agent: header.agent,
+        cwd: header.cwd,
+        lastUsedAt: last?.at ?? opened?.at ?? header.at,
+        prompt:
+          first === undefined
+            ? `Team attempt: ${receipt!.saved.name}`
+            : promptLine(first.prompt),
+        ...(header.parent === undefined ? {} : { parent: header.parent }),
+        ...(header.name === undefined ? {} : { name: header.name }),
+        ...(named === undefined ? {} : { title: named }),
+        ...(header.task === undefined ? {} : { task: true }),
+      };
+    },
   };
 }
 
 /**
- * The agent's title for a session as its record's `lines` leave it, as the
+ * The agent's title for a session as its record's lines leave it, as the
  * conversation keeps it (CHD-491): the last `session_info_update` that gave
  * one, `null` taking it back and a blank one left out; a subagent's is not
  * the session's. Only the lines that name the update are parsed.
  */
-function recordedTitle(lines: readonly string[]): string | undefined {
+function recordedTitle(): {
+  line(line: string): void;
+  done(): string | undefined;
+} {
   let title: string | undefined;
 
-  for (const line of lines) {
-    if (
-      !line.startsWith('{"type":"update"') ||
-      !line.includes('"session_info_update"')
-    ) {
-      continue;
-    }
+  return {
+    line: (line) => {
+      if (
+        !line.startsWith('{"type":"update"') ||
+        !line.includes('"session_info_update"')
+      ) {
+        return;
+      }
 
-    const [entry] = parseRecord(line);
+      const [entry] = parseRecord(line);
 
-    if (
-      entry?.type !== 'update' ||
-      entry.subagentId !== undefined ||
-      entry.update.sessionUpdate !== 'session_info_update'
-    ) {
-      continue;
-    }
+      if (
+        entry?.type !== 'update' ||
+        entry.subagentId !== undefined ||
+        entry.update.sessionUpdate !== 'session_info_update'
+      ) {
+        return;
+      }
 
-    if (entry.update.title === null) {
-      title = undefined;
-    } else if (
-      typeof entry.update.title === 'string' &&
-      entry.update.title.trim() !== ''
-    ) {
-      title = titleLine(entry.update.title);
-    }
-  }
-
-  return title;
+      if (entry.update.title === null) {
+        title = undefined;
+      } else if (
+        typeof entry.update.title === 'string' &&
+        entry.update.title.trim() !== ''
+      ) {
+        title = titleLine(entry.update.title);
+      }
+    },
+    done: () => title,
+  };
 }
 
 /**

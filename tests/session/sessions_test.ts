@@ -4,7 +4,7 @@ import {
 } from '../../src/session/team_selection.ts';
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { shellContext, withContext } from '../../src/session/context.ts';
@@ -25,6 +25,7 @@ import {
   earlierSessions,
   elsewhereRefusal,
   latestSession,
+  readRecords,
   recordedAgent,
   recordsOnce,
   resumeCommand,
@@ -1360,5 +1361,211 @@ describe('CHD-557 tester: startup snapshots settle once and stay local', () => {
 
     expect(await firstStart()).toStrictEqual([record('a')]);
     expect(await recordsOnce(read)()).toStrictEqual([record('b')]);
+  });
+});
+
+describe("the records' list reads a large store a few records at a time (CHD-615)", () => {
+  test('it reads every record, never more than a few at once, a line at a time', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-many-records-'));
+    const dir = join(stateDir, 'records');
+    const files = 40;
+    const recorded = (index: number) =>
+      lines(
+        { ...HEADER, sessionId: `id-${index}` },
+        {
+          type: 'prompt',
+          turnId: `turn-${index}`,
+          at: index,
+          prompt: `prompt ${index}`,
+          images: 0,
+        },
+      );
+    let reading = 0;
+    let most = 0;
+
+    // Each record's lines come one by one, the others free to run between
+    // them, as a file's do from disk.
+    async function* read(path: string): AsyncIterable<string> {
+      const index = Number(path.slice(dir.length + 1, -'.jsonl'.length));
+
+      reading++;
+
+      most = Math.max(most, reading);
+
+      try {
+        for (const line of recorded(index).split('\n')) {
+          await new Promise((resolve) => setTimeout(resolve, 0));
+
+          yield line;
+        }
+      } finally {
+        reading--;
+      }
+    }
+
+    try {
+      await mkdir(dir);
+
+      for (let index = 0; index < files; index++) {
+        await writeFile(join(dir, `${index}.jsonl`), recorded(index));
+      }
+
+      const records = await readRecords(stateDir, read);
+
+      expect(records.map((one) => one.sessionId).toSorted()).toStrictEqual(
+        Array.from({ length: files }, (_, index) => `id-${index}`).toSorted(),
+      );
+      expect(most).toBeGreaterThan(1);
+      expect(most).toBeLessThanOrEqual(8);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  test("a record's file is read to its last line, \\r\\n endings too", async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-record-lines-'));
+    const prompt = (at: number): RecordEntry => ({
+      type: 'prompt',
+      turnId: `turn-${at}`,
+      at,
+      prompt: `prompt ${at}`,
+      images: 0,
+    });
+
+    try {
+      await mkdir(join(stateDir, 'records'));
+      await writeFile(
+        join(stateDir, 'records', 'a.jsonl'),
+        lines(HEADER, prompt(2), prompt(7)).replaceAll('\n', '\r\n'),
+      );
+
+      expect(await readRecords(stateDir)).toMatchObject([
+        { sessionId: 'abc', prompt: 'prompt 2', lastUsedAt: 7 },
+      ]);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('CHD-615 tester: streamed record compatibility and failures', () => {
+  test('a split Unicode line, CRLF and an unterminated final prompt keep their summary', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-record-boundary-'));
+    const dir = join(stateDir, 'records');
+    const path = join(dir, 'boundary.jsonl');
+    const text = lines(
+      { ...HEADER, agent: 'riff' },
+      { type: 'prompt', turnId: 'first', at: 2, prompt: 'first', images: 0 },
+      {
+        type: 'update',
+        turnId: 'first',
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          content: { type: 'text', text: '界🙂'.repeat(30_000) },
+        },
+      },
+      {
+        type: 'update',
+        turnId: 'first',
+        update: { sessionUpdate: 'session_info_update', title: 'Résumé 界🙂' },
+      },
+      { type: 'prompt', turnId: 'last', at: 9, prompt: 'last', images: 0 },
+    )
+      .trimEnd()
+      .replaceAll('\n', '\r\n');
+
+    try {
+      await mkdir(dir);
+      await writeFile(path, text);
+
+      expect(await readRecords(stateDir)).toStrictEqual([
+        summaryOf(path, text)!,
+      ]);
+      expect(await readRecords(stateDir)).toMatchObject([
+        { agent: 'riff', title: 'Résumé 界🙂', prompt: 'first', lastUsedAt: 9 },
+      ]);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  test('a failed read drops its partial summary and releases its slot for queued records', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-record-failure-'));
+    const dir = join(stateDir, 'records');
+    const files = 24;
+    let active = 0;
+    let completed = 0;
+
+    async function* read(path: string): AsyncIterable<string> {
+      const id = path.slice(dir.length + 1, -'.jsonl'.length);
+
+      active++;
+
+      try {
+        yield JSON.stringify({ ...HEADER, sessionId: id });
+        yield JSON.stringify({
+          type: 'prompt',
+          turnId: id,
+          at: 2,
+          prompt: id,
+          images: 0,
+        });
+
+        if (id === '0' || id === '9') {
+          throw new Error('Fixture read failed after a prompt.');
+        }
+
+        completed++;
+      } finally {
+        active--;
+      }
+    }
+
+    try {
+      await mkdir(dir);
+
+      for (let index = 0; index < files; index++) {
+        await writeFile(join(dir, `${index}.jsonl`), '');
+      }
+
+      const records = await readRecords(stateDir, read);
+
+      expect(
+        records.map(({ sessionId }) => sessionId).toSorted(),
+      ).toStrictEqual(
+        Array.from({ length: files }, (_, index) => String(index))
+          .filter((id) => id !== '0' && id !== '9')
+          .toSorted(),
+      );
+      expect(completed).toBe(files - 2);
+      expect(active).toBe(0);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
+  });
+
+  test('an unreadable record beside a valid one cannot reject the list', async () => {
+    const stateDir = await mkdtemp(join(tmpdir(), 'chord-record-unreadable-'));
+    const dir = join(stateDir, 'records');
+
+    try {
+      await mkdir(join(dir, 'directory.jsonl'), { recursive: true });
+      await writeFile(
+        join(dir, 'valid.jsonl'),
+        lines(HEADER, {
+          type: 'prompt',
+          turnId: 'first',
+          at: 3,
+          prompt: 'valid',
+          images: 0,
+        }) + '{"type":"prompt",',
+      );
+
+      expect(await readRecords(stateDir)).toMatchObject([
+        { sessionId: 'abc', prompt: 'valid', lastUsedAt: 3 },
+      ]);
+    } finally {
+      await rm(stateDir, { recursive: true, force: true });
+    }
   });
 });

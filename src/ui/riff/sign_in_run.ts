@@ -308,7 +308,10 @@ export function useRiffSignIn({
     } else if (
       heard.type === 'connect_failed' &&
       heard.signIn !== undefined &&
-      !suppressed.current.has(at)
+      // A box reading the store waits on this start's outcome: nothing
+      // else settles it (CHD-615).
+      (!suppressed.current.has(at) ||
+        get(at).flow?.step.kind === 'reading_store')
     ) {
       attempts.current.get(at)?.abort();
       update(at, { type: 'signed_out' });
@@ -383,6 +386,9 @@ export function useRiffSignIn({
       current.flow === undefined &&
       current.provider === undefined
     ) {
+      // A start is asked for afresh, by /resume, /new or /clear, so a
+      // sign-in cancelled before it no longer holds the box back (CHD-615).
+      suppressed.current.delete(key);
       update(key, { type: 'signed_out' });
       show(key);
       event(key, {

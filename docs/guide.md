@@ -348,7 +348,10 @@ Claude's Bash stays `Waiting…` after approval until its adapter sends
 `in_progress` or the result.
 Results under `⎿` show every line, wrapped to the width: MCP results,
 Bash output, your `!` shell output, Codex plans and subagent work. Diffs
-show every row, with long lines wrapped under their code. Read shows its
+show every row, with long lines wrapped under their code. For every agent,
+edit summaries name files relative to the session directory; outside it,
+paths under home use `~`, and other paths stay absolute. The wire and
+records keep absolute paths. Read shows its
 first three source lines, each wrapped, then `… +N lines (ctrl+o to expand)`;
 ctrl+o shows the rest. Terminal output keeps its last three lines, wrapped.
 When a call has no content of its own, its `rawOutput` supplies the result:
@@ -423,6 +426,8 @@ or panel still closes on the first Esc.
 Permission requests appear over the prompt box: 1–9 picks an answer,
 ↑/↓ moves the highlight, Enter picks it, and Esc rejects. Proposed diffs
 show inside the request, with a path above each when there are several.
+For every agent, shell asks and reviews show the command's location as
+`in <dir>`, with home shortened to `~`, as in the header.
 A long request scrolls under its pinned title; long lines wrap, and choices
 and key hints stay whole inside the box. The request takes the room left,
 at most half the window's rows. The transcript gives way first, then the agents
@@ -589,6 +594,8 @@ choice. Esc follows the step's printed action. The box offers opening and copyin
 and copying a device code; the code has an expiry countdown. Failures,
 expiry and cancellation each show their own recovery choices.
 
+<img src="images/riff-sign-in.png" alt="riff's ChatGPT device-code sign-in box with the address, code, expiry and open and copy choices" width="900">
+
 Browser sign-in listens only while waiting, for at most 10 minutes:
 ChatGPT uses `localhost:1455`, Grok a free port on `127.0.0.1`. If 1455 is
 taken, chord says so and offers device code. Credentials stay only in
@@ -652,6 +659,8 @@ Paths are checked at their real destination; a link outside the session
 directory counts as outside. `shell` runs in the session directory, streams
 output into the transcript, and Esc stops its process groups.
 
+<img src="images/riff-session.png" alt="riff in auto mode editing greet.ts as a diff, running bun test and reporting the passing test" width="900">
+
 `read` reads text with line ranges; it refuses binary files. `list` and
 `search` reach only the session directory, through fff. `list` matches
 files by glob (`*` crosses `/`), or directories by fuzzy query; `search`
@@ -677,6 +686,8 @@ and `Library/LaunchAgents/`.
 path; `Allow this exact command for this session` covers only that command
 string, never a prefix. `Allow <server> - <tool> for this session` covers
 that MCP tool with any arguments. Grants hold in both modes for that session.
+
+<img src="images/riff-ask.png" alt="riff's shell permission box showing bun test, its directory and Allow, session grant and Deny choices" width="900">
 
 Auto admits two command sets adapted from fx v0.0.16, with restricted
 arguments and syntax:
@@ -721,6 +732,8 @@ the call. In `-p`, reviewed asks are denied even with
 `--dangerously-skip-permissions`. `chord acp` forwards them to its client,
 with the same 5-minute deadline.
 
+<img src="images/riff-review.png" alt="riff's auto review holding a shell command with a caution, its reason, Allow once and Deny choices and the denial countdown" width="900">
+
 ### MCP and teams
 
 riff takes stdio and streamable HTTP servers. SSE servers are held back
@@ -757,6 +770,8 @@ Resources must stay inside the skill's folder. Invalid metadata or a link
 outside the session directory (project skills) or home (home skills) skips
 the skill with `Skill <name> was not loaded: <reason>` in the transcript.
 `--fake` and `--qa` read no home skills or user `AGENTS.md`.
+
+<img src="images/riff-skill.png" alt="riff loading the release-notes skill and saving the release notes through an MCP tool" width="900">
 
 ### Model and effort
 

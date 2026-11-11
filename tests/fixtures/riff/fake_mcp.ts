@@ -9,8 +9,11 @@ import { isInitializeRequest } from '@modelcontextprotocol/sdk/types.js';
 import { z } from '@zod/zod';
 import { serve } from '../../../src/platform/serve.ts';
 
-/** How the fake behaves: plainly, or with a tool name libfx would change. */
-export type FakeMcpMode = 'ok' | 'badname';
+/**
+ * How the fake behaves: plainly, with a tool name libfx would change, or
+ * with tools that ask the person through the client.
+ */
+export type FakeMcpMode = 'ok' | 'badname' | 'ask';
 
 /** The fake server, its tools registered. */
 export function fakeMcpServer(
@@ -38,6 +41,10 @@ export function fakeMcpServer(
       return { content: [{ type: 'text', text: `Saved ${title}` }] };
     },
   );
+
+  if (mode === 'ask') {
+    asking(server);
+  }
 
   if (extra !== undefined) {
     server.registerTool(extra, { description: 'Another tool.' }, () => ({
@@ -121,4 +128,41 @@ export function serveFakeMcp(
       await listening.close();
     },
   };
+}
+
+/** Tools that ask the person through the client, answering with the reply. */
+function asking(server: McpServer): void {
+  server.registerTool(
+    'confirm',
+    { description: 'Asks for a project name.' },
+    async () => {
+      const reply = await server.server.elicitInput({
+        mode: 'form',
+        message: 'Set up the deploy target',
+        requestedSchema: {
+          type: 'object',
+          properties: { name: { type: 'string', title: 'Project name' } },
+          required: ['name'],
+        },
+      });
+
+      return { content: [{ type: 'text', text: JSON.stringify(reply) }] };
+    },
+  );
+  server.registerTool(
+    'open_link',
+    { description: 'Asks the person to open a link.' },
+    async () => {
+      const reply = await server.server.elicitInput({
+        mode: 'url',
+        message: 'Sign in to notes',
+        elicitationId: 'fixture-link',
+        url: 'https://example.invalid/sign-in',
+      });
+
+      await server.server.createElicitationCompletionNotifier('fixture-link')();
+
+      return { content: [{ type: 'text', text: JSON.stringify(reply) }] };
+    },
+  );
 }

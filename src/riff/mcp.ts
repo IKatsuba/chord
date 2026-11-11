@@ -12,6 +12,12 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
+import {
+  type ElicitRequest,
+  ElicitRequestSchema,
+  type ElicitResult,
+  ElicitationCompleteNotificationSchema,
+} from '@modelcontextprotocol/sdk/types.js';
 import type { FxAgentHostTool } from 'libfx/node';
 import { createMcpAdapter, type McpAdapter, type McpClient } from 'libfx/mcp';
 
@@ -192,6 +198,22 @@ export type Connect = (
   signal: AbortSignal,
 ) => Promise<Connected>;
 
+/**
+ * Where the servers' elicitations go: chord's form, through the window,
+ * in the modes the window takes.
+ */
+export interface Elicitor {
+  readonly form: boolean;
+  readonly url: boolean;
+  /** The person's answer, or a cancel when nobody can give one. */
+  readonly elicit: (
+    params: ElicitRequest['params'],
+    signal: AbortSignal,
+  ) => Promise<ElicitResult>;
+  /** A URL elicitation the server says is done. */
+  readonly complete: (elicitationId: string) => void;
+}
+
 /** The bytes of a stdio server's stderr kept for a failure's reason. */
 const TAIL_CHARS = 2000;
 
@@ -200,9 +222,40 @@ const TAIL_CHARS = 2000;
  * that fails says why with the tail of its stderr.
  */
 export const connectSdk =
-  (version: string): Connect =>
+  (version: string, elicitor?: Elicitor): Connect =>
   async (server, cwd, signal) => {
-    const client = new Client({ name: 'riff', version });
+    const form = elicitor?.form === true;
+    const url = elicitor?.url === true;
+    // A server asks only in the modes the window takes, or not at all.
+    const client = new Client(
+      { name: 'riff', version },
+      form || url
+        ? {
+            capabilities: {
+              elicitation: {
+                ...(form ? { form: {} } : {}),
+                ...(url ? { url: {} } : {}),
+              },
+            },
+          }
+        : {},
+    );
+
+    if (elicitor !== undefined && (form || url)) {
+      client.setRequestHandler(ElicitRequestSchema, (request, extra) =>
+        elicitor.elicit(request.params, extra.signal),
+      );
+    }
+
+    if (elicitor !== undefined && url) {
+      client.setNotificationHandler(
+        ElicitationCompleteNotificationSchema,
+        (notification) => {
+          elicitor.complete(notification.params.elicitationId);
+        },
+      );
+    }
+
     const transport = transportOf(server, cwd);
     let tail = '';
 

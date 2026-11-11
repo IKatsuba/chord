@@ -59,6 +59,7 @@ function fixtureCommandEnvironment(): NodeJS.ProcessEnv {
 async function open(
   provider = true,
   more: Partial<RiffOptions> = {},
+  clientCapabilities?: Record<string, unknown>,
 ): Promise<void> {
   const pair = clientOverStreams();
 
@@ -72,7 +73,10 @@ async function open(
     ...more,
   });
 
-  await client.request('initialize', { protocolVersion: 1 });
+  await client.request('initialize', {
+    protocolVersion: 1,
+    ...(clientCapabilities === undefined ? {} : { clientCapabilities }),
+  });
 }
 
 async function newSession(): Promise<string> {
@@ -2965,5 +2969,138 @@ describe('riff MCP calls ask', () => {
       _meta: { 'chord/permission': { review: { outcome: 'caution' } } },
     });
     expect(JSON.stringify(client.updates(sessionId))).toContain('Saved Held');
+  });
+});
+
+describe('riff relays MCP elicitations to the window', () => {
+  const STDIO = join(import.meta.dir, '..', 'fixtures', 'riff', 'mcp_stdio.ts');
+  const notes = {
+    name: 'notes',
+    command: process.execPath,
+    args: [STDIO, 'ask'],
+    env: [],
+  };
+
+  async function asking(capabilities: Record<string, unknown> | undefined) {
+    await open(
+      true,
+      { review: () => Promise.resolve({ outcome: 'clear' }) },
+      capabilities === undefined ? undefined : { elicitation: capabilities },
+    );
+
+    const answer = await client.request('session/new', {
+      cwd: process.cwd(),
+      mcpServers: [notes],
+    });
+
+    return answer.result?.['sessionId'] as string;
+  }
+
+  const created = () =>
+    client.until((message) => message.method === 'elicitation/create');
+
+  test('a form goes out as elicitation/create and the reply comes back', async () => {
+    const sessionId = await asking({ form: {} });
+    const work = prompt(sessionId, 'call notes__confirm {}');
+    const asked = await created();
+
+    expect(asked.params).toStrictEqual({
+      sessionId,
+      mode: 'form',
+      message: 'Set up the deploy target',
+      requestedSchema: {
+        type: 'object',
+        properties: { name: { type: 'string', title: 'Project name' } },
+        required: ['name'],
+      },
+    });
+    client.respond(asked.id!, {
+      action: 'accept',
+      content: { name: 'chord' },
+    });
+    await work;
+
+    expect(JSON.stringify(client.updates(sessionId))).toContain(
+      '{\\"action\\":\\"accept\\",\\"content\\":{\\"name\\":\\"chord\\"}}',
+    );
+  });
+
+  test('a decline goes back as a decline', async () => {
+    const sessionId = await asking({ form: {} });
+    const work = prompt(sessionId, 'call notes__confirm {}');
+    const asked = await created();
+
+    client.respond(asked.id!, { action: 'decline' });
+    await work;
+
+    expect(JSON.stringify(client.updates(sessionId))).toContain(
+      '{\\"action\\":\\"decline\\"}',
+    );
+  });
+
+  test('a link goes out in url mode and its completion follows', async () => {
+    const sessionId = await asking({ form: {}, url: {} });
+    const work = prompt(sessionId, 'call notes__open_link {}');
+    const asked = await created();
+
+    expect(asked.params).toStrictEqual({
+      sessionId,
+      mode: 'url',
+      message: 'Sign in to notes',
+      elicitationId: 'fixture-link',
+      url: 'https://example.invalid/sign-in',
+    });
+    client.respond(asked.id!, { action: 'accept' });
+    await work;
+    await client.until(
+      (message) =>
+        message.method === 'elicitation/complete' &&
+        (message.params as { elicitationId?: string } | undefined)
+          ?.elicitationId === 'fixture-link',
+    );
+  });
+
+  test('a cancel of the turn withdraws the form', async () => {
+    const sessionId = await asking({ form: {} });
+    const work = prompt(sessionId, 'call notes__confirm {}');
+    const asked = await created();
+
+    client.notify('session/cancel', { sessionId });
+
+    await client.until(
+      (message) =>
+        message.method === '$/cancel_request' &&
+        (message.params as { requestId?: unknown } | undefined)?.requestId ===
+          asked.id,
+    );
+    expect((await work).result?.['stopReason']).toBe('cancelled');
+  });
+
+  test("the session's close withdraws the form", async () => {
+    const sessionId = await asking({ form: {} });
+    const work = prompt(sessionId, 'call notes__confirm {}');
+    const asked = await created();
+    const closed = client.request('session/close', { sessionId });
+
+    await client.until(
+      (message) =>
+        message.method === '$/cancel_request' &&
+        (message.params as { requestId?: unknown } | undefined)?.requestId ===
+          asked.id,
+    );
+    await Promise.all([work, closed]);
+  });
+
+  test('a window that takes no forms is never asked; the server hears it cannot', async () => {
+    const sessionId = await asking(undefined);
+
+    await prompt(sessionId, 'call notes__confirm {}');
+
+    expect(
+      client.messages.some(
+        (message) => message.method === 'elicitation/create',
+      ),
+    ).toBe(false);
+    expect(JSON.stringify(client.updates(sessionId))).toContain('elicitation');
   });
 });

@@ -8,6 +8,9 @@ import {
   type AgentConnection,
   type AgentContext,
   type ContentBlock,
+  type CreateElicitationRequest,
+  type ElicitationCapabilities,
+  type ElicitationFormMode,
   type InitializeResponse,
   type McpServer,
   type PermissionOption,
@@ -46,9 +49,14 @@ import {
 } from './models.ts';
 import { readInstructions } from './instructions.ts';
 import { findSkills, skillsSection, skippedSkillNote } from './skills.ts';
+import type {
+  ElicitRequest,
+  ElicitResult,
+} from '@modelcontextprotocol/sdk/types.js';
 import {
   type Connect,
   connectSdk,
+  type Elicitor,
   mcpTitle,
   type McpTools,
   openMcp,
@@ -179,6 +187,8 @@ interface Open {
   readonly mcp: McpTools;
   /** chord's notes for the window ahead of the next prompt's reply. */
   readonly notices: string[];
+  /** The servers' forms waiting on the window, to withdraw. */
+  readonly elicitations: Set<AbortController>;
   readonly credential: CredentialCell | undefined;
   readonly authorization: ReturnType<typeof planProvider> | undefined;
   config: RiffConfig;
@@ -228,6 +238,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   // session/close or the connection's end.
   let opening: Promise<Open> | undefined;
   let gone = false;
+  // The forms the window takes, as it said in `initialize`.
+  let elicitation: ElicitationCapabilities | undefined;
   // The one cleanup both a session/close and the connection's end await.
   let closing: Promise<void> | undefined;
   // Sidecar writes, one after another in the order they were asked, so the
@@ -318,7 +330,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
         provider = { plan, cell };
       }
 
-      return made(provider, cwd, servers, resumed);
+      return made(provider, cwd, servers, client, resumed);
     })();
 
     try {
@@ -359,9 +371,10 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     provider: SelectedProvider,
     cwd: string,
     servers: readonly McpServer[],
+    client: AgentContext,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
-    const session = await create(provider, cwd, servers, resumed);
+    const session = await create(provider, cwd, servers, client, resumed);
 
     try {
       await save(session);
@@ -386,6 +399,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     provider: SelectedProvider,
     cwd: string,
     servers: readonly McpServer[],
+    window: AgentContext,
     resumed: { readonly id: string; readonly sidecar: Sidecar } | undefined,
   ): Promise<Open> => {
     const plan: RiffPlan = provider.plan;
@@ -460,10 +474,56 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
     });
 
     const listed = skillsSection(skills);
+    const elicitations = new Set<AbortController>();
+    // The window a server's form goes to: the turn's, or the one that
+    // opened the session.
+    const asked = () => holder.open?.client ?? window;
+    const elicitor: Elicitor = {
+      form: (elicitation?.form ?? null) !== null,
+      url: (elicitation?.url ?? null) !== null,
+      elicit: async (params, signal) => {
+        const sessionId = holder.open?.id;
+
+        if (sessionId === undefined || gone) {
+          return { action: 'cancel' };
+        }
+
+        // A cancel of the turn or the session's close withdraws it.
+        const withdrawn = new AbortController();
+
+        elicitations.add(withdrawn);
+
+        try {
+          const answer = await asked().request(
+            'elicitation/create',
+            elicitationRequest(sessionId, params),
+            { cancellationSignal: AbortSignal.any([signal, withdrawn.signal]) },
+          );
+
+          return answer.action === 'accept'
+            ? {
+                action: 'accept',
+                ...((answer.content ?? null) === null
+                  ? {}
+                  : { content: answer.content as ElicitResult['content'] }),
+              }
+            : { action: answer.action === 'decline' ? 'decline' : 'cancel' };
+        } catch {
+          return { action: 'cancel' };
+        } finally {
+          elicitations.delete(withdrawn);
+        }
+      },
+      complete: (elicitationId) => {
+        void asked()
+          .notify('elicitation/complete', { elicitationId })
+          .catch(() => {});
+      },
+    };
     const mcp = await openMcp(
       servers,
       directory,
-      options.connectMcp ?? connectSdk(options.version),
+      options.connectMcp ?? connectSdk(options.version, elicitor),
     );
     const notices = [
       ...skipped.map(skippedSkillNote),
@@ -618,6 +678,7 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       finder,
       mcp,
       notices,
+      elicitations,
       credential,
       authorization,
       config: { model: config.model, effort: config.effort, mode: config.mode },
@@ -709,6 +770,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
 
   /** Ends the session's libfx agent and its finder. */
   const closeOpen = async (session: Open) => {
+    withdraw(session);
+
     try {
       await closeBoth(session.agent, session.finder, session.mcp);
     } finally {
@@ -824,7 +887,11 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
   };
 
   const connection = agent({ name: RIFF })
-    .onRequest('initialize', () => riffInit(options.version))
+    .onRequest('initialize', ({ params }) => {
+      elicitation = params.clientCapabilities?.elicitation ?? undefined;
+
+      return riffInit(options.version);
+    })
     .onRequest('session/new', async ({ params, client }) => {
       const session = await start(params.cwd, params.mcpServers, client);
 
@@ -1031,6 +1098,8 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       if (open?.id === params.sessionId) {
         open.cancelled = true;
 
+        withdraw(open);
+
         if (!open.admitting) {
           await open.agent.session(open.id).cancel();
         }
@@ -1148,4 +1217,33 @@ function withId(
     update.sessionUpdate !== 'agent_message_chunk'
     ? update
     : { ...update, messageId };
+}
+
+/** Withdraws every server form `session` has waiting on the window. */
+function withdraw(session: Open): void {
+  for (const waiting of session.elicitations) {
+    waiting.abort();
+  }
+}
+
+/** An MCP server's elicitation as ACP's `elicitation/create` names it. */
+function elicitationRequest(
+  sessionId: string,
+  params: ElicitRequest['params'],
+): CreateElicitationRequest {
+  return params.mode === 'url'
+    ? {
+        sessionId,
+        mode: 'url',
+        message: params.message,
+        elicitationId: params.elicitationId,
+        url: params.url,
+      }
+    : {
+        sessionId,
+        mode: 'form',
+        message: params.message,
+        requestedSchema:
+          params.requestedSchema as unknown as ElicitationFormMode['requestedSchema'],
+      };
 }

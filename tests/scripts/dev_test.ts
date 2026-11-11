@@ -1,5 +1,9 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join, relative } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { ValidationError } from '@cliffy/command';
 import stripAnsi from 'strip-ansi';
 import { type DevActions, devCommand } from '../../scripts/dev.ts';
@@ -145,18 +149,24 @@ describe('chord', () => {
     expect(
       await parsed(['chord', '--qa', 'tabs', '--fake', '-p', 'hi']),
     ).toStrictEqual([
-      ['qa', '/tmp/chord-qa.tabs'],
-      ['chord', true, ['-C', '/tmp/chord-qa.tabs', '-p', 'hi'], true],
+      ['qa', '/tmp/chord-qa.tabs', '/tmp/chord-qa.tabs.state'],
+      [
+        'chord',
+        true,
+        ['-C', '/tmp/chord-qa.tabs', '-p', 'hi'],
+        true,
+        '/tmp/chord-qa.tabs.state',
+      ],
     ]);
 
     // Bare, the default place, the owner's Q65, before chord's own options.
     expect(await parsed(['chord', '--qa', '--fake'])).toStrictEqual([
-      ['qa', '/tmp/chord-qa'],
-      ['chord', true, ['-C', '/tmp/chord-qa'], true],
+      ['qa', '/tmp/chord-qa', '/tmp/chord-qa.state'],
+      ['chord', true, ['-C', '/tmp/chord-qa'], true, '/tmp/chord-qa.state'],
     ]);
     expect(await parsed(['chord', '--qa'])).toStrictEqual([
-      ['qa', '/tmp/chord-qa'],
-      ['chord', false, ['-C', '/tmp/chord-qa'], true],
+      ['qa', '/tmp/chord-qa', '/tmp/chord-qa.state'],
+      ['chord', false, ['-C', '/tmp/chord-qa'], true, '/tmp/chord-qa.state'],
     ]);
     // An empty name the parser drops: a run as with no --qa, as its help
     // says (Q65).
@@ -169,24 +179,29 @@ describe('chord', () => {
     }
   });
 
-  test("--fake before chord's arguments is its own", async () => {
+  test("--fake before chord's arguments is its own, its state in /tmp/chord-fake (CHD-616)", async () => {
     expect(await parsed(['chord', '--fake'])).toStrictEqual([
-      ['chord', true, []],
+      ['chord', true, [], undefined, '/tmp/chord-fake'],
     ]);
     expect(await parsed(['chord', '--fake', '-p', 'hi'])).toStrictEqual([
-      ['chord', true, ['-p', 'hi']],
+      ['chord', true, ['-p', 'hi'], undefined, '/tmp/chord-fake'],
     ]);
   });
 
   test('--fake with riff as the agent runs riff on its fake provider, --qa ahead of it', async () => {
     expect(await parsed(['chord', '--fake', 'riff'])).toStrictEqual([
-      ['riff', []],
+      ['riff', [], false, '/tmp/chord-fake'],
     ]);
     expect(
       await parsed(['chord', '--qa', 'read', '--fake', 'riff', '-p', 'hi']),
     ).toStrictEqual([
-      ['qa', '/tmp/chord-qa.read'],
-      ['riff', ['-C', '/tmp/chord-qa.read', '-p', 'hi'], true],
+      ['qa', '/tmp/chord-qa.read', '/tmp/chord-qa.read.state'],
+      [
+        'riff',
+        ['-C', '/tmp/chord-qa.read', '-p', 'hi'],
+        true,
+        '/tmp/chord-qa.read.state',
+      ],
     ]);
     // Without --fake, riff is an agent name like any other.
     expect(await parsed(['chord', 'riff'])).toStrictEqual([
@@ -206,7 +221,9 @@ describe('chord', () => {
     ]);
     expect(
       await parsed(['chord', '--fake', '-p', 'hi', '--', '--fake']),
-    ).toStrictEqual([['chord', true, ['-p', 'hi', '--fake']]]);
+    ).toStrictEqual([
+      ['chord', true, ['-p', 'hi', '--fake'], undefined, '/tmp/chord-fake'],
+    ]);
   });
 });
 
@@ -379,7 +396,7 @@ describe('tester: CHD-411 forwarding boundaries', () => {
 
     expect(forwarded).toStrictEqual([args]);
     expect(await parsed(['chord', '--fake', ...args])).toStrictEqual([
-      ['chord', true, args],
+      ['chord', true, args, undefined, '/tmp/chord-fake'],
     ]);
   });
 
@@ -767,5 +784,65 @@ describe('CHD-611 tester: model-check command arguments', () => {
     await expect(parsed(['riff-models', 'codex', 'extra'])).rejects.toThrow(
       ValidationError,
     );
+  });
+});
+
+describe("a fake or QA run keeps chord's state off the person's (CHD-616)", () => {
+  /** Every file under `dir`, relative to it; none when it is missing. */
+  const files = (dir: string): string[] =>
+    existsSync(dir)
+      ? readdirSync(dir, { recursive: true, withFileTypes: true })
+          .filter((entry) => entry.isFile())
+          .map((entry) => relative(dir, join(entry.parentPath, entry.name)))
+      : [];
+
+  /**
+   * `bun dev` with `args`, its home and XDG places in `person`, standing in
+   * for the person's own; riff's `-p` keeps its session in chord's state.
+   */
+  const run = (person: string, args: readonly string[]) => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        fileURLToPath(new URL('../../scripts/dev.ts', import.meta.url)),
+        ...args,
+      ],
+      {
+        encoding: 'utf8',
+        timeout: 60_000,
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          HOME: join(person, 'home'),
+          XDG_STATE_HOME: join(person, 'state'),
+          XDG_CONFIG_HOME: join(person, 'config'),
+          XDG_DATA_HOME: join(person, 'data'),
+          XDG_CACHE_HOME: join(person, 'cache'),
+        },
+      },
+    );
+
+    expect(result.stdout).toContain('Hello from riff.');
+  };
+
+  test('--qa keeps it beside its directory, out of it, and leaves the person nothing', () => {
+    const person = mkdtempSync(join(tmpdir(), 'chord-person-'));
+    const name = `dev-test-${process.pid}`;
+    const dir = `/tmp/chord-qa.${name}`;
+
+    try {
+      run(person, ['chord', '--qa', name, '--fake', 'riff', '-p', 'hi']);
+
+      expect(files(join(person, 'state'))).toStrictEqual([]);
+      expect(
+        files(join(`${dir}.state`, 'chord', 'riff', 'sidecars')),
+      ).toHaveLength(1);
+      // Nothing in the run's own directory, where @ would list it.
+      expect(files(dir)).toStrictEqual([]);
+    } finally {
+      rmSync(person, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
+      rmSync(`${dir}.state`, { recursive: true, force: true });
+    }
   });
 });

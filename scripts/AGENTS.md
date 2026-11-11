@@ -6,6 +6,13 @@
   are native Bun commands. Local quality checks the host's installed libfx
   package and every target's metadata; CI's static job installs all platforms
   and sets `CHORD_LIBFX_ALL_TARGETS=1` to check all four packages.
+- `bun dev chord --qa [name]` remakes its capture directory and sibling
+  `.state` directory together (`/tmp/chord-qa[.<name>]` and that path plus
+  `.state`). `--fake` without `--qa` uses `/tmp/chord-fake`, made if missing
+  and kept across runs. QA takes precedence. Both set only `XDG_STATE_HOME`,
+  never writing records or riff's state into the person's own state; config,
+  data and cache stay unchanged. Plain `bun dev chord` keeps the person's
+  XDG state.
 - `bun dev release [version|major|minor|patch|fix]` is the owner's
   (`docs/decisions.md`, "Releasing"); nobody else publishes. Give it the
   version instead of editing package.json's by hand. `--channel <name>` makes

@@ -198,9 +198,15 @@ an unrelated change.
 
 chord is a terminal program, so a check runs it in a real terminal of a known
 size and reads the screen back as text. For captures, use
-`bun dev chord --fake --qa <name>`: it recreates the fixed `/tmp/chord-qa.<name>`,
-never a directory from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa`;
-an empty name is treated as no `--qa`. For riff on its fake provider, use
+`bun dev chord --fake --qa <name>`: it recreates `/tmp/chord-qa.<name>` and
+its sibling `/tmp/chord-qa.<name>.state` for chord's state, never a directory
+from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa` and `/tmp/chord-qa.state`;
+an empty name is treated as no `--qa`. Without `--qa`, `--fake` uses
+`/tmp/chord-fake`, made if missing and kept across runs so sessions resume.
+`--qa` takes precedence. These runs set only `XDG_STATE_HOME`: records,
+riff's store, sidecars and provider record stay out of the person's state;
+config, data and cache are unchanged. Plain `bun dev chord` keeps the
+person's XDG state. For riff on its fake provider, use
 `bun dev chord --fake --qa <name> riff`. Both flags select riff's fake
 provider and come before `riff`. `CHORD_RIFF_QA_SIGN_IN` selects offline
 sign-in outcomes documented in the guide; never use a live sign-in for QA.

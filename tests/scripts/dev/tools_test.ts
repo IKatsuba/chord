@@ -370,6 +370,123 @@ describe("a fake or QA run's state (CHD-616)", () => {
   });
 });
 
+describe('CHD-616 tester: state reuse and failed launches', () => {
+  test('both launchers reuse existing state without clearing earlier files', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-kept-state-'));
+    const state = join(dir, 'state with spaces');
+    let calls = 0;
+    let stopped = 0;
+    const provider = () =>
+      Promise.resolve({
+        url: 'http://localhost:1/v1',
+        stop: () => {
+          stopped++;
+
+          return Promise.resolve();
+        },
+      });
+    const run: RunServing = async (_args, env) => {
+      expect(env['XDG_STATE_HOME']).toBe(state);
+      expect(await readFile(join(state, 'earlier'), 'utf8')).toBe('kept');
+
+      if (calls > 0) {
+        expect(await readFile(join(state, `run-${calls}`), 'utf8')).toBe(
+          'saved',
+        );
+      }
+
+      calls++;
+
+      await writeFile(join(state, `run-${calls}`), 'saved');
+
+      return 0;
+    };
+
+    try {
+      await mkdir(state);
+      await writeFile(join(state, 'earlier'), 'kept');
+      await chordOnRiff([], run, provider, false, state);
+      await chordOnRiff([], run, provider, false, state);
+      await chordWithRiff(true, [], false, run, provider, state);
+
+      expect(calls).toBe(3);
+      expect(stopped).toBe(3);
+      expect((await readdir(state)).toSorted()).toStrictEqual([
+        'earlier',
+        'run-1',
+        'run-2',
+        'run-3',
+      ]);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('a failed child launch still stops the fake provider and keeps existing state', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-failed-state-'));
+    const failure = new Error('Fixture child failed to start.');
+    let stopped = 0;
+
+    try {
+      await writeFile(join(dir, 'earlier'), 'kept');
+
+      await expect(
+        chordOnRiff(
+          [],
+          () => Promise.reject(failure),
+          () =>
+            Promise.resolve({
+              url: 'http://localhost:1/v1',
+              stop: () => {
+                stopped++;
+
+                return Promise.resolve();
+              },
+            }),
+          false,
+          dir,
+        ),
+      ).rejects.toBe(failure);
+
+      expect(stopped).toBe(1);
+      expect(await readFile(join(dir, 'earlier'), 'utf8')).toBe('kept');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('an unusable state path fails before a fake provider starts', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-invalid-state-'));
+    let started = 0;
+
+    try {
+      await writeFile(join(dir, 'file'), 'kept');
+
+      await expect(
+        chordOnRiff(
+          [],
+          () => Promise.resolve(0),
+          () => {
+            started++;
+
+            return Promise.resolve({
+              url: 'http://localhost:1/v1',
+              stop: () => Promise.resolve(),
+            });
+          },
+          false,
+          join(dir, 'file', 'state'),
+        ),
+      ).rejects.toBeInstanceOf(Error);
+
+      expect(started).toBe(0);
+      expect(await readFile(join(dir, 'file'), 'utf8')).toBe('kept');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe('spawnServing', () => {
   test("answers the command's status, with the env added, while this process still runs", async () => {
     let ticked = false;

@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { notFound } from './not_found.ts';
 import { NOTIF_CHANNELS } from './notify.ts';
 import { mergeTeamSelection, TeamSelection } from './session/budgets.ts';
+import { NO_MCP_SERVERS } from './session/servers.ts';
 import {
   DEFAULT_KEYMAP,
   type Keymap,
@@ -709,6 +710,8 @@ export interface Startup {
    * to, where one does.
    */
   readonly mcpServers?: boolean;
+  /** What set `mcpServers`: `--no-mcp-servers`, or the file's path. */
+  readonly mcpServersFrom?: string | undefined;
 }
 
 /** The flag's value, else the last file's that set the agent's `key`. */
@@ -798,6 +801,12 @@ export function resolveStartup(
     'permissionMode',
   );
   const mcpServers = flags.mcpServers ?? settings.agents?.[agent]?.mcpServers;
+  const mcpServersFrom =
+    flags.mcpServers === undefined
+      ? layers.findLast(
+          (layer) => layer.settings.agents?.[agent]?.mcpServers !== undefined,
+        )?.file
+      : NO_MCP_SERVERS;
 
   return {
     agent,
@@ -809,7 +818,7 @@ export function resolveStartup(
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
-    ...(mcpServers === undefined ? {} : { mcpServers }),
+    ...(mcpServers === undefined ? {} : { mcpServers, mcpServersFrom }),
   };
 }
 
@@ -833,11 +842,8 @@ export function resumedStartup(
   flags: Flags,
   layers: readonly SettingsLayer[],
 ): Startup {
-  const { model, effort, permissionMode, mcpServers } = resolveStartup(
-    { ...flags, agent: found.agent },
-    layers,
-    found.agent,
-  );
+  const { model, effort, permissionMode, mcpServers, mcpServersFrom } =
+    resolveStartup({ ...flags, agent: found.agent }, layers, found.agent);
 
   return {
     agent: found.agent,
@@ -847,7 +853,7 @@ export function resumedStartup(
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
-    ...(mcpServers === undefined ? {} : { mcpServers }),
+    ...(mcpServers === undefined ? {} : { mcpServers, mcpServersFrom }),
   };
 }
 
@@ -874,13 +880,15 @@ export function startupOf(
     return resolveStartup({ agent }, layers, agent);
   }
 
-  const { mcpServers } = resolveStartup(
+  const { mcpServers, mcpServersFrom } = resolveStartup(
     { agent, mcpServers: flags.mcpServers },
     layers,
     agent,
   );
 
-  return mcpServers === undefined ? invoked : { ...invoked, mcpServers };
+  return mcpServers === undefined
+    ? invoked
+    : { ...invoked, mcpServers, mcpServersFrom };
 }
 
 /**

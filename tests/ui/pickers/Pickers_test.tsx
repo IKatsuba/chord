@@ -16,6 +16,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parseServers } from '../../../src/mcp.ts';
 import { serveChord } from '../../../src/server/server.ts';
+import { NO_MCP_SERVERS } from '../../../src/session/servers.ts';
 import type { ThemeSetting } from '../../../src/ui/theme/theme.ts';
 import { fakeAgentCommand, gatedCommand } from '../../fixtures/fake.ts';
 import { recordSession } from '../../fixtures/records.ts';
@@ -1763,5 +1764,51 @@ describe('CHD-604c tester: riff picker row and keys', () => {
         await app.unmount();
       }
     });
+  }
+});
+
+test('an agent started with --no-mcp-servers is given none, and its start line and /mcp name the flag (CHD-620)', async () => {
+  const server = serveChord();
+  const command = fakeAgentCommand();
+
+  try {
+    await withWindow(
+      async (window) => {
+        await window.shows('--no-mcp-servers held back');
+
+        expect(window.frame()).toContain(
+          "--no-mcp-servers held back 3 MCP servers from fake: chord (chord's own), filesystem, docs.",
+        );
+        await ready(window);
+        await send(window, 'mcp');
+        await window.shows('│ []');
+        await window.type('/mcp');
+        await window.press('\r');
+        await window.shows("chord's MCP servers for fake.");
+
+        const words = window.frame().replace(/\s*│\s*\n│\s*/g, ' ');
+
+        expect(words).toContain(
+          "chord's server was not passed: --no-mcp-servers on the command line held it back, so fake cannot start other agents.",
+        );
+        expect(words).toContain(
+          'filesystem and docs were not passed: --no-mcp-servers on the command line held them back.',
+        );
+        expect(words).not.toContain('in your settings changes that');
+      },
+      {
+        server,
+        mcpServers: SERVERS,
+        rows: 60,
+        agentCommand: command,
+        startupOf: () => ({
+          agentCommand: command,
+          mcpServers: false,
+          mcpServersFrom: NO_MCP_SERVERS,
+        }),
+      },
+    );
+  } finally {
+    await server.close();
   }
 });

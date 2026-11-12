@@ -2017,6 +2017,9 @@ export function App({
                                         (each) =>
                                           each.own && each.takes.length === 0,
                                       ) === true,
+                                      conversation()?.session?.heldBack.find(
+                                        (each) => each.own,
+                                      )?.from,
                                     ),
                                   })}
                             />

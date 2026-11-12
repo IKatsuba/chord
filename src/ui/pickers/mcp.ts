@@ -8,7 +8,11 @@ import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import type { McpServer } from '@agentclientprotocol/sdk/unstable';
 import { type DefinedServer, type Ignored, transportOf } from '../../mcp.ts';
-import { type HeldBack, takenWords } from '../../session/servers.ts';
+import {
+  type HeldBack,
+  NO_MCP_SERVERS,
+  takenWords,
+} from '../../session/servers.ts';
 import { toolNames } from '../../server/tools.ts';
 
 /** chord's own server, as `/mcp` lists it ahead of the user's. */
@@ -22,6 +26,8 @@ export interface ChordRow {
   readonly child?: boolean;
   /** Not passed as the agent takes no MCP servers at all (CHD-441). */
   readonly none?: boolean;
+  /** What set `none`, as `HeldBack`'s `from` says it (CHD-620). */
+  readonly from?: string;
 }
 
 /**
@@ -32,6 +38,7 @@ export function chordRow(
   passed: McpServer | undefined,
   child = false,
   none = false,
+  from?: string,
 ): ChordRow {
   return {
     server: {
@@ -46,7 +53,9 @@ export function chordRow(
     passed: passed !== undefined,
     tools: toolNames(child ? 'child' : 'person'),
     ...(child ? { child } : {}),
-    ...(none && passed === undefined ? { none } : {}),
+    ...(none && passed === undefined
+      ? { none, ...(from === undefined ? {} : { from }) }
+      : {}),
   };
 }
 
@@ -76,11 +85,13 @@ export function chordLine(row: ChordRow, agent: string): string {
             'main only'
           : list(row.tools)
       }.`
-    : `chord's server was not passed: ${agent} ${
-        row.none === true
-          ? 'takes no MCP servers'
-          : 'does not take MCP servers over HTTP'
-      }, so it cannot start other agents.`;
+    : row.from === NO_MCP_SERVERS
+      ? `chord's server was not passed: ${NO_MCP_SERVERS} on the command line held it back, so ${agent} cannot start other agents.`
+      : `chord's server was not passed: ${agent} ${
+          row.none === true
+            ? 'takes no MCP servers'
+            : 'does not take MCP servers over HTTP'
+        }, so it cannot start other agents.`;
 }
 
 /** One server's parts, before they are laid out. */
@@ -357,7 +368,12 @@ export function heldNote(heldBack: readonly HeldBack[]): string | undefined {
     held.map((each) => each.server),
   );
 
-  const { agent, takes } = first;
+  const { agent, takes, from } = first;
+
+  // A setting would not help: the flag beats it (CHD-620).
+  if (from === NO_MCP_SERVERS) {
+    return `${names} ${held.length === 1 ? 'was' : 'were'} not passed: ${NO_MCP_SERVERS} on the command line held ${held.length === 1 ? 'it' : 'them'} back.`;
+  }
 
   return takes.length === 0
     ? `${names} ${held.length === 1 ? 'was' : 'were'} not passed: ${agent} takes no MCP servers. agents.${agent}.mcpServers in your settings changes that.`

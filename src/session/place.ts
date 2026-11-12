@@ -34,6 +34,8 @@ export interface SessionStart {
    * chord's own table says (CHD-441).
    */
   readonly mcpServers?: false | undefined;
+  /** What set `mcpServers`, as `HeldBack`'s `from` says it (CHD-620). */
+  readonly mcpServersFrom?: string | undefined;
 }
 
 /**
@@ -175,7 +177,10 @@ export function placeOf(
             agentCommand: found.agentCommand,
             ...(takesMcpServers(name, found.mcpServers)
               ? {}
-              : { mcpServers: false as const }),
+              : {
+                  mcpServers: false as const,
+                  mcpServersFrom: found.mcpServersFrom,
+                }),
             starting: {
               model: starting(found.model),
               effort: starting(found.effort),

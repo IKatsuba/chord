@@ -45,6 +45,7 @@ import {
 import { parse } from 'shell-quote';
 import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
+import { NO_MCP_SERVERS } from '../src/session/servers.ts';
 import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
 import { validateSelectedRole } from '../src/session/team_selection.ts';
 
@@ -1470,6 +1471,7 @@ test("an agent's mcpServers setting is read from the last file that sets it, tru
     agent: 'openclaw',
     agentCommand: 'oc acp',
     mcpServers: false,
+    mcpServersFrom: '/u.json',
   });
   // Only a boolean: anything else is a problem and is left out.
   expect(
@@ -2484,4 +2486,30 @@ describe('CHD-620 tester: transient MCP startup selection', () => {
       true,
     );
   });
+});
+
+test('what set an agent to take none is kept: the flag by name, else the file (CHD-620)', () => {
+  const layers = [
+    {
+      file: '/p.json',
+      settings: parseSettings(
+        '/p.json',
+        JSON.stringify({ agents: { eve: { mcpServers: false } } }),
+      ).settings,
+    },
+  ];
+  const flags = { agent: 'eve', mcpServers: false } as const;
+
+  expect(resolveStartup(flags, layers, 'claude').mcpServersFrom).toBe(
+    NO_MCP_SERVERS,
+  );
+  expect(
+    resolveStartup({ agent: 'eve' }, layers, 'claude').mcpServersFrom,
+  ).toBe('/p.json');
+  expect(startupOf('eve', { agent: 'eve' }, layers, flags).mcpServersFrom).toBe(
+    NO_MCP_SERVERS,
+  );
+  expect(resumedStartup({ agent: 'eve' }, flags, layers).mcpServersFrom).toBe(
+    NO_MCP_SERVERS,
+  );
 });

@@ -6,6 +6,7 @@ import type {
 import {
   type HeldBack,
   heldBackLine,
+  NO_MCP_SERVERS,
   serversFor,
 } from '../../src/session/servers.ts';
 import { riffInit } from '../../src/riff/adapter.ts';
@@ -358,5 +359,42 @@ describe('riff takes no SSE server (CHD-610)', () => {
     expect(given.heldBack).toEqual([
       expect.objectContaining({ server: 'logs', transport: 'sse' }),
     ]);
+  });
+});
+
+describe('--no-mcp-servers names itself in the start line (CHD-620)', () => {
+  const flagged = (servers: readonly McpServer[], chord?: McpServer) =>
+    serversFor('fake', { http: true }, servers, chord, true, NO_MCP_SERVERS);
+
+  test('every server is held back, each saying the flag set it', () => {
+    const given = flagged([STDIO, HTTP], CHORD);
+
+    expect(given.servers).toStrictEqual([]);
+    expect(given.heldBack.map((each) => each.from)).toStrictEqual([
+      NO_MCP_SERVERS,
+      NO_MCP_SERVERS,
+      NO_MCP_SERVERS,
+    ]);
+  });
+
+  test("the flag held them back, chord's own first, then its cost", () => {
+    expect(heldBackLine(flagged([STDIO, HTTP], CHORD).heldBack)).toBe(
+      '--no-mcp-servers held back 3 MCP servers from fake: chord ' +
+        "(chord's own), docs, search. Without chord's own, fake cannot " +
+        "start other agents or use chord's tools. /mcp lists them.",
+    );
+    expect(heldBackLine(flagged([STDIO]).heldBack)).toBe(
+      '--no-mcp-servers held back 1 MCP server from fake: docs. /mcp lists it.',
+    );
+  });
+
+  test("a file's none keeps its own words", () => {
+    expect(
+      heldBackLine(
+        serversFor('fake', {}, [STDIO], undefined, true, '/p.json').heldBack,
+      ),
+    ).toBe(
+      '1 MCP server was not passed to fake, which takes none: docs. /mcp lists it.',
+    );
   });
 });

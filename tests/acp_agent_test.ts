@@ -4487,7 +4487,7 @@ describe('--no-mcp-servers (CHD-620)', () => {
 
     await onAcp(
       [],
-      async ({ client, cwd, newSession, prompt }) => {
+      async ({ client, cwd, newSession, prompt, lines }) => {
         await team(cwd, agent);
 
         const sessionId = await newSession();
@@ -4495,6 +4495,10 @@ describe('--no-mcp-servers (CHD-620)', () => {
         await client.answerTo(prompt(sessionId, 'mcp'));
         // The agent the command line started: none, chord's own included.
         expect(client.said(sessionId)).toContain('```json\n[]\n```');
+        // Its start line names the flag, carried from the command line.
+        expect(
+          lines.some((line) => line.includes('--no-mcp-servers held back')),
+        ).toBe(true);
 
         await client.answerTo(prompt(sessionId, '/team run other text'));
         await until(() => opened.length === 2);

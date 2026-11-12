@@ -8632,3 +8632,53 @@ npx agents, `cursor-cloud` titled `Cursor Cloud Agents` (pending the owner,
 Q1). The start-failure pin line says "the version this chord pins" for every
 pinned agent, true for the registry's as for this one. No remote marker, no
 `/resume` from `session/list`.
+
+## 2026-11-12 — CHD-622: the owner's answers
+
+The owner answered the design's questions (CHD-622, Q1–Q9):
+
+- The agent is `cursor-cloud`, titled `Cursor Cloud Agents`.
+- Where no keychain exists, `login` refuses and points to
+  `CURSOR_API_KEY`; no key is written to a file.
+- The SDK's own login file is not used: the adapter always passes `apiKey`
+  from `CURSOR_API_KEY` or its keychain entry.
+- "Pushed" is read from the local remote-tracking ref, with no network.
+- MCP servers given to a session anyway are taken, as ACP asks, and the
+  first message says they are unreachable from Cursor's cloud.
+- `@cursor/sdk` is exact-pinned at 1.3.1, an approved exception to
+  AGENTS.md's caret rule: bun.lock does not reach a person's `npx`.
+- The required `node` CI job runs on Node 22 only, from 22.13, with no LTS
+  run.
+- Ship makes one live run against Cursor on the owner's account, tiny
+  prompt, before the stream lands.
+
+The proposed `bun dev release-acp` was not chosen (next entry). The entries
+above marked "pending the owner" for Q2, Q3, Q4 and Q5 stand as proposed,
+and Q1's name is `cursor-cloud`.
+
+## 2026-11-12 — CHD-622: `bun dev release` releases a package when given one (owner, Q6)
+
+Options put to the owner: a command of its own (`bun dev release-acp`); a
+stage set inside `bun dev release`; publishing from CI. The owner chose
+`bun dev release`: chord by default and, given a package, that package
+instead, every stage run against it. This supersedes the "its own release
+command" entry above.
+
+- **Stages.** One stage list in one order; a package runs those that apply.
+  For `cursor-cloud-acp`: install; check (its type check, ESLint on its
+  folder, its tests); compile (`bun build --target=node`, nothing bundled);
+  selftest (the Node smoke on a scratch pack); pack (one tarball, no source
+  archives); publish (`npm publish`, tag `cursor-cloud-acp-v<version>`).
+  natives, sign and notarise do not apply, and with them the arm64-Mac
+  guard. `--only`, `--from` and `--to` naming a stage that does not apply
+  are refused; `--skip` of one changes nothing.
+- **Versions and guards** as chord's, per package: bumps, channels counted
+  from npm's latest stable of that package, a version commit `chore:
+  cursor-cloud-acp v<version>` before any stage, CHD-547's rule, the branch
+  level with origin and no existing tag when publishing, npm authentication
+  on every run, a stopped run finished by a run without a version. `gh` is
+  not required: no GitHub release is proposed.
+- **Pending the owner:** how the package is named (a Cliffy subcommand per
+  workspace package is proposed, which leaves today's `--package` alone),
+  whether the package gets a GitHub release (none proposed), and whether
+  its check stage is its own checks (proposed) or the whole `bun quality`.

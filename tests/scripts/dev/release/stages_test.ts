@@ -591,7 +591,7 @@ if [ "$2" = 'quality' ]; then exit 2; fi
       `echo "git $*" >>"$STATE/ran.log"
 case "$1" in
 symbolic-ref) echo main ;;
-rev-parse) echo fixture-commit ;;
+rev-parse) if [ "$2" = --git-common-dir ]; then echo .git; else echo fixture-commit; fi ;;
 tag) if [ "$2" = '-a' ]; then echo 'fixture tag denied' >&2; exit 2; fi ;;
 esac
 `,

@@ -2,7 +2,7 @@ import eslintComments from '@eslint-community/eslint-plugin-eslint-comments';
 import js from '@eslint/js';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
-import type { ESLint } from 'eslint';
+import type { ESLint, Linter } from 'eslint';
 import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import style from './lint/style.ts';
@@ -27,11 +27,11 @@ const syntax = [
   })),
 ];
 
-export default defineConfig(
-  {
-    // Each package under packages/ is linted by its own config (CHD-623).
-    ignores: ['dist/', 'npm/', 'docs/', '.claude/worktrees/', 'packages/'],
-  },
+/**
+ * The rules every package of the repository is held to; a package's own
+ * eslint.config.ts adds its blocks to them (CHD-622).
+ */
+export const shared = defineConfig(
   js.configs.recommended,
   tseslint.configs.recommended,
   {
@@ -118,26 +118,76 @@ export default defineConfig(
       'style/blank-around-assignment': 'error',
     },
   },
+);
+
+/** A module source shipped code may not import, as a regular expression. */
+export interface Forbidden {
+  readonly source: string;
+  readonly message: string;
+}
+
+/** The repository's tooling: a steps.ts or anything of scripts/ (CHD-623). */
+export const TOOLING: Forbidden = {
+  source: '^\\.\\.?\\/(.*\\/)?(steps\\.ts$|scripts\\/)',
+  message:
+    "Shipped code imports no steps.ts and nothing of scripts/: they are the repository's tooling.",
+};
+
+/**
+ * `files` import none of `forbidden`, in any of an import's forms, a
+ * dynamic one too; they keep the rest of the shared syntax rules.
+ */
+export function forbid(
+  files: string[],
+  forbidden: readonly Forbidden[],
+): Linter.Config {
+  return {
+    files,
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...syntax,
+        ...forbidden.flatMap(({ source, message }) =>
+          imports.map((node) => ({
+            selector: `${node} > Literal.source[value=/${source}/]`,
+            message,
+          })),
+        ),
+      ],
+    },
+  };
+}
+
+export default defineConfig(
+  {
+    // Each package under packages/ is linted by its own config (CHD-623).
+    ignores: ['dist/', 'npm/', 'docs/', '.claude/worktrees/', 'packages/'],
+  },
+  shared,
   // Below the interface stdout may be the protocol: under `chord acp` a
   // `console.log` is a line no client can parse.
   {
     files: ['src/session/**', 'src/acp/**', 'src/server/**'],
     rules: { 'no-console': 'error' },
   },
-  // A package's code ships; its steps.ts and the scripts are the
-  // repository's tooling, and never reach it (CHD-623).
-  {
-    files: ['src/**', 'packages/*/src/**'],
-    rules: {
-      'no-restricted-syntax': [
-        'error',
-        ...syntax,
-        ...imports.map((node) => ({
-          selector: `${node} > Literal.source[value=/^\\.\\.?\\/(.*\\/)?(steps\\.ts$|scripts\\/)/]`,
-          message:
-            "Shipped code imports no steps.ts and nothing of scripts/: they are the repository's tooling.",
-        })),
-      ],
-    },
-  },
+  // chord's source imports no tooling (CHD-623), and nothing of
+  // cursor-cloud-acp or what it is built on: the package runs on Node under
+  // npx, and its SDK must not enter the binary (CHD-622).
+  forbid(
+    ['src/**'],
+    [
+      TOOLING,
+      {
+        source:
+          '^(@cursor\\/sdk|@napi-rs\\/keyring|@chorded\\/cursor-cloud-acp)(\\/|$)',
+        message:
+          "chord's source imports nothing of cursor-cloud-acp or its SDK and keyring: they never enter the binary.",
+      },
+      {
+        source: '(^|\\/)packages\\/',
+        message:
+          "chord's source imports nothing of packages/: each is a package of its own.",
+      },
+    ],
+  ),
 );

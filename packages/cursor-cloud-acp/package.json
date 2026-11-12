@@ -1,0 +1,39 @@
+{
+  "name": "@chorded/cursor-cloud-acp",
+  "version": "0.1.0",
+  "description": "Cursor's cloud agents as an ACP v1 agent on stdin and stdout",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "cursor-cloud-acp": "dist/bin.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=22.13"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IKatsuba/chord.git",
+    "directory": "packages/cursor-cloud-acp"
+  },
+  "homepage": "https://github.com/IKatsuba/chord/tree/main/packages/cursor-cloud-acp#readme",
+  "bugs": {
+    "url": "https://github.com/IKatsuba/chord/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@agentclientprotocol/sdk": "^2.2.0",
+    "@cursor/sdk": "1.3.1",
+    "@napi-rs/keyring": "^2.1.2",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.0"
+  }
+}

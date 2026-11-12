@@ -701,7 +701,7 @@ describe('a bare release', () => {
     );
 
     expect(result.stderr).toBe(
-      'release: not clear which package to release: bun dev release <package> (chord)\n',
+      'release: not clear which package to release: bun dev release <package> (chord, cursor-cloud-acp)\n',
     );
     expect(result.stdout).toBe('');
     expect(result.status).toBe(1);

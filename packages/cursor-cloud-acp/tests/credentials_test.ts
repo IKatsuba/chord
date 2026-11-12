@@ -92,3 +92,37 @@ describe('apiKey', () => {
     expect(from.store.loads).toBe(2);
   });
 });
+
+describe('CHD-622 tester: independent credential resolutions', () => {
+  test('concurrent sessions can finish in reverse order with their own keys', async () => {
+    const first = Promise.withResolvers<StoredSdkCredentials | undefined>();
+    const second = Promise.withResolvers<StoredSdkCredentials | undefined>();
+    const pending = [first.promise, second.promise];
+    const from = source(STORED);
+    let next = 0;
+
+    from.store.load = () => pending[next++]!;
+
+    const a = apiKey(from);
+    const b = apiKey(from);
+
+    second.resolve({ ...STORED, apiKey: 'key_second' });
+    expect(await b).toBe('key_second');
+    first.resolve({ ...STORED, apiKey: 'key_first' });
+    expect(await a).toBe('key_first');
+    expect(next).toBe(2);
+  });
+
+  test('an environment key bypasses a failed store and a later empty value reads it again', async () => {
+    const failure = new KeychainError('The keychain refused: locked.');
+    const from = source(failure, { CURSOR_API_KEY: 'key_env' });
+
+    expect(await apiKey(from)).toBe('key_env');
+    expect(from.store.loads).toBe(0);
+
+    from.env.CURSOR_API_KEY = '';
+
+    await expect(apiKey(from)).rejects.toBe(failure);
+    expect(from.store.loads).toBe(1);
+  });
+});

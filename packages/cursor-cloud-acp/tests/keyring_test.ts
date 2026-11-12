@@ -152,3 +152,22 @@ describe('the store', () => {
     }
   });
 });
+
+describe('CHD-622 tester: stored credential shape', () => {
+  test.each([
+    ['null', null],
+    ['missing backend', { ...STORED, backendUrl: undefined }],
+    ['missing creation time', { ...STORED, createdAtMs: undefined }],
+    ['non-string backend', { ...STORED, backendUrl: 1 }],
+    ['non-string key', { ...STORED, apiKey: null }],
+    ['non-number expiry', { ...STORED, apiKeyExpiresAtMs: 'tomorrow' }],
+    ['null expiry', { ...STORED, apiKeyExpiresAtMs: null }],
+    ['non-string email', { ...STORED, email: 1 }],
+  ])('%s is signed out without changing the entry', async (_, value) => {
+    const password = JSON.stringify(value);
+    const entry = fakeEntry(password);
+
+    expect(await keyringStore(() => entry).load()).toBeUndefined();
+    expect(entry.password).toBe(password);
+  });
+});

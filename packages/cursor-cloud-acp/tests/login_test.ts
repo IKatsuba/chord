@@ -207,3 +207,47 @@ describe('status', () => {
     ]);
   });
 });
+
+describe('CHD-622 tester: sign-in failure boundaries', () => {
+  test('a hanging preflight ends with keychain guidance without opening login', async () => {
+    const at = context();
+    const store = keyringStore(
+      () => ({
+        getPassword: (signal) =>
+          new Promise<string | null>((_, reject) =>
+            signal?.addEventListener('abort', () => reject(signal.reason)),
+          ),
+        setPassword: () => Promise.reject(new Error('never saved')),
+        deletePassword: () => Promise.reject(new Error('never deleted')),
+      }),
+      20,
+    );
+
+    expect(await login({ ...at.context, store })).toBe(1);
+    expect(at.logins).toEqual([]);
+    expect(at.out).toEqual([]);
+    expect(at.err).toEqual([
+      'No keychain to keep the key in: The keychain did not answer within 0.02 s. Set CURSOR_API_KEY instead.',
+    ]);
+  });
+
+  test('status uses the injected store and an empty environment value adds no notice', async () => {
+    const stores: unknown[] = [];
+    const at = context(
+      {
+        status: (options) => {
+          stores.push(options?.store);
+
+          return Promise.resolve({ status: 'logged-out' as const });
+        },
+      },
+      {},
+      { CURSOR_API_KEY: '' },
+    );
+
+    expect(await status(at.context)).toBe(0);
+    expect(stores).toEqual([at.context.store]);
+    expect(at.out).toEqual(['Not signed in to Cursor.']);
+    expect(at.err).toEqual([]);
+  });
+});

@@ -1,7 +1,8 @@
 /**
  * The commit a release given a new version makes before any stage
- * (CHD-412): package.json's version written and committed alone, so every
- * stage, which reads package.json, builds and packs that version. A run
+ * (CHD-412): the package's package.json's version written and committed
+ * alone, with bun.lock where Bun records it, so every stage, which reads
+ * package.json, builds and packs that version. A run
  * that publishes pushes it to origin's main, or its channel's branch, and
  * drops it if the push fails; any other run drops it at the end, leaving the
  * branch as it found it. Until it is pushed or dropped, Ctrl+C, SIGTERM and
@@ -11,18 +12,26 @@ import process from 'node:process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { channelOf } from '../../../src/channel.ts';
-import { die, type Release, run, said } from './lib.ts';
+import { die, type Release, type ReleasePackage, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 
-/** Commits package.json at `version` and answers the commit it was made on. */
-export function commitVersion(release: Release, version: string): string {
+/**
+ * Commits the package's package.json at `version`, with bun.lock where Bun
+ * records it, and answers the commit it was made on.
+ */
+export function commitVersion(
+  release: Release,
+  of: ReleasePackage,
+  version: string,
+): string {
   const head = run(release, 'git', ['rev-parse', 'HEAD']);
 
   if (head.status !== 0) {
     die(`git rev-parse HEAD failed: ${said(head.stderr)}`);
   }
 
-  const file = join(release.root, 'package.json');
+  const manifest = join(of.folder, 'package.json');
+  const file = join(release.root, manifest);
   const before = readFileSync(file, 'utf8');
   // Only the value replaced, so the rest of the file stays as Prettier laid it.
   const after = before.replace(
@@ -32,26 +41,64 @@ export function commitVersion(release: Release, version: string): string {
 
   writeFileSync(file, after);
 
-  if (packageVersion(release) !== version) {
+  if (packageVersion(release, of.folder) !== version) {
     writeFileSync(file, before);
-    die(`package.json's version could not be set to ${version}`);
+    die(`${manifest}'s version could not be set to ${version}`);
   }
 
+  const paths = [
+    manifest,
+    ...locked(release, of, () => writeFileSync(file, before)),
+  ];
   const committed = run(release, 'git', [
     'commit',
     '-q',
     '-m',
-    `chore: chord v${version}`,
+    `chore: ${of.name} v${version}`,
     '--',
-    'package.json',
+    ...paths,
   ]);
 
   if (committed.status !== 0) {
     writeFileSync(file, before);
-    die(`git commit of package.json failed: ${said(committed.stderr)}`);
+    run(release, 'git', ['checkout', '-q', '--', ...paths.slice(1)]);
+    die(
+      `git commit of ${paths.join(' and ')} failed: ${said(committed.stderr)}`,
+    );
   }
 
   return said(head.stdout);
+}
+
+/**
+ * bun.lock, when Bun's own lockfile install changed it: Bun records a
+ * workspace package's version there, never the root's (CHD-623), so only a
+ * workspace package's version needs it. A failure undoes the package.json
+ * edit through `undo` before the release dies.
+ */
+function locked(
+  release: Release,
+  of: ReleasePackage,
+  undo: () => void,
+): string[] {
+  if (of.folder === '.') {
+    return [];
+  }
+
+  if (run(release, 'bun', ['install', '--lockfile-only']).status !== 0) {
+    undo();
+    run(release, 'git', ['checkout', '-q', '--', 'bun.lock']);
+    die('bun install --lockfile-only failed');
+  }
+
+  const changed = run(release, 'git', [
+    'status',
+    '--porcelain',
+    '--',
+    'bun.lock',
+  ]);
+
+  return said(changed.stdout) === '' ? [] : ['bun.lock'];
 }
 
 /** The signals a held version commit is dropped on. */
@@ -122,6 +169,7 @@ export function holdVersion(release: Release, head: string): Held {
  */
 export function pushVersion(
   release: Release,
+  of: ReleasePackage,
   version: string,
   held: Held,
 ): void {
@@ -131,7 +179,7 @@ export function pushVersion(
   if (pushed.status !== 0) {
     held.drop();
     die(
-      `git push origin ${branch} failed, so chore: chord v${version} is dropped: ${said(pushed.stderr)}`,
+      `git push origin ${branch} failed, so chore: ${of.name} v${version} is dropped: ${said(pushed.stderr)}`,
     );
   }
 

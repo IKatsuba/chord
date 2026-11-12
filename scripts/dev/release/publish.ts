@@ -1,9 +1,10 @@
 /**
- * The release's last stage: the packed tarballs published to npm, the
- * platform packages first, then, once npm answers for each, the main one,
- * whose exact-version optionalDependencies must resolve; then, once npm
- * answers for all five, the version tagged and the tag pushed, and a draft
- * GitHub release made of it with the source archives. What npm has already is
+ * The release's last stage, from the package's publish data: the packed
+ * tarballs published to npm in its order, then, once npm answers for each,
+ * the main one (chord's, whose exact-version optionalDependencies must
+ * resolve); then, once npm answers for all, the version tagged in the
+ * package's form and the tag pushed, and for chord a draft GitHub release
+ * made of it with the source archives. What npm has already is
  * skipped, so a stopped publish is finished by running it again. Never
  * unpublish, and never publish the draft: that is the owner's.
  *
@@ -16,30 +17,35 @@ import { join } from 'node:path';
 import { channelOf } from '../../../src/channel.ts';
 import {
   die,
+  mainName,
   npm,
-  type Package,
-  PLATFORMS,
   published,
   type Release,
+  type ReleasePackage,
   run,
   said,
+  tagName,
   waitPublished,
 } from './lib.ts';
 import { draftRelease, fetchedSource } from './source.ts';
 import { checkSum } from './sums.ts';
 
-/** Where the packed tarballs and their SHA256SUMS are. */
-export function tarballs(release: Release): string {
-  return join(release.root, 'dist', 'release', 'tgz');
+/** Where `folder`'s package leaves its packed tarballs and their SHA256SUMS. */
+export function tarballs(release: Release, folder: string): string {
+  return join(release.root, folder, 'dist', 'release', 'tgz');
 }
 
-/** The tarball of `name` at `version`, where pack leaves it. */
+/** The tarball of the npm package `name` at `version`, as npm pack names it. */
 export function tarball(
   release: Release,
-  name: Package,
+  folder: string,
+  name: string,
   version: string,
 ): string {
-  return join(tarballs(release), `chorded-${name}-${version}.tgz`);
+  return join(
+    tarballs(release, folder),
+    `${name.replace(/^@/, '').replace('/', '-')}-${version}.tgz`,
+  );
 }
 
 /**
@@ -59,25 +65,29 @@ export interface PublishOptions {
 }
 
 /**
- * Publishes what npm does not have yet and tags the version once all five
- * answer.
+ * Publishes what npm does not have yet of `of`'s npm names, the main one
+ * last, and tags the version once all answer; then, for a package with a
+ * GitHub release, drafts it.
  */
 export async function publish(
   release: Release,
+  of: ReleasePackage,
   { version }: PublishOptions,
 ): Promise<void> {
+  const main = mainName(of);
+  const tag = tagName(of, version);
   // Before anything npm cannot take back.
-  const archives = fetchedSource(release);
+  const archives = of.publish.githubRelease ? fetchedSource(release) : [];
   let asked = false;
 
-  const publishOne = (name: Package) => {
+  const publishOne = (name: string) => {
     if (published(release, name, version)) {
-      release.out(`already published: @chorded/${name}@${version}`);
+      release.out(`already published: ${name}@${version}`);
 
       return;
     }
 
-    const file = tarball(release, name, version);
+    const file = tarball(release, of.folder, name, version);
 
     if (!existsSync(file)) {
       die(`no ${file} to publish; nothing of this run is left to resume from`);
@@ -108,49 +118,43 @@ export async function publish(
     }
   };
 
-  // The main package only once every platform package answers at the
-  // version: published while one is still in npm's validation, it installs
-  // with no binary, and `chord upgrade` prunes the old one on the way.
-  const publishMain = async () => {
-    for (const name of PLATFORMS) {
-      if (!(await waitPublished(release, name, version))) {
-        die(
-          `@chorded/${name}@${version} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun dev release\` once \`npm view @chorded/${name}@${version} version\` answers, and it resumes from there`,
-        );
-      }
-    }
-
-    publishOne('chord');
-
-    if (!(await waitPublished(release, 'chord', version))) {
-      die(
-        `@chorded/chord@${version} did not answer npm view in 15 minutes; v${version} was not tagged. Once \`npm view @chorded/chord@${version} version\` answers, tag it with: git tag -a v${version} -m "chord v${version}" && git push origin v${version}`,
-      );
-    }
-  };
-
-  for (const name of PLATFORMS) {
+  for (const name of of.publish.npm.slice(0, -1)) {
     publishOne(name);
   }
 
-  await publishMain();
-  tag(release, version);
-  draftRelease(release, version, archives);
+  // The main package only once every other answers at the version: chord's,
+  // published while a platform package is still in npm's validation,
+  // installs with no binary, and `chord upgrade` prunes the old one on the
+  // way.
+  for (const name of of.publish.npm.slice(0, -1)) {
+    if (!(await waitPublished(release, name, version))) {
+      die(
+        `${name}@${version} did not answer npm view in 15 minutes; ${main} was not published. Rerun \`bun dev release ${of.name}\` once \`npm view ${name}@${version} version\` answers, and it resumes from there`,
+      );
+    }
+  }
+
+  publishOne(main);
+
+  if (!(await waitPublished(release, main, version))) {
+    die(
+      `${main}@${version} did not answer npm view in 15 minutes; ${tag} was not tagged. Once \`npm view ${main}@${version} version\` answers, tag it with: git tag -a ${tag} -m "${of.name} v${version}" && git push origin ${tag}`,
+    );
+  }
+
+  tagged(release, tag, `${of.name} v${version}`);
+
+  if (of.publish.githubRelease) {
+    draftRelease(release, version, tag, `${of.name} ${tag}`, archives);
+  }
 }
 
-/** The version tagged, annotated, and the tag pushed to origin. */
-function tag(release: Release, version: string): void {
-  const name = `v${version}`;
-  const tagged = run(release, 'git', [
-    'tag',
-    '-a',
-    name,
-    '-m',
-    `chord ${name}`,
-  ]);
+/** `name` made, annotated with `message`, and pushed to origin. */
+function tagged(release: Release, name: string, message: string): void {
+  const made = run(release, 'git', ['tag', '-a', name, '-m', message]);
 
-  if (tagged.status !== 0) {
-    die(`git tag -a ${name} failed: ${said(tagged.stderr)}`);
+  if (made.status !== 0) {
+    die(`git tag -a ${name} failed: ${said(made.stderr)}`);
   }
 
   const pushed = run(release, 'git', ['push', 'origin', name]);

@@ -474,7 +474,7 @@ export async function selftest(
       mkdirSync(join(scratch, dir));
     }
 
-    const want = packageVersion(release);
+    const want = packageVersion(release, '.');
     const version = chord(['--version']);
 
     if (version.status !== 0) {

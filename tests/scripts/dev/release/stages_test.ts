@@ -7,7 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import {
   PLATFORMS,
   type Release,
@@ -24,6 +24,7 @@ import type { FoundPackage } from '../../../../scripts/dev/steps.ts';
 import chordSteps from '../../../../steps.ts';
 
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
+import { tarball, tarballs } from '../../../../scripts/dev/release/publish.ts';
 import {
   executable,
   fetchedArchives,
@@ -374,7 +375,7 @@ test('a stopped publish resumes without building, and prints the version last', 
   await released({});
 
   expect(at.out[0]).toBe(
-    `resuming ${VERSION}: a platform package is published, @chorded/chord is not`,
+    `resuming ${VERSION}: a package before @chorded/chord is published, @chorded/chord is not`,
   );
   expect(at.out.at(-1)).toBe(VERSION);
   expect(ran().some((line) => /^(bun|security|xcrun) /.test(line))).toBe(false);
@@ -803,7 +804,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
 
     for (const options of [{}, { dryRun: true }]) {
       expect(await died(releasedAt('minor', options))).toBe(
-        '@chorded/chord@9.9.9 is not published yet; `bun dev release` without a version finishes it',
+        '@chorded/chord@9.9.9 is not published yet; `bun dev release chord` without --bump finishes it',
       );
     }
 
@@ -1170,7 +1171,7 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
       await publishing(undefined, channel);
 
       expect(at.out[0]).toBe(
-        `resuming ${NEXT}: a platform package is published, @chorded/chord is not`,
+        `resuming ${NEXT}: a package before @chorded/chord is published, @chorded/chord is not`,
       );
       expect(at.out.at(-1)).toBe(NEXT);
       expect(ran().some((line) => /^(bun|security|xcrun) /.test(line))).toBe(
@@ -1190,7 +1191,7 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
       ['a bump', 'major'],
     ])('refuses %s, as it is not on npm', async (_name, wanted) => {
       expect(await died(publishing(wanted, 'next'))).toBe(
-        `@chorded/chord@${NEXT} is not published yet; \`bun dev release\` without a version finishes it`,
+        `@chorded/chord@${NEXT} is not published yet; \`bun dev release chord\` without --bump finishes it`,
       );
     });
 
@@ -1631,6 +1632,263 @@ describe('tester: CHD-577 branch and cleanup boundaries', () => {
     expect(ran()).toEqual(['npm view @chorded/chord dist-tags.latest']);
   });
 });
+
+describe.each([
+  {
+    name: 'five',
+    folder: '.',
+    npm: [
+      '@chorded/five-a',
+      '@chorded/five-b',
+      '@chorded/five-c',
+      '@chorded/five-d',
+      '@chorded/five',
+    ],
+    tag: 'v{version}',
+    githubRelease: true as const,
+  },
+  {
+    name: 'one',
+    folder: 'packages/one',
+    npm: ['@chorded/one'],
+    tag: 'one-v{version}',
+  },
+])(
+  "a fixture package's release: $name (CHD-623)",
+  ({ name, folder, npm, tag, githubRelease }) => {
+    const NEXT = '9.9.10';
+    const main = npm.at(-1)!;
+    const tagged = (version: string) => tag.replace('{version}', version);
+    const publish = {
+      name: 'publish' as const,
+      npm,
+      tag,
+      ...(githubRelease ? { githubRelease } : {}),
+    };
+    /** A stage that logs its name, as the fake commands log theirs. */
+    const logged = (stage: string) => async () => {
+      await Promise.resolve();
+      writeFileSync(join(at.place, 'ran.log'), `stage ${stage}\n`, {
+        flag: 'a',
+      });
+    };
+
+    const found: FoundPackage = {
+      name,
+      folder,
+      steps: {
+        checks: [],
+        lint: [],
+        release: [
+          { name: 'build', about: 'b', versioned: true, run: logged('build') },
+          {
+            name: 'sign',
+            about: 's',
+            machine: { platform: 'darwin', arch: 'arm64' },
+            run: logged('sign'),
+          },
+          {
+            name: 'pack',
+            about: 'p',
+            run: async (release, version) => {
+              await logged('pack')();
+
+              const dir = tarballs(release, folder);
+
+              mkdirSync(dir, { recursive: true });
+
+              const files = npm.map((each) =>
+                basename(tarball(release, folder, each, version)),
+              );
+
+              for (const file of files) {
+                writeFileSync(join(dir, file), file);
+              }
+
+              recordSums(dir, files);
+            },
+          },
+          publish,
+        ],
+      },
+    };
+    const stages = found.steps.release.map((stage) => stage.name);
+
+    beforeEach(() => {
+      // Its package.json and bun.lock, as a workspace has them, committed and
+      // on origin; dist/ and the release's output are ignored.
+      if (folder !== '.') {
+        mkdirSync(join(at.root, folder), { recursive: true });
+        writeFileSync(
+          join(at.root, folder, 'package.json'),
+          JSON.stringify({ name: main, version: VERSION }),
+        );
+      }
+
+      writeFileSync(join(at.root, 'bun.lock'), '{}\n');
+      writeFileSync(join(at.root, '.gitignore'), 'dist/\n*/*/dist/\n');
+      git(at.root, 'add', '-A');
+      git(at.root, 'commit', '-q', '-m', 'the package');
+      git(at.root, 'push', '-q', 'origin', 'main');
+      // The version npm has, so a new one may follow it.
+      writeFileSync(
+        join(
+          at.place,
+          'published',
+          `${main.slice('@chorded/'.length)}@${VERSION}`,
+        ),
+        '',
+      );
+      // Bun's lockfile install records a workspace package's version.
+      at.fake(
+        'bun',
+        `echo "bun $*" >>"$STATE/ran.log"
+if [ "$1 $2" = 'install --lockfile-only' ]; then echo "$(cat packages/one/package.json)" >bun.lock; fi
+`,
+      );
+      at.fake(
+        'npm',
+        `echo "npm $*" >>"$STATE/ran.log"
+case "$1" in
+whoami) echo owner ;;
+view)
+  if [ "$3" = dist-tags.latest ]; then echo "\${LATEST-9.9.9}"; exit 0; fi
+  spec=\${2#@chorded/}
+  if [ -f "$STATE/published/$spec" ]; then echo "\${spec##*@}"; exit 0; fi
+  echo 'npm error code E404' >&2
+  exit 1
+  ;;
+publish)
+  file=$(basename "$4" .tgz)
+  name=\${file#chorded-}
+  touch "$STATE/published/\${name%-*}@\${name##*-}"
+  ;;
+esac
+`,
+      );
+      fetchedArchives(at.root);
+    });
+
+    function run(
+      options: ReleaseOptions,
+      bump?: string,
+      machine = MAC,
+    ): Promise<void> {
+      return runRelease(
+        context(),
+        found,
+        selectStages({ name, stages }, options),
+        options,
+        machine,
+        bump,
+      );
+    }
+
+    function git_(...args: string[]): string {
+      return String(
+        spawnSync('git', args, { cwd: at.root, encoding: 'utf8' }).stdout,
+      ).trim();
+    }
+
+    test('a bump commits its package.json as chore: <package> v<version>, and publishes its npm names, the main one last, then tags', async () => {
+      await run({}, 'patch');
+
+      expect(git_('log', '-1', '--format=%s', 'origin/main')).toBe(
+        `chore: ${name} v${NEXT}`,
+      );
+      expect(
+        git_('show', '--name-only', '--format=', 'origin/main').split('\n'),
+      ).toStrictEqual(
+        folder === '.'
+          ? ['package.json']
+          : ['bun.lock', `${folder}/package.json`],
+      );
+      expect(
+        ran()
+          .filter((line) => line.startsWith('npm publish'))
+          .map((line) => line.split(' ').at(-1)!.split('/').at(-1)),
+      ).toStrictEqual(
+        npm.map(
+          (each) => `${each.replace('@', '').replace('/', '-')}-${NEXT}.tgz`,
+        ),
+      );
+      // On origin, and on the version commit.
+      expect(git_('ls-remote', '--tags', 'origin', tagged(NEXT))).toEndWith(
+        `refs/tags/${tagged(NEXT)}`,
+      );
+      expect(git_('rev-parse', `${tagged(NEXT)}^{commit}`)).toBe(
+        git_('rev-parse', 'origin/main'),
+      );
+      expect(at.out.at(-1)).toBe(NEXT);
+    });
+
+    test('a GitHub release, and gh at all, only for a package that has one', async () => {
+      await run({}, 'patch');
+
+      const gh = existsSync(join(at.place, 'gh.log'))
+        ? readFileSync(join(at.place, 'gh.log'), 'utf8').trim().split('\n')
+        : [];
+
+      // The draft's archives after --notes are pack's, checked elsewhere.
+      expect(gh.map((line) => line.split(' --notes')[0])).toStrictEqual(
+        githubRelease
+          ? [
+              'auth status',
+              `release create ${tagged(NEXT)} --draft --verify-tag --title ${name} ${tagged(NEXT)}`,
+            ]
+          : [],
+      );
+    });
+
+    test('a new version needs its versioned stage', async () => {
+      expect(await died(run({ skip: ['build'] }, 'patch'))).toBe(
+        `a new version needs the build stage: ${NEXT} is not package.json's ${VERSION}`,
+      );
+    });
+
+    test('a stage bound to a machine is refused elsewhere only when selected', async () => {
+      const linux = { platform: 'linux', arch: 'x64' };
+
+      expect(await died(run({ only: ['sign'] }, undefined, linux))).toBe(
+        'sign runs only on an arm64 Mac; this is linux-x64',
+      );
+      await run({ skip: ['sign'], dryRun: true }, 'patch', linux);
+      expect(ran()).toContain('stage pack');
+    });
+
+    test('CHD-547: a new version waits for npm to have the main npm name at the current one', async () => {
+      rmSync(join(at.place, 'published'), { recursive: true });
+      mkdirSync(join(at.place, 'published'));
+
+      expect(await died(run({}, 'patch'))).toBe(
+        `${main}@${VERSION} is not published yet; \`bun dev release ${name}\` without --bump finishes it`,
+      );
+    });
+
+    test("a channel's bump counts from its main npm name's latest stable, and its dry run shows each npm name's arguments", async () => {
+      git(at.root, 'checkout', '-q', '-b', 'next');
+
+      await runRelease(
+        context({ LATEST: '9.9.9' }),
+        found,
+        selectStages({ name, stages }, { dryRun: true, skip: ['sign'] }),
+        { dryRun: true, skip: ['sign'], channel: 'next' },
+        MAC,
+        'major',
+      );
+
+      expect(ran()).toContain(`npm view ${main} dist-tags.latest`);
+      expect(
+        at.out.filter((line) => line.startsWith('dry run: npm ')),
+      ).toStrictEqual(
+        npm.map(
+          (each) =>
+            `dry run: npm publish --access public ${tarball(at.release, folder, each, '10.0.0-next.0')} --tag next`,
+        ),
+      );
+    });
+  },
+);
 
 describe('tester: CHD-623 selected stage readiness', () => {
   test('shared readiness is awaited once before selected stages run in package order', async () => {

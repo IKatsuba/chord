@@ -17,6 +17,7 @@ import {
   PLATFORMS,
   type Release,
   ReleaseError,
+  type ReleasePackage,
 } from '../../../../scripts/dev/release/lib.ts';
 import { authenticate } from '../../../../scripts/dev/release/authenticate.ts';
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
@@ -26,6 +27,8 @@ import {
 } from '../../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import { parse } from 'shell-quote';
+import { isPublish, type PackageSteps } from '../../../../scripts/dev/steps.ts';
+import chordSteps from '../../../../steps.ts';
 import {
   executable,
   fetchedArchives,
@@ -40,6 +43,13 @@ import {
 
 const VERSION = '9.9.9';
 const TAG = `v${VERSION}`;
+const steps: PackageSteps = chordSteps;
+/** chord as the release reads it: its root folder and publish data. */
+const CHORD: ReleasePackage = {
+  name: 'chord',
+  folder: '.',
+  publish: steps.release.find(isPublish)!,
+};
 
 // npm's registry as files under the state directory: published/NAME is a
 // package npm took, late/NAME the views it still misses after that, as one in
@@ -201,10 +211,10 @@ function context(): Release {
 
 /** A release that publishes, as preflight then publish run it: true once it ends. */
 async function release(): Promise<boolean> {
-  const found = preflight(context(), { dryRun: false, publish: true });
+  const found = preflight(context(), CHORD, { dryRun: false, publish: true });
 
   authenticate(context());
-  await publish(context(), { version: found.version });
+  await publish(context(), CHORD, { version: found.version });
 
   return true;
 }
@@ -325,7 +335,7 @@ describe('a resumed release', () => {
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '1000');
 
     expect(await died(release)).toStartWith(
-      `@chorded/chord-linux-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun dev release\` once`,
+      `@chorded/chord-linux-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun dev release chord\` once`,
     );
     expect(err.at(-1)).toContain('(60/60)');
     // No sleep after the last miss.
@@ -341,9 +351,9 @@ describe('a resumed release', () => {
 
     out = [];
 
-    expect(preflight(context(), { dryRun: false, publish: true }).mode).toBe(
-      'resume',
-    );
+    expect(
+      preflight(context(), CHORD, { dryRun: false, publish: true }).mode,
+    ).toBe('resume');
     expect(await release()).toBeTrue();
 
     for (const name of PLATFORMS) {
@@ -453,7 +463,7 @@ describe('preflight', () => {
   test('a fresh version', () => {
     rmSync(join(state, 'published', 'chord-darwin-arm64'));
 
-    expect(preflight(context(), fresh)).toStrictEqual({
+    expect(preflight(context(), CHORD, fresh)).toStrictEqual({
       mode: 'fresh',
       version: VERSION,
     });
@@ -462,7 +472,7 @@ describe('preflight', () => {
   test('refuses a tree that is not clean, untracked files included', async () => {
     writeFileSync(join(repo, 'stray'), '');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       'the tree is not clean:\n?? stray',
     );
   });
@@ -471,7 +481,7 @@ describe('preflight', () => {
     writeFileSync(join(repo, 'package.json'), '{}');
     git(repo, 'commit', '-q', '-am', 'no version');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       'package.json has no version',
     );
   });
@@ -479,14 +489,16 @@ describe('preflight', () => {
   test('refuses a version the main package has', async () => {
     publishedAlready('chord');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       `@chorded/chord@${VERSION} is on npm already`,
     );
   });
 
   test('a dry run does not resume', async () => {
     expect(
-      await died(() => preflight(context(), { dryRun: true, publish: false })),
+      await died(() =>
+        preflight(context(), CHORD, { dryRun: true, publish: false }),
+      ),
     ).toBe(
       `--dry-run does not resume a stopped publish: @chorded/chord-darwin-arm64@${VERSION} is published`,
     );
@@ -494,7 +506,9 @@ describe('preflight', () => {
 
   test('a run without publish does not resume, and says to include it', async () => {
     expect(
-      await died(() => preflight(context(), { dryRun: false, publish: false })),
+      await died(() =>
+        preflight(context(), CHORD, { dryRun: false, publish: false }),
+      ),
     ).toBe(
       `a run without publish does not resume a stopped publish: @chorded/chord-darwin-arm64@${VERSION} is published; include publish`,
     );
@@ -503,7 +517,7 @@ describe('preflight', () => {
   test('eligibility does not attempt authentication', () => {
     writeFileSync(join(state, 'logged-out'), '');
 
-    expect(preflight(context(), fresh).mode).toBe('resume');
+    expect(preflight(context(), CHORD, fresh).mode).toBe('resume');
     expect(lines('npm.log').includes('whoami')).toBe(false);
   });
 
@@ -512,15 +526,15 @@ describe('preflight', () => {
     git(repo, 'checkout', '-q', '-b', 'topic');
     git(repo, 'tag', TAG);
 
-    expect(preflight(context(), { dryRun: true, publish: false }).mode).toBe(
-      'fresh',
-    );
+    expect(
+      preflight(context(), CHORD, { dryRun: true, publish: false }).mode,
+    ).toBe('fresh');
   });
 
   test('a run that publishes refuses a branch other than main', async () => {
     git(repo, 'checkout', '-q', '-b', 'topic');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       'a release that publishes runs from main; HEAD is topic',
     );
   });
@@ -531,7 +545,7 @@ describe('preflight', () => {
     const main = git(repo, 'rev-parse', 'main');
     const behind = git(repo, 'rev-parse', 'origin/main');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       `main is not origin/main: main is ${main}, origin/main is ${behind}`,
     );
   });
@@ -543,7 +557,7 @@ describe('preflight', () => {
     git(other, 'commit', '-q', '--allow-empty', '-m', 'elsewhere');
     git(other, 'push', '-q', 'origin', 'main');
 
-    expect(await died(() => preflight(context(), fresh))).toStartWith(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toStartWith(
       'main is not origin/main:',
     );
   });
@@ -551,7 +565,7 @@ describe('preflight', () => {
   test('a run that publishes refuses a version tagged here', async () => {
     git(repo, 'tag', TAG);
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       `${TAG} is a tag already`,
     );
   });
@@ -565,7 +579,7 @@ describe('preflight', () => {
     git(other, 'tag', TAG);
     git(other, 'push', '-q', 'origin', TAG);
 
-    expect(await died(() => preflight(context(), fresh))).toStartWith(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toStartWith(
       `${TAG} is a tag on origin already: `,
     );
   });
@@ -845,7 +859,7 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
     executable(join(bin, 'gh'), '#!/bin/bash\necho nope >&2\nexit 1\n');
 
     const said = await died(() =>
-      preflight(context(), { dryRun: false, publish: true }),
+      preflight(context(), CHORD, { dryRun: false, publish: true }),
     );
 
     expect(said).toContain('gh auth status');
@@ -859,7 +873,9 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
 
     if (!existsSync('/usr/bin/gh') && !existsSync('/bin/gh')) {
       expect(
-        await died(() => preflight(gone, { dryRun: false, publish: true })),
+        await died(() =>
+          preflight(gone, CHORD, { dryRun: false, publish: true }),
+        ),
       ).toContain('gh auth status');
     }
   });
@@ -870,9 +886,9 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
     rmSync(join(state, 'published'), { recursive: true });
     mkdirSync(join(state, 'published'));
 
-    expect(preflight(context(), { dryRun: true, publish: false }).mode).toBe(
-      'fresh',
-    );
+    expect(
+      preflight(context(), CHORD, { dryRun: true, publish: false }).mode,
+    ).toBe('fresh');
   });
 });
 

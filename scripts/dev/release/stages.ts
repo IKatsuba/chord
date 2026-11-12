@@ -1,11 +1,12 @@
 /**
- * `bun dev release`: the release, on the owner's arm64 Mac, not in CI,
- * as stages run in order, each checked before the next. Build every binary,
- * sign the macOS ones and the native libraries they embed, self-test,
- * notarise, pack, verify the installed copies, and publish to npm: the
- * platform packages, then, once npm answers for each, the main one. The last
- * line printed is the published version, printed only when everything held
- * and the version is tagged.
+ * `bun dev release <package>`: one package's release, not in CI, as the
+ * stages of its steps.ts run in order, each checked before the next.
+ * chord's, on the owner's arm64 Mac, builds every binary, signs the macOS
+ * ones and the native libraries they embed, self-tests, notarises, packs,
+ * verifies the installed copies, and publishes to npm: the platform
+ * packages, then, once npm answers for each, the main one. The last line
+ * printed is the published version, printed only when everything held and
+ * the version is tagged.
  */
 import { join } from 'node:path';
 import { authenticate } from './authenticate.ts';
@@ -15,9 +16,10 @@ import { channelOf } from '../../../src/channel.ts';
 import {
   die,
   identity,
+  mainName,
   npm,
-  PACKAGES,
   type Release,
+  type ReleasePackage,
   run,
   said,
 } from './lib.ts';
@@ -90,6 +92,8 @@ export async function runRelease(
   const has = (stage: string) => stages.includes(stage);
   const dryRun = options.dryRun ?? false;
   const list = found.steps.release;
+  const of = releasePackage(found);
+  const main = mainName(of);
   const selected = list.filter((stage) => has(stage.name));
   const built = selected.filter((stage): stage is Stage => !isPublish(stage));
 
@@ -111,7 +115,7 @@ export async function runRelease(
       );
 
       die(
-        `${listed(bound.map((each) => each.name))} run only on ${machineName(stage.machine)}; this is ${machine.platform}-${machine.arch}`,
+        `${listed(bound.map((each) => each.name))} ${bound.length === 1 ? 'runs' : 'run'} only on ${machineName(stage.machine)}; this is ${machine.platform}-${machine.arch}`,
       );
     }
   }
@@ -119,8 +123,8 @@ export async function runRelease(
   // Eligibility is checked before npm may hand over the terminal or save
   // credentials; publishing also requires the version's branch level with
   // origin and no tag.
-  const current = packageVersion(release);
-  const next = target(release, current, wanted, options.channel);
+  const current = packageVersion(release, of.folder);
+  const next = target(release, main, current, wanted, options.channel);
   const versioned = list
     .filter(
       (stage): stage is Stage => !isPublish(stage) && stage.versioned === true,
@@ -136,7 +140,7 @@ export async function runRelease(
     );
   }
 
-  const { mode, version } = preflight(release, {
+  const { mode, version } = preflight(release, of, {
     dryRun,
     publish: has('publish'),
     version: next,
@@ -153,12 +157,15 @@ export async function runRelease(
   // A stopped publish uses its existing packages without building again.
   if (mode === 'resume') {
     release.out(
-      `resuming ${version}: a platform package is published, @chorded/chord is not`,
+      `resuming ${version}: a package before ${main} is published, ${main} is not`,
     );
-    await published(release, version);
+    await published(release, of, version);
 
     return;
   }
+
+  // The package's own preflight (chord's agent pins, CHD-622).
+  await found.steps.preflight?.(release, version);
 
   // What the selected stages need, found before the build, each once.
   for (const ready of new Set(built.flatMap((stage) => stage.ready ?? []))) {
@@ -171,16 +178,16 @@ export async function runRelease(
   const held =
     version === current
       ? undefined
-      : holdVersion(release, commitVersion(release, version));
+      : holdVersion(release, commitVersion(release, of, version));
 
   try {
     if (held !== undefined && has('publish')) {
-      pushVersion(release, version, held);
+      pushVersion(release, of, version, held);
     }
 
     for (const stage of selected) {
       await (isPublish(stage)
-        ? published(release, version)
+        ? published(release, of, version)
         : stage.run(release, version));
     }
 
@@ -190,17 +197,17 @@ export async function runRelease(
       if (channelOf(version) !== null) {
         release.out(`dry run: ran ${stages.join(', ')}`);
 
-        for (const name of PACKAGES) {
+        for (const name of of.publish.npm) {
           release.out(
-            `dry run: npm ${publishArguments(version, tarball(release, name, version)).join(' ')}`,
+            `dry run: npm ${publishArguments(version, tarball(release, of.folder, name, version)).join(' ')}`,
           );
         }
       }
 
       release.out(
         has('pack')
-          ? `dry run: @chorded/chord ${version} is packed in ${tarballs(release)}, not published`
-          : `dry run: @chorded/chord ${version}, ran ${stages.join(', ')}; not published`,
+          ? `dry run: ${main} ${version} is packed in ${tarballs(release, of.folder)}, not published`
+          : `dry run: ${main} ${version}, ran ${stages.join(', ')}; not published`,
       );
     }
   } finally {
@@ -228,13 +235,14 @@ function machineName({ platform, arch }: NonNullable<Stage['machine']>) {
  */
 function target(
   release: Release,
+  main: string,
   current: string,
   wanted: string | undefined,
   channel: string | undefined,
 ): string {
   try {
     const version = releaseVersion(current, wanted, channel, () =>
-      latestStable(release),
+      latestStable(release, main),
     );
 
     channelOf(version);
@@ -249,21 +257,35 @@ function target(
   }
 }
 
-/** npm's latest stable version, which a bump on a channel counts from. */
-function latestStable(release: Release): string {
-  const view = npm(release, ['view', '@chorded/chord', 'dist-tags.latest']);
+/**
+ * npm's latest stable version of the package's main npm name, which a bump
+ * on a channel counts from.
+ */
+function latestStable(release: Release, main: string): string {
+  const view = npm(release, ['view', main, 'dist-tags.latest']);
 
   if (view.status !== 0) {
-    die(
-      `npm view @chorded/chord dist-tags.latest failed: ${said(view.stderr)}`,
-    );
+    die(`npm view ${main} dist-tags.latest failed: ${said(view.stderr)}`);
   }
 
   return said(view.stdout);
 }
 
 /** Publishes, and prints the version last once it is tagged. */
-async function published(release: Release, version: string): Promise<void> {
-  await publish(release, { version });
+async function published(
+  release: Release,
+  of: ReleasePackage,
+  version: string,
+): Promise<void> {
+  await publish(release, of, { version });
   release.out(version);
+}
+
+/** What the release reads of a found package: its name, folder and publish data. */
+function releasePackage(found: FoundPackage): ReleasePackage {
+  return {
+    name: found.name,
+    folder: found.folder,
+    publish: found.steps.release.find(isPublish)!,
+  };
 }

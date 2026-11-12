@@ -169,9 +169,10 @@ export function ghReady(release: Release): void {
 export function draftRelease(
   release: Release,
   version: string,
+  tag: string,
+  title: string,
   files: readonly string[],
 ): void {
-  const tag = `v${version}`;
   const args = [
     'release',
     'create',
@@ -180,7 +181,7 @@ export function draftRelease(
     ...(channelOf(version) === null ? [] : ['--prerelease']),
     '--verify-tag',
     '--title',
-    `chord ${tag}`,
+    title,
     '--notes',
     '',
     ...files,

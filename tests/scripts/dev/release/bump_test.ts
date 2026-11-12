@@ -63,7 +63,7 @@ const release = {
   tty: true,
 };
 
-holdVersion(release, commitVersion(release, '1.1.0'));
+holdVersion(release, commitVersion(release, { name: 'chord', folder: '.', publish: { name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' } }, '1.1.0'));
 
 // selftest's cleanup, as it registers it: clean up, remove, raise again.
 const signals = ['SIGINT', 'SIGTERM', 'SIGHUP'];

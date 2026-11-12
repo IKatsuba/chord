@@ -23,6 +23,32 @@ export function check(release: Release): void {
   }
 }
 
+/**
+ * `name`'s checks from its steps.ts, by the runner `bun dev quality` uses,
+ * in the release's root and environment.
+ */
+export async function quality(release: Release, name: string): Promise<void> {
+  const { packages, run: runSteps, spawnStep } = await import('../steps.ts');
+  const found = (await packages(release.root)).find(
+    (each) => each.name === name,
+  );
+
+  if (found === undefined) {
+    die(`no package ${name} in ${release.root}`);
+  }
+
+  const status = await runSteps(found, {
+    root: release.root,
+    env: release.env,
+    spawn: spawnStep,
+    output: release.err,
+  });
+
+  if (status !== 0) {
+    die(`bun dev quality ${name} failed`);
+  }
+}
+
 /** Every platform's packages installed, and their macOS libraries signed. */
 export function natives(release: Release): void {
   if (

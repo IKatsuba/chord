@@ -9,7 +9,7 @@
  */
 import { join } from 'node:path';
 import { authenticate } from './authenticate.ts';
-import { check, compile, install, natives } from './build.ts';
+import { check, compile, install, natives, quality } from './build.ts';
 import { commitVersion, holdVersion, pushVersion } from './bump.ts';
 import { channelOf } from '../../../src/channel.ts';
 import {
@@ -33,6 +33,46 @@ import { releaseVersion, VersionError } from './version.ts';
 
 const ARM = 'dist/bun-darwin-arm64/chord';
 const X64 = 'dist/bun-darwin-x64/chord';
+
+/**
+ * chord's stages and what they need ready, each on a release, which chord's
+ * steps.ts imports lazily so parsing `bun dev` loads no release module.
+ */
+export const chord = {
+  install: (release: Release) => install(release),
+  quality: (release: Release) => quality(release, 'chord'),
+  natives: (release: Release) => natives(release),
+  compile: (release: Release) => compile(release),
+  sign: (release: Release) => sign(release, [ARM, X64]),
+  selftest: async (release: Release) => {
+    await selftest(release, ARM);
+    await selftest(release, X64, 'x86_64');
+  },
+  // One zip notarised; Apple's log must list a ticket for each.
+  notarise: (release: Release) =>
+    notarise(release, join(release.root, 'dist', 'release'), [ARM, X64]),
+  pack: (release: Release) => pack(release),
+  /** The one signing identity, found before the build. */
+  identity: (release: Release) => void identity(release),
+  /** Apple's credentials, found before the build. */
+  notary: (release: Release) => notary(release),
+};
+
+/** Whether notarytool reads Apple's credentials from the keychain profile. */
+function notary(release: Release): void {
+  const history = run(release, 'xcrun', [
+    'notarytool',
+    'history',
+    '--keychain-profile',
+    PROFILE,
+  ]);
+
+  if (history.status !== 0) {
+    die(
+      `xcrun notarytool history --keychain-profile ${PROFILE} failed: ${said(history.stdout + history.stderr)}`,
+    );
+  }
+}
 
 /**
  * Runs `stages`, guarded as the owner decided, on `release`, at `wanted`:
@@ -103,34 +143,18 @@ export async function runRelease(
   }
 
   if (has('notarise')) {
-    const history = run(release, 'xcrun', [
-      'notarytool',
-      'history',
-      '--keychain-profile',
-      PROFILE,
-    ]);
-
-    if (history.status !== 0) {
-      die(
-        `xcrun notarytool history --keychain-profile ${PROFILE} failed: ${said(history.stdout + history.stderr)}`,
-      );
-    }
+    notary(release);
   }
 
-  const out = join(release.root, 'dist', 'release');
   const steps: Record<Stage, () => void | Promise<void>> = {
-    install: () => install(release),
+    install: () => chord.install(release),
     check: () => check(release),
-    natives: () => natives(release),
-    compile: () => compile(release),
-    sign: () => sign(release, [ARM, X64]),
-    selftest: async () => {
-      await selftest(release, ARM);
-      await selftest(release, X64, 'x86_64');
-    },
-    // One zip notarised; Apple's log must list a ticket for each.
-    notarise: () => notarise(release, out, [ARM, X64]),
-    pack: () => pack(release),
+    natives: () => chord.natives(release),
+    compile: () => chord.compile(release),
+    sign: () => chord.sign(release),
+    selftest: () => chord.selftest(release),
+    notarise: () => chord.notarise(release),
+    pack: () => chord.pack(release),
     publish: () => published(release, version, options.package),
   };
 

@@ -5,11 +5,12 @@
  * `strip_test.ts`), so a type error in the other passes the local check and
  * fails CI on Linux; tsconfig.json's `files` lists such files by name.
  * Run as a script, it compares `bun check --listFilesOnly` with `git ls-files -z`
- * and exits 1, naming each file left out.
+ * and exits 1, naming each file left out; given a package's folder, that
+ * folder's files against its own projects.
  */
 import { spawnSync } from 'node:child_process';
-import { realpathSync } from 'node:fs';
-import { relative, sep } from 'node:path';
+import { readdirSync, realpathSync } from 'node:fs';
+import { join, relative, sep } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
@@ -97,10 +98,46 @@ export function trackedFiles(cwd: string): string[] {
   return output(['git', 'ls-files', '-z'], cwd, '\0');
 }
 
+/**
+ * The tracked files a run counts: a package folder's own, or with none
+ * chord's, which leaves `packages/`, the other packages', out (CHD-623).
+ */
+export function scoped(
+  tracked: readonly string[],
+  folder: string | undefined,
+): string[] {
+  return folder === undefined
+    ? tracked.filter((file) => !file.startsWith('packages/'))
+    : tracked.filter((file) => file.startsWith(`${folder}/`));
+}
+
+/**
+ * The projects Bun checks a run against: the root's, or every
+ * `tsconfig*.json` at a package folder's top (its Node project and its
+ * tooling one, CHD-623).
+ */
+function projects(folder: string | undefined): string[][] {
+  if (folder === undefined) {
+    return [[]];
+  }
+
+  return readdirSync(join(root, folder))
+    .filter((name) => /^tsconfig.*\.json$/.test(name))
+    .map((name) => ['-p', join(folder, name)]);
+}
+
 if (import.meta.main) {
+  const folder = process.argv[2]?.replace(/\/+$/, '');
   const left = uncovered(
-    trackedFiles(root),
-    output([process.execPath, 'check', '--listFilesOnly'], root, '\n')
+    scoped(trackedFiles(root), folder),
+    projects(folder)
+      .flatMap((project) =>
+        output(
+          [process.execPath, 'check', ...project, '--listFilesOnly'],
+          root,
+          '\n',
+        ),
+      )
       // Bun's standard libraries are virtual files, never tracked source files.
       .filter((file) => !file.startsWith('bundled:///'))
       .map((file) => realpathSync(file)),
@@ -110,7 +147,7 @@ if (import.meta.main) {
   if (left.length > 0) {
     process.stderr.write(
       `bun check leaves out ${left.length} tracked file${left.length === 1 ? '' : 's'}; ` +
-        "list each in tsconfig.json's files:\n" +
+        `list each in ${folder === undefined ? 'tsconfig.json' : `${folder}'s tsconfig`}'s files:\n` +
         left.map((file) => `  ${file}\n`).join(''),
     );
     process.exit(1);

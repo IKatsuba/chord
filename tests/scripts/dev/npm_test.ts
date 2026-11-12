@@ -5,6 +5,7 @@ import {
   copyFile,
   mkdir,
   mkdtemp,
+  readdir,
   readFile,
   rm,
   symlink,
@@ -143,4 +144,60 @@ describe('CHD-561 tester: native notices survive npm layout and packing', () => 
       await rm(root, { recursive: true, force: true });
     }
   });
+});
+
+test("chord's layout writes no steps.ts into any package (CHD-623)", async () => {
+  const root = await mkdtemp(join(tmpdir(), 'chord-npm-steps-'));
+
+  try {
+    await mkdir(join(root, 'scripts', 'dev'), { recursive: true });
+    await writeFile(
+      join(root, 'package.json'),
+      JSON.stringify({ version: '9.9.9' }),
+    );
+    await writeFile(join(root, 'LICENSE'), 'Fixture chord licence\n');
+    await writeFile(join(root, 'README.md'), 'Fixture readme\n');
+    await writeFile(join(root, 'steps.ts'), 'export default {};\n');
+    await copyFile(
+      new URL('../../../scripts/dev/npm.ts', import.meta.url),
+      join(root, 'scripts', 'dev', 'npm.ts'),
+    );
+    await symlink(
+      new URL('../../../scripts/dev/compile.ts', import.meta.url).pathname,
+      join(root, 'scripts', 'dev', 'compile.ts'),
+    );
+    await symlink(
+      new URL('../../../scripts/targets.ts', import.meta.url).pathname,
+      join(root, 'scripts', 'targets.ts'),
+    );
+
+    for (const target of TARGETS) {
+      const native = join(
+        root,
+        'node_modules',
+        loadedNative(target.os, target.cpu, undefined),
+      );
+
+      await mkdir(native, { recursive: true });
+      await mkdir(join(root, 'dist', target.bun), { recursive: true });
+      await writeFile(join(root, 'dist', target.bun, 'chord'), 'fixture\n');
+
+      for (const notice of NATIVE_NOTICES) {
+        await writeFile(join(native, notice), `${notice}\n`);
+      }
+    }
+
+    await promisify(execFile)(
+      process.execPath,
+      ['-e', "await (await import('./scripts/dev/npm.ts')).npm();"],
+      { cwd: root },
+    );
+
+    const written = await readdir(join(root, 'npm'), { recursive: true });
+
+    expect(written).toContain(join('chord', 'package.json'));
+    expect(written.filter((file) => file.endsWith('steps.ts'))).toEqual([]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
 });

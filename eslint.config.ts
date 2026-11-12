@@ -7,9 +7,30 @@ import { defineConfig } from 'eslint/config';
 import tseslint from 'typescript-eslint';
 import style from './lint/style.ts';
 
+// The module forms an import takes, for the rules on its source.
+const imports = [
+  'ImportDeclaration',
+  'ExportNamedDeclaration',
+  'ExportAllDeclaration',
+  'ImportExpression',
+];
+
+const syntax = [
+  {
+    selector: 'TSEnumDeclaration[body.members.length=0]',
+    message: 'An empty enum is `{}`: give it members or remove it.',
+  },
+  // deno lint's no-sloppy-imports: a relative import names its file.
+  ...imports.map((node) => ({
+    selector: `${node} > Literal.source[value=/^\\.\\.?(\\/|$)/]:not([value=/\\.(tsx?|json)$/])`,
+    message: 'A relative import names its file, extension included.',
+  })),
+];
+
 export default defineConfig(
   {
-    ignores: ['dist/', 'npm/', 'docs/', '.claude/worktrees/'],
+    // Each package under packages/ is linted by its own config (CHD-623).
+    ignores: ['dist/', 'npm/', 'docs/', '.claude/worktrees/', 'packages/'],
   },
   js.configs.recommended,
   tseslint.configs.recommended,
@@ -58,23 +79,7 @@ export default defineConfig(
         'error',
         { name: 'window', message: 'Use globalThis.' },
       ],
-      'no-restricted-syntax': [
-        'error',
-        {
-          selector: 'TSEnumDeclaration[body.members.length=0]',
-          message: 'An empty enum is `{}`: give it members or remove it.',
-        },
-        // deno lint's no-sloppy-imports: a relative import names its file.
-        ...[
-          'ImportDeclaration',
-          'ExportNamedDeclaration',
-          'ExportAllDeclaration',
-          'ImportExpression',
-        ].map((node) => ({
-          selector: `${node} > Literal.source[value=/^\\.\\.?(\\/|$)/]:not([value=/\\.(tsx?|json)$/])`,
-          message: 'A relative import names its file, extension included.',
-        })),
-      ],
+      'no-restricted-syntax': ['error', ...syntax],
       'no-unreachable': 'error',
       'require-await': 'error',
       // deno lint's rules beyond its recommended set, as the 2026-10-10
@@ -118,5 +123,21 @@ export default defineConfig(
   {
     files: ['src/session/**', 'src/acp/**', 'src/server/**'],
     rules: { 'no-console': 'error' },
+  },
+  // A package's code ships; its steps.ts and the scripts are the
+  // repository's tooling, and never reach it (CHD-623).
+  {
+    files: ['src/**', 'packages/*/src/**'],
+    rules: {
+      'no-restricted-syntax': [
+        'error',
+        ...syntax,
+        ...imports.map((node) => ({
+          selector: `${node} > Literal.source[value=/^\\.\\.?\\/(.*\\/)?(steps\\.ts$|scripts\\/)/]`,
+          message:
+            "Shipped code imports no steps.ts and nothing of scripts/: they are the repository's tooling.",
+        })),
+      ],
+    },
   },
 );

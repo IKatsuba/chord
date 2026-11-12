@@ -263,6 +263,36 @@ test('a selection given back by the SDK becomes the choice it was', () => {
   });
 });
 
+describe('a selection the SDK reports without some parameter', () => {
+  const partial: Choice = { mode: 'default', model: chosen({ id: 'gpt-5' }) };
+
+  test('shows no option for the missing parameters', () => {
+    expect(optionIds(partial, false)).toEqual(['mode', 'model']);
+  });
+
+  test('choosing the same model starts its parameters', () => {
+    const seeded = choose(partial, MODELS, false, 'model', 'gpt-5')!;
+
+    expect(seeded.model).toEqual({
+      id: 'gpt-5',
+      params: { reasoning: 'medium', context: '200k' },
+    });
+    expect(optionIds(seeded, false)).toEqual([
+      'mode',
+      'model',
+      'parameter:reasoning',
+      'parameter:context',
+    ]);
+  });
+
+  test('choosing the same model with every parameter changes nothing', () => {
+    const full = choose(partial, MODELS, false, 'model', 'gpt-5')!;
+    const high = choose(full, MODELS, false, 'parameter:context', '1m')!;
+
+    expect(choose(high, MODELS, false, 'model', 'gpt-5')).toBe(high);
+  });
+});
+
 test('choose refuses an option or value not offered', () => {
   expect(
     choose({ mode: 'default' }, MODELS, true, 'mode', 'yolo'),

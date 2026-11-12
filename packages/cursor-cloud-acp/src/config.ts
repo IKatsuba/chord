@@ -207,11 +207,18 @@ export function choose(
       return { mode: choice.mode };
     }
 
-    if (value === choice.model?.id) {
+    const model = models.find((each) => each.id === value);
+
+    // The current model again: unchanged, unless the SDK reported it without
+    // some of its parameters, which then start as for a newly chosen one.
+    if (
+      value === choice.model?.id &&
+      (model?.parameters ?? []).every(
+        (parameter) => choice.model?.params[parameter.id] !== undefined,
+      )
+    ) {
       return choice;
     }
-
-    const model = models.find((each) => each.id === value);
 
     return {
       ...choice,

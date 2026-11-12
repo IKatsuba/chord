@@ -45,7 +45,7 @@ describe('tool rows', () => {
     expect(toolKind(name)).toBe(kind);
   });
 
-  test("a title is the name, plus the one field the SDK's type names when a string", () => {
+  test("a title is the one field the SDK's type names when a non-empty string, else the name", () => {
     expect(
       [
         { type: 'shell', args: { command: 'npm test' } },
@@ -60,11 +60,11 @@ describe('tool rows', () => {
         { type: 'somethingLater', args: { path: 'x' } },
       ].map(toolTitle),
     ).toEqual([
-      'shell: npm test',
-      'read: src/routes.ts',
-      'grep: login',
-      'glob: **/*.tsx',
-      'task: Check the forms',
+      'npm test',
+      'src/routes.ts',
+      'login',
+      '**/*.tsx',
+      'Check the forms',
       'semSearch',
       'shell',
       'read',
@@ -153,7 +153,7 @@ describe("the design's words", () => {
         mcpServers: [],
       }),
     ).toBe(
-      `Cursor cloud agent on github.com/acme/web, starting from branch login-page on origin. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.\n${LINK}`,
+      `Cursor cloud agent on github.com/acme/web, starting from branch login-page on origin. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.  \n${LINK}`,
     );
   });
 
@@ -167,14 +167,14 @@ describe("the design's words", () => {
         mcpServers: ['files', 'github'],
       }),
     ).toBe(
-      `Cursor cloud agent on git.example.com/a/b.git, starting from branch main on fork. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes. The MCP servers files, github given to this session are not reachable from Cursor's cloud.\n${LINK}`,
+      `Cursor cloud agent on git.example.com/a/b.git, starting from branch main on fork. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes. The MCP servers files, github given to this session are not reachable from Cursor's cloud.  \n${LINK}`,
     );
   });
 
   test('CREATING, a request, an unconfirmed stop', () => {
     expect(STARTING).toBe("Cursor is starting the agent's machine…");
     expect(requestLine('r-81c2', ID)).toBe(
-      `Cursor's agent is waiting for input or approval (request r-81c2). This adapter cannot answer it; Esc stops the run.\n${LINK}`,
+      `Cursor's agent is waiting for input or approval (request r-81c2). This adapter cannot answer it; Esc stops the run.  \n${LINK}`,
     );
     expect(unconfirmedStop(ID)).toBe(
       `Cursor did not confirm the stop; the run may still be going: ${LINK}`,
@@ -218,13 +218,13 @@ describe("a resumed session's first message", () => {
     [undefined, 'It has no runs yet.'],
   ] as const)('%p', (last, state) => {
     expect(say(last)).toBe(
-      `Cursor cloud agent on github.com/acme/web. ${state}\n${LINK}`,
+      `Cursor cloud agent on github.com/acme/web. ${state}  \n${LINK}`,
     );
   });
 
   test('without a repository, and with MCP servers', () => {
     expect(say(undefined, { mcpServers: ['files'] })).toBe(
-      `Cursor cloud agent. It has no runs yet. The MCP servers files given to this session are not reachable from Cursor's cloud.\n${LINK}`,
+      `Cursor cloud agent. It has no runs yet. The MCP servers files given to this session are not reachable from Cursor's cloud.  \n${LINK}`,
     );
   });
 });
@@ -313,7 +313,7 @@ describe('Drawing: the stream as updates', () => {
       {
         sessionUpdate: 'tool_call',
         toolCallId: 'c1',
-        title: 'shell: npm test',
+        title: 'npm test',
         kind: 'execute',
         status: 'in_progress',
         rawInput: { command: 'npm test' },
@@ -330,7 +330,7 @@ describe('Drawing: the stream as updates', () => {
       {
         sessionUpdate: 'tool_call_update',
         toolCallId: 'c1',
-        title: 'shell: npm test',
+        title: 'npm test',
         kind: 'execute',
         rawInput: { command: 'npm test' },
       },
@@ -441,7 +441,7 @@ describe('Drawing: the stream as updates', () => {
     ]);
     expect(texts({ ...base, type: 'task' })).toEqual([]);
     expect(texts({ ...base, type: 'request', request_id: 'r-81c2' })).toEqual([
-      `Cursor's agent is waiting for input or approval (request r-81c2). This adapter cannot answer it; Esc stops the run.\n${LINK}`,
+      `Cursor's agent is waiting for input or approval (request r-81c2). This adapter cannot answer it; Esc stops the run.  \n${LINK}`,
     ]);
     expect(
       texts({ ...base, type: 'assistant' } as unknown as SDKMessage),
@@ -483,7 +483,7 @@ test("replay: each turn's user message, then its steps as the live updates", () 
     },
     {
       sessionUpdate: 'tool_call',
-      title: 'read: src/routes.ts',
+      title: 'src/routes.ts',
       kind: 'read',
       status: 'completed',
       rawInput: { path: 'src/routes.ts' },

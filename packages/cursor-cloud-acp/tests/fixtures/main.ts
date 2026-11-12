@@ -52,7 +52,12 @@ const git: Git = (args) => {
   }
 };
 
-const tool = (callId: string, toolCall: object): InteractionUpdate[] => [
+/** A tool call started, then done with `value` as its own output. */
+const tool = (
+  callId: string,
+  toolCall: object,
+  value: unknown,
+): InteractionUpdate[] => [
   {
     type: 'tool-call-started',
     callId,
@@ -65,7 +70,7 @@ const tool = (callId: string, toolCall: object): InteractionUpdate[] => [
     modelCallId: callId,
     toolCall: {
       ...toolCall,
-      result: { status: 'success', value: { totalLines: 84 } },
+      result: { status: 'success', value },
     } as ToolCall,
   },
 ];
@@ -95,12 +100,31 @@ function scriptFor(text: string): Script | undefined {
       return {
         messages: [{ ...base, type: 'status', status: 'CREATING' }],
         deltas: [
-          ...tool('c1', { type: 'read', args: { path: 'src/routes.ts' } }),
-          ...tool('c2', {
-            type: 'semSearch',
-            args: { query: 'form validation' },
-          }),
-          ...tool('c3', { type: 'shell', args: { command: 'npm test' } }),
+          ...tool(
+            'c1',
+            { type: 'read', args: { path: 'src/routes.ts' } },
+            { totalLines: 84 },
+          ),
+          ...tool(
+            'c2',
+            { type: 'semSearch', args: { query: 'form validation' } },
+            {
+              query: 'form validation',
+              results: ['src/forms/validate.ts', 'src/forms/Field.tsx'],
+            },
+          ),
+          ...tool(
+            'c3',
+            { type: 'shell', args: { command: 'npm test' } },
+            {
+              exitCode: 0,
+              stdout: [
+                ...Array.from({ length: 38 }, (_, at) => `✓ test ${at + 1}`),
+                ' Tests  41 passed (41)',
+                ' Time   6.2s',
+              ].join('\n'),
+            },
+          ),
           ...words(
             'The login page is in src/pages/Login.tsx; its tests pass in the cloud VM.',
           ),
@@ -118,16 +142,20 @@ function scriptFor(text: string): Script | undefined {
       };
     case 'plan':
       return {
-        deltas: tool('c4', {
-          type: 'updateTodos',
-          args: {
-            todos: [
-              { content: 'Read the routes', status: 'completed' },
-              { content: 'Write the page', status: 'inProgress' },
-              { content: 'Test it', status: 'pending' },
-            ],
+        deltas: tool(
+          'c4',
+          {
+            type: 'updateTodos',
+            args: {
+              todos: [
+                { content: 'Read the routes', status: 'completed' },
+                { content: 'Write the page', status: 'inProgress' },
+                { content: 'Test it', status: 'pending' },
+              ],
+            },
           },
-        }),
+          { todos: 3 },
+        ),
       };
     case 'request':
       return {
@@ -181,6 +209,25 @@ cursor.runs.set(EARLIER, [
   fakeRun(
     EARLIER,
     {
+      // The design's resume mock: the person's prompt and the agent's answer.
+      conversation: [
+        {
+          type: 'agentConversationTurn',
+          turn: {
+            userMessage: {
+              text: 'add a login page with email and password, tests included',
+            },
+            steps: [
+              {
+                type: 'assistantMessage',
+                message: {
+                  text: 'The login page is in src/pages/Login.tsx with its route in src/routes.ts; its tests pass in the cloud VM.',
+                },
+              },
+            ],
+          },
+        },
+      ],
       result: {
         git: {
           branches: [

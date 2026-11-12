@@ -368,7 +368,7 @@ describe('the stream', () => {
     expect(at.texts()).toEqual([
       "Cursor is starting the agent's machine…",
       'Planning',
-      `Cursor's agent is waiting for input or approval (request r-81c2). This adapter cannot answer it; Esc stops the run.\n${LINK}`,
+      `Cursor's agent is waiting for input or approval (request r-81c2). This adapter cannot answer it; Esc stops the run.  \n${LINK}`,
     ]);
   });
 

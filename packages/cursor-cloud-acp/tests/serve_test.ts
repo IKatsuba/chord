@@ -274,7 +274,7 @@ describe('session/new', () => {
 
     expect(order).toEqual([
       'initialize',
-      `Cursor cloud agent on github.com/acme/web, starting from branch login-page on origin. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.\n${LINK('bc-1')}`,
+      `Cursor cloud agent on github.com/acme/web, starting from branch login-page on origin. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.  \n${LINK('bc-1')}`,
       'session/new',
       'ok',
       'session/prompt',
@@ -719,7 +719,7 @@ describe('list, resume, load, close', () => {
 
     await at.request('session/resume', { sessionId, cwd: CWD });
     expect(at.texts().slice(before)).toEqual([
-      `Cursor cloud agent on github.com/acme/web. Its last run finished: pushed to cursor/login-page-5e1f.\n${LINK(sessionId)}`,
+      `Cursor cloud agent on github.com/acme/web. Its last run finished: pushed to cursor/login-page-5e1f.  \n${LINK(sessionId)}`,
     ]);
   });
 
@@ -747,7 +747,7 @@ describe('list, resume, load, close', () => {
       `agent_message_chunk: answered ${runs[0]!.id}`,
       `user_message_chunk: asked ${runs[1]!.id}`,
       `agent_message_chunk: answered ${runs[1]!.id}`,
-      'agent_message_chunk: Cursor cloud agent on github.com/acme/web. Its last run finished: pushed to cursor/login-page-5e1f.',
+      'agent_message_chunk: Cursor cloud agent on github.com/acme/web. Its last run finished: pushed to cursor/login-page-5e1f.  ',
       'session/load',
     ]);
   });
@@ -853,7 +853,7 @@ describe('the fixture over real pipes', () => {
       expect(JSON.parse(each)).toMatchObject({ jsonrpc: '2.0' });
     }
 
-    expect(stdout).toContain('read: src/routes.ts');
+    expect(stdout).toContain('"title":"src/routes.ts"');
     expect(child.exitCode).toBe(0);
   }, 20_000);
 });

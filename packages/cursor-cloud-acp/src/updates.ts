@@ -69,7 +69,11 @@ export type AnyToolCall =
       readonly result?: unknown;
     };
 
-/** The tool's name, then `: <value>` when its titled field is a string. */
+/**
+ * The value of the one field the SDK's type names for the tool when it is a
+ * non-empty string, else the tool's name: chord draws the kind beside it,
+ * so the name before a value would say it twice (5af654a3).
+ */
 export function toolTitle(call: AnyToolCall): string {
   const field = TITLED[call.type];
   const value =
@@ -77,9 +81,7 @@ export function toolTitle(call: AnyToolCall): string {
       ? undefined
       : (call.args as Record<string, unknown>)[field];
 
-  return typeof value === 'string' && value !== ''
-    ? `${call.type}: ${value}`
-    : call.type;
+  return typeof value === 'string' && value !== '' ? value : call.type;
 }
 
 /** A row's end: failed when the SDK's result says error. */
@@ -155,6 +157,13 @@ export function line(text: string): SessionUpdate {
   };
 }
 
+/**
+ * Markdown's hard break: chord draws an agent's text as markdown, where a
+ * bare newline joins the next line to the paragraph, and a link after one
+ * wraps mid-address. With it the link stands on a line of its own.
+ */
+export const BREAK = '  \n';
+
 /** The agent's page on cursor.com. */
 export function link(agentId: string): string {
   return `https://cursor.com/agents/${agentId}`;
@@ -185,7 +194,7 @@ export function firstMessage(options: {
   readonly agentId: string;
   readonly mcpServers: readonly string[];
 }): string {
-  return `Cursor cloud agent on ${shown(options.url)}, starting from branch ${options.branch} on ${options.remote}. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.${unreachable(options.mcpServers)}\n${link(options.agentId)}`;
+  return `Cursor cloud agent on ${shown(options.url)}, starting from branch ${options.branch} on ${options.remote}. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.${unreachable(options.mcpServers)}${BREAK}${link(options.agentId)}`;
 }
 
 /** How a resumed agent's latest run stands, from what the SDK gives. */
@@ -227,7 +236,7 @@ export function resumedMessage(options: {
     state = 'Its last run was cancelled.';
   }
 
-  return `${on} ${state}${unreachable(options.mcpServers)}\n${link(options.agentId)}`;
+  return `${on} ${state}${unreachable(options.mcpServers)}${BREAK}${link(options.agentId)}`;
 }
 
 /** While Cursor provisions the VM. */
@@ -235,7 +244,7 @@ export const STARTING = "Cursor is starting the agent's machine…";
 
 /** A `request` event: shown, never answered. */
 export function requestLine(requestId: string, agentId: string): string {
-  return `Cursor's agent is waiting for input or approval (request ${requestId}). This adapter cannot answer it; Esc stops the run.\n${link(agentId)}`;
+  return `Cursor's agent is waiting for input or approval (request ${requestId}). This adapter cannot answer it; Esc stops the run.${BREAK}${link(agentId)}`;
 }
 
 /** A cancel Cursor did not confirm within the bound. */

@@ -4,6 +4,7 @@
  * stream messages, and a log of every call with the key it was given.
  */
 import type {
+  ConversationTurn,
   InteractionUpdate,
   ListResult,
   ModelListItem,
@@ -27,6 +28,8 @@ export interface Script {
   readonly refuse?: CursorError;
   /** The stream loses its connection after its messages; the run goes on. */
   readonly lose?: boolean;
+  /** What conversation() gives; else one turn naming the run. */
+  readonly conversation?: readonly ConversationTurn[];
 }
 
 /** One call the adapter made, with the key it passed. */
@@ -73,6 +76,13 @@ export function fakeRun(
 ): FakeRun {
   let cancelled = false;
   let finish: (result: RunResult) => void = () => undefined;
+  // Deltas wait for the stream's messages, which come first in a run
+  // (a CREATING status before any tool).
+  let streamed: () => void = () => undefined;
+  const messagesDrawn = new Promise<void>((resolve) => {
+    streamed = resolve;
+  });
+
   const ended = new Promise<RunResult>((resolve) => {
     finish = resolve;
   });
@@ -94,21 +104,30 @@ export function fakeRun(
     unsupportedReason: (operation) =>
       operation === 'conversation' && script.hang ? 'Still running' : undefined,
     conversation: () =>
-      Promise.resolve([
-        {
-          type: 'agentConversationTurn',
-          turn: {
-            userMessage: { text: `asked ${id}` },
-            steps: [
-              { type: 'assistantMessage', message: { text: `answered ${id}` } },
+      Promise.resolve(
+        script.conversation
+          ? [...script.conversation]
+          : [
+              {
+                type: 'agentConversationTurn',
+                turn: {
+                  userMessage: { text: `asked ${id}` },
+                  steps: [
+                    {
+                      type: 'assistantMessage',
+                      message: { text: `answered ${id}` },
+                    },
+                  ],
+                },
+              },
             ],
-          },
-        },
-      ]),
+      ),
     async *stream() {
       for (const message of script.messages ?? []) {
         yield message;
       }
+
+      streamed();
 
       if (script.lose === true) {
         throw new CursorError('network', 'Connection reset', {
@@ -127,6 +146,10 @@ export function fakeRun(
   };
 
   void (async () => {
+    if ((script.messages ?? []).length > 0) {
+      await messagesDrawn;
+    }
+
     for (const update of script.deltas ?? []) {
       await onDelta?.({ update });
     }

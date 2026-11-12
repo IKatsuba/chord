@@ -359,17 +359,26 @@ async function continued(
 
   const commit = versionCommit(release, of, state);
   const at = head(release);
-  const built = commit.at === 'made' ? commit.sha : state.built;
+  // The state as the guards judge it: a pending version commit found made
+  // is made, and the stages build from it.
+  const settled: ReleaseState =
+    commit.at === 'made'
+      ? {
+          ...state,
+          versionCommit: { state: 'made', sha: commit.sha },
+          built: commit.sha,
+        }
+      : state;
   // Nothing of the release is out yet: --from its first stage may build
   // again from HEAD, after a merge, say.
   const rebuild =
     options.from === list[0]?.name &&
-    state.versionCommit === undefined &&
+    settled.versionCommit?.state !== 'pushed' &&
     Object.keys(state.npm).length === 0 &&
     state.tag === undefined;
 
-  guarded(release, of, state, {
-    built,
+  guarded(release, of, settled, {
+    built: settled.built,
     building: plan.stages.length > 0,
     publishing: plan.publish !== undefined,
     kept: list
@@ -415,7 +424,7 @@ async function continued(
     }));
   }
 
-  if (rebuild && at !== state.built) {
+  if (rebuild && at !== settled.built) {
     recorded.record((now) => ({ ...now, built: at }));
   }
 

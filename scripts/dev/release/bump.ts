@@ -33,11 +33,7 @@ export function commitVersion(
   const manifest = join(of.folder, 'package.json');
   const file = join(release.root, manifest);
   const before = readFileSync(file, 'utf8');
-  // Only the value replaced, so the rest of the file stays as Prettier laid it.
-  const after = before.replace(
-    /("version"\s*:\s*)"[^"]*"/,
-    (_all, key: string) => `${key}"${version}"`,
-  );
+  const after = withVersion(before, version);
 
   writeFileSync(file, after);
 
@@ -99,6 +95,17 @@ function locked(
   ]);
 
   return said(changed.stdout) === '' ? [] : ['bun.lock'];
+}
+
+/**
+ * A package.json's text with only its version value replaced, so the rest
+ * of the file stays as Prettier laid it.
+ */
+export function withVersion(text: string, version: string): string {
+  return text.replace(
+    /("version"\s*:\s*)"[^"]*"/,
+    (_all, key: string) => `${key}"${version}"`,
+  );
 }
 
 /** The signals a held version commit is dropped on. */

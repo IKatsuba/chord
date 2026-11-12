@@ -18,6 +18,7 @@ import {
   type ReleaseOptions,
   selectStages,
 } from '../../../../scripts/dev/release/select.ts';
+import { commitVersion } from '../../../../scripts/dev/release/bump.ts';
 import { holdRelease } from '../../../../scripts/dev/release/lock.ts';
 import {
   readState,
@@ -1795,7 +1796,11 @@ describe.each([
         );
       }
 
-      writeFileSync(join(at.root, 'bun.lock'), '{}\n');
+      // As Bun lays a workspace package's version out in it.
+      writeFileSync(
+        join(at.root, 'bun.lock'),
+        `{\n  "workspaces": {\n    "packages/one": {\n      "version": "${VERSION}",\n    },\n  },\n}\n`,
+      );
       writeFileSync(
         join(at.root, '.gitignore'),
         'dist/\n*/*/dist/\n.release/\n',
@@ -1816,7 +1821,10 @@ describe.each([
       at.fake(
         'bun',
         `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1 $2" = 'install --lockfile-only' ]; then echo "$(cat packages/one/package.json)" >bun.lock; fi
+if [ "$1 $2" = 'install --lockfile-only' ]; then
+  v=$(sed -n 's/.*"version":"\\([^"]*\\)".*/\\1/p' packages/one/package.json)
+  sed -i.bak "s/\\"version\\": \\"[^\\"]*\\"/\\"version\\": \\"$v\\"/" bun.lock && rm bun.lock.bak
+fi
 `,
       );
       at.fake(
@@ -2208,6 +2216,138 @@ esac
 
         expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
         expect(sent()).toStrictEqual(all(NEXT));
+      });
+
+      test('a version commit pushed before the run recorded it is found on origin and goes on', async () => {
+        writeFileSync(join(at.place, 'fail-build'), '');
+        await died(run({ skip: ['sign'] }, 'patch'));
+
+        const state = readState(at.root, name)!;
+
+        // As a run killed between the push and its record.
+        writeState(at.root, {
+          ...state,
+          versionCommit: { state: 'made', sha: state.versionCommit!.sha! },
+        });
+        await run({ skip: ['sign'] });
+
+        expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
+        expect(sent()).toStrictEqual(all(NEXT));
+      });
+
+      test('a version commit left pending is found made only if it changes the version alone', async () => {
+        const base = git_('rev-parse', 'HEAD');
+        const pending = {
+          format: 1 as const,
+          package: name,
+          version: NEXT,
+          channel: null,
+          branch: 'main',
+          base,
+          built: base,
+          versionCommit: { state: 'pending' as const },
+          stages: {},
+          npm: {},
+        };
+        const of = { name, folder, publish };
+
+        // Made as the release makes it, then killed before its record and
+        // before the push.
+        commitVersion(context(), of, NEXT);
+        writeState(at.root, pending);
+        await run({ skip: ['sign'] });
+
+        expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
+        expect(sent()).toStrictEqual(all(NEXT));
+      });
+
+      test('a version commit left pending that changes more than the version is refused', async () => {
+        const base = git_('rev-parse', 'HEAD');
+        const manifest = join(at.root, folder, 'package.json');
+
+        writeFileSync(
+          manifest,
+          JSON.stringify({ name: main, version: NEXT, private: true }),
+        );
+        git_('commit', '-q', '-am', `chore: ${name} v${NEXT}`);
+        writeState(at.root, {
+          format: 1,
+          package: name,
+          version: NEXT,
+          channel: null,
+          branch: 'main',
+          base,
+          built: base,
+          versionCommit: { state: 'pending' },
+          stages: {},
+          npm: {},
+        });
+
+        expect(await died(run({ skip: ['sign'] }))).toBe(
+          `the version commit of ${name} ${NEXT} was left pending on ${base}, and HEAD ${git_('rev-parse', 'HEAD')} is neither that commit nor it plus only the version change; rm -r .release/${name} abandons it`,
+        );
+        expect(ran().filter((line) => line === 'npm whoami')).toStrictEqual([]);
+      });
+
+      test('--from its first stage is refused when HEAD holds another version', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'build' });
+
+        const manifest = join(at.root, folder, 'package.json');
+
+        writeFileSync(
+          manifest,
+          JSON.stringify({ name: main, version: '9.9.42' }),
+        );
+        git_('commit', '-q', '-am', 'another version');
+
+        expect(
+          await died(run({ from: 'build', to: 'pack', skip: ['sign'] })),
+        ).toBe(
+          `${join(folder, 'package.json')} at HEAD ${git_('rev-parse', 'HEAD')} is 9.9.42, not ${name} ${VERSION}, so it cannot be built again from HEAD; rm -r .release/${name} abandons it`,
+        );
+        expect(ran().filter((line) => line === 'npm whoami')).toHaveLength(1);
+      });
+
+      test('--from its first stage builds from a later HEAD at the version over a version commit made and not pushed', async () => {
+        const hook = join(at.place, 'origin.git', 'hooks', 'pre-receive');
+
+        executable(hook, '#!/bin/sh\necho refused >&2\nexit 1\n');
+        await died(run({ skip: ['sign'] }, 'patch'));
+        rmSync(hook);
+        writeFileSync(join(at.root, 'later'), 'later\n');
+        git_('add', 'later');
+        git_('commit', '-q', '-m', 'later, same version');
+
+        expect(await died(run({ skip: ['sign'] }))).toStartWith(
+          `HEAD ${git_('rev-parse', 'HEAD')} is not `,
+        );
+
+        await run({ from: 'build', skip: ['sign'] });
+
+        expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
+        expect(tagOn()).toBe(git_('rev-parse', 'HEAD'));
+        expect(git_('rev-parse', 'origin/main')).toBe(
+          git_('rev-parse', 'HEAD'),
+        );
+        expect(sent()).toStrictEqual(all(NEXT));
+      });
+
+      test('a git status that fails stops before authentication or any stage', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+        writeFileSync(join(at.place, 'ran.log'), '');
+        at.fake(
+          'git',
+          `if [ "$1" = status ]; then echo 'status broke' >&2; exit 3; fi
+exec ${JSON.stringify(spawnSync('which', ['git'], { encoding: 'utf8', env: { PATH: '/usr/bin:/bin:/usr/local/bin:/opt/homebrew/bin' } }).stdout.trim())} "$@"
+`,
+        );
+
+        expect(await died(run({ skip: ['sign'] }))).toStartWith(
+          'git status --porcelain --untracked-files=all failed: status broke',
+        );
+        expect(ran()).toStrictEqual([]);
       });
 
       test('an npm name left pending is settled by npm view: published once, never twice', async () => {

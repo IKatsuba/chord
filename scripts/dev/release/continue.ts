@@ -7,6 +7,7 @@
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { die, type Release, type ReleasePackage, run, said } from './lib.ts';
+import { withVersion } from './bump.ts';
 import { abandon, type ReleaseState } from './state.ts';
 import { sha256 } from './sums.ts';
 
@@ -61,24 +62,70 @@ export function versionCommit(
   }
 
   const parent = run(release, 'git', ['rev-parse', 'HEAD~1']);
-  const manifest = join(of.folder, 'package.json');
 
-  if (said(parent.stdout) === state.base) {
-    const changed = git(release, 'diff', '--name-only', state.base, 'HEAD')
-      .split('\n')
-      .filter((path) => path !== '');
-
-    if (
-      changed.every((path) => path === manifest || path === 'bun.lock') &&
-      versionAt(release, head, manifest) === state.version
-    ) {
-      return { at: 'made', sha: head };
-    }
+  if (
+    said(parent.stdout) === state.base &&
+    onlyVersion(release, of, state.base, head, state.version)
+  ) {
+    return { at: 'made', sha: head };
   }
 
   refuse(
     of,
     `the version commit of ${of.name} ${state.version} was left pending on ${state.base}, and HEAD ${head} is neither that commit nor it plus only the version change`,
+  );
+}
+
+/**
+ * Whether `head` changes `base` by the version alone: the package's
+ * package.json as `base` had it with only the version replaced, and, for a
+ * workspace package, bun.lock's lines that differ only by that version.
+ */
+function onlyVersion(
+  release: Release,
+  of: ReleasePackage,
+  base: string,
+  head: string,
+  version: string,
+): boolean {
+  const manifest = join(of.folder, 'package.json');
+  const changed = git(release, 'diff', '--name-only', base, head)
+    .split('\n')
+    .filter((path) => path !== '');
+  const show = (commit: string, path: string) =>
+    run(release, 'git', ['show', `${commit}:${path}`]).stdout;
+  const before = versionAt(release, base, manifest);
+
+  if (
+    !changed.includes(manifest) ||
+    changed.some((path) => path !== manifest && path !== 'bun.lock') ||
+    show(head, manifest) !== withVersion(show(base, manifest), version) ||
+    before === undefined
+  ) {
+    return false;
+  }
+
+  if (!changed.includes('bun.lock')) {
+    return true;
+  }
+
+  // Bun records a workspace package's version in bun.lock, never the root's.
+  const lines = git(release, 'diff', '-U0', base, head, '--', 'bun.lock')
+    .split('\n')
+    .filter((line) => /^[-+]/.test(line) && !/^(---|\+\+\+) /.test(line));
+  const removed = lines.filter((line) => line.startsWith('-'));
+  const added = lines.filter((line) => line.startsWith('+'));
+  const old = new RegExp(`("version":\\s*)"${before.replaceAll('.', '\\.')}"`);
+
+  return (
+    of.folder !== '.' &&
+    removed.length > 0 &&
+    removed.length === added.length &&
+    removed.every(
+      (line, at) =>
+        old.test(line) &&
+        `+${line.slice(1).replace(old, `$1"${version}"`)}` === added[at],
+    )
   );
 }
 
@@ -123,10 +170,7 @@ export function guarded(
   state: ReleaseState,
   at: Continuation,
 ): void {
-  const dirty = said(
-    run(release, 'git', ['status', '--porcelain', '--untracked-files=all'])
-      .stdout,
-  );
+  const dirty = git(release, 'status', '--porcelain', '--untracked-files=all');
 
   if (dirty !== '') {
     refuse(of, `the tree is not clean:\n${dirty}`);
@@ -149,6 +193,18 @@ export function guarded(
       of,
       `${manifest} at ${at.built} is ${version ?? 'without a version'}, not ${of.name} ${state.version}`,
     );
+  }
+
+  // Building again from HEAD: it must still be the state's version.
+  if (at.rebuild && head !== at.built) {
+    const now = versionAt(release, head, manifest);
+
+    if (now !== state.version) {
+      refuse(
+        of,
+        `${manifest} at HEAD ${head} is ${now ?? 'without a version'}, not ${of.name} ${state.version}, so it cannot be built again from HEAD`,
+      );
+    }
   }
 
   if (at.building && head !== at.built && !at.rebuild) {
@@ -223,12 +279,14 @@ function level(
 
   const origin = git(release, 'rev-parse', `origin/${state.branch}`);
   const commit = state.versionCommit;
+  // A version commit made and not recorded pushed: origin before the push,
+  // or after one the run did not live to record.
   const want =
     commit?.state === 'made' && commit.sha !== undefined
-      ? git(release, 'rev-parse', `${commit.sha}~1`)
-      : head;
+      ? [git(release, 'rev-parse', `${commit.sha}~1`), commit.sha]
+      : [head];
 
-  if (origin !== want) {
+  if (!want.includes(origin)) {
     refuse(
       of,
       `${state.branch} is not level with origin/${state.branch}: ${state.branch} is ${head}, origin/${state.branch} is ${origin}`,

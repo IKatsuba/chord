@@ -42,6 +42,7 @@ import {
 import {
   configOptions,
   defaultConfig,
+  offeredConfig,
   planModels,
   type RiffConfig,
   type RiffPlan,
@@ -416,7 +417,12 @@ export function connectRiff(stream: Stream, options: RiffOptions): Riff {
       credential === undefined || provider.plan === 'fake'
         ? undefined
         : planProvider(credential, provider.plan);
-    const config: RiffConfig = resumed?.sidecar ?? defaultConfig(offered);
+    // An effort the model does not take reads as `default`, which the
+    // sidecar written after this keeps.
+    const config: RiffConfig =
+      resumed === undefined
+        ? defaultConfig(offered)
+        : offeredConfig(offered, resumed.sidecar);
     const holder: { open?: Open } = {};
     const shown = new Map<string, string | ToolCallContent[]>();
     const grants: Grants = new Set();

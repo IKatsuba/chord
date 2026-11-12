@@ -1,6 +1,7 @@
 /** Responses and OAuth fixtures: every unlisted URL fails locally. */
 import type { FxFetch } from 'libfx/node';
 import { Buffer } from 'node:buffer';
+import { planModels } from './models.ts';
 
 export interface PlanFetch {
   readonly fetch: FxFetch;
@@ -40,6 +41,39 @@ const stream = (items: object[]) =>
       .join(''),
     { headers: { 'content-type': 'text/event-stream' } },
   );
+
+/**
+ * The plan's `/models`, in both plans' shapes, listing riff's models with
+ * their levels. libfx sends a named effort only on a catalog it reads: on
+ * ChatGPT, entries with `visibility` and `gpt-5.6-luna` among them; on Grok,
+ * entries with `model` and `api_backend`.
+ */
+function catalog(plan: 'codex' | 'grok') {
+  const models = planModels(plan);
+
+  return {
+    models: models.map(({ id, window, levels }) => ({
+      slug: id,
+      display_name: id,
+      visibility: 'list',
+      supported_in_api: true,
+      context_window: window,
+      supported_reasoning_levels: levels.map((effort) => ({
+        effort,
+        description: effort,
+      })),
+    })),
+    data: models.map(({ id, window, levels }) => ({
+      id,
+      object: 'model',
+      model: id,
+      api_backend: 'responses',
+      context_window: window,
+      supports_reasoning_effort: true,
+      reasoning_efforts: levels.map((value) => ({ id: value, value })),
+    })),
+  };
+}
 
 export function planFetch(options: {
   readonly plan: 'codex' | 'grok';
@@ -102,25 +136,7 @@ export function planFetch(options: {
         parsed.pathname.endsWith('/models') ||
         parsed.pathname === '/v1/language-models'
       ) {
-        const model = options.plan === 'codex' ? 'gpt-6.1-sol' : 'grok-4.7';
-
-        return Promise.resolve(
-          Response.json({
-            models: [
-              {
-                slug: model,
-                id: model,
-                display_name: model,
-                context_window: 400000,
-                supported_in_api: true,
-                supported_reasoning_levels: [
-                  { effort: 'low', description: 'Low' },
-                ],
-              },
-            ],
-            data: [{ id: model, object: 'model' }],
-          }),
-        );
+        return Promise.resolve(Response.json(catalog(options.plan)));
       }
 
       if (parsed.pathname.endsWith('/responses')) {

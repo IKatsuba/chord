@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtemp, readdir, rm } from 'node:fs/promises';
+import { mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { riffStore, type Sidecar } from '../../src/riff/store.ts';
@@ -53,6 +53,27 @@ describe('tester: riff sidecar boundaries', () => {
       expect(await store.read(id)).toBeUndefined();
       await expect(store.write(id, SIDECAR)).rejects.toThrow(
         'Not a riff session id',
+      );
+    },
+  );
+});
+
+describe('CHD-611 tester: prior sidecar effort compatibility', () => {
+  test.each(['default', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])(
+    'a raw sidecar with %s remains readable without model-level filtering',
+    async (effort) => {
+      const store = riffStore(stateDir);
+
+      await store.write('wrun_legacy', SIDECAR);
+
+      const sidecar = { ...SIDECAR, model: 'grok-4.5', effort };
+
+      await writeFile(
+        join(stateDir, 'riff', 'sidecars', 'wrun_legacy.json'),
+        JSON.stringify(sidecar),
+      );
+      expect(await riffStore(stateDir).read('wrun_legacy')).toStrictEqual(
+        sidecar,
       );
     },
   );

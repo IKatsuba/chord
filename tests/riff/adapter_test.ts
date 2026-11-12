@@ -968,7 +968,7 @@ describe('tester: riff resume rejects broken metadata', () => {
                 provider: 'fake',
                 account: null,
                 model: 'fake',
-                effort: 'max',
+                effort: 'turbo',
                 mode: 'ask',
               }),
         );
@@ -2585,6 +2585,95 @@ describe("a fake provider presenting a plan's model list (CHD-611)", () => {
         .find((update) => update.sessionUpdate === 'usage_update'),
     ).toMatchObject({ size: planModels('codex')[0]?.window });
   });
+
+  test("a model change answers the new model's efforts, resetting one it lacks", async () => {
+    await open(true, {
+      provider: { baseUrl: fake.url, models: 'codex' },
+    });
+
+    const sessionId = await newSession();
+    const ultra = await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'effort',
+      value: 'ultra',
+    });
+
+    expect(ultra.error).toBeUndefined();
+
+    const changed = await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'model',
+      value: 'gpt-6-luna',
+    });
+    const effort = (
+      changed.result?.['configOptions'] as {
+        id: string;
+        currentValue: string;
+        options: { value: string }[];
+      }[]
+    ).find((option) => option.id === 'effort');
+
+    expect(effort?.currentValue).toBe('default');
+    expect(effort?.options.map(({ value }) => value)).toEqual([
+      'default',
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ]);
+
+    const refused = await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'effort',
+      value: 'ultra',
+    });
+
+    expect(refused.error?.code).toBe(-32602);
+  });
+
+  test('a resumed effort its model does not take reads and saves as default', async () => {
+    await open(true, {
+      provider: { baseUrl: fake.url, models: 'codex' },
+    });
+
+    const sessionId = await newSession();
+
+    end();
+    await riff.finished;
+
+    const store = riffStore(stateDir);
+    const sidecar = await store.read(sessionId);
+
+    await store.write(sessionId, {
+      ...sidecar!,
+      model: 'gpt-6-luna',
+      effort: 'ultra',
+    });
+    await open(true, {
+      provider: { baseUrl: fake.url, models: 'codex' },
+    });
+
+    const resumed = await client.request('session/resume', {
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+    const effort = (
+      resumed.result?.['configOptions'] as {
+        id: string;
+        currentValue: string;
+        options: { value: string }[];
+      }[]
+    ).find((option) => option.id === 'effort');
+
+    expect(effort?.currentValue).toBe('default');
+    expect(effort?.options.map(({ value }) => value)).not.toContain('ultra');
+    expect(await store.read(sessionId)).toMatchObject({
+      model: 'gpt-6-luna',
+      effort: 'default',
+    });
+  });
 });
 
 describe('riff instructions at session start', () => {
@@ -3525,4 +3614,78 @@ describe('CHD-610 tester: own MCP tools and fake scenarios', () => {
         .some((update) => update.sessionUpdate === 'tool_call'),
     ).toBe(false);
   });
+});
+
+describe('CHD-611 tester: resume efforts stay session-local', () => {
+  for (const [plan, model, unsupported, supported] of [
+    ['codex', 'gpt-6-luna', 'ultra', 'max'],
+    ['grok', 'grok-4.5', 'xhigh', 'high'],
+  ] as const) {
+    test(`${plan}: reopening two sidecars resets only the unsupported effort`, async () => {
+      const options = { provider: { baseUrl: fake.url, models: plan } };
+
+      await open(true, options);
+
+      const first = await newSession();
+
+      end();
+      await riff.finished;
+      await open(true, options);
+
+      const second = await newSession();
+
+      end();
+      await riff.finished;
+      expect(typeof first).toBe('string');
+      expect(typeof second).toBe('string');
+      expect(first).not.toBe(second);
+
+      const store = riffStore(stateDir);
+
+      for (const [id, effort] of [
+        [first, unsupported],
+        [second, supported],
+      ] as const) {
+        await store.write(id, {
+          provider: 'fake',
+          account: null,
+          model,
+          effort,
+          mode: 'ask',
+        });
+      }
+
+      for (let reopen = 0; reopen < 2; reopen++) {
+        for (const [id, effort] of [
+          [first, 'default'],
+          [second, supported],
+        ] as const) {
+          await open(true, options);
+
+          const resumed = await client.request('session/resume', {
+            sessionId: id,
+            cwd: process.cwd(),
+            mcpServers: [],
+          });
+
+          expect(resumed.error).toBeUndefined();
+          expect(resumed.result?.['configOptions']).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ id: 'model', currentValue: model }),
+              expect.objectContaining({ id: 'effort', currentValue: effort }),
+              expect.objectContaining({ id: 'mode', currentValue: 'ask' }),
+            ]),
+          );
+          expect(await store.read(id)).toMatchObject({
+            model,
+            effort,
+            mode: 'ask',
+          });
+          expect(fake.requests).toHaveLength(0);
+          end();
+          await riff.finished;
+        }
+      }
+    });
+  }
 });

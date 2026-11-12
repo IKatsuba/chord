@@ -53,10 +53,10 @@ describe('riff-models on a fake plan', () => {
       expect(fake.responses).toBe(1);
       expect(found.caught.length).toBeGreaterThan(0);
 
-      const model = plan === 'codex' ? 'gpt-6.1-sol' : 'grok-4.7';
-
       expect(said).toContain(
-        `  ${model}  window 400000  levels low  default ?`,
+        plan === 'codex'
+          ? '  gpt-6.1-sol  window 500000  levels low medium high xhigh max ultra  default ?'
+          : '  grok-4.7  window 256000  levels low medium high xhigh  default ?',
       );
 
       const written = JSON.parse(await readFile(out, 'utf8')) as {

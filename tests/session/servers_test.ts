@@ -6,6 +6,7 @@ import type {
 import {
   type HeldBack,
   heldBackLine,
+  NO_MCP_SERVERS,
   serversFor,
 } from '../../src/session/servers.ts';
 import { riffInit } from '../../src/riff/adapter.ts';
@@ -358,5 +359,74 @@ describe('riff takes no SSE server (CHD-610)', () => {
     expect(given.heldBack).toEqual([
       expect.objectContaining({ server: 'logs', transport: 'sse' }),
     ]);
+  });
+});
+
+describe('--no-mcp-servers names itself in the start line (CHD-620)', () => {
+  const flagged = (servers: readonly McpServer[], chord?: McpServer) =>
+    serversFor('fake', { http: true }, servers, chord, true, NO_MCP_SERVERS);
+
+  test('every server is held back, each saying the flag set it', () => {
+    const given = flagged([STDIO, HTTP], CHORD);
+
+    expect(given.servers).toStrictEqual([]);
+    expect(given.heldBack.map((each) => each.from)).toStrictEqual([
+      NO_MCP_SERVERS,
+      NO_MCP_SERVERS,
+      NO_MCP_SERVERS,
+    ]);
+  });
+
+  test("the flag held them back, chord's own first, then its cost", () => {
+    expect(heldBackLine(flagged([STDIO, HTTP], CHORD).heldBack)).toBe(
+      '--no-mcp-servers held back 3 MCP servers from fake: chord ' +
+        "(chord's own), docs, search. Without chord's own, fake cannot " +
+        "start other agents or use chord's tools. /mcp lists them.",
+    );
+    expect(heldBackLine(flagged([STDIO]).heldBack)).toBe(
+      '--no-mcp-servers held back 1 MCP server from fake: docs. /mcp lists it.',
+    );
+  });
+
+  test("a file's none keeps its own words", () => {
+    expect(
+      heldBackLine(
+        serversFor('fake', {}, [STDIO], undefined, true, '/p.json').heldBack,
+      ),
+    ).toBe(
+      '1 MCP server was not passed to fake, which takes none: docs. /mcp lists it.',
+    );
+  });
+});
+
+describe('CHD-620 tester: suppressed-server edge cases', () => {
+  test('an empty configuration produces no warning or fabricated held server', () => {
+    const result = serversFor('fake', {}, [], undefined, true, NO_MCP_SERVERS);
+
+    expect(result.servers).toEqual([]);
+    expect(result.heldBack).toEqual([]);
+    expect(heldBackLine(result.heldBack)).toBeUndefined();
+  });
+
+  test('a user server named chord stays distinct from the suppressed own server', () => {
+    const ownName = { ...STDIO, name: 'chord' };
+    const result = serversFor(
+      'fake',
+      { http: true, sse: true },
+      [ownName, SSE],
+      CHORD,
+      true,
+      NO_MCP_SERVERS,
+    );
+
+    expect(result.servers).toEqual([]);
+    expect(result.heldBack.filter((entry) => entry.own)).toHaveLength(1);
+    expect(result.heldBack.filter((entry) => !entry.own)).toHaveLength(2);
+    expect(
+      result.heldBack.every((entry) => entry.from === NO_MCP_SERVERS),
+    ).toBe(true);
+    expect(heldBackLine(result.heldBack)).toContain("chord (chord's own)");
+    expect(heldBackLine(result.heldBack)).toContain('chord, logs');
+    expect(heldBackLine(result.heldBack)).not.toContain('Bearer token');
   });
 });

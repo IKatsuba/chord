@@ -11,7 +11,10 @@ These rules also cover `src/acp/`.
 - MCP servers go through `servers.ts` on new, fork, load and resume: stdio always,
   HTTP, SSE and ACP only when advertised. The agent's `mcpServers: false`
   setting holds every server back, chord's own included; its setting of
-  `true` overrides a default of none. Keep the held-back names and reasons.
+  `true` overrides a default of none. `--no-mcp-servers` beats the files for
+  the startup agent by name, including children and team members of that
+  agent. Never record it; resume needs it again. Held-back lines name the
+  flag when it caused the suppression. Keep the held-back names and reasons.
 - Forks use ACP `session/fork` in their own agent process, as resume does.
   Route the answer to the new session ID, not the source. Record the divider
   and subsequent work; the copied source transcript stays out of the record.

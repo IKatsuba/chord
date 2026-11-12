@@ -22,6 +22,7 @@ import {
 import { killSpawnedGroups } from '../src/platform/process.ts';
 import { serveChord } from '../src/server/server.ts';
 import type { LeaveExit } from '../src/session/leaving.ts';
+import { placeOf, readPlace } from '../src/session/place.ts';
 import {
   parseRecord,
   recordActions,
@@ -33,6 +34,7 @@ import {
   type Session,
 } from '../src/session/session.ts';
 import { earlierSessions, readRecords } from '../src/session/sessions.ts';
+import { loadSettings } from '../src/settings.ts';
 import {
   type AcpClient,
   clientOverStreams,
@@ -4427,4 +4429,110 @@ describe('CHD-613 tester: upstream resource boundaries', () => {
         );
       },
     ));
+});
+
+describe('--no-mcp-servers (CHD-620)', () => {
+  /**
+   * `chord acp fake --no-mcp-servers`'s place, read as `serveAcp` reads it:
+   * codex, the fake's child runtime, is the fake too, by its settings.
+   */
+  const flagged = async (cwd: string): Promise<AcpPlace> => {
+    const home = join(cwd, 'home');
+    const configHome = join(home, 'config');
+    const codex = fakeAgentCommand();
+
+    await mkdir(join(cwd, '.chord'), { recursive: true });
+    await writeFile(
+      join(cwd, '.chord', 'settings.json'),
+      JSON.stringify({
+        agents: { fake: { mcpServers: true }, codex: { command: codex } },
+      }),
+    );
+
+    const loaded = await loadSettings({ configHome, cwd, home });
+    const startup = {
+      configHome,
+      home,
+      invokedAs: {
+        agent: 'fake',
+        agentCommand: fakeAgentCommand(undefined, '--child-runtime', 'codex'),
+      },
+      flags: { agent: 'fake', mcpServers: false as const },
+    };
+    const read = await readPlace(cwd, {
+      ...startup,
+      loadedAt: cwd,
+      loaded,
+      problems: [],
+      report: () => Promise.resolve(),
+    });
+
+    return { ...placeOf(read, startup), runtimes: ['fake', 'codex'] };
+  };
+
+  /** A team of one lead on `agent`, laid in `cwd`'s teams. */
+  const team = async (cwd: string, agent: string) => {
+    const bugfix = await readFile(BUGFIX, 'utf8');
+
+    await mkdir(join(cwd, '.chord', 'teams'), { recursive: true });
+    await writeFile(
+      join(cwd, '.chord', 'teams', 'other.md'),
+      bugfix.replace('lead:\n  agent: fake', `lead:\n  agent: ${agent}`),
+    );
+  };
+
+  /** Runs `other` from a flagged session; the lead's open options. */
+  const leadOn = async (agent: string) => {
+    const opened: OpenSessionOptions[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, cwd, newSession, prompt, lines }) => {
+        await team(cwd, agent);
+
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'mcp'));
+        // The agent the command line started: none, chord's own included.
+        expect(client.said(sessionId)).toContain('```json\n[]\n```');
+        // Its start line names the flag, carried from the command line.
+        expect(
+          lines.some((line) => line.includes('--no-mcp-servers held back')),
+        ).toBe(true);
+
+        await client.answerTo(prompt(sessionId, '/team run other text'));
+        await until(() => opened.length === 2);
+        await client.answerTo(prompt(sessionId, '/team stop other'));
+      },
+      {
+        server: serveChord(),
+        place: flagged,
+        open: (options) => {
+          opened.push(options);
+
+          return openSession(options);
+        },
+      },
+    );
+
+    expect(opened[0]?.noMcpServers).toBe(true);
+
+    return opened[1];
+  };
+
+  test('a team lead on another agent keeps its servers', async () => {
+    const lead = await leadOn('codex');
+
+    expect(lead?.agent).toBe('codex');
+    expect(lead?.noMcpServers).toBeUndefined();
+    expect(lead?.chordServer).toBeDefined();
+  });
+
+  // The owner's decision: as far as --agent-command reaches, by name.
+  test('a team lead on the same agent gets none too', async () => {
+    const lead = await leadOn('fake');
+
+    expect(lead?.agent).toBe('fake');
+    expect(lead?.noMcpServers).toBe(true);
+  });
 });

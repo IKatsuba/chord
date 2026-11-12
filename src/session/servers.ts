@@ -10,6 +10,9 @@ import type {
 } from '@agentclientprotocol/sdk/unstable';
 import { transportOf } from '../mcp.ts';
 
+/** The flag that holds every server back from the agent it starts (CHD-620). */
+export const NO_MCP_SERVERS = '--no-mcp-servers';
+
 /** The transports past stdio an agent may advertise, in the order said. */
 const ADVERTISED = ['http', 'sse', 'acp'] as const;
 
@@ -27,6 +30,11 @@ export interface HeldBack {
    * none for an agent set to take no MCP servers at all.
    */
   readonly takes: readonly string[];
+  /**
+   * What set an agent to take none: `NO_MCP_SERVERS`, or a settings file's
+   * path; none for chord's own table or a transport not taken.
+   */
+  readonly from?: string;
   /** chord's own server, whose tools go with it. */
   readonly own?: true;
 }
@@ -45,7 +53,8 @@ export interface ServersFor {
  * agent to pick one, and either pick loses a server, so where a user's
  * server it is given takes chord's name, chord's goes as the first free
  * `chord-2`, `chord-3`, … and both stay reachable. An agent set to take
- * `none` is given no server, whatever it advertises (CHD-441).
+ * `none` is given no server, whatever it advertises (CHD-441), as `from`
+ * set it.
  */
 export function serversFor(
   agent: string,
@@ -53,6 +62,7 @@ export function serversFor(
   userServers: readonly McpServer[],
   chord?: McpServer,
   none = false,
+  from?: string,
 ): ServersFor {
   const takes = none
     ? []
@@ -76,6 +86,7 @@ export function serversFor(
       agent,
       transport,
       takes,
+      ...(none && from !== undefined ? { from } : {}),
       ...(own ? { own: true as const } : {}),
     });
 
@@ -131,7 +142,7 @@ export function heldBackLine(
     return undefined;
   }
 
-  const { agent, takes } = first;
+  const { agent, takes, from } = first;
   const held = [
     ...heldBack.filter((each) => each.own),
     ...heldBack.filter((each) => !each.own),
@@ -158,6 +169,15 @@ export function heldBackLine(
     ? ` Without ${count === 1 ? 'it' : "chord's own"}, ${agent} cannot ` +
       "start other agents or use chord's tools."
     : '';
+
+  // The person typed it, so it is named, not the agent's taking (CHD-620).
+  if (from === NO_MCP_SERVERS) {
+    return (
+      `${NO_MCP_SERVERS} held back ${count} MCP ` +
+      `${count === 1 ? 'server' : 'servers'} from ${agent}: ` +
+      `${names}.${own} /mcp lists ${count === 1 ? 'it' : 'them'}.`
+    );
+  }
 
   return (
     `${count} MCP ${count === 1 ? 'server was' : 'servers were'} not passed ` +

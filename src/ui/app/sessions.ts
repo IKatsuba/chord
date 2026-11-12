@@ -129,6 +129,8 @@ export interface SessionsOptions {
   agent: string;
   /** The `--agent-command` the person typed, which a resume line repeats. */
   typedCommand?: string | undefined;
+  /** `--no-mcp-servers` was typed, which a resume line repeats too. */
+  typedNoMcpServers?: boolean | undefined;
   /** The window's own place: where `agent`'s first session works. */
   place: Place;
   stateDir: string | undefined;
@@ -181,6 +183,7 @@ export function useSessions(
     resources,
     agent,
     typedCommand,
+    typedNoMcpServers,
     place,
     stateDir,
     readRecords,
@@ -1401,6 +1404,7 @@ export function useSessions(
         elsewhereRefusal(chosen, {
           agent: front,
           agentCommand: front === agent ? typedCommand : undefined,
+          noMcpServers: front === agent && typedNoMcpServers === true,
           shownCwd: homePath(chosen.cwd, home),
         }),
       );

@@ -29,6 +29,7 @@ import {
   recordedAgent,
   recordsOnce,
   resumeCommand,
+  resumeMessage,
   ResumeError,
   sessionById,
   type SessionRecord,
@@ -1567,5 +1568,43 @@ describe('CHD-615 tester: streamed record compatibility and failures', () => {
     } finally {
       await rm(stateDir, { recursive: true, force: true });
     }
+  });
+});
+
+describe('--no-mcp-servers in a reopen line (CHD-620)', () => {
+  test('said again only when typed, after a typed --agent-command', () => {
+    expect(resumeCommand('eve', 'id', 'eve acp', true)).toBe(
+      "chord eve --agent-command 'eve acp' --no-mcp-servers --resume id",
+    );
+    expect(resumeCommand('eve', 'id', undefined, true)).toBe(
+      'chord eve --no-mcp-servers --resume id',
+    );
+    expect(resumeCommand('eve', 'id')).toBe('chord eve --resume id');
+  });
+
+  test("the quit line says it for the agent it was given for, not another's session", () => {
+    const typed = { agent: 'eve', noMcpServers: true };
+
+    expect(resumeMessage({ agent: 'eve', sessionId: 'a' }, typed)).toBe(
+      'Resume this session with:\nchord eve --no-mcp-servers --resume a',
+    );
+    expect(resumeMessage({ agent: 'claude', sessionId: 'b' }, typed)).toBe(
+      'Resume this session with:\nchord claude --resume b',
+    );
+    expect(
+      resumeMessage({ agent: 'eve', sessionId: 'a' }, { agent: 'eve' }),
+    ).toBe('Resume this session with:\nchord eve --resume a');
+  });
+
+  test('a session in another directory is refused with it said again', () => {
+    expect(
+      elsewhereRefusal(
+        { sessionId: 'id-there', cwd: '/h/other' },
+        { agent: 'eve', noMcpServers: true, shownCwd: '~/other' },
+      ),
+    ).toBe(
+      'That session is in ~/other. Quit and open it there with:\n' +
+        'chord eve --no-mcp-servers --resume id-there',
+    );
   });
 });

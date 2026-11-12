@@ -1312,7 +1312,14 @@ export function createAgentsHost(
             ? {}
             : { mcpServers: mcpServers.map(({ server }) => server) }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
-          ...(startup.mcpServers === false ? { noMcpServers: true } : {}),
+          ...(startup.mcpServers === false
+            ? {
+                noMcpServers: true,
+                ...(startup.mcpServersFrom === undefined
+                  ? {}
+                  : { noMcpServersFrom: startup.mcpServersFrom }),
+              }
+            : {}),
           ...(forking === undefined ? {} : { fork: forking }),
         };
 
@@ -2377,6 +2384,7 @@ export function createAgentsHost(
       starting,
       refused,
       mcpServers: takes,
+      mcpServersFrom,
     } = startupOf(agent) ?? {};
     const servers = mainServers ?? mcpServers.map(({ server }) => server);
     let releaseCurrentCaller = () => {};
@@ -2422,7 +2430,14 @@ export function createAgentsHost(
           ...(next === undefined ? {} : { resume: next }),
           ...(servers.length === 0 ? {} : { mcpServers: servers }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
-          ...(takes === false ? { noMcpServers: true } : {}),
+          ...(takes === false
+            ? {
+                noMcpServers: true,
+                ...(mcpServersFrom === undefined
+                  ? {}
+                  : { noMcpServersFrom: mcpServersFrom }),
+              }
+            : {}),
         };
 
         resuming = undefined;

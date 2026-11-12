@@ -161,7 +161,8 @@ box through its owner session; the background summary keeps `● 1 task asking`.
 ctrl+d and `/exit` quit at once, closing main, its children and forks,
 and waiting for their agents to exit. chord prints a
 `chord <agent> --resume <id>` for the main session if a prompt went to it.
-It repeats `--agent-command` only when given as a flag; settings commands
+It repeats `--agent-command` and `--no-mcp-servers` only when given as
+flags, as does `/resume`'s reopen command for another directory. Settings
 are read again from their files.
 
 If chord fails while drawing the window, a crash screen shows the error
@@ -188,6 +189,8 @@ line; an id with no record goes to the default agent. A named agent that
 differs from the record's is refused. With no agent named,
 `--agent-command` overrides the default agent alone, so a record for
 another agent is refused too.
+`--no-mcp-servers` applies on `--resume` or `--continue` only when given
+again; the record does not keep it.
 
 An old `chord --resume w-<id>` command passes its id to the agent as any id
 chord has no record of; the agent's refusal shows. Legacy files under
@@ -830,8 +833,9 @@ directory's `.chord/settings.json` and `.mcp.json`. These can start MCP
 servers and set a starting permission mode, with no trust step, as the
 window and `-p` read them. The agent remains the one chosen at startup.
 Client-supplied `mcpServers` override settings servers by name for that
-session; `mcpServers: false` in settings holds them back too. Stdio, HTTP
-and SSE servers are accepted, subject to the agent's capabilities; a
+session; `mcpServers: false` in settings or `--no-mcp-servers` holds them
+back too, chord's own included. Stdio, HTTP and SSE servers are accepted,
+subject to the agent's capabilities; a
 client-supplied `acp` transport is refused with -32602.
 
 ### Methods
@@ -1210,7 +1214,7 @@ both.
 | `agents.<name>.model`          | the model each of its sessions starts on             | `-m, --model`       |
 | `agents.<name>.effort`         | the effort each of its sessions starts on            | `--effort`          |
 | `agents.<name>.permissionMode` | the mode each of its sessions starts in              | `--permission-mode` |
-| `agents.<name>.mcpServers`    | `false` passes no MCP servers; `true` overrides openclaw's default of none |                     |
+| `agents.<name>.mcpServers`    | `false` passes no MCP servers; `true` overrides openclaw's default of none | `--no-mcp-servers` |
 | `teamSelection`               | preferences and allowlists for agent-selected team runs; see below |                     |
 | `preferredNotifChannel`        | how the terminal is told chord waits on you          |                     |
 | `theme`                        | chord's colours, as `/theme` chooses them; user's file only | `/theme`     |
@@ -1433,14 +1437,17 @@ whole. Each is written the way `.mcp.json` writes it:
 
 A server started as a command has `command`, and may have `args` and `env`;
 one reached over the network has `type` (`http` or `sse`), `url`, and may
-have `headers`. Unless `agents.<name>.mcpServers` is `false`, an agent
-gets stdio servers, and HTTP, SSE or ACP only when it advertises them. `false` sends none, chord's own included;
-openclaw defaults to it because its bridge refuses per-session servers.
+have `headers`. An agent gets stdio servers, and HTTP, SSE or ACP only when
+it advertises them. `agents.<name>.mcpServers: false` or
+`--no-mcp-servers` sends none, chord's own included. The flag works in the
+window, `-p` and `chord acp`, and overrides a file's `true`.
+openclaw defaults to `false` because its bridge refuses per-session servers.
 Set `agents.openclaw.mcpServers` to `true` to use the transport filter
 instead. The rest are held back, chord's own among them, and each
 session says at its start, in a warning line, which ones were not passed
 to its agent and why; a task agent's line is in its parent's turn, named
-as the task. While the agent starts, `/mcp` shows only
+as the task. When the flag holds servers back, this line and `/mcp` name
+`--no-mcp-servers`. While the agent starts, `/mcp` shows only
 `<agent> is starting: chord has not passed it MCP servers yet.`
 Once the session exists, it lists each server's name, its transport, its
 command or URL, or `not passed` for one held back, with why under the
@@ -1955,6 +1962,9 @@ and the agent's `mcpServers` setting from the files, and says a refused
 effort or mode on stderr; `--model` is for the window. `--agent-command`,
 `--model`, `--effort` and `--permission-mode` speak for the main agent;
 children start on their own agent's settings or the values their caller gives.
+`--no-mcp-servers` reaches every session of the agent the command line
+starts, including `open_agent` children and team members with the same
+agent name. Other agents keep their MCP settings from the files.
 
 `chord agents` lists riff first, as `built in`, without checking sign-in.
 Its `--json` entry has `via: "builtin"`; the format stays at version 1.

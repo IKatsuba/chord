@@ -37,6 +37,10 @@ export function chordCommand() {
       "Start each of [agent]'s sessions in this mode, by its id for it.",
     )
     .option(
+      '--no-mcp-servers',
+      "Start each of [agent]'s sessions with no MCP servers, chord's own included.",
+    )
+    .option(
       '-c, --continue',
       "Open the agent's latest session in this directory again.",
       { conflicts: ['resume'] },

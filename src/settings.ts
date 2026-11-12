@@ -4,6 +4,7 @@ import { mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
 import { notFound } from './not_found.ts';
 import { NOTIF_CHANNELS } from './notify.ts';
 import { mergeTeamSelection, TeamSelection } from './session/budgets.ts';
+import { NO_MCP_SERVERS } from './session/servers.ts';
 import {
   DEFAULT_KEYMAP,
   type Keymap,
@@ -672,6 +673,8 @@ export interface Flags {
   readonly model?: string | undefined;
   readonly effort?: string | undefined;
   readonly permissionMode?: string | undefined;
+  /** `false` from `--no-mcp-servers`; nothing says `true` (CHD-620). */
+  readonly mcpServers?: false | undefined;
 }
 
 /**
@@ -702,8 +705,13 @@ export interface Startup {
   readonly model?: Sourced;
   readonly effort?: Sourced;
   readonly permissionMode?: Sourced;
-  /** What the files set the agent's `mcpServers` to, where one does. */
+  /**
+   * What `--no-mcp-servers` or else the files set the agent's `mcpServers`
+   * to, where one does.
+   */
   readonly mcpServers?: boolean;
+  /** What set `mcpServers`: `--no-mcp-servers`, or the file's path. */
+  readonly mcpServersFrom?: string | undefined;
 }
 
 /** The flag's value, else the last file's that set the agent's `key`. */
@@ -792,6 +800,13 @@ export function resolveStartup(
     agent,
     'permissionMode',
   );
+  const mcpServers = flags.mcpServers ?? settings.agents?.[agent]?.mcpServers;
+  const mcpServersFrom =
+    flags.mcpServers === undefined
+      ? layers.findLast(
+          (layer) => layer.settings.agents?.[agent]?.mcpServers !== undefined,
+        )?.file
+      : NO_MCP_SERVERS;
 
   return {
     agent,
@@ -803,9 +818,7 @@ export function resolveStartup(
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
-    ...(settings.agents?.[agent]?.mcpServers === undefined
-      ? {}
-      : { mcpServers: settings.agents[agent].mcpServers }),
+    ...(mcpServers === undefined ? {} : { mcpServers, mcpServersFrom }),
   };
 }
 
@@ -829,11 +842,8 @@ export function resumedStartup(
   flags: Flags,
   layers: readonly SettingsLayer[],
 ): Startup {
-  const { model, effort, permissionMode, mcpServers } = resolveStartup(
-    { ...flags, agent: found.agent },
-    layers,
-    found.agent,
-  );
+  const { model, effort, permissionMode, mcpServers, mcpServersFrom } =
+    resolveStartup({ ...flags, agent: found.agent }, layers, found.agent);
 
   return {
     agent: found.agent,
@@ -843,7 +853,7 @@ export function resumedStartup(
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
-    ...(mcpServers === undefined ? {} : { mcpServers }),
+    ...(mcpServers === undefined ? {} : { mcpServers, mcpServersFrom }),
   };
 }
 
@@ -852,21 +862,33 @@ export function resumedStartup(
  * window's own startup for its agent, flags and all; any other agent's
  * command, model, effort and mode from the files alone, as the flags were given for
  * the agent the command line named and their ids are that agent's. Whether
- * it takes MCP servers no flag says, so the files say it for every agent,
- * the window's own too (CHD-441).
+ * it takes MCP servers `flags`' `--no-mcp-servers` says for the window's own
+ * agent, and else the files there say, read again here since `invoked` may
+ * have been read in another directory (CHD-441, CHD-620).
+ *
+ * Keyed by name, so `--no-mcp-servers` reaches as far as `--agent-command`:
+ * an `open_agent` child or team member of the window's own agent takes it,
+ * of any other agent not (the owner's decision on CHD-620).
  */
 export function startupOf(
   agent: string,
   invoked: Startup,
   layers: readonly SettingsLayer[],
+  flags: Flags = {},
 ): Startup {
   if (agent !== invoked.agent) {
     return resolveStartup({ agent }, layers, agent);
   }
 
-  const { mcpServers } = resolveStartup({ agent }, layers, agent);
+  const { mcpServers, mcpServersFrom } = resolveStartup(
+    { agent, mcpServers: flags.mcpServers },
+    layers,
+    agent,
+  );
 
-  return mcpServers === undefined ? invoked : { ...invoked, mcpServers };
+  return mcpServers === undefined
+    ? invoked
+    : { ...invoked, mcpServers, mcpServersFrom };
 }
 
 /**

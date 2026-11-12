@@ -1,0 +1,40 @@
+ ▀▄     chord v0.69.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd620/b
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ 1 MCP server was not passed to fake, which takes none: chord (chord's own). Without it, fake cannot start other
+   agents or use chord's tools. /mcp lists it.
+
+ › /resume
+   ⎿  That session is in /tmp/chord-qa.chd620/a. Quit and open it there with:
+      chord fake --agent-command '~/.bun/bin/bun ~/projects/ikatsuba/chord/tests/
+      fixtures/fake_agent/main.ts' --no-mcp-servers --resume 27675911-7a10-4398-9391-cedb44952aab
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

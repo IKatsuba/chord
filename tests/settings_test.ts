@@ -45,6 +45,7 @@ import {
 import { parse } from 'shell-quote';
 import { commandLine, listedAgents } from '../src/agents.ts';
 import { commandArgv } from '../src/acp/process.ts';
+import { NO_MCP_SERVERS } from '../src/session/servers.ts';
 import { resumeCommand, resumeMessage } from '../src/session/sessions.ts';
 import { validateSelectedRole } from '../src/session/team_selection.ts';
 
@@ -1470,6 +1471,7 @@ test("an agent's mcpServers setting is read from the last file that sets it, tru
     agent: 'openclaw',
     agentCommand: 'oc acp',
     mcpServers: false,
+    mcpServersFrom: '/u.json',
   });
   // Only a boolean: anything else is a problem and is left out.
   expect(
@@ -1478,6 +1480,60 @@ test("an agent's mcpServers setting is read from the last file that sets it, tru
       JSON.stringify({ agents: { x: { mcpServers: 'no' } } }),
     ).problems,
   ).not.toStrictEqual([]);
+});
+
+describe('--no-mcp-servers (CHD-620)', () => {
+  const layer = (file: string, agents: Record<string, unknown>) => ({
+    file,
+    settings: parseSettings(file, JSON.stringify({ agents })).settings,
+  });
+  const flags = { agent: 'eve', mcpServers: false } as const;
+
+  test("it beats every file, a file's true included", () => {
+    const layers = [layer('/u.json', { eve: { mcpServers: true } })];
+
+    expect(resolveStartup(flags, layers, 'claude').mcpServers).toBe(false);
+    expect(resolveStartup(flags, [], 'claude').mcpServers).toBe(false);
+    expect(resolveStartup({ agent: 'eve' }, layers, 'claude').mcpServers).toBe(
+      true,
+    );
+  });
+
+  test('a session resumed from another directory keeps it', () => {
+    const there = [layer('/p.json', { eve: { mcpServers: true } })];
+
+    expect(resumedStartup({ agent: 'eve' }, flags, there).mcpServers).toBe(
+      false,
+    );
+    expect(resumedStartup({ agent: 'eve' }, {}, there).mcpServers).toBe(true);
+  });
+
+  test("an agent other than the window's reads the files alone", () => {
+    const layers = [layer('/u.json', { eve: { mcpServers: true }, fake2: {} })];
+    const invoked = resolveStartup(flags, layers, 'claude');
+
+    expect(startupOf('fake2', invoked, layers, flags).mcpServers).toBe(
+      undefined,
+    );
+    expect(
+      startupOf(
+        'fake2',
+        invoked,
+        [layer('/u.json', { fake2: { mcpServers: true } })],
+        flags,
+      ).mcpServers,
+    ).toBe(true);
+  });
+
+  test("the window's own agent takes it over the files where it works, and so does a child or member of the same agent", () => {
+    const layers = [layer('/p.json', { eve: { mcpServers: true } })];
+    const invoked = resolveStartup(flags, [], 'claude');
+
+    // A session of the same agent, an open_agent child or team member
+    // included, starts as the window's agent does (the owner's decision).
+    expect(startupOf('eve', invoked, layers, flags).mcpServers).toBe(false);
+    expect(startupOf('eve', invoked, layers).mcpServers).toBe(true);
+  });
 });
 
 describe('tester: resource preference layering', () => {
@@ -2379,5 +2435,105 @@ describe('the agents the files leave unstartable (CHD-598)', () => {
         layer(project, { codex: { model: 'o3' } }),
       ]),
     ).toStrictEqual(new Set(['codex']));
+  });
+});
+
+describe('CHD-620 tester: transient MCP startup selection', () => {
+  test('resuming a disabled startup without the flag restores the current file value', () => {
+    const layers = [
+      {
+        file: 'fixture.json',
+        settings: { agents: { fake: { mcpServers: true } } },
+      },
+    ];
+    const disabled = resolveStartup(
+      { agent: 'fake', mcpServers: false },
+      layers,
+      'fake',
+    );
+
+    expect(resumedStartup(disabled, {}, layers).mcpServers).toBe(true);
+    expect(resumedStartup(disabled, {}, []).mcpServers).toBeUndefined();
+    expect(
+      resumedStartup(disabled, { mcpServers: false }, layers).mcpServers,
+    ).toBe(false);
+    expect(layers[0]?.settings.agents.fake.mcpServers).toBe(true);
+  });
+
+  test('interleaved same-name and other-name starts preserve each file policy', () => {
+    const layers = [
+      {
+        file: 'fixture.json',
+        settings: {
+          agents: {
+            fake: { mcpServers: true },
+            other: { mcpServers: true },
+            denied: { mcpServers: false },
+          },
+        },
+      },
+    ];
+    const flags = { agent: 'fake', mcpServers: false } as const;
+    const invoked = resolveStartup(flags, layers, 'fake');
+
+    for (const agent of ['fake', 'other', 'denied', 'fake', 'other']) {
+      expect(startupOf(agent, invoked, layers, flags).mcpServers).toBe(
+        agent === 'other',
+      );
+    }
+
+    expect(resolveStartup({ agent: 'fake' }, layers, 'fake').mcpServers).toBe(
+      true,
+    );
+  });
+});
+
+test('what set an agent to take none is kept: the flag by name, else the file (CHD-620)', () => {
+  const layers = [
+    {
+      file: '/p.json',
+      settings: parseSettings(
+        '/p.json',
+        JSON.stringify({ agents: { eve: { mcpServers: false } } }),
+      ).settings,
+    },
+  ];
+  const flags = { agent: 'eve', mcpServers: false } as const;
+
+  expect(resolveStartup(flags, layers, 'claude').mcpServersFrom).toBe(
+    NO_MCP_SERVERS,
+  );
+  expect(
+    resolveStartup({ agent: 'eve' }, layers, 'claude').mcpServersFrom,
+  ).toBe('/p.json');
+  expect(startupOf('eve', { agent: 'eve' }, layers, flags).mcpServersFrom).toBe(
+    NO_MCP_SERVERS,
+  );
+  expect(resumedStartup({ agent: 'eve' }, flags, layers).mcpServersFrom).toBe(
+    NO_MCP_SERVERS,
+  );
+});
+
+describe('CHD-620 tester: suppression source on reopening', () => {
+  test('an unflagged reopen replaces the old flag source with the current file source', () => {
+    const layers = [
+      {
+        file: 'current-fixture.json',
+        settings: { agents: { fake: { mcpServers: false } } },
+      },
+    ];
+    const flagged = resolveStartup(
+      { agent: 'fake', mcpServers: false },
+      layers,
+      'fake',
+    );
+    const reopened = resumedStartup(flagged, {}, layers);
+    const unconfigured = resumedStartup(flagged, {}, []);
+
+    expect(flagged.mcpServersFrom).toBe(NO_MCP_SERVERS);
+    expect(reopened.mcpServers).toBe(false);
+    expect(reopened.mcpServersFrom).toBe('current-fixture.json');
+    expect(unconfigured.mcpServers).toBeUndefined();
+    expect(unconfigured.mcpServersFrom).toBeUndefined();
   });
 });

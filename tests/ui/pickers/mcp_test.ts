@@ -26,7 +26,7 @@ import {
   withHeldBack,
   wrapTarget,
 } from '../../../src/ui/pickers/mcp.ts';
-import { serversFor } from '../../../src/session/servers.ts';
+import { NO_MCP_SERVERS, serversFor } from '../../../src/session/servers.ts';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
 import { run, said } from '../../fixtures/recorder.ts';
 
@@ -523,5 +523,24 @@ test('/mcp says an agent set to take no MCP servers got none, and where the sett
   );
   expect(chordLine(chordRow(undefined, false, true), 'openclaw')).toBe(
     "chord's server was not passed: openclaw takes no MCP servers, so it cannot start other agents.",
+  );
+});
+
+test('/mcp names --no-mcp-servers as what held them back, with no setting to change (CHD-620)', () => {
+  const docs: McpServer = { name: 'docs', command: 'docs', args: [], env: [] };
+  const tracker: McpServer = { ...docs, name: 'tracker' };
+  const held = (servers: McpServer[]) =>
+    serversFor('fake', {}, servers, undefined, true, NO_MCP_SERVERS).heldBack;
+
+  expect(heldNote(held([docs, tracker]))).toBe(
+    'docs and tracker were not passed: --no-mcp-servers on the command line held them back.',
+  );
+  expect(heldNote(held([docs]))).toBe(
+    'docs was not passed: --no-mcp-servers on the command line held it back.',
+  );
+  expect(
+    chordLine(chordRow(undefined, false, true, NO_MCP_SERVERS), 'fake'),
+  ).toBe(
+    "chord's server was not passed: --no-mcp-servers on the command line held it back, so fake cannot start other agents.",
   );
 });

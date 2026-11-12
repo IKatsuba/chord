@@ -1,0 +1,24 @@
+ ▀▄     chord v0.69.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.chd620/c
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ --no-mcp-servers held back 3 MCP servers from fake: chord (chord's own),
+   filesystem, docs. Without chord's own, fake cannot start other agents or use
+   chord's tools. /mcp lists them.
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

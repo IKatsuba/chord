@@ -107,6 +107,8 @@ export interface OpenSessionOptions {
    * too, and the session says so (CHD-441).
    */
   noMcpServers?: boolean;
+  /** What set `noMcpServers`, as `HeldBack`'s `from` says it (CHD-620). */
+  noMcpServersFrom?: string;
   /**
    * chord's own MCP server, sent after `mcpServers` under the same rule; an
    * agent that would refuse it never sees it.
@@ -510,6 +512,7 @@ export async function openSession(
     userServers,
     options.chordServer,
     options.noMcpServers === true,
+    options.noMcpServersFrom,
   );
 
   const shutdown = async () => {

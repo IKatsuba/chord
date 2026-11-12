@@ -8494,3 +8494,26 @@ fresh clone, or one begun by `bun dev` before the state existed) is refused
 by the fresh guards and finished by hand; no flag rebuilds a state from npm
 and git. Both keep the owner's rule that a release resumes from what it
 recorded, never from inference.
+
+## 2026-11-12 — CHD-623: the release's lock never goes stale (owner)
+
+One release per checkout is held by `proper-lockfile` (already a dependency)
+on `chord-release` in git's common directory, so every worktree of a clone
+shares it. The library keeps a lock fresh by touching its mtime on a timer
+and lets the next run take over a lock older than `stale`, 10 s by default.
+The release's long stages (install, quality, compile) run `spawnSync` and
+hold the timer back for minutes, and a run waiting at npm's prompt can wait
+longer than any finite `stale`: a second run would then take the lock from
+a live release. Options weighed: a long finite `stale` (24 h), still lost by
+a release waiting past it; never stale; moving every release spawn to async;
+another library.
+
+The owner chose never stale: `stale: Infinity`, `update: 2^31 - 1` ms.
+proper-lockfile clamps `stale` only from below (2 s) and `update` to between
+1 s and `stale / 2`; with an infinite `stale` neither its staleness check
+nor its compromised check ever fires. `update` stays at 2^31 - 1 ms because
+a timer beyond that fires at once in Node and Bun. A lock a run left behind
+(SIGKILL, a crash, a reboot) is refused like a live one, naming the pid
+the holder wrote and `<git common dir>/chord-release.lock`, removed by hand
+as S1's state is; proper-lockfile itself removes the lock on exit and on
+signals it can catch.

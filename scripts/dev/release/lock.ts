@@ -9,12 +9,14 @@ import { join, resolve } from 'node:path';
 import { lock } from 'proper-lockfile';
 import { die, type Release, run, said } from './lib.ts';
 
-// A release runs its long stages (install, quality, compile) with spawnSync,
-// which holds back proper-lockfile's mtime updates for minutes: with its
-// default 10 s `stale`, a second run would take the lock in the middle of a
-// release. A day outlasts any release; a run killed by SIGKILL, which the
-// lock's own exit handler cannot see, leaves it to be removed by hand.
-const STALE = 24 * 60 * 60 * 1000;
+// The owner's choice (CHD-623): a release's lock never goes stale, so no
+// second run takes over a live one, however long it waits (a stage, npm's
+// prompt). A lock a run left behind (SIGKILL, a crash, a reboot) is refused
+// like any other, naming its pid and the path to remove by hand.
+// proper-lockfile caps `stale` only from below; `update` stays under the
+// runtime's timer ceiling of 2^31 - 1 ms, above which a timer fires at once.
+const STALE = Number.POSITIVE_INFINITY;
+const UPDATE = 2 ** 31 - 1;
 
 /** The file the lock is taken on, in git's common directory. */
 export function lockFile(release: Release): string {
@@ -49,7 +51,7 @@ export async function holdRelease(
     unlock = await lock(file, {
       realpath: false,
       stale: STALE,
-      update: STALE / 2,
+      update: UPDATE,
     });
   } catch (error) {
     if ((error as { code?: string }).code !== 'ELOCKED') {

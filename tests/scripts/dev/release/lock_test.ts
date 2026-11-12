@@ -6,6 +6,7 @@ import {
   readFileSync,
   realpathSync,
   rmSync,
+  utimesSync,
   writeFileSync,
 } from 'node:fs';
 import { join } from 'node:path';
@@ -110,4 +111,27 @@ test('a pid that cannot be written lets the lock go before the error', async () 
 
   await expect(holdRelease(at.release)).rejects.toThrow('EISDIR');
   expect(existsSync(`${file}.lock`)).toBeFalse();
+});
+
+test('a lock a killed run left, however old, is never taken over: it is refused, naming its pid and the path', async () => {
+  const file = lockFile(at.release);
+
+  // As a run killed by SIGKILL left it, a year ago.
+  mkdirSync(`${file}.lock`);
+  writeFileSync(file, '4242\n');
+
+  const year = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000);
+
+  utimesSync(`${file}.lock`, year, year);
+
+  expect(await refusal(at.release)).toBe(
+    `another release runs in this checkout (pid 4242); if it was killed, remove ${file}.lock`,
+  );
+  expect(existsSync(`${file}.lock`)).toBeTrue();
+
+  // Removed by hand, the next run takes it.
+  rmSync(`${file}.lock`, { recursive: true });
+  await (
+    await holdRelease(at.release)
+  )();
 });

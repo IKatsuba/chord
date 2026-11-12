@@ -1,9 +1,17 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdir, mkdtemp, realpath, rm } from 'node:fs/promises';
+import {
+  chmod,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { cursorUrl, type Git, repository } from '../src/repo.ts';
+import { cursorUrl, type Git, gitRunner, repository } from '../src/repo.ts';
 
 // The person's git configuration stays out: a global pushDefault would
 // change every answer here.
@@ -120,6 +128,13 @@ describe('repository', () => {
       (await repository(await pushed('https://git.example.com/acme/web.git')))
         .url,
     ).toBe('https://git.example.com/acme/web.git');
+  });
+
+  test("a push URL's user and password never leave repository()", async () => {
+    expect(
+      (await repository(await pushed('https://u:tok@git.example.com/a/b.git')))
+        .url,
+    ).toBe('https://git.example.com/a/b.git');
   });
 
   test("the push remote is git's: remote.pushDefault over origin", async () => {
@@ -250,7 +265,52 @@ describe('git failing', () => {
   });
 });
 
-test('cursorUrl: the known hosts as https://host/owner/repo, others as given', () => {
+describe('the git runner', () => {
+  test('answers git’s status and output, with no terminal for it', async () => {
+    const dir = await pushed();
+    const run = gitRunner();
+
+    expect(await run(['rev-parse', '--abbrev-ref', 'HEAD'], dir)).toEqual({
+      status: 0,
+      stdout: 'main\n',
+      stderr: '',
+    });
+    expect((await run(['config', 'core.no-such-key'], dir)).status).toBe(1);
+  });
+
+  test('kills a git that ignores SIGTERM at the bound, and reaps it', async () => {
+    const dir = join(root, 'stubborn');
+    const fake = join(dir, 'git');
+    const pidFile = join(dir, 'pid');
+
+    await mkdir(dir);
+    // exec keeps the pid and the ignored SIGTERM: one process to find.
+    await writeFile(
+      fake,
+      `#!/bin/sh\necho $ > '${pidFile}'\ntrap '' TERM\nexec sleep 30\n`,
+    );
+    await chmod(fake, 0o755);
+
+    const started = performance.now();
+    // Long enough for macOS to admit a new executable, which takes a moment.
+    const result = await gitRunner(fake, 3000)(['status'], dir);
+
+    expect(result.status).toBeNull();
+    expect(performance.now() - started).toBeLessThan(10_000);
+
+    const pid = Number(await readFile(pidFile, 'utf8'));
+
+    expect(() => process.kill(pid, 0)).toThrow();
+  });
+
+  test('rejects when git cannot be started', async () => {
+    await expect(
+      gitRunner(join(root, 'no-such-git'))(['status'], root),
+    ).rejects.toThrow('ENOENT');
+  });
+});
+
+test('cursorUrl: the known hosts as https://host/owner/repo, others as given without user or password', () => {
   expect(
     [
       'git@github.com:acme/web.git',
@@ -259,6 +319,11 @@ test('cursorUrl: the known hosts as https://host/owner/repo, others as given', (
       'git@bitbucket.org:acme/web.git',
       'git@git.sr.ht:~acme/web',
       'https://git.example.com/acme/web.git',
+      'https://u:tok@git.example.com/a/b.git',
+      'https://tok@git.example.com/a/b.git',
+      'ssh://git@git.example.com:2222/a/b.git',
+      'git@git.example.com:a/b.git',
+      'example.com:a/b.git',
     ].map(cursorUrl),
   ).toEqual([
     'https://github.com/acme/web',
@@ -267,5 +332,10 @@ test('cursorUrl: the known hosts as https://host/owner/repo, others as given', (
     'https://bitbucket.org/acme/web',
     'https://git.sr.ht/~acme/web',
     'https://git.example.com/acme/web.git',
+    'https://git.example.com/a/b.git',
+    'https://git.example.com/a/b.git',
+    'ssh://git.example.com:2222/a/b.git',
+    'git@git.example.com:a/b.git',
+    'example.com:a/b.git',
   ]);
 });

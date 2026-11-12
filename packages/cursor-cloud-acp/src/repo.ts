@@ -31,32 +31,61 @@ export interface Repository {
 export const BOUND_MS = 10_000;
 
 /**
- * git itself, with no terminal: stdin ignored and git's own prompts off, so
- * a passphrase it would ask for fails it rather than hanging the start.
+ * `command` (git, but in a test) with no terminal: stdin ignored and git's
+ * own prompts off, so a passphrase it would ask for fails it rather than
+ * hanging the start. Killed outright at `bound`: a git that ignored
+ * SIGTERM would hold session/new past it.
  */
-export const git: Git = (args, cwd) =>
-  new Promise((resolve, reject) => {
-    const child = spawn('git', args, {
-      cwd,
-      env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
-      stdio: ['ignore', 'pipe', 'pipe'],
-      timeout: BOUND_MS,
-    });
-    let stdout = '';
-    let stderr = '';
+export function gitRunner(command = 'git', bound = BOUND_MS): Git {
+  return (args, cwd) =>
+    new Promise((resolve, reject) => {
+      const child = spawn(command, args, {
+        cwd,
+        env: { ...process.env, GIT_TERMINAL_PROMPT: '0' },
+        stdio: ['ignore', 'pipe', 'pipe'],
+        timeout: bound,
+        killSignal: 'SIGKILL',
+      });
+      let stdout = '';
+      let stderr = '';
 
-    child.stdout.setEncoding('utf8').on('data', (chunk) => (stdout += chunk));
-    child.stderr.setEncoding('utf8').on('data', (chunk) => (stderr += chunk));
-    child.on('error', reject);
-    child.on('close', (status) => resolve({ status, stdout, stderr }));
-  });
+      child.stdout.setEncoding('utf8').on('data', (chunk) => (stdout += chunk));
+      child.stderr.setEncoding('utf8').on('data', (chunk) => (stderr += chunk));
+      child.on('error', reject);
+      child.on('close', (status) => resolve({ status, stdout, stderr }));
+    });
+}
+
+/** git itself. */
+export const git = gitRunner();
 
 /**
  * A repository URL in Cursor's form: `https://host/owner/repo` for the
- * hosts `hosted-git-info` knows, any other as git has it.
+ * hosts `hosted-git-info` knows, any other as git has it but for its user
+ * and password, which never go to Cursor or onto the screen (owner,
+ * CHD-622). An scp-style `user@host:path` is no URL and stays as it is.
  */
 export function cursorUrl(url: string): string {
-  return hostedGitInfo.fromUrl(url)?.browse({ noCommittish: true }) ?? url;
+  const known = hostedGitInfo.fromUrl(url)?.browse({ noCommittish: true });
+
+  if (known !== undefined) {
+    return known;
+  }
+
+  if (!URL.canParse(url)) {
+    return url;
+  }
+
+  const parsed = new URL(url);
+
+  if (parsed.username === '' && parsed.password === '') {
+    return url;
+  }
+
+  parsed.username = '';
+  parsed.password = '';
+
+  return parsed.href;
 }
 
 /**

@@ -342,3 +342,76 @@ test('cursorUrl: the known hosts as https://host/owner/repo, others as given wit
     'example.com:a/b.git',
   ]);
 });
+
+describe('CHD-622 tester: repository selection boundaries', () => {
+  test('the runner disables Git prompts and closes stdin while preserving failure output', async () => {
+    const dir = join(root, 'runner-stdin');
+    const fake = join(dir, 'git');
+
+    await mkdir(dir);
+    await writeFile(
+      fake,
+      '#!/bin/sh\nprintf "%s\\n" "$GIT_TERMINAL_PROMPT"\nif read value; then exit 9; fi\nprintf "stdin closed\\n" >&2\nexit 7\n',
+    );
+    await chmod(fake, 0o755);
+    expect(await gitRunner(fake)([], dir)).toEqual({
+      status: 7,
+      stdout: '0\n',
+      stderr: 'stdin closed\n',
+    });
+  });
+
+  test('branch pushRemote wins over pushDefault and reads its push URL', async () => {
+    const dir = await pushed();
+
+    sh(dir, 'remote', 'add', 'fork', 'https://github.com/upstream/web.git');
+    sh(dir, 'remote', 'set-url', '--push', 'fork', 'git@gitlab.com:me/web.git');
+    sh(dir, 'config', 'remote.pushDefault', 'origin');
+    sh(dir, 'config', 'branch.main.pushRemote', 'fork');
+    sh(dir, 'update-ref', 'refs/remotes/fork/main', 'HEAD');
+    expect(await repository(dir)).toEqual({
+      url: 'https://gitlab.com/me/web',
+      branch: 'main',
+      remote: 'fork',
+    });
+  });
+
+  test('a configured missing push remote cannot fall back to a pushed origin', async () => {
+    const dir = await pushed();
+
+    sh(dir, 'config', 'branch.main.pushRemote', 'missing');
+    expect((await refusal(dir)).code).toBe(-32602);
+  });
+
+  test('an upstream with a different branch name does not prove this branch pushed', async () => {
+    const dir = await pushed();
+
+    sh(dir, 'config', 'branch.main.remote', 'origin');
+    sh(dir, 'config', 'branch.main.merge', 'refs/heads/other');
+    sh(dir, 'update-ref', 'refs/remotes/origin/other', 'HEAD');
+    sh(dir, 'update-ref', '-d', 'refs/remotes/origin/main');
+    expect((await refusal(dir)).message).toStartWith(
+      'Branch main is not pushed to origin.',
+    );
+  });
+
+  test('concurrent repositories keep their cwd, branch and remote separate', async () => {
+    const a = await pushed('git@github.com:acme/first.git');
+    const b = await pushed('git@gitlab.com:acme/second.git');
+
+    sh(b, 'branch', '-m', 'feature/nested');
+    sh(b, 'update-ref', 'refs/remotes/origin/feature/nested', 'HEAD');
+    expect(await Promise.all([repository(a), repository(b)])).toEqual([
+      {
+        url: 'https://github.com/acme/first',
+        branch: 'main',
+        remote: 'origin',
+      },
+      {
+        url: 'https://gitlab.com/acme/second',
+        branch: 'feature/nested',
+        remote: 'origin',
+      },
+    ]);
+  });
+});

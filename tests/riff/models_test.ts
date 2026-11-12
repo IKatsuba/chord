@@ -115,3 +115,86 @@ describe("riff's models, efforts and modes", () => {
     });
   });
 });
+
+describe('CHD-611 tester: model and effort boundaries', () => {
+  test('every model transition retains only an effort the destination offers', () => {
+    for (const plan of ['codex', 'grok'] as const) {
+      for (const source of planModels(plan)) {
+        for (const effort of ['default', ...source.levels] as const) {
+          const config = { model: source.id, effort, mode: 'ask' as const };
+
+          for (const destination of planModels(plan)) {
+            const changed = setOption(plan, config, 'model', destination.id);
+            const expected = efforts(plan, destination.id);
+
+            expect(changed).toStrictEqual({
+              model: destination.id,
+              effort: expected.includes(effort) ? effort : 'default',
+              mode: 'ask',
+            });
+            expect(config).toStrictEqual({
+              model: source.id,
+              effort,
+              mode: 'ask',
+            });
+          }
+        }
+      }
+    }
+  });
+
+  test('the picker and accepted efforts agree for every listed model', () => {
+    const levels = [
+      'default',
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+      'ultra',
+    ] as const;
+
+    for (const plan of ['codex', 'grok'] as const) {
+      for (const model of planModels(plan)) {
+        const config = { ...defaultConfig(plan), model: model.id };
+        const offered = efforts(plan, model.id);
+
+        expect(offered).toStrictEqual(['default', ...model.levels]);
+        expect(new Set(offered).size).toBe(offered.length);
+        expect(windowOf(plan, model.id)).toBe(model.window);
+
+        for (const effort of levels) {
+          const result = setOption(plan, config, 'effort', effort);
+
+          if (offered.includes(effort)) {
+            expect(result).toStrictEqual({ ...config, effort });
+          } else {
+            expect(result).toBeUndefined();
+          }
+        }
+      }
+    }
+  });
+
+  test('hidden, API-only and other-plan ids cannot enter a plan picker', () => {
+    for (const plan of ['codex', 'grok'] as const) {
+      const config = defaultConfig(plan);
+      const rejected = [
+        'gpt-reserve',
+        'codex-auto-review',
+        'grok-4.3',
+        'grok-4.20',
+        'grok-code-fast-1',
+        'fake',
+        ...(plan === 'codex'
+          ? planModels('grok').map(({ id }) => id)
+          : planModels('codex').map(({ id }) => id)),
+      ];
+
+      for (const id of rejected) {
+        expect(planModels(plan).some((model) => model.id === id)).toBe(false);
+        expect(setOption(plan, config, 'model', id)).toBeUndefined();
+      }
+    }
+  });
+});

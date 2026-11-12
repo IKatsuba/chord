@@ -36,6 +36,8 @@ import { tarball, tarballs } from '../../../../scripts/dev/release/publish.ts';
 import {
   executable,
   fetchedArchives,
+  GIT_ENV,
+  gitRead,
   nativeNotes,
   type Scratch,
   scratch,
@@ -51,17 +53,6 @@ const STEPS = new URL('../../../../steps.ts', import.meta.url).pathname;
 
 const VERSION = '9.9.9';
 const MAC = { platform: 'darwin', arch: 'arm64' };
-// Scratch repositories never read the person's or the machine's git config:
-// a CI runner has no identity, and a global commit.gpgsign would sign every
-// scratch commit with the person's key.
-const GIT_ENV = {
-  GIT_CONFIG_GLOBAL: '/dev/null',
-  GIT_CONFIG_NOSYSTEM: '1',
-  GIT_AUTHOR_NAME: 'release',
-  GIT_AUTHOR_EMAIL: 'release@example.com',
-  GIT_COMMITTER_NAME: 'release',
-  GIT_COMMITTER_EMAIL: 'release@example.com',
-};
 const IDENTITY = `  1) ${'A'.repeat(40)} "Developer ID Application: Chorded (${TEAM})"`;
 
 let at: Scratch;
@@ -200,13 +191,7 @@ describe('CHD-561 tester: source fetch interrupts the release parent', () => {
 
     const lib = join(import.meta.dir, '../../../../scripts/dev/release');
     const script = join(at.place, 'source-interrupted.ts');
-    const readGit = (...args: string[]) => {
-      const result = spawnSync('git', args, { cwd: at.root, encoding: 'utf8' });
-
-      expect(result.status).toBe(0);
-
-      return result.stdout.trim();
-    };
+    const readGit = (...args: string[]) => gitRead(at.root, ...args);
 
     const head = readGit('rev-parse', 'HEAD');
 
@@ -358,7 +343,7 @@ test('publish without pack is refused before any stage, commit or publish: tarba
   expect(
     ran().filter((line) => /^(npm publish|bun |security |xcrun )/.test(line)),
   ).toStrictEqual([]);
-  expect(String(spawnSync('git', ['tag'], { cwd: at.root }).stdout)).toBe('');
+  expect(gitRead(at.root, 'tag')).toBe('');
   expect(existsSync(join(at.root, '.release'))).toBeFalse();
 });
 
@@ -423,11 +408,7 @@ describe('tester: CHD-547 explicit version eligibility', () => {
       );
       expect(ran()).toEqual(['npm view @chorded/chord@9.9.9 version']);
       expect(readFileSync(join(at.root, 'package.json'), 'utf8')).toBe(before);
-      expect(
-        String(
-          spawnSync('git', ['status', '--porcelain'], { cwd: at.root }).stdout,
-        ).trim(),
-      ).toBe('');
+      expect(gitRead(at.root, 'status', '--porcelain')).toBe('');
     },
   );
 });
@@ -676,10 +657,7 @@ describe('a version given', () => {
   }
 
   function out(cwd: string, ...args: string[]): string {
-    return String(
-      spawnSync('git', args, { cwd, env: { ...process.env, ...GIT_ENV } })
-        .stdout,
-    ).trim();
+    return gitRead(cwd, ...args);
   }
 
   const origin = () => join(at.place, 'origin.git');
@@ -950,10 +928,7 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
   }
 
   function read(cwd: string, ...args: string[]): string {
-    return String(
-      spawnSync('git', args, { cwd, env: { ...process.env, ...GIT_ENV } })
-        .stdout,
-    ).trim();
+    return gitRead(cwd, ...args);
   }
 
   const origin = () => join(at.place, 'origin.git');
@@ -1356,10 +1331,7 @@ await dying(() =>
   }
 
   function out(cwd: string, ...args: string[]): string {
-    return String(
-      spawnSync('git', args, { cwd, env: { ...process.env, ...GIT_ENV } })
-        .stdout,
-    ).trim();
+    return gitRead(cwd, ...args);
   }
 
   test.each(['SIGINT', 'SIGTERM', 'SIGHUP'])(
@@ -1428,9 +1400,7 @@ describe('CHD-531 mandatory authentication preparation', () => {
       writeFileSync(join(at.place, 'published', `chord@${VERSION}`), '');
 
       const before = readFileSync(join(at.root, 'package.json'), 'utf8');
-      const head = String(
-        spawnSync('git', ['rev-parse', 'HEAD'], { cwd: at.root }).stdout,
-      );
+      const head = gitRead(at.root, 'rev-parse', 'HEAD');
       const options = {
         only: ['install', 'compile', 'sign', 'notarise', 'publish'],
       } satisfies ReleaseOptions;
@@ -1455,17 +1425,8 @@ describe('CHD-531 mandatory authentication preparation', () => {
         ran().some((line) => /^(bun|security|xcrun|npm publish) /.test(line)),
       ).toBe(false);
       expect(readFileSync(join(at.root, 'package.json'), 'utf8')).toBe(before);
-      expect(
-        String(
-          spawnSync('git', ['rev-parse', 'HEAD'], { cwd: at.root }).stdout,
-        ),
-      ).toBe(head);
-      expect(
-        String(
-          spawnSync('git', ['rev-parse', 'origin/main'], { cwd: at.root })
-            .stdout,
-        ),
-      ).toBe(head);
+      expect(gitRead(at.root, 'rev-parse', 'HEAD')).toBe(head);
+      expect(gitRead(at.root, 'rev-parse', 'origin/main')).toBe(head);
     },
   );
 
@@ -1894,19 +1855,7 @@ esac
     }
 
     function git_(...args: string[]): string {
-      const child = spawnSync('git', args, {
-        cwd: at.root,
-        env: { ...process.env, ...GIT_ENV },
-        encoding: 'utf8',
-      });
-
-      // A git that failed here would leave the fixture half made and fail
-      // the test later, far from the cause.
-      if (child.status !== 0) {
-        throw new Error(`git ${args.join(' ')}: ${child.stderr}`);
-      }
-
-      return child.stdout.trim();
+      return gitRead(at.root, ...args);
     }
 
     test('a bump commits its package.json as chore: <package> v<version>, and publishes its npm names, the main one last, then tags', async () => {
@@ -2861,8 +2810,7 @@ await dying(() =>
     env: context().env,
     encoding: 'utf8',
   });
-  const git = (...args: string[]) =>
-    String(spawnSync('git', args, { cwd: at.root }).stdout).trim();
+  const git = (...args: string[]) => gitRead(at.root, ...args);
   const commit = git('rev-parse', 'HEAD');
 
   expect(child.signal).toBe('SIGTERM');

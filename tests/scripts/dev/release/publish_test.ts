@@ -34,6 +34,7 @@ import chordSteps from '../../../../steps.ts';
 import {
   executable,
   fetchedArchives,
+  GIT_ENV,
   nativeNotes,
   SOURCE_NOTES,
 } from './scratch.ts';
@@ -95,13 +96,6 @@ esac
 `;
 
 const NODE = '#!/bin/bash\nexec /bin/bash "$@"\n';
-
-const GIT_ENV = {
-  GIT_AUTHOR_NAME: 'release',
-  GIT_AUTHOR_EMAIL: 'release@example.com',
-  GIT_COMMITTER_NAME: 'release',
-  GIT_COMMITTER_EMAIL: 'release@example.com',
-};
 
 let place: string;
 let repo: string;

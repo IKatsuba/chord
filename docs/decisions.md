@@ -8510,8 +8510,10 @@ another library.
 
 The owner chose never stale: `stale: Infinity`, `update: 2^31 - 1` ms.
 proper-lockfile clamps `stale` only from below (2 s) and `update` to between
-1 s and `stale / 2`; with an infinite `stale` neither its staleness check
-nor its compromised check ever fires. `update` stays at 2^31 - 1 ms because
+1 s and `stale / 2`; with an infinite `stale` none of its elapsed-time
+thresholds fires: neither a lock's staleness nor a missed update counts.
+Its other compromise checks (the lock deleted, its mtime changed by
+another) still stand. `update` stays at 2^31 - 1 ms because
 a timer beyond that fires at once in Node and Bun. A lock a run left behind
 (SIGKILL, a crash, a reboot) is refused like a live one, naming the pid
 the holder wrote and `<git common dir>/chord-release.lock`, removed by hand

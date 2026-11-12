@@ -51,6 +51,7 @@ export class Turn {
   #stopped: (() => void) | undefined;
   /** Settles once the turn is cancelled. */
   readonly #cancelling: Promise<'cancelled'>;
+  #timer: ReturnType<typeof setTimeout> | undefined;
   #onCancel: () => void = () => undefined;
 
   constructor(context: TurnContext) {
@@ -78,6 +79,8 @@ export class Turn {
       return await this.#turn();
     } finally {
       this.#answered = true;
+      // The bound runs until the turn has answered, not until the run ends.
+      clearTimeout(this.#timer);
     }
   }
 
@@ -118,9 +121,26 @@ export class Turn {
     }
 
     // The run ended first: what its stream still holds is drawn before the
-    // turn answers, as the SDK's stream ends with its run.
-    if (first === outcome && (await Promise.race([read, stop])) === 'stopped') {
-      return this.#unconfirmed();
+    // turn answers, as the SDK's stream ends with its run. A cancel meanwhile
+    // answers at once: the run has already ended.
+    if (first === outcome) {
+      const drained = await Promise.race([read, stop, this.#cancelling]);
+
+      if (drained === 'stopped') {
+        return this.#unconfirmed();
+      }
+
+      if (drained === 'cancelled') {
+        return { stopReason: 'cancelled' };
+      }
+
+      if ('lost' in drained) {
+        throw lost(drained.lost, link(this.#context.agentId));
+      }
+
+      if ('failed' in drained) {
+        throw drained.failed;
+      }
     }
 
     const { result } = outcome;
@@ -214,15 +234,11 @@ export class Turn {
   }
 
   #cancel(run: PortRun): void {
-    const timer = setTimeout(
+    this.#timer = setTimeout(
       () => this.#stopped?.(),
       this.#context.bound ?? CANCEL_BOUND_MS,
     );
 
     run.cancel().catch(() => this.#stopped?.());
-    void run
-      .wait()
-      .finally(() => clearTimeout(timer))
-      .catch(() => undefined);
   }
 }

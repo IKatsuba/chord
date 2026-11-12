@@ -522,3 +522,69 @@ test("an erring run's code goes in data", async () => {
     data: { code: 'usage_limit_exceeded' },
   });
 });
+
+describe('while the stream drains after the run ended', () => {
+  test("its loss fails the turn with the link and the SDK's data", async () => {
+    const fake = fakeRun();
+    const at = turnOver(fake);
+    const answer = at.turn.run();
+
+    at.release();
+    await settle();
+    fake.resolveOnly();
+    await settle();
+    fake.fail(
+      new CursorError('network', 'Connection reset', {
+        sdkClass: 'NetworkError',
+      }),
+    );
+    await expect(answer).rejects.toMatchObject({
+      code: -32603,
+      data: { class: 'NetworkError' },
+    });
+  });
+
+  test("another failure fails the turn with the stream's error", async () => {
+    const fake = fakeRun();
+    const at = turnOver(fake);
+    const answer = at.turn.run();
+    const error = new CursorError('rate-limit', 'Too many requests');
+
+    at.release();
+    await settle();
+    fake.resolveOnly();
+    await settle();
+    fake.fail(error);
+    await expect(answer).rejects.toBe(error);
+  });
+
+  test('a cancel answers cancelled at once, though an update is held', async () => {
+    jest.useFakeTimers();
+
+    const fake = fakeRun();
+    const held = deferred<void>();
+    const turn = new Turn({
+      agentId: ID,
+      bound: 20,
+      send: () => Promise.resolve(fake.run),
+      artifacts: () => Promise.resolve([]),
+      emit: () => held.promise,
+    });
+
+    fake.message({ type: 'task', agent_id: ID, run_id: 'r', text: 'task0' });
+    fake.resolveOnly();
+
+    let answered: unknown;
+    const answer = turn.run().then((response) => {
+      answered = response;
+    });
+
+    await settle();
+    expect(answered).toBeUndefined();
+    turn.cancel();
+    await settle();
+    expect(answered).toEqual({ stopReason: 'cancelled' });
+    held.resolve();
+    await answer;
+  });
+});

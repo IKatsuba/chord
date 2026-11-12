@@ -75,6 +75,8 @@ function run(real: sdk.Run, from: typeof sdk): PortRun {
     id: real.id,
     agentId: real.agentId,
     supports: (operation) => real.supports(operation),
+    unsupportedReason: (operation) => real.unsupportedReason(operation),
+    ...(real.createdAt === undefined ? {} : { createdAt: real.createdAt }),
     async *stream() {
       try {
         yield* real.stream();

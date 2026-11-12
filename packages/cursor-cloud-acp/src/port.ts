@@ -17,7 +17,15 @@ import type {
 /** One run of a cloud agent, as a prompt drives it. */
 export type PortRun = Pick<
   Run,
-  'id' | 'agentId' | 'supports' | 'stream' | 'wait' | 'cancel' | 'conversation'
+  | 'id'
+  | 'agentId'
+  | 'supports'
+  | 'unsupportedReason'
+  | 'stream'
+  | 'wait'
+  | 'cancel'
+  | 'conversation'
+  | 'createdAt'
 >;
 
 /** One cloud agent, a session of the adapter's. */

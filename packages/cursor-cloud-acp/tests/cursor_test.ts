@@ -64,6 +64,8 @@ function failingRun(error: Error): sdk.Run {
     id: 'run-1',
     agentId: 'bc-1',
     supports: () => true,
+    unsupportedReason: () => 'Not for this run',
+    createdAt: 1_800_000_000_000,
     async *stream() {
       yield { type: 'status', status: 'RUNNING' } as unknown as sdk.SDKMessage;
 
@@ -139,7 +141,12 @@ describe("the Port throws the adapter's errors from every call", () => {
     const run = await agent.send('hi');
     const seen: unknown[] = [];
 
-    expect(run).toMatchObject({ id: 'run-1', agentId: 'bc-1' });
+    expect(run).toMatchObject({
+      id: 'run-1',
+      agentId: 'bc-1',
+      createdAt: 1_800_000_000_000,
+    });
+    expect(run.unsupportedReason('conversation')).toBe('Not for this run');
     await expect(
       (async () => {
         for await (const message of run.stream()) {

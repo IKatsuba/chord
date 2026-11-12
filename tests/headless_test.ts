@@ -1788,3 +1788,57 @@ describe('--no-mcp-servers with -p (CHD-620)', () => {
     expect(plain.stdout).toContain('"name": "files"');
   });
 });
+
+describe('CHD-620 tester: headless MCP flag boundaries', () => {
+  test('JSON output suppresses every configured transport and another invocation restores them', async () => {
+    const project = {
+      agents: { fake: { mcpServers: true } },
+      mcpServers: {
+        files: { command: 'unused-fixture-mcp' },
+        docs: { type: 'http', url: 'https://docs.example/mcp' },
+        events: { type: 'sse', url: 'https://events.example/sse' },
+      },
+    };
+
+    for (const disabled of [true, false, true]) {
+      const result = await chord(
+        [
+          '-p',
+          'mcp',
+          '--output-format',
+          'json',
+          ...(disabled ? ['--no-mcp-servers'] : []),
+        ],
+        '',
+        project,
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.stderr).toBe('');
+
+      const reply = JSON.parse(result.stdout);
+      const servers = JSON.parse(
+        reply.result.trim().replace(/^```json\n|\n```$/g, ''),
+      );
+
+      expect(reply.is_error).toBe(false);
+      expect(servers.map((server: { name: string }) => server.name)).toEqual(
+        disabled ? [] : ['files', 'docs', 'events'],
+      );
+    }
+  });
+
+  test('a failing fake turn still reports its failure with the flag', async () => {
+    const result = await chord(
+      ['-p', 'error', '--output-format', 'json', '--no-mcp-servers'],
+      '',
+    );
+
+    expect(result.code).toBe(1);
+    expect(JSON.parse(result.stdout)).toMatchObject({
+      is_error: true,
+      result: 'About to fail.',
+      error: 'The fake agent failed on purpose.',
+    });
+  });
+});

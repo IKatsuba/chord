@@ -2513,3 +2513,27 @@ test('what set an agent to take none is kept: the flag by name, else the file (C
     NO_MCP_SERVERS,
   );
 });
+
+describe('CHD-620 tester: suppression source on reopening', () => {
+  test('an unflagged reopen replaces the old flag source with the current file source', () => {
+    const layers = [
+      {
+        file: 'current-fixture.json',
+        settings: { agents: { fake: { mcpServers: false } } },
+      },
+    ];
+    const flagged = resolveStartup(
+      { agent: 'fake', mcpServers: false },
+      layers,
+      'fake',
+    );
+    const reopened = resumedStartup(flagged, {}, layers);
+    const unconfigured = resumedStartup(flagged, {}, []);
+
+    expect(flagged.mcpServersFrom).toBe(NO_MCP_SERVERS);
+    expect(reopened.mcpServers).toBe(false);
+    expect(reopened.mcpServersFrom).toBe('current-fixture.json');
+    expect(unconfigured.mcpServers).toBeUndefined();
+    expect(unconfigured.mcpServersFrom).toBeUndefined();
+  });
+});

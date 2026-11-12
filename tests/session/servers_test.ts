@@ -398,3 +398,35 @@ describe('--no-mcp-servers names itself in the start line (CHD-620)', () => {
     );
   });
 });
+
+describe('CHD-620 tester: suppressed-server edge cases', () => {
+  test('an empty configuration produces no warning or fabricated held server', () => {
+    const result = serversFor('fake', {}, [], undefined, true, NO_MCP_SERVERS);
+
+    expect(result.servers).toEqual([]);
+    expect(result.heldBack).toEqual([]);
+    expect(heldBackLine(result.heldBack)).toBeUndefined();
+  });
+
+  test('a user server named chord stays distinct from the suppressed own server', () => {
+    const ownName = { ...STDIO, name: 'chord' };
+    const result = serversFor(
+      'fake',
+      { http: true, sse: true },
+      [ownName, SSE],
+      CHORD,
+      true,
+      NO_MCP_SERVERS,
+    );
+
+    expect(result.servers).toEqual([]);
+    expect(result.heldBack.filter((entry) => entry.own)).toHaveLength(1);
+    expect(result.heldBack.filter((entry) => !entry.own)).toHaveLength(2);
+    expect(
+      result.heldBack.every((entry) => entry.from === NO_MCP_SERVERS),
+    ).toBe(true);
+    expect(heldBackLine(result.heldBack)).toContain("chord (chord's own)");
+    expect(heldBackLine(result.heldBack)).toContain('chord, logs');
+    expect(heldBackLine(result.heldBack)).not.toContain('Bearer token');
+  });
+});

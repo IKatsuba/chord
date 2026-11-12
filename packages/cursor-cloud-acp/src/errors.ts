@@ -145,6 +145,14 @@ export function lostConnection(link: string): string {
   return `Lost the connection to Cursor; the agent keeps running there: ${link}. Reopen the session to see where it got to.`;
 }
 
+/**
+ * A stream lost mid-run, as the turn ends: the design's words, with the
+ * SDK's class, code and request id in data as for every SDK error.
+ */
+export function lost(error: CursorError, link: string): RequestError {
+  return new RequestError(INTERNAL_ERROR, lostConnection(link), details(error));
+}
+
 /** The SDK's message, then a link on a line of its own, when there is one. */
 function joined(message: string, link: string | undefined): string {
   return link === undefined ? message : `${message}\n${link}`;

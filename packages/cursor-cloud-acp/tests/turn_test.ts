@@ -75,8 +75,17 @@ function fakeRun() {
   return {
     run,
     cancels,
-    finish: (value: Partial<RunResult> = {}) =>
+    /** Ends the run without ending its stream, which still holds messages. */
+    resolveOnly: (value: Partial<RunResult> = {}) =>
       result.resolve({ id: 'run-1', status: 'finished', ...value }),
+    // The SDK's stream ends with its run.
+    finish: (value: Partial<RunResult> = {}) => {
+      result.resolve({ id: 'run-1', status: 'finished', ...value });
+
+      ended = true;
+
+      wake();
+    },
     message: (message: SDKMessage) => {
       queue.push(message);
       wake();
@@ -400,5 +409,116 @@ describe('the stream', () => {
     await settle();
     fake.finish();
     expect((await answer).stopReason).toBe('end_turn');
+  });
+});
+
+describe('after the run ends', () => {
+  test("its stream's queued messages are drawn before the answer, each emit awaited", async () => {
+    const fake = fakeRun();
+    const held = deferred<void>();
+    const drawn: string[] = [];
+    let emits = 0;
+    const turn = new Turn({
+      agentId: ID,
+      send: () => Promise.resolve(fake.run),
+      artifacts: () => Promise.resolve([]),
+      emit: async (update) => {
+        emits += 1;
+
+        // The first update waits on the client: backpressure holds the rest.
+        if (emits === 1) {
+          await held.promise;
+        }
+
+        if (
+          update.sessionUpdate === 'agent_message_chunk' &&
+          update.content.type === 'text'
+        ) {
+          drawn.push(update.content.text);
+        }
+      },
+    });
+
+    for (let at = 0; at < 10; at += 1) {
+      fake.message({
+        type: 'task',
+        agent_id: ID,
+        run_id: 'r',
+        text: `task${at}`,
+      });
+    }
+
+    fake.resolveOnly();
+
+    let answered = false;
+    const answer = turn.run().then((response) => {
+      answered = true;
+
+      return response;
+    });
+
+    await settle();
+    expect(answered).toBe(false);
+    held.resolve();
+    await settle();
+    fake.end();
+    expect(await answer).toEqual({ stopReason: 'end_turn' });
+    expect(drawn).toEqual(Array.from({ length: 10 }, (_, at) => `task${at}`));
+  });
+
+  test('a cancel while the artifacts are asked for answers cancelled within the bound', async () => {
+    const fake = fakeRun();
+    const artifacts = deferred<{ path: string }[]>();
+    const turn = new Turn({
+      agentId: ID,
+      bound: 20,
+      send: () => Promise.resolve(fake.run),
+      artifacts: () => artifacts.promise,
+      emit: () => Promise.resolve(),
+    });
+    const answer = turn.run();
+
+    await settle();
+    fake.finish();
+    await settle();
+    turn.cancel();
+    expect(await answer).toEqual({ stopReason: 'cancelled' });
+  });
+});
+
+test("a lost stream keeps the SDK's class, code and request id in data", async () => {
+  const fake = fakeRun();
+  const at = turnOver(fake);
+  const answer = at.turn.run();
+
+  at.release();
+  await settle();
+  fake.fail(
+    new CursorError('network', 'Connection reset', {
+      sdkClass: 'NetworkError',
+      code: 'unavailable',
+      requestId: 'req-9',
+    }),
+  );
+  await expect(answer).rejects.toMatchObject({
+    code: -32603,
+    message: `Lost the connection to Cursor; the agent keeps running there: ${LINK}. Reopen the session to see where it got to.`,
+    data: { class: 'NetworkError', code: 'unavailable', requestId: 'req-9' },
+  });
+});
+
+test("an erring run's code goes in data", async () => {
+  const fake = fakeRun();
+  const at = turnOver(fake);
+  const answer = at.turn.run();
+
+  at.release();
+  fake.finish({
+    status: 'error',
+    error: { message: 'Usage limit exceeded', code: 'usage_limit_exceeded' },
+  });
+  await expect(answer).rejects.toMatchObject({
+    message: 'Usage limit exceeded',
+    data: { code: 'usage_limit_exceeded' },
   });
 });

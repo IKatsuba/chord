@@ -12,7 +12,7 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import { RequestError } from '@agentclientprotocol/sdk';
-import { CursorError, INTERNAL_ERROR, lostConnection } from './errors.ts';
+import { CursorError, INTERNAL_ERROR, lost } from './errors.ts';
 import type { PortRun } from './port.ts';
 import {
   Drawing,
@@ -49,10 +49,16 @@ export class Turn {
   #answered = false;
   /** Settles the turn with `cancelled` once the bound passes. */
   #stopped: (() => void) | undefined;
+  /** Settles once the turn is cancelled. */
+  readonly #cancelling: Promise<'cancelled'>;
+  #onCancel: () => void = () => undefined;
 
   constructor(context: TurnContext) {
     this.#context = context;
     this.#drawing = new Drawing(context.agentId);
+    this.#cancelling = new Promise((resolve) => {
+      this.#onCancel = () => resolve('cancelled');
+    });
   }
 
   /** Draws `updates` unless the turn has answered. */
@@ -90,59 +96,91 @@ export class Turn {
       this.#cancel(run);
     }
 
-    const lost = this.#read(run);
-    const outcome = await Promise.race([run.wait(), stop, lost]);
+    const waited = run.wait().then((result) => ({ result }));
+    const read = this.#read(run);
+    const first = await Promise.race([waited, read, stop]);
+    // The stream ended first: the answer is still wait()'s.
+    const outcome =
+      first !== 'stopped' && 'ended' in first
+        ? await Promise.race([waited, stop])
+        : first;
 
     if (outcome === 'stopped') {
-      await this.#draw([line(unconfirmedStop(this.#context.agentId))]);
-
-      return { stopReason: 'cancelled' };
+      return this.#unconfirmed();
     }
 
-    if (typeof outcome === 'object' && 'failed' in outcome) {
+    if ('lost' in outcome) {
+      throw lost(outcome.lost, link(this.#context.agentId));
+    }
+
+    if ('failed' in outcome) {
       throw outcome.failed;
     }
 
-    if (outcome === 'lost') {
-      throw new RequestError(
-        INTERNAL_ERROR,
-        lostConnection(link(this.#context.agentId)),
-      );
+    // The run ended first: what its stream still holds is drawn before the
+    // turn answers, as the SDK's stream ends with its run.
+    if (first === outcome && (await Promise.race([read, stop])) === 'stopped') {
+      return this.#unconfirmed();
     }
 
-    if (outcome.model !== undefined) {
-      this.#context.ran?.(outcome.model);
+    const { result } = outcome;
+
+    if (result.model !== undefined) {
+      this.#context.ran?.(result.model);
     }
 
     const tokens =
-      outcome.usage === undefined ? {} : { usage: usage(outcome.usage) };
+      result.usage === undefined ? {} : { usage: usage(result.usage) };
 
-    if (outcome.status === 'cancelled' || this.#cancelled) {
+    if (result.status === 'cancelled' || this.#cancelled) {
       return { stopReason: 'cancelled', ...tokens };
     }
 
-    if (outcome.status === 'error') {
+    if (result.status === 'error') {
       throw new RequestError(
         INTERNAL_ERROR,
-        outcome.error?.message ?? 'The run failed.',
+        result.error?.message ?? 'The run failed.',
+        result.error?.code === undefined
+          ? undefined
+          : { code: result.error.code },
       );
     }
 
-    await this.#draw(
-      runEnd(outcome, await this.#context.artifacts()).map((text) =>
-        line(text),
-      ),
-    );
+    // A cancel while the artifacts are asked for still answers at once.
+    const artifacts = await Promise.race([
+      this.#context.artifacts(),
+      this.#cancelling,
+    ]);
 
-    return { stopReason: 'end_turn', ...tokens };
+    if (artifacts === 'cancelled' || this.#cancelled) {
+      return { stopReason: 'cancelled', ...tokens };
+    }
+
+    await this.#draw(runEnd(result, artifacts).map((text) => line(text)));
+
+    return this.#cancelled
+      ? { stopReason: 'cancelled', ...tokens }
+      : { stopReason: 'end_turn', ...tokens };
+  }
+
+  /** A stop Cursor did not confirm within the bound. */
+  async #unconfirmed(): Promise<PromptResponse> {
+    await this.#draw([line(unconfirmedStop(this.#context.agentId))]);
+
+    return { stopReason: 'cancelled' };
   }
 
   /**
-   * Draws the run's stream until the turn answers. Settles only when the
-   * stream fails: `lost` when its connection to Cursor goes, the error
-   * otherwise; a stream that simply ends leaves the answer to `wait()`.
+   * Draws the run's stream until it ends or the turn answers: `ended`, or
+   * how it failed, `lost` when its connection to Cursor went.
    */
-  async #read(run: PortRun): Promise<'lost' | { readonly failed: unknown }> {
+  async #read(
+    run: PortRun,
+  ): Promise<
+    | { readonly ended: true }
+    | { readonly lost: CursorError }
+    | { readonly failed: unknown }
+  > {
     try {
       for await (const message of run.stream()) {
         if (this.#answered) {
@@ -153,11 +191,11 @@ export class Turn {
       }
     } catch (error) {
       return error instanceof CursorError && error.kind === 'network'
-        ? 'lost'
+        ? { lost: error }
         : { failed: error };
     }
 
-    return new Promise<never>(() => undefined);
+    return { ended: true };
   }
 
   /** Stops the run: at once when it exists, else once `send()` gives it. */
@@ -167,6 +205,8 @@ export class Turn {
     }
 
     this.#cancelled = true;
+
+    this.#onCancel();
 
     if (this.#run !== undefined) {
       this.#cancel(this.#run);

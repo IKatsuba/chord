@@ -629,16 +629,28 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
           await writeFile(
             join(checkout, 'package.json'),
             JSON.stringify({
+              name: '@chorded/chord',
               type: 'module',
               version: '0.0.0',
               scripts: {
                 dev: 'bun scripts/dev.ts',
-                quality: 'bun scripts/quality.ts',
                 check: 'bun -e "0"',
                 eslint: 'bun -e "0"',
                 fmt: 'bun -e "0"',
               },
             }),
+          );
+          await writeFile(
+            join(checkout, 'steps.ts'),
+            `const bun = process.execPath;
+export default {
+  checks: [
+    { name: 'static tests', static: true, run: [bun, 'test', 'lint/'] },
+    { name: 'the suite', run: [bun, 'scripts/dev.ts', 'test'] },
+  ],
+  lint: [],
+  release: [{ name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' }],
+};\n`,
           );
           // Isolate the suite's status from unrelated static tooling.
           await writeFile(
@@ -661,7 +673,9 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
 
           const result = spawnSync(
             bun,
-            command === 'test' ? ['dev', 'test'] : command.split(' '),
+            command === 'test'
+              ? ['dev', 'test']
+              : ['dev', 'quality', 'chord', ...command.split(' ').slice(1)],
             {
               cwd: checkout,
               encoding: 'utf8',

@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
+import { cp, readFile, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -432,6 +433,8 @@ describe('tester: migrated command boundaries', () => {
     };
 
     const actions: DevActions = {
+      quality: unexpected,
+      lint: unexpected,
       compile: unexpected,
       npm: unexpected,
       registry: unexpected,
@@ -453,7 +456,7 @@ describe('tester: migrated command boundaries', () => {
     };
 
     await expect(
-      devCommand(actions).noExit().throwErrors().parse(['mark']),
+      devCommand(actions, PACKAGES).noExit().throwErrors().parse(['mark']),
     ).rejects.toBe(failure);
   });
 });
@@ -461,18 +464,12 @@ describe('tester: migrated command boundaries', () => {
 describe('tester: CHD-411 forwarding boundaries', () => {
   test('quoted and dash-prefixed values retain their boundaries', async () => {
     const args = ['-t', 'a stop with spaces', '--unknown=value'];
-    const forwarded: string[][] = [];
 
     expect(await parsed(['test', ...args])).toStrictEqual([['test', args]]);
 
-    await lintCommand((values) => {
-      forwarded.push([...values]);
-    })
-      .noExit()
-      .throwErrors()
-      .parse(args);
-
-    expect(forwarded).toStrictEqual([args]);
+    expect(await parsed(['lint', 'chord', ...args])).toStrictEqual([
+      ['lint', 'chord', args],
+    ]);
     expect(await parsed(['chord', '--fake', ...args])).toStrictEqual([
       ['chord', true, args, undefined, '/tmp/chord-fake'],
     ]);
@@ -497,19 +494,12 @@ describe('tester: CHD-411 forwarding boundaries', () => {
   });
 
   test('quality accepts only its static option', async () => {
-    const calls: { static: boolean }[] = [];
-    const parse = (argv: string[]) =>
-      qualityCommand((options) => {
-        calls.push(options);
-      })
-        .noExit()
-        .throwErrors()
-        .parse(argv);
-
-    await parse([]);
-    await parse(['--static']);
-
-    expect(calls).toStrictEqual([{ static: false }, { static: true }]);
+    expect(await parsed(['quality', 'chord'])).toStrictEqual([
+      ['quality', 'chord', false],
+    ]);
+    expect(await parsed(['quality', 'chord', '--static'])).toStrictEqual([
+      ['quality', 'chord', true],
+    ]);
 
     for (const argv of [
       ['--fix'],
@@ -517,7 +507,9 @@ describe('tester: CHD-411 forwarding boundaries', () => {
       ['--static', 'extra'],
       ['check'],
     ]) {
-      await expect(parse(argv)).rejects.toThrow(ValidationError);
+      await expect(parsed(['quality', 'chord', ...argv])).rejects.toThrow(
+        ValidationError,
+      );
     }
   });
 });
@@ -921,6 +913,65 @@ describe("a fake or QA run keeps chord's state off the person's (CHD-616)", () =
       rmSync(person, { recursive: true, force: true });
       rmSync(dir, { recursive: true, force: true });
       rmSync(`${dir}.state`, { recursive: true, force: true });
+    }
+  });
+});
+
+describe('tester: direct lint process boundaries', () => {
+  test('fix flags, literal empty arguments and ESLint failure status reach the package caller', async () => {
+    const root = join(import.meta.dir, '..', '..');
+    const dir = mkdtempSync(join(tmpdir(), 'chord-lint-tester-'));
+
+    try {
+      await cp(join(root, 'scripts'), join(dir, 'scripts'), {
+        recursive: true,
+      });
+      await symlink(join(root, 'node_modules'), join(dir, 'node_modules'));
+      await writeFile(
+        join(dir, 'package.json'),
+        JSON.stringify({
+          name: '@chorded/chord',
+          type: 'module',
+          scripts: { dev: 'bun scripts/dev.ts', eslint: 'bun eslint.ts' },
+        }),
+      );
+      await writeFile(
+        join(dir, 'steps.ts'),
+        `export default {
+  checks: [],
+  lint: [process.execPath, 'run', 'eslint', '.'],
+  release: [{ name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' }],
+};\n`,
+      );
+      await writeFile(
+        join(dir, 'eslint.ts'),
+        [
+          "import { writeFileSync } from 'node:fs';",
+          "writeFileSync('arguments.json', JSON.stringify(process.argv.slice(2)));",
+          'process.exit(Number(process.env.LINT_FIXTURE_STATUS));',
+        ].join('\n'),
+      );
+
+      for (const status of [0, 23]) {
+        const result = spawnSync(
+          process.execPath,
+          ['dev', 'lint', 'chord', '--fix', '--', 'a b.ts', ''],
+          {
+            cwd: dir,
+            encoding: 'utf8',
+            timeout: 10_000,
+            env: { ...process.env, LINT_FIXTURE_STATUS: String(status) },
+          },
+        );
+
+        expect(result.error).toBeUndefined();
+        expect(result.status, result.stdout + result.stderr).toBe(status);
+        expect(
+          JSON.parse(await readFile(join(dir, 'arguments.json'), 'utf8')),
+        ).toEqual(['.', '--fix', 'a b.ts', '']);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });

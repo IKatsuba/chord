@@ -448,12 +448,12 @@ describe('tester: CHD-412 release transaction boundaries', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
+if [ "$2" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
 `,
     );
 
     expect(await died(versioned('patch', { only: ['check', 'compile'] }))).toBe(
-      'bun quality failed',
+      'bun dev quality chord failed',
     );
     expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(readFileSync(join(at.root, '.gitignore'), 'utf8')).toBe(
@@ -465,7 +465,7 @@ if [ "$1" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
       version: VERSION,
     });
     expect(ran().filter((line) => line.startsWith('bun '))).toEqual([
-      'bun quality',
+      'bun scripts/dev.ts quality chord',
     ]);
   });
 
@@ -489,7 +489,7 @@ describe('tester: CHD-411 release check caller', () => {
     await released({ only: ['check'] });
 
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
-      'bun quality',
+      'bun scripts/dev.ts quality chord',
     ]);
     expect(at.out).toEqual([]);
   });
@@ -544,7 +544,7 @@ describe('tester: release orchestration boundaries', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'quality' ]; then exit 2; fi
+if [ "$2" = 'quality' ]; then exit 2; fi
 `,
     );
 
@@ -552,10 +552,10 @@ if [ "$1" = 'quality' ]; then exit 2; fi
       await died(
         released({ dryRun: true, only: ['install', 'check', 'compile'] }),
       ),
-    ).toBe('bun quality failed');
+    ).toBe('bun dev quality chord failed');
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
       'bun install --frozen-lockfile',
-      'bun quality',
+      'bun scripts/dev.ts quality chord',
     ]);
     expect(at.out).toEqual([]);
   });
@@ -1582,7 +1582,7 @@ describe('tester: CHD-577 branch and cleanup boundaries', () => {
       await died(
         runRelease(context(), selectStages(options), options, MAC, '10.0.0'),
       ),
-    ).toBe('bun quality failed');
+    ).toBe('bun dev quality chord failed');
     expect(read('rev-parse', 'HEAD')).toBe(head);
     expect(
       JSON.parse(readFileSync(join(at.root, 'package.json'), 'utf8')),

@@ -1857,6 +1857,104 @@ esac
       expect(ran()).toContain('stage pack');
     });
 
+    /** `found` with its own preflight: logged, refusing if `refuse`. */
+    function guarded(refuse: boolean): FoundPackage {
+      return {
+        ...found,
+        steps: {
+          ...found.steps,
+          preflight: async (release, version) => {
+            await logged(`preflight ${version}`)();
+
+            if (refuse) {
+              throw new ReleaseError(`${name} refuses ${version}`);
+            }
+          },
+        },
+      };
+    }
+
+    test("the package's own preflight runs after the release's and before npm authentication", async () => {
+      const options = { dryRun: true, skip: ['sign'] };
+
+      await runRelease(
+        context(),
+        guarded(false),
+        selectStages({ name, stages }, options),
+        options,
+        MAC,
+        'patch',
+      );
+
+      const order = ran().filter(
+        (line) =>
+          line.startsWith(`npm view ${main}@${NEXT}`) ||
+          line.startsWith('stage ') ||
+          line === 'npm whoami',
+      );
+
+      expect(order).toStrictEqual([
+        `npm view ${main}@${NEXT} version`,
+        `stage preflight ${NEXT}`,
+        'npm whoami',
+        'stage build',
+        'stage pack',
+      ]);
+    });
+
+    test('a refusing package preflight stops before npm authentication or any stage, resuming too', async () => {
+      expect(
+        await died(
+          runRelease(
+            context(),
+            guarded(true),
+            selectStages({ name, stages }, {}),
+            {},
+            MAC,
+            'patch',
+          ),
+        ),
+      ).toBe(`${name} refuses ${NEXT}`);
+
+      if (npm.length > 1) {
+        // A stopped publish: a package before the main one has the version.
+        rmSync(join(at.place, 'published'), { recursive: true });
+        mkdirSync(join(at.place, 'published'));
+        writeFileSync(
+          join(
+            at.place,
+            'published',
+            `${npm[0]!.slice('@chorded/'.length)}@${VERSION}`,
+          ),
+          '',
+        );
+
+        expect(
+          await died(
+            runRelease(
+              context(),
+              guarded(true),
+              selectStages({ name, stages }, {}),
+              {},
+              MAC,
+            ),
+          ),
+        ).toBe(`${name} refuses ${VERSION}`);
+      }
+
+      expect(
+        ran().filter(
+          (line) => line === 'npm whoami' || line.startsWith('npm login'),
+        ),
+      ).toStrictEqual([]);
+      expect(
+        ran().filter(
+          (line) =>
+            line.startsWith('stage ') && !line.startsWith('stage preflight'),
+        ),
+      ).toStrictEqual([]);
+    });
+
     test('a new version needs its versioned stage', async () => {
       expect(await died(run({ skip: ['build'] }, 'patch'))).toBe(
         `a new version needs the build stage: ${NEXT} is not package.json's ${VERSION}`,

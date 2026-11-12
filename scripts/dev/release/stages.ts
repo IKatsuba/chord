@@ -172,6 +172,10 @@ async function locked(
     );
   }
 
+  // The package's own preflight (chord's agent pins, CHD-622), after the
+  // release's and before npm may hand over the terminal or save credentials.
+  await found.steps.preflight?.(release, version);
+
   authenticate(release);
 
   // A stopped publish uses its existing packages without building again.
@@ -183,9 +187,6 @@ async function locked(
 
     return;
   }
-
-  // The package's own preflight (chord's agent pins, CHD-622).
-  await found.steps.preflight?.(release, version);
 
   // What the selected stages need, found before the build, each once.
   for (const ready of new Set(built.flatMap((stage) => stage.ready ?? []))) {

@@ -340,6 +340,52 @@ test('choose refuses an option or value not offered', () => {
 });
 
 describe('CHD-622 tester: config roundtrip boundaries', () => {
+  test('model choice and partial reselection use the entire non-max variant without changing Cursor default', () => {
+    const model: ModelListItem = {
+      ...GPT,
+      variants: [
+        {
+          displayName: 'Max default',
+          isDefault: true,
+          isMaxMode: true,
+          params: [
+            { id: 'reasoning', value: 'high' },
+            { id: 'context', value: '1m' },
+          ],
+        },
+        {
+          displayName: 'Standard',
+          isMaxMode: false,
+          params: [
+            { id: 'reasoning', value: 'low' },
+            { id: 'context', value: '200k' },
+          ],
+        },
+      ],
+    };
+    const expected = {
+      mode: 'plan',
+      model: { id: GPT.id, params: { reasoning: 'low', context: '200k' } },
+    };
+
+    expect(choose({ mode: 'plan' }, [model], true, 'model', GPT.id)).toEqual(
+      expected,
+    );
+    expect(
+      choose(
+        { mode: 'plan', model: { id: GPT.id, params: { reasoning: 'high' } } },
+        [model],
+        false,
+        'model',
+        GPT.id,
+      ),
+    ).toEqual(expected);
+    expect(
+      choose({ mode: 'plan' }, [model], true, 'model', CURSORS_DEFAULT),
+    ).toEqual({ mode: 'plan' });
+    expect(selection({ mode: 'plan' })).toBeUndefined();
+  });
+
   test('reselecting a partially reported model replaces all parameters with one valid default', () => {
     const partial: Choice = Object.freeze({
       mode: 'plan',

@@ -8367,3 +8367,84 @@ the library. riff therefore advertises `mcpCapabilities.sse: false`, and
 `serversFor` holds SSE servers back from it with the usual reason; stdio
 and streamable HTTP, whose starts are bounded, stay. No upstream issue is
 filed for now.
+
+## 2026-11-12 — CHD-623: `bun dev` for several packages: the owner's decisions
+
+Designing CHD-622 (`@chorded/cursor-cloud-acp`, a second package in this
+repository) raised how `bun dev` releases and checks more than one package.
+The owner decided, in turn:
+
+- **Not a command of its own** (`bun dev release-acp`, proposed and
+  refused): `bun dev release` releases the package it is given, every
+  stage run against that package.
+- **The package is an explicit positional argument**, neither a subcommand
+  per package nor a flag, and there is **no default**: chord's release is
+  named too. A bare `bun dev release` releases nothing and says it is not
+  clear which package to release.
+- **A package is named by its npm name without the scope**: `chord`,
+  `cursor-cloud-acp`.
+- **The version or bump is `--bump`.**
+- **No GitHub release** for a package other than chord.
+- **Every package defines its own steps in a file at its root**, named
+  close to what it holds: its checks, build, publish and other steps, in
+  their order. A command run for a package runs only that package's steps;
+  chord's release never runs cursor-cloud-acp's checks, and the reverse.
+  Refused: `bun quality [package]`, and `scripts` in each package.json run
+  by `bun run --filter` (chord's checks back in the root package.json
+  against CHD-411, no step named on failure, the Node smoke behind Bun's
+  node shim).
+- **Everything goes through `bun dev`**: `bun quality [--static]` becomes
+  the checks command for chord, `bun lint --fix` a `bun dev` command for a
+  package, `bun dev test` stays chord's suite runner, CI calls the checks
+  command per package, and AGENTS.md, the folder AGENTS.md files,
+  CONTRIBUTING, the guide and comments follow in the same change.
+- **The steps**: chord's are types, covered, eslint, format, `lint/`'s
+  tests and, when not `--static`, the suite, each leaving `packages/` out;
+  cursor-cloud-acp's are types, covered, eslint, format, tests and, when
+  not `--static`, its build and its Node 22 smoke.
+- The checks command may be `check` or `quality`.
+
+## 2026-11-12 — CHD-623: `steps.ts`, `quality`, and stages per package
+
+`docs/design/CHD-623.md` is the design. Within the decisions above:
+
+- **`steps.ts`** at each package's root (the repository's root for chord):
+  a TypeScript module whose default export satisfies a `PackageSteps` type
+  from `scripts/dev/steps.ts`, imported for its type only. Checks are argv
+  or a lazily imported function; release stages are functions; `publish`
+  is a stage listed last, as data (npm names in order, the tag form,
+  whether a GitHub release follows) run by the release's one publish
+  implementation. Options weighed: JSON or YAML of argv (cannot hold
+  chord's signing and notarising stages without a script each); `checks.ts`
+  (too narrow now that it holds the release); package.json scripts
+  (refused by the owner).
+- **The checks command is `quality`**: `bun check` is Bun's own and is one
+  step of it. The release's check stage is renamed `quality`.
+- **Only commands that choose something take a package**: `quality`,
+  `lint`, `release`. `chord`, `test`, `compile`, `npm`, `selftest`,
+  `memory` stay chord's tools; `registry`, `mark`, `screenshots`, `social`
+  the repository's (pending the owner, O5).
+- **The release's package is a positional of `release`**, declared
+  optional so a bare run gets the release's own words. Stage options take
+  one `EnumType` over every package's stage names, and a stage the named
+  package lacks is refused after parsing by a `ValidationError`, as
+  `select.ts` already refuses impossible selections. A subcommand per
+  package would have let Cliffy type each package's stages, but the owner
+  refused subcommands.
+- **Each steps file is checked by its own package**: cursor-cloud-acp has a
+  tooling project (`tsconfig.tools.json`, Bun's types) beside its Node
+  project; chord's `tsconfig.json` does not include `packages/`, so
+  chord's check never follows a package's imports. Putting every steps file
+  in chord's project was rejected: TypeScript would follow their dynamic
+  imports into the package's tooling.
+- **One release at a time per checkout**, by `proper-lockfile` (already a
+  dependency) on a file in git's directory, taken before preflight: nothing
+  in the tree or branch state stops a second run from moving the first's
+  version commit.
+- **The step runner takes an explicit context** (root, environment, spawn,
+  output), so the release's tests run a package's checks in a scratch root.
+  A package's smoke gets its own `mkdtemp` scratch, removed when it ends.
+- Pending the owner: publish as a stage or a command (O1), `--npm <full
+  npm name>` replacing `--package` (O2), stages per package or one shared
+  list (O3), a rerun finishing a release stopped after npm published by
+  tagging alone, for both packages (O4), and the command set (O5).

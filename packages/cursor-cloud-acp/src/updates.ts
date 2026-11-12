@@ -111,12 +111,21 @@ export function plan(call: AnyToolCall): SessionUpdate | undefined {
 
   const entries: PlanEntry[] = [];
 
-  for (const todo of todos as { content?: unknown; status?: unknown }[]) {
-    const status = TODO_STATUS[todo.status as keyof typeof TODO_STATUS];
+  for (const todo of todos as unknown[]) {
+    if (typeof todo !== 'object' || todo === null) {
+      continue;
+    }
 
-    if (status !== undefined && typeof todo.content === 'string') {
+    const { content, status: given } = todo as Record<string, unknown>;
+    // Own keys only: a status such as `toString` is none of the SDK's.
+    const status =
+      typeof given === 'string' && Object.hasOwn(TODO_STATUS, given)
+        ? TODO_STATUS[given as keyof typeof TODO_STATUS]
+        : undefined;
+
+    if (status !== undefined && typeof content === 'string') {
       // ACP requires a priority; the SDK gives none.
-      entries.push({ content: todo.content, priority: 'medium', status });
+      entries.push({ content, priority: 'medium', status });
     }
   }
 

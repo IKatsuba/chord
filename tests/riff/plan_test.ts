@@ -569,3 +569,69 @@ describe("a plan's named efforts on the wire (CHD-611)", () => {
     });
   }
 });
+
+describe('CHD-611 tester: refused efforts never reach a plan', () => {
+  for (const [plan, model, supported, refused] of [
+    ['codex', 'gpt-6-luna', 'max', 'ultra'],
+    ['grok', 'grok-4.5', 'high', 'xhigh'],
+  ] as const) {
+    test(`${plan}: a refused effort leaves the next request and sidecar unchanged`, async () => {
+      const fixture = planFetch({ plan });
+      const sent: { model?: string; reasoning?: { effort?: string } }[] = [];
+      const recorded: PlanFetch = {
+        ...fixture,
+        fetch: async (url, init) => {
+          if (!new URL(url).pathname.endsWith('/responses')) {
+            return fixture.fetch(url, init);
+          }
+
+          const body = await new Response(init?.body as BodyInit).text();
+
+          sent.push(JSON.parse(body));
+
+          return fixture.fetch(url, { ...init, body });
+        },
+      };
+      const { client } = await open(plan, recorded);
+      const id = (await start(client)).result?.['sessionId'] as string;
+
+      for (const [configId, value] of [
+        ['model', model],
+        ['effort', supported],
+      ]) {
+        expect(
+          (
+            await client.request('session/set_config_option', {
+              sessionId: id,
+              configId,
+              value,
+            })
+          ).error,
+        ).toBeUndefined();
+      }
+
+      expect(
+        (
+          await client.request('session/set_config_option', {
+            sessionId: id,
+            configId: 'effort',
+            value: refused,
+          })
+        ).error?.code,
+      ).toBe(-32602);
+      expect(sent).toHaveLength(0);
+      expect((await prompt(client, id)).result?.['stopReason']).toBe(
+        'end_turn',
+      );
+      expect(sent).toHaveLength(1);
+      expect(sent[0]).toMatchObject({
+        model,
+        reasoning: { effort: supported },
+      });
+      expect(await riffStore(root!).read(id)).toMatchObject({
+        model,
+        effort: supported,
+      });
+    });
+  }
+});

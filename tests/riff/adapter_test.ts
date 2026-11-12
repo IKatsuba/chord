@@ -3615,3 +3615,77 @@ describe('CHD-610 tester: own MCP tools and fake scenarios', () => {
     ).toBe(false);
   });
 });
+
+describe('CHD-611 tester: resume efforts stay session-local', () => {
+  for (const [plan, model, unsupported, supported] of [
+    ['codex', 'gpt-6-luna', 'ultra', 'max'],
+    ['grok', 'grok-4.5', 'xhigh', 'high'],
+  ] as const) {
+    test(`${plan}: reopening two sidecars resets only the unsupported effort`, async () => {
+      const options = { provider: { baseUrl: fake.url, models: plan } };
+
+      await open(true, options);
+
+      const first = await newSession();
+
+      end();
+      await riff.finished;
+      await open(true, options);
+
+      const second = await newSession();
+
+      end();
+      await riff.finished;
+      expect(typeof first).toBe('string');
+      expect(typeof second).toBe('string');
+      expect(first).not.toBe(second);
+
+      const store = riffStore(stateDir);
+
+      for (const [id, effort] of [
+        [first, unsupported],
+        [second, supported],
+      ] as const) {
+        await store.write(id, {
+          provider: 'fake',
+          account: null,
+          model,
+          effort,
+          mode: 'ask',
+        });
+      }
+
+      for (let reopen = 0; reopen < 2; reopen++) {
+        for (const [id, effort] of [
+          [first, 'default'],
+          [second, supported],
+        ] as const) {
+          await open(true, options);
+
+          const resumed = await client.request('session/resume', {
+            sessionId: id,
+            cwd: process.cwd(),
+            mcpServers: [],
+          });
+
+          expect(resumed.error).toBeUndefined();
+          expect(resumed.result?.['configOptions']).toEqual(
+            expect.arrayContaining([
+              expect.objectContaining({ id: 'model', currentValue: model }),
+              expect.objectContaining({ id: 'effort', currentValue: effort }),
+              expect.objectContaining({ id: 'mode', currentValue: 'ask' }),
+            ]),
+          );
+          expect(await store.read(id)).toMatchObject({
+            model,
+            effort,
+            mode: 'ask',
+          });
+          expect(fake.requests).toHaveLength(0);
+          end();
+          await riff.finished;
+        }
+      }
+    });
+  }
+});

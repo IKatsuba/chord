@@ -1,6 +1,6 @@
 import { expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import steps from '../steps.ts';
@@ -26,15 +26,36 @@ test("chord's checks are today's argv: Bun's check, covered, ESLint, Bun's fmt, 
     [bun, 'check'],
     [bun, 'scripts/dev/covered.ts'],
     [bun, 'run', 'eslint', '.'],
-    [bun, 'fmt', '--check', '.'],
+    [bun, 'fmt', '--check', '--ignore-pattern=packages/', '.'],
     [bun, 'test', 'lint/'],
     [bun, 'scripts/dev.ts', 'test'],
   ]);
   expect(steps.lint).toEqual([bun, 'run', 'eslint', '.']);
 });
 
-test('no check of chord names packages/, the other packages', () => {
-  for (const check of steps.checks) {
+test("chord's format check leaves packages/ out, which a package's own still reaches", async () => {
+  const dir = await mkdtemp(join(tmpdir(), 'chord-format-packages-'));
+  const format = steps.checks.find((check) => check.name === 'format')!;
+  const run = (argv: readonly string[]) =>
+    spawnSync(argv[0]!, argv.slice(1), { cwd: dir, encoding: 'utf8' }).status;
+
+  try {
+    await writeFile(join(dir, 'chord.ts'), 'export const a = 1;\n');
+    await mkdir(join(dir, 'packages', 'acp'), { recursive: true });
+    await writeFile(
+      join(dir, 'packages', 'acp', 'a.ts'),
+      'export const a   =   "x"',
+    );
+
+    expect(run(format.run as readonly string[])).toBe(0);
+    expect(run([process.execPath, 'fmt', '--check', 'packages/acp'])).toBe(1);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test('no other check of chord names packages/', () => {
+  for (const check of steps.checks.filter((each) => each.name !== 'format')) {
     expect(JSON.stringify(check.run)).not.toContain('packages');
   }
 });

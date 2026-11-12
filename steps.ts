@@ -22,7 +22,13 @@ export default {
     { name: 'types', static: true, run: [bun, 'check'] },
     { name: 'covered', static: true, run: [bun, 'scripts/dev/covered.ts'] },
     { name: 'eslint', static: true, run: eslint },
-    { name: 'format', static: true, run: [bun, 'fmt', '--check', '.'] },
+    // A pattern, not .prettierignore: an ignore file would leave a
+    // package's own `bun fmt --check packages/<name>` nothing to check.
+    {
+      name: 'format',
+      static: true,
+      run: [bun, 'fmt', '--check', '--ignore-pattern=packages/', '.'],
+    },
     { name: "lint/'s tests", static: true, run: [bun, 'test', 'lint/'] },
     { name: 'the suite', run: [bun, 'scripts/dev.ts', 'test'] },
   ],

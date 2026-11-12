@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   realpathSync,
   rmSync,
@@ -99,4 +100,14 @@ test('outside a git checkout, the lock is refused with what git said', async () 
   expect(await refusal(at.release)).toStartWith(
     'git rev-parse --git-common-dir failed: fatal: not a git repository',
   );
+});
+
+test('a pid that cannot be written lets the lock go before the error', async () => {
+  const file = lockFile(at.release);
+
+  // A directory where the pid file goes: writing it fails after the lock.
+  mkdirSync(file);
+
+  await expect(holdRelease(at.release)).rejects.toThrow('EISDIR');
+  expect(existsSync(`${file}.lock`)).toBeFalse();
 });

@@ -61,8 +61,15 @@ export async function holdRelease(
     );
   }
 
-  // The holder's pid, for the refusal a second run prints.
-  writeFileSync(file, `${process.pid}\n`);
+  // The holder's pid, for the refusal a second run prints; a lock whose pid
+  // cannot be written is let go before the error goes on.
+  try {
+    writeFileSync(file, `${process.pid}\n`);
+  } catch (error) {
+    await unlock();
+
+    throw error;
+  }
 
   return unlock;
 }

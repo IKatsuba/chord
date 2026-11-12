@@ -44,6 +44,11 @@ export class CursorError extends Error {
   }
 }
 
+/** The keychain failed or did not answer; its message names the keychain. */
+export class KeychainError extends Error {
+  override name = 'KeychainError';
+}
+
 /** ACP's codes the adapter answers with. */
 export const AUTH_REQUIRED = -32000;
 export const RESOURCE_NOT_FOUND = -32002;

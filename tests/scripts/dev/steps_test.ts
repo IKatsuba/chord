@@ -306,3 +306,106 @@ test("a type error in a package's tooling fails its quality, never chord's", asy
     expect.stringMatching(/^quality acp: tooling types failed with status/),
   ]);
 });
+
+describe('tester: package discovery and runner boundaries', () => {
+  test('workspace objects honor exclusions and discover overlapping patterns once', async () => {
+    pkg('.', '@chorded/chord', undefined, {
+      workspaces: {
+        packages: ['packages/*', 'packages/a', '!packages/ignored'],
+      },
+    });
+    pkg('packages/a', '@chorded/a');
+    write('packages/ignored/package.json', '{"name":"outside-scope"}');
+
+    expect((await packages(root)).map(({ name }) => name)).toEqual([
+      'chord',
+      'a',
+    ]);
+  });
+
+  test('discovery imports definitions without running checks or stages', async () => {
+    pkg('.', '@chorded/chord');
+    write(
+      'steps.ts',
+      `const forbidden = async () => { throw new Error('must stay lazy'); };
+export default {
+  checks: [{ name: 'check', run: forbidden }],
+  lint: [],
+  release: [{ name: 'build', about: 'build', run: forbidden }, ${PUBLISH}],
+};\n`,
+    );
+
+    expect((await packages(root))[0]?.steps.checks[0]?.name).toBe('check');
+  });
+
+  test('static mode skips a failing function and succeeds with no selected checks', async () => {
+    const at = fixture([
+      {
+        name: 'smoke',
+        run: () => {
+          throw new Error('non-static smoke must not run');
+        },
+      },
+    ]);
+
+    expect(await run(at.found, at.context, { static: true })).toBe(0);
+    expect(at.spawned).toEqual([]);
+    expect(at.said).toEqual([]);
+  });
+
+  test('a late function answer holds later argv steps until it succeeds', async () => {
+    const answer = Promise.withResolvers<number>();
+    const started = Promise.withResolvers<void>();
+    const at = fixture([
+      {
+        name: 'held',
+        run: () => {
+          started.resolve();
+
+          return answer.promise;
+        },
+      },
+      { name: 'after', run: ['after'] },
+    ]);
+    const pending = run(at.found, at.context);
+
+    await started.promise;
+    expect(at.spawned).toEqual([]);
+    answer.resolve(0);
+    expect(await pending).toBe(0);
+    expect(at.spawned).toEqual([['after']]);
+  });
+
+  test('simultaneous package runs keep their contexts and failures separate', async () => {
+    const answer = Promise.withResolvers<number>();
+    const first = fixture([{ name: 'held', run: () => answer.promise }]);
+    const second = fixture([{ name: 'types', run: ['types'] }]);
+    const pending = run(first.found, first.context);
+
+    expect(await run(second.found, second.context)).toBe(0);
+    expect(first.spawned).toEqual([]);
+    expect(second.spawned).toEqual([['types']]);
+    expect(second.said).toEqual([]);
+    answer.resolve(23);
+    expect(await pending).toBe(23);
+    expect(first.said).toEqual(['quality a-acp: held failed with status 23']);
+    expect(second.said).toEqual([]);
+  });
+
+  test('an interrupted argv check stops the runner with its signal status', async () => {
+    const at = fixture([
+      {
+        name: 'interrupted',
+        run: [process.execPath, '-e', "process.kill(process.pid, 'SIGINT')"],
+      },
+      { name: 'after', run: ['must-not-run'] },
+    ]);
+
+    expect(await run(at.found, { ...at.context, root, spawn: spawnStep })).toBe(
+      130,
+    );
+    expect(at.said).toEqual([
+      'quality a-acp: interrupted failed with status 130',
+    ]);
+  });
+});

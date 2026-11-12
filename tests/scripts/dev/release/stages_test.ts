@@ -408,7 +408,7 @@ describe('tester: CHD-547 explicit version eligibility', () => {
           ),
         ),
       ).toBe(
-        '@chorded/chord@9.9.9 is not published yet; `bun dev release` without a version finishes it',
+        '@chorded/chord@9.9.9 is not published yet; `bun dev release chord` without --bump finishes it',
       );
       expect(ran()).toEqual(['npm view @chorded/chord@9.9.9 version']);
       expect(readFileSync(join(at.root, 'package.json'), 'utf8')).toBe(before);

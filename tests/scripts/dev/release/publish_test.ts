@@ -275,7 +275,7 @@ describe('CHD-561 tester: complete source guards precede every publish', () => {
 
       // A local inventory must never authorize an incomplete or stale set.
       writeFileSync(join(source, 'SHA256SUMS'), '');
-      await died(() => publish(context(), { version: VERSION }));
+      await died(() => publish(context(), CHORD, { version: VERSION }));
 
       expect(
         lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
@@ -624,6 +624,7 @@ describe('tester: publish guard boundaries', () => {
             return ctx.sleep(ms);
           },
         },
+        CHORD,
         { version: VERSION },
       ),
     ).toBeUndefined();
@@ -659,7 +660,9 @@ describe('tester: publish guard boundaries', () => {
 
     tty = false;
 
-    expect(await publish(context(), { version: VERSION })).toBeUndefined();
+    expect(
+      await publish(context(), CHORD, { version: VERSION }),
+    ).toBeUndefined();
     expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
       [],
     );
@@ -677,7 +680,9 @@ describe('tester: publish guard boundaries', () => {
 
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '2');
 
-    expect(await publish(context(), { version: VERSION })).toBeUndefined();
+    expect(
+      await publish(context(), CHORD, { version: VERSION }),
+    ).toBeUndefined();
     expect(isPublished('chord-linux-x64')).toBeTrue();
     expect(sleeps).toEqual([15_000, 15_000]);
     expect(tagged(repo)).toBe(TAG);
@@ -724,7 +729,7 @@ esac
 
       expect(
         await died(() =>
-          preflight(context(), { dryRun: false, publish: true }),
+          preflight(context(), CHORD, { dryRun: false, publish: true }),
         ),
       ).toBe(message!);
       expect(
@@ -750,7 +755,9 @@ esac
       );
       rmSync(join(state, 'git.log'), { force: true });
 
-      expect(await died(() => publish(context(), { version: VERSION }))).toBe(
+      expect(
+        await died(() => publish(context(), CHORD, { version: VERSION })),
+      ).toBe(
         command === 'tag'
           ? `git tag -a ${TAG} failed: fixture tag denied`
           : `git push origin ${TAG} failed: fixture push denied`,

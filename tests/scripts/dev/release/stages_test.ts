@@ -278,7 +278,7 @@ test('the credentials and the identity are asked only for the stages that need t
 
   expect(ran().filter((line) => !line.startsWith('npm '))).toStrictEqual([
     'bun install --frozen-lockfile',
-    'bun quality',
+    'bun scripts/dev.ts quality chord',
   ]);
 });
 

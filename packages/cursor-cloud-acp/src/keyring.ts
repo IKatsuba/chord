@@ -69,21 +69,26 @@ async function bounded<T>(
   }
 }
 
-/** The store over `entry`, the real keychain's but in a test. */
+/**
+ * The store over the entry `open` makes, the real keychain's but in a test.
+ * The entry is made inside each call: pinned to the Secret Service, its
+ * constructor throws where there is none, and that must fail as the
+ * keychain does, not before.
+ */
 export function keyringStore(
-  entry: Entry = new AsyncEntry(SERVICE, ACCOUNT, OPTIONS),
+  open: () => Entry = () => new AsyncEntry(SERVICE, ACCOUNT, OPTIONS),
   bound = BOUND_MS,
 ): SdkCredentialStore {
   return {
     load: async () =>
-      parsed(await bounded((signal) => entry.getPassword(signal), bound)),
+      parsed(await bounded((signal) => open().getPassword(signal), bound)),
     save: (credentials) =>
       bounded(
-        (signal) => entry.setPassword(JSON.stringify(credentials), signal),
+        (signal) => open().setPassword(JSON.stringify(credentials), signal),
         bound,
       ),
     clear: async () => {
-      await bounded((signal) => entry.deletePassword(signal), bound);
+      await bounded((signal) => open().deletePassword(signal), bound);
     },
   };
 }

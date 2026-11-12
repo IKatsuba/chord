@@ -63,7 +63,7 @@ test("one entry, the package's service and account, pinned on Linux to the Secre
 describe('the store', () => {
   test("saves the SDK's credentials as JSON and loads them back", async () => {
     const entry = fakeEntry();
-    const store = keyringStore(entry);
+    const store = keyringStore(() => entry);
 
     await store.save(STORED);
     expect(JSON.parse(entry.password!)).toEqual(STORED);
@@ -75,7 +75,7 @@ describe('the store', () => {
 
   test('passes every call a signal', async () => {
     const entry = fakeEntry(JSON.stringify(STORED));
-    const store = keyringStore(entry);
+    const store = keyringStore(() => entry);
 
     await store.load();
     await store.save(STORED);
@@ -91,20 +91,20 @@ describe('the store', () => {
     ['no key', JSON.stringify({ ...STORED, apiKey: undefined })],
     ['an array', '[]'],
   ])('an entry of another shape (%s) loads as signed out', async (_, value) => {
-    expect(await keyringStore(fakeEntry(value)).load()).toBeUndefined();
+    expect(await keyringStore(() => fakeEntry(value)).load()).toBeUndefined();
   });
 
   test('an entry without the optional fields loads', async () => {
     const { version, backendUrl, apiKey, createdAtMs } = STORED;
     const bare = { version, backendUrl, apiKey, createdAtMs };
 
-    expect(await keyringStore(fakeEntry(JSON.stringify(bare))).load()).toEqual(
-      bare,
-    );
+    expect(
+      await keyringStore(() => fakeEntry(JSON.stringify(bare))).load(),
+    ).toEqual(bare);
   });
 
   test('a keychain that does not answer within the bound fails naming the keychain', async () => {
-    const store = keyringStore(fakeEntry(null, true), 20);
+    const store = keyringStore(() => fakeEntry(null, true), 20);
 
     for (const call of [
       () => store.load(),
@@ -127,10 +127,28 @@ describe('the store', () => {
         Promise.reject(new Error('Platform secure storage failure')),
     };
 
-    await expect(keyringStore(entry).load()).rejects.toThrow(
+    await expect(keyringStore(() => entry).load()).rejects.toThrow(
       new KeychainError(
         'The keychain refused: Platform secure storage failure',
       ),
     );
+  });
+
+  test('an entry that cannot be made, as without a Secret Service, fails each call as the keychain', async () => {
+    const store = keyringStore(() => {
+      throw new Error('Platform secure storage failure: no Secret Service');
+    });
+
+    for (const call of [
+      () => store.load(),
+      () => store.save(STORED),
+      () => store.clear(),
+    ]) {
+      await expect(call()).rejects.toThrow(
+        new KeychainError(
+          'The keychain refused: Platform secure storage failure: no Secret Service',
+        ),
+      );
+    }
   });
 });

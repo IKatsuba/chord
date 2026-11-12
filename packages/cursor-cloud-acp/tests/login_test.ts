@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { SdkCredentialStore, SdkLoginOptions } from '@cursor/sdk';
 import { CursorError, KeychainError } from '../src/errors.ts';
+import { keyringStore } from '../src/keyring.ts';
 import { type LoginContext, login, logout, status } from '../src/login.ts';
 
 const EXPIRES = Date.UTC(2027, 1, 10, 12);
@@ -90,6 +91,19 @@ describe('login', () => {
       'No keychain to keep the key in: The keychain refused: no Secret Service is running. Set CURSOR_API_KEY instead.',
     ]);
     expect(at.out).toEqual([]);
+  });
+
+  test('a keychain entry that cannot be made refuses before the SDK is called', async () => {
+    const at = context();
+    const store = keyringStore(() => {
+      throw new Error('no Secret Service');
+    });
+
+    expect(await login({ ...at.context, store })).toBe(1);
+    expect(at.logins).toEqual([]);
+    expect(at.err).toEqual([
+      'No keychain to keep the key in: The keychain refused: no Secret Service. Set CURSOR_API_KEY instead.',
+    ]);
   });
 
   test("a keychain failing at the save, inside the SDK's error, refuses the same way", async () => {

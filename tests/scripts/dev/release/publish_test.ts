@@ -1199,3 +1199,122 @@ describe.each(['next', 'beta'])(
     });
   },
 );
+
+describe('tester: CHD-623 publish checkpoint recovery', () => {
+  test.each(['pending', 'sent'] as const)(
+    'a checkpoint failure at %s resumes without publishing any version twice',
+    async (checkpoint) => {
+      nothingStarted();
+
+      const recorded = stateOf();
+      const first = CHORD.publish.npm[0]!;
+      const failure = new Error('fixture checkpoint interrupted');
+      let cut = true;
+      const interrupted: Recorded = {
+        state: recorded.state,
+        record: (change) => {
+          const next = change(recorded.state());
+
+          if (cut && next.npm[first] === checkpoint) {
+            cut = false;
+
+            if (checkpoint === 'pending') {
+              recorded.record(() => next);
+            }
+
+            throw failure;
+          }
+
+          recorded.record(() => next);
+        },
+      };
+
+      await expect(
+        publish(context(), CHORD, { version: VERSION, recorded: interrupted }),
+      ).rejects.toBe(failure);
+      expect(recorded.state().npm[first]).toBe('pending');
+      expect(isPublished(PLATFORMS[0])).toBe(checkpoint === 'sent');
+
+      await publish(context(), CHORD, { version: VERSION, recorded });
+
+      const sends = lines('npm.log').filter((line) => line.startsWith(PUBLISH));
+
+      expect(sends).toHaveLength(CHORD.publish.npm.length);
+      expect(new Set(sends).size).toBe(CHORD.publish.npm.length);
+      expect(Object.values(recorded.state().npm)).toEqual(
+        CHORD.publish.npm.map(() => 'answered'),
+      );
+      expect(recorded.state().tag?.state).toBe('pushed');
+      expect(recorded.state().draft?.state).toBe('made');
+    },
+  );
+
+  function allAnswered(): Recorded {
+    for (const name of PACKAGES) {
+      publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
+    }
+
+    return stateOf();
+  }
+
+  test('a pending tag on another commit is refused without replacing or pushing it', async () => {
+    const recorded = allAnswered();
+    const built = recorded.state().built;
+
+    recorded.record((state) => ({ ...state, tag: { state: 'pending' } }));
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'later fixture commit');
+
+    const later = git(repo, 'rev-parse', 'HEAD');
+
+    git(repo, 'tag', TAG);
+
+    expect(
+      await died(() =>
+        publish(context(), CHORD, { version: VERSION, recorded }),
+      ),
+    ).toBe(`${TAG} is on ${later}, not on ${built}, which the release built`);
+    expect(git(repo, 'rev-parse', TAG)).toBe(later);
+    expect(tagged(origin)).toBe('');
+    expect(recorded.state().tag?.state).toBe('pending');
+    expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
+      [],
+    );
+    expect(lines('gh.log')).toEqual([]);
+  });
+
+  test('an existing pending draft is recorded once and a completed publish repeats no act', async () => {
+    const recorded = allAnswered();
+
+    git(repo, 'tag', TAG, recorded.state().built);
+    git(repo, 'push', '-q', 'origin', TAG);
+
+    recorded.record((state) => ({
+      ...state,
+      tag: { state: 'pushed' },
+      draft: { state: 'pending' },
+    }));
+
+    await publish(context(), CHORD, { version: VERSION, recorded });
+
+    expect(lines('gh.log')).toEqual([
+      `release view ${TAG} --json url --jq .url`,
+    ]);
+    expect(recorded.state().draft).toEqual({
+      state: 'made',
+      url: 'https://github.example/draft',
+    });
+
+    const npm = lines('npm.log');
+    const gh = lines('gh.log');
+
+    rmSync(join(repo, 'dist', 'release', 'source'), {
+      recursive: true,
+      force: true,
+    });
+    await publish(context(), CHORD, { version: VERSION, recorded });
+
+    expect(lines('npm.log')).toEqual(npm);
+    expect(lines('gh.log')).toEqual(gh);
+  });
+});

@@ -18,8 +18,10 @@ if (major < 22 || (major === 22 && minor < 13)) {
 void import('./main.ts')
   .then(({ main }) => main(process.argv.slice(2)))
   .then(
+    // Exits once stdout has drained: the SDK may hold sockets open after a
+    // command is done, and a served session must end within its bound.
     (status) => {
-      process.exitCode = status;
+      process.stdout.write('', () => process.exit(status));
     },
     // One line, never a stack: an SDK error's is its minified bundle.
     (error) => {

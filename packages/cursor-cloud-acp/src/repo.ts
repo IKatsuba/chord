@@ -90,11 +90,13 @@ export function cursorUrl(url: string): string {
 
 /**
  * The repository a session in `cwd` starts from, or a refusal (-32602)
- * saying why and what to do.
+ * saying why and what to do. Without `pushed`, whether the branch is
+ * pushed is not asked: `session/list` wants only the repository.
  */
 export async function repository(
   cwd: string,
   run: Git = git,
+  { pushed: needsPushed = true }: { readonly pushed?: boolean } = {},
 ): Promise<Repository> {
   /** git's answer, its output trimmed; any failure refuses naming it. */
   const ask = async (
@@ -155,17 +157,7 @@ export async function repository(
     );
   }
 
-  const tracking = `refs/remotes/${remote}/${branch}`;
-  const known = await ask(
-    ['rev-parse', '--verify', '--quiet', tracking],
-    [0, 1],
-  );
-  const pushed =
-    known.status === 0 &&
-    (await ask(['merge-base', '--is-ancestor', 'HEAD', tracking], [0, 1]))
-      .status === 0;
-
-  if (!pushed) {
+  if (needsPushed && !(await isPushed(branch, remote, ask))) {
     throw refused(
       `Branch ${branch} is not pushed to ${remote}. A cloud agent starts from a pushed branch: run git push -u ${remote} ${branch}, then start again.`,
     );
@@ -174,6 +166,25 @@ export async function repository(
   const url = await ask(['remote', 'get-url', '--push', remote]);
 
   return { url: cursorUrl(url.out), branch, remote };
+}
+
+/** Whether `remote`'s local tracking ref of `branch` holds HEAD (Q4). */
+async function isPushed(
+  branch: string,
+  remote: string,
+  ask: (
+    args: readonly string[],
+    ok: readonly number[],
+  ) => Promise<{ status: number }>,
+): Promise<boolean> {
+  const tracking = `refs/remotes/${remote}/${branch}`;
+
+  return (
+    (await ask(['rev-parse', '--verify', '--quiet', tracking], [0, 1]))
+      .status === 0 &&
+    (await ask(['merge-base', '--is-ancestor', 'HEAD', tracking], [0, 1]))
+      .status === 0
+  );
 }
 
 /**

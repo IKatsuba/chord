@@ -155,6 +155,17 @@ describe('repository', () => {
     });
   });
 
+  test('without pushed, a branch not pushed still gives its repository', async () => {
+    const dir = await repo();
+
+    sh(dir, 'remote', 'add', 'origin', 'git@github.com:acme/web.git');
+    expect(await repository(dir, undefined, { pushed: false })).toEqual({
+      url: 'https://github.com/acme/web',
+      branch: 'main',
+      remote: 'origin',
+    });
+  });
+
   test('not pushed: no remote-tracking ref', async () => {
     const dir = await repo();
 

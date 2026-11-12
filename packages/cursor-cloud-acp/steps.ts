@@ -36,9 +36,36 @@ export default {
     { name: 'format', static: true, run: [bun, 'fmt', '--check', here] },
     { name: 'tests', run: [bun, 'test', `./${here}/tests/`] },
     { name: 'build', run: async (context) => (await tools()).build(context) },
+    { name: 'smoke', run: async (context) => (await tools()).smoke(context) },
   ],
   lint: eslint,
   release: [
+    {
+      name: 'install',
+      about: 'bun install --frozen-lockfile',
+      run: async (release) => (await tools()).stages.install(release),
+    },
+    {
+      name: 'quality',
+      about: 'bun dev quality cursor-cloud-acp',
+      run: async (release) => (await tools()).stages.quality(release),
+    },
+    {
+      name: 'build',
+      about: 'bun build --target=node; nothing bundled, by the metafile',
+      versioned: true,
+      outputs: () => [`${here}/dist/bin.js`, `${here}/dist/main.js`],
+      run: async (release) => (await tools()).stages.build(release),
+    },
+    {
+      name: 'pack',
+      about: 'npm pack, its sum recorded, installed by Node 22.13+ and run',
+      outputs: (_release, version) => [
+        `${here}/dist/release/tgz/chorded-cursor-cloud-acp-${version}.tgz`,
+      ],
+      run: async (release, version) =>
+        (await tools()).stages.pack(release, version),
+    },
     {
       name: 'publish',
       npm: ['@chorded/cursor-cloud-acp'],

@@ -4,7 +4,7 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { build, foreign, here } from '../../scripts/tools.ts';
+import { build, foreign, here, PACKED, tooOld } from '../../scripts/tools.ts';
 
 test("foreign names a build's inputs outside the package's src/, by a path from the cwd or absolute", () => {
   const root = join(here, '..', '..');
@@ -146,4 +146,27 @@ test("build writes bin.js, whose only import is main's chunk, after Node's versi
   } finally {
     await rm(outdir, { recursive: true, force: true });
   }
+});
+
+test("tooOld refuses a Node below 22.13, naming it as the node found past Bun's", () => {
+  expect(tooOld('v22.13.0')).toBeUndefined();
+  expect(tooOld('v24.1.0')).toBeUndefined();
+  expect(tooOld('v22.12.0')).toBe(
+    "the smoke needs Node 22.13 or newer; v22.12.0 is the first node past Bun's on PATH",
+  );
+});
+
+test('the tarball holds dist, README.md, LICENSE and package.json alone, as files names them', async () => {
+  const manifest = JSON.parse(
+    await readFile(join(here, 'package.json'), 'utf8'),
+  ) as { files: string[] };
+
+  expect(manifest.files).toEqual(['dist', 'README.md', 'LICENSE']);
+  expect(PACKED).toEqual([
+    'LICENSE',
+    'README.md',
+    'dist/bin.js',
+    'dist/main.js',
+    'package.json',
+  ]);
 });

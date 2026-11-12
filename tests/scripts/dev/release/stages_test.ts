@@ -51,7 +51,12 @@ const STEPS = new URL('../../../../steps.ts', import.meta.url).pathname;
 
 const VERSION = '9.9.9';
 const MAC = { platform: 'darwin', arch: 'arm64' };
+// Scratch repositories never read the person's or the machine's git config:
+// a CI runner has no identity, and a global commit.gpgsign would sign every
+// scratch commit with the person's key.
 const GIT_ENV = {
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_NOSYSTEM: '1',
   GIT_AUTHOR_NAME: 'release',
   GIT_AUTHOR_EMAIL: 'release@example.com',
   GIT_COMMITTER_NAME: 'release',
@@ -671,7 +676,10 @@ describe('a version given', () => {
   }
 
   function out(cwd: string, ...args: string[]): string {
-    return String(spawnSync('git', args, { cwd }).stdout).trim();
+    return String(
+      spawnSync('git', args, { cwd, env: { ...process.env, ...GIT_ENV } })
+        .stdout,
+    ).trim();
   }
 
   const origin = () => join(at.place, 'origin.git');
@@ -942,7 +950,10 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
   }
 
   function read(cwd: string, ...args: string[]): string {
-    return String(spawnSync('git', args, { cwd }).stdout).trim();
+    return String(
+      spawnSync('git', args, { cwd, env: { ...process.env, ...GIT_ENV } })
+        .stdout,
+    ).trim();
   }
 
   const origin = () => join(at.place, 'origin.git');
@@ -1345,7 +1356,10 @@ await dying(() =>
   }
 
   function out(cwd: string, ...args: string[]): string {
-    return String(spawnSync('git', args, { cwd }).stdout).trim();
+    return String(
+      spawnSync('git', args, { cwd, env: { ...process.env, ...GIT_ENV } })
+        .stdout,
+    ).trim();
   }
 
   test.each(['SIGINT', 'SIGTERM', 'SIGHUP'])(
@@ -1880,9 +1894,19 @@ esac
     }
 
     function git_(...args: string[]): string {
-      return String(
-        spawnSync('git', args, { cwd: at.root, encoding: 'utf8' }).stdout,
-      ).trim();
+      const child = spawnSync('git', args, {
+        cwd: at.root,
+        env: { ...process.env, ...GIT_ENV },
+        encoding: 'utf8',
+      });
+
+      // A git that failed here would leave the fixture half made and fail
+      // the test later, far from the cause.
+      if (child.status !== 0) {
+        throw new Error(`git ${args.join(' ')}: ${child.stderr}`);
+      }
+
+      return child.stdout.trim();
     }
 
     test('a bump commits its package.json as chore: <package> v<version>, and publishes its npm names, the main one last, then tags', async () => {

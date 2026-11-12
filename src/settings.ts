@@ -672,6 +672,8 @@ export interface Flags {
   readonly model?: string | undefined;
   readonly effort?: string | undefined;
   readonly permissionMode?: string | undefined;
+  /** `false` from `--no-mcp-servers`; nothing says `true` (CHD-620). */
+  readonly mcpServers?: false | undefined;
 }
 
 /**
@@ -702,7 +704,10 @@ export interface Startup {
   readonly model?: Sourced;
   readonly effort?: Sourced;
   readonly permissionMode?: Sourced;
-  /** What the files set the agent's `mcpServers` to, where one does. */
+  /**
+   * What `--no-mcp-servers` or else the files set the agent's `mcpServers`
+   * to, where one does.
+   */
   readonly mcpServers?: boolean;
 }
 
@@ -792,6 +797,7 @@ export function resolveStartup(
     agent,
     'permissionMode',
   );
+  const mcpServers = flags.mcpServers ?? settings.agents?.[agent]?.mcpServers;
 
   return {
     agent,
@@ -803,9 +809,7 @@ export function resolveStartup(
     ...(model === undefined ? {} : { model }),
     ...(effort === undefined ? {} : { effort }),
     ...(permissionMode === undefined ? {} : { permissionMode }),
-    ...(settings.agents?.[agent]?.mcpServers === undefined
-      ? {}
-      : { mcpServers: settings.agents[agent].mcpServers }),
+    ...(mcpServers === undefined ? {} : { mcpServers }),
   };
 }
 
@@ -852,19 +856,29 @@ export function resumedStartup(
  * window's own startup for its agent, flags and all; any other agent's
  * command, model, effort and mode from the files alone, as the flags were given for
  * the agent the command line named and their ids are that agent's. Whether
- * it takes MCP servers no flag says, so the files say it for every agent,
- * the window's own too (CHD-441).
+ * it takes MCP servers `flags`' `--no-mcp-servers` says for the window's own
+ * agent, and else the files there say, read again here since `invoked` may
+ * have been read in another directory (CHD-441, CHD-620).
+ *
+ * Keyed by name, so `--no-mcp-servers` reaches as far as `--agent-command`:
+ * an `open_agent` child or team member of the window's own agent takes it,
+ * of any other agent not (the owner's decision on CHD-620).
  */
 export function startupOf(
   agent: string,
   invoked: Startup,
   layers: readonly SettingsLayer[],
+  flags: Flags = {},
 ): Startup {
   if (agent !== invoked.agent) {
     return resolveStartup({ agent }, layers, agent);
   }
 
-  const { mcpServers } = resolveStartup({ agent }, layers, agent);
+  const { mcpServers } = resolveStartup(
+    { agent, mcpServers: flags.mcpServers },
+    layers,
+    agent,
+  );
 
   return mcpServers === undefined ? invoked : { ...invoked, mcpServers };
 }

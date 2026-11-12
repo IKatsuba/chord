@@ -155,6 +155,7 @@ export function placeOf(
           ...(permissionMode === undefined ? {} : { permissionMode }),
         },
         layers,
+        flags,
       );
       // The window's own agent starts as it was invoked, but this place's
       // files may refuse its command, unless a flag gave it one.

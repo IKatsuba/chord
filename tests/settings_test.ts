@@ -1480,6 +1480,60 @@ test("an agent's mcpServers setting is read from the last file that sets it, tru
   ).not.toStrictEqual([]);
 });
 
+describe('--no-mcp-servers (CHD-620)', () => {
+  const layer = (file: string, agents: Record<string, unknown>) => ({
+    file,
+    settings: parseSettings(file, JSON.stringify({ agents })).settings,
+  });
+  const flags = { agent: 'eve', mcpServers: false } as const;
+
+  test("it beats every file, a file's true included", () => {
+    const layers = [layer('/u.json', { eve: { mcpServers: true } })];
+
+    expect(resolveStartup(flags, layers, 'claude').mcpServers).toBe(false);
+    expect(resolveStartup(flags, [], 'claude').mcpServers).toBe(false);
+    expect(resolveStartup({ agent: 'eve' }, layers, 'claude').mcpServers).toBe(
+      true,
+    );
+  });
+
+  test('a session resumed from another directory keeps it', () => {
+    const there = [layer('/p.json', { eve: { mcpServers: true } })];
+
+    expect(resumedStartup({ agent: 'eve' }, flags, there).mcpServers).toBe(
+      false,
+    );
+    expect(resumedStartup({ agent: 'eve' }, {}, there).mcpServers).toBe(true);
+  });
+
+  test("an agent other than the window's reads the files alone", () => {
+    const layers = [layer('/u.json', { eve: { mcpServers: true }, fake2: {} })];
+    const invoked = resolveStartup(flags, layers, 'claude');
+
+    expect(startupOf('fake2', invoked, layers, flags).mcpServers).toBe(
+      undefined,
+    );
+    expect(
+      startupOf(
+        'fake2',
+        invoked,
+        [layer('/u.json', { fake2: { mcpServers: true } })],
+        flags,
+      ).mcpServers,
+    ).toBe(true);
+  });
+
+  test("the window's own agent takes it over the files where it works, and so does a child or member of the same agent", () => {
+    const layers = [layer('/p.json', { eve: { mcpServers: true } })];
+    const invoked = resolveStartup(flags, [], 'claude');
+
+    // A session of the same agent, an open_agent child or team member
+    // included, starts as the window's agent does (the owner's decision).
+    expect(startupOf('eve', invoked, layers, flags).mcpServers).toBe(false);
+    expect(startupOf('eve', invoked, layers).mcpServers).toBe(true);
+  });
+});
+
 describe('tester: resource preference layering', () => {
   test('an empty later map preserves denied runtime lists and an explicit model reset', () => {
     const base = {

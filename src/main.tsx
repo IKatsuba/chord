@@ -269,7 +269,9 @@ export const cli = chordCommand().action(async (options, named) => {
     model: options.model,
     effort: options.effort,
     permissionMode: options.permissionMode,
-  };
+    // Only `--no-mcp-servers` is declared, so Cliffy's `true` means not given.
+    mcpServers: options.mcpServers ? undefined : false,
+  } as const;
   const { agent, agentCommand, refused, ...invoked } = resolveStartup(
     flags,
     loaded.layers,
@@ -538,6 +540,7 @@ export const cli = chordCommand().action(async (options, named) => {
       cwd={resume?.cwd ?? options.cwd}
       agentCommand={agentCommand}
       typedCommand={flags.agentCommand}
+      typedNoMcpServers={flags.mcpServers === false}
       starting={{
         model: starting(model),
         effort: starting(effort),
@@ -609,6 +612,7 @@ export const cli = chordCommand().action(async (options, named) => {
     ...(flags.agentCommand === undefined
       ? {}
       : { agentCommand: flags.agentCommand }),
+    ...(flags.mcpServers === false ? { noMcpServers: true } : {}),
   });
 
   if (resuming !== undefined) {
@@ -682,6 +686,10 @@ cli
     '--permission-mode <mode:string>',
     "Start each of [agent]'s sessions in this mode, by its id for it.",
   )
+  .option(
+    '--no-mcp-servers',
+    "Start each of [agent]'s sessions with no MCP servers, chord's own included.",
+  )
   // Cliffy prints a usage error's help on stdout, which here is the protocol.
   .throwErrors()
   .action(serveAcp);
@@ -714,6 +722,8 @@ async function serveAcp(
     readonly model?: string | undefined;
     readonly effort?: string | undefined;
     readonly permissionMode?: string | undefined;
+    /** Cliffy's `false` for `--no-mcp-servers`, `true` without it. */
+    readonly mcpServers: boolean;
   },
   named?: string,
 ): Promise<void> {
@@ -738,7 +748,8 @@ async function serveAcp(
     model: flags.model,
     effort: flags.effort,
     permissionMode: flags.permissionMode,
-  };
+    mcpServers: flags.mcpServers ? undefined : false,
+  } as const;
   const here = process.cwd();
   const loaded = await settingsAt(here);
 

@@ -450,10 +450,13 @@ export function elsewhereRefusal(
   {
     agent,
     agentCommand,
+    noMcpServers,
     shownCwd,
   }: {
     agent: string;
     agentCommand?: string | undefined;
+    /** `--no-mcp-servers` was typed for `agent`. */
+    noMcpServers?: boolean | undefined;
     /** The session's directory as the screen shows it. */
     shownCwd: string;
   },
@@ -462,6 +465,7 @@ export function elsewhereRefusal(
     agent,
     chosen.sessionId,
     agentCommand,
+    noMcpServers,
   )}`;
 }
 
@@ -531,11 +535,17 @@ export function resumeCommand(
    * settings is not, as the settings give it again (the owner's Q56).
    */
   agentCommand?: string,
+  /** `--no-mcp-servers` was typed, and is said again as the command is. */
+  noMcpServers = false,
 ): string {
   const words = ['chord', shellQuote(agent)];
 
   if (agentCommand !== undefined) {
     words.push('--agent-command', shellQuote(agentCommand));
+  }
+
+  if (noMcpServers) {
+    words.push('--no-mcp-servers');
   }
 
   // An id that starts with a dash would be read as an option on its own;
@@ -555,8 +565,8 @@ export interface Resumable {
 
 /**
  * What is printed once the window has gone: the command that resumes its
- * session, or nothing when no prompt went to it. `agentCommand` goes with
- * it when it is of the agent that command overrides.
+ * session, or nothing when no prompt went to it. A typed `agentCommand` and
+ * `--no-mcp-servers` go with it when it is of the agent they were given for.
  */
 export function resumeMessage(
   session: Resumable | undefined,
@@ -564,6 +574,8 @@ export function resumeMessage(
     readonly agent: string;
     /** The `--agent-command` the person gave, for `agent` alone. */
     readonly agentCommand?: string;
+    /** `--no-mcp-servers` was typed, for `agent` alone. */
+    readonly noMcpServers?: boolean;
   },
 ): string | undefined {
   return session === undefined
@@ -572,6 +584,7 @@ export function resumeMessage(
         session.agent,
         session.sessionId,
         session.agent === override?.agent ? override.agentCommand : undefined,
+        session.agent === override?.agent && override.noMcpServers === true,
       )}`;
 }
 

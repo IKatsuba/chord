@@ -1772,3 +1772,19 @@ describe('CHD-604c tester: named riff outside the fake provider', () => {
     });
   }
 });
+
+describe('--no-mcp-servers with -p (CHD-620)', () => {
+  test("it sends no servers, over a file's true; without it they go", async () => {
+    const project = {
+      agents: { fake: { mcpServers: true } },
+      mcpServers: { files: { command: 'unused-mcp-server' } },
+    };
+    const flagged = await chord(['-p', 'mcp', '--no-mcp-servers'], '', project);
+    const plain = await chord(['-p', 'mcp'], '', project);
+
+    expect(flagged.code).toBe(0);
+    expect(flagged.stdout).toContain('[]');
+    expect(plain.code).toBe(0);
+    expect(plain.stdout).toContain('"name": "files"');
+  });
+});

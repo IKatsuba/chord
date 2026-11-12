@@ -250,6 +250,8 @@ export interface AppProps {
    * a command from the settings is not, as they give it again (Q56).
    */
   typedCommand?: string | undefined;
+  /** `--no-mcp-servers` was typed, which a resume line repeats too. */
+  typedNoMcpServers?: boolean | undefined;
   /** The model and mode each session starts on; the agent's by default. */
   starting?: Starting | undefined;
   /**
@@ -400,6 +402,7 @@ export function App({
   cwd,
   agentCommand,
   typedCommand,
+  typedNoMcpServers,
   starting,
   startupOf = (name) =>
     name === agent
@@ -560,6 +563,7 @@ export function App({
     {
       agent,
       typedCommand,
+      typedNoMcpServers,
       place: {
         cwd,
         startupOf,

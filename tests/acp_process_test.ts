@@ -76,11 +76,14 @@ async function start({
   stderr = 'pipe',
   args = [],
   flags = [],
+  chordFlags = [],
 }: {
   stdout?: 'pipe' | number;
   stderr?: 'pipe' | number;
   args?: readonly string[];
   flags?: readonly string[];
+  /** `chord acp`'s own, after the agent's command. */
+  chordFlags?: readonly string[];
 } = {}): Promise<Chord> {
   const dir = await scratch();
   const pidFile = join(dir, 'agent.pid');
@@ -93,6 +96,7 @@ async function start({
       'fake',
       '--agent-command',
       quote([execPath(), AGENT, pidFile, '--session-id', SESSION, ...flags]),
+      ...chordFlags,
     ],
     {
       cwd: dir,
@@ -508,6 +512,12 @@ describe('the command', () => {
     expect(stdout).toContain('Serve ACP on stdin and stdout');
   });
 
+  test('--help lists --no-mcp-servers (CHD-620)', () => {
+    const { stdout } = ran(['acp', '--help']);
+
+    expect(stdout).toContain('--no-mcp-servers');
+  });
+
   test('a usage error goes to stderr, stdout empty', () => {
     const { status, stdout, stderr } = ran(['acp', 'no-such-agent']);
 
@@ -761,4 +771,26 @@ describe('a place per session', () => {
 
     expect(said.filter((line) => line.includes('.mcp.json'))).toHaveLength(1);
   }, 30_000);
+});
+
+describe('--no-mcp-servers (CHD-620)', () => {
+  for (const given of [true, false]) {
+    test(`session/new ${given ? 'carries no servers with it' : "carries chord's own without it"}`, async () => {
+      const chord = await start({
+        chordFlags: given ? ['--no-mcp-servers'] : [],
+      });
+      const sessionId = await chord.newSession();
+
+      await chord.client.request('session/prompt', promptOf(sessionId, 'mcp'));
+
+      if (given) {
+        expect(chord.client.said(sessionId)).toContain('```json\n[]\n```');
+      } else {
+        expect(chord.client.said(sessionId)).toContain('"name": "chord"');
+      }
+
+      chord.child.stdin?.end();
+      await chord.ended;
+    });
+  }
 });

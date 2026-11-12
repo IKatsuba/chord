@@ -507,3 +507,21 @@ test('CHD-532 CLI help explains invocation-only unnamed interactive choice', () 
     'explicit commands, headless and resume routes keep their existing behavior',
   );
 });
+
+describe('--no-mcp-servers (CHD-620)', () => {
+  test('help lists it', () => {
+    expect(chordCommand().getHelp()).toContain('--no-mcp-servers');
+  });
+
+  test('Cliffy says false only when it is given', async () => {
+    const parse = (args: string[]) =>
+      chordCommand()
+        .noExit()
+        .throwErrors()
+        .action(() => {})
+        .parse(args);
+
+    expect((await parse([])).options.mcpServers).toBe(true);
+    expect((await parse(['--no-mcp-servers'])).options.mcpServers).toBe(false);
+  });
+});

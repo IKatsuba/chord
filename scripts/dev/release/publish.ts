@@ -2,11 +2,11 @@
  * The release's last stage, from the package's publish data: the packed
  * tarballs published to npm in its order, then, once npm answers for each,
  * the main one (chord's, whose exact-version optionalDependencies must
- * resolve); then, once npm answers for all, the version tagged in the
+ * resolve); then, once npm answers for all, the built commit tagged in the
  * package's form and the tag pushed, and for chord a draft GitHub release
- * made of it with the source archives. What npm has already is
- * skipped, so a stopped publish is finished by running it again. Never
- * unpublish, and never publish the draft: that is the owner's.
+ * made of it with the source archives. Each act is recorded in the
+ * release's state, so a stopped publish is finished from what it recorded.
+ * Never unpublish, and never publish the draft: that is the owner's.
  *
  * npm asks the owner to authorise each publish in the terminal and the
  * browser, so each `npm publish` gets the terminal and is waited on however
@@ -28,6 +28,7 @@ import {
   waitPublished,
 } from './lib.ts';
 import { draftRelease, fetchedSource } from './source.ts';
+import { abandon, type ReleaseState } from './state.ts';
 import { checkSum } from './sums.ts';
 
 /** Where `folder`'s package leaves its packed tarballs and their SHA256SUMS. */
@@ -60,31 +61,57 @@ export function publishArguments(version: string, file: string): string[] {
   return channel === null ? args : [...args, '--tag', channel];
 }
 
+/**
+ * The release's state as publish reads and writes it: before and after
+ * every act npm, git or GitHub cannot take back (CHD-623).
+ */
+export interface Recorded {
+  readonly state: () => ReleaseState;
+  readonly record: (change: (state: ReleaseState) => ReleaseState) => void;
+}
+
 export interface PublishOptions {
   readonly version: string;
+  readonly recorded: Recorded;
 }
 
 /**
- * Publishes what npm does not have yet of `of`'s npm names, the main one
- * last, and tags the version once all answer; then, for a package with a
- * GitHub release, drafts it.
+ * Publishes `of`'s npm names the state does not have answered, the main one
+ * last, each recorded pending before `npm publish`, sent once npm exits 0
+ * and answered once `npm view` has it; then tags the state's built commit,
+ * and for a package with a GitHub release drafts it, each recorded too.
  */
 export async function publish(
   release: Release,
   of: ReleasePackage,
-  { version }: PublishOptions,
+  { version, recorded }: PublishOptions,
 ): Promise<void> {
   const main = mainName(of);
   const tag = tagName(of, version);
+  const draft = of.publish.githubRelease === true;
+  const npmState = (name: string) => recorded.state().npm[name];
+  const npmRecord = (name: string, to: 'pending' | 'sent' | 'answered') =>
+    recorded.record((state) => ({
+      ...state,
+      npm: { ...state.npm, [name]: to },
+    }));
   // Before anything npm cannot take back.
-  const archives = of.publish.githubRelease ? fetchedSource(release) : [];
+  const archives =
+    draft && recorded.state().draft?.state !== 'made'
+      ? fetchedSource(release)
+      : [];
   let asked = false;
 
   const publishOne = (name: string) => {
-    if (published(release, name, version)) {
-      release.out(`already published: ${name}@${version}`);
-
+    if (npmState(name) !== undefined) {
       return;
+    }
+
+    // Not started by this release, so npm having it is someone else's.
+    if (published(release, name, version)) {
+      die(
+        `npm has ${name}@${version}, which this release did not publish; ${abandon(of.name)}`,
+      );
     }
 
     const file = tarball(release, of.folder, name, version);
@@ -109,6 +136,8 @@ export async function publish(
       asked = true;
     }
 
+    npmRecord(name, 'pending');
+
     const sent = npm(release, publishArguments(version, file), {
       stdio: 'inherit',
     });
@@ -116,6 +145,22 @@ export async function publish(
     if (sent.status !== 0) {
       die(`npm publish of ${file} failed`);
     }
+
+    npmRecord(name, 'sent');
+  };
+
+  const answered = async (name: string) => {
+    if (npmState(name) === 'answered') {
+      return true;
+    }
+
+    if (!(await waitPublished(release, name, version))) {
+      return false;
+    }
+
+    npmRecord(name, 'answered');
+
+    return true;
   };
 
   for (const name of of.publish.npm.slice(0, -1)) {
@@ -127,7 +172,7 @@ export async function publish(
   // installs with no binary, and `chord upgrade` prunes the old one on the
   // way.
   for (const name of of.publish.npm.slice(0, -1)) {
-    if (!(await waitPublished(release, name, version))) {
+    if (!(await answered(name))) {
       die(
         `${name}@${version} did not answer npm view in 15 minutes; ${main} was not published. Rerun \`bun dev release ${of.name}\` once \`npm view ${name}@${version} version\` answers, and it resumes from there`,
       );
@@ -136,25 +181,63 @@ export async function publish(
 
   publishOne(main);
 
-  if (!(await waitPublished(release, main, version))) {
+  if (!(await answered(main))) {
     die(
-      `${main}@${version} did not answer npm view in 15 minutes; ${tag} was not tagged. Once \`npm view ${main}@${version} version\` answers, tag it with: git tag -a ${tag} -m "${of.name} v${version}" && git push origin ${tag}`,
+      `${main}@${version} did not answer npm view in 15 minutes; ${tag} was not tagged. Once \`npm view ${main}@${version} version\` answers, tag it with: git tag -a ${tag} -m "${of.name} v${version}" ${recorded.state().built} && git push origin ${tag}`,
     );
   }
 
-  tagged(release, tag, `${of.name} v${version}`);
+  tagged(release, recorded, tag, `${of.name} v${version}`);
 
-  if (of.publish.githubRelease) {
-    draftRelease(release, version, tag, `${of.name} ${tag}`, archives);
+  if (draft && recorded.state().draft?.state !== 'made') {
+    recorded.record((state) => ({ ...state, draft: { state: 'pending' } }));
+
+    const url = draftRelease(
+      release,
+      version,
+      tag,
+      `${of.name} ${tag}`,
+      archives,
+    );
+
+    recorded.record((state) => ({ ...state, draft: { state: 'made', url } }));
   }
 }
 
-/** `name` made, annotated with `message`, and pushed to origin. */
-function tagged(release: Release, name: string, message: string): void {
-  const made = run(release, 'git', ['tag', '-a', name, '-m', message]);
+/**
+ * `name` made on the state's built commit, annotated with `message`, and
+ * pushed to origin, each recorded.
+ */
+function tagged(
+  release: Release,
+  recorded: Recorded,
+  name: string,
+  message: string,
+): void {
+  const tag = (to: 'pending' | 'made' | 'pushed') =>
+    recorded.record((state) => ({ ...state, tag: { state: to } }));
 
-  if (made.status !== 0) {
-    die(`git tag -a ${name} failed: ${said(made.stderr)}`);
+  if (recorded.state().tag?.state === 'pushed') {
+    return;
+  }
+
+  if (recorded.state().tag?.state !== 'made') {
+    tag('pending');
+
+    const made = run(release, 'git', [
+      'tag',
+      '-a',
+      name,
+      '-m',
+      message,
+      recorded.state().built,
+    ]);
+
+    if (made.status !== 0) {
+      die(`git tag -a ${name} failed: ${said(made.stderr)}`);
+    }
+
+    tag('made');
   }
 
   const pushed = run(release, 'git', ['push', 'origin', name]);
@@ -162,4 +245,6 @@ function tagged(release: Release, name: string, message: string): void {
   if (pushed.status !== 0) {
     die(`git push origin ${name} failed: ${said(pushed.stderr)}`);
   }
+
+  tag('pushed');
 }

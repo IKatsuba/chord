@@ -20,6 +20,21 @@ const ARM_MAC = { platform: 'darwin', arch: 'arm64' };
 // One function for both stages that sign, so the release asks for the
 // identity once.
 const identity = async (release: Release) => (await stages()).identity(release);
+// What the release's state records the sums of: the binaries compile builds
+// (sign signs the macOS two in place), and pack's tarballs.
+const BINARIES = [
+  'dist/bun-darwin-arm64/chord',
+  'dist/bun-darwin-x64/chord',
+  'dist/bun-linux-arm64/chord',
+  'dist/bun-linux-x64/chord',
+];
+const NPM = [
+  '@chorded/chord-darwin-arm64',
+  '@chorded/chord-darwin-x64',
+  '@chorded/chord-linux-arm64',
+  '@chorded/chord-linux-x64',
+  '@chorded/chord',
+];
 
 export default {
   checks: [
@@ -59,6 +74,7 @@ export default {
       name: 'compile',
       about: 'bun dev compile --all, each kind checked',
       versioned: true,
+      outputs: () => BINARIES,
       run: async (release) => (await stages()).compile(release),
     },
     {
@@ -66,6 +82,7 @@ export default {
       about: 'both macOS binaries signed and verified',
       machine: ARM_MAC,
       ready: identity,
+      outputs: () => BINARIES.filter((binary) => binary.includes('darwin')),
       run: async (release) => (await stages()).sign(release),
     },
     {
@@ -83,17 +100,16 @@ export default {
     {
       name: 'pack',
       about: 'five packages packed, sums recorded, installed and checked',
+      outputs: (_release, version) =>
+        NPM.map(
+          (name) =>
+            `dist/release/tgz/${name.replace('@', '').replace('/', '-')}-${version}.tgz`,
+        ),
       run: async (release) => (await stages()).pack(release),
     },
     {
       name: 'publish',
-      npm: [
-        '@chorded/chord-darwin-arm64',
-        '@chorded/chord-darwin-x64',
-        '@chorded/chord-linux-arm64',
-        '@chorded/chord-linux-x64',
-        '@chorded/chord',
-      ],
+      npm: NPM,
       tag: 'v{version}',
       githubRelease: true,
     },

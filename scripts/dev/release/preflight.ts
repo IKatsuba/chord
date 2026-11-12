@@ -1,8 +1,8 @@
 /**
  * Eligibility guards before authentication or release work, for one
  * package: a clean tree, a new version only once its package.json's is
- * published under its main npm name, an unpublished version or a stopped
- * publish to resume; publishing also requires the version's branch, main or
+ * published under its main npm name, and none of its npm names at the
+ * version; publishing also requires the version's branch, main or
  * its channel's, level with origin, no tag of its form, and `gh` for a
  * package with a GitHub release. Registry reads and the existing fetch may use the network, but these
  * guards do not log in.
@@ -22,14 +22,12 @@ import {
 } from './lib.ts';
 import { ghReady } from './source.ts';
 
-/** What preflight found: a fresh version, or a stopped publish to finish. */
+/** What preflight found: the version, clear to release. */
 export interface Preflight {
-  readonly mode: 'fresh' | 'resume';
   readonly version: string;
 }
 
 export interface PreflightOptions {
-  readonly dryRun: boolean;
   /** Whether the run's stages include publish. */
   readonly publish: boolean;
   /** The version to release, before it is written; package.json's if none. */
@@ -39,11 +37,7 @@ export interface PreflightOptions {
 export function preflight(
   release: Release,
   of: ReleasePackage,
-  {
-    dryRun,
-    publish,
-    version = packageVersion(release, of.folder),
-  }: PreflightOptions,
+  { publish, version = packageVersion(release, of.folder) }: PreflightOptions,
 ): Preflight {
   // 1. The tree, untracked files included.
   const status = run(release, 'git', [
@@ -78,25 +72,11 @@ export function preflight(
     die(`${main}@${version} is on npm already`);
   }
 
-  let mode: Preflight['mode'] = 'fresh';
-
+  // Any other npm name at it is a release stopped with its state lost:
+  // finished by hand (owner, S2), never resumed by guessing.
   for (const name of of.publish.npm.slice(0, -1)) {
     if (published(release, name, version)) {
-      if (dryRun) {
-        die(
-          `--dry-run does not resume a stopped publish: ${name}@${version} is published`,
-        );
-      }
-
-      if (!publish) {
-        die(
-          `a run without publish does not resume a stopped publish: ${name}@${version} is published; include publish`,
-        );
-      }
-
-      mode = 'resume';
-
-      break;
+      die(`${name}@${version} is on npm already`);
     }
   }
 
@@ -109,7 +89,7 @@ export function preflight(
     }
   }
 
-  return { mode, version };
+  return { version };
 }
 
 /** The package.json's version in `folder`, the root's for `.`. */

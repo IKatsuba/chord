@@ -7,7 +7,7 @@ import {
   rmSync,
   writeFileSync,
 } from 'node:fs';
-import { basename, join } from 'node:path';
+import { basename, join, relative } from 'node:path';
 import {
   PLATFORMS,
   type Release,
@@ -19,6 +19,11 @@ import {
   selectStages,
 } from '../../../../scripts/dev/release/select.ts';
 import { holdRelease } from '../../../../scripts/dev/release/lock.ts';
+import {
+  readState,
+  writeState,
+} from '../../../../scripts/dev/release/state.ts';
+import { sha256 } from '../../../../scripts/dev/release/sums.ts';
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
 import { KINDS } from '../../../../scripts/dev/release/build.ts';
 import type { FoundPackage } from '../../../../scripts/dev/steps.ts';
@@ -62,7 +67,7 @@ beforeEach(() => {
     join(at.root, 'package.json'),
     JSON.stringify({ version: VERSION }),
   );
-  writeFileSync(join(at.root, '.gitignore'), 'dist/\n');
+  writeFileSync(join(at.root, '.gitignore'), 'dist/\n.release/\n');
   nativeNotes(at.root);
 
   const origin = join(at.place, 'origin.git');
@@ -337,9 +342,8 @@ test('skipping pack leaves publish to stop before npm takes anything', async () 
     recursive: true,
     force: true,
   });
-  writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
 
-  expect(await died(released({ skip: ['pack'] }))).toContain(
+  expect(await died(released({ only: ['publish'] }))).toContain(
     'fetched by the pack stage',
   );
   expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
@@ -369,25 +373,18 @@ function packed(): void {
   recordSums(tgz, files);
 }
 
-test('a stopped publish resumes without building, and prints the version last', async () => {
+test('a release stopped with its state lost is refused, publishing or not: npm has part of it (S2)', async () => {
   packed();
   writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
 
-  await released({});
+  for (const options of [{}, { to: 'pack' }]) {
+    expect(await died(released(options))).toBe(
+      `@chorded/chord-darwin-arm64@${VERSION} is on npm already`,
+    );
+  }
 
-  expect(at.out[0]).toBe(
-    `resuming ${VERSION}: a package before @chorded/chord is published, @chorded/chord is not`,
-  );
-  expect(at.out.at(-1)).toBe(VERSION);
   expect(ran().some((line) => /^(bun|security|xcrun) /.test(line))).toBe(false);
-});
-
-test('a stopped publish found by a run without publish stops it', async () => {
-  writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
-
-  expect(await died(released({ to: 'pack' }))).toBe(
-    `a run without publish does not resume a stopped publish: @chorded/chord-darwin-arm64@${VERSION} is published; include publish`,
-  );
+  expect(existsSync(join(at.root, '.release'))).toBeFalse();
 });
 
 describe('tester: CHD-547 explicit version eligibility', () => {
@@ -734,31 +731,42 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
     expect(ran()).toStrictEqual([]);
   });
 
-  test("a stopped publish resumes only package.json's version", async () => {
+  test('a new version npm already has part of is refused before anything is committed', async () => {
     writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
 
     const head = out(at.root, 'rev-parse', 'HEAD');
 
     expect(await died(releasedAt('patch', {}))).toBe(
-      "a stopped publish resumes package.json's version 9.9.9, not 9.9.10; run it without a version",
+      '@chorded/chord-darwin-arm64@9.9.10 is on npm already',
     );
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
   });
 
-  test('a push that fails drops the commit and stops before any stage', async () => {
+  test('a push that fails keeps the commit, recorded made, and stops before any stage', async () => {
     const head = out(at.root, 'rev-parse', 'HEAD');
     const hook = join(origin(), 'hooks', 'pre-receive');
 
     executable(hook, '#!/bin/sh\necho refused >&2\nexit 1\n');
 
     expect(await died(releasedAt('patch', {}))).toStartWith(
-      'git push origin main failed, so chore: chord v9.9.10 is dropped:',
+      'git push origin main failed; chore: chord v9.9.10 stays committed, and `bun dev release chord` pushes it:',
     );
-    expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
-    expect(version()).toBe(VERSION);
+
+    const commit = out(at.root, 'rev-parse', 'HEAD');
+
+    expect(out(at.root, 'rev-parse', 'HEAD~1')).toBe(head);
+    expect(version()).toBe('9.9.10');
     expect(out(at.root, 'status', '--porcelain')).toBe('');
     expect(ran().some((line) => line.startsWith('bun '))).toBeFalse();
+    expect(readState(at.root, 'chord')).toMatchObject({
+      version: '9.9.10',
+      base: head,
+      built: commit,
+      versionCommit: { state: 'made', sha: commit },
+      stages: {},
+      npm: {},
+    });
   });
 
   test("package.json's own version makes no commit", async () => {
@@ -1074,9 +1082,14 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
     );
 
     expect(await died(publishing('major', 'next'))).toStartWith(
-      'git push origin next failed, so chore: chord v10.0.0-next.0 is dropped:',
+      'git push origin next failed; chore: chord v10.0.0-next.0 stays committed, and `bun dev release chord` pushes it:',
     );
-    expect(read(at.root, 'rev-parse', 'HEAD')).toBe(head);
+    expect(read(at.root, 'rev-parse', 'HEAD~1')).toBe(head);
+    expect(readState(at.root, 'chord')).toMatchObject({
+      channel: 'next',
+      branch: 'next',
+      versionCommit: { state: 'made' },
+    });
   });
 
   describe('a dry run', () => {
@@ -1145,7 +1158,7 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
     });
   });
 
-  describe('a stopped publish', () => {
+  describe('npm with part of a release whose state is lost', () => {
     beforeEach(() => {
       onBranch('next', NEXT);
       fetchedArchives(at.root);
@@ -1168,17 +1181,14 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
     test.each([
       ['with no version', undefined],
       ['with its channel', 'next'],
-    ])('resumes %s, building nothing', async (_name, channel) => {
-      await publishing(undefined, channel);
-
-      expect(at.out[0]).toBe(
-        `resuming ${NEXT}: a package before @chorded/chord is published, @chorded/chord is not`,
+    ])('is refused %s, building nothing (S2)', async (_name, channel) => {
+      expect(await died(publishing(undefined, channel))).toBe(
+        `@chorded/chord-darwin-arm64@${NEXT} is on npm already`,
       );
-      expect(at.out.at(-1)).toBe(NEXT);
       expect(ran().some((line) => /^(bun|security|xcrun) /.test(line))).toBe(
         false,
       );
-      expect(read(origin(), 'tag', '--list', `v${NEXT}`)).toBe(`v${NEXT}`);
+      expect(read(origin(), 'tag', '--list', `v${NEXT}`)).toBe('');
     });
 
     test('refuses another channel', async () => {
@@ -1193,14 +1203,6 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
     ])('refuses %s, as it is not on npm', async (_name, wanted) => {
       expect(await died(publishing(wanted, 'next'))).toBe(
         `@chorded/chord@${NEXT} is not published yet; \`bun dev release chord\` without --bump finishes it`,
-      );
-    });
-
-    test('is refused from another branch', async () => {
-      git(at.root, 'checkout', '-q', '-b', 'topic');
-
-      expect(await died(publishing(undefined, undefined))).toBe(
-        'a release on channel next publishes only from branch next; HEAD is topic',
       );
     });
   });
@@ -1351,10 +1353,9 @@ describe('CHD-531 mandatory authentication preparation', () => {
     },
   );
 
-  test('a resumed publish authenticates before publishing without rebuilding', async () => {
+  test('a publish authenticates before publishing', async () => {
     packed();
-    writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
-    await released({}, { AUTH_FAIL: 'yes' });
+    await released({ only: ['publish'] }, { AUTH_FAIL: 'yes' });
 
     const log = ran();
     const login = log.indexOf('npm login');
@@ -1447,12 +1448,12 @@ describe('CHD-531 mandatory authentication preparation', () => {
       { platform: 'linux', arch: 'x64' },
     ],
     ['new version', { only: ['install'] }, 'patch', MAC],
-    ['dry resume', { dryRun: true, only: ['compile'] }, undefined, MAC],
-    ['nonpublishing resume', { only: ['compile'] }, undefined, MAC],
+    ['npm with part, dry', { dryRun: true, only: ['compile'] }, undefined, MAC],
+    ['npm with part, no publish', { only: ['compile'] }, undefined, MAC],
   ] satisfies [string, ReleaseOptions, string | undefined, typeof MAC][])(
     '%s eligibility rejects before authentication',
     async (guard, options, wanted, machine) => {
-      if (guard.endsWith('resume')) {
+      if (guard.startsWith('npm with part')) {
         writeFileSync(join(at.place, 'published', 'chord-darwin-arm64'), '');
       }
 
@@ -1468,7 +1469,7 @@ describe('CHD-531 mandatory authentication preparation', () => {
       );
 
       expect(message).toMatch(
-        /^(natives, sign|a new version needs|--dry-run does not resume|a run without publish does not resume)/,
+        /^(natives, sign|a new version needs|@chorded\/chord-darwin-arm64@9\.9\.9 is on npm already$)/,
       );
       expect(
         ran().some((line) => line === 'npm whoami' || line === 'npm login'),
@@ -1484,7 +1485,7 @@ describe('CHD-531 mandatory authentication preparation', () => {
     'ahead',
     'local tag',
     'remote tag',
-    'resume version',
+    'npm with part',
   ])('%s eligibility failure never starts authentication', async (guard) => {
     let wanted: string | undefined;
     const options = { only: ['compile', 'publish'] } satisfies ReleaseOptions;
@@ -1691,6 +1692,10 @@ describe.each([
           {
             name: 'pack',
             about: 'p',
+            outputs: (release, version) =>
+              npm.map((each) =>
+                relative(release.root, tarball(release, folder, each, version)),
+              ),
             run: async (release, version) => {
               await logged('pack')();
 
@@ -1727,7 +1732,10 @@ describe.each([
       }
 
       writeFileSync(join(at.root, 'bun.lock'), '{}\n');
-      writeFileSync(join(at.root, '.gitignore'), 'dist/\n*/*/dist/\n');
+      writeFileSync(
+        join(at.root, '.gitignore'),
+        'dist/\n*/*/dist/\n.release/\n',
+      );
       git(at.root, 'add', '-A');
       git(at.root, 'commit', '-q', '-m', 'the package');
       git(at.root, 'push', '-q', 'origin', 'main');
@@ -1902,7 +1910,7 @@ esac
       ]);
     });
 
-    test('a refusing package preflight stops before npm authentication or any stage, resuming too', async () => {
+    test('a refusing package preflight stops before npm authentication or any stage', async () => {
       expect(
         await died(
           runRelease(
@@ -1916,32 +1924,6 @@ esac
         ),
       ).toBe(`${name} refuses ${NEXT}`);
 
-      if (npm.length > 1) {
-        // A stopped publish: a package before the main one has the version.
-        rmSync(join(at.place, 'published'), { recursive: true });
-        mkdirSync(join(at.place, 'published'));
-        writeFileSync(
-          join(
-            at.place,
-            'published',
-            `${npm[0]!.slice('@chorded/'.length)}@${VERSION}`,
-          ),
-          '',
-        );
-
-        expect(
-          await died(
-            runRelease(
-              context(),
-              guarded(true),
-              selectStages({ name, stages }, {}),
-              {},
-              MAC,
-            ),
-          ),
-        ).toBe(`${name} refuses ${VERSION}`);
-      }
-
       expect(
         ran().filter(
           (line) => line === 'npm whoami' || line.startsWith('npm login'),
@@ -1953,6 +1935,96 @@ esac
             line.startsWith('stage ') && !line.startsWith('stage preflight'),
         ),
       ).toStrictEqual([]);
+    });
+
+    /** The state the run left, if any. */
+    const left = () => readState(at.root, name);
+
+    test('a release that publishes keeps a state as it goes and removes it once done, the version printed last', async () => {
+      await run({}, 'patch');
+
+      expect(left()).toBeUndefined();
+      expect(existsSync(join(at.root, '.release', name))).toBeFalse();
+      expect(at.out.at(-1)).toBe(NEXT);
+    });
+
+    test('a run without publish at the current version keeps a state, with each stage and the sums of what it left', async () => {
+      // package.json's version not on npm yet: a run at it may go.
+      rmSync(
+        join(
+          at.place,
+          'published',
+          `${main.slice('@chorded/'.length)}@${VERSION}`,
+        ),
+      );
+      await run({ skip: ['sign'], to: 'pack' });
+
+      const state = left()!;
+      const head = git_('rev-parse', 'HEAD');
+
+      expect(state).toMatchObject({
+        format: 1,
+        package: name,
+        version: VERSION,
+        channel: null,
+        branch: 'main',
+        base: head,
+        built: head,
+        npm: {},
+      });
+      expect(state.versionCommit).toBeUndefined();
+      expect(Object.keys(state.stages)).toStrictEqual(['build', 'pack']);
+      expect(state.stages['build']!.outputs).toStrictEqual({});
+      expect(state.stages['pack']!.outputs).toStrictEqual(
+        Object.fromEntries(
+          npm.map((each) => {
+            const file = tarball(at.release, folder, each, VERSION);
+
+            return [relative(at.root, file), sha256(file)];
+          }),
+        ),
+      );
+    });
+
+    test('a dry run, or a run without publish that makes a new version, keeps none', async () => {
+      await run({ dryRun: true, skip: ['sign'] }, 'patch');
+
+      expect(left()).toBeUndefined();
+
+      await run({ skip: ['sign'], to: 'pack' }, 'patch');
+
+      expect(left()).toBeUndefined();
+      expect(git_('log', '-1', '--format=%s')).toBe('the package');
+    });
+
+    test('a finished state is cleared and the run goes on without it; an unfinished one is refused, naming how to abandon it', async () => {
+      const finished = {
+        format: 1 as const,
+        package: name,
+        version: VERSION,
+        channel: null,
+        branch: 'main',
+        base: 'a'.repeat(40),
+        built: 'a'.repeat(40),
+        stages: {},
+        npm: Object.fromEntries(npm.map((each) => [each, 'answered' as const])),
+        tag: { state: 'pushed' as const },
+        ...(githubRelease ? { draft: { state: 'made' as const } } : {}),
+      };
+
+      writeState(at.root, finished);
+      await run({ dryRun: true, skip: ['sign'] }, 'patch');
+
+      expect(at.out[0]).toBe(`${name} ${VERSION} is released`);
+      expect(left()).toBeUndefined();
+
+      writeState(at.root, { ...finished, tag: { state: 'made' } });
+      writeFileSync(join(at.place, 'ran.log'), '');
+
+      expect(await died(run({}, 'patch'))).toBe(
+        `${name} ${VERSION} is in progress (done: nothing; npm ${npm.length} of ${npm.length}); rm -r .release/${name} abandons it`,
+      );
+      expect(ran()).toStrictEqual([]);
     });
 
     test('a new version needs its versioned stage', async () => {

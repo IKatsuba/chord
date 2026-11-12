@@ -43,7 +43,11 @@ const SCHEMA = z.object({
     z.string(),
     z.object({ at: z.string(), outputs: z.record(z.string(), z.string()) }),
   ),
-  /** Each npm name of the publish stage, in its order. */
+  /**
+   * The npm names whose publish began: pending right before `npm publish`,
+   * sent when it exits 0, answered when `npm view` has it. A name not here
+   * is not started.
+   */
   npm: z.record(z.string(), z.enum(['pending', 'sent', 'answered'])),
   tag: z.object({ state: progress }).optional(),
   /** chord only. */
@@ -166,19 +170,22 @@ export function clearState(root: string, name: string): void {
 }
 
 /** Whether everything of the release is done: npm, the tag and the draft. */
-export function finished(state: ReleaseState, githubRelease: boolean): boolean {
+export function finished(
+  state: ReleaseState,
+  npm: readonly string[],
+  githubRelease: boolean,
+): boolean {
   return (
-    Object.values(state.npm).every((each) => each === 'answered') &&
+    npm.every((name) => state.npm[name] === 'answered') &&
     state.tag?.state === 'pushed' &&
     (!githubRelease || state.draft?.state === 'made')
   );
 }
 
 /** How a refusal names a state's progress: its version, done stages and npm. */
-export function described(state: ReleaseState): string {
+export function described(state: ReleaseState, npm: readonly string[]): string {
   const done = Object.keys(state.stages);
-  const npm = Object.values(state.npm);
-  const answered = npm.filter((each) => each === 'answered').length;
+  const answered = npm.filter((name) => state.npm[name] === 'answered').length;
 
   return `${state.package} ${state.version} is in progress (done: ${done.length === 0 ? 'nothing' : done.join(', ')}; npm ${answered} of ${npm.length})`;
 }
@@ -194,6 +201,8 @@ export interface Selection {
   readonly dryRun: boolean;
   readonly bump: string | undefined;
   readonly channel: string | undefined;
+  /** The publish stage's npm names, in order: a name not in the state is not started. */
+  readonly npm: readonly string[];
   readonly githubRelease: boolean;
 }
 
@@ -222,19 +231,19 @@ export function left(state: ReleaseState, selection: Selection): Left {
 
   if (selection.dryRun) {
     refuse(
-      `--dry-run is refused while ${described(state)}: \`bun dev release ${name}\` continues it`,
+      `--dry-run is refused while ${described(state, selection.npm)}: \`bun dev release ${name}\` continues it`,
     );
   }
 
   if (selection.bump !== undefined && selection.bump !== state.version) {
     refuse(
-      `--bump ${selection.bump} is refused while ${described(state)}: \`bun dev release ${name}\` continues it`,
+      `--bump ${selection.bump} is refused while ${described(state, selection.npm)}: \`bun dev release ${name}\` continues it`,
     );
   }
 
   if (selection.channel !== undefined && selection.channel !== state.channel) {
     refuse(
-      `--channel ${selection.channel} is not ${described(state)}'s channel, ${state.channel ?? 'none'}`,
+      `--channel ${selection.channel} is not ${described(state, selection.npm)}'s channel, ${state.channel ?? 'none'}`,
     );
   }
 
@@ -255,7 +264,7 @@ export function left(state: ReleaseState, selection: Selection): Left {
     Object.values(state.npm).some((each) => each !== 'pending')
   ) {
     refuse(
-      `${listed(cleared)} cannot run again: npm has ${name} ${state.version}'s bytes from ${described(state)}`,
+      `${listed(cleared)} cannot run again: npm has ${name} ${state.version}'s bytes from ${described(state, selection.npm)}`,
     );
   }
 
@@ -285,9 +294,7 @@ export function left(state: ReleaseState, selection: Selection): Left {
     ...(publish
       ? {
           publish: {
-            npm: Object.entries(state.npm)
-              .filter(([, each]) => each !== 'answered')
-              .map(([npm]) => npm),
+            npm: selection.npm.filter((npm) => state.npm[npm] !== 'answered'),
             tag: state.tag?.state !== 'pushed',
             draft: selection.githubRelease && state.draft?.state !== 'made',
           },

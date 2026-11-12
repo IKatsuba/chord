@@ -27,7 +27,7 @@ const ABANDON = 'rm -r .release/one abandons it';
 /** A state of `one` 1.2.0 with `done` stages and its npm names as given. */
 function state(
   done: readonly string[] = [],
-  npm: ReleaseState['npm'] = { '@chorded/one': 'pending' },
+  npm: ReleaseState['npm'] = {},
   more: Partial<ReleaseState> = {},
 ): ReleaseState {
   return {
@@ -61,6 +61,7 @@ function selection(
     dryRun: false,
     bump: undefined,
     channel: undefined,
+    npm: ['@chorded/one'],
     githubRelease: false,
     ...more,
   };
@@ -98,18 +99,27 @@ describe('what is left', () => {
       { tag: { state: 'made' }, draft: { state: 'pending' } },
     );
 
-    expect(left(at, selection(STAGES, { githubRelease: true }))).toStrictEqual({
+    const all = {
+      githubRelease: true,
+      npm: ['@chorded/a', '@chorded/b', '@chorded/c', '@chorded/one'],
+    };
+
+    expect(left(at, selection(STAGES, all))).toStrictEqual({
       cleared: [],
       stages: [],
-      publish: { npm: ['@chorded/b', '@chorded/one'], tag: true, draft: true },
+      publish: {
+        npm: ['@chorded/b', '@chorded/c', '@chorded/one'],
+        tag: true,
+        draft: true,
+      },
     });
     expect(
       left(
         { ...at, tag: { state: 'pushed' }, draft: { state: 'made' } },
-        selection(STAGES, { githubRelease: true }),
+        selection(STAGES, all),
       ).publish,
     ).toStrictEqual({
-      npm: ['@chorded/b', '@chorded/one'],
+      npm: ['@chorded/b', '@chorded/c', '@chorded/one'],
       tag: false,
       draft: false,
     });
@@ -199,7 +209,10 @@ describe('refused, naming the way out', () => {
               '@chorded/a': sent,
               '@chorded/one': 'pending',
             }),
-            selection(['pack', 'publish'], { named: true }),
+            selection(['pack', 'publish'], {
+              named: true,
+              npm: ['@chorded/a', '@chorded/one'],
+            }),
           ),
         ),
       ).toStartWith(`pack cannot run again: npm has one 1.2.0's bytes`);
@@ -227,13 +240,17 @@ test('a state is finished once npm answered for all, the tag is pushed and, with
     { tag: { state: 'pushed' } },
   );
 
-  expect(finished(at, false)).toBeTrue();
-  expect(finished(at, true)).toBeFalse();
-  expect(finished({ ...at, draft: { state: 'made' } }, true)).toBeTrue();
-  expect(finished({ ...at, tag: { state: 'made' } }, false)).toBeFalse();
+  const npm = ['@chorded/one'];
+
+  expect(finished(at, npm, false)).toBeTrue();
+  expect(finished(at, npm, true)).toBeFalse();
+  expect(finished({ ...at, draft: { state: 'made' } }, npm, true)).toBeTrue();
+  expect(finished({ ...at, tag: { state: 'made' } }, npm, false)).toBeFalse();
   expect(
-    finished({ ...at, npm: { '@chorded/one': 'sent' } }, false),
+    finished({ ...at, npm: { '@chorded/one': 'sent' } }, npm, false),
   ).toBeFalse();
+  // A name the state never started is not done.
+  expect(finished(at, ['@chorded/a', ...npm], false)).toBeFalse();
 });
 
 test('cleared leaves the other done stages', () => {

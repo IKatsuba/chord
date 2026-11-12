@@ -160,7 +160,8 @@ export function ghReady(release: Release): void {
 }
 
 /**
- * A draft GitHub release of the tag with the archives attached. Never more
+ * A draft GitHub release of the tag with the archives attached, answering
+ * its URL. Never more
  * than a draft: the owner writes the notes and publishes it. A channel's is
  * marked a pre-release, so it cannot become the repository's latest release.
  * By then npm has the version and origin the tag, so a failure says how to
@@ -172,7 +173,7 @@ export function draftRelease(
   tag: string,
   title: string,
   files: readonly string[],
-): void {
+): string {
   const args = [
     'release',
     'create',
@@ -195,4 +196,6 @@ export function draftRelease(
   }
 
   release.out(`drafted ${tag}, with its source archives: ${said(made.stdout)}`);
+
+  return said(made.stdout);
 }

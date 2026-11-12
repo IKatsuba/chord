@@ -8,10 +8,11 @@
  * printed is the published version, printed only when everything held and
  * the version is tagged.
  */
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { authenticate } from './authenticate.ts';
 import { compile, install, natives, quality } from './build.ts';
-import { commitVersion, holdVersion, pushVersion } from './bump.ts';
+import { commitVersion, type Held, holdVersion, pushVersion } from './bump.ts';
 import { channelOf } from '../../../src/channel.ts';
 import {
   die,
@@ -27,11 +28,28 @@ import { notarise, PROFILE } from './notarise.ts';
 import { holdRelease } from './lock.ts';
 import { pack } from './pack.ts';
 import { packageVersion, preflight } from './preflight.ts';
-import { publish, publishArguments, tarball, tarballs } from './publish.ts';
+import {
+  publish,
+  publishArguments,
+  type Recorded,
+  tarball,
+  tarballs,
+} from './publish.ts';
 import { selftest } from './selftest.ts';
 import type { ReleaseOptions } from './select.ts';
 import { type FoundPackage, isPublish, type Stage } from '../steps.ts';
 import { sign } from './sign.ts';
+import {
+  abandon,
+  clearState,
+  described,
+  finished,
+  FORMAT,
+  readState,
+  type ReleaseState,
+  writeState,
+} from './state.ts';
+import { sha256 } from './sums.ts';
 import { releaseVersion, VersionError } from './version.ts';
 
 const ARM = 'dist/bun-darwin-arm64/chord';
@@ -117,6 +135,19 @@ async function locked(
   const selected = list.filter((stage) => has(stage.name));
   const built = selected.filter((stage): stage is Stage => !isPublish(stage));
 
+  // A state an earlier run left: a finished one is cleared, and the run goes
+  // on without it; an unfinished one is refused, naming how to abandon it.
+  const earlier = readState(release.root, of.name);
+
+  if (earlier !== undefined) {
+    if (finished(earlier, of.publish.npm, of.publish.githubRelease === true)) {
+      release.out(`${of.name} ${earlier.version} is released`);
+      clearState(release.root, of.name);
+    } else {
+      die(`${described(earlier, of.publish.npm)}; ${abandon(of.name)}`);
+    }
+  }
+
   // A stage that needs another machine (chord's signing: this Mac's keychain
   // and Rosetta) is refused at once anywhere else, only when selected.
   for (const stage of built) {
@@ -160,17 +191,10 @@ async function locked(
     );
   }
 
-  const { mode, version } = preflight(release, of, {
-    dryRun,
+  const { version } = preflight(release, of, {
     publish: has('publish'),
     version: next,
   });
-
-  if (mode === 'resume' && version !== current) {
-    die(
-      `a stopped publish resumes package.json's version ${current}, not ${version}; run it without a version`,
-    );
-  }
 
   // The package's own preflight (chord's agent pins, CHD-622), after the
   // release's and before npm may hand over the terminal or save credentials.
@@ -178,38 +202,85 @@ async function locked(
 
   authenticate(release);
 
-  // A stopped publish uses its existing packages without building again.
-  if (mode === 'resume') {
-    release.out(
-      `resuming ${version}: a package before ${main} is published, ${main} is not`,
-    );
-    await published(release, of, version);
-
-    return;
-  }
-
   // What the selected stages need, found before the build, each once.
   for (const ready of new Set(built.flatMap((stage) => stage.ready ?? []))) {
     await ready(release);
   }
 
-  // A new version is written and committed before any stage reads it; a
-  // run that publishes keeps the commit on origin once pushed, any other
-  // drops it.
-  const held =
-    version === current
-      ? undefined
-      : holdVersion(release, commitVersion(release, of, version));
+  // The first change to the world: a run that publishes, or one at
+  // package.json's version (`--to pack`, to publish later), keeps a state
+  // from here; a dry run, or a run without publish that makes a new
+  // version, keeps none.
+  const base = head(release);
+  const recorded =
+    !dryRun && (has('publish') || version === current)
+      ? record(release, {
+          format: FORMAT,
+          package: of.name,
+          version,
+          channel: channelOf(version),
+          branch: channelOf(version) ?? 'main',
+          base,
+          built: base,
+          stages: {},
+          npm: {},
+        })
+      : undefined;
+
+  // A new version is written and committed before any stage reads it. With
+  // a state the commit stays, pushed when publishing, and a stopped run
+  // goes on from it; without one it is dropped at the end, or on a signal.
+  let held: Held | undefined;
+
+  if (version !== current) {
+    if (recorded === undefined) {
+      held = holdVersion(release, commitVersion(release, of, version));
+    } else {
+      recorded.record((state) => ({
+        ...state,
+        versionCommit: { state: 'pending' },
+      }));
+      commitVersion(release, of, version);
+
+      const sha = head(release);
+
+      recorded.record((state) => ({
+        ...state,
+        versionCommit: { state: 'made', sha },
+        built: sha,
+      }));
+
+      if (has('publish')) {
+        pushVersion(release, of, version);
+        recorded.record((state) => ({
+          ...state,
+          versionCommit: { state: 'pushed', sha },
+        }));
+      }
+    }
+  }
 
   try {
-    if (held !== undefined && has('publish')) {
-      pushVersion(release, of, version, held);
-    }
-
     for (const stage of selected) {
-      await (isPublish(stage)
-        ? published(release, of, version)
-        : stage.run(release, version));
+      if (isPublish(stage)) {
+        await publish(release, of, { version, recorded: recorded! });
+        clearState(release.root, of.name);
+        release.out(version);
+
+        continue;
+      }
+
+      await stage.run(release, version);
+      recorded?.record((state) => ({
+        ...state,
+        stages: {
+          ...state.stages,
+          [stage.name]: {
+            at: new Date().toISOString(),
+            outputs: sums(release, stage, version),
+          },
+        },
+      }));
     }
 
     if (dryRun) {
@@ -232,9 +303,57 @@ async function locked(
       );
     }
   } finally {
-    // Kept once pushed, so only an unpushed commit is dropped.
     held?.drop();
   }
+}
+
+/** HEAD's sha. */
+function head(release: Release): string {
+  const at = run(release, 'git', ['rev-parse', 'HEAD']);
+
+  if (at.status !== 0) {
+    die(`git rev-parse HEAD failed: ${said(at.stderr)}`);
+  }
+
+  return said(at.stdout);
+}
+
+/** A state written now, then again at every change recorded. */
+function record(release: Release, first: ReleaseState): Recorded {
+  let state = first;
+
+  writeState(release.root, state);
+
+  return {
+    state: () => state,
+    record: (change) => {
+      state = change(state);
+
+      writeState(release.root, state);
+    },
+  };
+}
+
+/**
+ * The sha256 of what `stage` left for later ones, by path from the root;
+ * an output it names and did not leave stops the release.
+ */
+function sums(
+  release: Release,
+  stage: Stage,
+  version: string,
+): Record<string, string> {
+  return Object.fromEntries(
+    (stage.outputs?.(release, version) ?? []).map((path) => {
+      const file = join(release.root, path);
+
+      if (!existsSync(file)) {
+        die(`${stage.name} did not leave ${path}`);
+      }
+
+      return [path, sha256(file)];
+    }),
+  );
 }
 
 /** `a`, `a and b`, `a, b and c`. */
@@ -290,16 +409,6 @@ function latestStable(release: Release, main: string): string {
   }
 
   return said(view.stdout);
-}
-
-/** Publishes, and prints the version last once it is tagged. */
-async function published(
-  release: Release,
-  of: ReleasePackage,
-  version: string,
-): Promise<void> {
-  await publish(release, of, { version });
-  release.out(version);
 }
 
 /** What the release reads of a found package: its name, folder and publish data. */

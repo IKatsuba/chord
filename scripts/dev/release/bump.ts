@@ -164,26 +164,33 @@ export function holdVersion(release: Release, head: string): Held {
 }
 
 /**
- * The version's branch, main or its channel's, pushed to origin, the version
- * commit `held` with it.
+ * The version's branch, main or its channel's, pushed to origin with the
+ * version commit. A held commit (a run without a state) is dropped if the
+ * push fails; one a state records stays, and the next run pushes it.
  */
 export function pushVersion(
   release: Release,
   of: ReleasePackage,
   version: string,
-  held: Held,
+  held?: Held,
 ): void {
   const branch = channelOf(version) ?? 'main';
   const pushed = run(release, 'git', ['push', '-q', 'origin', branch]);
 
   if (pushed.status !== 0) {
+    if (held === undefined) {
+      die(
+        `git push origin ${branch} failed; chore: ${of.name} v${version} stays committed, and \`bun dev release ${of.name}\` pushes it: ${said(pushed.stderr)}`,
+      );
+    }
+
     held.drop();
     die(
       `git push origin ${branch} failed, so chore: ${of.name} v${version} is dropped: ${said(pushed.stderr)}`,
     );
   }
 
-  held.keep();
+  held?.keep();
 }
 
 /**

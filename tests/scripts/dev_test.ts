@@ -975,3 +975,157 @@ describe('tester: direct lint process boundaries', () => {
     }
   });
 });
+
+describe('tester: CHD-623 package command boundaries', () => {
+  test('ESLint option names stay with lint after the selected package', async () => {
+    const args = ['--static', '--bump', 'minor', '--package', 'x'];
+
+    expect(await parsed(['lint', 'cursor-cloud-acp', ...args])).toEqual([
+      ['lint', 'cursor-cloud-acp', args],
+    ]);
+    expect(await parsed(['lint', 'chord', '--', '', '--help'])).toEqual([
+      ['lint', 'chord', ['', '--help']],
+    ]);
+  });
+
+  test('quality never interprets an npm scope or a folder as a package name', async () => {
+    for (const name of ['@chorded/chord', 'packages/cursor-cloud-acp']) {
+      await expect(parsed(['quality', name])).rejects.toThrow(
+        'Expected values: "chord", "cursor-cloud-acp"',
+      );
+    }
+  });
+
+  async function checkout() {
+    const dir = mkdtempSync(join(tmpdir(), 'chord-package-command-'));
+    const root = join(import.meta.dir, '..', '..');
+
+    await cp(join(root, 'scripts'), join(dir, 'scripts'), { recursive: true });
+    await symlink(join(root, 'node_modules'), join(dir, 'node_modules'));
+    await writeFile(
+      join(dir, 'package.json'),
+      JSON.stringify({
+        name: '@chorded/chord',
+        type: 'module',
+        workspaces: ['packages/*'],
+        scripts: { dev: 'bun scripts/dev.ts' },
+      }),
+    );
+    await cp(join(dir, 'package.json'), join(dir, 'workspace-manifest.json'));
+
+    return dir;
+  }
+
+  function invoked(dir: string, args: string[]) {
+    return spawnSync(process.execPath, ['dev', ...args], {
+      cwd: dir,
+      encoding: 'utf8',
+      timeout: 20_000,
+    });
+  }
+
+  test('quality runs only the selected package, preserves status and stops before later checks', async () => {
+    const dir = await checkout();
+
+    try {
+      const writePackage = async (folder: string, name: string) => {
+        const here = join(dir, folder);
+
+        await cp(
+          join(dir, 'workspace-manifest.json'),
+          join(here, 'package.json'),
+        );
+        await writeFile(
+          join(here, 'package.json'),
+          JSON.stringify({ name: `@chorded/${name}`, type: 'module' }),
+        );
+
+        const checks = [
+          { name: 'static', static: true, status: 0 },
+          { name: 'dynamic', status: 17 },
+          { name: 'after', status: 0 },
+        ].map(({ name: step, static: only, status }) => ({
+          name: step,
+          static: only,
+          run: [
+            process.execPath,
+            '-e',
+            `import { appendFileSync } from 'node:fs'; appendFileSync('ran.log', ${JSON.stringify(`${name}:${step}\n`)}); process.exit(${status});`,
+          ],
+        }));
+
+        await writeFile(
+          join(here, 'steps.ts'),
+          `export default ${JSON.stringify({
+            checks,
+            lint: [],
+            release: [
+              { name: 'publish', npm: [`@chorded/${name}`], tag: 'v{version}' },
+            ],
+          })};\n`,
+        );
+      };
+
+      // cp creates the workspace's parents; the runner must still use the root cwd.
+      await writePackage('.', 'chord');
+      await writePackage('packages/acp', 'cursor-cloud-acp');
+      await cp(join(dir, 'workspace-manifest.json'), join(dir, 'package.json'));
+
+      for (const name of ['chord', 'cursor-cloud-acp']) {
+        const result = invoked(dir, ['quality', name, '--static']);
+
+        expect(result.error).toBeUndefined();
+        expect(result.status, result.stdout + result.stderr).toBe(0);
+      }
+
+      const result = invoked(dir, ['quality', 'cursor-cloud-acp']);
+
+      expect(result.error).toBeUndefined();
+      expect(result.status, result.stdout + result.stderr).toBe(17);
+      expect(result.stderr).toContain(
+        'quality cursor-cloud-acp: dynamic failed with status 17',
+      );
+      expect(await readFile(join(dir, 'ran.log'), 'utf8')).toBe(
+        'chord:static\ncursor-cloud-acp:static\ncursor-cloud-acp:static\ncursor-cloud-acp:dynamic\n',
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('a broken workspace steps file stops even help before any check runs', async () => {
+    const dir = await checkout();
+
+    try {
+      await writeFile(
+        join(dir, 'steps.ts'),
+        "export default { checks: [], lint: [], release: [{ name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' }] };\n",
+      );
+      await cp(
+        join(dir, 'workspace-manifest.json'),
+        join(dir, 'packages/acp/package.json'),
+      );
+      await writeFile(
+        join(dir, 'packages/acp/package.json'),
+        '{"name":"@chorded/cursor-cloud-acp"}',
+      );
+      await writeFile(
+        join(dir, 'packages/acp/steps.ts'),
+        "throw new Error('fixture steps failed');\n",
+      );
+
+      for (const args of [['--help'], ['chord', '--fake', '--', '--help']]) {
+        const result = invoked(dir, args);
+
+        expect(result.error).toBeUndefined();
+        expect(result.status).toBe(1);
+        expect(result.stderr).toContain(
+          'bun dev: packages/acp/steps.ts: fixture steps failed',
+        );
+        expect(result.stdout).toBe('');
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

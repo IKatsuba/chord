@@ -135,6 +135,25 @@ describe('discovery', () => {
     expect(await refusal()).toBe(`packages/a/steps.ts: ${problem}`);
   });
 
+  test.each([
+    ['no default export', 'export const steps = {};', 'the export: '],
+    ['a null default', 'export default null;', 'the export: '],
+    ['no release', 'export default { checks: [], lint: [] };', 'release: '],
+    [
+      'a stage without its run',
+      "export default { checks: [], lint: [], release: [{ name: 'build', about: 'b' }] };",
+      'release.0: ',
+    ],
+  ])('a steps file with %s is named by its file', async (_, text, where) => {
+    pkg('.', '@chorded/chord', undefined, { workspaces: ['packages/*'] });
+    pkg('packages/a', '@chorded/a');
+    write('packages/a/steps.ts', `${text}\n`);
+
+    expect(await refusal()).toStartWith(
+      `packages/a/steps.ts: its default export is not a package's steps: ${where}`,
+    );
+  });
+
   test('a steps file that does not load is named', async () => {
     pkg('.', '@chorded/chord');
     write('steps.ts', "throw new Error('broken on purpose');\n");

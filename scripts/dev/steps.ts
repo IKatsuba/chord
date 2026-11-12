@@ -10,6 +10,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { constants } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { z } from '@zod/zod';
 import { globby } from 'globby';
 import type { Release } from './release/lib.ts';
 
@@ -157,32 +158,61 @@ async function readSteps(root: string, folder: string): Promise<PackageSteps> {
     throw new StepsError(`${folder}: no steps.ts`);
   }
 
-  let steps: PackageSteps | undefined;
+  let steps: unknown;
 
   try {
-    steps = (
-      (await import(pathToFileURL(path).href)) as {
-        default?: PackageSteps;
-      }
-    ).default;
+    steps = ((await import(pathToFileURL(path).href)) as { default?: unknown })
+      .default;
   } catch (error) {
     throw new StepsError(
       `${file}: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 
-  if (steps === undefined) {
-    throw new StepsError(`${file}: no default export`);
+  const shape = SHAPE.safeParse(steps);
+
+  if (!shape.success) {
+    const [issue] = shape.error.issues;
+
+    throw new StepsError(
+      `${file}: its default export is not a package's steps: ${issue?.path.join('.') || 'the export'}: ${issue?.message}`,
+    );
   }
 
-  const problem = releaseProblem(steps.release);
+  const problem = releaseProblem((steps as PackageSteps).release);
 
   if (problem !== undefined) {
     throw new StepsError(`${file}: ${problem}`);
   }
 
-  return steps;
+  return steps as PackageSteps;
 }
+
+const runs = z.custom<(...args: never[]) => unknown>(
+  (value) => typeof value === 'function',
+  'expected a function',
+);
+
+/**
+ * What a steps file's default export must hold for discovery to read it;
+ * the types check the rest where the file is checked.
+ */
+const SHAPE = z.object({
+  checks: z.array(
+    z.object({ name: z.string(), run: z.union([z.array(z.string()), runs]) }),
+  ),
+  lint: z.array(z.string()),
+  release: z.array(
+    z.union([
+      z.object({
+        name: z.literal('publish'),
+        npm: z.array(z.string()).min(1),
+        tag: z.string(),
+      }),
+      z.object({ name: z.string(), about: z.string(), run: runs }),
+    ]),
+  ),
+});
 
 /** What breaks the release list's rules, if anything. */
 function releaseProblem(

@@ -79,6 +79,7 @@ export class Turn {
       return await this.#turn();
     } finally {
       this.#answered = true;
+
       // The bound runs until the turn has answered, not until the run ends.
       clearTimeout(this.#timer);
     }

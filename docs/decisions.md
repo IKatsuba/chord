@@ -8716,3 +8716,35 @@ The owner answered the release's questions:
 AGENTS.md's command block and release paragraph, `docs/guide.md`'s release
 section, `CONTRIBUTING.md` where it names the release and the release's
 help text change with the code, in the same pull request.
+
+## 2026-11-12 — CHD-622: packages by npm name, `--bump`, checks defined in each package (owner, P1–P4)
+
+The owner answered:
+
+- **P1.** A package is named by its npm name without the scope: `chord`,
+  `cursor-cloud-acp`. The names come from the root's and each workspace's
+  `package.json`.
+- **P2.** The release's version or bump is `--bump`. Cliffy registers
+  `-V, --version` only on the main command when `.version()` is set; the
+  name keeps clear of it either way.
+- **P3.** A bare `bun dev release` releases nothing, runs no preflight or
+  authentication, and says it is not clear which package to release,
+  naming the packages; the positional is declared optional so that the
+  release's own words, not Cliffy's missing-argument error, answer it.
+- **P4.** Not `bun quality [package]`. Each package defines its own checks
+  inside itself, and `bun dev` runs the chosen package's checks;
+  everything goes through `bun dev`. This supersedes the previous entry's
+  `bun quality <package>`.
+
+Proposed, pending the owner (`docs/design/CHD-622.md`, C1–C4): a
+`checks.ts` at each package's root exporting an ordered list of named
+steps marked `static` or not, over `scripts` in each `package.json` run by
+`bun run --filter` (which would put chord's checks back in the root
+package.json against CHD-411, lose the named failure of CHD-467, and run
+the Node smoke behind Bun's node shim); `bun dev check <package>
+[--static]`, a bare run refused as the release's is; `bun quality` and
+`bun lint` and their package.json scripts retired for `bun dev check` and
+`bun dev lint <package>`, `bun dev test` kept as chord's suite runner; CI's
+`static` on `bun dev check chord --static` and the `node` job on
+`bun dev check cursor-cloud-acp`. Today's `--package` is held for the
+owner (P5).

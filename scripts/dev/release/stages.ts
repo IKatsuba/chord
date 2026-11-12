@@ -207,6 +207,17 @@ async function locked(
     await ready(release);
   }
 
+  // What publish sends is what the stage before it left (pack's tarballs),
+  // recorded in the state as it runs: never bytes no run recorded. Refused
+  // here, before the first change to the world.
+  const before = list.at(-2)?.name;
+
+  if (has('publish') && before !== undefined && !has(before)) {
+    die(
+      `publish needs ${before}'s output; ${before} is not done in ${of.name} ${version}`,
+    );
+  }
+
   // The first change to the world: a run that publishes, or one at
   // package.json's version (`--to pack`, to publish later), keeps a state
   // from here; a dry run, or a run without publish that makes a new

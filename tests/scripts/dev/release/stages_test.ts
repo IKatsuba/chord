@@ -336,17 +336,23 @@ test('a bad archive stops a dry run before it packs anything', async () => {
   expect(ran().some((line) => line.startsWith('npm pack'))).toBeFalse();
 });
 
-test('skipping pack leaves publish to stop before npm takes anything', async () => {
+test('publish without pack is refused before any stage, commit or publish: tarballs no run recorded are never published or tagged', async () => {
   packed();
-  rmSync(join(at.root, 'dist', 'release', 'source'), {
-    recursive: true,
-    force: true,
-  });
 
-  expect(await died(released({ only: ['publish'] }))).toContain(
-    'fetched by the pack stage',
-  );
-  expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
+  for (const options of [
+    { only: ['publish'] },
+    { skip: ['natives', 'sign', 'selftest', 'notarise', 'pack'] },
+  ]) {
+    expect(await died(released(options))).toBe(
+      `publish needs pack's output; pack is not done in chord ${VERSION}`,
+    );
+  }
+
+  expect(
+    ran().filter((line) => /^(npm publish|bun |security |xcrun )/.test(line)),
+  ).toStrictEqual([]);
+  expect(String(spawnSync('git', ['tag'], { cwd: at.root }).stdout)).toBe('');
+  expect(existsSync(join(at.root, '.release'))).toBeFalse();
 });
 
 test('a run without publish prints no version', async () => {
@@ -694,7 +700,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
       releasedAt(
         'patch',
         {
-          skip: ['natives', 'sign', 'selftest', 'notarise', 'pack'],
+          skip: ['natives', 'sign', 'selftest', 'notarise'],
         },
         { FAIL_CHECK: 'yes' },
       ),
@@ -905,7 +911,7 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
   ): Promise<void> {
     const options = {
       channel,
-      skip: ['natives', 'sign', 'selftest', 'notarise', 'pack'] as const,
+      skip: ['natives', 'sign', 'selftest', 'notarise'] as const,
     };
 
     return runRelease(
@@ -1312,7 +1318,7 @@ await dying(() =>
 
   test('a run that has pushed keeps its commit', () => {
     const child = interrupted('SIGINT', {
-      skip: ['natives', 'sign', 'selftest', 'notarise', 'pack'],
+      skip: ['natives', 'sign', 'selftest', 'notarise'],
     });
 
     expect(child.status).not.toBe(0);
@@ -1352,21 +1358,6 @@ describe('CHD-531 mandatory authentication preparation', () => {
       ]);
     },
   );
-
-  test('a publish authenticates before publishing', async () => {
-    packed();
-    await released({ only: ['publish'] }, { AUTH_FAIL: 'yes' });
-
-    const log = ran();
-    const login = log.indexOf('npm login');
-
-    expect(log.slice(login - 1, login + 2)).toEqual(auth);
-    expect(
-      log.findIndex((line) => line.startsWith('npm publish')),
-    ).toBeGreaterThan(login + 1);
-    expect(log.some((line) => /^(bun|security|xcrun) /.test(line))).toBe(false);
-    expect(at.out.at(-1)).toBe(VERSION);
-  });
 
   test.each([
     { LOGIN_RESULT: '2' },
@@ -2025,6 +2016,32 @@ esac
         `${name} ${VERSION} is in progress (done: nothing; npm ${npm.length} of ${npm.length}); rm -r .release/${name} abandons it`,
       );
       expect(ran()).toStrictEqual([]);
+    });
+
+    test('publish without pack is refused before npm or a tag, old tarballs or not', async () => {
+      rmSync(
+        join(
+          at.place,
+          'published',
+          `${main.slice('@chorded/'.length)}@${VERSION}`,
+        ),
+      );
+      await run({ dryRun: true, skip: ['sign'] });
+
+      for (const options of [
+        { only: ['publish'] },
+        { skip: ['sign', 'pack'] },
+      ]) {
+        expect(await died(run(options))).toBe(
+          `publish needs pack's output; pack is not done in ${name} ${VERSION}`,
+        );
+      }
+
+      expect(
+        ran().filter((line) => line.startsWith('npm publish')),
+      ).toStrictEqual([]);
+      expect(git_('tag')).toBe('');
+      expect(readState(at.root, name)).toBeUndefined();
     });
 
     test('a new version needs its versioned stage', async () => {

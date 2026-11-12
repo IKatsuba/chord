@@ -517,10 +517,6 @@ export function devCommand(
             'bun dev release chord --skip install,quality',
           )
           .example(
-            "publish a dry run's tarballs",
-            'bun dev release chord --only publish',
-          )
-          .example(
             'rerun from the self-test',
             'bun dev release chord --from selftest',
           )

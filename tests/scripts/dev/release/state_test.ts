@@ -334,3 +334,103 @@ describe('on disk', () => {
     expect(readFileSync(file(), 'utf8')).toBe(text);
   });
 });
+
+describe('tester: CHD-623 state persistence boundaries', () => {
+  let root: string;
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'chord-state-tester-'));
+  });
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true });
+  });
+
+  test('clearing one package preserves the other state and build outputs', () => {
+    const one = state(['build'], {});
+    const two = state(['pack'], {}, { package: 'two', version: '2.0.0' });
+
+    writeState(root, one);
+    writeState(root, two);
+    mkdirSync(join(root, 'dist'));
+    writeFileSync(join(root, 'dist', 'artifact'), 'release bytes');
+    clearState(root, 'one');
+    clearState(root, 'one');
+
+    expect(readState(root, 'one')).toBeUndefined();
+    expect(readState(root, 'two')).toEqual(two);
+    expect(readFileSync(join(root, 'dist', 'artifact'), 'utf8')).toBe(
+      'release bytes',
+    );
+  });
+
+  test('an interrupted first write stays absent until a complete replacement is renamed', () => {
+    const at = state(['install'], {});
+    const failure = new Error('fixture interrupted rename');
+    const temporary = join(root, '.release', 'one', 'state.json.tmp');
+
+    expect(() =>
+      writeState(root, at, {
+        rename: (from, to) => {
+          expect(from).toBe(temporary);
+          expect(to).toBe(join(root, '.release', 'one', 'state.json'));
+          expect(JSON.parse(readFileSync(from, 'utf8'))).toEqual(at);
+
+          throw failure;
+        },
+      }),
+    ).toThrow(failure);
+    expect(existsSync(temporary)).toBeTrue();
+    expect(readState(root, 'one')).toBeUndefined();
+
+    writeState(root, at);
+
+    expect(existsSync(temporary)).toBeFalse();
+    expect(readState(root, 'one')).toEqual(at);
+  });
+
+  test.each([
+    ['versionCommit', { versionCommit: { state: 'sent' } }],
+    ['stages', { stages: { pack: { at: 'now', outputs: { artifact: 1 } } } }],
+    ['npm', { npm: { '@chorded/one': true } }],
+    ['draft', { draft: { state: 'pushed' } }],
+  ])(
+    'malformed nested %s is refused without replacing the file',
+    (_, invalid) => {
+      const file = join(root, '.release', 'one', 'state.json');
+      const text = JSON.stringify({ ...state([], {}), ...invalid });
+
+      mkdirSync(join(root, '.release', 'one'), { recursive: true });
+      writeFileSync(file, text);
+
+      expect(refused(() => readState(root, 'one'))).toEndWith(`; ${ABANDON}`);
+      expect(readFileSync(file, 'utf8')).toBe(text);
+    },
+  );
+
+  test('clearing stage progress keeps its input and unrelated output sums intact', () => {
+    const at = state(
+      [],
+      {},
+      {
+        stages: {
+          build: { at: 'built', outputs: { binary: 'build-sum' } },
+          pack: { at: 'packed', outputs: { tarball: 'pack-sum' } },
+        },
+      },
+    );
+    const before = JSON.stringify(at);
+
+    Object.freeze(at.stages);
+    Object.freeze(at);
+
+    const next = cleared(at, ['pack']);
+
+    expect(next.stages).toEqual({
+      build: { at: 'built', outputs: { binary: 'build-sum' } },
+    });
+    expect(JSON.stringify(at)).toBe(before);
+    expect(next.built).toBe(at.built);
+    expect(next.base).toBe(at.base);
+  });
+});

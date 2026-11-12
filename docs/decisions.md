@@ -8367,3 +8367,155 @@ the library. riff therefore advertises `mcpCapabilities.sse: false`, and
 `serversFor` holds SSE servers back from it with the usual reason; stdio
 and streamable HTTP, whose starts are bounded, stay. No upstream issue is
 filed for now.
+
+## 2026-11-12 — CHD-623: `bun dev` for several packages: the owner's decisions
+
+Designing CHD-622 (`@chorded/cursor-cloud-acp`, a second package in this
+repository) raised how `bun dev` releases and checks more than one package.
+The owner decided, in turn:
+
+- **Not a command of its own** (`bun dev release-acp`, proposed and
+  refused): `bun dev release` releases the package it is given, every
+  stage run against that package.
+- **The package is an explicit positional argument**, neither a subcommand
+  per package nor a flag, and there is **no default**: chord's release is
+  named too. A bare `bun dev release` releases nothing and says it is not
+  clear which package to release.
+- **A package is named by its npm name without the scope**: `chord`,
+  `cursor-cloud-acp`.
+- **The version or bump is `--bump`.**
+- **No GitHub release** for a package other than chord.
+- **Every package defines its own steps in a file at its root**, named
+  close to what it holds: its checks, build, publish and other steps, in
+  their order. A command run for a package runs only that package's steps;
+  chord's release never runs cursor-cloud-acp's checks, and the reverse.
+  Refused: `bun quality [package]`, and `scripts` in each package.json run
+  by `bun run --filter` (chord's checks back in the root package.json
+  against CHD-411, no step named on failure, the Node smoke behind Bun's
+  node shim).
+- **Everything goes through `bun dev`**: `bun quality [--static]` becomes
+  the checks command for chord, `bun lint --fix` a `bun dev` command for a
+  package, `bun dev test` stays chord's suite runner, CI calls the checks
+  command per package, and AGENTS.md, the folder AGENTS.md files,
+  CONTRIBUTING, the guide and comments follow in the same change.
+- **The steps**: chord's are types, covered, eslint, format, `lint/`'s
+  tests and, when not `--static`, the suite, each leaving `packages/` out;
+  cursor-cloud-acp's are types, covered, eslint, format, tests and, when
+  not `--static`, its build and its Node 22 smoke.
+- The checks command may be `check` or `quality`.
+
+## 2026-11-12 — CHD-623: `steps.ts`, `quality`, and stages per package
+
+`docs/design/CHD-623.md` is the design. Within the decisions above:
+
+- **`steps.ts`** at each package's root (the repository's root for chord):
+  a TypeScript module whose default export satisfies a `PackageSteps` type
+  from `scripts/dev/steps.ts`, imported for its type only. Checks are argv
+  or a lazily imported function; release stages are functions; `publish`
+  is a stage listed last, as data (npm names in order, the tag form,
+  whether a GitHub release follows) run by the release's one publish
+  implementation. Options weighed: JSON or YAML of argv (cannot hold
+  chord's signing and notarising stages without a script each); `checks.ts`
+  (too narrow now that it holds the release); package.json scripts
+  (refused by the owner).
+- **The checks command is `quality`**: `bun check` is Bun's own and is one
+  step of it. The release's check stage is renamed `quality`.
+- **Only commands that choose something take a package**: `quality`,
+  `lint`, `release`. `chord`, `test`, `compile`, `npm`, `selftest`,
+  `memory` stay chord's tools; `registry`, `mark`, `screenshots`, `social`
+  the repository's (pending the owner, O5).
+- **The release's package is a positional of `release`**, declared
+  optional so a bare run gets the release's own words. Stage options take
+  one `EnumType` over every package's stage names, and a stage the named
+  package lacks is refused after parsing by a `ValidationError`, as
+  `select.ts` already refuses impossible selections. A subcommand per
+  package would have let Cliffy type each package's stages, but the owner
+  refused subcommands.
+- **Each steps file is checked by its own package**: cursor-cloud-acp has a
+  tooling project (`tsconfig.tools.json`, Bun's types) beside its Node
+  project; chord's `tsconfig.json` does not include `packages/`, so
+  chord's check never follows a package's imports. Putting every steps file
+  in chord's project was rejected: TypeScript would follow their dynamic
+  imports into the package's tooling.
+- **One release at a time per checkout**, by `proper-lockfile` (already a
+  dependency) on a file in git's directory, taken before preflight: nothing
+  in the tree or branch state stops a second run from moving the first's
+  version commit.
+- **The step runner takes an explicit context** (root, environment, spawn,
+  output), so the release's tests run a package's checks in a scratch root.
+  A package's smoke gets its own `mkdtemp` scratch, removed when it ends.
+- Pending the owner: publish as a stage or a command (O1), `--npm <full
+  npm name>` replacing `--package` (O2), stages per package or one shared
+  list (O3), a rerun finishing a release stopped after npm published by
+  tagging alone, for both packages (O4), and the command set (O5).
+
+## 2026-11-12 — CHD-623: the owner's answers, and the release's state
+
+The owner answered CHD-623's questions: publishing stays the release's
+last stage (O1); `--package` goes with no replacement, `bun dev release
+chord` publishing all five npm packages itself in order (O2); each
+package's stages are its own, from its `steps.ts` (O3); only `quality`,
+`lint` and `release` take a package (O5). On a release stopped after npm
+published (O4) the owner took neither proposal (a rerun tagging alone,
+inferred from npm and git; today's printed manual command): the release
+keeps its state per package in a gitignored folder, and every stopped
+release resumes from it.
+
+The design (`docs/design/CHD-623.md`, "The release's state"):
+
+- **Where**: `.release/<package>/state.json`, `.release/` gitignored. Not
+  under `dist/`, whose build output may be wiped while the state says npm
+  has part of a release; not in git's directory, where it would be hidden.
+- **What**: format 1, validated by zod; the package, version, channel,
+  branch, base commit, the version commit's progress, the `built` commit
+  the stages build from and the tag points at, each done stage with its
+  outputs' sha256, each npm name `pending`, `sent` or `answered`, the tag's
+  and chord's draft's progress. Written atomically (temporary file, fsync,
+  rename) before and after every act on the world.
+- **How it is read**: after the one-release lock, before authentication.
+  With a state, a run does what is left behind continuation guards (clean
+  tree, `built` in HEAD's history, HEAD at `built` while a build stage is
+  left, sums holding, branch and tag when publishing); git, npm and GitHub
+  are read only to refuse a mismatch or to settle one `pending` act.
+  `--bump` and `--dry-run` are refused while a state is unfinished; a state
+  of another format is refused untouched; a fully done one is removed.
+- **Cleared** when the release is done; an abandoned one by hand (owner, S1).
+- **Replaces** preflight's resume mode, `stages.ts`'s resume branch and
+  publish's skip of what npm has. CHD-547's rule holds from the state, and
+  as an npm guard when there is none. A state lost while npm has part of a
+  release is refused and finished by hand (owner, S2).
+
+## 2026-11-12 — CHD-623: an abandoned or lost release is the owner's to finish (owner, S1, S2)
+
+An abandoned release is cleared by hand, `rm -r .release/<package>`, which
+every refusal a state causes names; no `--forget` flag and no kept history.
+A release whose state is lost while npm has part of it (`git clean -fdx`, a
+fresh clone, or one begun by `bun dev` before the state existed) is refused
+by the fresh guards and finished by hand; no flag rebuilds a state from npm
+and git. Both keep the owner's rule that a release resumes from what it
+recorded, never from inference.
+
+## 2026-11-12 — CHD-623: the release's lock never goes stale (owner)
+
+One release per checkout is held by `proper-lockfile` (already a dependency)
+on `chord-release` in git's common directory, so every worktree of a clone
+shares it. The library keeps a lock fresh by touching its mtime on a timer
+and lets the next run take over a lock older than `stale`, 10 s by default.
+The release's long stages (install, quality, compile) run `spawnSync` and
+hold the timer back for minutes, and a run waiting at npm's prompt can wait
+longer than any finite `stale`: a second run would then take the lock from
+a live release. Options weighed: a long finite `stale` (24 h), still lost by
+a release waiting past it; never stale; moving every release spawn to async;
+another library.
+
+The owner chose never stale: `stale: Infinity`, `update: 2^31 - 1` ms.
+proper-lockfile clamps `stale` only from below (2 s) and `update` to between
+1 s and `stale / 2`; with an infinite `stale` none of its elapsed-time
+thresholds fires: neither a lock's staleness nor a missed update counts.
+Its other compromise checks (the lock deleted, its mtime changed by
+another) still stand. `update` stays at 2^31 - 1 ms because
+a timer beyond that fires at once in Node and Bun. A lock a run left behind
+(SIGKILL, a crash, a reboot) is refused like a live one, naming the pid
+the holder wrote and `<git common dir>/chord-release.lock`, removed by hand
+as S1's state is; proper-lockfile itself removes the lock on exit and on
+signals it can catch.

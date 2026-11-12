@@ -17,9 +17,15 @@ export function install(release: Release): void {
   }
 }
 
-export function check(release: Release): void {
-  if (run(release, 'bun', ['quality'], loud).status !== 0) {
-    die('bun quality failed');
+/**
+ * `bun dev quality <name>`: the package's checks from its steps.ts, by the
+ * runner, in the release's root and environment.
+ */
+export function quality(release: Release, name: string): void {
+  if (
+    run(release, 'bun', ['scripts/dev.ts', 'quality', name], loud).status !== 0
+  ) {
+    die(`bun dev quality ${name} failed`);
   }
 }
 

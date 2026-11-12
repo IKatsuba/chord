@@ -1,3 +1,4 @@
+import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { loadedNative } from '../../../../scripts/dev/compile.ts';
 import { TARGETS } from '../../../../scripts/targets.ts';
@@ -14,6 +15,40 @@ import {
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { Release } from '../../../../scripts/dev/release/lib.ts';
+
+/**
+ * The environment of every git a release test runs, and of the release under
+ * test: its own identity, and never the person's or the machine's git config.
+ * A CI runner has no identity, and a global commit.gpgsign would sign every
+ * scratch commit with the person's key.
+ */
+export const GIT_ENV = {
+  GIT_CONFIG_GLOBAL: '/dev/null',
+  GIT_CONFIG_NOSYSTEM: '1',
+  GIT_AUTHOR_NAME: 'release',
+  GIT_AUTHOR_EMAIL: 'release@example.com',
+  GIT_COMMITTER_NAME: 'release',
+  GIT_COMMITTER_EMAIL: 'release@example.com',
+};
+
+/**
+ * What git prints for `args` in `cwd`, under GIT_ENV, trimmed. A git that
+ * fails throws with its stderr: a read that failed would print nothing, and an
+ * assertion that expects nothing would pass on it.
+ */
+export function gitRead(cwd: string, ...args: string[]): string {
+  const child = spawnSync('git', args, {
+    cwd,
+    env: { ...process.env, ...GIT_ENV },
+    encoding: 'utf8',
+  });
+
+  if (child.status !== 0) {
+    throw new Error(`git ${args.join(' ')}: ${child.stderr}`);
+  }
+
+  return child.stdout.trim();
+}
 
 /** Where each executable a test fakes is written once, by its content. */
 const EXECUTABLES = join(tmpdir(), 'chord-test-executables');

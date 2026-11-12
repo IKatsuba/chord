@@ -103,7 +103,9 @@ esac
 
     at.fake('gh', 'echo denied >&2\nexit 1\n');
 
-    const message = died(() => draftRelease(release, '9.9.9', files));
+    const message = died(() =>
+      draftRelease(release, '9.9.9', 'v9.9.9', 'chord v9.9.9', files),
+    );
     const command = message.split('Finish it with: ')[1];
 
     expect(command).toBeDefined();
@@ -226,7 +228,13 @@ describe('the draft', () => {
 
   test('is only ever a draft, on the tag, with what was fetched', () => {
     fetchSource(at.release);
-    draftRelease(at.release, '9.9.9', fetchedSource(at.release));
+    draftRelease(
+      at.release,
+      '9.9.9',
+      'v9.9.9',
+      'chord v9.9.9',
+      fetchedSource(at.release),
+    );
 
     expect(log()).toStartWith(
       'release create v9.9.9 --draft --verify-tag --title chord v9.9.9 --notes ',

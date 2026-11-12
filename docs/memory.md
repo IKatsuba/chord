@@ -68,8 +68,8 @@ From source it runs chord as `bun dev chord` does, with React's production
 build; `--development` runs it as plain `bun src/main.tsx` does, with the
 development build.
 
-It is a script, not part of `bun quality`: memory that grows shows only
-over minutes, and the check's tests end in seconds.
+It is outside `bun dev quality chord`: memory grows over minutes;
+the checks end in seconds.
 
 memlab's ids do not carry over between two of Bun's snapshots, so what grew
 is told by counts and sizes per type and name, not object by object. An

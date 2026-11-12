@@ -1,25 +1,33 @@
 /**
- * Eligibility guards before authentication or release work: a clean tree,
- * a new version only once package.json's is published, an unpublished
- * version or a stopped publish to resume; publishing also requires the
- * version's branch, main or its channel's, level with origin and no version
- * tag. Registry reads and the existing fetch may use the network, but these
+ * Eligibility guards before authentication or release work, for one
+ * package: a clean tree, a new version only once its package.json's is
+ * published under its main npm name, and none of its npm names at the
+ * version; publishing also requires the version's branch, main or
+ * its channel's, level with origin, no tag of its form, and `gh` for a
+ * package with a GitHub release. Registry reads and the existing fetch may use the network, but these
  * guards do not log in.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { channelOf } from '../../../src/channel.ts';
-import { die, PLATFORMS, published, type Release, run, said } from './lib.ts';
+import {
+  die,
+  mainName,
+  published,
+  type Release,
+  type ReleasePackage,
+  run,
+  said,
+  tagName,
+} from './lib.ts';
 import { ghReady } from './source.ts';
 
-/** What preflight found: a fresh version, or a stopped publish to finish. */
+/** What preflight found: the version, clear to release. */
 export interface Preflight {
-  readonly mode: 'fresh' | 'resume';
   readonly version: string;
 }
 
 export interface PreflightOptions {
-  readonly dryRun: boolean;
   /** Whether the run's stages include publish. */
   readonly publish: boolean;
   /** The version to release, before it is written; package.json's if none. */
@@ -28,7 +36,8 @@ export interface PreflightOptions {
 
 export function preflight(
   release: Release,
-  { dryRun, publish, version = packageVersion(release) }: PreflightOptions,
+  of: ReleasePackage,
+  { publish, version = packageVersion(release, of.folder) }: PreflightOptions,
 ): Preflight {
   // 1. The tree, untracked files included.
   const status = run(release, 'git', [
@@ -49,57 +58,49 @@ export function preflight(
 
   // 2. A new version, refused while package.json's never reached npm: a
   // stopped release is finished, not bumped past.
-  const current = packageVersion(release);
+  const current = packageVersion(release, of.folder);
+  const main = mainName(of);
 
-  if (version !== current && !published(release, 'chord', current)) {
+  if (version !== current && !published(release, main, current)) {
     die(
-      `@chorded/chord@${current} is not published yet; \`bun dev release\` without a version finishes it`,
+      `${main}@${current} is not published yet; \`bun dev release ${of.name}\` without --bump finishes it`,
     );
   }
 
   // 3. The version, refused if the main package has it.
-  if (published(release, 'chord', version)) {
-    die(`@chorded/chord@${version} is on npm already`);
+  if (published(release, main, version)) {
+    die(`${main}@${version} is on npm already`);
   }
 
-  let mode: Preflight['mode'] = 'fresh';
-
-  for (const name of PLATFORMS) {
+  // Any other npm name at it is a release stopped with its state lost:
+  // finished by hand (owner, S2), never resumed by guessing.
+  for (const name of of.publish.npm.slice(0, -1)) {
     if (published(release, name, version)) {
-      if (dryRun) {
-        die(
-          `--dry-run does not resume a stopped publish: @chorded/${name}@${version} is published`,
-        );
-      }
-
-      if (!publish) {
-        die(
-          `a run without publish does not resume a stopped publish: @chorded/${name}@${version} is published; include publish`,
-        );
-      }
-
-      mode = 'resume';
-
-      break;
+      die(`${name}@${version} is on npm already`);
     }
   }
 
   if (publish) {
     onBranch(release, channelOf(version));
-    notTagged(release, version);
-    ghReady(release);
+    notTagged(release, tagName(of, version));
+
+    if (of.publish.githubRelease) {
+      ghReady(release);
+    }
   }
 
-  return { mode, version };
+  return { version };
 }
 
-/** package.json's version. */
-export function packageVersion(release: Release): string {
+/** The package.json's version in `folder`, the root's for `.`. */
+export function packageVersion(release: Release, folder: string): string {
   let version: unknown;
 
   try {
     version = (
-      JSON.parse(readFileSync(join(release.root, 'package.json'), 'utf8')) as {
+      JSON.parse(
+        readFileSync(join(release.root, folder, 'package.json'), 'utf8'),
+      ) as {
         version?: unknown;
       }
     ).version;
@@ -108,7 +109,7 @@ export function packageVersion(release: Release): string {
   }
 
   if (typeof version !== 'string' || version === '') {
-    die('package.json has no version');
+    die(`${join(folder, 'package.json')} has no version`);
   }
 
   return version;
@@ -152,10 +153,8 @@ function onBranch(release: Release, channel: string | null): void {
   }
 }
 
-/** No v<version> tag, here or on origin. */
-function notTagged(release: Release, version: string): void {
-  const tag = `v${version}`;
-
+/** No `tag`, here or on origin. */
+function notTagged(release: Release, tag: string): void {
   if (said(run(release, 'git', ['tag', '--list', tag]).stdout) !== '') {
     die(`${tag} is a tag already`);
   }

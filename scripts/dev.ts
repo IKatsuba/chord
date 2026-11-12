@@ -5,16 +5,16 @@
  */
 import { Command, EnumType, ValidationError } from '@cliffy/command';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import type { CompileOptions } from './dev/compile.ts';
 import type { MemoryOptions } from './dev/memory.ts';
-import { PACKAGES } from './dev/release/lib.ts';
+import { packages as findPackages, StepsError } from './dev/steps.ts';
+import chordSteps from '../steps.ts';
 import {
   BUMPS,
   isVersionArgument,
   type ReleaseOptions,
   selectStages,
-  type Stage,
-  STAGES,
 } from './dev/release/select.ts';
 
 /**
@@ -24,6 +24,10 @@ import {
  * runs, so parsing loads none of them.
  */
 export interface DevActions {
+  /** `name`'s checks from its steps.ts, only the static ones if `only`. */
+  quality(name: string, only: boolean): void | Promise<void>;
+  /** ESLint with `name`'s argv, `args` after it. */
+  lint(name: string, args: readonly string[]): void | Promise<void>;
   compile(options: CompileOptions): void | Promise<void>;
   npm(): void | Promise<void>;
   registry(): void | Promise<void>;
@@ -34,11 +38,15 @@ export interface DevActions {
   /** The owner's live check of riff's model list for `plan`. */
   riffModels(plan: 'codex' | 'grok', out: string): void | Promise<void>;
   selftest(binary: string, arch: string | undefined): void | Promise<void>;
+  /** Releases `name`'s `stages`, at `bump` if given. */
   release(
-    stages: readonly Stage[],
+    name: string,
+    stages: readonly string[],
     options: ReleaseOptions,
-    version: string | undefined,
+    bump: string | undefined,
   ): void | Promise<void>;
+  /** A run that cannot say what to do: `line` on stderr, status 1. */
+  unclear(line: string): void | Promise<void>;
   /** `state` holds chord's state in place of the person's (CHD-616). */
   chord(
     fake: boolean,
@@ -95,7 +103,29 @@ export function qaState(dir: string): string {
  */
 export const FAKE_STATE = '/tmp/chord-fake';
 
+// The checkout this file is in, every package's steps run from.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+/** The found package `name`: Cliffy's enum lets no other through. */
+async function found(name: string) {
+  const all = await findPackages(ROOT);
+
+  return all.find((each) => each.name === name)!;
+}
+
 const RUN: DevActions = {
+  quality: async (name, only) => {
+    const { run, stepContext } = await import('./dev/steps.ts');
+
+    process.exitCode = await run(await found(name), stepContext(ROOT), {
+      static: only,
+    });
+  },
+  lint: async (name, args) => {
+    const { lint, stepContext } = await import('./dev/steps.ts');
+
+    process.exitCode = await lint(await found(name), args, stepContext(ROOT));
+  },
   compile: async (options) =>
     (await import('./dev/compile.ts')).compile(options),
   npm: async () => (await import('./dev/npm.ts')).npm(),
@@ -128,11 +158,19 @@ const RUN: DevActions = {
 
     await dying(() => selftest(release(), binary, arch));
   },
-  release: async (stages, options, version) => {
+  release: async (name, stages, options, bump) => {
     const { dying, release } = await import('./dev/release/lib.ts');
     const { runRelease } = await import('./dev/release/stages.ts');
+    const each = await found(name);
 
-    await dying(() => runRelease(release(), stages, options, process, version));
+    await dying(() =>
+      runRelease(release(), each, stages, options, process, bump),
+    );
+  },
+  unclear: (line) => {
+    process.stderr.write(`${line}\n`);
+
+    process.exitCode = 1;
   },
   chord: async (fake, args, fixtureResources, state) => {
     const tools = await import('./dev/tools.ts');
@@ -161,32 +199,73 @@ const RUN: DevActions = {
   },
 };
 
-const RELEASE = `The release, on the owner's arm64 Mac. With no options it runs every stage in order, step for step as scripts/release.sh did, and the last line it prints is the published version. Preflight runs on every run, whatever is skipped. After all eligibility guards, mandatory npm authentication runs for every invocation, including dry runs and runs without publish. A successful npm whoami continues without needing a terminal. If it fails, stdin and stdout must be terminals: the release runs plain npm login once with inherited stdio, then rechecks npm whoami. npm may open a browser and save credentials or registry settings, including during a dry run. Failed, cancelled or signal-terminated login, or a failed recheck, stops before release work. Stage selection cannot skip authentication. If a run stopped between publishes, the next run resumes it: it publishes what is missing from the tarballs already packed and builds nothing. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
+const RELEASE = `The release of one package by its steps.ts; chord's runs on the owner's arm64 Mac. With no options it runs every stage of the package in order, and the last line it prints is the published version. With no package it releases nothing. Preflight runs on every run, whatever is skipped. After all eligibility guards, mandatory npm authentication runs for every invocation, including dry runs and runs without publish. A successful npm whoami continues without needing a terminal. If it fails, stdin and stdout must be terminals: the release runs plain npm login once with inherited stdio, then rechecks npm whoami. npm may open a browser and save credentials or registry settings, including during a dry run. Failed, cancelled or signal-terminated login, or a failed recheck, stops before release work. Stage selection cannot skip authentication. A run that publishes, or one at package.json's version, keeps the release's state in .release/<package>/state.json as it goes: each stage done with the sha256 of what it left, each npm name, the tag and the draft. A stopped release goes on from it: the next run does what is left, past guards that refuse a changed tree, a moved HEAD while a stage before publish is left, a changed output, or an npm version or tag the release did not make. Every refusal a state causes names rm -r .release/<package>, which abandons it. The state is removed once everything is done. The publish stage hands the terminal to npm, which asks you to authorise each publish (press Enter, then approve in the browser), and the CLI waits for as long as that takes.
 
-The version is package.json's, or the one given: package.json's own, an exact version above it, or major, minor, patch or fix (patch) to bump it. A version with a pre-release label cannot be given, and a new version needs the compile stage. Given a new one, the release checks it, writes it into package.json and commits that alone as "chore: chord v<version>" before any stage. A run that publishes pushes the commit to origin's main first, and it stays there if a later stage fails: rerun with no version, or that one. If the push fails, the commit is dropped and the release stops. A dry run, or a run without publish, drops the commit at the end and pushes nothing. Until the commit is pushed or dropped, Ctrl+C, SIGTERM and SIGHUP drop it too; a run killed otherwise may leave it, to be dropped with git reset --keep HEAD~1. A stopped publish resumes only package.json's version.
+The version is the package's package.json's, or --bump's: package.json's own, an exact version above it, or major, minor, patch or fix (patch) to bump it. A version with a pre-release label cannot be given, and a new version needs the stage that puts it into what is published (chord's compile). Given a new one, the release checks it, writes it into the package's package.json and commits that alone as "chore: <package> v<version>" before any stage. A run that publishes pushes the commit to origin's main first, and its state keeps it if the push or a later stage fails: rerun without --bump. A dry run, or a run without publish that makes a new version, keeps no state and drops the commit at the end, pushing nothing; until then Ctrl+C, SIGTERM and SIGHUP drop it too, and a run killed otherwise may leave it, to be dropped with git reset --keep HEAD~1. --bump is refused while the package's state is unfinished, and so is --dry-run. Publish needs pack done, in this run or the state.
 
---channel <name> releases a pre-release on that channel: <x.y.z>-<name>.<n>. A bump counts from npm's latest stable version, and an exact version is taken as written; if package.json already holds that channel's pre-release of it, n goes up by one, otherwise it starts at 0. So from 0.67.0, major --channel next gives 1.0.0-next.0, and the same command again 1.0.0-next.1. With no version, --channel finishes package.json's version if it is that channel's. The channel is the version's label, and the rest follows from the version whether or not --channel is given: a publishing run needs the branch named after the channel, level with its origin, and pushes there instead of main. Every package is published with --tag <name>, so npm's latest does not move, and the draft GitHub release is marked a pre-release. A dry run on a channel also prints the stages it ran and each package's npm publish arguments, in publish order. A stable version publishes only from main.
+--channel <name> releases a pre-release on that channel: <x.y.z>-<name>.<n>. A bump counts from npm's latest stable version, and an exact version is taken as written; if package.json already holds that channel's pre-release of it, n goes up by one, otherwise it starts at 0. So from 0.67.0, --bump major --channel next gives 1.0.0-next.0, and the same command again 1.0.0-next.1. Without --bump, --channel finishes package.json's version if it is that channel's. The channel is the version's label, and the rest follows from the version whether or not --channel is given: a publishing run needs the branch named after the channel, level with its origin, and pushes there instead of main. Every package is published with --tag <name>, so npm's latest does not move, and the draft GitHub release is marked a pre-release. A dry run on a channel also prints the stages it ran and each package's npm publish arguments, in publish order. A stable version publishes only from main.`;
 
-Stages:
-  install    bun install --frozen-lockfile
-  check      bun quality
-  natives    every platform's packages installed; the macOS native libraries signed
-  compile    bun dev compile --all; each binary's kind checked with file(1)
-  sign       both macOS binaries signed, verified and their entitlements compared
-  selftest   each macOS binary run on the fake agent, the window in tmux (the x64 one under Rosetta)
-  notarise   one zip submitted to Apple; each binary's cdhash found in Apple's log
-  pack       the five packages laid out and packed, their sha256 recorded, the tarballs installed and checked
-  publish    the four platform packages, a wait until npm answers for each, then @chorded/chord, then the tag`;
+/** What `bun dev` knows of a package: its name and its stages' names. */
+export interface DevPackage {
+  readonly name: string;
+  readonly stages: readonly string[];
+}
 
-/** `bun dev`'s commands, declared, each running through `actions`. */
-export function devCommand(actions: DevActions = RUN) {
+/** chord's, as its steps.ts lists them: the default tree's one package. */
+const CHORD: DevPackage = {
+  name: 'chord',
+  stages: chordSteps.release.map((stage) => stage.name),
+};
+
+/**
+ * `bun dev`'s commands, declared, each running through `actions`; a
+ * command that takes `<package>` takes one of `packages`.
+ */
+export function devCommand(
+  actions: DevActions = RUN,
+  packages: readonly DevPackage[] = [CHORD],
+) {
+  const names = packages.map((each) => each.name);
+  const stageNames = packages.flatMap((each) => each.stages);
+  const width = Math.max(...names.map((name) => name.length));
+
   return (
     new Command()
       .name('bun dev')
-      .description("chord's build, release and maintenance tools.")
+      .description(
+        `chord's build, release and maintenance tools. A command that takes <package> runs that package's steps from its steps.ts and nothing else: ${names.join(' or ')}, its npm name without the scope.`,
+      )
       .action(function () {
         this.showHelp();
       })
+      .command(
+        'quality',
+        new Command()
+          .description(
+            "A package's checks in its steps.ts's order, stopping at the first that fails.",
+          )
+          .type('package', new EnumType(names))
+          .arguments('<package:package>')
+          .option('--static', 'Only the checks marked static.', {
+            default: false,
+          })
+          .example("chord's static checks", 'bun dev quality chord --static')
+          .action(({ static: only }, name) => actions.quality(name, only)),
+      )
+      .command(
+        'lint',
+        new Command()
+          .description(
+            "ESLint with a package's config over its files; the rest of the arguments are ESLint's, an empty one only after --.",
+          )
+          .type('package', new EnumType(names))
+          .arguments('<package:package> [args...:string]')
+          .stopEarly()
+          .example('what ESLint can fix, fixed', 'bun dev lint chord --fix')
+          .action(function (_options, name, ...args) {
+            return actions.lint(name, [...args, ...this.getLiteralArgs()]);
+          }),
+      )
       .command(
         'chord',
         new Command()
@@ -375,10 +454,17 @@ export function devCommand(actions: DevActions = RUN) {
       .command(
         'release',
         new Command()
-          .description(RELEASE)
-          .type('stage', new EnumType(STAGES))
-          .type('package', new EnumType(PACKAGES))
-          .type('version', ({ value }) => {
+          .description(
+            `${RELEASE}\n\nStages:\n${packages
+              .map(
+                (each) =>
+                  `  ${each.name.padEnd(width)}  ${each.stages.join(', ')}`,
+              )
+              .join('\n')}`,
+          )
+          .type('package', new EnumType(names))
+          .type('stage', new EnumType([...new Set(stageNames)]))
+          .type('bump', ({ value }) => {
             if (!isVersionArgument(value)) {
               throw new ValidationError(
                 `"${value}" is neither an exact version (1.2.3) nor one of ${BUMPS.join(', ')}.`,
@@ -387,70 +473,67 @@ export function devCommand(actions: DevActions = RUN) {
 
             return value;
           })
-          .arguments('[version:version]')
+          // Optional, so a bare run reaches the release's own words.
+          .arguments('[package:package]')
+          .option(
+            '--bump <version:bump>',
+            "An exact version above the package's package.json, or major, minor, patch or fix.",
+          )
+          .option(
+            '--channel <name:string>',
+            'A pre-release on this channel, from the branch of that name.',
+          )
           .option(
             '--dry-run',
-            'Every stage but publish, so it still submits to Apple. It never resumes a stopped publish.',
+            "Every stage but publish, so chord's still submits to Apple. Refused while the package's state is unfinished.",
           )
           .option(
             '--skip <stages:stage[]>',
-            'Leave these stages out (comma-separated). Any stage may be skipped, check and install included.',
+            "Leave these of the package's stages out (comma-separated).",
           )
           .option(
             '--only <stages:stage[]>',
-            'Run only these stages (comma-separated).',
+            "Run only these of the package's stages.",
             { conflicts: ['skip', 'from', 'to'] },
           )
           .option('--from <stage:stage>', 'Start at this stage.')
           .option('--to <stage:stage>', 'Stop after this stage.')
-          .option(
-            '--channel <name:string>',
-            'Release a pre-release on this channel, from the branch of that name.',
+          .example('the whole release', 'bun dev release chord')
+          .example(
+            'the next minor version',
+            'bun dev release chord --bump minor',
           )
-          .option(
-            '--package <name:package>',
-            'Publish only this package: chord-darwin-arm64, chord-darwin-x64, chord-linux-arm64, chord-linux-x64 or chord.',
-            { conflicts: ['dry-run'] },
-          )
-          .example('the whole release', 'bun dev release')
-          .example('the next minor version', 'bun dev release minor')
-          .example('an exact version', 'bun dev release 1.0.0')
+          .example('an exact version', 'bun dev release chord --bump 1.0.0')
           .example(
             "the next pre-release on a channel, from that channel's branch",
-            'bun dev release major --channel next',
-          )
-          .example(
-            'a pre-release of an exact version',
-            'bun dev release 1.0.0 --channel next',
+            'bun dev release chord --bump major --channel next',
           )
           .example(
             'a dry run of the next patch, package.json as it was after',
-            'bun dev release patch --dry-run --skip notarise',
-          )
-          .example('everything up to npm publish', 'bun dev release --dry-run')
-          .example(
-            'no Apple submission',
-            'bun dev release --dry-run --skip notarise',
+            'bun dev release chord --bump patch --dry-run --skip notarise',
           )
           .example(
             'without the checks and tests',
-            'bun dev release --skip install,check',
-          )
-          .example(
-            "publish a dry run's tarballs",
-            'bun dev release --only publish',
+            'bun dev release chord --skip install,quality',
           )
           .example(
             'rerun from the self-test',
-            'bun dev release --from selftest',
+            'bun dev release chord --from selftest',
           )
-          .example(
-            'one package',
-            'bun dev release --only publish --package chord-linux-x64',
-          )
-          .action((options, version) =>
-            actions.release(selectStages(options), options, version),
-          ),
+          .action(({ bump, ...options }, name) => {
+            if (name === undefined) {
+              return actions.unclear(
+                `release: not clear which package to release: bun dev release <package> (${names.join(', ')})`,
+              );
+            }
+
+            const stages = selectStages(
+              packages.find((each) => each.name === name)!,
+              options,
+            );
+
+            return actions.release(name, stages, options, bump);
+          }),
       )
       // Back to the root, so what a caller chains on applies to the whole tree.
       .reset()
@@ -458,5 +541,21 @@ export function devCommand(actions: DevActions = RUN) {
 }
 
 if (import.meta.main) {
-  await devCommand().parse(process.argv.slice(2));
+  try {
+    // Every steps file, read before the tree it shapes: a broken one stops
+    // every command, naming it.
+    const packages = (await findPackages(ROOT)).map((each) => ({
+      name: each.name,
+      stages: each.steps.release.map((stage) => stage.name),
+    }));
+
+    await devCommand(RUN, packages).parse(process.argv.slice(2));
+  } catch (error) {
+    if (!(error instanceof StepsError)) {
+      throw error;
+    }
+
+    process.stderr.write(`bun dev: ${error.message}\n`);
+    process.exit(1);
+  }
 }

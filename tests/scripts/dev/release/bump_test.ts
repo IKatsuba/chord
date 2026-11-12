@@ -2,17 +2,11 @@ import { afterEach, beforeEach, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { type Scratch, scratch } from './scratch.ts';
+import { GIT_ENV, type Scratch, scratch } from './scratch.ts';
 
 // holdVersion's signal handling beside another listener registered after
 // it, as selftest's cleanup is during a stage: both must run.
 
-const GIT_ENV = {
-  GIT_AUTHOR_NAME: 'release',
-  GIT_AUTHOR_EMAIL: 'release@example.com',
-  GIT_COMMITTER_NAME: 'release',
-  GIT_COMMITTER_EMAIL: 'release@example.com',
-};
 const bump = join(import.meta.dir, '../../../../scripts/dev/release/bump.ts');
 
 let at: Scratch;
@@ -63,7 +57,7 @@ const release = {
   tty: true,
 };
 
-holdVersion(release, commitVersion(release, '1.1.0'));
+holdVersion(release, commitVersion(release, { name: 'chord', folder: '.', publish: { name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' } }, '1.1.0'));
 
 // selftest's cleanup, as it registers it: clean up, remove, raise again.
 const signals = ['SIGINT', 'SIGTERM', 'SIGHUP'];

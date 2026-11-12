@@ -38,8 +38,8 @@ export async function pack(
   fetchSource(release);
   await packages(release, out, test);
 
-  const tgz = tarballs(release);
-  const version = packageVersion(release);
+  const tgz = tarballs(release, '.');
+  const version = packageVersion(release, '.');
   const files = PACKAGES.map((name) => `chorded-${name}-${version}.tgz`);
 
   mkdirSync(tgz, { recursive: true });
@@ -76,7 +76,7 @@ async function packages(
     }
   }
 
-  const version = packageVersion(release);
+  const version = packageVersion(release, '.');
   const tgz = (name: string) =>
     join(out, 'tgz', `chorded-${name}-${version}.tgz`);
   const scratch = mkdtempSync(join(tmpdir(), 'chord-packages-'));

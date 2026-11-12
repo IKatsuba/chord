@@ -6,6 +6,7 @@ import { accessSync, constants, realpathSync, statSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { delimiter, join } from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
+import type { Publish } from '../steps.ts';
 
 /**
  * A check the release died on. `bun dev release` prints its message as
@@ -47,6 +48,26 @@ export function release(): Release {
     err: (line) => process.stderr.write(`${line}\n`),
     tty: Boolean(process.stdin.isTTY && process.stdout.isTTY),
   };
+}
+
+/**
+ * The package a release is of (CHD-623): its name without the scope, its
+ * folder from the root, and its publish stage's data.
+ */
+export interface ReleasePackage {
+  readonly name: string;
+  readonly folder: string;
+  readonly publish: Publish;
+}
+
+/** The package's main npm name, published last. */
+export function mainName(of: ReleasePackage): string {
+  return of.publish.npm.at(-1)!;
+}
+
+/** The package's git tag for `version`. */
+export function tagName(of: ReleasePackage, version: string): string {
+  return of.publish.tag.replaceAll('{version}', version);
 }
 
 /** A command's exit status and output, its output as text. */
@@ -180,8 +201,9 @@ export function identity(release: Release): string {
 }
 
 /**
- * Whether @chorded/NAME has VERSION on npm: yes, no (a 404, or the package
- * without that version), or a failure to ask, which stops the release.
+ * Whether NAME, a full npm name, has VERSION on npm: yes, no (a 404, or the
+ * package without that version), or a failure to ask, which stops the
+ * release.
  */
 export function published(
   release: Release,
@@ -189,7 +211,7 @@ export function published(
   version: string,
 ): boolean {
   // Only stdout is the answer; npm's warnings go to stderr.
-  const view = npm(release, ['view', `@chorded/${name}@${version}`, 'version']);
+  const view = npm(release, ['view', `${name}@${version}`, 'version']);
 
   if (view.status === 0) {
     const answer = said(view.stdout);
@@ -202,14 +224,14 @@ export function published(
       return false;
     }
 
-    die(`npm view @chorded/${name}@${version} answered "${answer}"`);
+    die(`npm view ${name}@${version} answered "${answer}"`);
   }
 
   if (view.stderr.includes('code E404')) {
     return false;
   }
 
-  die(`npm view @chorded/${name}@${version} failed: ${said(view.stderr)}`);
+  die(`npm view ${name}@${version} failed: ${said(view.stderr)}`);
 }
 
 /** How many times waitPublished asks, and how long apart. */
@@ -217,7 +239,7 @@ export const WAIT_ATTEMPTS = 60;
 export const WAIT_MS = 15_000;
 
 /**
- * Waits until @chorded/NAME answers npm view at VERSION: npm can hold a
+ * Waits until NAME answers npm view at VERSION: npm can hold a
  * package it accepted in validation for minutes, and a main package published
  * in that window installs with no binary, as board's 1.0.0 did. 60 attempts
  * 15 seconds apart, a guess at how long validation takes; each miss is said on
@@ -235,7 +257,7 @@ export async function waitPublished(
     }
 
     release.err(
-      `release: waiting for @chorded/${name}@${version} to answer npm view (${attempt}/${WAIT_ATTEMPTS})`,
+      `release: waiting for ${name}@${version} to answer npm view (${attempt}/${WAIT_ATTEMPTS})`,
     );
 
     if (attempt < WAIT_ATTEMPTS) {

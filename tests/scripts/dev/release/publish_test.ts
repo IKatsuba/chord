@@ -11,25 +11,30 @@ import {
 } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { VersionError } from '../../../../src/channel.ts';
+import { channelOf, VersionError } from '../../../../src/channel.ts';
 import {
-  type Package,
   PACKAGES,
   PLATFORMS,
   type Release,
   ReleaseError,
+  type ReleasePackage,
 } from '../../../../scripts/dev/release/lib.ts';
 import { authenticate } from '../../../../scripts/dev/release/authenticate.ts';
 import { preflight } from '../../../../scripts/dev/release/preflight.ts';
 import {
+  type Recorded,
   publish,
   publishArguments,
 } from '../../../../scripts/dev/release/publish.ts';
+import type { ReleaseState } from '../../../../scripts/dev/release/state.ts';
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import { parse } from 'shell-quote';
+import { isPublish, type PackageSteps } from '../../../../scripts/dev/steps.ts';
+import chordSteps from '../../../../steps.ts';
 import {
   executable,
   fetchedArchives,
+  GIT_ENV,
   nativeNotes,
   SOURCE_NOTES,
 } from './scratch.ts';
@@ -41,6 +46,13 @@ import {
 
 const VERSION = '9.9.9';
 const TAG = `v${VERSION}`;
+const steps: PackageSteps = chordSteps;
+/** chord as the release reads it: its root folder and publish data. */
+const CHORD: ReleasePackage = {
+  name: 'chord',
+  folder: '.',
+  publish: steps.release.find(isPublish)!,
+};
 
 // npm's registry as files under the state directory: published/NAME is a
 // package npm took, late/NAME the views it still misses after that, as one in
@@ -85,13 +97,6 @@ esac
 
 const NODE = '#!/bin/bash\nexec /bin/bash "$@"\n';
 
-const GIT_ENV = {
-  GIT_AUTHOR_NAME: 'release',
-  GIT_AUTHOR_EMAIL: 'release@example.com',
-  GIT_COMMITTER_NAME: 'release',
-  GIT_COMMITTER_EMAIL: 'release@example.com',
-};
-
 let place: string;
 let repo: string;
 let origin: string;
@@ -101,6 +106,8 @@ let out: string[];
 let err: string[];
 let sleeps: number[];
 let tty: boolean;
+/** The release's state publish reads and writes, kept in memory. */
+let recorded: Recorded | undefined;
 
 beforeEach(() => {
   place = mkdtempSync(join(tmpdir(), 'chord-release-'));
@@ -112,6 +119,7 @@ beforeEach(() => {
   err = [];
   sleeps = [];
   tty = true;
+  recorded = undefined;
 
   for (const dir of ['published', 'late', 'fail']) {
     mkdirSync(join(state, dir), { recursive: true });
@@ -156,12 +164,15 @@ beforeEach(() => {
   git(repo, 'commit', '-q', '-m', 'release');
   git(repo, 'remote', 'add', 'origin', origin);
   git(repo, 'push', '-q', 'origin', 'main');
-  // A run stopped after its first publish, so the rerun resumes.
+  // A run stopped after its first publish, as its state records it.
   publishedAlready('chord-darwin-arm64');
+  answeredAlready('@chorded/chord-darwin-arm64');
 });
 
 afterEach(() => {
   rmSync(place, { recursive: true, force: true });
+
+  answered = [];
 });
 
 function git(cwd: string, ...args: string[]): string {
@@ -200,13 +211,66 @@ function context(): Release {
   };
 }
 
-/** A release that publishes, as preflight then publish run it. */
-async function release(only?: Package): Promise<boolean> {
-  const found = preflight(context(), { dryRun: false, publish: true });
+/** The npm names the state records answered before a run, from beforeEach on. */
+let answered: string[] = [];
+
+function answeredAlready(name: string): void {
+  answered.push(name);
+}
+
+/** Nothing of the version on npm, and nothing in the state. */
+function nothingStarted(): void {
+  rmSync(join(state, 'published', 'chord-darwin-arm64'));
+
+  answered = [];
+}
+
+/**
+ * The state of the release at package.json's version, built on HEAD, made
+ * on the first call and kept for every later one, as a rerun reads it.
+ */
+function stateOf(): Recorded {
+  if (recorded === undefined) {
+    const version = (
+      JSON.parse(readFileSync(join(repo, 'package.json'), 'utf8')) as {
+        version: string;
+      }
+    ).version;
+    const built = git(repo, 'rev-parse', 'HEAD');
+    let state: ReleaseState = {
+      format: 1,
+      package: 'chord',
+      version,
+      channel: channelOf(version),
+      branch: channelOf(version) ?? 'main',
+      base: built,
+      built,
+      stages: {},
+      npm: Object.fromEntries(answered.map((name) => [name, 'answered'])),
+    };
+
+    recorded = {
+      state: () => state,
+      record: (change) => {
+        state = change(state);
+      },
+    };
+  }
+
+  return recorded;
+}
+
+/** A release that publishes from its state: true once it ends. */
+async function release(): Promise<boolean> {
+  const recorded = stateOf();
 
   authenticate(context());
+  await publish(context(), CHORD, {
+    version: recorded.state().version,
+    recorded,
+  });
 
-  return await publish(context(), { version: found.version, only });
+  return true;
 }
 
 /** The message a run died with. */
@@ -241,50 +305,47 @@ function tagged(where: string): string {
 const PUBLISH = 'publish --access public ';
 
 describe('CHD-561 tester: complete source guards precede every publish', () => {
-  for (const only of [undefined, 'chord-linux-x64'] as const) {
-    for (const defect of ['missing', 'changed', 'disagreeing notes'] as const) {
-      test(`${defect} blocks ${only ?? 'all packages'} before any platform publish or tag`, async () => {
-        const source = join(repo, 'dist', 'release', 'source');
-        const archive = join(source, 'zlib-1.3.2.tar.gz');
+  for (const defect of ['missing', 'changed', 'disagreeing notes'] as const) {
+    test(`${defect} blocks all packages before any platform publish or tag`, async () => {
+      const source = join(repo, 'dist', 'release', 'source');
+      const archive = join(source, 'zlib-1.3.2.tar.gz');
 
-        if (defect === 'missing') {
-          rmSync(archive);
-        } else if (defect === 'changed') {
-          writeFileSync(archive, 'untrusted bytes');
-        } else {
-          writeFileSync(
-            join(
-              repo,
-              'node_modules',
-              '@opentui',
-              'core-linux-x64',
-              'FFMPEG-SOURCE.md',
-            ),
-            `${SOURCE_NOTES}\nchanged build\n`,
-          );
-        }
+      if (defect === 'missing') {
+        rmSync(archive);
+      } else if (defect === 'changed') {
+        writeFileSync(archive, 'untrusted bytes');
+      } else {
+        writeFileSync(
+          join(
+            repo,
+            'node_modules',
+            '@opentui',
+            'core-linux-x64',
+            'FFMPEG-SOURCE.md',
+          ),
+          `${SOURCE_NOTES}\nchanged build\n`,
+        );
+      }
 
-        // A local inventory must never authorize an incomplete or stale set.
-        writeFileSync(join(source, 'SHA256SUMS'), '');
-        await died(() => publish(context(), { version: VERSION, only }));
+      // A local inventory must never authorize an incomplete or stale set.
+      writeFileSync(join(source, 'SHA256SUMS'), '');
+      await died(() =>
+        publish(context(), CHORD, { version: VERSION, recorded: stateOf() }),
+      );
 
-        expect(
-          lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
-        ).toEqual([]);
-        expect(lines('gh.log')).toEqual([]);
-        expect(tagged(repo)).toBe('');
-        expect(isPublished('chord-linux-x64')).toBe(false);
-      });
-    }
+      expect(
+        lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
+      ).toEqual([]);
+      expect(lines('gh.log')).toEqual([]);
+      expect(tagged(repo)).toBe('');
+      expect(isPublished('chord-linux-x64')).toBe(false);
+    });
   }
 });
 
-describe('a resumed release', () => {
-  test('publishes every platform package, then the main one last, and tags', async () => {
+describe('a release whose state has a package answered', () => {
+  test('publishes every other platform package, then the main one last, and tags the built commit', async () => {
     expect(await release()).toBeTrue();
-    expect(out).toContain(
-      `already published: @chorded/chord-darwin-arm64@${VERSION}`,
-    );
     expect(
       [...PLATFORMS, 'chord'].every((name) => isPublished(name)),
     ).toBeTrue();
@@ -300,6 +361,32 @@ describe('a resumed release', () => {
       git(repo, 'tag', '--list', TAG, '--format=%(contents:subject)'),
     ).toBe(`chord ${TAG}`);
     expect(git(repo, 'cat-file', '-t', TAG)).toBe('tag');
+  });
+
+  test('records each npm name answered, the tag pushed and the draft made with its URL', async () => {
+    await release();
+
+    expect(stateOf().state()).toMatchObject({
+      npm: Object.fromEntries(
+        PACKAGES.map((name) => [`@chorded/${name}`, 'answered']),
+      ),
+      tag: { state: 'pushed' },
+      draft: { state: 'made', url: 'https://github.example/draft' },
+    });
+  });
+
+  test('an npm name the state never started that npm has is refused, not skipped', async () => {
+    publishedAlready('chord-linux-x64');
+
+    expect(await died(release)).toBe(
+      `npm has @chorded/chord-linux-x64@${VERSION}, which this release did not publish; rm -r .release/chord abandons it`,
+    );
+    expect(
+      lines('npm.log').filter(
+        (line) => line.includes('chord-linux-x64') && line.startsWith(PUBLISH),
+      ),
+    ).toStrictEqual([]);
+    expect(stateOf().state().npm['@chorded/chord-linux-x64']).toBeUndefined();
   });
 
   test('the main package waits for a platform package npm answers for late', async () => {
@@ -327,7 +414,7 @@ describe('a resumed release', () => {
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '1000');
 
     expect(await died(release)).toStartWith(
-      `@chorded/chord-linux-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun dev release\` once`,
+      `@chorded/chord-linux-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published. Rerun \`bun dev release chord\` once`,
     );
     expect(err.at(-1)).toContain('(60/60)');
     // No sleep after the last miss.
@@ -341,17 +428,21 @@ describe('a resumed release', () => {
     await died(release);
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '0');
 
-    out = [];
+    const sent = lines('npm.log').filter((line) => line.startsWith(PUBLISH));
 
-    expect(preflight(context(), { dryRun: false, publish: true }).mode).toBe(
-      'resume',
-    );
     expect(await release()).toBeTrue();
-
-    for (const name of PLATFORMS) {
-      expect(out).toContain(`already published: @chorded/${name}@${VERSION}`);
-    }
-
+    // Each platform package was published once, by the first run.
+    expect(
+      lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
+    ).toStrictEqual([
+      ...sent,
+      expect.stringContaining(`chorded-chord-${VERSION}.tgz`),
+    ]);
+    expect(stateOf().state().npm).toStrictEqual(
+      Object.fromEntries(
+        PACKAGES.map((name) => [`@chorded/${name}`, 'answered']),
+      ),
+    );
     expect(isPublished('chord')).toBeTrue();
   });
 
@@ -369,7 +460,7 @@ describe('a resumed release', () => {
     writeFileSync(join(state, 'late', 'chord'), '1000');
 
     expect(await died(release)).toBe(
-      `@chorded/chord@${VERSION} did not answer npm view in 15 minutes; ${TAG} was not tagged. Once \`npm view @chorded/chord@${VERSION} version\` answers, tag it with: git tag -a ${TAG} -m "chord ${TAG}" && git push origin ${TAG}`,
+      `@chorded/chord@${VERSION} did not answer npm view in 15 minutes; ${TAG} was not tagged. Once \`npm view @chorded/chord@${VERSION} version\` answers, tag it with: git tag -a ${TAG} -m "chord ${TAG}" ${git(repo, 'rev-parse', 'HEAD')} && git push origin ${TAG}, or run \`bun dev release chord\` to continue`,
     );
     expect(isPublished('chord')).toBeTrue();
     expect(tagged(repo)).toBe('');
@@ -385,9 +476,6 @@ describe('before the first publish', () => {
     expect(notices).toStrictEqual([
       'npm will ask to authorise each publish: press Enter when it asks, then approve in the browser',
     ]);
-    expect(out.indexOf(notices[0]!)).toBeGreaterThan(
-      out.indexOf(`already published: @chorded/chord-darwin-arm64@${VERSION}`),
-    );
   });
 
   test('stops without a terminal, and publishes nothing', async () => {
@@ -449,56 +537,16 @@ describe('before the first publish', () => {
   });
 });
 
-describe('--package', () => {
-  test('publishes only the platform package named, and leaves the tag while one is missing', async () => {
-    expect(await release('chord-linux-arm64')).toBeFalse();
-    expect(isPublished('chord-linux-arm64')).toBeTrue();
-    expect(isPublished('chord-darwin-x64')).toBeFalse();
-    expect(isPublished('chord')).toBeFalse();
-    expect(err).toStrictEqual([
-      `not tagged: @chorded/chord-darwin-x64@${VERSION} does not answer npm view yet; ${TAG} is tagged by the run that publishes the last of the five`,
-    ]);
-    expect(tagged(repo)).toBe('');
-  });
-
-  test('tags once the package published is the last of the five', async () => {
-    for (const name of ['chord-darwin-x64', 'chord-linux-arm64', 'chord']) {
-      publishedAlready(name);
-    }
-
-    // The main package on npm stops preflight, so publish runs alone.
-    expect(
-      await publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
-    ).toBeTrue();
-    expect(tagged(origin)).toBe(TAG);
-  });
-
-  test('chord waits for every platform package before it publishes', async () => {
-    expect(await died(() => release('chord'))).toStartWith(
-      `@chorded/chord-darwin-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published.`,
-    );
-    expect(isPublished('chord')).toBeFalse();
-  });
-
-  test('chord, once the platform packages answer, publishes and tags', async () => {
-    for (const name of PLATFORMS) {
-      publishedAlready(name);
-    }
-
-    expect(await release('chord')).toBeTrue();
-    expect(isPublished('chord')).toBeTrue();
-    expect(tagged(origin)).toBe(TAG);
-  });
-});
-
 describe('preflight', () => {
-  const fresh = { dryRun: false, publish: true };
+  const fresh = { publish: true };
+
+  // Nothing of the version on npm: preflight's guards are a fresh run's.
+  beforeEach(() => {
+    rmSync(join(state, 'published', 'chord-darwin-arm64'));
+  });
 
   test('a fresh version', () => {
-    rmSync(join(state, 'published', 'chord-darwin-arm64'));
-
-    expect(preflight(context(), fresh)).toStrictEqual({
-      mode: 'fresh',
+    expect(preflight(context(), CHORD, fresh)).toStrictEqual({
       version: VERSION,
     });
   });
@@ -506,7 +554,7 @@ describe('preflight', () => {
   test('refuses a tree that is not clean, untracked files included', async () => {
     writeFileSync(join(repo, 'stray'), '');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       'the tree is not clean:\n?? stray',
     );
   });
@@ -515,7 +563,7 @@ describe('preflight', () => {
     writeFileSync(join(repo, 'package.json'), '{}');
     git(repo, 'commit', '-q', '-am', 'no version');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       'package.json has no version',
     );
   });
@@ -523,48 +571,43 @@ describe('preflight', () => {
   test('refuses a version the main package has', async () => {
     publishedAlready('chord');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       `@chorded/chord@${VERSION} is on npm already`,
     );
   });
 
-  test('a dry run does not resume', async () => {
-    expect(
-      await died(() => preflight(context(), { dryRun: true, publish: false })),
-    ).toBe(
-      `--dry-run does not resume a stopped publish: @chorded/chord-darwin-arm64@${VERSION} is published`,
-    );
-  });
+  test('any npm name already at the version is refused, publishing or not: a release whose state is lost is finished by hand (S2)', async () => {
+    publishedAlready('chord-darwin-arm64');
 
-  test('a run without publish does not resume, and says to include it', async () => {
-    expect(
-      await died(() => preflight(context(), { dryRun: false, publish: false })),
-    ).toBe(
-      `a run without publish does not resume a stopped publish: @chorded/chord-darwin-arm64@${VERSION} is published; include publish`,
-    );
+    for (const publish of [true, false]) {
+      expect(await died(() => preflight(context(), CHORD, { publish }))).toBe(
+        `@chorded/chord-darwin-arm64@${VERSION} is on npm already`,
+      );
+    }
   });
 
   test('eligibility does not attempt authentication', () => {
     writeFileSync(join(state, 'logged-out'), '');
 
-    expect(preflight(context(), fresh).mode).toBe('resume');
+    expect(preflight(context(), CHORD, fresh)).toStrictEqual({
+      version: VERSION,
+    });
     expect(lines('npm.log').includes('whoami')).toBe(false);
   });
 
   test('a run without publish asks nothing of main or the tags', () => {
-    rmSync(join(state, 'published', 'chord-darwin-arm64'));
     git(repo, 'checkout', '-q', '-b', 'topic');
     git(repo, 'tag', TAG);
 
-    expect(preflight(context(), { dryRun: true, publish: false }).mode).toBe(
-      'fresh',
-    );
+    expect(preflight(context(), CHORD, { publish: false })).toStrictEqual({
+      version: VERSION,
+    });
   });
 
   test('a run that publishes refuses a branch other than main', async () => {
     git(repo, 'checkout', '-q', '-b', 'topic');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       'a release that publishes runs from main; HEAD is topic',
     );
   });
@@ -575,7 +618,7 @@ describe('preflight', () => {
     const main = git(repo, 'rev-parse', 'main');
     const behind = git(repo, 'rev-parse', 'origin/main');
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       `main is not origin/main: main is ${main}, origin/main is ${behind}`,
     );
   });
@@ -587,7 +630,7 @@ describe('preflight', () => {
     git(other, 'commit', '-q', '--allow-empty', '-m', 'elsewhere');
     git(other, 'push', '-q', 'origin', 'main');
 
-    expect(await died(() => preflight(context(), fresh))).toStartWith(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toStartWith(
       'main is not origin/main:',
     );
   });
@@ -595,7 +638,7 @@ describe('preflight', () => {
   test('a run that publishes refuses a version tagged here', async () => {
     git(repo, 'tag', TAG);
 
-    expect(await died(() => preflight(context(), fresh))).toBe(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toBe(
       `${TAG} is a tag already`,
     );
   });
@@ -609,7 +652,7 @@ describe('preflight', () => {
     git(other, 'tag', TAG);
     git(other, 'push', '-q', 'origin', TAG);
 
-    expect(await died(() => preflight(context(), fresh))).toStartWith(
+    expect(await died(() => preflight(context(), CHORD, fresh))).toStartWith(
       `${TAG} is a tag on origin already: `,
     );
   });
@@ -617,7 +660,7 @@ describe('preflight', () => {
 
 describe('tester: publish guard boundaries', () => {
   test('a fresh run publishes all five in order and announces npm once', async () => {
-    rmSync(join(state, 'published', PLATFORMS[0]));
+    nothingStarted();
 
     expect(await release()).toBeTrue();
     expect(
@@ -636,6 +679,7 @@ describe('tester: publish guard boundaries', () => {
   test('the tag stays absent while the main package answers late', async () => {
     for (const name of PLATFORMS) {
       publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
     }
 
     writeFileSync(join(state, 'late', 'chord'), '2');
@@ -654,9 +698,10 @@ describe('tester: publish guard boundaries', () => {
             return ctx.sleep(ms);
           },
         },
-        { version: VERSION, only: 'chord' },
+        CHORD,
+        { version: VERSION, recorded: stateOf() },
       ),
-    ).toBeTrue();
+    ).toBeUndefined();
     expect(sleeps).toStrictEqual([15_000, 15_000]);
     expect(tagged(origin)).toBe(TAG);
   });
@@ -673,6 +718,11 @@ describe('tester: publish guard boundaries', () => {
   });
 
   test('a resumed package needs no local tarball or checksum', async () => {
+    for (const name of [...PLATFORMS, 'chord']) {
+      publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
+    }
+
     rmSync(
       join(
         repo,
@@ -685,34 +735,45 @@ describe('tester: publish guard boundaries', () => {
 
     tty = false;
 
-    expect(await release(PLATFORMS[0])).toBeFalse();
+    expect(
+      await publish(context(), CHORD, {
+        version: VERSION,
+        recorded: stateOf(),
+      }),
+    ).toBeUndefined();
     expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
       [],
     );
     expect(sleeps).toEqual([]);
     expect(out.filter((line) => line.startsWith('npm will ask'))).toEqual([]);
-    expect(tagged(repo)).toBe('');
+    expect(tagged(repo)).toBe(TAG);
   });
 
-  test('a selected platform that answers late does not wait or tag', async () => {
+  test('the last unpublished platform answers late before the release tags', async () => {
     for (const name of [...PLATFORMS, 'chord']) {
       if (name !== 'chord-linux-x64') {
         publishedAlready(name);
+        answeredAlready(`@chorded/${name}`);
       }
     }
 
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '2');
 
     expect(
-      await publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
-    ).toBeFalse();
+      await publish(context(), CHORD, {
+        version: VERSION,
+        recorded: stateOf(),
+      }),
+    ).toBeUndefined();
     expect(isPublished('chord-linux-x64')).toBeTrue();
-    expect(sleeps).toEqual([]);
-    expect(tagged(repo)).toBe('');
-    expect(tagged(origin)).toBe('');
+    expect(sleeps).toEqual([15_000, 15_000]);
+    expect(tagged(repo)).toBe(TAG);
+    expect(tagged(origin)).toBe(TAG);
   });
 
   test('a successful npm view with the wrong version stops with its answer', async () => {
+    nothingStarted();
+    publishedAlready(PLATFORMS[0]);
     executable(
       join(bin, 'npm'),
       NPM.replace('echo "${spec##*@}"', 'echo "9.9.8"'),
@@ -728,6 +789,8 @@ describe('tester: publish guard boundaries', () => {
   });
 
   test('preflight command failures retain their diagnostic and stop before publish', async () => {
+    nothingStarted();
+
     const cases = [
       ['status', 'git status failed: fixture status denied'],
       ['fetch', 'git fetch origin failed: fixture fetch denied'],
@@ -751,9 +814,7 @@ esac
       );
 
       expect(
-        await died(() =>
-          preflight(context(), { dryRun: false, publish: true }),
-        ),
+        await died(() => preflight(context(), CHORD, { publish: true })),
       ).toBe(message!);
       expect(
         lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
@@ -764,7 +825,11 @@ esac
   test('tag and push failures retain their diagnostic after all five answer', async () => {
     for (const name of [...PLATFORMS, 'chord']) {
       publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
     }
+
+    const recorded = stateOf();
+    const built = recorded.state().built;
 
     for (const command of ['tag', 'push']) {
       executable(
@@ -780,7 +845,7 @@ esac
 
       expect(
         await died(() =>
-          publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
+          publish(context(), CHORD, { version: VERSION, recorded }),
         ),
       ).toBe(
         command === 'tag'
@@ -789,8 +854,13 @@ esac
       );
       expect(lines('git.log')).toStrictEqual(
         command === 'tag'
-          ? [`tag -a ${TAG} -m chord ${TAG}`]
-          : [`tag -a ${TAG} -m chord ${TAG}`, `push origin ${TAG}`],
+          ? [`tag -a ${TAG} -m chord ${TAG} ${built}`]
+          : [
+              `rev-parse -q --verify refs/tags/${TAG}^{commit}`,
+              'ls-remote --tags origin',
+              `tag -a ${TAG} -m chord ${TAG} ${built}`,
+              `push origin ${TAG}`,
+            ],
       );
     }
   });
@@ -865,7 +935,12 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
 
     expect(said).toContain('its draft release failed: gh broke');
 
-    const line = said.slice(said.indexOf('Finish it with: ') + 16);
+    expect(said).toEndWith('\nor run `bun dev release chord` to continue');
+
+    const line = said.slice(
+      said.indexOf('Finish it with: ') + 16,
+      said.lastIndexOf('\n'),
+    );
     const argv = parse(line) as string[];
 
     expect(argv.slice(0, 10)).toStrictEqual([
@@ -887,17 +962,13 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
     expect(tagged(origin)).toContain(TAG);
   });
 
-  test('a single package that leaves another missing makes no draft', async () => {
-    await release('chord-linux-x64');
-
-    expect(made()).toStrictEqual([]);
-  });
-
   test('no gh, or one not signed in, stops among the guards', async () => {
     executable(join(bin, 'gh'), '#!/bin/bash\necho nope >&2\nexit 1\n');
 
+    rmSync(join(state, 'published', 'chord-darwin-arm64'));
+
     const said = await died(() =>
-      preflight(context(), { dryRun: false, publish: true }),
+      preflight(context(), CHORD, { publish: true }),
     );
 
     expect(said).toContain('gh auth status');
@@ -911,20 +982,18 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
 
     if (!existsSync('/usr/bin/gh') && !existsSync('/bin/gh')) {
       expect(
-        await died(() => preflight(gone, { dryRun: false, publish: true })),
+        await died(() => preflight(gone, CHORD, { publish: true })),
       ).toContain('gh auth status');
     }
   });
 
   test('a run that does not publish does not ask for gh', () => {
     executable(join(bin, 'gh'), '#!/bin/bash\nexit 1\n');
-    // Nothing stopped, as a dry run refuses to resume one.
-    rmSync(join(state, 'published'), { recursive: true });
-    mkdirSync(join(state, 'published'));
+    rmSync(join(state, 'published', 'chord-darwin-arm64'));
 
-    expect(preflight(context(), { dryRun: true, publish: false }).mode).toBe(
-      'fresh',
-    );
+    expect(preflight(context(), CHORD, { publish: false })).toStrictEqual({
+      version: VERSION,
+    });
   });
 });
 
@@ -991,7 +1060,7 @@ describe.each(['next', 'beta'])('publishing on %s', (channel) => {
   });
 
   function nothingOnNpm(): void {
-    rmSync(join(state, 'published', 'chord-darwin-arm64'));
+    nothingStarted();
   }
 
   test('every package carries the tag, in publish order', async () => {
@@ -1006,22 +1075,6 @@ describe.each(['next', 'beta'])('publishing on %s', (channel) => {
     expect(publishes()).toStrictEqual(
       PACKAGES.filter((name) => name !== 'chord-darwin-arm64').map(sent),
     );
-  });
-
-  test.each(PLATFORMS)('--package %s carries it', async (name) => {
-    nothingOnNpm();
-
-    expect(await release(name)).toBeFalse();
-    expect(publishes()).toStrictEqual([sent(name)]);
-  });
-
-  test('--package chord carries it', async () => {
-    for (const name of PLATFORMS) {
-      publishedAlready(name);
-    }
-
-    expect(await release('chord')).toBeTrue();
-    expect(publishes()).toStrictEqual([sent('chord')]);
   });
 
   test('the draft is marked a pre-release', async () => {
@@ -1047,7 +1100,7 @@ describe.each(['next', 'beta'])('publishing on %s', (channel) => {
 
 describe('publishing a stable version', () => {
   test('every package has no tag, and the draft no mark', async () => {
-    rmSync(join(state, 'published', 'chord-darwin-arm64'));
+    nothingStarted();
 
     await release();
 
@@ -1140,3 +1193,122 @@ describe.each(['next', 'beta'])(
     });
   },
 );
+
+describe('tester: CHD-623 publish checkpoint recovery', () => {
+  test.each(['pending', 'sent'] as const)(
+    'a checkpoint failure at %s resumes without publishing any version twice',
+    async (checkpoint) => {
+      nothingStarted();
+
+      const recorded = stateOf();
+      const first = CHORD.publish.npm[0]!;
+      const failure = new Error('fixture checkpoint interrupted');
+      let cut = true;
+      const interrupted: Recorded = {
+        state: recorded.state,
+        record: (change) => {
+          const next = change(recorded.state());
+
+          if (cut && next.npm[first] === checkpoint) {
+            cut = false;
+
+            if (checkpoint === 'pending') {
+              recorded.record(() => next);
+            }
+
+            throw failure;
+          }
+
+          recorded.record(() => next);
+        },
+      };
+
+      await expect(
+        publish(context(), CHORD, { version: VERSION, recorded: interrupted }),
+      ).rejects.toBe(failure);
+      expect(recorded.state().npm[first]).toBe('pending');
+      expect(isPublished(PLATFORMS[0])).toBe(checkpoint === 'sent');
+
+      await publish(context(), CHORD, { version: VERSION, recorded });
+
+      const sends = lines('npm.log').filter((line) => line.startsWith(PUBLISH));
+
+      expect(sends).toHaveLength(CHORD.publish.npm.length);
+      expect(new Set(sends).size).toBe(CHORD.publish.npm.length);
+      expect(Object.values(recorded.state().npm)).toEqual(
+        CHORD.publish.npm.map(() => 'answered'),
+      );
+      expect(recorded.state().tag?.state).toBe('pushed');
+      expect(recorded.state().draft?.state).toBe('made');
+    },
+  );
+
+  function allAnswered(): Recorded {
+    for (const name of PACKAGES) {
+      publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
+    }
+
+    return stateOf();
+  }
+
+  test('a pending tag on another commit is refused without replacing or pushing it', async () => {
+    const recorded = allAnswered();
+    const built = recorded.state().built;
+
+    recorded.record((state) => ({ ...state, tag: { state: 'pending' } }));
+    git(repo, 'commit', '-q', '--allow-empty', '-m', 'later fixture commit');
+
+    const later = git(repo, 'rev-parse', 'HEAD');
+
+    git(repo, 'tag', TAG);
+
+    expect(
+      await died(() =>
+        publish(context(), CHORD, { version: VERSION, recorded }),
+      ),
+    ).toBe(`${TAG} is on ${later}, not on ${built}, which the release built`);
+    expect(git(repo, 'rev-parse', TAG)).toBe(later);
+    expect(tagged(origin)).toBe('');
+    expect(recorded.state().tag?.state).toBe('pending');
+    expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
+      [],
+    );
+    expect(lines('gh.log')).toEqual([]);
+  });
+
+  test('an existing pending draft is recorded once and a completed publish repeats no act', async () => {
+    const recorded = allAnswered();
+
+    git(repo, 'tag', TAG, recorded.state().built);
+    git(repo, 'push', '-q', 'origin', TAG);
+
+    recorded.record((state) => ({
+      ...state,
+      tag: { state: 'pushed' },
+      draft: { state: 'pending' },
+    }));
+
+    await publish(context(), CHORD, { version: VERSION, recorded });
+
+    expect(lines('gh.log')).toEqual([
+      `release view ${TAG} --json url --jq .url`,
+    ]);
+    expect(recorded.state().draft).toEqual({
+      state: 'made',
+      url: 'https://github.example/draft',
+    });
+
+    const npm = lines('npm.log');
+    const gh = lines('gh.log');
+
+    rmSync(join(repo, 'dist', 'release', 'source'), {
+      recursive: true,
+      force: true,
+    });
+    await publish(context(), CHORD, { version: VERSION, recorded });
+
+    expect(lines('npm.log')).toEqual(npm);
+    expect(lines('gh.log')).toEqual(gh);
+  });
+});

@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   failure,
+  scoped,
   trackedFiles,
   uncovered,
 } from '../../../scripts/dev/covered.ts';
@@ -126,6 +127,97 @@ test('a command killed, or failing to start, is named with how it ended (CHD-467
   expect(failure(argv, { status: 128, signal: null })).toBe(
     'covered: git ls-files -z exited with status 128',
   );
+});
+
+describe('a package folder argument (CHD-623)', () => {
+  const tracked = [
+    'src/main.tsx',
+    'steps.ts',
+    'packages/acp/steps.ts',
+    'packages/acp/src/index.ts',
+    'packages/acpx/src/index.ts',
+  ];
+
+  test("chord's run leaves packages/ out", () => {
+    expect(scoped(tracked, undefined)).toEqual(['src/main.tsx', 'steps.ts']);
+  });
+
+  test("a package's run counts its own folder's files only", () => {
+    expect(scoped(tracked, 'packages/acp')).toEqual([
+      'packages/acp/steps.ts',
+      'packages/acp/src/index.ts',
+    ]);
+  });
+
+  test("the script checks a package's files against each of its projects", async () => {
+    const repo = await mkdtemp(join(tmpdir(), 'chord-covered-package-'));
+    const acp = join(repo, 'packages', 'acp');
+
+    try {
+      await mkdir(join(repo, 'scripts', 'dev'), { recursive: true });
+      await mkdir(join(acp, 'src'), { recursive: true });
+      await mkdir(join(repo, 'src'));
+      await copyFile(
+        new URL('../../../scripts/dev/covered.ts', import.meta.url),
+        join(repo, 'scripts', 'dev', 'covered.ts'),
+      );
+      // Bun runs a project's check script for bun check: this one lists
+      // each project's file by the -p it is given.
+      await writeFile(
+        join(repo, 'package.json'),
+        JSON.stringify({ scripts: { check: 'bun compiler.ts' } }),
+      );
+      await writeFile(
+        join(repo, 'compiler.ts'),
+        [
+          "const at = process.argv.indexOf('-p');",
+          'const project = at < 0 ? undefined : process.argv[at + 1];',
+          "const files = { 'packages/acp/tsconfig.json': 'packages/acp/src/index.ts', 'packages/acp/tsconfig.tools.json': process.env.TOOLS_LISTED };",
+          'const file = files[project];',
+          "if (file) process.stdout.write(process.cwd() + '/' + file + '\\n');",
+        ].join('\n'),
+      );
+
+      for (const name of [
+        'packages/acp/tsconfig.json',
+        'packages/acp/tsconfig.tools.json',
+        'packages/acp/src/index.ts',
+        'packages/acp/steps.ts',
+        'src/main.ts',
+      ]) {
+        await writeFile(join(repo, name), 'export {};\n');
+      }
+
+      execFileSync('git', ['init', '-q'], { cwd: repo, stdio: 'pipe' });
+      execFileSync('git', ['add', '--', '.'], { cwd: repo, stdio: 'pipe' });
+
+      const run = (listed: string) =>
+        spawnSync(
+          process.execPath,
+          [join(repo, 'scripts', 'dev', 'covered.ts'), 'packages/acp'],
+          {
+            cwd: repo,
+            encoding: 'utf8',
+            env: { ...process.env, TOOLS_LISTED: listed },
+          },
+        );
+
+      const left = run('');
+
+      expect(left.stderr).toBe(
+        "bun check leaves out 1 tracked file; list each in packages/acp's tsconfig's files:\n" +
+          '  packages/acp/steps.ts\n',
+      );
+      expect(left.status).toBe(1);
+
+      const covered = run('packages/acp/steps.ts');
+
+      expect(covered.stderr).toBe('');
+      expect(covered.status).toBe(0);
+    } finally {
+      await rm(repo, { recursive: true, force: true });
+    }
+  });
 });
 
 describe('CHD-474 tester: actual guard process boundaries', () => {

@@ -18,11 +18,9 @@ import { join } from 'node:path';
 import process from 'node:process';
 import { quote } from 'shell-quote';
 import {
-  check,
   chord,
   chordOnRiff,
   chordWithRiff,
-  lint,
   qaPlace,
   type Run,
   type RunServing,
@@ -524,69 +522,6 @@ test("test runs the whole suite placed by the record's times, its arguments afte
   ]);
 });
 
-test('lint runs ESLint over the tree', () => {
-  const { run, ran } = faked();
-
-  lint(['--fix'], run);
-
-  expect(ran).toStrictEqual([[bun, 'run', 'eslint', '.', '--fix']]);
-});
-
-describe('check', () => {
-  const STATIC = [
-    [bun, 'check'],
-    [bun, 'scripts/dev/covered.ts'],
-    [bun, 'run', 'eslint', '.'],
-    [bun, 'fmt', '--check', '.'],
-    [bun, 'test', 'lint/'],
-  ];
-
-  test('runs the static steps, then the suite', () => {
-    const { run, ran } = faked();
-
-    expect(check({ static: false }, run, () => {})).toBe(0);
-    expect(ran).toStrictEqual([
-      ...STATIC,
-      [
-        bun,
-        'test',
-        '--parallel',
-        '--timeout=60000',
-        '--timings=tests/timings.json',
-        './tests/',
-      ],
-    ]);
-  });
-
-  test('--static leaves the suite out', () => {
-    const { run, ran } = faked();
-
-    expect(check({ static: true }, run)).toBe(0);
-    expect(ran).toStrictEqual(STATIC);
-  });
-
-  test("stops at the first failure, with that tool's status", () => {
-    const { run, ran } = faked([0, 2]);
-
-    expect(check({ static: false }, run, () => {})).toBe(2);
-    expect(ran).toStrictEqual(STATIC.slice(0, 2));
-  });
-
-  test("a failing suite is the check's status", () => {
-    const { run } = faked([0, 0, 0, 0, 0, 1]);
-
-    expect(check({ static: false }, run, () => {})).toBe(1);
-  });
-
-  test('a failing step is named with its status, as one may say nothing (CHD-467)', () => {
-    const said: string[] = [];
-    const { run } = faked([0, 1]);
-
-    expect(check({ static: false }, run, (line) => said.push(line))).toBe(1);
-    expect(said).toStrictEqual(['check: covered failed with status 1\n']);
-  });
-});
-
 describe('spawn', () => {
   test("answers the command's exit status", () => {
     expect(spawn([bun, '-e', 'process.exit(3)'])).toBe(3);
@@ -694,16 +629,28 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
           await writeFile(
             join(checkout, 'package.json'),
             JSON.stringify({
+              name: '@chorded/chord',
               type: 'module',
               version: '0.0.0',
               scripts: {
                 dev: 'bun scripts/dev.ts',
-                quality: 'bun scripts/quality.ts',
                 check: 'bun -e "0"',
                 eslint: 'bun -e "0"',
                 fmt: 'bun -e "0"',
               },
             }),
+          );
+          await writeFile(
+            join(checkout, 'steps.ts'),
+            `const bun = process.execPath;
+export default {
+  checks: [
+    { name: 'static tests', static: true, run: [bun, 'test', 'lint/'] },
+    { name: 'the suite', run: [bun, 'scripts/dev.ts', 'test'] },
+  ],
+  lint: [],
+  release: [{ name: 'publish', npm: ['@chorded/chord'], tag: 'v{version}' }],
+};\n`,
           );
           // Isolate the suite's status from unrelated static tooling.
           await writeFile(
@@ -726,7 +673,9 @@ describe('CHD-513 U1 tester: command status without timing gates', () => {
 
           const result = spawnSync(
             bun,
-            command === 'test' ? ['dev', 'test'] : command.split(' '),
+            command === 'test'
+              ? ['dev', 'test']
+              : ['dev', 'quality', 'chord', ...command.split(' ').slice(1)],
             {
               cwd: checkout,
               encoding: 'utf8',

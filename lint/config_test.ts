@@ -95,6 +95,17 @@ const cases: [rule: string, code: string, file?: string][] = [
   ['no-console', "console.log('x');\n", 'session/probe.ts'],
   ['no-console', "console.log('x');\n", 'acp/probe.ts'],
   ['no-console', "console.log('x');\n", 'server/probe.ts'],
+  // Shipped code never imports a steps.ts or the scripts (CHD-623).
+  [
+    'no-restricted-syntax',
+    "export { default } from '../steps.ts';\n",
+    'ui/probe.ts',
+  ],
+  [
+    'no-restricted-syntax',
+    "export const a = await import('../../scripts/dev/steps.ts');\n",
+    'ui/app/probe.ts',
+  ],
 ];
 
 for (const [rule, code, file = 'probe.ts'] of cases) {

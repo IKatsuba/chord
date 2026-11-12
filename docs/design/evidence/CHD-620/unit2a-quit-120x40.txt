@@ -1,0 +1,40 @@
+$ bun scripts/dev.ts chord --fake -C "/tmp/chord-qa.chd620/a" --no-mcp-servers
+Resume this session with:
+chord fake --agent-command '~/.bun/bin/bun ~/projects/ikatsuba/chord/tests/fixtures/fa
+ke_agent/main.ts' --no-mcp-servers --resume 27675911-7a10-4398-9391-cedb44952aab
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

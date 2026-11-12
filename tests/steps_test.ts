@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -149,4 +149,34 @@ test('native formatting and types keep their own arguments and failure statuses'
   } finally {
     await rm(dir, { recursive: true, force: true });
   }
+});
+
+describe('tester: CHD-623 format exclusion boundary', () => {
+  test('packages.ts at the root still fails, and checking rewrites neither file', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-format-boundary-'));
+    const source = 'export const value   =   1';
+    const format = steps.checks.find((check) => check.name === 'format')!;
+
+    try {
+      await mkdir(join(dir, 'packages', 'acp'), { recursive: true });
+      await writeFile(join(dir, 'packages.ts'), source);
+      await writeFile(join(dir, 'packages', 'acp', 'sample.ts'), source);
+
+      const argv = format.run as readonly string[];
+      const result = spawnSync(argv[0]!, argv.slice(1), {
+        cwd: dir,
+        encoding: 'utf8',
+        timeout: 20_000,
+      });
+
+      expect(result.error).toBeUndefined();
+      expect(result.status, result.stdout + result.stderr).toBe(1);
+      expect(await readFile(join(dir, 'packages.ts'), 'utf8')).toBe(source);
+      expect(
+        await readFile(join(dir, 'packages', 'acp', 'sample.ts'), 'utf8'),
+      ).toBe(source);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
 });

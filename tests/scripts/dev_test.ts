@@ -670,6 +670,25 @@ describe('a bare release', () => {
     }
   });
 
+  test("checks that need the package's stages do not run without one", async () => {
+    expect(
+      await parsed(['release', '--dry-run', '--only', 'publish']),
+    ).toStrictEqual([['unclear', line]]);
+  });
+
+  test("Cliffy's own refusals still come first: conflicts, values, unknown flags", async () => {
+    for (const argv of [
+      ['--only', 'publish', '--skip', 'quality'],
+      ['--skip', 'tests'],
+      ['--bump', 'v1'],
+      ['--package', 'chord'],
+    ]) {
+      await expect(parsed(['release', ...argv])).rejects.toThrow(
+        ValidationError,
+      );
+    }
+  });
+
   test('says it on stderr and exits 1, running nothing', () => {
     const result = spawnSync(
       process.execPath,

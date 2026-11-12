@@ -168,3 +168,85 @@ describe("the Port throws the adapter's errors from every call", () => {
     expect(agent.model).toEqual({ id: 'composer-2' });
   });
 });
+
+describe('CHD-622 tester: error boundaries', () => {
+  test.each([
+    ['auth', new sdk.AuthenticationError('Agent is archived')],
+    ['network', new sdk.NetworkError('Invalid API key')],
+    [
+      'other',
+      new sdk.ConfigurationError('Agent is archived', {
+        code: 'invalid_model',
+      }),
+    ],
+    [
+      'archived',
+      new sdk.ConfigurationError('Invalid API key', {
+        code: 'agent_archived',
+      }),
+    ],
+  ] as const)(
+    '%s is decided without interpreting the message',
+    (kind, error) => {
+      expect(normalise(error)).toMatchObject({
+        kind,
+        message: error.message,
+        cause: error,
+      });
+    },
+  );
+
+  test('normalises a failed create, list-runs and send without retrying', async () => {
+    const error = new sdk.RateLimitError('Try later', {
+      code: 'rate_limited',
+      requestId: 'req-limit',
+    });
+    const from = fakeSdk(error);
+    let attempts = 0;
+    const fail = () => {
+      attempts += 1;
+
+      return Promise.reject(error);
+    };
+
+    const port = cursorPort({
+      ...from,
+      Agent: {
+        ...from.Agent,
+        create: fail,
+        listRuns: fail,
+        resume: () =>
+          Promise.resolve({
+            agentId: 'bc-1',
+            send: fail,
+          }),
+      },
+    } as unknown as typeof sdk);
+    const expected = {
+      kind: 'rate-limit',
+      message: 'Try later',
+      code: 'rate_limited',
+      requestId: 'req-limit',
+      cause: error,
+    };
+
+    await expect(port.create({ apiKey: 'fixture-key' })).rejects.toMatchObject(
+      expected,
+    );
+    await expect(
+      port.listRuns('bc-1', { apiKey: 'fixture-key', runtime: 'cloud' }),
+    ).rejects.toMatchObject(expected);
+
+    const agent = await port.resume('bc-1', { apiKey: 'fixture-key' });
+
+    await expect(agent.send('hello')).rejects.toMatchObject(expected);
+    expect(attempts).toBe(3);
+  });
+
+  test('an unknown rejection keeps its identity through a Port call', async () => {
+    const error = new Error('Invalid API key');
+    const port = cursorPort(fakeSdk(error));
+
+    await expect(port.me({ apiKey: 'fixture-key' })).rejects.toBe(error);
+  });
+});

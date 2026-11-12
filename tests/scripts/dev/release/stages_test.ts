@@ -415,11 +415,7 @@ describe('tester: CHD-547 explicit version eligibility', () => {
 
 describe('tester: CHD-412 release transaction boundaries', () => {
   function output(cwd: string, ...args: string[]): string {
-    const child = spawnSync('git', args, { cwd, encoding: 'utf8' });
-
-    expect(child.status).toBe(0);
-
-    return child.stdout.trim();
+    return gitRead(cwd, ...args);
   }
 
   function versioned(
@@ -1547,11 +1543,7 @@ describe('CHD-531 mandatory authentication preparation', () => {
 
 describe('tester: CHD-577 branch and cleanup boundaries', () => {
   function read(...args: string[]): string {
-    const result = spawnSync('git', args, { cwd: at.root, encoding: 'utf8' });
-
-    expect(result.status).toBe(0);
-
-    return result.stdout.trim();
+    return gitRead(at.root, ...args);
   }
 
   function publishing(): Promise<void> {

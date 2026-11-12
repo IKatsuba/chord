@@ -9,14 +9,13 @@
  */
 import { join } from 'node:path';
 import { authenticate } from './authenticate.ts';
-import { check, compile, install, natives, quality } from './build.ts';
+import { compile, install, natives, quality } from './build.ts';
 import { commitVersion, holdVersion, pushVersion } from './bump.ts';
 import { channelOf } from '../../../src/channel.ts';
 import {
   die,
   identity,
   npm,
-  type Package,
   PACKAGES,
   type Release,
   run,
@@ -27,7 +26,8 @@ import { pack } from './pack.ts';
 import { packageVersion, preflight } from './preflight.ts';
 import { publish, publishArguments, tarball, tarballs } from './publish.ts';
 import { selftest } from './selftest.ts';
-import { type ReleaseOptions, type Stage } from './select.ts';
+import type { ReleaseOptions } from './select.ts';
+import { type FoundPackage, isPublish, type Stage } from '../steps.ts';
 import { sign } from './sign.ts';
 import { releaseVersion, VersionError } from './version.ts';
 
@@ -75,28 +75,45 @@ function notary(release: Release): void {
 }
 
 /**
- * Runs `stages`, guarded as the owner decided, on `release`, at `wanted`:
- * a version or a bump of package.json's, or package.json's own if none.
+ * Runs `stages` of `found`'s release, guarded as the owner decided, on
+ * `release`, at `wanted`: a version or a bump of package.json's, or
+ * package.json's own if none.
  */
 export async function runRelease(
   release: Release,
-  stages: readonly Stage[],
+  found: FoundPackage,
+  stages: readonly string[],
   options: ReleaseOptions,
   machine: { platform: string; arch: string } = process,
   wanted?: string,
 ): Promise<void> {
-  const has = (stage: Stage) => stages.includes(stage);
+  const has = (stage: string) => stages.includes(stage);
   const dryRun = options.dryRun ?? false;
+  const list = found.steps.release;
+  const selected = list.filter((stage) => has(stage.name));
+  const built = selected.filter((stage): stage is Stage => !isPublish(stage));
 
-  // Signing and notarisation need this Mac's keychain and Rosetta: refused
-  // at once anywhere else.
-  if (
-    (has('natives') || has('sign') || has('notarise')) &&
-    !(machine.platform === 'darwin' && machine.arch === 'arm64')
-  ) {
-    die(
-      `natives, sign and notarise run only on an arm64 Mac; this is ${machine.platform}-${machine.arch}`,
-    );
+  // A stage that needs another machine (chord's signing: this Mac's keychain
+  // and Rosetta) is refused at once anywhere else, only when selected.
+  for (const stage of built) {
+    if (
+      stage.machine !== undefined &&
+      !(
+        machine.platform === stage.machine.platform &&
+        machine.arch === stage.machine.arch
+      )
+    ) {
+      const bound = list.filter(
+        (each): each is Stage =>
+          !isPublish(each) &&
+          each.machine?.platform === stage.machine!.platform &&
+          each.machine.arch === stage.machine!.arch,
+      );
+
+      die(
+        `${listed(bound.map((each) => each.name))} run only on ${machineName(stage.machine)}; this is ${machine.platform}-${machine.arch}`,
+      );
+    }
   }
 
   // Eligibility is checked before npm may hand over the terminal or save
@@ -104,12 +121,18 @@ export async function runRelease(
   // origin and no tag.
   const current = packageVersion(release);
   const next = target(release, current, wanted, options.channel);
+  const versioned = list
+    .filter(
+      (stage): stage is Stage => !isPublish(stage) && stage.versioned === true,
+    )
+    .map((stage) => stage.name);
 
-  // The version enters the binary at compile: a run without it would pack
-  // or publish what was built at package.json's.
-  if (next !== current && !has('compile')) {
+  // The version enters what is published at a versioned stage (chord's
+  // compile): a run without it would pack or publish what was built at
+  // package.json's.
+  if (next !== current && !versioned.some(has)) {
     die(
-      `a new version needs the compile stage: ${next} is not package.json's ${current}`,
+      `a new version needs the ${listed(versioned, 'or')} stage: ${next} is not package.json's ${current}`,
     );
   }
 
@@ -132,31 +155,15 @@ export async function runRelease(
     release.out(
       `resuming ${version}: a platform package is published, @chorded/chord is not`,
     );
-    await published(release, version, options.package);
+    await published(release, version);
 
     return;
   }
 
-  // The signing identity and Apple's credentials, found before the build.
-  if (has('natives') || has('sign')) {
-    identity(release);
+  // What the selected stages need, found before the build, each once.
+  for (const ready of new Set(built.flatMap((stage) => stage.ready ?? []))) {
+    await ready(release);
   }
-
-  if (has('notarise')) {
-    notary(release);
-  }
-
-  const steps: Record<Stage, () => void | Promise<void>> = {
-    install: () => chord.install(release),
-    check: () => check(release),
-    natives: () => chord.natives(release),
-    compile: () => chord.compile(release),
-    sign: () => chord.sign(release),
-    selftest: () => chord.selftest(release),
-    notarise: () => chord.notarise(release),
-    pack: () => chord.pack(release),
-    publish: () => published(release, version, options.package),
-  };
 
   // A new version is written and committed before any stage reads it; a
   // run that publishes keeps the commit on origin once pushed, any other
@@ -171,8 +178,10 @@ export async function runRelease(
       pushVersion(release, version, held);
     }
 
-    for (const stage of stages) {
-      await steps[stage]();
+    for (const stage of selected) {
+      await (isPublish(stage)
+        ? published(release, version)
+        : stage.run(release, version));
     }
 
     if (dryRun) {
@@ -198,6 +207,18 @@ export async function runRelease(
     // Kept once pushed, so only an unpushed commit is dropped.
     held?.drop();
   }
+}
+
+/** `a`, `a and b`, `a, b and c`. */
+function listed(names: readonly string[], and = 'and'): string {
+  return names.length < 2
+    ? names.join('')
+    : `${names.slice(0, -1).join(', ')} ${and} ${names.at(-1)}`;
+}
+
+/** How a refusal names a machine: chord's is "an arm64 Mac". */
+function machineName({ platform, arch }: NonNullable<Stage['machine']>) {
+  return platform === 'darwin' ? `an ${arch} Mac` : `${platform}-${arch}`;
 }
 
 /**
@@ -242,12 +263,7 @@ function latestStable(release: Release): string {
 }
 
 /** Publishes, and prints the version last once it is tagged. */
-async function published(
-  release: Release,
-  version: string,
-  only: Package | undefined,
-): Promise<void> {
-  if (await publish(release, { version, only })) {
-    release.out(version);
-  }
+async function published(release: Release, version: string): Promise<void> {
+  await publish(release, { version });
+  release.out(version);
 }

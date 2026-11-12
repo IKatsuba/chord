@@ -18,7 +18,6 @@ import {
   die,
   npm,
   type Package,
-  PACKAGES,
   PLATFORMS,
   published,
   type Release,
@@ -57,19 +56,16 @@ export function publishArguments(version: string, file: string): string[] {
 
 export interface PublishOptions {
   readonly version: string;
-  /** Only this package; every one when absent. */
-  readonly only?: Package | undefined;
 }
 
 /**
  * Publishes what npm does not have yet and tags the version once all five
- * answer. Answers whether it tagged: a single platform package published
- * while another is still missing leaves the tag to a later run.
+ * answer.
  */
 export async function publish(
   release: Release,
-  { version, only }: PublishOptions,
-): Promise<boolean> {
+  { version }: PublishOptions,
+): Promise<void> {
   // Before anything npm cannot take back.
   const archives = fetchedSource(release);
   let asked = false;
@@ -133,32 +129,13 @@ export async function publish(
     }
   };
 
-  if (only === undefined) {
-    for (const name of PLATFORMS) {
-      publishOne(name);
-    }
-
-    await publishMain();
-  } else if (only === 'chord') {
-    await publishMain();
-  } else {
-    publishOne(only);
-
-    const missing = PACKAGES.find((name) => !published(release, name, version));
-
-    if (missing !== undefined) {
-      release.err(
-        `not tagged: @chorded/${missing}@${version} does not answer npm view yet; v${version} is tagged by the run that publishes the last of the five`,
-      );
-
-      return false;
-    }
+  for (const name of PLATFORMS) {
+    publishOne(name);
   }
 
+  await publishMain();
   tag(release, version);
   draftRelease(release, version, archives);
-
-  return true;
 }
 
 /** The version tagged, annotated, and the tag pushed to origin. */

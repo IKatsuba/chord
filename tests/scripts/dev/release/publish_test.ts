@@ -13,7 +13,6 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { VersionError } from '../../../../src/channel.ts';
 import {
-  type Package,
   PACKAGES,
   PLATFORMS,
   type Release,
@@ -200,13 +199,14 @@ function context(): Release {
   };
 }
 
-/** A release that publishes, as preflight then publish run it. */
-async function release(only?: Package): Promise<boolean> {
+/** A release that publishes, as preflight then publish run it: true once it ends. */
+async function release(): Promise<boolean> {
   const found = preflight(context(), { dryRun: false, publish: true });
 
   authenticate(context());
+  await publish(context(), { version: found.version });
 
-  return await publish(context(), { version: found.version, only });
+  return true;
 }
 
 /** The message a run died with. */
@@ -446,48 +446,6 @@ describe('before the first publish', () => {
     expect(await died(release)).toBe(
       `no ${tarball} to publish; nothing of this run is left to resume from`,
     );
-  });
-});
-
-describe('--package', () => {
-  test('publishes only the platform package named, and leaves the tag while one is missing', async () => {
-    expect(await release('chord-linux-arm64')).toBeFalse();
-    expect(isPublished('chord-linux-arm64')).toBeTrue();
-    expect(isPublished('chord-darwin-x64')).toBeFalse();
-    expect(isPublished('chord')).toBeFalse();
-    expect(err).toStrictEqual([
-      `not tagged: @chorded/chord-darwin-x64@${VERSION} does not answer npm view yet; ${TAG} is tagged by the run that publishes the last of the five`,
-    ]);
-    expect(tagged(repo)).toBe('');
-  });
-
-  test('tags once the package published is the last of the five', async () => {
-    for (const name of ['chord-darwin-x64', 'chord-linux-arm64', 'chord']) {
-      publishedAlready(name);
-    }
-
-    // The main package on npm stops preflight, so publish runs alone.
-    expect(
-      await publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
-    ).toBeTrue();
-    expect(tagged(origin)).toBe(TAG);
-  });
-
-  test('chord waits for every platform package before it publishes', async () => {
-    expect(await died(() => release('chord'))).toStartWith(
-      `@chorded/chord-darwin-x64@${VERSION} did not answer npm view in 15 minutes; @chorded/chord was not published.`,
-    );
-    expect(isPublished('chord')).toBeFalse();
-  });
-
-  test('chord, once the platform packages answer, publishes and tags', async () => {
-    for (const name of PLATFORMS) {
-      publishedAlready(name);
-    }
-
-    expect(await release('chord')).toBeTrue();
-    expect(isPublished('chord')).toBeTrue();
-    expect(tagged(origin)).toBe(TAG);
   });
 });
 
@@ -887,12 +845,6 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
     expect(tagged(origin)).toContain(TAG);
   });
 
-  test('a single package that leaves another missing makes no draft', async () => {
-    await release('chord-linux-x64');
-
-    expect(made()).toStrictEqual([]);
-  });
-
   test('no gh, or one not signed in, stops among the guards', async () => {
     executable(join(bin, 'gh'), '#!/bin/bash\necho nope >&2\nexit 1\n');
 
@@ -1006,22 +958,6 @@ describe.each(['next', 'beta'])('publishing on %s', (channel) => {
     expect(publishes()).toStrictEqual(
       PACKAGES.filter((name) => name !== 'chord-darwin-arm64').map(sent),
     );
-  });
-
-  test.each(PLATFORMS)('--package %s carries it', async (name) => {
-    nothingOnNpm();
-
-    expect(await release(name)).toBeFalse();
-    expect(publishes()).toStrictEqual([sent(name)]);
-  });
-
-  test('--package chord carries it', async () => {
-    for (const name of PLATFORMS) {
-      publishedAlready(name);
-    }
-
-    expect(await release('chord')).toBeTrue();
-    expect(publishes()).toStrictEqual([sent('chord')]);
   });
 
   test('the draft is marked a pre-release', async () => {

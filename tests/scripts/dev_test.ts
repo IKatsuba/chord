@@ -1,4 +1,4 @@
-import { describe, expect, test } from 'bun:test';
+import { describe, expect, spyOn, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { cp, readFile, symlink, writeFile } from 'node:fs/promises';
@@ -10,7 +10,24 @@ import stripAnsi from 'strip-ansi';
 import { type DevActions, devCommand } from '../../scripts/dev.ts';
 
 /** Two packages, as a repository with a workspace finds them. */
-const PACKAGES = [{ name: 'chord' }, { name: 'cursor-cloud-acp' }];
+const CHORD_STAGES = [
+  'install',
+  'quality',
+  'natives',
+  'compile',
+  'sign',
+  'selftest',
+  'notarise',
+  'pack',
+  'publish',
+];
+const PACKAGES = [
+  { name: 'chord', stages: CHORD_STAGES },
+  {
+    name: 'cursor-cloud-acp',
+    stages: ['install', 'quality', 'build', 'pack', 'publish'],
+  },
+];
 
 /** Each command `argv` ran, with what it was given; nothing is run. */
 async function parsed(argv: string[]): Promise<unknown[][]> {
@@ -34,6 +51,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     riffModels: record('riffModels'),
     selftest: record('selftest'),
     release: record('release'),
+    unclear: record('unclear'),
     chord: record('chord'),
     riff: record('riff'),
     qa: record('qa'),
@@ -538,177 +556,234 @@ describe('selftest', () => {
 });
 
 describe('release', () => {
-  /** The stages and options `argv` gives the release, or the error. */
+  /** The stages, options and bump `argv` gives chord's release. */
   async function released(argv: string[]) {
-    const [call] = await parsed(['release', ...argv]);
+    const [call] = await parsed(['release', 'chord', ...argv]);
 
-    expect(call?.[0]).toBe('release');
+    expect(call?.slice(0, 2)).toStrictEqual(['release', 'chord']);
 
-    return { stages: call?.[1], options: call?.[2] };
+    return { stages: call?.[2], options: call?.[3], bump: call?.[4] };
   }
 
-  test('with no options runs every stage', async () => {
+  test('with no options runs every stage of the package', async () => {
     expect(await released([])).toStrictEqual({
-      stages: [
-        'install',
-        'check',
-        'natives',
-        'compile',
-        'sign',
-        'selftest',
-        'notarise',
-        'pack',
-        'publish',
-      ],
+      stages: CHORD_STAGES,
       options: {},
+      bump: undefined,
     });
+    expect(await parsed(['release', 'cursor-cloud-acp'])).toStrictEqual([
+      [
+        'release',
+        'cursor-cloud-acp',
+        ['install', 'quality', 'build', 'pack', 'publish'],
+        {},
+        undefined,
+      ],
+    ]);
   });
 
   test('--dry-run runs every stage but publish', async () => {
     const { stages, options } = await released(['--dry-run']);
 
-    expect(stages).not.toContain('publish');
-    expect(stages).toHaveLength(8);
+    expect(stages).toStrictEqual(CHORD_STAGES.slice(0, -1));
     expect(options).toStrictEqual({ dryRun: true });
   });
 
   test('--skip takes a comma-separated list', async () => {
-    expect(await released(['--skip', 'install,check'])).toStrictEqual({
-      stages: [
-        'natives',
-        'compile',
-        'sign',
-        'selftest',
-        'notarise',
-        'pack',
-        'publish',
-      ],
-      options: { skip: ['install', 'check'] },
+    expect(await released(['--skip', 'install,quality'])).toStrictEqual({
+      stages: CHORD_STAGES.slice(2),
+      options: { skip: ['install', 'quality'] },
+      bump: undefined,
     });
   });
 
-  test('--dry-run --skip notarise, the run without Apple', async () => {
-    expect(
-      (await released(['--dry-run', '--skip', 'notarise'])).stages,
-    ).toStrictEqual([
-      'install',
-      'check',
-      'natives',
-      'compile',
-      'sign',
-      'selftest',
-      'pack',
-    ]);
-  });
-
-  test('--only runs the stages named', async () => {
-    expect((await released(['--only', 'publish'])).stages).toStrictEqual([
-      'publish',
-    ]);
+  test("--only, --from and --to over the package's own stages", async () => {
     expect((await released(['--only', 'pack,sign'])).stages).toStrictEqual([
       'sign',
       'pack',
     ]);
-  });
-
-  test('--from and --to', async () => {
-    expect((await released(['--from', 'selftest'])).stages).toStrictEqual([
-      'selftest',
-      'notarise',
-      'pack',
-      'publish',
-    ]);
     expect(
       (await released(['--from', 'natives', '--to', 'sign'])).stages,
     ).toStrictEqual(['natives', 'compile', 'sign']);
+    expect(
+      (
+        await parsed(['release', 'cursor-cloud-acp', '--from', 'build'])
+      )[0]?.[2],
+    ).toStrictEqual(['build', 'pack', 'publish']);
   });
 
-  test('--package names one of the five packages', async () => {
-    expect(
-      await released(['--only', 'publish', '--package', 'chord-linux-x64']),
-    ).toStrictEqual({
-      stages: ['publish'],
-      options: { only: ['publish'], package: 'chord-linux-x64' },
-    });
-    expect((await released(['--package', 'chord'])).stages).toContain(
-      'publish',
+  test("a stage the package does not have is refused, naming the package's stages", async () => {
+    await expect(
+      parsed(['release', 'cursor-cloud-acp', '--skip', 'compile']),
+    ).rejects.toThrow(
+      new ValidationError(
+        'cursor-cloud-acp has no stage "compile"; its stages are install, quality, build, pack, publish',
+      ),
     );
+    await expect(
+      parsed(['release', 'chord', '--only', 'build']),
+    ).rejects.toThrow('chord has no stage "build"');
   });
 
   test.each([
     ['an unknown stage', ['--skip', 'tests']],
     ['an unknown stage in a list', ['--only', 'pack,tests']],
-    ['an unknown stage for --from', ['--from', 'build']],
-    ['an unknown package', ['--package', 'chord-windows-x64']],
-    ['--only with --skip', ['--only', 'publish', '--skip', 'check']],
+    ['the old check stage', ['--skip', 'check']],
+    ['--package, which is gone', ['--package', 'chord']],
+    ['--npm, which never was', ['--npm', '@chorded/chord']],
+    ['--only with --skip', ['--only', 'publish', '--skip', 'quality']],
     ['--only with --from', ['--only', 'publish', '--from', 'pack']],
     ['--only with --to', ['--only', 'pack', '--to', 'pack']],
-    ['--package with --dry-run', ['--package', 'chord', '--dry-run']],
     ['--dry-run with --only publish', ['--dry-run', '--only', 'publish']],
-    ['--package without publish', ['--to', 'pack', '--package', 'chord']],
-    ['options that leave no stage', ['--from', 'pack', '--to', 'check']],
-    ['an argument', ['now']],
+    ['options that leave no stage', ['--from', 'pack', '--to', 'quality']],
+    ['a second argument', ['now']],
+    ['a version as an argument', ['1.0.0']],
   ])('refuses %s', async (_name, argv) => {
-    await expect(parsed(['release', ...argv])).rejects.toThrow(ValidationError);
+    await expect(parsed(['release', 'chord', ...argv])).rejects.toThrow(
+      ValidationError,
+    );
+  });
+
+  test('an unknown package is refused, listing the packages', async () => {
+    await expect(parsed(['release', 'x'])).rejects.toThrow(
+      'Expected values: "chord", "cursor-cloud-acp"',
+    );
   });
 });
 
-describe('release [version]', () => {
+describe('a bare release', () => {
+  const line =
+    'release: not clear which package to release: bun dev release <package> (chord, cursor-cloud-acp)';
+
+  test('releases nothing and says so, whatever options it is given', async () => {
+    for (const argv of [
+      [],
+      ['--dry-run'],
+      ['--bump', 'minor', '--channel', 'next'],
+      ['--only', 'publish'],
+      ['--skip', 'compile'],
+    ]) {
+      expect(await parsed(['release', ...argv])).toStrictEqual([
+        ['unclear', line],
+      ]);
+    }
+  });
+
+  test('says it on stderr and exits 1, running nothing', () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        new URL('../../scripts/dev.ts', import.meta.url).pathname,
+        'release',
+        '--dry-run',
+      ],
+      { encoding: 'utf8', timeout: 10_000 },
+    );
+
+    expect(result.stderr).toBe(
+      'release: not clear which package to release: bun dev release <package> (chord)\n',
+    );
+    expect(result.stdout).toBe('');
+    expect(result.status).toBe(1);
+  });
+});
+
+describe('release --bump', () => {
   test('takes an exact version or a bump', async () => {
     for (const version of ['1.0.0', 'major', 'minor', 'patch', 'fix']) {
-      const [call] = await parsed(['release', version, '--dry-run']);
+      const [call] = await parsed([
+        'release',
+        'chord',
+        '--bump',
+        version,
+        '--dry-run',
+      ]);
 
-      expect(call?.[3]).toBe(version);
+      expect(call?.[4]).toBe(version);
+      expect(call?.[3]).toStrictEqual({ dryRun: true });
     }
-
-    expect((await parsed(['release']))[0]?.[3]).toBeUndefined();
   });
 
   test.each([['v1.0.0'], ['1.0'], ['next'], ['1.0.0+build']])(
     'refuses %s',
     async (version) => {
-      await expect(parsed(['release', version])).rejects.toThrow(
-        ValidationError,
-      );
+      await expect(
+        parsed(['release', 'chord', '--bump', version]),
+      ).rejects.toThrow(ValidationError);
     },
   );
 
-  test('is parsed whatever the stages; the release judges it', async () => {
-    const [call] = await parsed(['release', 'patch', '--only', 'publish']);
+  test('needs a value', async () => {
+    await expect(parsed(['release', 'chord', '--bump'])).rejects.toThrow(
+      ValidationError,
+    );
+  });
 
-    expect(call?.[1]).toEqual(['publish']);
-    expect(call?.[3]).toBe('patch');
+  test('is parsed whatever the stages; the release judges it', async () => {
+    const [call] = await parsed([
+      'release',
+      'chord',
+      '--bump',
+      'patch',
+      '--only',
+      'publish',
+    ]);
+
+    expect(call?.[2]).toEqual(['publish']);
+    expect(call?.[4]).toBe('patch');
   });
 });
 
 describe('release --channel', () => {
   test('passes on the name, the release judges it', async () => {
     for (const name of ['next', 'latest', 'Next']) {
-      const [call] = await parsed(['release', 'major', '--channel', name]);
+      const [call] = await parsed([
+        'release',
+        'chord',
+        '--bump',
+        'major',
+        '--channel',
+        name,
+      ]);
 
-      expect(call?.[2]).toMatchObject({ channel: name });
-      expect(call?.[3]).toBe('major');
+      expect(call?.[3]).toMatchObject({ channel: name });
+      expect(call?.[4]).toBe('major');
     }
   });
 
-  test('takes no version', async () => {
-    const [call] = await parsed(['release', '--channel', 'next']);
+  test('takes no --bump', async () => {
+    const [call] = await parsed(['release', 'chord', '--channel', 'next']);
 
-    expect(call?.[2]).toMatchObject({ channel: 'next' });
-    expect(call?.[3]).toBeUndefined();
-  });
-
-  test('is absent without it', async () => {
-    const [call] = await parsed(['release', 'major']);
-
-    expect(call?.[2]).not.toHaveProperty('channel');
+    expect(call?.[3]).toMatchObject({ channel: 'next' });
+    expect(call?.[4]).toBeUndefined();
   });
 
   test('needs a name', async () => {
-    await expect(parsed(['release', '--channel'])).rejects.toThrow(
+    await expect(parsed(['release', 'chord', '--channel'])).rejects.toThrow(
       ValidationError,
     );
   });
+});
+
+test("release's help lists each package's stages", async () => {
+  const shown: string[] = [];
+  const log = spyOn(console, 'log').mockImplementation((text: string) => {
+    shown.push(text);
+  });
+
+  try {
+    await devCommand(undefined, PACKAGES).noExit().parse(['release', '--help']);
+  } finally {
+    log.mockRestore();
+  }
+
+  const help = stripAnsi(shown.join('\n')).replace(/ +$/gm, '');
+
+  expect(help).toContain(
+    '  Stages:\n    chord             install, quality, natives, compile, sign, selftest, notarise, pack, publish\n    cursor-cloud-acp  install, quality, build, pack, publish\n',
+  );
+  expect(help).toContain('--bump');
+  expect(help).not.toContain('--package');
 });
 
 describe('tester: release parsing boundaries', () => {

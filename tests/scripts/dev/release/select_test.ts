@@ -1,9 +1,25 @@
 import { describe, expect, test } from 'bun:test';
 import { ValidationError } from '@cliffy/command';
 import {
-  selectStages,
-  STAGES,
+  type ReleaseOptions,
+  selectStages as selectOf,
 } from '../../../../scripts/dev/release/select.ts';
+
+const STAGES = [
+  'install',
+  'quality',
+  'natives',
+  'compile',
+  'sign',
+  'selftest',
+  'notarise',
+  'pack',
+  'publish',
+];
+
+/** chord's stages the options leave. */
+const selectStages = (options: ReleaseOptions) =>
+  selectOf({ name: 'chord', stages: STAGES }, options);
 
 describe('the stages a run leaves', () => {
   test('every stage, in order, with no options', () => {
@@ -17,7 +33,7 @@ describe('the stages a run leaves', () => {
   });
 
   test('--skip leaves out the stages named', () => {
-    expect(selectStages({ skip: ['check', 'notarise'] })).toStrictEqual([
+    expect(selectStages({ skip: ['quality', 'notarise'] })).toStrictEqual([
       'install',
       'natives',
       'compile',
@@ -45,7 +61,7 @@ describe('the stages a run leaves', () => {
     ]);
     expect(selectStages({ to: 'compile' })).toStrictEqual([
       'install',
-      'check',
+      'quality',
       'natives',
       'compile',
     ]);
@@ -65,7 +81,7 @@ describe('the stages a run leaves', () => {
   test('--dry-run with --skip, as the run without Apple', () => {
     expect(selectStages({ dryRun: true, skip: ['notarise'] })).toStrictEqual([
       'install',
-      'check',
+      'quality',
       'natives',
       'compile',
       'sign',
@@ -73,26 +89,37 @@ describe('the stages a run leaves', () => {
       'pack',
     ]);
   });
-
-  test('--package with publish in the run', () => {
-    expect(
-      selectStages({ only: ['publish'], package: 'chord-linux-x64' }),
-    ).toStrictEqual(['publish']);
-  });
 });
 
 describe('refused', () => {
-  test('--dry-run with --only publish', () => {
-    expect(() => selectStages({ dryRun: true, only: ['publish'] })).toThrow(
-      ValidationError,
-    );
+  test("a stage the package does not have, naming the package's stages", () => {
+    const one = { name: 'one', stages: ['build', 'pack', 'publish'] };
+
+    for (const options of [
+      { skip: ['compile'] },
+      { only: ['pack', 'compile'] },
+      { from: 'compile' },
+      { to: 'compile' },
+    ]) {
+      expect(() => selectOf(one, options)).toThrow(
+        new ValidationError(
+          'one has no stage "compile"; its stages are build, pack, publish',
+        ),
+      );
+    }
   });
 
-  test('--package without publish in the run', () => {
-    expect(() =>
-      selectStages({ to: 'pack', package: 'chord-linux-x64' }),
-    ).toThrow(ValidationError);
-    expect(() => selectStages({ skip: ['publish'], package: 'chord' })).toThrow(
+  test("another package's stages, in its own order", () => {
+    const one = { name: 'one', stages: ['build', 'pack', 'publish'] };
+
+    expect(selectOf(one, {})).toStrictEqual(['build', 'pack', 'publish']);
+    expect(selectOf(one, { dryRun: true, from: 'pack' })).toStrictEqual([
+      'pack',
+    ]);
+  });
+
+  test('--dry-run with --only publish', () => {
+    expect(() => selectStages({ dryRun: true, only: ['publish'] })).toThrow(
       ValidationError,
     );
   });
@@ -101,9 +128,9 @@ describe('refused', () => {
     expect(() => selectStages({ from: 'pack', to: 'install' })).toThrow(
       ValidationError,
     );
-    expect(() => selectStages({ only: ['check'], skip: ['check'] })).toThrow(
-      ValidationError,
-    );
+    expect(() =>
+      selectStages({ only: ['quality'], skip: ['quality'] }),
+    ).toThrow(ValidationError);
   });
 });
 

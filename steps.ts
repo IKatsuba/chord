@@ -3,6 +3,7 @@
  * ESLint's argv for `bun dev lint chord`, and its release's stages. Each
  * leaves `packages/`, the other packages' own, out.
  */
+import type { Release } from './scripts/dev/release/lib.ts';
 import type { PackageSteps } from './scripts/dev/steps.ts';
 
 const bun = process.execPath;
@@ -16,6 +17,9 @@ const stages = async () =>
   (await import('./scripts/dev/release/stages.ts')).chord;
 // Signing and notarisation need this Mac's keychain and Rosetta.
 const ARM_MAC = { platform: 'darwin', arch: 'arm64' };
+// One function for both stages that sign, so the release asks for the
+// identity once.
+const identity = async (release: Release) => (await stages()).identity(release);
 
 export default {
   checks: [
@@ -48,7 +52,7 @@ export default {
       name: 'natives',
       about: "every platform's packages; macOS libraries signed",
       machine: ARM_MAC,
-      ready: async (release) => (await stages()).identity(release),
+      ready: identity,
       run: async (release) => (await stages()).natives(release),
     },
     {
@@ -61,7 +65,7 @@ export default {
       name: 'sign',
       about: 'both macOS binaries signed and verified',
       machine: ARM_MAC,
-      ready: async (release) => (await stages()).identity(release),
+      ready: identity,
       run: async (release) => (await stages()).sign(release),
     },
     {

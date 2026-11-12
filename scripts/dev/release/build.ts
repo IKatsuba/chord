@@ -17,37 +17,14 @@ export function install(release: Release): void {
   }
 }
 
-export function check(release: Release): void {
-  if (
-    run(release, 'bun', ['scripts/dev.ts', 'quality', 'chord'], loud).status !==
-    0
-  ) {
-    die('bun dev quality chord failed');
-  }
-}
-
 /**
- * `name`'s checks from its steps.ts, by the runner `bun dev quality` uses,
- * in the release's root and environment.
+ * `bun dev quality <name>`: the package's checks from its steps.ts, by the
+ * runner, in the release's root and environment.
  */
-export async function quality(release: Release, name: string): Promise<void> {
-  const { packages, run: runSteps, spawnStep } = await import('../steps.ts');
-  const found = (await packages(release.root)).find(
-    (each) => each.name === name,
-  );
-
-  if (found === undefined) {
-    die(`no package ${name} in ${release.root}`);
-  }
-
-  const status = await runSteps(found, {
-    root: release.root,
-    env: release.env,
-    spawn: spawnStep,
-    output: release.err,
-  });
-
-  if (status !== 0) {
+export function quality(release: Release, name: string): void {
+  if (
+    run(release, 'bun', ['scripts/dev.ts', 'quality', name], loud).status !== 0
+  ) {
     die(`bun dev quality ${name} failed`);
   }
 }

@@ -20,6 +20,9 @@ import {
 } from '../../../../scripts/dev/release/select.ts';
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
 import { KINDS } from '../../../../scripts/dev/release/build.ts';
+import type { FoundPackage } from '../../../../scripts/dev/steps.ts';
+import chordSteps from '../../../../steps.ts';
+
 import { recordSums } from '../../../../scripts/dev/release/sums.ts';
 import {
   executable,
@@ -28,6 +31,9 @@ import {
   type Scratch,
   scratch,
 } from './scratch.ts';
+
+/** chord's steps.ts, for a release run in a child. */
+const STEPS = new URL('../../../../steps.ts', import.meta.url).pathname;
 
 // A whole run's guards and their order, on a scratch repository with a bare
 // origin: npm, bun, security and xcrun faked, each logging what it was asked,
@@ -131,13 +137,24 @@ function context(env: Record<string, string> = {}): Release {
   };
 }
 
-/** Runs the release `options` select, on `machine`. */
+/** chord as discovery finds it, its stages from its steps.ts. */
+const CHORD: FoundPackage = { name: 'chord', folder: '.', steps: chordSteps };
+
+/** The stages of chord's release `options` select. */
+function select(options: ReleaseOptions): string[] {
+  return selectStages(
+    { name: 'chord', stages: chordSteps.release.map((stage) => stage.name) },
+    options,
+  );
+}
+
+/** Runs chord's release `options` select, on `machine`. */
 async function released(
   options: ReleaseOptions,
   env: Record<string, string> = {},
   machine = MAC,
 ): Promise<void> {
-  await runRelease(context(env), selectStages(options), options, machine);
+  await runRelease(context(env), CHORD, select(options), options, machine);
 }
 
 async function died(run: Promise<void>): Promise<string> {
@@ -274,7 +291,7 @@ test("Apple's credentials are checked before anything builds", async () => {
 });
 
 test('the credentials and the identity are asked only for the stages that need them', async () => {
-  await released({ to: 'check' }, { NO_NOTARY: 'yes', IDENTITIES: '' });
+  await released({ to: 'quality' }, { NO_NOTARY: 'yes', IDENTITIES: '' });
 
   expect(ran().filter((line) => !line.startsWith('npm '))).toStrictEqual([
     'bun install --frozen-lockfile',
@@ -283,10 +300,10 @@ test('the credentials and the identity are asked only for the stages that need t
 });
 
 test('a dry run that did not pack says what it ran, and publishes nothing', async () => {
-  await released({ dryRun: true, only: ['install', 'check'] });
+  await released({ dryRun: true, only: ['install', 'quality'] });
 
   expect(at.out.at(-1)).toBe(
-    `dry run: @chorded/chord ${VERSION}, ran install, check; not published`,
+    `dry run: @chorded/chord ${VERSION}, ran install, quality; not published`,
   );
   expect(ran().some((line) => line.startsWith('npm publish'))).toBeFalse();
 });
@@ -367,17 +384,6 @@ test('a stopped publish found by a run without publish stops it', async () => {
   expect(await died(released({ to: 'pack' }))).toBe(
     `a run without publish does not resume a stopped publish: @chorded/chord-darwin-arm64@${VERSION} is published; include publish`,
   );
-});
-
-test('--package publishes the one package, and prints no version while others are missing', async () => {
-  packed();
-
-  await released({ only: ['publish'], package: 'chord-linux-x64' });
-
-  expect(existsSync(join(at.place, 'published', 'chord-linux-x64'))).toBe(true);
-  expect(existsSync(join(at.place, 'published', 'chord'))).toBeFalse();
-  expect(at.out).not.toContain(VERSION);
-  expect(at.err.at(-1)).toStartWith('not tagged: ');
 });
 
 describe('tester: CHD-547 explicit version eligibility', () => {
@@ -604,7 +610,8 @@ describe('a version given', () => {
   ): Promise<void> {
     await runRelease(
       context(env),
-      selectStages(options),
+      CHORD,
+      select(options),
       options,
       MAC,
       version,
@@ -650,12 +657,12 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
 
     await releasedAt('minor', {
       dryRun: true,
-      only: ['install', 'check', 'compile'],
+      only: ['install', 'quality', 'compile'],
     });
 
     expect(checked()).toBe('9.10.0');
     expect(at.out.at(-1)).toBe(
-      'dry run: @chorded/chord 9.10.0, ran install, check, compile; not published',
+      'dry run: @chorded/chord 9.10.0, ran install, quality, compile; not published',
     );
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(version()).toBe(VERSION);
@@ -754,7 +761,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
 
     const head = out(at.root, 'rev-parse', 'HEAD');
 
-    await releasedAt(VERSION, { to: 'check' });
+    await releasedAt(VERSION, { to: 'quality' });
 
     expect(checked()).toBe(VERSION);
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
@@ -763,12 +770,12 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
   test.each([
     ['--only publish', { only: ['publish' as const] }],
     [
-      '--only check,pack,publish',
-      { only: ['check', 'pack', 'publish'] as const },
+      '--only quality,pack,publish',
+      { only: ['quality', 'pack', 'publish'] as const },
     ],
     ['--from pack', { from: 'pack' as const }],
     ['--skip compile', { skip: ['compile' as const] }],
-    ['--to check', { to: 'check' as const }],
+    ['--to quality', { to: 'quality' as const }],
   ])('a new version without compile is refused: %s', async (_name, options) => {
     const head = out(at.root, 'rev-parse', 'HEAD');
 
@@ -781,7 +788,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
 
   test("package.json's own version needs no compile", async () => {
     rmSync(join(at.place, 'published', `chord@${VERSION}`));
-    await releasedAt(VERSION, { dryRun: true, only: ['check'] });
+    await releasedAt(VERSION, { dryRun: true, only: ['quality'] });
 
     expect(checked()).toBe(VERSION);
   });
@@ -808,8 +815,8 @@ if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
   test("a run without a version needs no published package.json's version", async () => {
     rmSync(join(at.place, 'published', `chord@${VERSION}`));
 
-    await released({ dryRun: true, only: ['check'] });
-    await releasedAt(VERSION, { dryRun: true, only: ['check'] });
+    await released({ dryRun: true, only: ['quality'] });
+    await releasedAt(VERSION, { dryRun: true, only: ['quality'] });
 
     expect(checked()).toBe(VERSION);
   });
@@ -890,7 +897,8 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
 
     return runRelease(
       context(env),
-      selectStages(options),
+      CHORD,
+      select(options),
       options,
       MAC,
       wanted,
@@ -1091,7 +1099,8 @@ if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
 
         await runRelease(
           context(),
-          selectStages(options),
+          CHORD,
+          select(options),
           options,
           MAC,
           'major',
@@ -1252,7 +1261,9 @@ if [ "$2" = 'quality' ]; then kill -${signal} $PPID; exit 2; fi
       `import { dying } from ${JSON.stringify(join(lib, 'lib.ts'))};
 import { selectStages } from ${JSON.stringify(join(lib, 'select.ts'))};
 import { runRelease } from ${JSON.stringify(join(lib, 'stages.ts'))};
+import steps from ${JSON.stringify(STEPS)};
 
+const chord = { name: 'chord', folder: '.', steps };
 const options = ${JSON.stringify(options)};
 const release = {
   root: ${JSON.stringify(at.root)},
@@ -1264,7 +1275,7 @@ const release = {
 };
 
 await dying(() =>
-  runRelease(release, selectStages(options), options, { platform: 'darwin', arch: 'arm64' }, 'patch'),
+  runRelease(release, chord, selectStages({ name: 'chord', stages: steps.release.map((stage) => stage.name) }, options), options, { platform: 'darwin', arch: 'arm64' }, 'patch'),
 );
 `,
     );
@@ -1317,7 +1328,7 @@ describe('CHD-531 mandatory authentication preparation', () => {
   test.each([
     { only: ['install'] },
     { from: 'install', to: 'install' },
-    { skip: ['check'], to: 'install' },
+    { skip: ['quality'], to: 'install' },
     { dryRun: true, skip: ['notarise'], to: 'install' },
   ] satisfies ReleaseOptions[])(
     'stage selection %j retains auth for fresh nonpublishing runs',
@@ -1371,7 +1382,8 @@ describe('CHD-531 mandatory authentication preparation', () => {
       const error = await died(
         runRelease(
           context({ AUTH_FAIL: 'yes', ...failure }),
-          selectStages(options),
+          CHORD,
+          select(options),
           options,
           MAC,
           'patch',
@@ -1409,7 +1421,8 @@ describe('CHD-531 mandatory authentication preparation', () => {
       await died(
         runRelease(
           { ...context({ AUTH_FAIL: 'yes' }), tty: false },
-          selectStages(options),
+          CHORD,
+          select(options),
           options,
           MAC,
         ),
@@ -1441,7 +1454,8 @@ describe('CHD-531 mandatory authentication preparation', () => {
       const message = await died(
         runRelease(
           context({ AUTH_FAIL: 'yes' }),
-          selectStages(options),
+          CHORD,
+          select(options),
           options,
           machine,
           wanted,
@@ -1501,7 +1515,8 @@ describe('CHD-531 mandatory authentication preparation', () => {
       await died(
         runRelease(
           context({ AUTH_FAIL: 'yes' }),
-          selectStages(options),
+          CHORD,
+          select(options),
           options,
           MAC,
           wanted,

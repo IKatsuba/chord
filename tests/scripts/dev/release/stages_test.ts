@@ -434,8 +434,12 @@ describe('tester: CHD-412 release transaction boundaries', () => {
     return child.stdout.trim();
   }
 
-  function versioned(wanted: string, options: ReleaseOptions) {
-    return runRelease(context(), CHORD, select(options), options, MAC, wanted);
+  function versioned(
+    wanted: string,
+    options: ReleaseOptions,
+    found: FoundPackage = CHORD,
+  ) {
+    return runRelease(context(), found, select(options), options, MAC, wanted);
   }
 
   test('a successful local run drops its version commit without a dry-run flag', async () => {
@@ -486,8 +490,26 @@ if [ "$2" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
   test('an equal exact version can publish packed fixtures without a new commit', async () => {
     const head = output(at.root, 'rev-parse', 'HEAD');
 
-    packed();
-    await versioned(VERSION, { only: ['publish'] });
+    const found: FoundPackage = {
+      ...CHORD,
+      steps: {
+        ...CHORD.steps,
+        release: CHORD.steps.release.map((stage) =>
+          stage.name === 'pack'
+            ? {
+                ...stage,
+                run: () => {
+                  packed();
+
+                  return Promise.resolve();
+                },
+              }
+            : stage,
+        ),
+      },
+    };
+
+    await versioned(VERSION, { only: ['pack', 'publish'] }, found);
 
     expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(output(join(at.place, 'origin.git'), 'rev-parse', 'main')).toBe(
@@ -588,7 +610,25 @@ if [ "$2" = 'quality' ]; then exit 2; fi
   });
 
   test('a failed tag never prints the final version or pushes', async () => {
-    packed();
+    const found: FoundPackage = {
+      ...CHORD,
+      steps: {
+        ...CHORD.steps,
+        release: CHORD.steps.release.map((stage) =>
+          stage.name === 'pack'
+            ? {
+                ...stage,
+                run: () => {
+                  packed();
+
+                  return Promise.resolve();
+                },
+              }
+            : stage,
+        ),
+      },
+    };
+
     at.fake(
       'git',
       `echo "git $*" >>"$STATE/ran.log"
@@ -600,9 +640,11 @@ esac
 `,
     );
 
-    expect(await died(released({ only: ['publish'] }))).toBe(
-      `git tag -a v${VERSION} failed: fixture tag denied`,
-    );
+    const options = { only: ['pack', 'publish'] };
+
+    expect(
+      await died(runRelease(context(), found, select(options), options, MAC)),
+    ).toBe(`git tag -a v${VERSION} failed: fixture tag denied`);
     expect(existsSync(join(at.place, 'published', 'chord'))).toBeTrue();
     expect(at.out).not.toContain(VERSION);
     expect(ran().some((line) => line.startsWith('git push'))).toBeFalse();

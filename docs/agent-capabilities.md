@@ -18,7 +18,8 @@ and Codex 2.5.0 findings named below from source, not observation. Other
 findings retain their stated reading versions; a newer pin does not verify
 them again. Live CHD-561 checks are recorded separately in
 [the design](design/CHD-561.md). riff was read in chord at `a0db5059`
-for CHD-611; its model ids and windows have not been verified on live plans.
+for CHD-611; its model list, windows and efforts were checked against live
+ChatGPT and Grok plans on 2026-11-12.
 
 For an agent whose licence limits reverse-engineering (bob, cursor, nova,
 auggie, factory-droid, poolside), the owner's rule of 2026-10-18, recorded on
@@ -128,7 +129,7 @@ columns; section 3 uses them too.
 
 | Agent | Modes | Models | Config options | Effort |
 | --- | --- | --- | --- | --- |
-| riff | ask · auto, option only c [rf3] | ✓ config only, live list unverified c [rf3] | model · effort · mode c [rf3] | ✓ `thought_level`, five values c [rf3] |
+| riff | ask · auto, option only c [rf3] | ✓ config only, checked plan list c [rf3] | model · effort · mode c [rf3] | ✓ `thought_level`, per model c [rf3] |
 | agoragentic-acp | ✗ c | ✗ c | ✗ c | ✗ c |
 | auggie | default · ask c [au5] | ✓ legacy, may be null c [au5] | ✗ c | ✗ over ACP c [au5] |
 | autohand | ✓ six, legacy r [ah7] | ✓ legacy, next run r [ah7] | ✓ nine selects r [ah7] | ◐ no `thought_level` r [ah8] |
@@ -657,9 +658,9 @@ the sources.
 - Run as: `chord riff`; chord starts its own ACP child process
 - Install: included in chord
 
-Read in chord at `a0db5059` (CHD-611), with libfx 0.0.16. These are code
-findings; no live plan was used for this reading. The shipped per-plan
-model ids and context windows remain unverified.
+Read in chord at `a0db5059` (CHD-611), with libfx 0.0.16; model and effort
+updates at `30b08965`. The shipped model lists, windows and efforts were
+checked against live ChatGPT and Grok plans on 2026-11-12.
 
 **Footnotes.**
 
@@ -677,12 +678,14 @@ model ids and context windows remain unverified.
   riff adapter. Session grants are in memory and are not restored.
 - **rf3 (B9–B12).** `src/riff/models.ts` offers three select options:
   `model` (category `model`), `effort` (`thought_level`) and `mode` (`mode`).
-  Modes are `ask` and default `auto`; efforts `default`, `low`, `medium`,
-  `high`, `xhigh`. There is no `session/set_model` or `session/set_mode`
-  handler. `session/set_config_option` saves the option; model/effort apply
-  to the next prompt. `LIBFX_MODEL_UNSUPPORTED_EFFORT` resets effort to
-  default and sends `config_option_update` before the error. The model list
-  is static and explicitly unverified against live plans.
+  Modes are `ask` and default `auto`; effort offers `default` (the model's
+  own) plus its levels, from `low` up to `ultra`. There is no
+  `session/set_model` or `session/set_mode` handler.
+  `session/set_config_option` saves the option; model/effort apply to the
+  next prompt. Switching or resuming with an effort the model lacks resets
+  it to default. `LIBFX_MODEL_UNSUPPORTED_EFFORT` resets effort to default
+  and sends `config_option_update` before the error. The checked list ships
+  with chord; later plan changes may refuse a model or effort.
 - **rf4 (B13).** `promptOf` in `src/riff/adapter.ts` forwards text and image
   data/MIME, converts a resource link to `name: uri` text, and passes a text
   resource's URI and text to libfx. Audio and binary resources are refused

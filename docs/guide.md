@@ -775,15 +775,19 @@ the skill with `Skill <name> was not loaded: <reason>` in the transcript.
 
 ### Model and effort
 
-`/model` chooses from the current plan's list; `/config` offers effort:
-`default`, `low`, `medium`, `high` or `xhigh`. Model and effort changes apply
-to the next turn and keep the conversation. A model that rejects an effort
-ends that turn with `LIBFX_MODEL_UNSUPPORTED_EFFORT`; riff resets effort
-to `default`. Mode changes take effect during the session.
+`/model` chooses from the current plan's list; `/config` offers `default`
+(the model's own effort) plus the current model's levels: `low`, `medium`,
+`high`, `xhigh`, `max` or `ultra`, where supported. Changes apply to the next
+turn and keep the conversation. Switching or resuming with an effort the
+model lacks resets it to `default`. A model that rejects an effort ends
+that turn with `LIBFX_MODEL_UNSUPPORTED_EFFORT`; riff resets effort to
+`default`. Mode changes take effect during the session.
 
-The model ids and context windows in the list have not yet been checked
-against the live ChatGPT and Grok plans. The list is shipped with chord,
-not fetched from the plan, so an offered model or effort may be refused.
+The model list, context windows and effort levels were checked against the
+live ChatGPT and Grok plans on 2026-11-12. The list ships with chord rather
+than being fetched; a plan's later change may refuse a model or effort.
+
+<img src="images/riff-model.png" alt="riff's model picker showing the checked ChatGPT model list" width="900">
 
 ### Failures
 

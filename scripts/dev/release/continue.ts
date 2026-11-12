@@ -164,7 +164,9 @@ export function guarded(
   }
 
   // A path a later stage records again (sign over compile's macOS
-  // binaries) holds by the later stage's sum.
+  // binaries) holds by the later stage's sum; with that stage cleared to run
+  // again, the earlier one's applies, so changing it again starts from the
+  // earlier stage.
   const latest = new Map<string, { stage: string; sum: string }>();
 
   for (const stage of at.kept) {
@@ -190,7 +192,7 @@ export function guarded(
     if (now !== sum) {
       refuse(
         of,
-        `${path} is not what ${stage} left: its sha256 is ${now}, the state recorded ${sum}`,
+        `${path} is not what ${stage} left: its sha256 is ${now}, the state recorded ${sum}; run ${stage} again with --from ${stage}`,
       );
     }
   }

@@ -2359,9 +2359,23 @@ esac
         atCurrent();
         await run({ to: 'pack' });
 
-        expect(await died(run({ from: 'sign' }))).toStartWith(
+        const message = await died(run({ from: 'sign' }));
+
+        expect(message).toStartWith(
           `${BIN} is not what build left: its sha256 is `,
         );
+        expect(message).toEndWith(
+          `; run build again with --from build; rm -r .release/${name} abandons it`,
+        );
+
+        // The way on: from the stage that made it.
+        await run({ from: 'build', to: 'pack' });
+
+        expect(Object.keys(readState(at.root, name)!.stages)).toStrictEqual([
+          'build',
+          'sign',
+          'pack',
+        ]);
       });
 
       test('a tag the state did not make is refused', async () => {

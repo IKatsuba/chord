@@ -304,3 +304,84 @@ test('choose refuses an option or value not offered', () => {
     choose({ mode: 'default' }, MODELS, true, 'parameter:reasoning', 'high'),
   ).toBeUndefined();
 });
+
+describe('CHD-622 tester: config roundtrip boundaries', () => {
+  test('reselecting a partially reported model replaces all parameters with one valid default', () => {
+    const partial: Choice = Object.freeze({
+      mode: 'plan',
+      model: Object.freeze({
+        id: 'gpt-5',
+        params: Object.freeze({ reasoning: 'high' }),
+      }),
+    });
+
+    expect(optionIds(partial, false)).toEqual([
+      'mode',
+      'model',
+      'parameter:reasoning',
+    ]);
+    expect(choose(partial, MODELS, false, 'model', 'gpt-5')).toEqual({
+      mode: 'plan',
+      model: {
+        id: 'gpt-5',
+        params: { reasoning: 'medium', context: '200k' },
+      },
+    });
+    expect(partial.model?.params).toEqual({ reasoning: 'high' });
+  });
+
+  test('every offered parameter change stays within a published variant', () => {
+    for (const variant of GPT.variants ?? []) {
+      const current: Choice = {
+        mode: 'plan',
+        model: chosen({ id: GPT.id, params: variant.params }),
+      };
+
+      for (const parameter of GPT.parameters ?? []) {
+        for (const value of values(
+          current,
+          `parameter:${parameter.id}`,
+          false,
+        )) {
+          const next = choose(
+            current,
+            MODELS,
+            false,
+            `parameter:${parameter.id}`,
+            value,
+          )!;
+
+          expect(next.mode).toBe('plan');
+          expect(
+            GPT.variants?.some((candidate) =>
+              candidate.params.every(
+                (pair) => next.model?.params[pair.id] === pair.value,
+              ),
+            ),
+          ).toBe(true);
+          expect(current.model).toEqual(
+            chosen({ id: GPT.id, params: variant.params }),
+          );
+        }
+      }
+    }
+  });
+
+  test('an unlisted SDK selection roundtrips without inventing parameters or losing them', () => {
+    const reported = {
+      id: 'vendor-model:v1',
+      params: [{ id: 'unlisted:parameter', value: 'value/one' }],
+    };
+    const current: Choice = { mode: 'default', model: chosen(reported) };
+
+    expect(configOptions(current, [], false).map((each) => each.id)).toEqual([
+      'mode',
+      'model',
+    ]);
+    expect(choose(current, [], false, 'model', reported.id)).toBe(current);
+    expect(selection(current)).toEqual(reported);
+    expect(choose(current, [], false, 'mode', 'plan')?.model).toBe(
+      current.model,
+    );
+  });
+});

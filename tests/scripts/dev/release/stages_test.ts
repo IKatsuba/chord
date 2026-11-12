@@ -465,7 +465,7 @@ if [ "$2" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
     ).toBe('bun dev quality chord failed');
     expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(readFileSync(join(at.root, '.gitignore'), 'utf8')).toBe(
-      'dist/\nstage-output/\n',
+      'dist/\n.release/\nstage-output/\n',
     );
     expect(
       JSON.parse(readFileSync(join(at.root, 'package.json'), 'utf8')),

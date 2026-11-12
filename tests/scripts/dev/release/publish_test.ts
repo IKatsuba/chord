@@ -335,7 +335,9 @@ describe('CHD-561 tester: complete source guards precede every publish', () => {
 
       // A local inventory must never authorize an incomplete or stale set.
       writeFileSync(join(source, 'SHA256SUMS'), '');
-      await died(() => publish(context(), CHORD, { version: VERSION }));
+      await died(() =>
+        publish(context(), CHORD, { version: VERSION, recorded: stateOf() }),
+      );
 
       expect(
         lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
@@ -664,7 +666,7 @@ describe('preflight', () => {
 
 describe('tester: publish guard boundaries', () => {
   test('a fresh run publishes all five in order and announces npm once', async () => {
-    rmSync(join(state, 'published', PLATFORMS[0]));
+    nothingStarted();
 
     expect(await release()).toBeTrue();
     expect(
@@ -683,6 +685,7 @@ describe('tester: publish guard boundaries', () => {
   test('the tag stays absent while the main package answers late', async () => {
     for (const name of PLATFORMS) {
       publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
     }
 
     writeFileSync(join(state, 'late', 'chord'), '2');
@@ -702,7 +705,7 @@ describe('tester: publish guard boundaries', () => {
           },
         },
         CHORD,
-        { version: VERSION },
+        { version: VERSION, recorded: stateOf() },
       ),
     ).toBeUndefined();
     expect(sleeps).toStrictEqual([15_000, 15_000]);
@@ -723,6 +726,7 @@ describe('tester: publish guard boundaries', () => {
   test('a resumed package needs no local tarball or checksum', async () => {
     for (const name of [...PLATFORMS, 'chord']) {
       publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
     }
 
     rmSync(
@@ -738,7 +742,10 @@ describe('tester: publish guard boundaries', () => {
     tty = false;
 
     expect(
-      await publish(context(), CHORD, { version: VERSION }),
+      await publish(context(), CHORD, {
+        version: VERSION,
+        recorded: stateOf(),
+      }),
     ).toBeUndefined();
     expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
       [],
@@ -752,13 +759,17 @@ describe('tester: publish guard boundaries', () => {
     for (const name of [...PLATFORMS, 'chord']) {
       if (name !== 'chord-linux-x64') {
         publishedAlready(name);
+        answeredAlready(`@chorded/${name}`);
       }
     }
 
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '2');
 
     expect(
-      await publish(context(), CHORD, { version: VERSION }),
+      await publish(context(), CHORD, {
+        version: VERSION,
+        recorded: stateOf(),
+      }),
     ).toBeUndefined();
     expect(isPublished('chord-linux-x64')).toBeTrue();
     expect(sleeps).toEqual([15_000, 15_000]);
@@ -767,6 +778,8 @@ describe('tester: publish guard boundaries', () => {
   });
 
   test('a successful npm view with the wrong version stops with its answer', async () => {
+    nothingStarted();
+    publishedAlready(PLATFORMS[0]);
     executable(
       join(bin, 'npm'),
       NPM.replace('echo "${spec##*@}"', 'echo "9.9.8"'),
@@ -782,6 +795,8 @@ describe('tester: publish guard boundaries', () => {
   });
 
   test('preflight command failures retain their diagnostic and stop before publish', async () => {
+    nothingStarted();
+
     const cases = [
       ['status', 'git status failed: fixture status denied'],
       ['fetch', 'git fetch origin failed: fixture fetch denied'],
@@ -805,9 +820,7 @@ esac
       );
 
       expect(
-        await died(() =>
-          preflight(context(), CHORD, { dryRun: false, publish: true }),
-        ),
+        await died(() => preflight(context(), CHORD, { publish: true })),
       ).toBe(message!);
       expect(
         lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
@@ -818,7 +831,11 @@ esac
   test('tag and push failures retain their diagnostic after all five answer', async () => {
     for (const name of [...PLATFORMS, 'chord']) {
       publishedAlready(name);
+      answeredAlready(`@chorded/${name}`);
     }
+
+    const recorded = stateOf();
+    const built = recorded.state().built;
 
     for (const command of ['tag', 'push']) {
       executable(
@@ -833,7 +850,9 @@ esac
       rmSync(join(state, 'git.log'), { force: true });
 
       expect(
-        await died(() => publish(context(), CHORD, { version: VERSION })),
+        await died(() =>
+          publish(context(), CHORD, { version: VERSION, recorded }),
+        ),
       ).toBe(
         command === 'tag'
           ? `git tag -a ${TAG} failed: fixture tag denied`
@@ -841,8 +860,8 @@ esac
       );
       expect(lines('git.log')).toStrictEqual(
         command === 'tag'
-          ? [`tag -a ${TAG} -m chord ${TAG}`]
-          : [`tag -a ${TAG} -m chord ${TAG}`, `push origin ${TAG}`],
+          ? [`tag -a ${TAG} -m chord ${TAG} ${built}`]
+          : [`tag -a ${TAG} -m chord ${TAG} ${built}`, `push origin ${TAG}`],
       );
     }
   });

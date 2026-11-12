@@ -21,6 +21,7 @@ import {
   npm,
   published,
   type Release,
+  ReleaseError,
   type ReleasePackage,
   run,
   said,
@@ -28,6 +29,7 @@ import {
   waitPublished,
 } from './lib.ts';
 import { draftRelease, fetchedSource } from './source.ts';
+import { draftAt, tagAt } from './continue.ts';
 import { abandon, type ReleaseState } from './state.ts';
 import { checkSum } from './sums.ts';
 
@@ -103,12 +105,18 @@ export async function publish(
   let asked = false;
 
   const publishOne = (name: string) => {
-    if (npmState(name) !== undefined) {
+    // One a killed run left pending: npm's answer settles it, as npm
+    // refuses one version twice.
+    if (npmState(name) === 'pending' && published(release, name, version)) {
+      npmRecord(name, 'answered');
+    }
+
+    if (npmState(name) !== undefined && npmState(name) !== 'pending') {
       return;
     }
 
     // Not started by this release, so npm having it is someone else's.
-    if (published(release, name, version)) {
+    if (npmState(name) === undefined && published(release, name, version)) {
       die(
         `npm has ${name}@${version}, which this release did not publish; ${abandon(of.name)}`,
       );
@@ -183,24 +191,47 @@ export async function publish(
 
   if (!(await answered(main))) {
     die(
-      `${main}@${version} did not answer npm view in 15 minutes; ${tag} was not tagged. Once \`npm view ${main}@${version} version\` answers, tag it with: git tag -a ${tag} -m "${of.name} v${version}" ${recorded.state().built} && git push origin ${tag}`,
+      `${main}@${version} did not answer npm view in 15 minutes; ${tag} was not tagged. Once \`npm view ${main}@${version} version\` answers, tag it with: git tag -a ${tag} -m "${of.name} v${version}" ${recorded.state().built} && git push origin ${tag}, or run \`bun dev release ${of.name}\` to continue`,
     );
   }
 
   tagged(release, recorded, tag, `${of.name} v${version}`);
 
   if (draft && recorded.state().draft?.state !== 'made') {
+    // A draft a killed run left pending may be on GitHub already.
+    let url =
+      recorded.state().draft?.state === 'pending'
+        ? draftAt(release, tag)
+        : undefined;
+
     recorded.record((state) => ({ ...state, draft: { state: 'pending' } }));
 
-    const url = draftRelease(
-      release,
-      version,
-      tag,
-      `${of.name} ${tag}`,
-      archives,
-    );
+    if (url === undefined) {
+      try {
+        url = draftRelease(
+          release,
+          version,
+          tag,
+          `${of.name} ${tag}`,
+          archives,
+        );
+      } catch (error) {
+        if (!(error instanceof ReleaseError)) {
+          throw error;
+        }
 
-    recorded.record((state) => ({ ...state, draft: { state: 'made', url } }));
+        die(
+          `${error.message}\nor run \`bun dev release ${of.name}\` to continue`,
+        );
+      }
+    }
+
+    const made = url;
+
+    recorded.record((state) => ({
+      ...state,
+      draft: { state: 'made', url: made },
+    }));
   }
 }
 
@@ -219,6 +250,31 @@ function tagged(
 
   if (recorded.state().tag?.state === 'pushed') {
     return;
+  }
+
+  // One a killed run left pending: where the tag is settles it.
+  if (recorded.state().tag?.state === 'pending') {
+    const built = recorded.state().built;
+    const at = tagAt(release, name);
+    const elsewhere = [at.here, at.origin].find(
+      (sha) => sha !== undefined && sha !== built,
+    );
+
+    if (elsewhere !== undefined) {
+      die(
+        `${name} is on ${elsewhere}, not on ${built}, which the release built`,
+      );
+    }
+
+    if (at.origin === built) {
+      tag('pushed');
+
+      return;
+    }
+
+    if (at.here === built) {
+      tag('made');
+    }
   }
 
   if (recorded.state().tag?.state !== 'made') {

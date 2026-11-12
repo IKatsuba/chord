@@ -466,7 +466,7 @@ describe('a release whose state has a package answered', () => {
     writeFileSync(join(state, 'late', 'chord'), '1000');
 
     expect(await died(release)).toBe(
-      `@chorded/chord@${VERSION} did not answer npm view in 15 minutes; ${TAG} was not tagged. Once \`npm view @chorded/chord@${VERSION} version\` answers, tag it with: git tag -a ${TAG} -m "chord ${TAG}" ${git(repo, 'rev-parse', 'HEAD')} && git push origin ${TAG}`,
+      `@chorded/chord@${VERSION} did not answer npm view in 15 minutes; ${TAG} was not tagged. Once \`npm view @chorded/chord@${VERSION} version\` answers, tag it with: git tag -a ${TAG} -m "chord ${TAG}" ${git(repo, 'rev-parse', 'HEAD')} && git push origin ${TAG}, or run \`bun dev release chord\` to continue`,
     );
     expect(isPublished('chord')).toBeTrue();
     expect(tagged(repo)).toBe('');
@@ -936,7 +936,12 @@ describe('the draft GitHub release beside a publish (CHD-561)', () => {
 
     expect(said).toContain('its draft release failed: gh broke');
 
-    const line = said.slice(said.indexOf('Finish it with: ') + 16);
+    expect(said).toEndWith('\nor run `bun dev release chord` to continue');
+
+    const line = said.slice(
+      said.indexOf('Finish it with: ') + 16,
+      said.lastIndexOf('\n'),
+    );
     const argv = parse(line) as string[];
 
     expect(argv.slice(0, 10)).toStrictEqual([

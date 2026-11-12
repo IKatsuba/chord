@@ -37,14 +37,21 @@ import {
 } from './publish.ts';
 import { selftest } from './selftest.ts';
 import type { ReleaseOptions } from './select.ts';
-import { type FoundPackage, isPublish, type Stage } from '../steps.ts';
-import { sign } from './sign.ts';
 import {
-  abandon,
+  type FoundPackage,
+  isPublish,
+  type Publish,
+  type Stage,
+} from '../steps.ts';
+import { sign } from './sign.ts';
+import { guarded, versionCommit } from './continue.ts';
+import { ghReady } from './source.ts';
+import {
+  cleared,
   clearState,
-  described,
   finished,
   FORMAT,
+  left,
   readState,
   type ReleaseState,
   writeState,
@@ -136,40 +143,28 @@ async function locked(
   const built = selected.filter((stage): stage is Stage => !isPublish(stage));
 
   // A state an earlier run left: a finished one is cleared, and the run goes
-  // on without it; an unfinished one is refused, naming how to abandon it.
+  // on without it; the run goes on from an unfinished one.
   const earlier = readState(release.root, of.name);
 
   if (earlier !== undefined) {
-    if (finished(earlier, of.publish.npm, of.publish.githubRelease === true)) {
-      release.out(`${of.name} ${earlier.version} is released`);
-      clearState(release.root, of.name);
-    } else {
-      die(`${described(earlier, of.publish.npm)}; ${abandon(of.name)}`);
-    }
-  }
-
-  // A stage that needs another machine (chord's signing: this Mac's keychain
-  // and Rosetta) is refused at once anywhere else, only when selected.
-  for (const stage of built) {
-    if (
-      stage.machine !== undefined &&
-      !(
-        machine.platform === stage.machine.platform &&
-        machine.arch === stage.machine.arch
-      )
-    ) {
-      const bound = list.filter(
-        (each): each is Stage =>
-          !isPublish(each) &&
-          each.machine?.platform === stage.machine!.platform &&
-          each.machine.arch === stage.machine!.arch,
-      );
-
-      die(
-        `${listed(bound.map((each) => each.name))} ${bound.length === 1 ? 'runs' : 'run'} only on ${machineName(stage.machine)}; this is ${machine.platform}-${machine.arch}`,
+    if (!finished(earlier, of.publish.npm, of.publish.githubRelease === true)) {
+      return continued(
+        release,
+        found,
+        of,
+        earlier,
+        stages,
+        options,
+        machine,
+        wanted,
       );
     }
+
+    release.out(`${of.name} ${earlier.version} is released`);
+    clearState(release.root, of.name);
   }
+
+  onMachine(list, stages, machine);
 
   // Eligibility is checked before npm may hand over the terminal or save
   // credentials; publishing also requires the version's branch level with
@@ -272,27 +267,7 @@ async function locked(
   }
 
   try {
-    for (const stage of selected) {
-      if (isPublish(stage)) {
-        await publish(release, of, { version, recorded: recorded! });
-        clearState(release.root, of.name);
-        release.out(version);
-
-        continue;
-      }
-
-      await stage.run(release, version);
-      recorded?.record((state) => ({
-        ...state,
-        stages: {
-          ...state.stages,
-          [stage.name]: {
-            at: new Date().toISOString(),
-            outputs: sums(release, stage, version),
-          },
-        },
-      }));
-    }
+    await ran(release, of, selected, version, recorded);
 
     if (dryRun) {
       // A channel's run shows what would publish, so a dry run from its
@@ -315,6 +290,182 @@ async function locked(
     }
   } finally {
     held?.drop();
+  }
+}
+
+/**
+ * `selected` in order on `version`, each done stage recorded with its
+ * outputs' sums; publish last, after which the state is removed and the
+ * version printed last.
+ */
+async function ran(
+  release: Release,
+  of: ReleasePackage,
+  selected: readonly (Stage | Publish)[],
+  version: string,
+  recorded: Recorded | undefined,
+): Promise<void> {
+  for (const stage of selected) {
+    if (isPublish(stage)) {
+      await publish(release, of, { version, recorded: recorded! });
+      clearState(release.root, of.name);
+      release.out(version);
+
+      continue;
+    }
+
+    await stage.run(release, version);
+    recorded?.record((state) => ({
+      ...state,
+      stages: {
+        ...state.stages,
+        [stage.name]: {
+          at: new Date().toISOString(),
+          outputs: sums(release, stage, version),
+        },
+      },
+    }));
+  }
+}
+
+/**
+ * A run that goes on from `state`: what is left of it under the options,
+ * past the guards, the version commit a killed run left settled, then the
+ * stages left and what is left of publish.
+ */
+async function continued(
+  release: Release,
+  found: FoundPackage,
+  of: ReleasePackage,
+  state: ReleaseState,
+  stages: readonly string[],
+  options: ReleaseOptions,
+  machine: { platform: string; arch: string },
+  wanted: string | undefined,
+): Promise<void> {
+  const list = found.steps.release;
+  const plan = left(state, {
+    stages: list.map((stage) => stage.name),
+    selected: stages,
+    named: options.only !== undefined || options.from !== undefined,
+    dryRun: options.dryRun ?? false,
+    bump: wanted,
+    channel: options.channel,
+    npm: of.publish.npm,
+    githubRelease: of.publish.githubRelease === true,
+  });
+
+  onMachine(list, plan.stages, machine);
+
+  const commit = versionCommit(release, of, state);
+  const at = head(release);
+  const built = commit.at === 'made' ? commit.sha : state.built;
+  // Nothing of the release is out yet: --from its first stage may build
+  // again from HEAD, after a merge, say.
+  const rebuild =
+    options.from === list[0]?.name &&
+    state.versionCommit === undefined &&
+    Object.keys(state.npm).length === 0 &&
+    state.tag === undefined;
+
+  guarded(release, of, state, {
+    built,
+    building: plan.stages.length > 0,
+    publishing: plan.publish !== undefined,
+    kept: list
+      .map((stage) => stage.name)
+      .filter(
+        (stage) => stage in state.stages && !plan.cleared.includes(stage),
+      ),
+    rebuild,
+  });
+
+  if (plan.publish?.draft === true) {
+    ghReady(release);
+  }
+
+  await found.steps.preflight?.(release, state.version);
+  authenticate(release);
+
+  const selected = list.filter(
+    (stage) =>
+      plan.stages.includes(stage.name) ||
+      (isPublish(stage) && plan.publish !== undefined),
+  );
+
+  for (const ready of new Set(
+    selected.flatMap((stage) => (isPublish(stage) ? [] : (stage.ready ?? []))),
+  )) {
+    await ready(release);
+  }
+
+  const recorded = record(release, state);
+
+  if (commit.at === 'base') {
+    commitVersion(release, of, state.version);
+  }
+
+  if (commit.at !== 'none') {
+    const sha = commit.at === 'made' ? commit.sha : head(release);
+
+    recorded.record((now) => ({
+      ...now,
+      versionCommit: { state: 'made', sha },
+      built: sha,
+    }));
+  }
+
+  if (rebuild && at !== state.built) {
+    recorded.record((now) => ({ ...now, built: at }));
+  }
+
+  const made = recorded.state().versionCommit;
+
+  if (plan.publish !== undefined && made?.state === 'made') {
+    pushVersion(release, of, state.version);
+    recorded.record((now) => ({
+      ...now,
+      versionCommit: { state: 'pushed', sha: made.sha! },
+    }));
+  }
+
+  if (plan.cleared.length > 0) {
+    recorded.record((now) => cleared(now, plan.cleared));
+  }
+
+  await ran(release, of, selected, state.version, recorded);
+}
+
+/**
+ * A stage that needs another machine (chord's signing: this Mac's keychain
+ * and Rosetta) is refused at once anywhere else, only when it runs.
+ */
+function onMachine(
+  list: readonly (Stage | Publish)[],
+  names: readonly string[],
+  machine: { platform: string; arch: string },
+): void {
+  for (const stage of list) {
+    if (
+      isPublish(stage) ||
+      !names.includes(stage.name) ||
+      stage.machine === undefined ||
+      (machine.platform === stage.machine.platform &&
+        machine.arch === stage.machine.arch)
+    ) {
+      continue;
+    }
+
+    const bound = list.filter(
+      (each): each is Stage =>
+        !isPublish(each) &&
+        each.machine?.platform === stage.machine!.platform &&
+        each.machine.arch === stage.machine!.arch,
+    );
+
+    die(
+      `${listed(bound.map((each) => each.name))} ${bound.length === 1 ? 'runs' : 'run'} only on ${machineName(stage.machine)}; this is ${machine.platform}-${machine.arch}`,
+    );
   }
 }
 

@@ -1701,13 +1701,27 @@ describe.each([
       ...(githubRelease ? { githubRelease } : {}),
     };
     /** A stage that logs its name, as the fake commands log theirs. */
+    /**
+     * A stage that logs its name, as the fake commands log theirs, and
+     * fails once while `fail-<stage>` is in the scratch place.
+     */
     const logged = (stage: string) => async () => {
       await Promise.resolve();
       writeFileSync(join(at.place, 'ran.log'), `stage ${stage}\n`, {
         flag: 'a',
       });
+
+      const fail = join(at.place, `fail-${stage}`);
+
+      if (existsSync(fail)) {
+        rmSync(fail);
+
+        throw new ReleaseError(`${stage} failed once`);
+      }
     };
 
+    /** What build leaves and sign signs in place. */
+    const BIN = join(folder, 'dist', 'bin');
     const found: FoundPackage = {
       name,
       folder,
@@ -1715,12 +1729,29 @@ describe.each([
         checks: [],
         lint: [],
         release: [
-          { name: 'build', about: 'b', versioned: true, run: logged('build') },
           {
+            name: 'build',
+            about: 'b',
+            versioned: true,
+            outputs: () => [BIN],
+            run: async (release, version) => {
+              await logged('build')();
+              mkdirSync(join(release.root, folder, 'dist'), {
+                recursive: true,
+              });
+              writeFileSync(join(release.root, BIN), `built ${version}`);
+            },
+          },
+          {
+            // Signs build's output in place, as chord's sign does compile's.
             name: 'sign',
             about: 's',
             machine: { platform: 'darwin', arch: 'arm64' },
-            run: logged('sign'),
+            outputs: () => [BIN],
+            run: async (release) => {
+              await logged('sign')();
+              writeFileSync(join(release.root, BIN), 'signed');
+            },
           },
           {
             name: 'pack',
@@ -1809,6 +1840,19 @@ esac
 `,
       );
       fetchedArchives(at.root);
+      // gh: a draft is there once created; creating fails once while
+      // gh-fails is in the scratch place.
+      at.fake(
+        'gh',
+        `printf '%s\\n' "$*" >>"$STATE/gh.log"
+case "$1 $2" in
+'release view') [ -f "$STATE/draft" ] && echo https://github.example/draft || exit 1 ;;
+'release create')
+  if [ -f "$STATE/gh-fails" ]; then rm "$STATE/gh-fails"; echo 'gh broke' >&2; exit 1; fi
+  touch "$STATE/draft"; echo https://github.example/draft ;;
+esac
+`,
+      );
     });
 
     function run(
@@ -2007,7 +2051,9 @@ esac
       });
       expect(state.versionCommit).toBeUndefined();
       expect(Object.keys(state.stages)).toStrictEqual(['build', 'pack']);
-      expect(state.stages['build']!.outputs).toStrictEqual({});
+      expect(state.stages['build']!.outputs).toStrictEqual({
+        [BIN]: sha256(join(at.root, BIN)),
+      });
       expect(state.stages['pack']!.outputs).toStrictEqual(
         Object.fromEntries(
           npm.map((each) => {
@@ -2030,7 +2076,7 @@ esac
       expect(git_('log', '-1', '--format=%s')).toBe('the package');
     });
 
-    test('a finished state is cleared and the run goes on without it; an unfinished one is refused, naming how to abandon it', async () => {
+    test('a finished state is cleared and the run goes on without it; an unfinished one is gone on from, refusing --bump', async () => {
       const finished = {
         format: 1 as const,
         package: name,
@@ -2055,9 +2101,329 @@ esac
       writeFileSync(join(at.place, 'ran.log'), '');
 
       expect(await died(run({}, 'patch'))).toBe(
-        `${name} ${VERSION} is in progress (done: nothing; npm ${npm.length} of ${npm.length}); rm -r .release/${name} abandons it`,
+        `--bump patch is refused while ${name} ${VERSION} is in progress (done: nothing; npm ${npm.length} of ${npm.length}): \`bun dev release ${name}\` continues it; rm -r .release/${name} abandons it`,
       );
       expect(ran()).toStrictEqual([]);
+    });
+
+    /** The npm publish lines, by tarball name. */
+    const sent = () =>
+      ran()
+        .filter((line) => line.startsWith('npm publish'))
+        .map((line) => line.split(' ').at(-1)!.split('/').at(-1)!);
+    const all = (version: string) =>
+      npm.map(
+        (each) => `${each.replace('@', '').replace('/', '-')}-${version}.tgz`,
+      );
+    /** The version commits on the branch since the package's commit. */
+    const versionCommits = () =>
+      git_('log', '--format=%s', 'HEAD')
+        .split('\n')
+        .filter((line) => line.startsWith('chore: '));
+    const tagOn = () => git_('rev-parse', `${tagged(NEXT)}^{commit}`);
+
+    /** package.json's version not on npm yet, so a run at it may go. */
+    const atCurrent = () =>
+      rmSync(
+        join(
+          at.place,
+          'published',
+          `${main.slice('@chorded/'.length)}@${VERSION}`,
+        ),
+      );
+    /** npm has `each` at `version`. */
+    const onNpm = (each: string, version: string) =>
+      writeFileSync(
+        join(
+          at.place,
+          'published',
+          `${each.slice('@chorded/'.length)}@${version}`,
+        ),
+        '',
+      );
+
+    describe('a stopped release goes on from its state', () => {
+      test.each(['build', 'pack'])(
+        'stopped in %s, a rerun runs it and what follows, and nothing done twice',
+        async (stage) => {
+          writeFileSync(join(at.place, `fail-${stage}`), '');
+
+          expect(await died(run({ skip: ['sign'] }, 'patch'))).toBe(
+            `${stage} failed once`,
+          );
+          expect(readState(at.root, name)).toMatchObject({
+            version: NEXT,
+            versionCommit: { state: 'pushed' },
+          });
+
+          await run({ skip: ['sign'] });
+
+          expect(ran().filter((line) => line === 'stage build')).toHaveLength(
+            stage === 'build' ? 2 : 1,
+          );
+          expect(ran().filter((line) => line === 'stage pack')).toHaveLength(
+            stage === 'pack' ? 2 : 1,
+          );
+          expect(sent()).toStrictEqual(all(NEXT));
+          expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
+          expect(tagOn()).toBe(git_('rev-parse', 'origin/main'));
+          expect(readState(at.root, name)).toBeUndefined();
+          expect(at.out.at(-1)).toBe(NEXT);
+        },
+      );
+
+      test('a version commit whose push failed is pushed by the rerun, not made again', async () => {
+        const hook = join(at.place, 'origin.git', 'hooks', 'pre-receive');
+
+        executable(hook, '#!/bin/sh\necho refused >&2\nexit 1\n');
+        await died(run({ skip: ['sign'] }, 'patch'));
+        rmSync(hook);
+
+        await run({ skip: ['sign'] });
+
+        expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
+        expect(git_('rev-parse', 'origin/main')).toBe(
+          git_('rev-parse', 'HEAD'),
+        );
+        expect(sent()).toStrictEqual(all(NEXT));
+      });
+
+      test('a version commit left pending is made, or found made, once', async () => {
+        const base = git_('rev-parse', 'HEAD');
+        const pending = {
+          format: 1 as const,
+          package: name,
+          version: NEXT,
+          channel: null,
+          branch: 'main',
+          base,
+          built: base,
+          versionCommit: { state: 'pending' as const },
+          stages: {},
+          npm: {},
+        };
+
+        writeState(at.root, pending);
+        await run({ skip: ['sign'] });
+
+        expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
+        expect(sent()).toStrictEqual(all(NEXT));
+      });
+
+      test('an npm name left pending is settled by npm view: published once, never twice', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+
+        const [first] = npm;
+
+        // As a run killed after npm took the first name, before it wrote `sent`.
+        writeState(at.root, {
+          ...readState(at.root, name)!,
+          npm: { [first!]: 'pending' },
+        });
+        onNpm(first!, VERSION);
+        await run({ skip: ['sign'] });
+
+        expect(sent()).toStrictEqual(all(VERSION).slice(1));
+        expect(readState(at.root, name)).toBeUndefined();
+      });
+
+      test('an npm name left pending that npm does not have is published', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+        writeState(at.root, {
+          ...readState(at.root, name)!,
+          npm: { [main]: 'pending' },
+        });
+        await run({ skip: ['sign'] });
+
+        expect(sent()).toStrictEqual(all(VERSION));
+      });
+
+      test('a tag left pending: on another commit, refused; here on built, recorded made and pushed, never made again', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+
+        const state = readState(at.root, name)!;
+
+        for (const each of npm) {
+          onNpm(each, VERSION);
+        }
+
+        writeFileSync(join(at.root, 'later'), 'later\n');
+        git_('add', 'later');
+        git_('commit', '-q', '-m', 'later');
+        git_('push', '-q', 'origin', 'main');
+        git_('tag', '-a', tagged(VERSION), '-m', 'elsewhere', 'HEAD');
+        writeState(at.root, {
+          ...state,
+          npm: Object.fromEntries(
+            npm.map((each) => [each, 'answered' as const]),
+          ),
+          tag: { state: 'pending' },
+        });
+
+        expect(await died(run({ only: ['publish'] }))).toBe(
+          `${tagged(VERSION)} is on ${git_('rev-parse', 'HEAD')}, not on ${state.built}, which ${name} ${VERSION} is built from; rm -r .release/${name} abandons it`,
+        );
+
+        git_('tag', '-d', tagged(VERSION));
+        git_('tag', '-a', tagged(VERSION), '-m', 'here', state.built);
+
+        const object = git_('rev-parse', `refs/tags/${tagged(VERSION)}`);
+
+        await run({ only: ['publish'] });
+
+        expect(git_('rev-parse', `refs/tags/${tagged(VERSION)}`)).toBe(object);
+        expect(
+          git_('ls-remote', '--tags', 'origin', tagged(VERSION)),
+        ).toContain(object);
+        expect(sent()).toStrictEqual([]);
+        expect(readState(at.root, name)).toBeUndefined();
+      });
+
+      test('HEAD moved on with only publish left: the tag goes on built, not HEAD', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+
+        const built = readState(at.root, name)!.built;
+
+        writeFileSync(join(at.root, 'merged'), 'a merge\n');
+        git_('add', 'merged');
+        git_('commit', '-q', '-m', 'merged');
+        git_('push', '-q', 'origin', 'main');
+        await run({ skip: ['sign'] });
+
+        expect(git_('rev-parse', `${tagged(VERSION)}^{commit}`)).toBe(built);
+        expect(git_('rev-parse', 'HEAD')).not.toBe(built);
+        expect(ran().filter((line) => line === 'stage pack')).toHaveLength(1);
+        expect(sent()).toStrictEqual(all(VERSION));
+      });
+
+      test('HEAD moved on with a stage left is refused; --from its first stage builds from HEAD while nothing is out', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'build' });
+
+        const built = readState(at.root, name)!.built;
+
+        writeFileSync(join(at.root, 'merged'), 'a merge\n');
+        git_('add', 'merged');
+        git_('commit', '-q', '-m', 'merged');
+
+        expect(await died(run({ skip: ['sign'] }))).toBe(
+          `HEAD ${git_('rev-parse', 'HEAD')} is not ${built}, which ${name} ${VERSION} is built from, and a stage before publish is left: the stages build from it; rm -r .release/${name} abandons it`,
+        );
+
+        await run({ from: 'build', to: 'pack', skip: ['sign'] });
+
+        expect(readState(at.root, name)!.built).toBe(git_('rev-parse', 'HEAD'));
+      });
+
+      test('an output changed or gone since its stage is refused, naming the stage', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+
+        const file = tarball(at.release, folder, main, VERSION);
+        const path = relative(at.root, file);
+
+        writeFileSync(file, 'other bytes');
+
+        expect(await died(run({ only: ['publish'] }))).toStartWith(
+          `${path} is not what pack left: its sha256 is `,
+        );
+
+        rmSync(file);
+
+        expect(await died(run({ only: ['publish'] }))).toBe(
+          `${path}, which pack left, is gone; run pack again with --from pack; rm -r .release/${name} abandons it`,
+        );
+      });
+
+      test("a path a later stage records again holds by the later stage's sum; with that stage cleared, the earlier one's applies", async () => {
+        atCurrent();
+        await run({ to: 'pack' });
+
+        const state = readState(at.root, name)!;
+
+        expect(state.stages['build']!.outputs[BIN]).not.toBe(
+          state.stages['sign']!.outputs[BIN],
+        );
+
+        // sign's sum holds for the signed file: publish goes on.
+        await run({ only: ['publish'] });
+
+        expect(sent()).toStrictEqual(all(VERSION));
+      });
+
+      test("clearing the later stage brings back the earlier one's sum, which a signed file no longer matches", async () => {
+        atCurrent();
+        await run({ to: 'pack' });
+
+        expect(await died(run({ from: 'sign' }))).toStartWith(
+          `${BIN} is not what build left: its sha256 is `,
+        );
+      });
+
+      test('a tag the state did not make is refused', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+        git_('tag', tagged(VERSION));
+
+        expect(await died(run({ only: ['publish'] }))).toBe(
+          `${tagged(VERSION)} is a tag already, which this release did not make; rm -r .release/${name} abandons it`,
+        );
+      });
+
+      test('--bump is refused while a state is unfinished; the same exact version is no --bump', async () => {
+        atCurrent();
+        await run({ skip: ['sign'], to: 'pack' });
+
+        expect(await died(run({ skip: ['sign'] }, 'patch'))).toStartWith(
+          `--bump patch is refused while ${name} ${VERSION} is in progress (done: build, pack; npm 0 of ${npm.length})`,
+        );
+
+        await run({ skip: ['sign'] }, VERSION);
+
+        expect(sent()).toStrictEqual(all(VERSION));
+      });
+
+      test("another package's state is left alone", async () => {
+        const other = {
+          format: 1 as const,
+          package: 'other',
+          version: '1.0.0',
+          channel: null,
+          branch: 'main',
+          base: 'a'.repeat(40),
+          built: 'a'.repeat(40),
+          stages: {},
+          npm: {},
+        };
+
+        writeState(at.root, other);
+        await run({ skip: ['sign'] }, 'patch');
+
+        expect(readState(at.root, 'other')).toStrictEqual(other);
+        expect(readState(at.root, name)).toBeUndefined();
+      });
+
+      if (githubRelease) {
+        test('a draft that failed is made by the rerun; one left pending that GitHub has is found, not made again', async () => {
+          writeFileSync(join(at.place, 'gh-fails'), '');
+
+          expect(await died(run({ skip: ['sign'] }, 'patch'))).toEndWith(
+            `\nor run \`bun dev release ${name}\` to continue`,
+          );
+
+          await run({ skip: ['sign'] });
+
+          const gh = readFileSync(join(at.place, 'gh.log'), 'utf8');
+
+          expect(gh.match(/release create/g)).toHaveLength(2);
+          expect(sent()).toStrictEqual(all(NEXT));
+          expect(readState(at.root, name)).toBeUndefined();
+        });
+      }
     });
 
     test('publish without pack is refused before npm or a tag, old tarballs or not', async () => {
@@ -2221,4 +2587,107 @@ describe('tester: CHD-623 selected stage readiness', () => {
     expect(events).toEqual([]);
     expect(ran()).toContain('npm whoami');
   });
+});
+
+test('SIGTERM during a stage ends the run by it, keeps the state and the version commit, and the rerun goes on from them (CHD-623)', async () => {
+  const lib = join(import.meta.dir, '../../../../scripts/dev/release');
+  const script = join(at.place, 'solo.ts');
+  const tgz = join(at.root, 'dist', 'release', 'tgz');
+
+  writeFileSync(join(at.place, 'published', `solo@${VERSION}`), '');
+  writeFileSync(
+    script,
+    `import { dying } from ${JSON.stringify(join(lib, 'lib.ts'))};
+import { runRelease } from ${JSON.stringify(join(lib, 'stages.ts'))};
+
+const release = {
+  root: ${JSON.stringify(at.root)},
+  env: process.env,
+  sleep: () => Promise.resolve(),
+  out: (line) => console.log(line),
+  err: (line) => console.error(line),
+  tty: true,
+};
+const found = {
+  name: 'solo',
+  folder: '.',
+  steps: {
+    checks: [],
+    lint: [],
+    release: [
+      {
+        name: 'build',
+        about: 'b',
+        versioned: true,
+        run: async () => {
+          process.kill(process.pid, 'SIGTERM');
+          await new Promise((resolve) => setTimeout(resolve, 10_000));
+        },
+      },
+      { name: 'pack', about: 'p', run: async () => {} },
+      { name: 'publish', npm: ['@chorded/solo'], tag: 'v{version}' },
+    ],
+  },
+};
+
+await dying(() =>
+  runRelease(release, found, ['build', 'pack', 'publish'], {}, { platform: 'darwin', arch: 'arm64' }, 'patch'),
+);
+`,
+  );
+
+  const child = spawnSync(process.execPath, [script], {
+    cwd: at.root,
+    env: context().env,
+    encoding: 'utf8',
+  });
+  const git = (...args: string[]) =>
+    String(spawnSync('git', args, { cwd: at.root }).stdout).trim();
+  const commit = git('rev-parse', 'HEAD');
+
+  expect(child.signal).toBe('SIGTERM');
+  expect(git('log', '-1', '--format=%s')).toBe('chore: solo v9.9.10');
+  expect(readState(at.root, 'solo')).toMatchObject({
+    version: '9.9.10',
+    built: commit,
+    versionCommit: { state: 'pushed', sha: commit },
+    stages: {},
+    npm: {},
+  });
+  // The lock went with the run.
+  expect(existsSync(join(at.root, '.git', 'chord-release.lock'))).toBeFalse();
+
+  // The rerun, with the stages as they are, goes on from the state.
+  mkdirSync(tgz, { recursive: true });
+  writeFileSync(join(tgz, 'chorded-solo-9.9.10.tgz'), 'solo');
+  recordSums(tgz, ['chorded-solo-9.9.10.tgz']);
+  await runRelease(
+    context(),
+    {
+      name: 'solo',
+      folder: '.',
+      steps: {
+        checks: [],
+        lint: [],
+        release: [
+          { name: 'build', about: 'b', versioned: true, run: async () => {} },
+          { name: 'pack', about: 'p', run: async () => {} },
+          { name: 'publish', npm: ['@chorded/solo'], tag: 'v{version}' },
+        ],
+      },
+    },
+    ['build', 'pack', 'publish'],
+    {},
+    MAC,
+  );
+
+  expect(git('log', '--format=%s').split('\n')[0]).toBe('chore: solo v9.9.10');
+  expect(
+    git('log', '--format=%s')
+      .split('\n')
+      .filter((line) => line.startsWith('chore: ')),
+  ).toHaveLength(1);
+  expect(git('rev-parse', 'v9.9.10^{commit}')).toBe(commit);
+  expect(readState(at.root, 'solo')).toBeUndefined();
+  expect(at.out.at(-1)).toBe('9.9.10');
 });

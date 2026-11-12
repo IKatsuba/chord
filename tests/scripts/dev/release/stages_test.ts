@@ -18,6 +18,7 @@ import {
   type ReleaseOptions,
   selectStages,
 } from '../../../../scripts/dev/release/select.ts';
+import { holdRelease } from '../../../../scripts/dev/release/lock.ts';
 import { runRelease } from '../../../../scripts/dev/release/stages.ts';
 import { KINDS } from '../../../../scripts/dev/release/build.ts';
 import type { FoundPackage } from '../../../../scripts/dev/steps.ts';
@@ -1838,6 +1839,22 @@ esac
             ]
           : [],
       );
+    });
+
+    test('a second release in the checkout is refused before anything runs, naming the first', async () => {
+      const unlock = await holdRelease(context());
+
+      try {
+        expect(await died(run({}, 'patch'))).toStartWith(
+          `another release runs in this checkout (pid ${process.pid}); if it was killed, remove `,
+        );
+        expect(ran()).toStrictEqual([]);
+      } finally {
+        await unlock();
+      }
+
+      await run({ dryRun: true }, 'patch');
+      expect(ran()).toContain('stage pack');
     });
 
     test('a new version needs its versioned stage', async () => {

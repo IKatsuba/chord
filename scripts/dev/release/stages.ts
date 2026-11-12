@@ -24,6 +24,7 @@ import {
   said,
 } from './lib.ts';
 import { notarise, PROFILE } from './notarise.ts';
+import { holdRelease } from './lock.ts';
 import { pack } from './pack.ts';
 import { packageVersion, preflight } from './preflight.ts';
 import { publish, publishArguments, tarball, tarballs } from './publish.ts';
@@ -88,6 +89,25 @@ export async function runRelease(
   options: ReleaseOptions,
   machine: { platform: string; arch: string } = process,
   wanted?: string,
+): Promise<void> {
+  // One release per checkout, held from before any guard to the end.
+  const unlock = await holdRelease(release);
+
+  try {
+    await locked(release, found, stages, options, machine, wanted);
+  } finally {
+    await unlock();
+  }
+}
+
+/** The release `runRelease` runs once it holds the checkout's lock. */
+async function locked(
+  release: Release,
+  found: FoundPackage,
+  stages: readonly string[],
+  options: ReleaseOptions,
+  machine: { platform: string; arch: string },
+  wanted: string | undefined,
 ): Promise<void> {
   const has = (stage: string) => stages.includes(stage);
   const dryRun = options.dryRun ?? false;

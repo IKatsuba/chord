@@ -160,6 +160,40 @@ describe('model', () => {
 });
 
 describe('parameters', () => {
+  test('start from a variant that is not max mode where the model has one', () => {
+    const variant = (value: string, extra: object = {}) => ({
+      displayName: value,
+      params: [{ id: 'mode', value }],
+      ...extra,
+    });
+    const starting = (...variants: ReturnType<typeof variant>[]) =>
+      startingParams({ id: 'grok', displayName: 'Grok', variants });
+
+    // The default is max mode: the first that is not.
+    expect(
+      starting(
+        variant('max', { isDefault: true, isMaxMode: true }),
+        variant('max2', { isMaxMode: true }),
+        variant('fast'),
+        variant('slow'),
+      ),
+    ).toEqual({ mode: 'fast' });
+    // The default is not max mode: the default.
+    expect(
+      starting(variant('fast'), variant('slow', { isDefault: true })),
+    ).toEqual({ mode: 'slow' });
+    // Nothing but max mode: the default, else the first.
+    expect(
+      starting(
+        variant('max', { isMaxMode: true }),
+        variant('max2', { isDefault: true, isMaxMode: true }),
+      ),
+    ).toEqual({ mode: 'max2' });
+    expect(starting(variant('max', { isMaxMode: true }))).toEqual({
+      mode: 'max',
+    });
+  });
+
   test('start from the isDefault variant, else the first', () => {
     expect(startingParams(GPT)).toEqual({
       reasoning: 'medium',

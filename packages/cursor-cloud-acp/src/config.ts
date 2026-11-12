@@ -63,13 +63,22 @@ export function chosen(model: ModelSelection): NonNullable<Choice['model']> {
   };
 }
 
-/** A newly chosen model's parameters: its `isDefault` variant's, else its first's. */
+/**
+ * A newly chosen model's parameters: its `isDefault` variant's when that is
+ * not max mode, else its first that is not, else its `isDefault` (else
+ * first) one's. Max mode costs more, so it is sent only when the person
+ * picks it or the model has nothing else (the lead's call within Q12).
+ */
 export function startingParams(
   model: ModelListItem,
 ): Readonly<Record<string, string>> {
+  const variants = model.variants ?? [];
+  const marked = variants.find((each) => each.isDefault === true);
   const variant =
-    model.variants?.find((each) => each.isDefault === true) ??
-    model.variants?.[0];
+    (marked?.isMaxMode === true ? undefined : marked) ??
+    variants.find((each) => each.isMaxMode !== true) ??
+    marked ??
+    variants[0];
 
   return Object.fromEntries(
     (variant?.params ?? []).map(({ id, value }) => [id, value]),

@@ -645,7 +645,7 @@ describe('tester: publish guard boundaries', () => {
 
     tty = false;
 
-    expect(await release()).toBeTrue();
+    expect(await publish(context(), { version: VERSION })).toBeUndefined();
     expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
       [],
     );

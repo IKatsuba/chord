@@ -2887,3 +2887,94 @@ await dying(() =>
   expect(readState(at.root, 'solo')).toBeUndefined();
   expect(at.out.at(-1)).toBe('9.9.10');
 });
+
+describe('tester: CHD-623 continuation option refusals on disk', () => {
+  function fixture(): FoundPackage {
+    return {
+      ...CHORD,
+      steps: {
+        ...CHORD.steps,
+        release: CHORD.steps.release.map((stage) =>
+          stage.name === 'pack'
+            ? {
+                ...stage,
+                run: () => {
+                  packed();
+
+                  return Promise.resolve();
+                },
+              }
+            : stage,
+        ),
+      },
+    };
+  }
+
+  async function prepare(): Promise<FoundPackage> {
+    const found = fixture();
+    const options = { only: ['pack'] };
+
+    await runRelease(context(), found, select(options), options, MAC);
+    expect(readState(at.root, 'chord')?.stages['pack']).toBeDefined();
+
+    return found;
+  }
+
+  test.each([
+    ['dry run', { dryRun: true, only: ['pack'] }, '--dry-run is refused'],
+    [
+      'another channel',
+      { channel: 'next', only: ['publish'] },
+      '--channel next is not',
+    ],
+  ] satisfies [string, ReleaseOptions, string][])(
+    '%s preserves the state and starts no authentication or stage',
+    async (_, options, why) => {
+      const found = await prepare();
+      const file = join(at.root, '.release', 'chord', 'state.json');
+      const before = readFileSync(file, 'utf8');
+
+      writeFileSync(join(at.place, 'ran.log'), '');
+
+      const message = await died(
+        runRelease(context(), found, select(options), options, MAC),
+      );
+
+      expect(message).toContain(why);
+      expect(message).toEndWith('rm -r .release/chord abandons it');
+      expect(readFileSync(file, 'utf8')).toBe(before);
+      expect(ran()).toEqual([]);
+      expect(
+        existsSync(join(at.root, '.git', 'chord-release.lock')),
+      ).toBeFalse();
+    },
+  );
+
+  test.each(['sent', 'answered'] as const)(
+    'rerunning pack after an npm name is %s refuses before any work',
+    async (progress) => {
+      const found = await prepare();
+      const state = readState(at.root, 'chord')!;
+      const options = { only: ['pack'] };
+      const file = join(at.root, '.release', 'chord', 'state.json');
+
+      writeState(at.root, {
+        ...state,
+        npm: { '@chorded/chord-darwin-arm64': progress },
+      });
+
+      const before = readFileSync(file, 'utf8');
+
+      writeFileSync(join(at.place, 'ran.log'), '');
+
+      expect(
+        await died(runRelease(context(), found, select(options), options, MAC)),
+      ).toContain(`pack cannot run again: npm has chord ${VERSION}'s bytes`);
+      expect(readFileSync(file, 'utf8')).toBe(before);
+      expect(ran()).toEqual([]);
+      expect(
+        existsSync(join(at.root, '.git', 'chord-release.lock')),
+      ).toBeFalse();
+    },
+  );
+});

@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, expect, test } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { spawnSync } from 'node:child_process';
 import {
   existsSync,
@@ -134,4 +134,49 @@ test('a lock a killed run left, however old, is never taken over: it is refused,
   await (
     await holdRelease(at.release)
   )();
+});
+
+describe('tester: CHD-623 checkout lock boundaries', () => {
+  test('a lock directory without a pid remains owned and is refused as unknown', async () => {
+    const file = lockFile(at.release);
+
+    mkdirSync(`${file}.lock`);
+
+    expect(await refusal(at.release)).toBe(
+      `another release runs in this checkout (pid unknown); if it was killed, remove ${file}.lock`,
+    );
+    expect(existsSync(`${file}.lock`)).toBeTrue();
+    expect(existsSync(file)).toBeFalse();
+  });
+
+  test('independent checkouts can hold locks together and release them separately', async () => {
+    const other = scratch();
+    let unlockFirst: (() => Promise<void>) | undefined;
+    let unlockOther: (() => Promise<void>) | undefined;
+
+    try {
+      git(other.root, 'init', '-q', '-b', 'main');
+
+      unlockFirst = await holdRelease(at.release);
+      unlockOther = await holdRelease(other.release);
+
+      const firstFile = lockFile(at.release);
+      const otherFile = lockFile(other.release);
+
+      expect(firstFile).not.toBe(otherFile);
+      expect(existsSync(`${firstFile}.lock`)).toBeTrue();
+      expect(existsSync(`${otherFile}.lock`)).toBeTrue();
+      await unlockFirst();
+
+      unlockFirst = undefined;
+
+      expect(existsSync(`${firstFile}.lock`)).toBeFalse();
+      expect(existsSync(`${otherFile}.lock`)).toBeTrue();
+      expect(await refusal(other.release)).toContain(`pid ${process.pid}`);
+    } finally {
+      await unlockOther?.();
+      await unlockFirst?.();
+      rmSync(other.place, { recursive: true, force: true });
+    }
+  });
 });

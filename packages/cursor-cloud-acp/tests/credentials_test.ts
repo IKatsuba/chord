@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { SdkCredentialStore, StoredSdkCredentials } from '@cursor/sdk';
-import { apiKey, backendUrl } from '../src/credentials.ts';
+import { apiKey } from '../src/credentials.ts';
 import { KeychainError } from '../src/errors.ts';
 
 const NOW = 1_850_000_000_000;
@@ -49,7 +49,7 @@ describe('apiKey', () => {
     );
   });
 
-  test("the keychain's key when unexpired and minted for the backend in use", async () => {
+  test("the keychain's key when unexpired", async () => {
     expect(await apiKey(source(STORED))).toBe('key_keychain');
 
     const { apiKeyExpiresAtMs: _, ...never } = STORED;
@@ -63,15 +63,15 @@ describe('apiKey', () => {
     ).toBeUndefined();
   });
 
-  test('none when minted for another backend', async () => {
+  test('a key minted for another backend is still used: Cursor refuses it', async () => {
     expect(
       await apiKey(source({ ...STORED, backendUrl: 'https://api3.cursor.sh' })),
-    ).toBeUndefined();
+    ).toBe('key_keychain');
     expect(
       await apiKey(
         source(STORED, { CURSOR_BACKEND_URL: 'https://staging.example' }),
       ),
-    ).toBeUndefined();
+    ).toBe('key_keychain');
   });
 
   test('none when the keychain holds nothing, or nothing of its shape', async () => {
@@ -91,11 +91,4 @@ describe('apiKey', () => {
     await apiKey(from);
     expect(from.store.loads).toBe(2);
   });
-});
-
-test("backendUrl is the SDK's: CURSOR_BACKEND_URL or production, trailing slashes off", () => {
-  expect(backendUrl({})).toBe('https://api2.cursor.sh');
-  expect(backendUrl({ CURSOR_BACKEND_URL: 'https://b.example//' })).toBe(
-    'https://b.example',
-  );
 });

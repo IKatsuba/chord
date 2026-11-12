@@ -13,22 +13,10 @@ export interface CredentialSource {
 }
 
 /**
- * The backend the SDK talks to, as it resolves it: a key works only
- * against the backend it was minted for. The SDK does not export its own.
- */
-export function backendUrl(
-  env: Readonly<Record<string, string | undefined>>,
-): string {
-  return (env.CURSOR_BACKEND_URL ?? 'https://api2.cursor.sh').replace(
-    /\/+$/,
-    '',
-  );
-}
-
-/**
- * `CURSOR_API_KEY` when set, else the keychain's key when unexpired and
- * minted for the backend in use, else none: signed out. A keychain that
- * fails or does not answer rejects, naming the keychain.
+ * `CURSOR_API_KEY` when set, else the keychain's key when unexpired, else
+ * none: signed out. A keychain that fails or does not answer rejects,
+ * naming the keychain. A key minted for another backend is not checked
+ * here: Cursor refuses it at `Cursor.me` (owner, CHD-622).
  */
 export async function apiKey(
   source: CredentialSource,
@@ -43,7 +31,6 @@ export async function apiKey(
 
   if (
     stored === undefined ||
-    stored.backendUrl !== backendUrl(source.env) ||
     (stored.apiKeyExpiresAtMs !== undefined &&
       stored.apiKeyExpiresAtMs <= source.now())
   ) {

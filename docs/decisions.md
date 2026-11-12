@@ -8539,15 +8539,16 @@ session id is the cloud agent's id; the adapter keeps no state.
 
 Options: a Bun workspace under `packages/` with one `bun.lock`; the same
 folder with its own npm install and lockfile; a separate repository (ruled
-out by the owner). Chosen: the workspace. One install and one lockfile;
-the root's tests reach its source. "Bun runs chord" holds for chord: the
-package's own `tsconfig.json` has Node's types, `bun check -p` checks it,
-ESLint keeps `Bun` and `bun:*` out of it and keeps it and its dependencies
-out of `src/`, `covered.ts` takes each workspace's file list, and a `node`
-CI job installs the packed tarball on Node 22.13.0 and the current LTS and
-runs a smoke (pending the owner, CHD-622 Q8). TypeScript project references
-were tried and need `composite` and emitted declarations, which do not fit
-the root's `noEmit`.
+out by the owner). Chosen: the workspace: one install and one lockfile.
+"Bun runs chord" holds for chord: the package's `tsconfig.json` has Node's
+types, ESLint keeps `Bun` and `bun:*` out of its `src/`, and chord's
+`src/` may import nothing of it. Its tests and fixture live in
+`packages/cursor-cloud-acp/tests/`; its checks, build and release are
+defined in its `steps.ts` and run by `bun dev` (CHD-623), so chord's
+checks never reach it and the reverse. A required `node` CI job runs
+`bun dev quality cursor-cloud-acp` on Node 22.13 (owner, Q8). TypeScript
+project references were tried and need `composite` and emitted
+declarations, which do not fit the root's `noEmit`.
 
 ## 2026-11-12 — CHD-622: built by `bun build --target=node`
 
@@ -8557,18 +8558,6 @@ toolchain, no new dependency. Tried: the output keeps the shebang, leaves
 packages as imports and runs on Node 22.13.0, which cannot run TypeScript.
 The build fails unless Bun's metafile lists only the package's own files,
 so `@cursor/sdk` and the keyring are never bundled.
-
-## 2026-11-12 — CHD-622: its own release command (pending the owner, Q6)
-
-Options: a stage set inside `bun dev release` (whose natives, compile,
-signing, notarisation and `--package` do not apply); a command of its own;
-publishing from CI with provenance (against "published from the owner's
-Mac"). Proposed: `bun dev release-acp [version|bump]` reusing the release's
-version, npm-authentication and npm-on-node helpers; tag
-`cursor-cloud-acp-v<version>`; CHD-547's rule per package; no channels, no
-GitHub release, no provenance. chord pins the package by an exact literal
-in `src/chorded.ts`, bumped by a chord commit after a package release, and
-chord's release preflight stops on a pin npm does not have.
 
 ## 2026-11-12 — CHD-622: the keychain through `@napi-rs/keyring`
 
@@ -8586,8 +8575,8 @@ at reboot. Every call bounded at 10 s (macOS's access dialog).
 The store reaches only the SDK's auth calls; every other call takes
 `apiKey`. The adapter resolves `CURSOR_API_KEY`, else its keychain entry,
 and always passes the result, so the SDK's own login file is not read
-(pending the owner, Q3). Where no keychain exists, `login` refuses and
-points to `CURSOR_API_KEY` (pending the owner, Q2).
+(owner, Q3). Where no keychain exists, `login` refuses and
+points to `CURSOR_API_KEY` (owner, Q2).
 
 ## 2026-11-12 — CHD-622: content from `onDelta`, not `run.stream()`'s text
 
@@ -8606,8 +8595,8 @@ it does not, the mapping goes back to the owner.
 - `session/new` checks git first (work tree, branch, push remote, pushed),
   then the key (`Cursor.me`), then creates the agent with
   `workOnCurrentBranch` and `autoCreatePR` false: the agent pushes a branch
-  of its own, and the person tells it what to do with it. How "pushed" is
-  read is pending the owner (Q4).
+  of its own, and the person tells it what to do with it. "Pushed" is read
+  from the local remote-tracking ref, with no network (owner, Q4).
 - `authenticate` is answered with an error naming the `login` command.
 - `request` events: a line with the request id and the link, never an
   answer; the turn stays open, Esc stops it.
@@ -8623,13 +8612,14 @@ it does not, the mapping goes back to the owner.
   repository. chord's `/resume` keeps reading chord's records.
 - Not served: fork, delete, steering, `usage_update` (no context size),
   env vars, artifact downloads. chord's entry takes no MCP servers; servers
-  sent anyway are pending the owner (Q5).
+  sent anyway are taken and named unreachable in the first message
+  (owner, Q5).
 
 ## 2026-11-12 — CHD-622: chord's changes
 
 chord's own npx agents live in `src/chorded.ts`, merged by name into the
-npx agents, `cursor-cloud` titled `Cursor Cloud Agents` (pending the owner,
-Q1). The start-failure pin line says "the version this chord pins" for every
+npx agents, `cursor-cloud` titled `Cursor Cloud Agents` (owner, Q1). The
+start-failure pin line says "the version this chord pins" for every
 pinned agent, true for the registry's as for this one. No remote marker, no
 `/resume` from `session/list`.
 
@@ -8652,99 +8642,16 @@ The owner answered the design's questions (CHD-622, Q1–Q9):
 - Ship makes one live run against Cursor on the owner's account, tiny
   prompt, before the stream lands.
 
-The proposed `bun dev release-acp` was not chosen (next entry). The entries
-above marked "pending the owner" for Q2, Q3, Q4 and Q5 stand as proposed,
-and Q1's name is `cursor-cloud`.
+The release (Q6) became a review of `bun dev` for several packages,
+CHD-623, which records it.
 
-## 2026-11-12 — CHD-622: `bun dev release` releases a package when given one (owner, Q6)
+## 2026-11-12 — CHD-622: chord pins the package by an exact version
 
-Options put to the owner: a command of its own (`bun dev release-acp`); a
-stage set inside `bun dev release`; publishing from CI. The owner chose
-`bun dev release`: chord by default and, given a package, that package
-instead, every stage run against it. This supersedes the "its own release
-command" entry above.
-
-- **Stages.** One stage list in one order; a package runs those that apply.
-  For `cursor-cloud-acp`: install; check (its type check, ESLint on its
-  folder, its tests); compile (`bun build --target=node`, nothing bundled);
-  selftest (the Node smoke on a scratch pack); pack (one tarball, no source
-  archives); publish (`npm publish`, tag `cursor-cloud-acp-v<version>`).
-  natives, sign and notarise do not apply, and with them the arm64-Mac
-  guard. `--only`, `--from` and `--to` naming a stage that does not apply
-  are refused; `--skip` of one changes nothing.
-- **Versions and guards** as chord's, per package: bumps, channels counted
-  from npm's latest stable of that package, a version commit `chore:
-  cursor-cloud-acp v<version>` before any stage, CHD-547's rule, the branch
-  level with origin and no existing tag when publishing, npm authentication
-  on every run, a stopped run finished by a run without a version. `gh` is
-  not required: no GitHub release is proposed.
-- **Pending the owner:** how the package is named (a Cliffy subcommand per
-  workspace package is proposed, which leaves today's `--package` alone),
-  whether the package gets a GitHub release (none proposed), and whether
-  its check stage is its own checks (proposed) or the whole `bun quality`.
-
-## 2026-11-12 — CHD-622: the release names its package; each package checks only itself (owner, R1–R3)
-
-The owner answered the release's questions:
-
-- **R1.** The package is an explicit positional argument of
-  `bun dev release`, with no default: chord's own release is named too,
-  and the version or bump moves to a flag. Neither a subcommand per
-  package nor a `--package` flag. Proposed: Cliffy's `EnumType` over
-  chord's name and each workspace folder, `--bump <major|minor|patch|fix|x.y.z>`
-  (Cliffy registers `-V, --version` only on the main command when
-  `.version()` is set, which `bun dev` does not; `--bump` keeps clear of it
-  anyway), and a bare `bun dev release` left to Cliffy's missing-argument
-  error. Pending the owner: chord's name (`chord` proposed), the flag's
-  name, the bare run, `bun quality [package]` defaulting to chord, and
-  renaming today's `--package` to `--publish-only`.
-- **R2.** No GitHub release for a package.
-- **R3.** Every package has its own checks, and a release runs only those
-  of the package released. The package's tests move into
-  `packages/cursor-cloud-acp/tests/` (with its fixture), outside chord's
-  `tsconfig.json` `include` and `bun dev test`'s `./tests/`; `bun fmt
-  --check`, ESLint and `covered.ts` leave `packages/` out of chord's run,
-  and the package has its own `eslint.config.ts` importing chord's shared
-  rules. chord's tests never import the package: its window tests use
-  `fake_agent` scenarios. chord keeps the boundary checks (`src/` imports
-  nothing of `packages/`, the SDK or the keyring; the binary holds none of
-  them) and `privacy_test.ts` over every tracked file. CI's `node` job runs
-  the package's checks; chord's jobs run chord's. This supersedes the
-  earlier entries' "`bun quality` runs it beside the root check" and
-  `covered.ts`'s union.
-
-AGENTS.md's command block and release paragraph, `docs/guide.md`'s release
-section, `CONTRIBUTING.md` where it names the release and the release's
-help text change with the code, in the same pull request.
-
-## 2026-11-12 — CHD-622: packages by npm name, `--bump`, checks defined in each package (owner, P1–P4)
-
-The owner answered:
-
-- **P1.** A package is named by its npm name without the scope: `chord`,
-  `cursor-cloud-acp`. The names come from the root's and each workspace's
-  `package.json`.
-- **P2.** The release's version or bump is `--bump`. Cliffy registers
-  `-V, --version` only on the main command when `.version()` is set; the
-  name keeps clear of it either way.
-- **P3.** A bare `bun dev release` releases nothing, runs no preflight or
-  authentication, and says it is not clear which package to release,
-  naming the packages; the positional is declared optional so that the
-  release's own words, not Cliffy's missing-argument error, answer it.
-- **P4.** Not `bun quality [package]`. Each package defines its own checks
-  inside itself, and `bun dev` runs the chosen package's checks;
-  everything goes through `bun dev`. This supersedes the previous entry's
-  `bun quality <package>`.
-
-Proposed, pending the owner (`docs/design/CHD-622.md`, C1–C4): a
-`checks.ts` at each package's root exporting an ordered list of named
-steps marked `static` or not, over `scripts` in each `package.json` run by
-`bun run --filter` (which would put chord's checks back in the root
-package.json against CHD-411, lose the named failure of CHD-467, and run
-the Node smoke behind Bun's node shim); `bun dev check <package>
-[--static]`, a bare run refused as the release's is; `bun quality` and
-`bun lint` and their package.json scripts retired for `bun dev check` and
-`bun dev lint <package>`, `bun dev test` kept as chord's suite runner; CI's
-`static` on `bun dev check chord --static` and the `node` job on
-`bun dev check cursor-cloud-acp`. Today's `--package` is held for the
-owner (P5).
+`src/chorded.ts` holds chord's own npx agents in the registry's shape;
+`cursor-cloud` starts `npx -y @chorded/cursor-cloud-acp@<version>`, the
+version an exact literal bumped by a chord commit after a package release,
+so main never pins a version npm does not have. Reading it from the
+package's `package.json` was rejected: that would pin a version still being
+released. chord's release preflight (its `steps.ts`, CHD-623) stops on a
+pin npm does not have. 0.70.0's order: CHD-623, this package's 0.1.0, then
+chord.

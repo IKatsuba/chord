@@ -363,27 +363,22 @@ describe('CHD-622 tester: config roundtrip boundaries', () => {
         },
       ],
     };
-    const expected = {
+    const initial: Choice = { mode: 'plan' };
+    const partial: Choice = {
+      mode: 'plan',
+      model: { id: GPT.id, params: { reasoning: 'high' } },
+    };
+    const expected: Choice = {
       mode: 'plan',
       model: { id: GPT.id, params: { reasoning: 'low', context: '200k' } },
     };
 
-    expect(choose({ mode: 'plan' }, [model], true, 'model', GPT.id)).toEqual(
-      expected,
-    );
-    expect(
-      choose(
-        { mode: 'plan', model: { id: GPT.id, params: { reasoning: 'high' } } },
-        [model],
-        false,
-        'model',
-        GPT.id,
-      ),
-    ).toEqual(expected);
-    expect(
-      choose({ mode: 'plan' }, [model], true, 'model', CURSORS_DEFAULT),
-    ).toEqual({ mode: 'plan' });
-    expect(selection({ mode: 'plan' })).toBeUndefined();
+    expect(choose(initial, [model], true, 'model', GPT.id)).toEqual(expected);
+    expect(choose(partial, [model], false, 'model', GPT.id)).toEqual(expected);
+    expect(choose(initial, [model], true, 'model', CURSORS_DEFAULT)).toEqual({
+      mode: 'plan',
+    });
+    expect(selection(initial)).toBeUndefined();
   });
 
   test('reselecting a partially reported model replaces all parameters with one valid default', () => {

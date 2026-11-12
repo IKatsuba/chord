@@ -653,7 +653,7 @@ describe('CHD-622 tester: concurrent and late turns', () => {
     fake.finish({ status: 'cancelled' });
     expect(await answer).toEqual({ stopReason: 'cancelled' });
     expect(at.texts()).toEqual([
-      `Cursor's agent is waiting for input or approval (request needs-input). This adapter cannot answer it; Esc stops the run.\n${LINK}`,
+      `Cursor's agent is waiting for input or approval (request needs-input). This adapter cannot answer it; Esc stops the run.  \n${LINK}`,
     ]);
   });
 });

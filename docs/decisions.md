@@ -8448,3 +8448,40 @@ The owner decided, in turn:
   npm name>` replacing `--package` (O2), stages per package or one shared
   list (O3), a rerun finishing a release stopped after npm published by
   tagging alone, for both packages (O4), and the command set (O5).
+
+## 2026-11-12 — CHD-623: the owner's answers, and the release's state
+
+The owner answered CHD-623's questions: publishing stays the release's
+last stage (O1); `--package` goes with no replacement, `bun dev release
+chord` publishing all five npm packages itself in order (O2); each
+package's stages are its own, from its `steps.ts` (O3); only `quality`,
+`lint` and `release` take a package (O5). On a release stopped after npm
+published (O4) the owner took neither proposal (a rerun tagging alone,
+inferred from npm and git; today's printed manual command): the release
+keeps its state per package in a gitignored folder, and every stopped
+release resumes from it.
+
+The design (`docs/design/CHD-623.md`, "The release's state"):
+
+- **Where**: `.release/<package>/state.json`, `.release/` gitignored. Not
+  under `dist/`, whose build output may be wiped while the state says npm
+  has part of a release; not in git's directory, where it would be hidden.
+- **What**: format 1, validated by zod; the package, version, channel,
+  branch, base commit, the version commit's progress, the `built` commit
+  the stages build from and the tag points at, each done stage with its
+  outputs' sha256, each npm name `pending`, `sent` or `answered`, the tag's
+  and chord's draft's progress. Written atomically (temporary file, fsync,
+  rename) before and after every act on the world.
+- **How it is read**: after the one-release lock, before authentication.
+  With a state, a run does what is left behind continuation guards (clean
+  tree, `built` in HEAD's history, HEAD at `built` while a build stage is
+  left, sums holding, branch and tag when publishing); git, npm and GitHub
+  are read only to refuse a mismatch or to settle one `pending` act.
+  `--bump` and `--dry-run` are refused while a state is unfinished; a state
+  of another format is refused untouched; a fully done one is removed.
+- **Cleared** when the release is done; an abandoned one by hand (pending
+  the owner, S1).
+- **Replaces** preflight's resume mode, `stages.ts`'s resume branch and
+  publish's skip of what npm has. CHD-547's rule holds from the state, and
+  as an npm guard when there is none. A state lost while npm has part of a
+  release is refused and finished by hand (pending the owner, S2).

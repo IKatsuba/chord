@@ -588,3 +588,72 @@ describe('while the stream drains after the run ended', () => {
     await answer;
   });
 });
+
+describe('CHD-622 tester: concurrent and late turns', () => {
+  test('an unconfirmed cancelled turn cannot emit into or cancel another live turn', async () => {
+    jest.useFakeTimers();
+
+    const first = fakeRun();
+    const second = fakeRun();
+    const a = turnOver(first, 20);
+    const b = turnOver(second, 20);
+    const answerA = a.turn.run();
+    const answerB = b.turn.run();
+
+    a.release();
+    b.release();
+    await settle();
+    a.turn.cancel();
+    jest.advanceTimersByTime(20);
+    expect(await answerA).toEqual({ stopReason: 'cancelled' });
+
+    const before = [...a.drawn];
+
+    await a.delta({ type: 'text-delta', text: 'late A' });
+    first.message({
+      type: 'task',
+      agent_id: ID,
+      run_id: 'run-1',
+      text: 'late task A',
+    });
+    first.finish();
+    a.turn.cancel();
+    await b.delta({ type: 'text-delta', text: 'live B' });
+    await settle();
+    expect(a.drawn).toEqual(before);
+    expect(first.cancels).toHaveLength(1);
+    expect(second.cancels).toEqual([]);
+    second.finish();
+    expect(await answerB).toEqual({ stopReason: 'end_turn' });
+    expect(b.texts()).toEqual(['live B']);
+  });
+
+  test('a request keeps the turn open until cancel without answering the request', async () => {
+    const fake = fakeRun();
+    const at = turnOver(fake);
+    let answered = false;
+    const answer = at.turn.run().then((result) => {
+      answered = true;
+
+      return result;
+    });
+
+    at.release();
+    await settle();
+    fake.message({
+      type: 'request',
+      agent_id: ID,
+      run_id: 'run-1',
+      request_id: 'needs-input',
+    });
+    await settle();
+    expect(answered).toBe(false);
+    expect(fake.cancels).toEqual([]);
+    at.turn.cancel();
+    fake.finish({ status: 'cancelled' });
+    expect(await answer).toEqual({ stopReason: 'cancelled' });
+    expect(at.texts()).toEqual([
+      `Cursor's agent is waiting for input or approval (request needs-input). This adapter cannot answer it; Esc stops the run.\n${LINK}`,
+    ]);
+  });
+});

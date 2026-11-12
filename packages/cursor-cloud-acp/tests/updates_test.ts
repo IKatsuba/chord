@@ -495,3 +495,41 @@ test("replay: each turn's user message, then its steps as the live updates", () 
   ]);
   expect(updates).toHaveLength(4);
 });
+
+describe('CHD-622 tester: unknown todo shapes', () => {
+  test('null and non-object todos do not crash or invent plan entries', () => {
+    expect(
+      plan({
+        type: 'updateTodos',
+        args: {
+          todos: [
+            null,
+            1,
+            'later-shape',
+            { content: 'Valid', status: 'pending' },
+          ],
+        },
+      }),
+    ).toEqual({
+      sessionUpdate: 'plan',
+      entries: [{ content: 'Valid', priority: 'medium', status: 'pending' }],
+    });
+  });
+
+  test('unrecognized statuses, including object property names, are left out', () => {
+    expect(
+      plan({
+        type: 'updateTodos',
+        args: {
+          todos: [
+            'cancelled',
+            'later-status',
+            'toString',
+            'constructor',
+            '__proto__',
+          ].map((status) => ({ content: 'Unknown', status })),
+        },
+      }),
+    ).toEqual({ sessionUpdate: 'plan', entries: [] });
+  });
+});

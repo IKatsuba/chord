@@ -2075,14 +2075,14 @@ and no dismissal is recorded.
 ## Development
 
 ```sh
-bun install       # the dependencies
-bun dev chord     # run from source
-bun quality       # types, lint, format and tests
-bun check         # native type checker
-bun lint --fix    # what ESLint can fix
-bun fmt           # native formatter
-bun dev compile   # this machine's binary into dist/
-bun dev registry  # refetch the ACP Registry's agents into src/registry.ts
+bun install                # the dependencies
+bun dev chord              # run from source
+bun dev quality chord      # types, lint, format and tests
+bun check                  # native type checker
+bun dev lint chord --fix   # what ESLint can fix
+bun fmt                    # native formatter
+bun dev compile            # this machine's binary into dist/
+bun dev registry           # refetch the ACP Registry's agents into src/registry.ts
 ```
 
 `AGENTS.md` is binding for people and agents and says which checks a change
@@ -2092,7 +2092,8 @@ needs. `docs/decisions.md` records why the stack is what it is.
 for the test agent, `--fake riff` for riff on its fake provider), `test`,
 `compile` (`--all` or `--install`), `npm`,
 `registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
-`selftest <binary>` and `release [version]`. `bun dev chord --qa [name]`
+`selftest <binary>`, `quality <package>`, `lint <package> [args…]` and
+`release <package> [--bump <version>]`. `bun dev chord --qa [name]`
 recreates `/tmp/chord-qa.<name>` for captures and its sibling
 `/tmp/chord-qa.<name>.state` for chord's state. Without a name, these are
 `/tmp/chord-qa` and `/tmp/chord-qa.state`; an empty name disables QA.
@@ -2138,99 +2139,110 @@ riff turn through ACP on native and WebAssembly: search with fff, read
 `needle.txt`, then answer `done`, with three requests per backend to a local
 fake provider.
 
-`bun quality` runs native type and format checks, tracked-file coverage,
-ESLint and `lint/` tests, then the suite; `--static` leaves out the suite.
+`bun dev quality <package>` runs that package's checks in its root
+`steps.ts`, which also defines its lint arguments and release stages,
+with publish last. Only `quality`, `lint` and `release` take a package,
+by its npm name without the scope; chord's `steps.ts` is at the repository
+root. Its checks run types, tracked-file coverage, ESLint, format, `lint/`
+tests and the suite, in order; `--static` leaves out the suite. They leave
+`packages/` out; format uses `bun fmt --check --ignore-pattern=packages/ .`.
 A plain `bun install` suffices locally: the libfx layout check covers the
 host's installed package and every target's metadata, while CI's static job
 installs all platforms and sets `CHORD_LIBFX_ALL_TARGETS=1` to check all four
 packages.
-`bun lint` runs ESLint. Arguments after `bun dev chord`, `bun dev test`
-and `bun lint` pass on as written; empty arguments need `--`
-(`bun dev test -- -t ''`), as does the tool's help (`bun lint -- --help`
+`bun dev lint chord` runs ESLint. Arguments after `bun dev chord`, `bun dev test`
+and `bun dev lint chord` pass on as written; empty arguments need `--`
+(`bun dev test -- -t ''`), as does the tool's help (`bun dev lint chord -- --help`
 or `bun dev chord -- --help`).
 
 `bun dev test` reports the tests' status. `tests/timings.json` only places
 files: Bun uses it to balance shards and start each worker's slowest files
 first; an unlisted file takes the median. No refresh is required.
 On pull requests and pushes to `main` and `next`, CI runs `static`
-(`bun quality --static`), three `tests` shards
+(`bun dev quality chord --static`), three `tests` shards
 (`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
 passes only when all of them succeed.
 
-The owner's `bun dev release [version|major|minor|patch|fix]` releases
-package.json's version when none is given. An exact version must equal it
-or be above it, in canonical `X.Y.Z` form with no prefix or build metadata.
-`fix` means `patch`. Add `--channel <name>` for `<base>-<channel>.<n>`.
-A channel bump counts from npm's latest stable version. If package.json
-already holds that base on that channel, its number goes up; otherwise it
-starts at 0. From stable 0.67.0, `major --channel next` gives
-1.0.0-next.0, then 1.0.0-next.1; `1.0.0 --channel next` gives the same.
-Channel names start with a lowercase letter, then use lowercase letters,
-digits or hyphens; `latest`, `main` and semver ranges such as `x` or `v1`
-are refused. A labelled version argument is refused; use `--channel`.
-A stable bump from a pre-release is refused: name the version, such as
-`1.0.0` over `1.0.0-next.5`. Give the command a version or bump instead of
-editing package.json's version by hand. A different version or bump is
-refused while package.json's version is not on npm; `bun dev release`
-without a version finishes it, including a channel release. `--channel`
-without a version requires package.json already on that channel.
+The owner's `bun dev release <package>` releases the package's version;
+a bare `bun dev release` releases nothing. Use
+`--bump <version|major|minor|patch|fix>` instead of editing package.json.
+An exact version must equal it or be above it, in canonical `X.Y.Z` form
+with no prefix or build metadata. `fix` means `patch`.
+Add `--channel <name>` for `<base>-<channel>.<n>`. A channel bump counts
+from npm's latest stable version. If package.json already holds that base
+on that channel, its number goes up; otherwise it starts at 0. From stable
+0.67.0, `--bump major --channel next` gives 1.0.0-next.0, then
+1.0.0-next.1; `--bump 1.0.0 --channel next` gives the same. Channel names
+start with a lowercase letter, then use lowercase letters, digits or hyphens;
+`latest`, `main` and semver ranges such as `x` or `v1` are refused. Labelled
+versions are refused; use `--channel`. A stable bump from a pre-release
+needs an exact version, such as `--bump 1.0.0` over `1.0.0-next.5`.
+Without `--bump`, `--channel` requires package.json already on that channel.
+A fresh release refuses a different version while package.json's is not on npm.
 
-The release runs `install`, `check` (`bun quality`), `natives`, `compile`, `sign`,
-`selftest`, `notarise`, `pack` and `publish` in order. `--skip` and `--only`
-take comma-separated stages; `--from` and `--to` bound the run. `--only`
-cannot combine with the other three. A new version needs `compile` among
-the selected stages. `--package` selects one package to publish.
-`--dry-run` stops before publishing but still submits to Apple;
-`--dry-run --skip notarise` leaves out that submission. `pack` also uses
-`curl` to download FFmpeg and zlib source archives into
-`dist/release/source/`, checking their SHA-256 sums against OpenTUI's native
-package `FFMPEG-SOURCE.md`. A failed download or mismatch stops the release.
-This stage needs the network even in a dry run. A channel dry run also
-prints its stages and each package's npm publish arguments.
+chord's release runs `install`, `quality` (`bun dev quality chord`),
+`natives`, `compile`, `sign`, `selftest`, `notarise`, `pack`, `publish` in
+order. `--skip` and `--only` take comma-separated stages; `--from` and
+`--to` bound the run. `--only` cannot combine with the other three.
+A new version needs `compile` selected. `--dry-run` stops before publishing
+but still submits to Apple; `--dry-run --skip notarise` leaves that out.
+`pack` uses `curl` to fetch FFmpeg and zlib source into
+`dist/release/source/`, checking SHA-256 sums against OpenTUI's native
+package `FFMPEG-SOURCE.md`. Failed downloads or mismatches stop the release,
+even in a dry run. A channel dry run prints its stages and npm publish arguments.
 
-Preflight checks a clean tree and the version. Publishing needs the channel's
-branch, or `main` for a stable release, equal to its origin branch, no
-`v<version>` tag, and `gh` installed and signed in, checked with
-`gh auth status` when `publish` is selected. After these guards, every run
-requires successful `npm whoami`, including dry runs and runs without
-`publish`; stage selection cannot skip authentication. Success
-needs no terminal. On failure, stdin and stdout must both be terminals:
-the release runs plain `npm login` once in that terminal, then requires a
-successful `npm whoami` recheck. Without those terminals, or if login fails,
-is cancelled or interrupted, or the recheck fails, the release stops before
-release work. npm may open a browser and save credentials or registry
-settings, even during a dry run.
+One release at a time holds a lock in git's common directory, shared by
+worktrees. It never goes stale: a lock left by SIGKILL, a crash or reboot
+is refused with its pid and path, to remove by hand. Preflight checks a
+clean tree and the version. Publishing needs the channel's branch, or
+`main` for a stable release, level with origin, no `v<version>` tag the
+release did not make, and signed-in `gh`, checked with `gh auth status`.
+After the guards, every named release requires successful `npm whoami`,
+including dry runs and runs without publish. Success needs no terminal.
+On failure, stdin and stdout must be terminals for one plain `npm login`
+and a successful `npm whoami` recheck. Missing terminals, failed, cancelled
+or interrupted login, or a failed recheck stop release work. npm may open
+a browser and save credentials or registry settings, even in a dry run.
+Stage selection cannot skip authentication.
 
-A new version is then written into package.json and committed alone as
+A new version is written into package.json and committed alone as
 `chore: chord v<version>` before any stage. A publishing run pushes that
-branch first. If the push fails, it drops the local commit and stops; a later
-failure leaves the pushed commit on origin. Rerun with no version to
-release package.json's version without another commit.
-
-A dry run or a run without `publish` makes the version commit locally and
-drops it at the end, on failure too. SIGINT, SIGTERM and SIGHUP also drop
-an unpushed version commit. SIGKILL may leave it; drop that commit with
+branch first. A run that publishes, or one at package.json's version
+without `--dry-run`, records its progress in gitignored
+`.release/<package>/state.json`: stages and output sums, each npm package,
+the tag and the draft. It keeps its version commit on failure, a failed
+push or a signal. A dry run, or a run without publish that makes a new
+version, keeps no state and drops its commit at the end, on failure,
+SIGINT, SIGTERM or SIGHUP too. SIGKILL may leave that commit; drop it with
 `git reset --keep HEAD~1`.
 
-`natives`, `sign` and `notarise` require an arm64 Mac; signing and notary
-credentials are checked before building when their stages are selected.
-A stopped publish resumes only package.json's version from the packed
-tarballs without rebuilding; a dry run or a run without `publish` refuses
-that resume. Each tarball must match its recorded SHA-256 sum. Before npm
-publishing, including on resume, the source archives must still match
-`FFMPEG-SOURCE.md`; missing or changed archives stop the release.
-`--skip pack` with `publish` needs archives from an earlier pack. Every
-package on a channel publishes with `--tag <channel>`, leaving npm's
-`latest` unchanged. The main package waits for all four platform packages
-on npm, then all five must answer before the annotated version tag is
-pushed to origin. `gh release create v<version> --draft` attaches the
-archives to a draft
-GitHub release, adding `--prerelease` for a channel. The owner fills in its
-notes and publishes it. If creating the draft fails, the version is already
-on npm and tagged; the release prints the exact `gh` command to finish by
-hand. Rerunning cannot create
-that draft. Publishing needs the owner at a terminal: npm gets the terminal
-for each authorisation and the CLI waits. See `bun dev release --help`.
+Rerun `bun dev release <package>` to continue from the state. It runs what
+is left, including a failed draft; `--bump` and `--dry-run` are refused
+while state is unfinished. Continuation needs a clean tree, the recorded
+build commit in HEAD's history, and HEAD at that commit while a stage before
+publish is left. With only publish left, HEAD may move on; publishing uses
+the recorded artifacts and tags their build commit. Missing or changed
+output is refused, naming the stage to rerun from; after signing changed
+compile's binaries, use `--from compile`. `--only` or `--from` reruns a
+selected done stage and clears it and later progress; rebuilding is refused
+once any npm package has been sent. `--skip` leaves stages undone; `--to`
+keeps state to continue later. Unrecorded npm versions or tags are refused.
+Completion removes state. To abandon a release, remove it by hand with
+`rm -r .release/<package>`. If state is lost after part of a release reached
+npm, the fresh guards refuse it; finish by hand.
+
+`natives`, `sign` and `notarise` need an arm64 Mac; signing and notary
+credentials are checked before building when selected. Publish needs `pack`
+done in this run or the state. Each tarball must match its recorded SHA-256;
+the source archives must still match `FFMPEG-SOURCE.md`. All five npm
+packages publish in order, the main one after the four platform packages
+answer on npm. Channel packages use `--tag <channel>`, leaving `latest`
+unchanged. Once all five answer, the annotated version tag is pushed and
+`gh release create v<version> --draft` attaches the archives to a draft
+GitHub release, with `--prerelease` for a channel. The owner writes its notes
+and publishes it. If creating the draft fails, rerun to continue from state
+or use the printed `gh` command. Publishing hands the terminal to npm for
+each authorisation and waits. See `bun dev release --help`.
 
 A chord that has grown large: `kill -USR2 <pid>` writes a heap snapshot of
 it, without stopping it, into `heaps/` in chord's state directory, for

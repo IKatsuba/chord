@@ -861,7 +861,12 @@ esac
       expect(lines('git.log')).toStrictEqual(
         command === 'tag'
           ? [`tag -a ${TAG} -m chord ${TAG} ${built}`]
-          : [`tag -a ${TAG} -m chord ${TAG} ${built}`, `push origin ${TAG}`],
+          : [
+              `rev-parse -q --verify refs/tags/${TAG}^{commit}`,
+              'ls-remote --tags origin',
+              `tag -a ${TAG} -m chord ${TAG} ${built}`,
+              `push origin ${TAG}`,
+            ],
       );
     }
   });

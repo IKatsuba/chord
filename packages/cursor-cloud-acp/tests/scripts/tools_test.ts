@@ -1,7 +1,9 @@
-import { expect, test } from 'bun:test';
-import { mkdtemp, readdir, readFile, rm } from 'node:fs/promises';
+import { describe, expect, test } from 'bun:test';
+import { spawnSync } from 'node:child_process';
+import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { build, foreign, here } from '../../scripts/tools.ts';
 
 test("foreign names a build's inputs outside the package's src/, by a path from the cwd or absolute", () => {
@@ -23,6 +25,50 @@ test("foreign names a build's inputs outside the package's src/, by a path from 
     'packages/cursor-cloud-acp/scripts/tools.ts',
     'packages/cursor-cloud-acp/srcs/a.ts',
   ]);
+});
+
+describe('CHD-622 tester: built Node launcher', () => {
+  test('rejects old versions before loading main and forwards arguments and exit status on supported versions', async () => {
+    const outdir = await mkdtemp(join(tmpdir(), 'cursor-cloud-acp-node-'));
+
+    try {
+      expect(await build({ output: () => undefined }, outdir)).toBe(0);
+      await writeFile(join(outdir, 'package.json'), '{"type":"module"}\n');
+      await writeFile(
+        join(outdir, 'main.js'),
+        'export function main(args) { process.stdout.write(JSON.stringify(args)); return 7; }\n',
+      );
+
+      for (const version of ['21.99.0', '22.12.999', '22.13.0', '23.0.0']) {
+        const accepted = version === '22.13.0' || version === '23.0.0';
+        const result = spawnSync(
+          'node',
+          [
+            '--input-type=module',
+            '-e',
+            `Object.defineProperty(process.versions, 'node', { value: ${JSON.stringify(version)} }); process.argv = ['node', 'bin.js', 'login', 'a b', '']; await import(${JSON.stringify(pathToFileURL(join(outdir, 'bin.js')).href)});`,
+          ],
+          {
+            encoding: 'utf8',
+            stdio: ['ignore', 'pipe', 'pipe'],
+            timeout: 5000,
+          },
+        );
+
+        expect(result.error).toBeUndefined();
+        expect(result.signal).toBeNull();
+        expect(result.status).toBe(accepted ? 7 : 1);
+        expect(result.stdout).toBe(accepted ? '["login","a b",""]' : '');
+        expect(result.stderr).toBe(
+          accepted
+            ? ''
+            : `cursor-cloud-acp needs Node 22.13 or newer; this is Node ${version}.\n`,
+        );
+      }
+    } finally {
+      await rm(outdir, { recursive: true, force: true });
+    }
+  });
 });
 
 test("build writes bin.js, whose only import is main's chunk, after Node's version is checked", async () => {

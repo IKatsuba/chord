@@ -246,7 +246,12 @@ async function locked(
         ...state,
         versionCommit: { state: 'pending' },
       }));
-      commitVersion(release, of, version);
+      commitVersion(release, of, version, (files) =>
+        recorded.record((state) => ({
+          ...state,
+          versionCommit: { state: 'pending', files },
+        })),
+      );
 
       const sha = head(release);
 
@@ -411,7 +416,12 @@ async function continued(
   const recorded = record(release, state);
 
   if (commit.at === 'base') {
-    commitVersion(release, of, state.version);
+    commitVersion(release, of, state.version, (files) =>
+      recorded.record((now) => ({
+        ...now,
+        versionCommit: { state: 'pending', files },
+      })),
+    );
   }
 
   if (commit.at !== 'none') {

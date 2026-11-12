@@ -4,10 +4,11 @@
  * pending, settled by reading git, npm or GitHub once. Nothing else is
  * inferred from them: what the state does not record is refused.
  */
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { die, type Release, type ReleasePackage, run, said } from './lib.ts';
-import { withVersion } from './bump.ts';
 import { abandon, type ReleaseState } from './state.ts';
 import { sha256 } from './sums.ts';
 
@@ -41,8 +42,8 @@ export type VersionCommit =
 /**
  * The version commit as the state and HEAD have it: none to make, one left
  * pending that never happened (HEAD is still `base`), or one made before the
- * run was killed (HEAD is `base` plus only the version change). Anything
- * else is refused.
+ * run was killed (HEAD's parent is `base`, and it holds exactly the files
+ * the release recorded, by their sha256). Anything else is refused.
  */
 export function versionCommit(
   release: Release,
@@ -65,67 +66,49 @@ export function versionCommit(
 
   if (
     said(parent.stdout) === state.base &&
-    onlyVersion(release, of, state.base, head, state.version)
+    recorded(release, state.base, head, commit.files)
   ) {
     return { at: 'made', sha: head };
   }
 
   refuse(
     of,
-    `the version commit of ${of.name} ${state.version} was left pending on ${state.base}, and HEAD ${head} is neither that commit nor it plus only the version change`,
+    `the version commit of ${of.name} ${state.version} was left pending on ${state.base}, and HEAD ${head} is neither that commit nor it plus exactly the files the release recorded`,
   );
 }
 
 /**
- * Whether `head` changes `base` by the version alone: the package's
- * package.json as `base` had it with only the version replaced, and, for a
- * workspace package, bun.lock's lines that differ only by that version.
+ * Whether `head` holds exactly the files the release recorded before making
+ * the version commit, each with its recorded sha256.
  */
-function onlyVersion(
+function recorded(
   release: Release,
-  of: ReleasePackage,
   base: string,
   head: string,
-  version: string,
+  files: Readonly<Record<string, string>> | undefined,
 ): boolean {
-  const manifest = join(of.folder, 'package.json');
-  const changed = git(release, 'diff', '--name-only', base, head)
-    .split('\n')
-    .filter((path) => path !== '');
-  const show = (commit: string, path: string) =>
-    run(release, 'git', ['show', `${commit}:${path}`]).stdout;
-  const before = versionAt(release, base, manifest);
-
-  if (
-    !changed.includes(manifest) ||
-    changed.some((path) => path !== manifest && path !== 'bun.lock') ||
-    show(head, manifest) !== withVersion(show(base, manifest), version) ||
-    before === undefined
-  ) {
+  if (files === undefined) {
     return false;
   }
 
-  if (!changed.includes('bun.lock')) {
-    return true;
-  }
-
-  // Bun records a workspace package's version in bun.lock, never the root's.
-  const lines = git(release, 'diff', '-U0', base, head, '--', 'bun.lock')
+  const changed = git(release, 'diff', '--name-only', base, head)
     .split('\n')
-    .filter((line) => /^[-+]/.test(line) && !/^(---|\+\+\+) /.test(line));
-  const removed = lines.filter((line) => line.startsWith('-'));
-  const added = lines.filter((line) => line.startsWith('+'));
-  const old = new RegExp(`("version":\\s*)"${before.replaceAll('.', '\\.')}"`);
+    .filter((path) => path !== '')
+    .toSorted();
 
   return (
-    of.folder !== '.' &&
-    removed.length > 0 &&
-    removed.length === added.length &&
-    removed.every(
-      (line, at) =>
-        old.test(line) &&
-        `+${line.slice(1).replace(old, `$1"${version}"`)}` === added[at],
-    )
+    changed.join('\n') === Object.keys(files).toSorted().join('\n') &&
+    changed.every((path) => {
+      const blob = spawnSync('git', ['show', `${head}:${path}`], {
+        cwd: release.root,
+        env: release.env,
+      });
+
+      return (
+        blob.status === 0 &&
+        createHash('sha256').update(blob.stdout).digest('hex') === files[path]
+      );
+    })
   );
 }
 

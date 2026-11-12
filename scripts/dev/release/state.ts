@@ -34,7 +34,12 @@ const SCHEMA = z.object({
   /** HEAD when the release began. */
   base: z.string(),
   versionCommit: z
-    .object({ state: progress, sha: z.string().optional() })
+    .object({
+      state: progress,
+      sha: z.string().optional(),
+      /** What the commit holds, by path, with its sha256, written before it is made. */
+      files: z.record(z.string(), z.string()).optional(),
+    })
     .optional(),
   /** The commit the stages build from; the tag points here. */
   built: z.string(),

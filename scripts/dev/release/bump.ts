@@ -14,6 +14,7 @@ import { join } from 'node:path';
 import { channelOf } from '../../../src/channel.ts';
 import { die, type Release, type ReleasePackage, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
+import { sha256 } from './sums.ts';
 
 /**
  * Commits the package's package.json at `version`, with bun.lock where Bun
@@ -23,6 +24,7 @@ export function commitVersion(
   release: Release,
   of: ReleasePackage,
   version: string,
+  committing: (files: Record<string, string>) => void = () => {},
 ): string {
   const head = run(release, 'git', ['rev-parse', 'HEAD']);
 
@@ -46,6 +48,15 @@ export function commitVersion(
     manifest,
     ...locked(release, of, () => writeFileSync(file, before)),
   ];
+
+  // What the commit will hold, by path, told before it is made: a run with a
+  // state records it, so one killed after the commit knows it by its bytes.
+  committing(
+    Object.fromEntries(
+      paths.map((path) => [path, sha256(join(release.root, path))]),
+    ),
+  );
+
   const committed = run(release, 'git', [
     'commit',
     '-q',
@@ -101,7 +112,7 @@ function locked(
  * A package.json's text with only its version value replaced, so the rest
  * of the file stays as Prettier laid it.
  */
-export function withVersion(text: string, version: string): string {
+function withVersion(text: string, version: string): string {
   return text.replace(
     /("version"\s*:\s*)"[^"]*"/,
     (_all, key: string) => `${key}"${version}"`,

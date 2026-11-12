@@ -22,6 +22,7 @@ import { commitVersion } from '../../../../scripts/dev/release/bump.ts';
 import { holdRelease } from '../../../../scripts/dev/release/lock.ts';
 import {
   readState,
+  type ReleaseState,
   writeState,
 } from '../../../../scripts/dev/release/state.ts';
 import { sha256 } from '../../../../scripts/dev/release/sums.ts';
@@ -1799,7 +1800,7 @@ describe.each([
       // As Bun lays a workspace package's version out in it.
       writeFileSync(
         join(at.root, 'bun.lock'),
-        `{\n  "workspaces": {\n    "packages/one": {\n      "version": "${VERSION}",\n    },\n  },\n}\n`,
+        `{\n  "workspaces": {\n    "packages/one": {\n      "version": "${VERSION}",\n    },\n    "packages/two": {\n      "version": "${VERSION}",\n    },\n  },\n}\n`,
       );
       writeFileSync(
         join(at.root, '.gitignore'),
@@ -1823,7 +1824,7 @@ describe.each([
         `echo "bun $*" >>"$STATE/ran.log"
 if [ "$1 $2" = 'install --lockfile-only' ]; then
   v=$(sed -n 's/.*"version":"\\([^"]*\\)".*/\\1/p' packages/one/package.json)
-  sed -i.bak "s/\\"version\\": \\"[^\\"]*\\"/\\"version\\": \\"$v\\"/" bun.lock && rm bun.lock.bak
+  awk -v v="$v" '/"packages\\/one"/ { one = 1 } one && /"version"/ { sub(/"version": "[^"]*"/, "\\"version\\": \\"" v "\\""); one = 0 } { print }' bun.lock >bun.lock.new && mv bun.lock.new bun.lock
 fi
 `,
       );
@@ -2235,42 +2236,12 @@ esac
         expect(sent()).toStrictEqual(all(NEXT));
       });
 
-      test('a version commit left pending is found made only if it changes the version alone', async () => {
-        const base = git_('rev-parse', 'HEAD');
-        const pending = {
-          format: 1 as const,
-          package: name,
-          version: NEXT,
-          channel: null,
-          branch: 'main',
-          base,
-          built: base,
-          versionCommit: { state: 'pending' as const },
-          stages: {},
-          npm: {},
-        };
-        const of = { name, folder, publish };
-
-        // Made as the release makes it, then killed before its record and
-        // before the push.
-        commitVersion(context(), of, NEXT);
-        writeState(at.root, pending);
-        await run({ skip: ['sign'] });
-
-        expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
-        expect(sent()).toStrictEqual(all(NEXT));
-      });
-
-      test('a version commit left pending that changes more than the version is refused', async () => {
-        const base = git_('rev-parse', 'HEAD');
-        const manifest = join(at.root, folder, 'package.json');
-
-        writeFileSync(
-          manifest,
-          JSON.stringify({ name: main, version: NEXT, private: true }),
-        );
-        git_('commit', '-q', '-am', `chore: ${name} v${NEXT}`);
-        writeState(at.root, {
+      /** A pending version commit's state at NEXT on base, with `files`. */
+      function pendingOn(
+        base: string,
+        files?: Record<string, string>,
+      ): ReleaseState {
+        return {
           format: 1,
           package: name,
           version: NEXT,
@@ -2278,16 +2249,87 @@ esac
           branch: 'main',
           base,
           built: base,
-          versionCommit: { state: 'pending' },
+          versionCommit: {
+            state: 'pending',
+            ...(files === undefined ? {} : { files }),
+          },
           stages: {},
           npm: {},
+        };
+      }
+
+      /** The version commit made as the release makes it, and the files it recorded. */
+      function madeAsReleased(): Record<string, string> {
+        let files: Record<string, string> = {};
+
+        commitVersion(context(), { name, folder, publish }, NEXT, (each) => {
+          files = each;
         });
 
-        expect(await died(run({ skip: ['sign'] }))).toBe(
-          `the version commit of ${name} ${NEXT} was left pending on ${base}, and HEAD ${git_('rev-parse', 'HEAD')} is neither that commit nor it plus only the version change; rm -r .release/${name} abandons it`,
+        return files;
+      }
+
+      test('a version commit left pending is found made when HEAD holds exactly the files the release recorded', async () => {
+        const base = git_('rev-parse', 'HEAD');
+        const files = madeAsReleased();
+
+        expect(Object.keys(files).toSorted()).toStrictEqual(
+          folder === '.'
+            ? ['package.json']
+            : ['bun.lock', join(folder, 'package.json')],
         );
-        expect(ran().filter((line) => line === 'npm whoami')).toStrictEqual([]);
+
+        // Killed after the commit, before its record and the push.
+        writeState(at.root, pendingOn(base, files));
+        await run({ skip: ['sign'] });
+
+        expect(versionCommits()).toStrictEqual([`chore: ${name} v${NEXT}`]);
+        expect(sent()).toStrictEqual(all(NEXT));
       });
+
+      test.each([
+        ['a non-version edit of the same package.json', 'manifest'],
+        ["another workspace's version in bun.lock", 'lock'],
+        ['no recorded files', 'none'],
+      ])(
+        'a version commit left pending is refused with %s',
+        async (_, change) => {
+          const base = git_('rev-parse', 'HEAD');
+          const files = madeAsReleased();
+          const manifest = join(at.root, folder, 'package.json');
+
+          git_('reset', '-q', '--hard', base);
+          writeFileSync(
+            manifest,
+            JSON.stringify({
+              name: main,
+              version: NEXT,
+              ...(change === 'manifest' ? { private: true } : {}),
+            }),
+          );
+
+          if (change === 'lock') {
+            // As Bun would leave it, plus another workspace's version moved too.
+            writeFileSync(
+              join(at.root, 'bun.lock'),
+              `{\n  "workspaces": {\n    "packages/one": {\n      "version": "${folder === '.' ? VERSION : NEXT}",\n    },\n    "packages/two": {\n      "version": "${NEXT}",\n    },\n  },\n}\n`,
+            );
+          }
+
+          git_('commit', '-q', '-am', `chore: ${name} v${NEXT}`);
+          writeState(
+            at.root,
+            pendingOn(base, change === 'none' ? undefined : files),
+          );
+
+          expect(await died(run({ skip: ['sign'] }))).toBe(
+            `the version commit of ${name} ${NEXT} was left pending on ${base}, and HEAD ${git_('rev-parse', 'HEAD')} is neither that commit nor it plus exactly the files the release recorded; rm -r .release/${name} abandons it`,
+          );
+          expect(ran().filter((line) => line === 'npm whoami')).toStrictEqual(
+            [],
+          );
+        },
+      );
 
       test('--from its first stage is refused when HEAD holds another version', async () => {
         atCurrent();

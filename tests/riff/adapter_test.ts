@@ -968,7 +968,7 @@ describe('tester: riff resume rejects broken metadata', () => {
                 provider: 'fake',
                 account: null,
                 model: 'fake',
-                effort: 'max',
+                effort: 'turbo',
                 mode: 'ask',
               }),
         );

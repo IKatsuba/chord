@@ -287,7 +287,7 @@ describe('the git runner', () => {
     // exec keeps the pid and the ignored SIGTERM: one process to find.
     await writeFile(
       fake,
-      `#!/bin/sh\necho $ > '${pidFile}'\ntrap '' TERM\nexec sleep 30\n`,
+      `#!/bin/sh\necho $$ > '${pidFile}'\ntrap '' TERM\nexec sleep 30\n`,
     );
     await chmod(fake, 0o755);
 
@@ -300,7 +300,10 @@ describe('the git runner', () => {
 
     const pid = Number(await readFile(pidFile, 'utf8'));
 
-    expect(() => process.kill(pid, 0)).toThrow();
+    expect(Number.isSafeInteger(pid) && pid > 0).toBe(true);
+    expect(() => process.kill(pid, 0)).toThrow(
+      expect.objectContaining({ code: 'ESRCH' }),
+    );
   });
 
   test('rejects when git cannot be started', async () => {

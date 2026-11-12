@@ -163,3 +163,30 @@ describe('tester: stage selection boundaries', () => {
     ).toThrow(ValidationError);
   });
 });
+
+describe('tester: CHD-623 package selector isolation', () => {
+  test('selection leaves frozen definitions and options untouched', () => {
+    const stages = Object.freeze(['install', 'build', 'pack', 'publish']);
+    const only = Object.freeze(['publish', 'build', 'build']);
+    const of = Object.freeze({ name: 'acp', stages });
+    const options = Object.freeze({ only });
+    const selected = selectOf(of, options);
+
+    expect(selected).toEqual(['build', 'publish']);
+    selected.pop();
+    expect(selectOf(of, options)).toEqual(['build', 'publish']);
+    expect(stages).toEqual(['install', 'build', 'pack', 'publish']);
+    expect(only).toEqual(['publish', 'build', 'build']);
+  });
+
+  test('an unavailable skipped stage is refused even outside the selected range', () => {
+    expect(() =>
+      selectOf(
+        { name: 'acp', stages: ['install', 'build', 'pack', 'publish'] },
+        { from: 'pack', skip: ['compile'] },
+      ),
+    ).toThrow(
+      'acp has no stage "compile"; its stages are install, build, pack, publish',
+    );
+  });
+});

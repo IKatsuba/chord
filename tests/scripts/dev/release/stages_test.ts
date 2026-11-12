@@ -1631,3 +1631,90 @@ describe('tester: CHD-577 branch and cleanup boundaries', () => {
     expect(ran()).toEqual(['npm view @chorded/chord dist-tags.latest']);
   });
 });
+
+describe('tester: CHD-623 selected stage readiness', () => {
+  test('shared readiness is awaited once before selected stages run in package order', async () => {
+    const events: string[] = [];
+    const ready = async () => {
+      await Promise.resolve();
+      events.push('ready');
+    };
+
+    const stage = (name: string) => ({
+      name,
+      about: name,
+      ready,
+      run: () => {
+        events.push(name);
+
+        return Promise.resolve();
+      },
+    });
+    const found: FoundPackage = {
+      ...CHORD,
+      steps: {
+        ...CHORD.steps,
+        release: [
+          {
+            name: 'unselected',
+            about: 'must stay idle',
+            ready: () => Promise.reject(new Error('unselected readiness ran')),
+            run: () => Promise.reject(new Error('unselected stage ran')),
+          },
+          stage('first'),
+          stage('second'),
+          CHORD.steps.release.at(-1)!,
+        ],
+      },
+    };
+
+    await runRelease(context(), found, ['second', 'first'], {}, MAC);
+
+    expect(events).toEqual(['ready', 'first', 'second']);
+    expect(ran()).toContain('npm whoami');
+  });
+
+  test('a failed readiness stops later readiness and every selected stage', async () => {
+    const failure = new Error('fixture readiness failed');
+    const events: string[] = [];
+    const found: FoundPackage = {
+      ...CHORD,
+      steps: {
+        ...CHORD.steps,
+        release: [
+          {
+            name: 'first',
+            about: 'first',
+            ready: () => Promise.reject(failure),
+            run: () => {
+              events.push('first');
+
+              return Promise.resolve();
+            },
+          },
+          {
+            name: 'second',
+            about: 'second',
+            ready: () => {
+              events.push('second ready');
+
+              return Promise.resolve();
+            },
+            run: () => {
+              events.push('second');
+
+              return Promise.resolve();
+            },
+          },
+          CHORD.steps.release.at(-1)!,
+        ],
+      },
+    };
+
+    await expect(
+      runRelease(context(), found, ['first', 'second'], {}, MAC),
+    ).rejects.toBe(failure);
+    expect(events).toEqual([]);
+    expect(ran()).toContain('npm whoami');
+  });
+});

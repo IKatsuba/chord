@@ -8479,9 +8479,18 @@ The design (`docs/design/CHD-623.md`, "The release's state"):
   are read only to refuse a mismatch or to settle one `pending` act.
   `--bump` and `--dry-run` are refused while a state is unfinished; a state
   of another format is refused untouched; a fully done one is removed.
-- **Cleared** when the release is done; an abandoned one by hand (pending
-  the owner, S1).
+- **Cleared** when the release is done; an abandoned one by hand (owner, S1).
 - **Replaces** preflight's resume mode, `stages.ts`'s resume branch and
   publish's skip of what npm has. CHD-547's rule holds from the state, and
   as an npm guard when there is none. A state lost while npm has part of a
-  release is refused and finished by hand (pending the owner, S2).
+  release is refused and finished by hand (owner, S2).
+
+## 2026-11-12 — CHD-623: an abandoned or lost release is the owner's to finish (owner, S1, S2)
+
+An abandoned release is cleared by hand, `rm -r .release/<package>`, which
+every refusal a state causes names; no `--forget` flag and no kept history.
+A release whose state is lost while npm has part of it (`git clean -fdx`, a
+fresh clone, or one begun by `bun dev` before the state existed) is refused
+by the fresh guards and finished by hand; no flag rebuilds a state from npm
+and git. Both keep the owner's rule that a release resumes from what it
+recorded, never from inference.

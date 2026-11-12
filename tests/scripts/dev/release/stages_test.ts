@@ -202,12 +202,14 @@ describe('CHD-561 tester: source fetch interrupts the release parent', () => {
 import { dying } from ${JSON.stringify(join(lib, 'lib.ts'))};
 import { selectStages } from ${JSON.stringify(join(lib, 'select.ts'))};
 import { runRelease } from ${JSON.stringify(join(lib, 'stages.ts'))};
+import steps from ${JSON.stringify(STEPS)};
+const chord = { name: 'chord', folder: '.', steps };
 const options = { dryRun: true, only: ['compile', 'pack'] };
 const release = {
   root: ${JSON.stringify(at.root)}, env: process.env,
   sleep: () => Promise.resolve(), out: console.log, err: console.error, tty: true,
 };
-await dying(() => runRelease(release, selectStages(options), options,
+await dying(() => runRelease(release, chord, selectStages({ name: 'chord', stages: steps.release.map((stage) => stage.name) }, options), options,
   { platform: 'darwin', arch: 'arm64' }, 'patch'));
 `,
     );
@@ -397,7 +399,8 @@ describe('tester: CHD-547 explicit version eligibility', () => {
         await died(
           runRelease(
             context({ AUTH_FAIL: 'yes' }),
-            selectStages(options),
+            CHORD,
+            select(options),
             options,
             MAC,
             '9.9.10',
@@ -427,7 +430,7 @@ describe('tester: CHD-412 release transaction boundaries', () => {
   }
 
   function versioned(wanted: string, options: ReleaseOptions) {
-    return runRelease(context(), selectStages(options), options, MAC, wanted);
+    return runRelease(context(), CHORD, select(options), options, MAC, wanted);
   }
 
   test('a successful local run drops its version commit without a dry-run flag', async () => {
@@ -458,9 +461,9 @@ if [ "$2" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
 `,
     );
 
-    expect(await died(versioned('patch', { only: ['check', 'compile'] }))).toBe(
-      'bun dev quality chord failed',
-    );
+    expect(
+      await died(versioned('patch', { only: ['quality', 'compile'] })),
+    ).toBe('bun dev quality chord failed');
     expect(output(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(readFileSync(join(at.root, '.gitignore'), 'utf8')).toBe(
       'dist/\nstage-output/\n',
@@ -491,8 +494,8 @@ if [ "$2" = 'quality' ]; then echo 'stage-output/' >> .gitignore; exit 2; fi
 });
 
 describe('tester: CHD-411 release check caller', () => {
-  test('check selected alone calls the dev entry point without install', async () => {
-    await released({ only: ['check'] });
+  test('quality selected alone calls the dev entry point without install', async () => {
+    await released({ only: ['quality'] });
 
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
       'bun scripts/dev.ts quality chord',
@@ -500,7 +503,7 @@ describe('tester: CHD-411 release check caller', () => {
     expect(at.out).toEqual([]);
   });
 
-  test('a failed install never reaches the migrated check command', async () => {
+  test('a failed install never reaches the migrated quality command', async () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
@@ -508,7 +511,7 @@ if [ "$1" = 'install' ]; then exit 7; fi
 `,
     );
 
-    expect(await died(released({ to: 'check' }))).toBe(
+    expect(await died(released({ to: 'quality' }))).toBe(
       'bun install --frozen-lockfile failed',
     );
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
@@ -534,10 +537,10 @@ describe('tester: release orchestration boundaries', () => {
     expect(ran()).toEqual([]);
   });
 
-  test('preflight guards check, compile, pack and publish selected alone', async () => {
+  test('preflight guards quality, compile, pack and publish selected alone', async () => {
     writeFileSync(join(at.root, 'untracked-fixture'), '');
 
-    for (const stage of ['check', 'compile', 'pack', 'publish'] as const) {
+    for (const stage of ['quality', 'compile', 'pack', 'publish'] as const) {
       expect(await died(released({ only: [stage] }))).toBe(
         'the tree is not clean:\n?? untracked-fixture',
       );
@@ -556,7 +559,7 @@ if [ "$2" = 'quality' ]; then exit 2; fi
 
     expect(
       await died(
-        released({ dryRun: true, only: ['install', 'check', 'compile'] }),
+        released({ dryRun: true, only: ['install', 'quality', 'compile'] }),
       ),
     ).toBe('bun dev quality chord failed');
     expect(ran().filter((line) => line.startsWith('bun '))).toStrictEqual([
@@ -1541,7 +1544,14 @@ describe('tester: CHD-577 branch and cleanup boundaries', () => {
   function publishing(): Promise<void> {
     const options = { channel: 'beta', only: ['compile', 'publish'] as const };
 
-    return runRelease(context(), selectStages(options), options, MAC, '10.0.0');
+    return runRelease(
+      context(),
+      CHORD,
+      select(options),
+      options,
+      MAC,
+      '10.0.0',
+    );
   }
 
   beforeEach(() => {
@@ -1590,12 +1600,12 @@ describe('tester: CHD-577 branch and cleanup boundaries', () => {
     const options = {
       channel: 'beta',
       dryRun: true,
-      only: ['check', 'compile'] as const,
+      only: ['quality', 'compile'] as const,
     };
 
     expect(
       await died(
-        runRelease(context(), selectStages(options), options, MAC, '10.0.0'),
+        runRelease(context(), CHORD, select(options), options, MAC, '10.0.0'),
       ),
     ).toBe('bun dev quality chord failed');
     expect(read('rev-parse', 'HEAD')).toBe(head);
@@ -1615,7 +1625,7 @@ describe('tester: CHD-577 branch and cleanup boundaries', () => {
 
     expect(
       await died(
-        runRelease(context(), selectStages(options), options, MAC, 'major'),
+        runRelease(context(), CHORD, select(options), options, MAC, 'major'),
       ),
     ).toBe("npm's latest 10.0.0-next.1 is no stable version");
     expect(ran()).toEqual(['npm view @chorded/chord dist-tags.latest']);

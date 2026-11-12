@@ -451,6 +451,7 @@ describe('tester: migrated command boundaries', () => {
     };
 
     const actions: DevActions = {
+      unclear: unexpected,
       quality: unexpected,
       lint: unexpected,
       compile: unexpected,
@@ -791,7 +792,7 @@ describe('tester: release parsing boundaries', () => {
     for (const pair of [
       [
         ['--only', 'publish'],
-        ['--skip', 'check'],
+        ['--skip', 'quality'],
       ],
       [
         ['--only', 'pack'],
@@ -804,9 +805,9 @@ describe('tester: release parsing boundaries', () => {
       [['--package', 'chord'], ['--dry-run']],
     ]) {
       for (const parts of [pair, [...pair].reverse()]) {
-        await expect(parsed(['release', ...parts.flat()])).rejects.toThrow(
-          ValidationError,
-        );
+        await expect(
+          parsed(['release', 'chord', ...parts.flat()]),
+        ).rejects.toThrow(ValidationError);
       }
     }
   });
@@ -815,10 +816,10 @@ describe('tester: release parsing boundaries', () => {
     for (const stages of [
       'pack,publish',
       'publish,pack',
-      'check,publish,pack',
+      'quality,publish,pack',
     ]) {
       await expect(
-        parsed(['release', '--dry-run', '--only', stages]),
+        parsed(['release', 'chord', '--dry-run', '--only', stages]),
       ).rejects.toThrow(ValidationError);
     }
   });
@@ -831,22 +832,22 @@ describe('tester: release parsing boundaries', () => {
       ['--to'],
       ['--package'],
       ['--to', 'build'],
-      ['--skip', 'check,unknown'],
+      ['--skip', 'quality,unknown'],
     ]) {
-      await expect(parsed(['release', ...argv])).rejects.toThrow(
+      await expect(parsed(['release', 'chord', ...argv])).rejects.toThrow(
         ValidationError,
       );
     }
   });
 
-  test('a package cannot survive a selection that removes publish', async () => {
+  test('the removed package flag stays refused when publish is not selected', async () => {
     for (const argv of [
       ['--skip', 'publish'],
-      ['--only', 'check'],
+      ['--only', 'quality'],
       ['--from', 'install', '--to', 'pack'],
     ]) {
       await expect(
-        parsed(['release', ...argv, '--package', 'chord-linux-arm64']),
+        parsed(['release', 'chord', ...argv, '--package', 'chord-linux-arm64']),
       ).rejects.toThrow(ValidationError);
     }
   });
@@ -883,14 +884,31 @@ test('CHD-531 release help discloses mandatory authentication and dry-run effect
 describe('tester: CHD-577 channel argument boundaries', () => {
   test('channel before the version and an equals value preserve the release selection', async () => {
     for (const argv of [
-      ['release', '--channel', 'beta', '1.0.0', '--only', 'compile,check'],
-      ['release', '1.0.0', '--channel=beta', '--only', 'compile,check'],
+      [
+        'release',
+        'chord',
+        '--channel',
+        'beta',
+        '--bump',
+        '1.0.0',
+        '--only',
+        'compile,quality',
+      ],
+      [
+        'release',
+        'chord',
+        '--bump',
+        '1.0.0',
+        '--channel=beta',
+        '--only',
+        'compile,quality',
+      ],
     ]) {
       const [call] = await parsed(argv);
 
-      expect(call?.slice(1)).toEqual([
-        ['check', 'compile'],
-        { channel: 'beta', only: ['compile', 'check'] },
+      expect(call?.slice(2)).toEqual([
+        ['quality', 'compile'],
+        { channel: 'beta', only: ['compile', 'quality'] },
         '1.0.0',
       ]);
     }
@@ -900,6 +918,7 @@ describe('tester: CHD-577 channel argument boundaries', () => {
     await expect(
       parsed([
         'release',
+        'chord',
         '--channel',
         'next',
         '--dry-run',

@@ -241,41 +241,39 @@ function tagged(where: string): string {
 const PUBLISH = 'publish --access public ';
 
 describe('CHD-561 tester: complete source guards precede every publish', () => {
-  for (const only of [undefined, 'chord-linux-x64'] as const) {
-    for (const defect of ['missing', 'changed', 'disagreeing notes'] as const) {
-      test(`${defect} blocks ${only ?? 'all packages'} before any platform publish or tag`, async () => {
-        const source = join(repo, 'dist', 'release', 'source');
-        const archive = join(source, 'zlib-1.3.2.tar.gz');
+  for (const defect of ['missing', 'changed', 'disagreeing notes'] as const) {
+    test(`${defect} blocks all packages before any platform publish or tag`, async () => {
+      const source = join(repo, 'dist', 'release', 'source');
+      const archive = join(source, 'zlib-1.3.2.tar.gz');
 
-        if (defect === 'missing') {
-          rmSync(archive);
-        } else if (defect === 'changed') {
-          writeFileSync(archive, 'untrusted bytes');
-        } else {
-          writeFileSync(
-            join(
-              repo,
-              'node_modules',
-              '@opentui',
-              'core-linux-x64',
-              'FFMPEG-SOURCE.md',
-            ),
-            `${SOURCE_NOTES}\nchanged build\n`,
-          );
-        }
+      if (defect === 'missing') {
+        rmSync(archive);
+      } else if (defect === 'changed') {
+        writeFileSync(archive, 'untrusted bytes');
+      } else {
+        writeFileSync(
+          join(
+            repo,
+            'node_modules',
+            '@opentui',
+            'core-linux-x64',
+            'FFMPEG-SOURCE.md',
+          ),
+          `${SOURCE_NOTES}\nchanged build\n`,
+        );
+      }
 
-        // A local inventory must never authorize an incomplete or stale set.
-        writeFileSync(join(source, 'SHA256SUMS'), '');
-        await died(() => publish(context(), { version: VERSION, only }));
+      // A local inventory must never authorize an incomplete or stale set.
+      writeFileSync(join(source, 'SHA256SUMS'), '');
+      await died(() => publish(context(), { version: VERSION }));
 
-        expect(
-          lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
-        ).toEqual([]);
-        expect(lines('gh.log')).toEqual([]);
-        expect(tagged(repo)).toBe('');
-        expect(isPublished('chord-linux-x64')).toBe(false);
-      });
-    }
+      expect(
+        lines('npm.log').filter((line) => line.startsWith(PUBLISH)),
+      ).toEqual([]);
+      expect(lines('gh.log')).toEqual([]);
+      expect(tagged(repo)).toBe('');
+      expect(isPublished('chord-linux-x64')).toBe(false);
+    });
   }
 });
 
@@ -612,9 +610,9 @@ describe('tester: publish guard boundaries', () => {
             return ctx.sleep(ms);
           },
         },
-        { version: VERSION, only: 'chord' },
+        { version: VERSION },
       ),
-    ).toBeTrue();
+    ).toBeUndefined();
     expect(sleeps).toStrictEqual([15_000, 15_000]);
     expect(tagged(origin)).toBe(TAG);
   });
@@ -631,6 +629,10 @@ describe('tester: publish guard boundaries', () => {
   });
 
   test('a resumed package needs no local tarball or checksum', async () => {
+    for (const name of [...PLATFORMS, 'chord']) {
+      publishedAlready(name);
+    }
+
     rmSync(
       join(
         repo,
@@ -643,16 +645,16 @@ describe('tester: publish guard boundaries', () => {
 
     tty = false;
 
-    expect(await release(PLATFORMS[0])).toBeFalse();
+    expect(await release()).toBeTrue();
     expect(lines('npm.log').filter((line) => line.startsWith(PUBLISH))).toEqual(
       [],
     );
     expect(sleeps).toEqual([]);
     expect(out.filter((line) => line.startsWith('npm will ask'))).toEqual([]);
-    expect(tagged(repo)).toBe('');
+    expect(tagged(repo)).toBe(TAG);
   });
 
-  test('a selected platform that answers late does not wait or tag', async () => {
+  test('the last unpublished platform answers late before the release tags', async () => {
     for (const name of [...PLATFORMS, 'chord']) {
       if (name !== 'chord-linux-x64') {
         publishedAlready(name);
@@ -661,13 +663,11 @@ describe('tester: publish guard boundaries', () => {
 
     writeFileSync(join(state, 'late', 'chord-linux-x64'), '2');
 
-    expect(
-      await publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
-    ).toBeFalse();
+    expect(await publish(context(), { version: VERSION })).toBeUndefined();
     expect(isPublished('chord-linux-x64')).toBeTrue();
-    expect(sleeps).toEqual([]);
-    expect(tagged(repo)).toBe('');
-    expect(tagged(origin)).toBe('');
+    expect(sleeps).toEqual([15_000, 15_000]);
+    expect(tagged(repo)).toBe(TAG);
+    expect(tagged(origin)).toBe(TAG);
   });
 
   test('a successful npm view with the wrong version stops with its answer', async () => {
@@ -736,11 +736,7 @@ esac
       );
       rmSync(join(state, 'git.log'), { force: true });
 
-      expect(
-        await died(() =>
-          publish(context(), { version: VERSION, only: 'chord-linux-x64' }),
-        ),
-      ).toBe(
+      expect(await died(() => publish(context(), { version: VERSION }))).toBe(
         command === 'tag'
           ? `git tag -a ${TAG} failed: fixture tag denied`
           : `git push origin ${TAG} failed: fixture push denied`,

@@ -149,10 +149,10 @@ describe('tester: stage selection boundaries', () => {
 
   test('duplicate stages are run once in release order', () => {
     expect(
-      selectStages({ only: ['publish', 'check', 'publish', 'check'] }),
-    ).toStrictEqual(['check', 'publish']);
-    expect(selectStages({ skip: ['check', 'check'] })).toStrictEqual(
-      STAGES.filter((stage) => stage !== 'check'),
+      selectStages({ only: ['publish', 'quality', 'publish', 'quality'] }),
+    ).toStrictEqual(['quality', 'publish']);
+    expect(selectStages({ skip: ['quality', 'quality'] })).toStrictEqual(
+      STAGES.filter((stage) => stage !== 'quality'),
     );
   });
 

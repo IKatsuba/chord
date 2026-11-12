@@ -2631,6 +2631,49 @@ describe("a fake provider presenting a plan's model list (CHD-611)", () => {
 
     expect(refused.error?.code).toBe(-32602);
   });
+
+  test('a resumed effort its model does not take reads and saves as default', async () => {
+    await open(true, {
+      provider: { baseUrl: fake.url, models: 'codex' },
+    });
+
+    const sessionId = await newSession();
+
+    end();
+    await riff.finished;
+
+    const store = riffStore(stateDir);
+    const sidecar = await store.read(sessionId);
+
+    await store.write(sessionId, {
+      ...sidecar!,
+      model: 'gpt-6-luna',
+      effort: 'ultra',
+    });
+    await open(true, {
+      provider: { baseUrl: fake.url, models: 'codex' },
+    });
+
+    const resumed = await client.request('session/resume', {
+      sessionId,
+      cwd: process.cwd(),
+      mcpServers: [],
+    });
+    const effort = (
+      resumed.result?.['configOptions'] as {
+        id: string;
+        currentValue: string;
+        options: { value: string }[];
+      }[]
+    ).find((option) => option.id === 'effort');
+
+    expect(effort?.currentValue).toBe('default');
+    expect(effort?.options.map(({ value }) => value)).not.toContain('ultra');
+    expect(await store.read(sessionId)).toMatchObject({
+      model: 'gpt-6-luna',
+      effort: 'default',
+    });
+  });
 });
 
 describe('riff instructions at session start', () => {

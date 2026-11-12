@@ -506,3 +506,66 @@ describe('riff plans on an injected fetch', () => {
     expect(fixture.urls).toEqual([]);
   });
 });
+
+describe("a plan's named efforts on the wire (CHD-611)", () => {
+  /** The Responses bodies' `reasoning.effort`, one per request. */
+  function sentEfforts(fixture: PlanFetch) {
+    const efforts: unknown[] = [];
+    const recorded: PlanFetch = {
+      ...fixture,
+      fetch: async (url, init) => {
+        if (!new URL(url).pathname.endsWith('/responses')) {
+          return fixture.fetch(url, init);
+        }
+
+        const body = await new Response(init?.body as BodyInit).text();
+        const sent = JSON.parse(body) as { reasoning?: { effort?: unknown } };
+
+        efforts.push(sent.reasoning?.effort);
+
+        return fixture.fetch(url, { ...init, body });
+      },
+    };
+
+    return { recorded, efforts };
+  }
+
+  const cases = [
+    ['codex', 'gpt-6.1-sol', ['high', 'max', 'ultra']],
+    ['codex', 'gpt-6-luna', ['max']],
+    ['grok', 'grok-4.7', ['high', 'xhigh']],
+  ] as const;
+
+  for (const [plan, model, values] of cases) {
+    test(`${plan}: ${model} sends ${values.join(', ')} as written`, async () => {
+      const { recorded, efforts } = sentEfforts(planFetch({ plan }));
+      const { client } = await open(plan, recorded);
+      const id = (await start(client)).result?.['sessionId'] as string;
+
+      expect(
+        (
+          await client.request('session/set_config_option', {
+            sessionId: id,
+            configId: 'model',
+            value: model,
+          })
+        ).error,
+      ).toBeUndefined();
+
+      for (const value of values) {
+        const set = await client.request('session/set_config_option', {
+          sessionId: id,
+          configId: 'effort',
+          value,
+        });
+
+        expect(set.error).toBeUndefined();
+        expect((await prompt(client, id)).result?.['stopReason']).toBe(
+          'end_turn',
+        );
+      }
+
+      expect(efforts).toEqual([...values]);
+    });
+  }
+});

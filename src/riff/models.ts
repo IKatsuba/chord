@@ -102,6 +102,16 @@ function effortsOf(plan: RiffPlan, model: string): readonly RiffEffort[] {
   return ['default', ...(modelOf(plan, model)?.levels ?? [])];
 }
 
+/**
+ * `config`, its effort `default` where its model does not take it: what a
+ * model change or a resumed sidecar runs on.
+ */
+export function offeredConfig(plan: RiffPlan, config: RiffConfig): RiffConfig {
+  return effortsOf(plan, config.model).includes(config.effort)
+    ? config
+    : { ...config, effort: 'default' };
+}
+
 export function configOptions(
   plan: RiffPlan,
   config: RiffConfig,
@@ -152,12 +162,7 @@ export function setOption(
   }
 
   if (id === 'model' && PLAN_MODELS[plan].some((model) => model.id === value)) {
-    // A model without the effort set runs on its own default instead.
-    const effort = effortsOf(plan, value).includes(config.effort)
-      ? config.effort
-      : 'default';
-
-    return { ...config, model: value, effort };
+    return offeredConfig(plan, { ...config, model: value });
   }
 
   if (

@@ -6,6 +6,10 @@
 import type { PackageSteps } from './scripts/dev/steps.ts';
 
 const bun = process.execPath;
+// ESLint runs as `bun run eslint`, on Bun through bunfig.toml: Bun finds
+// the bin in node_modules/.bin and, by `[run] bun = true`, runs it on Bun,
+// when `bun scripts/dev.ts` is started directly (the release) as much as
+// through `bun dev`.
 const eslint = [bun, 'run', 'eslint', '.'];
 // Loaded only when a stage runs, so parsing any `bun dev` command loads no release module.
 const stages = async () =>

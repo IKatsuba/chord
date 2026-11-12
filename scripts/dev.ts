@@ -5,8 +5,10 @@
  */
 import { Command, EnumType, ValidationError } from '@cliffy/command';
 import process from 'node:process';
+import { fileURLToPath } from 'node:url';
 import type { CompileOptions } from './dev/compile.ts';
 import type { MemoryOptions } from './dev/memory.ts';
+import { packages as findPackages, StepsError } from './dev/steps.ts';
 import { PACKAGES } from './dev/release/lib.ts';
 import {
   BUMPS,
@@ -24,6 +26,10 @@ import {
  * runs, so parsing loads none of them.
  */
 export interface DevActions {
+  /** `name`'s checks from its steps.ts, only the static ones if `only`. */
+  quality(name: string, only: boolean): void | Promise<void>;
+  /** ESLint with `name`'s argv, `args` after it. */
+  lint(name: string, args: readonly string[]): void | Promise<void>;
   compile(options: CompileOptions): void | Promise<void>;
   npm(): void | Promise<void>;
   registry(): void | Promise<void>;
@@ -95,7 +101,29 @@ export function qaState(dir: string): string {
  */
 export const FAKE_STATE = '/tmp/chord-fake';
 
+// The checkout this file is in, every package's steps run from.
+const ROOT = fileURLToPath(new URL('..', import.meta.url));
+
+/** The found package `name`: Cliffy's enum lets no other through. */
+async function found(name: string) {
+  const all = await findPackages(ROOT);
+
+  return all.find((each) => each.name === name)!;
+}
+
 const RUN: DevActions = {
+  quality: async (name, only) => {
+    const { run, stepContext } = await import('./dev/steps.ts');
+
+    process.exitCode = await run(await found(name), stepContext(ROOT), {
+      static: only,
+    });
+  },
+  lint: async (name, args) => {
+    const { lint, stepContext } = await import('./dev/steps.ts');
+
+    process.exitCode = await lint(await found(name), args, stepContext(ROOT));
+  },
   compile: async (options) =>
     (await import('./dev/compile.ts')).compile(options),
   npm: async () => (await import('./dev/npm.ts')).npm(),
@@ -169,7 +197,7 @@ The version is package.json's, or the one given: package.json's own, an exact ve
 
 Stages:
   install    bun install --frozen-lockfile
-  check      bun quality
+  check      bun dev quality chord
   natives    every platform's packages installed; the macOS native libraries signed
   compile    bun dev compile --all; each binary's kind checked with file(1)
   sign       both macOS binaries signed, verified and their entitlements compared
@@ -178,15 +206,58 @@ Stages:
   pack       the five packages laid out and packed, their sha256 recorded, the tarballs installed and checked
   publish    the four platform packages, a wait until npm answers for each, then @chorded/chord, then the tag`;
 
-/** `bun dev`'s commands, declared, each running through `actions`. */
-export function devCommand(actions: DevActions = RUN) {
+/** What `bun dev` knows of a package: its name, for `<package>`. */
+export interface DevPackage {
+  readonly name: string;
+}
+
+/**
+ * `bun dev`'s commands, declared, each running through `actions`; a
+ * command that takes `<package>` takes one of `packages`.
+ */
+export function devCommand(
+  actions: DevActions = RUN,
+  packages: readonly DevPackage[] = [{ name: 'chord' }],
+) {
+  const names = packages.map((each) => each.name);
+
   return (
     new Command()
       .name('bun dev')
-      .description("chord's build, release and maintenance tools.")
+      .description(
+        `chord's build, release and maintenance tools. A command that takes <package> runs that package's steps from its steps.ts and nothing else: ${names.join(' or ')}, its npm name without the scope.`,
+      )
       .action(function () {
         this.showHelp();
       })
+      .command(
+        'quality',
+        new Command()
+          .description(
+            "A package's checks in its steps.ts's order, stopping at the first that fails.",
+          )
+          .type('package', new EnumType(names))
+          .arguments('<package:package>')
+          .option('--static', 'Only the checks marked static.', {
+            default: false,
+          })
+          .example("chord's static checks", 'bun dev quality chord --static')
+          .action(({ static: only }, name) => actions.quality(name, only)),
+      )
+      .command(
+        'lint',
+        new Command()
+          .description(
+            "ESLint with a package's config over its files; the rest of the arguments are ESLint's, an empty one only after --.",
+          )
+          .type('package', new EnumType(names))
+          .arguments('<package:package> [args...:string]')
+          .stopEarly()
+          .example('what ESLint can fix, fixed', 'bun dev lint chord --fix')
+          .action(function (_options, name, ...args) {
+            return actions.lint(name, [...args, ...this.getLiteralArgs()]);
+          }),
+      )
       .command(
         'chord',
         new Command()
@@ -458,5 +529,18 @@ export function devCommand(actions: DevActions = RUN) {
 }
 
 if (import.meta.main) {
-  await devCommand().parse(process.argv.slice(2));
+  try {
+    // Every steps file, read before the tree it shapes: a broken one stops
+    // every command, naming it.
+    const packages = await findPackages(ROOT);
+
+    await devCommand(RUN, packages).parse(process.argv.slice(2));
+  } catch (error) {
+    if (!(error instanceof StepsError)) {
+      throw error;
+    }
+
+    process.stderr.write(`bun dev: ${error.message}\n`);
+    process.exit(1);
+  }
 }

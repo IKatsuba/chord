@@ -7,8 +7,9 @@ import { fileURLToPath } from 'node:url';
 import { ValidationError } from '@cliffy/command';
 import stripAnsi from 'strip-ansi';
 import { type DevActions, devCommand } from '../../scripts/dev.ts';
-import { lintCommand } from '../../scripts/lint.ts';
-import { qualityCommand } from '../../scripts/quality.ts';
+
+/** Two packages, as a repository with a workspace finds them. */
+const PACKAGES = [{ name: 'chord' }, { name: 'cursor-cloud-acp' }];
 
 /** Each command `argv` ran, with what it was given; nothing is run. */
 async function parsed(argv: string[]): Promise<unknown[][]> {
@@ -20,6 +21,8 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     };
 
   const actions: DevActions = {
+    quality: record('quality'),
+    lint: record('lint'),
     compile: record('compile'),
     npm: record('npm'),
     registry: record('registry'),
@@ -36,7 +39,7 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     test: record('test'),
   };
 
-  await devCommand(actions).noExit().throwErrors().parse(argv);
+  await devCommand(actions, PACKAGES).noExit().throwErrors().parse(argv);
 
   return calls;
 }
@@ -248,16 +251,91 @@ describe('test', () => {
   });
 });
 
-test('quality commands are no longer dev commands', async () => {
-  for (const command of ['check', 'lint', 'fmt']) {
+test("Bun's own check and fmt are not dev commands", async () => {
+  for (const command of ['check', 'fmt']) {
     await expect(parsed([command])).rejects.toThrow(ValidationError);
   }
 });
 
-test('--help lists every command', () => {
-  const help = stripAnsi(devCommand().getHelp());
+describe('quality', () => {
+  test("runs a package's checks, or only its static ones", async () => {
+    expect(await parsed(['quality', 'chord'])).toStrictEqual([
+      ['quality', 'chord', false],
+    ]);
+    expect(
+      await parsed(['quality', 'cursor-cloud-acp', '--static']),
+    ).toStrictEqual([['quality', 'cursor-cloud-acp', true]]);
+  });
+
+  test('a missing or unknown package is refused, listing the packages', async () => {
+    await expect(parsed(['quality'])).rejects.toThrow(
+      'Missing argument(s): package',
+    );
+    await expect(parsed(['quality', 'x'])).rejects.toThrow(
+      'Argument "package" must be of type "package", but got "x". Expected values: "chord", "cursor-cloud-acp"',
+    );
+  });
+
+  test('refuses extra arguments and unknown options', async () => {
+    for (const argv of [
+      ['quality', 'chord', 'tests/'],
+      ['quality', 'chord', '--fix'],
+      ['quality', 'chord', '--static', 'extra'],
+    ]) {
+      await expect(parsed(argv)).rejects.toThrow(ValidationError);
+    }
+  });
+
+  test("an action's failure reaches the caller", async () => {
+    const failure = new Error('fixture action failed');
+    const actions = {
+      quality: () => Promise.reject(failure),
+    } as unknown as DevActions;
+
+    await expect(
+      devCommand(actions, PACKAGES)
+        .noExit()
+        .throwErrors()
+        .parse(['quality', 'chord']),
+    ).rejects.toBe(failure);
+  });
+});
+
+describe('lint', () => {
+  test('passes the rest of the arguments to ESLint as they are', async () => {
+    expect(
+      await parsed(['lint', 'chord', '--fix', 'a b', '--quiet']),
+    ).toStrictEqual([['lint', 'chord', ['--fix', 'a b', '--quiet']]]);
+    expect(
+      await parsed(['lint', 'cursor-cloud-acp', '--fix', '--', '--quiet', '']),
+    ).toStrictEqual([['lint', 'cursor-cloud-acp', ['--fix', '--quiet', '']]]);
+    expect(await parsed(['lint', 'chord', '--fix', ''])).toStrictEqual([
+      ['lint', 'chord', ['--fix']],
+    ]);
+    expect(await parsed(['lint', 'chord', '--', '--help'])).toStrictEqual([
+      ['lint', 'chord', ['--help']],
+    ]);
+  });
+
+  test('a missing or unknown package is refused', async () => {
+    await expect(parsed(['lint'])).rejects.toThrow(ValidationError);
+    await expect(parsed(['lint', '--fix'])).rejects.toThrow(ValidationError);
+    await expect(parsed(['lint', 'x', '--fix'])).rejects.toThrow(
+      'Expected values: "chord", "cursor-cloud-acp"',
+    );
+  });
+});
+
+test('--help lists every command, and names the packages', () => {
+  const help = stripAnsi(devCommand(undefined, PACKAGES).getHelp());
+
+  expect(help.replace(/\s+/g, ' ')).toContain(
+    "runs that package's steps from its steps.ts and nothing else: chord or cursor-cloud-acp, its npm name without the scope.",
+  );
 
   for (const name of [
+    'quality',
+    'lint',
     'chord',
     'test',
     'compile',

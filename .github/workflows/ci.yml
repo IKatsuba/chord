@@ -18,7 +18,7 @@ jobs:
       # before a binary is built from them; locally it checks the host's
       # alone (CHD-603).
       - run: bun install --frozen-lockfile --os='*' --cpu='*' --libc='*'
-      - run: bun quality --static
+      - run: bun dev quality chord --static
         env:
           CHORD_LIBFX_ALL_TARGETS: '1'
 

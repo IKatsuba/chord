@@ -18,8 +18,11 @@ export function install(release: Release): void {
 }
 
 export function check(release: Release): void {
-  if (run(release, 'bun', ['quality'], loud).status !== 0) {
-    die('bun quality failed');
+  if (
+    run(release, 'bun', ['scripts/dev.ts', 'quality', 'chord'], loud).status !==
+    0
+  ) {
+    die('bun dev quality chord failed');
   }
 }
 

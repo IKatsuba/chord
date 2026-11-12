@@ -630,8 +630,8 @@ describe('a version given', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'quality' ]; then cat package.json >"$STATE/checked.json"; fi
-if [ -n "$FAIL_CHECK" ] && [ "$1" = 'quality' ]; then exit 2; fi
+if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; fi
+if [ -n "$FAIL_CHECK" ] && [ "$2" = 'quality' ]; then exit 2; fi
 `,
     );
     // Every binary the compile faked is every kind it should be.
@@ -670,7 +670,7 @@ if [ -n "$FAIL_CHECK" ] && [ "$1" = 'quality' ]; then exit 2; fi
       await died(
         releasedAt('9.9.10', { to: 'compile' }, { FAIL_CHECK: 'yes' }),
       ),
-    ).toBe('bun quality failed');
+    ).toBe('bun dev quality chord failed');
     expect(checked()).toBe('9.9.10');
     expect(out(at.root, 'rev-parse', 'HEAD')).toBe(head);
     expect(version()).toBe(VERSION);
@@ -849,7 +849,7 @@ esac
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; fi
+if [ "$2" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; fi
 `,
     );
     onNpm('chord', VERSION);
@@ -902,7 +902,9 @@ if [ "$1" = 'quality' ]; then cat package.json >"$STATE/checked.json"; exit 2; f
 
     const main = read(at.root, 'rev-parse', 'main');
 
-    expect(await died(publishing('major', 'next'))).toBe('bun quality failed');
+    expect(await died(publishing('major', 'next'))).toBe(
+      'bun dev quality chord failed',
+    );
     expect(read(at.root, 'log', '-1', '--format=%s')).toBe(
       'chore: chord v10.0.0-next.0',
     );
@@ -1239,7 +1241,7 @@ describe('a signal while the version commit is held', () => {
     at.fake(
       'bun',
       `echo "bun $*" >>"$STATE/ran.log"
-if [ "$1" = 'quality' ]; then kill -${signal} $PPID; exit 2; fi
+if [ "$2" = 'quality' ]; then kill -${signal} $PPID; exit 2; fi
 `,
     );
 

@@ -1,14 +1,7 @@
 /**
- * The tool runners shared by the dev CLI and the quality package scripts:
- * chord from source, the tests, the checks, formatting and ESLint. Each
- * spawns its tool from the repository's root with the terminal handed over
- * and answers the tool's
- * exit status, which the calling command exits with.
- *
- * ESLint runs as `bun run eslint`, on Bun through bunfig.toml:
- * Bun finds the bin in node_modules/.bin and, by bunfig.toml's
- * `[run] bun = true`, runs it on Bun, when `bun scripts/dev.ts` is started
- * directly (the release) as much as through `bun dev`.
+ * The dev CLI's tool runners: chord from source and the tests. Each spawns
+ * its tool from the repository's root with the terminal handed over and
+ * answers the tool's exit status, which the calling command exits with.
  */
 import { spawn as spawnChild, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
@@ -220,44 +213,4 @@ export function test(args: readonly string[], run: Run = spawn): number {
     './tests/',
     ...args,
   ]);
-}
-
-/** ESLint over the tree, `args` passed on. */
-export function lint(args: readonly string[], run: Run = spawn): number {
-  return run([process.execPath, 'run', 'eslint', '.', ...args]);
-}
-
-/**
- * The static checks in order, then the suite unless `only` static; after
- * Bun's type check, that it checked every tracked TypeScript file (`covered.ts`). The
- * step that fails is named through `say`, as one that ends without a word
- * of its own would otherwise leave nothing to read (CHD-467).
- */
-export function check(
-  only: { static?: boolean },
-  run: Run = spawn,
-  say: (line: string) => void = (line) => void process.stderr.write(line),
-): number {
-  const steps: [string, () => number][] = [
-    ['types', () => run([process.execPath, 'check'])],
-    ['covered', () => run([process.execPath, 'scripts/dev/covered.ts'])],
-    ['eslint', () => lint([], run)],
-    ['format', () => run([process.execPath, 'fmt', '--check', '.'])],
-    ["lint/'s tests", () => run([process.execPath, 'test', 'lint/'])],
-    ...(only.static === true
-      ? []
-      : [['the suite', () => test([], run)] as [string, () => number]]),
-  ];
-
-  for (const [name, step] of steps) {
-    const status = step();
-
-    if (status !== 0) {
-      say(`check: ${name} failed with status ${status}\n`);
-
-      return status;
-    }
-  }
-
-  return 0;
 }

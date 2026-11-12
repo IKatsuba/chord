@@ -10,13 +10,14 @@
  * `outside`, `detached`, `no-remote`, `not-pushed`; unset, it starts. A
  * prompt's first word picks its run: `think`, `tool`, `plan`, `request`,
  * `hang` (until Esc), `fail`, `busy`, `lost`; any other is answered `ok`.
- * Words later in a prompt never pick one.
+ * Words later in a prompt never pick one. One earlier agent, `EARLIER`,
+ * can be resumed by id.
  */
 import type { InteractionUpdate, ToolCall } from '@cursor/sdk';
 import { CursorError } from '../../src/errors.ts';
 import type { Git, GitResult } from '../../src/repo.ts';
 import { serveStdio } from '../../src/serve.ts';
-import { fakeCursor, type Script } from './fake_port.ts';
+import { fakeCursor, fakeRun, type Script } from './fake_port.ts';
 
 const START = process.env.CURSOR_CLOUD_QA ?? '';
 
@@ -160,6 +161,41 @@ function scriptFor(text: string): Script | undefined {
 }
 
 const cursor = fakeCursor(scriptFor);
+
+/**
+ * An agent started earlier, on cursor.com or another machine, so
+ * `--resume` has one to reopen in a fresh fixture: its last run finished,
+ * pushed to a branch of its own.
+ */
+export const EARLIER = 'bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10';
+
+cursor.listed.push({
+  agentId: EARLIER,
+  name: 'Add login page',
+  summary: '',
+  lastModified: Date.now() - 3 * 3600 * 1000,
+  runtime: 'cloud',
+  repos: ['https://github.com/acme/web'],
+});
+cursor.runs.set(EARLIER, [
+  fakeRun(
+    EARLIER,
+    {
+      result: {
+        git: {
+          branches: [
+            {
+              repoUrl: 'https://github.com/acme/web',
+              branch: 'cursor/login-page-5e1f',
+            },
+          ],
+        },
+      },
+    },
+    undefined,
+    Date.now() - 3 * 3600 * 1000,
+  ),
+]);
 
 if (START === 'key-refused') {
   cursor.keys.clear();

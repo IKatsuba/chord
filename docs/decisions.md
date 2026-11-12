@@ -8682,3 +8682,37 @@ command" entry above.
   workspace package is proposed, which leaves today's `--package` alone),
   whether the package gets a GitHub release (none proposed), and whether
   its check stage is its own checks (proposed) or the whole `bun quality`.
+
+## 2026-11-12 — CHD-622: the release names its package; each package checks only itself (owner, R1–R3)
+
+The owner answered the release's questions:
+
+- **R1.** The package is an explicit positional argument of
+  `bun dev release`, with no default: chord's own release is named too,
+  and the version or bump moves to a flag. Neither a subcommand per
+  package nor a `--package` flag. Proposed: Cliffy's `EnumType` over
+  chord's name and each workspace folder, `--bump <major|minor|patch|fix|x.y.z>`
+  (Cliffy registers `-V, --version` only on the main command when
+  `.version()` is set, which `bun dev` does not; `--bump` keeps clear of it
+  anyway), and a bare `bun dev release` left to Cliffy's missing-argument
+  error. Pending the owner: chord's name (`chord` proposed), the flag's
+  name, the bare run, `bun quality [package]` defaulting to chord, and
+  renaming today's `--package` to `--publish-only`.
+- **R2.** No GitHub release for a package.
+- **R3.** Every package has its own checks, and a release runs only those
+  of the package released. The package's tests move into
+  `packages/cursor-cloud-acp/tests/` (with its fixture), outside chord's
+  `tsconfig.json` `include` and `bun dev test`'s `./tests/`; `bun fmt
+  --check`, ESLint and `covered.ts` leave `packages/` out of chord's run,
+  and the package has its own `eslint.config.ts` importing chord's shared
+  rules. chord's tests never import the package: its window tests use
+  `fake_agent` scenarios. chord keeps the boundary checks (`src/` imports
+  nothing of `packages/`, the SDK or the keyring; the binary holds none of
+  them) and `privacy_test.ts` over every tracked file. CI's `node` job runs
+  the package's checks; chord's jobs run chord's. This supersedes the
+  earlier entries' "`bun quality` runs it beside the root check" and
+  `covered.ts`'s union.
+
+AGENTS.md's command block and release paragraph, `docs/guide.md`'s release
+section, `CONTRIBUTING.md` where it names the release and the release's
+help text change with the code, in the same pull request.

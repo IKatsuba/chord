@@ -15,6 +15,7 @@ import {
   requestLine,
   resumedMessage,
   runEnd,
+  shellContent,
   STARTING,
   toolKind,
   toolStatus,
@@ -531,5 +532,76 @@ describe('CHD-622 tester: unknown todo shapes', () => {
         },
       }),
     ).toEqual({ sessionUpdate: 'plan', entries: [] });
+  });
+});
+
+describe("a shell's output as text the row draws by line (3b989b57)", () => {
+  const shellDone = (result: unknown) =>
+    ({
+      type: 'shell',
+      args: { command: 'npm test' },
+      result,
+    }) as unknown as ToolCall;
+  const success = (stdout: string, stderr: string) => ({
+    status: 'success',
+    value: { exitCode: 0, signal: '', stdout, stderr, executionTime: 6200 },
+  });
+
+  test('stdout, then stderr, each a block; an empty one left out', () => {
+    expect(
+      shellContent(shellDone(success('Tests  41 passed (41)\n', 'warn: x'))),
+    ).toEqual([
+      {
+        type: 'content',
+        content: { type: 'text', text: 'Tests  41 passed (41)\n' },
+      },
+      { type: 'content', content: { type: 'text', text: 'warn: x' } },
+    ]);
+    expect(shellContent(shellDone(success('', 'only stderr')))).toEqual([
+      { type: 'content', content: { type: 'text', text: 'only stderr' } },
+    ]);
+    expect(shellContent(shellDone(success('', '')))).toEqual([]);
+  });
+
+  test('a failed shell, any other tool, and an unknown result shape give none', () => {
+    expect(
+      shellContent(shellDone({ status: 'error', error: 'exit 1' })),
+    ).toEqual([]);
+    expect(
+      shellContent({
+        type: 'read',
+        args: { path: 'a' },
+        result: success('x', 'y'),
+      } as unknown as ToolCall),
+    ).toEqual([]);
+    expect(
+      shellContent(shellDone({ status: 'success', value: { stdout: 7 } })),
+    ).toEqual([]);
+    expect(shellContent(shellDone(undefined))).toEqual([]);
+  });
+
+  test("the completed row carries it beside rawOutput, as does a load's replay", () => {
+    const call = shellDone(success('ok\n', ''));
+    const [completed] = new Drawing(ID).delta({
+      type: 'tool-call-completed',
+      callId: 'c1',
+      modelCallId: 'm1',
+      toolCall: call,
+    });
+
+    expect(completed).toMatchObject({
+      rawOutput: success('ok\n', ''),
+      content: [{ type: 'content', content: { type: 'text', text: 'ok\n' } }],
+    });
+    expect(
+      replay([
+        {
+          type: 'agentConversationTurn',
+          turn: { steps: [{ type: 'toolCall', message: call }] },
+        },
+      ] as unknown as ConversationTurn[])[0],
+    ).toMatchObject({
+      content: [{ type: 'content', content: { type: 'text', text: 'ok\n' } }],
+    });
   });
 });

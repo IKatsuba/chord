@@ -118,6 +118,9 @@ function scriptFor(text: string): Script | undefined {
             { type: 'shell', args: { command: 'npm test' } },
             {
               exitCode: 0,
+              signal: '',
+              stderr: '',
+              executionTime: 6200,
               stdout: [
                 ...Array.from({ length: 38 }, (_, at) => `✓ test ${at + 1}`),
                 ' Tests  41 passed (41)',

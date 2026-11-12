@@ -7,6 +7,7 @@ import { randomUUID } from 'node:crypto';
 import type {
   PlanEntry,
   SessionUpdate,
+  ToolCallContent,
   ToolKind,
   Usage,
 } from '@agentclientprotocol/sdk/unstable';
@@ -91,6 +92,27 @@ export function toolStatus(call: AnyToolCall): 'completed' | 'failed' {
     (call.result as { status?: unknown }).status === 'error'
     ? 'failed'
     : 'completed';
+}
+
+/**
+ * A shell call's output as text a row draws line by line: a successful
+ * result's stdout, then its stderr, each a block, an empty one left out
+ * (3b989b57). Every other tool, and a failed shell, sends none.
+ */
+export function shellContent(call: AnyToolCall): ToolCallContent[] {
+  const result = call.result as
+    | { status?: unknown; value?: { stdout?: unknown; stderr?: unknown } }
+    | undefined;
+
+  if (call.type !== 'shell' || result?.status !== 'success') {
+    return [];
+  }
+
+  return [result.value?.stdout, result.value?.stderr].flatMap((text) =>
+    typeof text === 'string' && text !== ''
+      ? [{ type: 'content' as const, content: { type: 'text' as const, text } }]
+      : [],
+  );
 }
 
 const TODO_STATUS = {
@@ -353,6 +375,7 @@ export class Drawing {
             status: toolStatus(update.toolCall),
             rawInput: update.toolCall.args,
             rawOutput: update.toolCall.result,
+            ...withContent(update.toolCall),
           },
           ...optional(plan(update.toolCall)),
         ]);
@@ -393,6 +416,13 @@ export class Drawing {
 }
 
 const TERMINAL = new Set(['FINISHED', 'ERROR', 'CANCELLED', 'EXPIRED']);
+
+/** `content` with a shell's output, or nothing. */
+function withContent(call: AnyToolCall): { content?: ToolCallContent[] } {
+  const content = shellContent(call);
+
+  return content.length === 0 ? {} : { content };
+}
 
 function optional<T>(value: T | undefined): T[] {
   return value === undefined ? [] : [value];
@@ -454,6 +484,7 @@ function stepUpdates(step: ConversationStep): SessionUpdate[] {
           status: toolStatus(call),
           rawInput: call.args,
           rawOutput: call.result,
+          ...withContent(call),
         },
         ...optional(plan(call)),
       ];

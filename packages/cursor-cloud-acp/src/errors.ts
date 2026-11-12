@@ -20,6 +20,8 @@ export type Kind =
 export class CursorError extends Error {
   override name = 'CursorError';
   readonly kind: Kind;
+  /** The SDK's own name for its error class: `ConfigurationError`. */
+  readonly sdkClass: string | undefined;
   readonly code: string | undefined;
   readonly requestId: string | undefined;
   /** Where to connect the repository's provider, for `integration`. */
@@ -29,6 +31,7 @@ export class CursorError extends Error {
     kind: Kind,
     message: string,
     options: {
+      readonly sdkClass?: string | undefined;
       readonly code?: string | undefined;
       readonly requestId?: string | undefined;
       readonly helpUrl?: string | undefined;
@@ -38,6 +41,7 @@ export class CursorError extends Error {
     super(message, { cause: options.cause });
 
     this.kind = kind;
+    this.sdkClass = options.sdkClass;
     this.code = options.code;
     this.requestId = options.requestId;
     this.helpUrl = options.helpUrl;
@@ -86,32 +90,54 @@ export function toAcp(error: unknown, link?: string): RequestError {
     );
   }
 
+  const data = details(error);
+
   switch (error.kind) {
     case 'auth':
-      return new RequestError(AUTH_REQUIRED, error.message);
+      return new RequestError(AUTH_REQUIRED, error.message, data);
     case 'not-found':
-      return new RequestError(RESOURCE_NOT_FOUND, error.message);
+      return new RequestError(RESOURCE_NOT_FOUND, error.message, data);
     case 'archived':
-      return new RequestError(INVALID_PARAMS, error.message);
+      return new RequestError(INVALID_PARAMS, error.message, data);
     case 'integration':
       return new RequestError(
         INTERNAL_ERROR,
         joined(error.message, error.helpUrl),
+        data,
       );
     case 'busy':
-      return new RequestError(INTERNAL_ERROR, joined(error.message, link));
-    case 'rate-limit':
-    case 'network':
-      return new RequestError(INTERNAL_ERROR, error.message);
-    case 'other':
       return new RequestError(
         INTERNAL_ERROR,
-        error.message,
-        error.code === undefined && error.requestId === undefined
-          ? undefined
-          : { code: error.code, requestId: error.requestId },
+        joined(error.message, link),
+        data,
       );
+    case 'rate-limit':
+    case 'network':
+    case 'other':
+      return new RequestError(INTERNAL_ERROR, error.message, data);
   }
+}
+
+/**
+ * The SDK's class, code and request id, in an error's `data`: its message
+ * is the one line shown (owner, CHD-622).
+ */
+function details(error: CursorError) {
+  const entries = Object.entries({
+    class: error.sdkClass,
+    code: error.code,
+    requestId: error.requestId,
+  }).filter(([, value]) => value !== undefined);
+
+  return entries.length === 0 ? undefined : Object.fromEntries(entries);
+}
+
+/**
+ * Any error as the one line the adapter writes to stderr: its message,
+ * never a stack, which for the SDK is its minified bundle (owner).
+ */
+export function plain(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** The words a turn ends with when the run's stream is lost mid-run. */

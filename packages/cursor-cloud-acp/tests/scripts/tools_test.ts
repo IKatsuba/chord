@@ -71,6 +71,29 @@ describe('CHD-622 tester: built Node launcher', () => {
   });
 });
 
+test('a main that rejects ends the built bin.js with one line and status 1, never a stack', async () => {
+  const outdir = await mkdtemp(join(tmpdir(), 'cursor-cloud-acp-reject-'));
+
+  try {
+    expect(await build({ output: () => undefined }, outdir)).toBe(0);
+    await writeFile(
+      join(outdir, 'main.js'),
+      "export function main() { return Promise.reject(new Error('Usage limit exceeded')); }\n",
+    );
+
+    const run = spawnSync(process.execPath, [join(outdir, 'bin.js')], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    expect(run.stderr).toBe('cursor-cloud-acp: Usage limit exceeded\n');
+    expect(run.stdout).toBe('');
+    expect(run.status).toBe(1);
+  } finally {
+    await rm(outdir, { recursive: true, force: true });
+  }
+});
+
 test("build writes bin.js, whose only import is main's chunk, after Node's version is checked", async () => {
   const outdir = await mkdtemp(join(tmpdir(), 'cursor-cloud-acp-build-'));
   const lines: string[] = [];

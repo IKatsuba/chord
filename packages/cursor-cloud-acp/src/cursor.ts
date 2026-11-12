@@ -14,6 +14,7 @@ export function normalise(error: unknown, from = sdk): unknown {
   }
 
   return new CursorError(kind(error, from), error.message, {
+    sdkClass: error.name,
     code: error.code,
     requestId: error.requestId,
     helpUrl:

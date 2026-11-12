@@ -5,7 +5,7 @@
  * stderr.
  */
 import type { SdkCredentialStore } from '@cursor/sdk';
-import { KeychainError } from './errors.ts';
+import { KeychainError, plain } from './errors.ts';
 import type { Port } from './port.ts';
 
 /** What the commands reach. */
@@ -47,9 +47,7 @@ function failed(context: LoginContext, error: unknown): number {
 
   context.fail(
     missing === undefined
-      ? error instanceof Error
-        ? error.message
-        : String(error)
+      ? plain(error)
       : `No keychain to keep the key in: ${missing.message.replace(/\.$/, '')}. Set CURSOR_API_KEY instead.`,
   );
 

@@ -28,6 +28,7 @@ describe('normalise tells the SDK errors apart by class and code', () => {
     expect(normalised).toMatchObject({
       kind,
       message: error.message,
+      sdkClass: error.name,
       cause: error,
     });
   });

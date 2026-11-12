@@ -17,6 +17,16 @@ if (major < 22 || (major === 22 && minor < 13)) {
 // prints the line above.
 void import('./main.ts')
   .then(({ main }) => main(process.argv.slice(2)))
-  .then((status) => {
-    process.exitCode = status;
-  });
+  .then(
+    (status) => {
+      process.exitCode = status;
+    },
+    // One line, never a stack: an SDK error's is its minified bundle.
+    (error) => {
+      process.stderr.write(
+        `cursor-cloud-acp: ${error instanceof Error ? error.message : String(error)}\n`,
+      );
+
+      process.exitCode = 1;
+    },
+  );

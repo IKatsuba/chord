@@ -3,6 +3,7 @@ import { RequestError } from '@agentclientprotocol/sdk';
 import {
   CursorError,
   lostConnection,
+  plain,
   refused,
   signedOut,
   toAcp,
@@ -56,6 +57,28 @@ describe("toAcp answers each kind as the design's table says", () => {
     ).toBe('Agent has an active run');
   });
 
+  test("every kind carries the SDK's class, code and request id in data", () => {
+    for (const kind of [
+      'auth',
+      'not-found',
+      'archived',
+      'integration',
+      'busy',
+      'rate-limit',
+      'network',
+      'other',
+    ] as const) {
+      expect(
+        toAcp(
+          new CursorError(kind, 'Usage limit exceeded', {
+            sdkClass: 'ConfigurationError',
+            code: 'usage_limit_exceeded',
+          }),
+        ).data,
+      ).toEqual({ class: 'ConfigurationError', code: 'usage_limit_exceeded' });
+    }
+  });
+
   test('other: -32603, its code and request id in data', () => {
     const error = new CursorError('other', 'Something broke', {
       code: 'internal',
@@ -80,6 +103,13 @@ test("an error not the SDK's is an internal error with its message", () => {
     data: undefined,
   });
   expect(toAcp('a string').message).toBe('a string');
+});
+
+test('plain is the one line written: a message, never a stack', () => {
+  const error = new CursorError('other', 'Usage limit exceeded');
+
+  expect(plain(error)).toBe('Usage limit exceeded');
+  expect(plain('x')).toBe('x');
 });
 
 test('a RequestError answers as it is', () => {

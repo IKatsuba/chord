@@ -2435,3 +2435,53 @@ describe('the agents the files leave unstartable (CHD-598)', () => {
     ).toStrictEqual(new Set(['codex']));
   });
 });
+
+describe('CHD-620 tester: transient MCP startup selection', () => {
+  test('resuming a disabled startup without the flag restores the current file value', () => {
+    const layers = [
+      {
+        file: 'fixture.json',
+        settings: { agents: { fake: { mcpServers: true } } },
+      },
+    ];
+    const disabled = resolveStartup(
+      { agent: 'fake', mcpServers: false },
+      layers,
+      'fake',
+    );
+
+    expect(resumedStartup(disabled, {}, layers).mcpServers).toBe(true);
+    expect(resumedStartup(disabled, {}, []).mcpServers).toBeUndefined();
+    expect(
+      resumedStartup(disabled, { mcpServers: false }, layers).mcpServers,
+    ).toBe(false);
+    expect(layers[0]?.settings.agents.fake.mcpServers).toBe(true);
+  });
+
+  test('interleaved same-name and other-name starts preserve each file policy', () => {
+    const layers = [
+      {
+        file: 'fixture.json',
+        settings: {
+          agents: {
+            fake: { mcpServers: true },
+            other: { mcpServers: true },
+            denied: { mcpServers: false },
+          },
+        },
+      },
+    ];
+    const flags = { agent: 'fake', mcpServers: false } as const;
+    const invoked = resolveStartup(flags, layers, 'fake');
+
+    for (const agent of ['fake', 'other', 'denied', 'fake', 'other']) {
+      expect(startupOf(agent, invoked, layers, flags).mcpServers).toBe(
+        agent === 'other',
+      );
+    }
+
+    expect(resolveStartup({ agent: 'fake' }, layers, 'fake').mcpServers).toBe(
+      true,
+    );
+  });
+});

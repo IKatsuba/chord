@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -150,5 +150,37 @@ test('an agent chord cannot start has no startup', async () => {
     const place = placeOf(await readPlace(dirs.there, given.with), given.with);
 
     expect(place.startupOf('no-such-agent')).toBeUndefined();
+  });
+});
+
+describe('CHD-620 tester: MCP policy across places', () => {
+  test('same-agent starts take the flag while another agent keeps its file policy', async () => {
+    await withDirs(async (dirs) => {
+      await settings(
+        dirs.there,
+        JSON.stringify({
+          agents: {
+            codex: { mcpServers: true },
+            claude: { mcpServers: true },
+          },
+        }),
+      );
+
+      const given = await reading(dirs, { mcpServers: false });
+      const read = await readPlace(dirs.there, given.with);
+      const place = placeOf(read, given.with);
+
+      expect(place.startupOf('codex')?.mcpServers).toBe(false);
+      expect(place.startupOf('claude')?.mcpServers).toBeUndefined();
+      expect(place.startupOf('codex')?.mcpServers).toBe(false);
+
+      const fresh = await reading(dirs);
+      const reopened = placeOf(
+        await readPlace(dirs.there, fresh.with),
+        fresh.with,
+      );
+
+      expect(reopened.startupOf('codex')?.mcpServers).toBeUndefined();
+    });
   });
 });

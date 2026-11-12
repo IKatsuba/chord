@@ -451,3 +451,60 @@ describe('tester: CHD-623 state persistence boundaries', () => {
     expect(next.base).toBe(at.base);
   });
 });
+
+describe('tester: CHD-623 expected npm progress', () => {
+  test('work follows the package npm order, including names the state never started', () => {
+    const npm = [
+      '@chorded/a',
+      '@chorded/b',
+      '@chorded/missing',
+      '@chorded/one',
+    ];
+    const at = state(['pack'], {
+      '@chorded/one': 'answered',
+      '@chorded/b': 'sent',
+      '@chorded/a': 'pending',
+    });
+    const before = JSON.stringify(at);
+
+    expect(left(at, selection(['publish'], { npm })).publish?.npm).toEqual([
+      '@chorded/a',
+      '@chorded/b',
+      '@chorded/missing',
+    ]);
+    expect(JSON.stringify(at)).toBe(before);
+  });
+
+  test('an empty npm map cannot finish or hide outstanding names after tagging', () => {
+    const npm = ['@chorded/a', '@chorded/one'];
+    const at = state(
+      ['pack'],
+      {},
+      {
+        tag: { state: 'pushed' },
+        draft: { state: 'made', url: 'https://github.example/draft' },
+      },
+    );
+
+    expect(finished(at, npm, false)).toBeFalse();
+    expect(finished(at, npm, true)).toBeFalse();
+    expect(
+      left(at, selection(['publish'], { npm, githubRelease: true })).publish,
+    ).toEqual({ npm, tag: false, draft: false });
+  });
+
+  test('progress diagnostics count expected names rather than unrelated entries', () => {
+    const at = state(['pack'], {
+      '@chorded/a': 'answered',
+      '@chorded/unrelated': 'answered',
+    });
+    const npm = ['@chorded/a', '@chorded/one'];
+
+    expect(
+      refused(() => left(at, selection(['publish'], { npm, dryRun: true }))),
+    ).toContain('npm 1 of 2');
+    expect(
+      finished({ ...at, tag: { state: 'pushed' } }, npm, false),
+    ).toBeFalse();
+  });
+});

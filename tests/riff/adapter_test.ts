@@ -2585,6 +2585,52 @@ describe("a fake provider presenting a plan's model list (CHD-611)", () => {
         .find((update) => update.sessionUpdate === 'usage_update'),
     ).toMatchObject({ size: planModels('codex')[0]?.window });
   });
+
+  test("a model change answers the new model's efforts, resetting one it lacks", async () => {
+    await open(true, {
+      provider: { baseUrl: fake.url, models: 'codex' },
+    });
+
+    const sessionId = await newSession();
+    const ultra = await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'effort',
+      value: 'ultra',
+    });
+
+    expect(ultra.error).toBeUndefined();
+
+    const changed = await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'model',
+      value: 'gpt-6-luna',
+    });
+    const effort = (
+      changed.result?.['configOptions'] as {
+        id: string;
+        currentValue: string;
+        options: { value: string }[];
+      }[]
+    ).find((option) => option.id === 'effort');
+
+    expect(effort?.currentValue).toBe('default');
+    expect(effort?.options.map(({ value }) => value)).toEqual([
+      'default',
+      'low',
+      'medium',
+      'high',
+      'xhigh',
+      'max',
+    ]);
+
+    const refused = await client.request('session/set_config_option', {
+      sessionId,
+      configId: 'effort',
+      value: 'ultra',
+    });
+
+    expect(refused.error?.code).toBe(-32602);
+  });
 });
 
 describe('riff instructions at session start', () => {

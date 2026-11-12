@@ -363,14 +363,15 @@ export const SHOTS: readonly Shot[] = [
     ],
   },
   {
-    // Taken once M1 has checked the ChatGPT list against the plan.
+    // The ChatGPT plan's list as checked against its /models on 2026-11-12,
+    // on the fake provider; the last row means the whole list is drawn.
     name: 'riff-model',
     scenario: 'text',
     args: ['riff'],
     // The header says `? for shortcuts` before the session is open.
     first: 'auto mode on',
     riff: {},
-    steps: [...prompt('/model'), { until: 'gpt-6-luna' }],
+    steps: [...prompt('/model'), { until: 'gpt-5.6-luna' }],
   },
   {
     // A reply's code blocks, each with its [copy], and [run] on a command.

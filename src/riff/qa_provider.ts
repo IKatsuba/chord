@@ -111,7 +111,7 @@ export function planFetch(options: {
                 slug: model,
                 id: model,
                 display_name: model,
-                context_window: 400000,
+                context_window: options.plan === 'codex' ? 500000 : 256000,
                 supported_in_api: true,
                 supported_reasoning_levels: [
                   { effort: 'low', description: 'Low' },

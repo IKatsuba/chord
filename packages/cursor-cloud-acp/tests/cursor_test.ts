@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import * as sdk from '@cursor/sdk';
 import { cursorPort, normalise } from '../src/cursor.ts';
-import { CursorError } from '../src/errors.ts';
+import { CursorError, toAcp } from '../src/errors.ts';
 
 describe('normalise tells the SDK errors apart by class and code', () => {
   test.each([
@@ -171,6 +171,48 @@ describe("the Port throws the adapter's errors from every call", () => {
 });
 
 describe('CHD-622 tester: error boundaries', () => {
+  test('real SDK classes retain class, code and request id through ACP conversion', () => {
+    const options = { code: 'fixture_code', requestId: 'fixture-request' };
+    const cases = [
+      ['AuthenticationError', new sdk.AuthenticationError('original', options)],
+      ['RateLimitError', new sdk.RateLimitError('original', options)],
+      ['AgentBusyError', new sdk.AgentBusyError('original', options)],
+      ['AgentNotFoundError', new sdk.AgentNotFoundError('original', options)],
+      ['NetworkError', new sdk.NetworkError('original', options)],
+      ['UnknownAgentError', new sdk.UnknownAgentError('original', options)],
+      [
+        'ConfigurationError',
+        new sdk.ConfigurationError('original', {
+          ...options,
+          code: 'agent_archived',
+        }),
+      ],
+      [
+        'IntegrationNotConnectedError',
+        new sdk.IntegrationNotConnectedError('original', {
+          ...options,
+          provider: 'github',
+          helpUrl: 'https://cursor.com/integrations',
+        }),
+      ],
+    ] as const;
+
+    for (const [name, error] of cases) {
+      const answer = toAcp(normalise(error));
+
+      expect(answer.data).toEqual({
+        class: name,
+        code: error.code,
+        requestId: 'fixture-request',
+      });
+      expect(answer.message).toBe(
+        name === 'IntegrationNotConnectedError'
+          ? 'original\nhttps://cursor.com/integrations'
+          : 'original',
+      );
+    }
+  });
+
   test.each([
     ['auth', new sdk.AuthenticationError('Agent is archived')],
     ['network', new sdk.NetworkError('Invalid API key')],

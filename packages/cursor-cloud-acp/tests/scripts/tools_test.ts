@@ -28,6 +28,41 @@ test("foreign names a build's inputs outside the package's src/, by a path from 
 });
 
 describe('CHD-622 tester: built Node launcher', () => {
+  test('Node reports a thrown error or primitive without a stack or stdout', async () => {
+    const outdir = await mkdtemp(
+      join(tmpdir(), 'cursor-cloud-acp-node-error-'),
+    );
+
+    try {
+      expect(await build({ output: () => undefined }, outdir)).toBe(0);
+      await writeFile(join(outdir, 'package.json'), '{"type":"module"}\n');
+
+      for (const thrown of [
+        "Object.assign(new Error('fixture failure'), { stack: 'private-stack-marker' })",
+        "'fixture failure'",
+      ]) {
+        await writeFile(
+          join(outdir, 'main.js'),
+          `export function main() { throw ${thrown}; }\n`,
+        );
+
+        const result = spawnSync('node', [join(outdir, 'bin.js')], {
+          encoding: 'utf8',
+          stdio: ['ignore', 'pipe', 'pipe'],
+          timeout: 5000,
+        });
+
+        expect(result.error).toBeUndefined();
+        expect(result.signal).toBeNull();
+        expect(result.status).toBe(1);
+        expect(result.stdout).toBe('');
+        expect(result.stderr).toBe('cursor-cloud-acp: fixture failure\n');
+      }
+    } finally {
+      await rm(outdir, { recursive: true, force: true });
+    }
+  });
+
   test('rejects old versions before loading main and forwards arguments and exit status on supported versions', async () => {
     const outdir = await mkdtemp(join(tmpdir(), 'cursor-cloud-acp-node-'));
 

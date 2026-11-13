@@ -478,3 +478,35 @@ describe('CHD-604c tester: new-agent ordering boundaries', () => {
     ).toStrictEqual(['claude', 'riff']);
   });
 });
+
+describe('CHD-621 tester: removed sign-in commands', () => {
+  test('login and logout are absent unless the agent advertises them', () => {
+    const ours = commandItems([]);
+
+    for (const name of ['login', 'logout']) {
+      expect(ours.some((item) => item.name === name)).toBe(false);
+      expect(submitted(`/${name}`)).toStrictEqual({
+        type: 'send',
+        text: `/${name}`,
+      });
+      expect(submitted(`/${name} example`)).toStrictEqual({
+        type: 'send',
+        text: `/${name} example`,
+      });
+    }
+
+    const advertised = commandItems([
+      { name: 'login', description: 'Agent sign-in' },
+      { name: 'logout', description: 'Agent sign-out' },
+    ]).filter(({ name }) => name === 'login' || name === 'logout');
+
+    expect(advertised).toStrictEqual([
+      { name: 'login', description: 'Agent sign-in', owner: 'agent' },
+      { name: 'logout', description: 'Agent sign-out', owner: 'agent' },
+    ]);
+    expect(submitted('/lo', advertised[0])).toStrictEqual({
+      type: 'send',
+      text: '/login',
+    });
+  });
+});

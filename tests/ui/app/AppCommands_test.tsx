@@ -395,3 +395,38 @@ describe('CHD-493 U2 tester: aliases retire live per-agent work', () => {
     });
   }
 });
+
+describe('CHD-621 tester: sign-in commands reach the agent', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    for (const command of ['/login', '/logout']) {
+      test(`${command} is an ordinary prompt at ${columns} by ${rows}`, () =>
+        withWindow(
+          async (window) => {
+            await ready(window);
+            await window.type('?');
+            await window.shows('enter to send');
+            expect(window.frame()).not.toContain('/login');
+            expect(window.frame()).not.toContain('/logout');
+            await window.press(ESC);
+            await window.type('/lo');
+            expect(window.frame()).not.toContain('/login');
+            expect(window.frame()).not.toContain('/logout');
+            await window.press(ESC);
+            await window.press('\x03');
+            await send(window, command);
+            await window.shows('This reply came in chunks.');
+            await until(
+              'the command turn to finish',
+              () => !window.frame().includes('Working'),
+            );
+            expect(window.frame()).not.toContain('ChatGPT');
+            expect(window.frame()).not.toContain('Grok');
+          },
+          { columns, rows },
+        ));
+    }
+  }
+});

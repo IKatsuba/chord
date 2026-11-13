@@ -2,7 +2,7 @@
  * Why an agent did not start, as chord knows it from the protocol and the
  * process it ran, never from the words: the step that failed, how the
  * process ended, the error's code, the end of its stderr, and the package a
- * registry agent ran (CHD-454).
+ * pinned agent ran, the registry's or chord's own (CHD-454, CHD-622).
  */
 import { AgentGone } from '../acp/connection.ts';
 import type { Tail } from '../acp/process.ts';
@@ -35,7 +35,7 @@ export interface StartFailure {
   readonly said?: string;
   /** The end of what it wrote to stderr, when it wrote anything. */
   readonly stderr?: Tail;
-  /** The package and version chord ran, for an agent of the registry's. */
+  /** The package and version chord ran, for an agent chord pins. */
   readonly pinned?: string;
 }
 
@@ -154,7 +154,7 @@ const METHOD_NOT_FOUND = -32601;
 /** JSON-RPC's invalid params. */
 const INVALID_PARAMS = -32602;
 
-/** The line that names what chord ran for a registry agent. */
+/** The line that names what chord ran for an agent it pins. */
 export function pinLine(pinned: string): string {
   return `chord ran ${pinned}, the version this chord pins.`;
 }

@@ -5,6 +5,7 @@ import type {
   EmbeddedResource as AcpEmbeddedResource,
   McpServer,
   PromptResponse,
+  SessionConfigOption,
   SessionNotification,
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
@@ -339,6 +340,11 @@ export interface Session {
    * `session/set_config_option`; `options()` then holds what it answered.
    */
   setOption(id: string, value: string): Promise<void>;
+  /**
+   * The config options as the agent last sent them, categories and `_meta`
+   * included, for what reads them by those (`parameters.ts`, `choice.ts`).
+   */
+  configOptions(): readonly SessionConfigOption[];
   /**
    * The efforts the agent offers for the model it is on, and the one it
    * reports; none when it offers none.
@@ -828,6 +834,7 @@ export async function openSession(
 
       state = withOptions(state, answered.configOptions);
     },
+    configOptions: () => state.configOptions,
     efforts: () => effortsOf(state),
     setEffort: async (effort) => {
       const key = effortsOf(state)?.option;

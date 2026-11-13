@@ -4,7 +4,10 @@
  */
 import type { SpendPart } from '../transcript/spend.ts';
 import { type Dispatch, useRef } from 'react';
+import { findAgent } from '../../agents.ts';
 import type { Conversation } from '../../session/conversation.ts';
+import { effortsFrom } from '../../session/efforts.ts';
+import { modelName } from '../../session/models.ts';
 import type { TeamShown } from '../../session/transcript/types.ts';
 import type { EditorMode } from '../../settings.ts';
 import { type TeamListing, teamCommand } from '../../session/team_command.ts';
@@ -160,6 +163,10 @@ export function useCommands(
         conversation()?.readOptions();
 
         return dispatch({ type: 'config_picker_opened' });
+      case 'effort':
+        return effort(args.trim());
+      case 'fast':
+        return fast();
       case 'resume':
         return sessions.openResume();
       case 'theme':
@@ -190,6 +197,51 @@ export function useCommands(
       case 'team':
         return team(args);
     }
+  };
+
+  /** A line under the command as typed, for `/effort` and `/fast`. */
+  const said = (command: string, text: string) =>
+    dispatch({
+      type: 'noted',
+      turnId: `${command}-${crypto.randomUUID()}`,
+      command,
+      text,
+      failed: false,
+    });
+
+  /**
+   * `/effort`: the picker of the model in use's efforts, or with a value, that
+   * effort by its id, exactly (CHD-626).
+   */
+  const effort = (value: string) => {
+    const typed = ['effort', value].filter(Boolean).join(' ');
+    const model = modelName(state.models) ?? '';
+
+    // A value is looked up in the chain, against the set as it is then.
+    if (value !== '') {
+      void conversation()
+        ?.setEffortById(agent, value, typed)
+        .catch(() => {});
+
+      return;
+    }
+
+    // The picker shows the efforts there are now.
+    if (effortsFrom(state.configOptions) === undefined) {
+      return said(typed, `${agent} offers no effort for ${model}.`);
+    }
+
+    dispatch({ type: 'effort_picker_opened' });
+  };
+
+  /**
+   * `/fast`: the fast option's other value, the option found by chord's
+   * `_meta` key or the agent's recorded id (CHD-626, O3).
+   */
+  const fast = () => {
+    void conversation()
+      ?.toggleFast(agent, findAgent(agent)?.fastOption)
+      .catch(() => {});
   };
 
   /**

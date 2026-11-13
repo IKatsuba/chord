@@ -1140,6 +1140,7 @@ function stubSession(id: string): Session {
     models: () => undefined,
     modes: () => undefined,
     options: () => [],
+    configOptions: () => [],
     history: () => [],
   } as unknown as Session;
 }

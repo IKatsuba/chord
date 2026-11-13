@@ -368,14 +368,19 @@ export const SHORTCUTS: readonly Shortcut[] = [
     commands: [],
     choices: [...'123456789'],
   },
+  // ← → move `/model`'s effort, one line with the list's own keys so the
+  // full panel takes none more (CHD-626).
   {
-    key: '↑ ↓ or j k',
-    does: 'to move between choices',
-    commands: [],
+    key: '↑ ↓ j k ← →',
+    does: 'to move or change a value',
+    commands: ['decrease_effort', 'increase_effort'],
+    presses: ['←', '→'],
     // ink-select-input does not look at ctrl, so ctrl+k moves up as k does,
     // and the pickers follow it; a side effect of the widget, not a key
     // worth a line of its own.
     choices: ['↑', '↓', 'j', 'k', 'ctrl + k'],
+    actions: ['modelPicker:decreaseEffort', 'modelPicker:increaseEffort'],
+    also: '↑ ↓ j k',
   },
   {
     key: 'enter',
@@ -401,6 +406,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'close_background',
       'background_back',
       'close_model_picker',
+      'close_effort_picker',
       'close_resume_picker',
       'close_config_picker',
       'close_theme_picker',
@@ -457,6 +463,8 @@ export const SHORTCUTS: readonly Shortcut[] = [
       ...NORMAL_KEYS,
       '↑',
       '↓',
+      '←',
+      '→',
       'backspace',
       'shift + backspace',
     ],

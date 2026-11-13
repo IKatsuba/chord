@@ -18,6 +18,16 @@ const ALIASES: Readonly<Record<string, string>> = {
   codex: 'codex-acp',
 };
 
+/**
+ * The id of an agent's fast option, read from its adapter's source and
+ * rechecked when its pin moves (CHD-626, O3): ACP has no category for speed.
+ * An agent that marks its option with `_meta["chord/parameter"]` needs none.
+ */
+const FAST_OPTIONS: Readonly<Record<string, string>> = {
+  'claude-acp': 'fast',
+  'codex-acp': 'fast-mode',
+};
+
 /** Fallback agent and initial startup-picker preference. */
 export const DEFAULT_AGENT = 'claude';
 
@@ -39,6 +49,8 @@ export interface KnownAgent {
   readonly mcpServers?: false;
   /** The registry's package and version, `package@version`, that npx or uvx runs. */
   readonly pinned?: string;
+  /** The id of its fast option, where chord records one. */
+  readonly fastOption?: string;
 }
 
 /** How an agent's process is started. */
@@ -73,6 +85,9 @@ function fromRegistry(agent: RegistryAgent | ChordedAgent): KnownAgent {
     install: agent.website ?? agent.repository,
     pinned,
     ...('mcpServers' in agent ? { mcpServers: agent.mcpServers } : {}),
+    ...(Object.hasOwn(FAST_OPTIONS, agent.id)
+      ? { fastOption: FAST_OPTIONS[agent.id] }
+      : {}),
   };
 }
 

@@ -8691,3 +8691,75 @@ What stays, as every agent uses it:
   session's directory (CHD-611).
 - Proposed diffs in permission requests (`dialogs/Permission.tsx`,
   `dialogs/permission.ts`).
+
+## 2026-11-13 — CHD-626: a model's parameters by ACP category only
+
+Options: recognise effort, fast and context by ACP's categories alone; by
+the agent's ids or names; by a shape (the one on/off option). Chosen:
+categories. Effort stays the first select of `thought_level`; a model's
+other parameters are the options of `model_config`, shown on `/model`'s
+settings line under the agent's own names, as ACP asks for that category.
+ACP has no way to tell fast from context from Claude's `ultracode` (all
+`model_config`), so chord does not; a shape rule fails on `ultracode`.
+Consequences: `/fast` cannot be built on categories alone (see the owner's
+answers below); fx's fast stays hidden while fx marks it `model`. `/config`
+keeps listing every option but mode and model, so the record keeps recording
+effort and fast. Libraries: `@agentclientprotocol/sdk` 2.2.0's types and
+ACP's "Session Config Options" page; no library recognises parameters beyond
+them.
+
+## 2026-11-13 — CHD-626: effort in `/model` with the widgets chord has
+
+Options: Claude Code's line under the list with ←/→ and its horizontal
+`/effort` scale; Cursor's Tab to an "Edit Parameters" panel of radio groups;
+a one-level `/config` of `‹ Value ›` rows. Chosen (owner, O2): one line of
+text under `/model`'s list, ←/→ moving the effort of the model in use, Enter
+sending it; `/effort` as chord's picker list; `/config` unchanged. No Tab
+and no second level in `/model`: it bound edits to the model in use while
+another was highlighted, and the shortcuts panel has no free line. Libraries
+tried under the one rule: OpenTUI has no labelled slider (core's
+`SliderRenderable` is a scrollbar thumb, not in `@opentui/react`) and no
+radio group; `<tab-select>` was found unfit for steps in CHD-1 and was not
+tried again here. The owner declined a scale of our own (O2).
+
+## 2026-11-13 — CHD-626: a highlighted model's effort is carried by value id
+
+ACP gives a model's parameters only once the session is on it. Options:
+switch first and keep the picker open; carry the moved effort to the new
+model by value id after the switch; open `/effort` after the switch (Codex);
+remember each visited model's option set per session; probe models by
+switching or by throwaway sessions. Chosen (owner, O1): carry over, sent
+only if the person moved it and the new set lists that id, a note otherwise.
+Rejected: the per-session memory (more state, may be stale, nothing it gives
+that carry-over lacks for the person); probing (moves the live model, may
+bill); reading Codex's `model[effort]` legacy ids (meaning read into an id
+format).
+
+## 2026-11-13 — CHD-626: config changes in one chain, folded by arrival
+
+`Conversation` keeps model changes and other option changes on two chains,
+so an effort set can overtake a model set. Chosen: one chain per session for
+model, mode and options; a choice's steps (model, then effort read from the
+set after the model's answer, `askStarting`'s rule) run inside one link;
+each step checks its session is still current. Option sets are folded in
+arrival order, as today. Rejected: dropping an answer when an update came
+after its request, since ACP carries no revision and arrival order cannot
+show which is newer. Refused steps are not undone: the model stays and one
+note says what was and was not set. No timeout on config calls.
+
+## 2026-11-13 — CHD-626: the owner's answers; `/fast` by a table and `_meta`
+
+The owner took every recommendation of `docs/design/CHD-626.md`. `/fast`
+finds the fast option by a table in chord's agent entries of ids read from
+the adapters' source (`claude-acp` `fast`, `codex-acp` `fast-mode`) and by
+`_meta["chord/parameter"]` (`"fast"`, `"context"`), which our cursor-cloud
+package sends; chord proposes reserved speed and context categories to ACP
+upstream, and they replace both when they land. Options considered: the
+table alone, the `_meta` key alone, no `/fast`. Cursor's parameter ids are
+recorded on CHD-622 from the owner's run (`context` 256k/500k,
+`reasoning_effort` low…xhigh, `fast` false/true): cursor-cloud marks
+`reasoning_effort` `thought_level`, and `context` and `fast` `model_config`.
+Not in this task: boolean config options (they would make cline's
+auto-approve and dirac's `yolo` settable), global keys, an id rule for fx
+(asked upstream instead), `--fast` and a `fast` setting, a timeout on config
+calls. A refused effort keeps the model; changes are sent mid-turn as today.

@@ -427,8 +427,15 @@
   session offers two models, `Fake Large with a 1M context window` (in use
   until switched) and `Fake Small`, and three modes, `default`, `acceptEdits`
   and `plan`, and an effort, `low`, `medium` (until set) or `high`, through
-  config options; `--config-delay <ms>` (`CHORD_FAKE_CONFIG_DELAY`)
-  delays `session/set_config_option` replies for startup ordering tests.
+  config options. Opt-in `--model-parameters`
+  (`CHORD_FAKE_MODEL_PARAMETERS=1`) gives Large efforts `low` through `max`
+  and fast mode, and Small only `low` and `medium`. A switch keeps an
+  offered effort, otherwise uses `medium`.
+  `--resend-config before|after` (`CHORD_FAKE_RESEND_CONFIG`) also sends a
+  config update on `low` effort before or after the model-switch answer,
+  to check differing sets in arrival order.
+  `--config-delay <ms>` (`CHORD_FAKE_CONFIG_DELAY`) delays
+  `session/set_config_option` replies for startup ordering tests.
   `--no-config` or `CHORD_FAKE_NO_CONFIG=1` leaves the effort
   out and `--refuse-config` or `CHORD_FAKE_REFUSE_CONFIG=1` refuses every
   change to it; `--no-modes` or `CHORD_FAKE_NO_MODES=1` offers no modes and
@@ -452,8 +459,9 @@
   for a missing `agentAlias`, as zeroclaw does with several agents and no
   default.
   `--hang <step>` or `CHORD_FAKE_HANG=<step>` wedges it: `start` never
-  answers `initialize`, `config` never answers a
-  config, mode or model change, `turn` never ends a prompt, cancelled or not.
+  answers `initialize`, `config` never answers a config, mode or model
+  change, `effort` never answers an effort change, and `turn` never ends a
+  prompt, cancelled or not.
   It ignores SIGTERM and stdin closing, but exits on SIGKILL or parent loss.
   It also exits when started under PID 1, even if that parent is alive. It
   switches its model, mode and effort through

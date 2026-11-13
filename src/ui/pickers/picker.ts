@@ -10,6 +10,7 @@ import { type ListedAgent, NOT_ON_PATH } from '../../agents.ts';
 import stringWidth from 'string-width';
 import wrapAnsi from 'wrap-ansi';
 import { type AgentOption, valueName } from '../../session/config.ts';
+import type { AgentEfforts } from '../../session/efforts.ts';
 import type { AgentModels } from '../../session/models.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import { homePath } from '../../settings.ts';
@@ -162,6 +163,20 @@ export function modelChoices(models: AgentModels | undefined): ModelChoice[] {
     }`,
     value: model.id,
     current: model.id === models?.current,
+  }));
+}
+
+/** `/effort`'s list: the efforts in the agent's order, the one in use marked. */
+export function effortChoices(
+  efforts: AgentEfforts | undefined,
+): PickerChoice[] {
+  return (efforts?.available ?? []).map((effort) => ({
+    key: effort.id,
+    label: `${effort.name}${
+      effort.id === efforts?.current ? ` ${CURRENT_MARK}` : ''
+    }`,
+    value: effort.id,
+    current: effort.id === efforts?.current,
   }));
 }
 

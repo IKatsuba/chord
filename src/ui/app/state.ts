@@ -23,6 +23,7 @@ import type { EarlierSession } from '../../session/sessions.ts';
 import type { SignIn } from '../../session/sign_in.ts';
 import type { StartFailure } from '../../session/start_failure.ts';
 import { addTurn, type KeptPlace, type Spent } from '../../session/usage.ts';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import type { AgentOption } from '../../session/config.ts';
 import { reduceTranscript } from '../../session/transcript/reducer.ts';
 import {
@@ -73,6 +74,7 @@ import {
   initialPickers,
   mcpShown,
   modelPickerShown,
+  effortPickerShown,
   type PickersAction,
   type PickersState,
   reducePickers,
@@ -172,6 +174,11 @@ export interface SessionState extends PromptSession, ViewSession, DialogsState {
    * `/config` lists them.
    */
   readonly options: readonly AgentOption[];
+  /**
+   * The same set whole, as the agent sent it, which `/model`'s settings
+   * line reads by category (CHD-626).
+   */
+  readonly configOptions: readonly SessionConfigOption[];
   /** The modes the agent offers, in its order; shift+tab walks them. */
   readonly modes: readonly AgentMode[];
   /**
@@ -385,6 +392,7 @@ export const initialAppState: AppState = {
   quitArmed: false,
   modes: [],
   options: [],
+  configOptions: [],
   monitors: [],
   endedMonitors: [],
   ...initialPrompt,
@@ -536,6 +544,9 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         : (reducePrompt(state, action) as AppState);
     case 'model_picker_opened':
     case 'model_picker_closed':
+    case 'model_effort_moved':
+    case 'effort_picker_opened':
+    case 'effort_picker_closed':
     case 'resume_asked':
     case 'resume_scope_toggled':
     case 'resume_picker_closed':
@@ -654,6 +665,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         teamsPicker: _________,
         backgroundView: __________,
         agentsView: ___________,
+        modelEffort: ____________,
+        effortPicker: _____________,
         ...rest
       } = state;
 
@@ -695,7 +708,11 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       };
     }
     case 'options':
-      return { ...state, options: action.options };
+      return {
+        ...state,
+        options: action.options,
+        configOptions: action.configOptions,
+      };
     case 'resume_listed': {
       // A read that outlived its `/resume`, or a newer one, opens nothing.
       if (state.resumeAsked !== action.asked) {
@@ -1115,6 +1132,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   startedModel: true,
   resumed: true,
   options: true,
+  configOptions: true,
   modes: true,
   modeAsked: true,
   monitors: true,
@@ -1599,6 +1617,7 @@ function pickerShown(state: AppState): boolean {
 function otherPickerShown(state: AppState): boolean {
   return (
     modelPickerShown(state) ||
+    effortPickerShown(state) ||
     resumePickerShown(state) ||
     configPickerShown(state) ||
     themePickerShown(state) ||
@@ -2033,6 +2052,18 @@ function boundCommand(
 
   if (closing && modelPickerShown(state)) {
     return 'close_model_picker';
+  }
+
+  if (closing && effortPickerShown(state)) {
+    return 'close_effort_picker';
+  }
+
+  if (on('modelPicker:decreaseEffort') && modelPickerShown(state)) {
+    return 'decrease_effort';
+  }
+
+  if (on('modelPicker:increaseEffort') && modelPickerShown(state)) {
+    return 'increase_effort';
   }
 
   if (closing && resumePickerShown(state)) {

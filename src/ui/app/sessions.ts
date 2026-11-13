@@ -11,6 +11,7 @@ import { resolve } from 'node:path';
 import type { Wait } from '../../notify.ts';
 import { busyOf, mine } from '../../session/busy.ts';
 import { withContext } from '../../session/context.ts';
+import { effortById } from '../../session/parameters.ts';
 import {
   Conversation,
   type ConversationEvent,
@@ -1412,14 +1413,41 @@ export function useSessions(
   /** Enter on `/resume`'s list. */
   const pickResume = (chosen: EarlierSession) => pickSession(chosen.resume);
 
-  /** Enter on `/model`'s list. */
+  /**
+   * Enter, or a digit, on `/model`'s list: the model, if another, then the
+   * effort moved with ←/→, if any, as one choice (CHD-626).
+   */
   const pickModel = (id: string) => {
+    const effort = state.modelEffort;
+
     dispatch({ type: 'model_picker_closed' });
 
-    const model = modelToAsk(state.models, id);
+    const asked = modelToAsk(state.models, id);
+    const name =
+      state.models?.available.find((model) => model.id === asked)?.name ??
+      asked;
 
-    if (model !== undefined) {
-      conversation()?.setModel(model);
+    if (asked === undefined && effort === undefined) {
+      return;
+    }
+
+    conversation()?.makeChoice(
+      {
+        ...(asked === undefined ? {} : { model: { id: asked, name: name! } }),
+        ...(effort === undefined ? {} : { effort }),
+      },
+      'model',
+    );
+  };
+
+  /** Enter, or a digit, on `/effort`'s list. */
+  const pickEffort = (id: string) => {
+    dispatch({ type: 'effort_picker_closed' });
+
+    const effort = effortById(state.configOptions, id);
+
+    if (effort !== undefined) {
+      conversation()?.makeChoice({ effort }, 'effort');
     }
   };
 
@@ -1540,6 +1568,7 @@ export function useSessions(
     openResume,
     pickResume,
     pickModel,
+    pickEffort,
     pickOption,
     moveAgent,
     closePicked,

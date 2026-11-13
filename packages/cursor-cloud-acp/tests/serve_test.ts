@@ -619,6 +619,78 @@ describe('config options', () => {
       ).code,
     ).toBe(-32602);
   });
+
+  test("Cursor's effort, context and fast reach the client marked; its default sends none", async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+    at.cursor.models.push({
+      id: 'gpt-5.5',
+      displayName: 'GPT-5.5',
+      parameters: [
+        { id: 'context', values: [{ value: '256k' }, { value: '500k' }] },
+        {
+          id: 'reasoning_effort',
+          values: ['low', 'medium', 'high', 'xhigh'].map((value) => ({
+            value,
+          })),
+        },
+        { id: 'fast', values: [{ value: 'false' }, { value: 'true' }] },
+      ],
+      variants: [
+        {
+          displayName: 'GPT-5.5',
+          isDefault: true,
+          params: [
+            { id: 'context', value: '256k' },
+            { id: 'reasoning_effort', value: 'medium' },
+            { id: 'fast', value: 'false' },
+          ],
+        },
+      ],
+    });
+
+    const { sessionId, configOptions } = await newSession(at);
+
+    expect(configOptions.map((each) => each.id)).toEqual(['mode', 'model']);
+
+    const changed = await at.request<{
+      configOptions: {
+        id: string;
+        category?: string;
+        _meta?: Record<string, unknown>;
+      }[];
+    }>('session/set_config_option', {
+      sessionId,
+      configId: 'model',
+      value: 'gpt-5.5',
+    });
+
+    expect(
+      changed.configOptions.map(({ id, category, _meta }) => ({
+        id,
+        category,
+        parameter: _meta?.['chord/parameter'],
+      })),
+    ).toEqual([
+      { id: 'mode', category: 'mode', parameter: undefined },
+      { id: 'model', category: 'model', parameter: undefined },
+      {
+        id: 'parameter:context',
+        category: 'model_config',
+        parameter: 'context',
+      },
+      {
+        id: 'parameter:reasoning_effort',
+        category: 'thought_level',
+        parameter: undefined,
+      },
+      { id: 'parameter:fast', category: 'model_config', parameter: 'fast' },
+    ]);
+  });
 });
 
 describe('list, resume, load, close', () => {

@@ -8,6 +8,7 @@ import { EventEmitter, once } from 'node:events';
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   DIMCODE_PERMISSION,
+  MODEL_PARAMETERS,
   NO_CONFIG,
   AUTO_MODE,
   BYPASS_MODE,
@@ -61,6 +62,39 @@ export const AVAILABLE_EFFORTS = [
   { value: 'low', name: 'Low' },
   { value: 'medium', name: 'Medium' },
   { value: 'high', name: 'High' },
+];
+
+/** Each session's fast option, `off` until set, with `--model-parameters`. */
+export const fasts = new Map<string, string>();
+
+/** The large model's efforts with `--model-parameters`. */
+const LARGE_EFFORTS = [
+  ...AVAILABLE_EFFORTS,
+  { value: 'xhigh', name: 'Xhigh' },
+  { value: 'max', name: 'Max' },
+];
+
+/**
+ * The efforts `model` offers: with `--model-parameters`, its own (the first
+ * model's `low` to `max`, the others' `low` and `medium`), else the same
+ * three for every model.
+ */
+export function effortsOf(model: string): { value: string; name: string }[] {
+  if (!MODEL_PARAMETERS) {
+    return AVAILABLE_EFFORTS;
+  }
+
+  return model === FIRST_MODEL ? LARGE_EFFORTS : AVAILABLE_EFFORTS.slice(0, 2);
+}
+
+/** Whether `model` offers a fast option: the first, with `--model-parameters`. */
+export function hasFast(model: string): boolean {
+  return MODEL_PARAMETERS && model === FIRST_MODEL;
+}
+
+export const FAST_VALUES = [
+  { value: 'off', name: 'Off' },
+  { value: 'on', name: 'On' },
 ];
 
 /**
@@ -127,6 +161,7 @@ export const strayCancels = new Map<string, number>();
  * `modes`.
  */
 export function configOptions(sessionId: string): acp.SessionConfigOption[] {
+  const model = models.get(sessionId) ?? FIRST_MODEL;
   const effort: acp.SessionConfigOption[] = NO_CONFIG
     ? []
     : [
@@ -136,9 +171,23 @@ export function configOptions(sessionId: string): acp.SessionConfigOption[] {
           category: 'thought_level',
           type: 'select',
           currentValue: efforts.get(sessionId) ?? 'medium',
-          options: AVAILABLE_EFFORTS,
+          options: effortsOf(model),
         },
       ];
+  const fast: acp.SessionConfigOption[] = hasFast(model)
+    ? [
+        {
+          id: 'fast',
+          name: 'Fast',
+          category: 'model_config',
+          // Marked as chord's own adapters mark theirs, so `/fast` finds it.
+          _meta: { 'chord/parameter': 'fast' },
+          type: 'select',
+          currentValue: fasts.get(sessionId) ?? 'off',
+          options: FAST_VALUES,
+        },
+      ]
+    : [];
 
   const mode: acp.SessionConfigOption[] = NO_MODES
     ? []
@@ -173,11 +222,12 @@ export function configOptions(sessionId: string): acp.SessionConfigOption[] {
       name: 'Model',
       category: 'model',
       type: 'select',
-      currentValue: models.get(sessionId) ?? FIRST_MODEL,
+      currentValue: model,
       options: AVAILABLE_MODELS,
     },
     ...mode,
     ...effort,
+    ...fast,
     ...permission,
   ];
 }

@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
+import stringWidth from 'string-width';
 import { useState } from 'react';
 import { draw } from '../harness.tsx';
 import { usePress } from '../../../src/ui/app/input.ts';
@@ -1759,5 +1760,391 @@ test('an agent started with --no-mcp-servers is given none, and its start line a
     );
   } finally {
     await server.close();
+  }
+});
+
+describe("/model's settings line and effort (CHD-626)", () => {
+  const RIGHT = '\x1b[C';
+  const LEFT = '\x1b[D';
+  const parameters = fakeAgentCommand(undefined, '--model-parameters');
+  const opened = async (window: Window) => {
+    await ready(window);
+    await send(window, '/model');
+    await window.shows('Select model');
+  };
+
+  test('M1, M2, M3: the line, → waiting for Enter, and carried to another model', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        // The fake has nothing beyond these, so no /config tail.
+        await window.shows('Medium effort  ←/→ to adjust · Fast  Off');
+        expect(window.frame()).not.toContain('/config');
+        await window.shows('Enter to switch · ←/→ for effort · Esc to close');
+        await window.press(RIGHT);
+        await window.shows('High effort •  ←/→ to adjust · Fast  Off');
+        await window.shows('Enter to set · ←/→ for effort · Esc to close');
+        await window.press(DOWN);
+        await window.shows(
+          'High effort •  ←/→ to adjust · asked for once Fake Small is in use, if it offers High',
+        );
+        await window.shows('Enter to switch · ←/→ for effort');
+        await window.press('\r');
+        await window.shows(
+          'Switched to Fake Small; it offers no High effort, it is on Medium.',
+        );
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('a digit sends the pending effort with its model; Esc sends nothing', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        await window.press(LEFT);
+        await window.shows('Low effort •');
+        await window.press(ESC);
+        await until(
+          'the picker closed',
+          () => !window.frame().includes('Select model'),
+        );
+        expect(window.frame()).not.toContain('Effort set to');
+        await send(window, '/model');
+        await window.shows('Medium effort  ←/→');
+        await window.press(LEFT);
+        await window.press('2');
+        await window.shows('Switched to Fake Small · Low effort');
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  for (const [what, bindings, cue, hint] of [
+    [
+      'both unbound: no cue on the line or in the hint',
+      { left: null, right: null },
+      'Medium effort · Fast  Off',
+      'Enter to switch · Esc to close',
+    ],
+    [
+      'one unbound, the other rebound: only the key that acts',
+      { left: null, right: null, l: 'modelPicker:increaseEffort' },
+      'Medium effort  l to adjust · Fast  Off',
+      'Enter to switch · l for effort · Esc to close',
+    ],
+  ] as const) {
+    test(`the effort keys ${what}`, () =>
+      withWindow(
+        async (window) => {
+          await opened(window);
+          await window.shows(cue);
+          await window.shows(hint);
+          expect(window.frame()).not.toContain('←/→');
+        },
+        {
+          agentCommand: parameters,
+          columns: 120,
+          rows: 40,
+          keybindings: JSON.stringify({
+            bindings: [{ context: 'ModelPicker', bindings }],
+          }),
+        },
+      ));
+  }
+
+  test('the narrow line and hint where the wide one does not fit', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        await window.shows('Medium effort ←/→ · Fast Off');
+        await window.shows('←/→ effort');
+      },
+      { agentCommand: parameters, columns: 40, rows: 24 },
+    ));
+
+  test('M4: a model with nothing to change says so, and ← → do nothing', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        await window.shows(
+          'Fake Large with a 1M context window has no effort or settings to change',
+        );
+        await window.press(RIGHT);
+        await window.shows('Enter to switch · Esc to close');
+        expect(window.frame()).not.toContain('•');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--no-config', '--no-modes'),
+      },
+    ));
+});
+
+describe('CHD-626 tester: model picker effort lifecycle', () => {
+  const RIGHT = '\x1b[C';
+  const LEFT = '\x1b[D';
+  const parameters = fakeAgentCommand(undefined, '--model-parameters');
+  const open = async (window: Window) => {
+    await ready(window);
+    await send(window, '/model');
+    await window.shows('Medium effort');
+  };
+
+  const current = (window: Window) =>
+    window
+      .session()
+      ?.options()
+      .find((option) => option.id === 'effort')?.current;
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`same-model Enter sends only the pending effort at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await open(window);
+          await window.press(LEFT);
+          await window.shows('Low effort •');
+          expect(current(window)).toBe('medium');
+          await window.press('\r');
+          await window.shows('Effort set to Low');
+          expect(window.session()?.models()?.current).toBe('fake-large');
+          expect(current(window)).toBe('low');
+          expect(window.frame()).not.toContain('Switched to');
+        },
+        { columns, rows, agentCommand: parameters },
+      ));
+  }
+
+  test('rebound keys act, unbound arrows do not, and returning to current clears the pending value', () =>
+    withWindow(
+      async (window) => {
+        await open(window);
+        expect(window.frame()).not.toContain('←/→');
+        await window.press(RIGHT);
+        expect(window.frame()).not.toContain('•');
+        await window.press('l');
+        await window.shows('High effort •');
+        await window.press('h');
+        await window.shows('Medium effort');
+        expect(window.frame()).not.toContain('•');
+        await window.press('h');
+        await window.shows('Low effort •');
+        await window.press('1');
+        await window.shows('Effort set to Low');
+        expect(current(window)).toBe('low');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        agentCommand: parameters,
+        keybindings: JSON.stringify({
+          bindings: [
+            {
+              context: 'ModelPicker',
+              bindings: {
+                left: null,
+                right: null,
+                h: 'modelPicker:decreaseEffort',
+                l: 'modelPicker:increaseEffort',
+              },
+            },
+          ],
+        }),
+      },
+    ));
+
+  test('resize preserves the pending effort; both ends clamp without sending before Enter', () =>
+    withWindow(
+      async (window) => {
+        await open(window);
+
+        for (let i = 0; i < 7; i++) {
+          await window.press(RIGHT);
+        }
+
+        await window.shows('Max effort •');
+        await window.resize({ columns: 80, rows: 24 });
+        await window.shows('Max effort •');
+        expect(
+          stripAnsi(window.frame())
+            .split('\n')
+            .every((row) => stringWidth(row) <= 80),
+        ).toBe(true);
+
+        for (let i = 0; i < 7; i++) {
+          await window.press(LEFT);
+        }
+
+        await window.shows('Low effort •');
+        expect(current(window)).toBe('medium');
+        await window.press(ESC);
+        await until(
+          'picker closes after resize',
+          () => !window.frame().includes('Select model'),
+        );
+        expect(current(window)).toBe('medium');
+      },
+      { columns: 120, rows: 40, agentCommand: parameters },
+    ));
+
+  test('an agent update removing a pending effort keeps the request until Enter and explains why it was not sent', () =>
+    withWindow(
+      async (window) => {
+        await open(window);
+        await window.press(RIGHT);
+        await window.shows('High effort •');
+        await window.session()!.setModel('fake-small');
+        await window.shows('Low effort');
+        expect(window.frame()).not.toContain('High effort •');
+        await window.press('2');
+        await window.shows(
+          'High effort was not sent: Fake Small no longer offers it; it is on Low.',
+        );
+        expect(current(window)).toBe('low');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--model-parameters',
+          '--resend-config',
+          'after',
+        ),
+      },
+    ));
+});
+
+describe('/effort and /fast (CHD-626)', () => {
+  const parameters = fakeAgentCommand(undefined, '--model-parameters');
+
+  test("E1: /effort lists the model's efforts, the one in use marked; Enter sets one", () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort');
+        await window.shows(
+          "fake's effort for Fake Large with a 1M context window, in the order it gives them.",
+        );
+        await window.shows('2. Medium ✔');
+        await window.shows('5. Max');
+        await window.shows('Enter to set · Esc to close');
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('Effort set to High');
+        expect(window.frame()).not.toContain('Setting Effort to High…');
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('N4 at 80x24: the short line; Esc sets nothing', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort');
+        await window.shows(
+          "fake's effort for Fake Large with a 1M context window.",
+        );
+        await window.press(ESC);
+        await until(
+          'the picker closed',
+          () => !window.frame().includes('Enter to set'),
+        );
+        expect(window.frame()).not.toContain('Effort set to');
+      },
+      { agentCommand: parameters, columns: 80, rows: 24 },
+    ));
+
+  test('/effort <value> by its id exactly, else the ids', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort max');
+        await window.shows('Effort set to Max');
+        await send(window, '/effort High');
+        await window.shows(
+          'fake offers low, medium, high, xhigh, max effort for Fake Large with a 1M context window.',
+        );
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('/fast toggles the marked option and says it; a model without one says so', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/fast');
+        await window.shows(
+          'Fast mode On for Fake Large with a 1M context window',
+        );
+        await send(window, '/fast');
+        await window.shows(
+          'Fast mode Off for Fake Large with a 1M context window',
+        );
+        await send(window, '/model');
+        await window.shows('Select model');
+        await window.press('2');
+        await window.shows('Switched to Fake Small');
+        await send(window, '/fast');
+        await window.shows('fake offers no fast mode for Fake Small.');
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('an agent with no effort: /effort opens nothing and says so', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort');
+        await window.shows(
+          'fake offers no effort for Fake Large with a 1M context window.',
+        );
+        expect(window.frame()).not.toContain('Enter to set');
+      },
+      { agentCommand: fakeAgentCommand(undefined, '--no-config') },
+    ));
+});
+
+describe('CHD-626 tester: effort command picker acceptance', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`digits choose the offered effort and Esc preserves the current one at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/effort');
+          await window.shows('2. Medium ✔');
+          await window.press(DOWN);
+          await window.shows('❯ 3. High');
+          await window.press(ESC);
+          await until(
+            'effort picker dismissed',
+            () => !window.frame().includes('Enter to set'),
+          );
+          expect(
+            window
+              .session()
+              ?.options()
+              .find((option) => option.id === 'effort')?.current,
+          ).toBe('medium');
+          await send(window, '/effort');
+          await window.shows('2. Medium ✔');
+          await window.press('5');
+          await window.shows('Effort set to Max');
+          expect(
+            window
+              .session()
+              ?.options()
+              .find((option) => option.id === 'effort')?.current,
+          ).toBe('max');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--model-parameters'),
+        },
+      ));
   }
 });

@@ -1,26 +1,39 @@
 import process from 'node:process';
 import type { ListedAgent } from '../../agents.ts';
 import { useTerminalDimensions } from '@opentui/react';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import wrapAnsi from 'wrap-ansi';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
 import type { AgentOption } from '../../session/config.ts';
-import type { AgentModels } from '../../session/models.ts';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
+import { effortsFrom } from '../../session/efforts.ts';
+import { type AgentModels, modelName } from '../../session/models.ts';
+import { settingsLine } from '../../session/parameters.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { HeldBack } from '../../session/servers.ts';
 import { capital } from '../shortcuts/state.ts';
 import {
+  type PendingEffort,
   resumeChoices,
   type ResumePicker as ResumePickerState,
 } from './state.ts';
 import {
   hintOf,
+  Keys,
   paint,
   useCloseHint,
   useColours,
   useHintKey,
 } from '../app/context.ts';
+import { type Action, keysOf, sequencePanel } from '../shortcuts/bindings.ts';
 import { usePress } from '../app/input.ts';
 import type { ListedTeam, TeamListing } from '../../session/team_command.ts';
 import {
@@ -67,6 +80,7 @@ import {
   agentChoices,
   choiceKey,
   initialChoice,
+  effortChoices,
   modelChoices,
   fromFirstLine,
   lineKey,
@@ -221,11 +235,14 @@ function Body({
 
 /**
  * `/model`: the agent's models, inline above the prompt as the permission
- * prompt is, the one in use marked. The list takes 1–9, ↑/↓, j/k and Enter;
- * Esc is the window's.
+ * prompt is, the one in use marked, and under them the settings line of the
+ * model in use (CHD-626). The list takes 1–9, ↑/↓, j/k and Enter; Esc and
+ * ←/→, which move the effort waiting for Enter, are the window's.
  */
 export function ModelPicker({
   models,
+  configOptions = [],
+  effort,
   rows,
   room = Number.POSITIVE_INFINITY,
   agent,
@@ -233,6 +250,10 @@ export function ModelPicker({
   onPick,
 }: {
   models: AgentModels | undefined;
+  /** The agent's whole set of options, which the settings line reads. */
+  configOptions?: readonly SessionConfigOption[];
+  /** The effort moved with ←/→, waiting for Enter. */
+  effort?: PendingEffort | undefined;
   /** The most models shown at once; a longer list scrolls. */
   rows: number;
   /** The rows the layer it floats in has; none outside one. */
@@ -243,6 +264,41 @@ export function ModelPicker({
 }) {
   const choices = modelChoices(models);
   const closeHint = useCloseHint();
+  const { width: columns } = useTerminalDimensions();
+  const [highlighted, setHighlighted] = useState(models?.current);
+  // The keys as arrows, as the design draws them, as bound when rebound, and
+  // only those that act: none when neither direction is bound.
+  const keymap = useContext(Keys);
+  const named = [
+    'modelPicker:decreaseEffort',
+    'modelPicker:increaseEffort',
+  ].flatMap((action) =>
+    keysOf(keymap, action as Action)
+      .slice(0, 1)
+      .map(sequencePanel),
+  );
+  const keys = named.length === 0 ? null : named.join('/');
+  const efforts = effortsFrom(configOptions);
+  const other =
+    highlighted === undefined || highlighted === models?.current
+      ? undefined
+      : models?.available.find((model) => model.id === highlighted)?.name;
+  // The frame's border and padding take two columns each side.
+  const line = settingsLine({
+    options: configOptions,
+    inUse: modelName(models) ?? '',
+    ...(other === undefined ? {} : { highlighted: other }),
+    ...(effort === undefined || effort.option !== efforts?.option
+      ? {}
+      : { pending: effort.value }),
+    width: Math.max(1, columns - 4),
+    keys,
+  });
+  const moved =
+    effort !== undefined &&
+    efforts?.available.some(
+      (each) => each.id === effort.value && each.id !== efforts.current,
+    ) === true;
   // None where it has no choice, or the room no row for one: the list, and
   // its keys, go.
   const listed =
@@ -275,12 +331,104 @@ export function ModelPicker({
             rows={listed}
             active={active}
             onPick={onPick}
+            onMove={setHighlighted}
+          />
+        )}
+        {listed > 0 && line !== undefined && (
+          <box marginTop={1}>
+            <text {...CUT} {...(line.dim ? { attributes: DIM } : {})}>
+              {line.text}
+            </text>
+          </box>
+        )}
+      </Body>
+      <box marginTop={1} flexShrink={0}>
+        <text {...TEXT} attributes={DIM}>
+          {hintOf(
+            listed === 0
+              ? undefined
+              : moved && other === undefined
+                ? 'Enter to set'
+                : 'Enter to switch',
+            listed === 0 || efforts === undefined || keys === null
+              ? undefined
+              : `${keys} ${line?.narrow === true ? 'effort' : 'for effort'}`,
+            closeHint,
+          )}
+        </text>
+      </box>
+    </box>
+  );
+}
+
+/**
+ * `/effort` (CHD-626, E1): the model in use's efforts in the agent's order,
+ * the one in use marked, on the picker the model's have. Enter sets one; Esc
+ * is the window's.
+ */
+export function EffortPicker({
+  configOptions,
+  model,
+  rows,
+  room = Number.POSITIVE_INFINITY,
+  agent,
+  active,
+  onPick,
+}: {
+  configOptions: readonly SessionConfigOption[];
+  /** The model in use, by name. */
+  model: string;
+  rows: number;
+  room?: number;
+  agent: string;
+  active: boolean;
+  onPick: (id: string) => void;
+}) {
+  const choices = effortChoices(effortsFrom(configOptions));
+  const closeHint = useCloseHint();
+  const { width: columns } = useTerminalDimensions();
+  const listed =
+    choices.length === 0 ? 0 : framedRows(rows, room, choices.length);
+  const wide = `${agent}'s effort for ${model}, in the order it gives them.`;
+  // The frame's border and padding take two columns each side (N4).
+  const said =
+    choices.length === 0
+      ? `${agent} offers no effort for ${model}.`
+      : wide.length <= columns - 4
+        ? wide
+        : `${agent}'s effort for ${model}.`;
+
+  return (
+    <box
+      {...borderOf(useColours().permission)}
+      paddingX={1}
+      flexShrink={1}
+      minHeight={0}
+    >
+      <text
+        {...TEXT}
+        {...fg(useColours().permission)}
+        attributes={BOLD}
+        flexShrink={0}
+      >
+        Effort
+      </text>
+      <Body room={room}>
+        <text {...CUT} attributes={DIM}>
+          {said}
+        </text>
+        {listed > 0 && (
+          <PickerList
+            choices={choices}
+            rows={listed}
+            active={active}
+            onPick={onPick}
           />
         )}
       </Body>
       <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
-          {hintOf(listed === 0 ? undefined : 'Enter to switch', closeHint)}
+          {hintOf(listed === 0 ? undefined : 'Enter to set', closeHint)}
         </text>
       </box>
     </box>

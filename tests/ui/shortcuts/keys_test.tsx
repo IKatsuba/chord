@@ -89,6 +89,26 @@ const LEADER: AppAction = { type: 'keys_pending', keys: sequence('ctrl+x') };
 const VIM_NORMAL: Vim = { ...startingVim, mode: 'normal', entered: undefined };
 
 /** Every state that changes what a key means. */
+/** The agent's set with an effort, as `/model`'s settings line reads it. */
+const EFFORT_OPTIONS: AppAction = {
+  type: 'options',
+  options: [],
+  configOptions: [
+    {
+      id: 'effort',
+      name: 'Effort',
+      category: 'thought_level',
+      type: 'select',
+      currentValue: 'medium',
+      options: [
+        { value: 'low', name: 'Low' },
+        { value: 'medium', name: 'Medium' },
+        { value: 'high', name: 'High' },
+      ],
+    },
+  ],
+};
+
 const STATES: Record<string, AppState> = {
   starting: initialAppState,
   ready: after({ type: 'connected', sessionId: 'session-1' }),
@@ -256,6 +276,31 @@ const STATES: Record<string, AppState> = {
   'picker, busy': after({ type: 'connected', sessionId: 'session-1' }, prompt, {
     type: 'model_picker_opened',
   }),
+  // `/effort`'s picker, which Esc closes (CHD-626).
+  'effort picker': after(
+    { type: 'connected', sessionId: 'session-1' },
+    EFFORT_OPTIONS,
+    { type: 'effort_picker_opened' },
+  ),
+  // An effort moved with → waits for Enter, or a digit (CHD-626).
+  'picker, effort pending': after(
+    { type: 'connected', sessionId: 'session-1' },
+    EFFORT_OPTIONS,
+    { type: 'model_picker_opened' },
+    {
+      type: 'model_effort_moved',
+      efforts: {
+        option: 'effort',
+        available: [
+          { id: 'low', name: 'Low' },
+          { id: 'medium', name: 'Medium' },
+          { id: 'high', name: 'High' },
+        ],
+        current: 'medium',
+      },
+      by: 1,
+    },
+  ),
   vim: after(
     { type: 'connected', sessionId: 'session-1' },
     {
@@ -358,6 +403,17 @@ Object.assign(STATES, {
 /** Every key press worth trying, and the name the panel would give it. */
 const PRESSES: { name: string; input: string; key: KeyPress }[] = [
   { name: 'esc', input: '', key: { ctrl: false, escape: true } },
+  // Plain only, as the lines that name ← and → mean them.
+  {
+    name: '←',
+    input: '',
+    key: { ctrl: false, escape: false, leftArrow: true },
+  },
+  {
+    name: '→',
+    input: '',
+    key: { ctrl: false, escape: false, rightArrow: true },
+  },
   ...[...LETTERS].map((letter) => ({
     name: `ctrl + ${letter}`,
     input: letter,
@@ -2037,5 +2093,57 @@ describe('CHD-535 U2 tester: rebound queued action', () => {
         'draft stays',
       ),
     ).toBeUndefined();
+  });
+});
+
+describe("/model's ← → (CHD-626)", () => {
+  const left = { ctrl: false, escape: false, leftArrow: true };
+  const right = { ctrl: false, escape: false, rightArrow: true };
+  const plain = { ctrl: false, escape: false };
+  const pending = STATES['picker, effort pending']!;
+
+  test('with an effort pending, ← and → move it and the digits stay the list', () => {
+    expect(pending.modelEffort).toStrictEqual({
+      option: 'effort',
+      value: 'high',
+      name: 'High',
+    });
+    expect(keyCommand('', left, pending, '')).toBe('decrease_effort');
+    expect(keyCommand('', right, pending, '')).toBe('increase_effort');
+
+    for (const digit of '123456789') {
+      expect(keyCommand(digit, plain, pending, '')).toBeUndefined();
+    }
+  });
+
+  test('rebound, ← and → give way and the panel names the bound keys', () => {
+    const { keymap, problems } = readKeybindings(
+      JSON.stringify({
+        bindings: [
+          {
+            context: 'ModelPicker',
+            bindings: {
+              left: null,
+              right: null,
+              h: 'modelPicker:decreaseEffort',
+              l: 'modelPicker:increaseEffort',
+            },
+          },
+        ],
+      }),
+    );
+    const rebound = { ...pending, keys: keymap };
+
+    expect(problems).toStrictEqual([]);
+    expect(keyCommand('h', plain, rebound, '')).toBe('decrease_effort');
+    expect(keyCommand('l', plain, rebound, '')).toBe('increase_effort');
+    expect(keyCommand('', left, rebound, '')).toBeUndefined();
+    expect(keyCommand('', right, rebound, '')).toBeUndefined();
+    expect(shortcuts(keymap).map(shortcutLine)).toContain(
+      'h l or ↑ ↓ j k to move or change a value',
+    );
+    expect(shortcuts().map(shortcutLine)).toContain(
+      '↑ ↓ j k ← → to move or change a value',
+    );
   });
 });

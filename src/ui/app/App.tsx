@@ -26,6 +26,7 @@ import { type LinkOpener, openLink } from '../../links.ts';
 import type { Notifications } from '../../notify.ts';
 import { askedInput } from '../../session/busy.ts';
 import type { OpenSession, Starting } from '../../session/conversation.ts';
+import { modelName } from '../../session/models.ts';
 import type { SessionStart } from '../../session/place.ts';
 import { openSession } from '../../session/session.ts';
 import {
@@ -115,6 +116,7 @@ import {
   configPickerShown,
   mcpShown,
   modelPickerShown,
+  effortPickerShown,
   resumePickerShown,
   shownTheme,
   teamsPickerShown,
@@ -204,6 +206,7 @@ import {
   ConfigPicker,
   type KeptChoice,
   McpPanel,
+  EffortPicker,
   ModelPicker,
   NoticeBox,
   ResumePicker,
@@ -620,6 +623,7 @@ export function App({
   const inputAsked = askedInput(state.transcript);
   const planAsked = askedPlan(state.transcript);
   const picking = modelPickerShown(state);
+  const effortShown = effortPickerShown(state);
   const resumingShown = resumePickerShown(state);
   const configuring = configPickerShown(state);
   const theming = themePickerShown(state);
@@ -630,6 +634,7 @@ export function App({
   // A framed picker floats over the transcript, its frame the edge, no rule.
   const pickerShown =
     picking ||
+    effortShown ||
     configuring ||
     (resumingShown && state.resumePicker !== undefined) ||
     theming ||
@@ -643,6 +648,7 @@ export function App({
   const choosing =
     viewing ||
     picking ||
+    effortShown ||
     resumingShown ||
     configuring ||
     theming ||
@@ -1813,6 +1819,8 @@ export function App({
                           {picking && (
                             <ModelPicker
                               models={state.models}
+                              configOptions={state.configOptions}
+                              effort={state.modelEffort}
                               rows={menuRows}
                               room={room}
                               agent={shownAgent}
@@ -1833,6 +1841,17 @@ export function App({
                                 dispatch({ type: 'config_option_opened', id })
                               }
                               onPick={sessions.pickOption}
+                            />
+                          )}
+                          {effortShown && (
+                            <EffortPicker
+                              configOptions={state.configOptions}
+                              model={modelName(state.models) ?? ''}
+                              rows={menuRows}
+                              room={room}
+                              agent={shownAgent}
+                              active={listening}
+                              onPick={sessions.pickEffort}
                             />
                           )}
                           {resumingShown && state.resumePicker && (

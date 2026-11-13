@@ -208,7 +208,7 @@ describe('parameters', () => {
     expect(startingParams(COMPOSER)).toEqual({});
   });
 
-  test('one option per parameter, named by its displayName else id, no category', () => {
+  test('one option per parameter, named by its displayName else id', () => {
     const choice = choose({ mode: 'default' }, MODELS, true, 'model', 'gpt-5')!;
 
     expect(configOptions(choice, MODELS, true).slice(2)).toEqual([
@@ -225,6 +225,8 @@ describe('parameters', () => {
       {
         id: 'parameter:context',
         name: 'context',
+        category: 'model_config',
+        _meta: { 'chord/parameter': 'context' },
         type: 'select',
         currentValue: '200k',
         options: [
@@ -232,6 +234,65 @@ describe('parameters', () => {
           { value: '1m', name: '1m' },
         ],
       },
+    ]);
+  });
+
+  test("Cursor's recorded ids are marked, any other id is not", () => {
+    const cursor: ModelListItem = {
+      id: 'gpt-5.5',
+      displayName: 'GPT-5.5',
+      parameters: [
+        { id: 'context', values: [{ value: '256k' }, { value: '500k' }] },
+        {
+          id: 'reasoning_effort',
+          values: ['low', 'medium', 'high', 'xhigh'].map((value) => ({
+            value,
+          })),
+        },
+        { id: 'fast', values: [{ value: 'false' }, { value: 'true' }] },
+        { id: 'thinking', values: [{ value: 'on' }] },
+      ],
+      variants: [
+        {
+          displayName: 'GPT-5.5',
+          isDefault: true,
+          params: [
+            { id: 'context', value: '256k' },
+            { id: 'reasoning_effort', value: 'medium' },
+            { id: 'fast', value: 'false' },
+            { id: 'thinking', value: 'on' },
+          ],
+        },
+      ],
+    };
+    const choice = choose(
+      { mode: 'default' },
+      [cursor],
+      true,
+      'model',
+      'gpt-5.5',
+    )!;
+    const marks = configOptions(choice, [cursor], true)
+      .slice(2)
+      .map(({ id, category, _meta }) => ({ id, category, _meta }));
+
+    expect(marks).toEqual([
+      {
+        id: 'parameter:context',
+        category: 'model_config',
+        _meta: { 'chord/parameter': 'context' },
+      },
+      {
+        id: 'parameter:reasoning_effort',
+        category: 'thought_level',
+        _meta: undefined,
+      },
+      {
+        id: 'parameter:fast',
+        category: 'model_config',
+        _meta: { 'chord/parameter': 'fast' },
+      },
+      { id: 'parameter:thinking', category: undefined, _meta: undefined },
     ]);
   });
 
@@ -458,5 +519,118 @@ describe('CHD-622 tester: config roundtrip boundaries', () => {
     expect(choose(current, [], false, 'mode', 'plan')?.model).toBe(
       current.model,
     );
+  });
+});
+
+describe('CHD-626 tester: parameter recognition boundaries', () => {
+  test('display names, near matches and inherited object keys never mark an unknown id', () => {
+    const ids = ['Fast', 'context_size', 'effort', 'constructor', '__proto__'];
+    const model: ModelListItem = {
+      id: 'unknown-parameters',
+      displayName: 'Unknown parameters',
+      parameters: ids.map((id) => ({
+        id,
+        displayName: 'Fast context reasoning_effort',
+        values: [{ value: 'on' }],
+      })),
+      variants: [
+        {
+          displayName: 'Default',
+          params: ids.map((id) => ({ id, value: 'on' })),
+        },
+      ],
+    };
+    const choice = choose(
+      { mode: 'default' },
+      [model],
+      true,
+      'model',
+      model.id,
+    )!;
+    const parameters = configOptions(choice, [model], true).slice(2);
+
+    expect(parameters.map((each) => each.id)).toEqual(
+      ids.map((id) => `parameter:${id}`),
+    );
+
+    for (const parameter of parameters) {
+      expect(parameter).not.toHaveProperty('category');
+      expect(parameter).not.toHaveProperty('_meta');
+    }
+  });
+
+  test('dependent choices retain marks while refusing a value outside the current variants', () => {
+    const model: ModelListItem = {
+      id: 'dependent',
+      displayName: 'Dependent',
+      parameters: [
+        {
+          id: 'reasoning_effort',
+          values: [{ value: 'low' }, { value: 'high' }],
+        },
+        { id: 'fast', values: [{ value: 'false' }, { value: 'true' }] },
+      ],
+      variants: [
+        {
+          displayName: 'Low',
+          params: [
+            { id: 'reasoning_effort', value: 'low' },
+            { id: 'fast', value: 'false' },
+          ],
+        },
+        {
+          displayName: 'High',
+          params: [
+            { id: 'reasoning_effort', value: 'high' },
+            { id: 'fast', value: 'false' },
+          ],
+        },
+        {
+          displayName: 'Fast',
+          params: [
+            { id: 'reasoning_effort', value: 'low' },
+            { id: 'fast', value: 'true' },
+          ],
+        },
+      ],
+    };
+    const initial = choose({ mode: 'plan' }, [model], true, 'model', model.id)!;
+    const fast = choose(initial, [model], true, 'parameter:fast', 'true')!;
+    const parameters = configOptions(fast, [model], true).slice(2);
+
+    expect(parameters).toEqual([
+      {
+        id: 'parameter:reasoning_effort',
+        name: 'reasoning_effort',
+        category: 'thought_level',
+        type: 'select',
+        currentValue: 'low',
+        options: [{ value: 'low', name: 'low' }],
+      },
+      {
+        id: 'parameter:fast',
+        name: 'fast',
+        category: 'model_config',
+        _meta: { 'chord/parameter': 'fast' },
+        type: 'select',
+        currentValue: 'true',
+        options: [
+          { value: 'false', name: 'false' },
+          { value: 'true', name: 'true' },
+        ],
+      },
+    ]);
+    expect(
+      choose(fast, [model], true, 'parameter:reasoning_effort', 'high'),
+    ).toBeUndefined();
+
+    const back = choose(fast, [model], true, 'model', CURSORS_DEFAULT)!;
+
+    expect(back).toEqual({ mode: 'plan' });
+    expect(configOptions(back, [model], true).map((each) => each.id)).toEqual([
+      'mode',
+      'model',
+    ]);
+    expect(selection(back)).toBeUndefined();
   });
 });

@@ -281,6 +281,7 @@ import {
   AUTH_REQUIRED,
   FIRST_MESSAGE,
   HANG,
+  RESEND_CONFIG,
   CONFIG_IN_RESPONSES,
   NO_CONFIG,
   SESSION_ID,
@@ -345,12 +346,15 @@ import { proposing, teamParts, TEAMS } from './scenarios/teams.ts';
 import { TEXT } from './scenarios/text.ts';
 import { TOOLS } from './scenarios/tools.ts';
 import {
-  AVAILABLE_EFFORTS,
   AVAILABLE_MODELS,
   AVAILABLE_MODES,
   configOptions,
   cwds,
   efforts,
+  effortsOf,
+  FAST_VALUES,
+  fasts,
+  hasFast,
   DIMCODE_PERMISSIONS,
   permissions,
   FIRST_MODEL,
@@ -653,6 +657,65 @@ function defaultScenario(): Scenario {
 /** An answer that never comes. */
 function never(): Promise<never> {
   return new Promise(() => {});
+}
+
+/**
+ * The answer to a model switch: the new model's set, its effort kept where
+ * it lists it, else `medium`; with `--resend-config`, also sent by
+ * `config_option_update` on `low`, before or after the answer.
+ */
+async function switchedModel(
+  client: {
+    notify: (
+      method: 'session/update',
+      params: acp.SessionNotification,
+    ) => Promise<void>;
+  },
+  sessionId: string,
+): Promise<acp.SetSessionConfigOptionResponse> {
+  const model = models.get(sessionId) ?? FIRST_MODEL;
+
+  if (
+    !effortsOf(model).some(
+      (each) => each.value === (efforts.get(sessionId) ?? 'medium'),
+    )
+  ) {
+    efforts.set(sessionId, 'medium');
+  }
+
+  if (!hasFast(model)) {
+    fasts.delete(sessionId);
+  }
+
+  const answer = { configOptions: configOptions(sessionId) };
+  const resend = () => {
+    const said = efforts.get(sessionId);
+
+    efforts.set(sessionId, 'low');
+
+    const update = configOptions(sessionId);
+
+    if (RESEND_CONFIG === 'before') {
+      if (said === undefined) {
+        efforts.delete(sessionId);
+      } else {
+        efforts.set(sessionId, said);
+      }
+    }
+
+    return client.notify('session/update', {
+      sessionId,
+      update: { sessionUpdate: 'config_option_update', configOptions: update },
+    });
+  };
+
+  if (RESEND_CONFIG === 'before') {
+    await resend();
+  } else if (RESEND_CONFIG === 'after') {
+    setTimeout(() => void resend(), STEP_MS);
+  }
+
+  return answer;
 }
 
 if (HANG !== undefined) {
@@ -1536,8 +1599,11 @@ const connection = acp
   })
   // A model, a mode or an effort is chosen through its config option, and the
   // answer carries every option as it now stands, as ACP asks.
-  .onRequest('session/set_config_option', async ({ params }) => {
-    if (HANG === 'config') {
+  .onRequest('session/set_config_option', async ({ params, client }) => {
+    if (
+      HANG === 'config' ||
+      (HANG === 'effort' && params.configId === 'effort')
+    ) {
       await never();
     }
 
@@ -1546,17 +1612,20 @@ const connection = acp
     }
 
     const value = String(params.value);
+    const model = models.get(params.sessionId) ?? FIRST_MODEL;
     const offered =
       params.configId === 'model'
         ? AVAILABLE_MODELS
         : params.configId === 'mode' && !NO_MODES
           ? AVAILABLE_MODES.map(({ id }) => ({ value: id }))
           : params.configId === 'effort' && !NO_CONFIG
-            ? AVAILABLE_EFFORTS
-            : params.configId === 'permission' &&
-                DIMCODE_PERMISSION !== undefined
-              ? DIMCODE_PERMISSIONS
-              : [];
+            ? effortsOf(model)
+            : params.configId === 'fast' && hasFast(model)
+              ? FAST_VALUES
+              : params.configId === 'permission' &&
+                  DIMCODE_PERMISSION !== undefined
+                ? DIMCODE_PERMISSIONS
+                : [];
 
     if (!offered.some((entry) => entry.value === value)) {
       throw acp.RequestError.invalidParams(
@@ -1580,9 +1649,15 @@ const connection = acp
           ? modes
           : params.configId === 'permission'
             ? permissions
-            : efforts;
+            : params.configId === 'fast'
+              ? fasts
+              : efforts;
 
     chosen.set(params.sessionId, value);
+
+    if (params.configId === 'model') {
+      return switchedModel(client, params.sessionId);
+    }
 
     // Codex's adapter says nothing of the mode it moved to.
     if (params.configId === 'mode' && SILENT_SET_MODE) {

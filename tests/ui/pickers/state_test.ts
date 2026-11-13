@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { EarlierSession } from '../../../src/session/sessions.ts';
 import {
   type AppAction,
@@ -253,6 +253,7 @@ test('/resume is refused while a turn runs, in a sentence', () => {
 
 const OPTIONS: AppAction = {
   type: 'options',
+  configOptions: [],
   options: [
     {
       id: 'effort',
@@ -282,7 +283,9 @@ test('/config opens on the options, Enter on one lists its values', () => {
   expect(configOption(values)?.id).toStrictEqual('effort');
   // An option the agent no longer offers falls back to the list.
   expect(
-    configOption(reduceApp(values, { type: 'options', options: [] })),
+    configOption(
+      reduceApp(values, { type: 'options', options: [], configOptions: [] }),
+    ),
   ).toStrictEqual(undefined);
   // Nothing opens an option on a picker that is shut.
   expect(
@@ -445,4 +448,112 @@ test('/mcp opens its list, takes the keys, and Esc or closing shuts it', () => {
     false,
   );
   expect(mcpShown(reduceApp(open, { type: 'closing' }))).toStrictEqual(false);
+});
+
+describe("/model's effort waiting for Enter (CHD-626)", () => {
+  const efforts = {
+    option: 'effort',
+    available: [
+      { id: 'low', name: 'Low' },
+      { id: 'medium', name: 'Medium' },
+      { id: 'high', name: 'High' },
+    ],
+    current: 'medium',
+  };
+  const open = reduceApp(ready, { type: 'model_picker_opened' });
+  const moved = (state: typeof open, ...by: (-1 | 1)[]) =>
+    by.reduce(
+      (at, step) =>
+        reduceApp(at, { type: 'model_effort_moved', efforts, by: step }),
+      state,
+    );
+
+  test('← and → move it one in the agent order, stopping at either end', () => {
+    expect(moved(open, 1).modelEffort).toStrictEqual({
+      option: 'effort',
+      value: 'high',
+      name: 'High',
+    });
+    expect(moved(open, 1, 1, 1).modelEffort?.value).toBe('high');
+    expect(moved(open, -1, -1).modelEffort?.value).toBe('low');
+  });
+
+  test('back on the effort in use, nothing waits', () => {
+    expect(moved(open, 1, -1).modelEffort).toBeUndefined();
+  });
+
+  test('closing sends nothing and forgets it; a closed picker moves nothing', () => {
+    expect(
+      reduceApp(moved(open, 1), { type: 'model_picker_closed' }).modelEffort,
+    ).toBeUndefined();
+    expect(moved(ready, 1).modelEffort).toBeUndefined();
+  });
+
+  test('a moved effort the agent no longer lists moves on from the one in use', () => {
+    const kept = moved(open, 1);
+    const shrunk = reduceApp(kept, {
+      type: 'model_effort_moved',
+      efforts: { ...efforts, available: efforts.available.slice(0, 2) },
+      by: -1,
+    });
+
+    expect(shrunk.modelEffort?.value).toBe('low');
+  });
+});
+
+describe('CHD-626 tester: pending effort state boundaries', () => {
+  const efforts = {
+    option: 'effort',
+    available: [
+      { id: 'auto', name: 'Auto' },
+      { id: 'high', name: 'High' },
+    ],
+    current: 'auto',
+  };
+  const open = reduceApp(ready, { type: 'model_picker_opened' });
+  const pending = reduceApp(open, {
+    type: 'model_effort_moved',
+    efforts,
+    by: 1,
+  });
+
+  test('an option update cannot silently discard the pending request; clear and closing do discard it', () => {
+    const updated = reduceApp(pending, {
+      type: 'options',
+      options: [],
+      configOptions: [],
+    });
+
+    expect(updated.modelEffort).toEqual({
+      option: 'effort',
+      value: 'high',
+      name: 'High',
+    });
+    expect(reduceApp(updated, { type: 'cleared' }).modelEffort).toBeUndefined();
+    expect(reduceApp(updated, { type: 'closing' }).modelEffort).toBeUndefined();
+  });
+
+  test('agent order includes Auto; an unknown current value cannot invent a starting position', () => {
+    expect(
+      reduceApp(open, {
+        type: 'model_effort_moved',
+        efforts,
+        by: -1,
+      }).modelEffort,
+    ).toBeUndefined();
+    expect(
+      reduceApp(pending, {
+        type: 'model_effort_moved',
+        efforts,
+        by: -1,
+      }).modelEffort,
+    ).toBeUndefined();
+    expect(
+      reduceApp(open, {
+        type: 'model_effort_moved',
+        efforts: { ...efforts, current: 'not-listed' },
+        by: 1,
+      }).modelEffort,
+    ).toBeUndefined();
+  });
 });

@@ -392,6 +392,13 @@ describe("chord's commands", () => {
         }
       ).availableCommands[1]?.description,
     ).toBe('Open a new agent beside main');
+    expect(
+      (
+        notification?.update as unknown as {
+          availableCommands: { input: { hint: string } }[];
+        }
+      ).availableCommands[1]?.input.hint,
+    ).toBe('[agent] [--name <name>]');
     expect(session.commandsSent).toBe(true);
   });
 

@@ -133,7 +133,7 @@ export const CHORD_COMMANDS: readonly AvailableCommand[] = [
   {
     name: 'new',
     description: 'Open a new agent beside main',
-    input: { hint: '<agent>' },
+    input: { hint: '[agent] [--name <name>]' },
   },
 ];
 

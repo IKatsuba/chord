@@ -113,7 +113,9 @@ test("/new opens an agent of main's runtime for main, idle, and goes to it; main
       await window.shows('This reply came in chunks.');
       await until('the turn to end', () => !window.frame().includes('Working'));
       await window.type('/new');
-      await window.shows('Open a new agent beside main and go to it');
+      await window.shows(
+        'Open a new agent beside main and go to it; --name names it',
+      );
       expect(window.frame()).not.toContain('/clear (new)');
       await window.press('\r');
       await window.shows('╭─ fake ');
@@ -480,6 +482,22 @@ describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () =>
               : { agentCommand: command },
         },
       ));
+
+    test(`--name names the child, and a taken name is refused where it was typed, at ${columns} columns`, () =>
+      run(columns, async (window, _callers, sessions) => {
+        await connected(window);
+        await send(window, '/new --name the scout');
+        await window.shows('╭─ the scout ');
+        await connected(window);
+        await send(window, '/new fake --name the scout');
+        await window.shows('The name the scout is taken in this window');
+        await send(window, '/new fake scout');
+        await window.shows(
+          '/new takes an agent, then --name <name> · /new [agent] --name <name>',
+        );
+        expect(window.frame()).toContain('╭─ the scout ');
+        expect(sessions).toHaveLength(2);
+      }));
   }
 
   test('eight idle children fill the cap in their invoking view; x frees a place and /clear reaps the rest', () =>

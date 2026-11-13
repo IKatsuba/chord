@@ -8655,3 +8655,39 @@ package's `package.json` was rejected: that would pin a version still being
 released. chord's release preflight (its `steps.ts`, CHD-623) stops on a
 pin npm does not have. 0.70.0's order: CHD-623, this package's 0.1.0, then
 chord.
+
+## 2026-11-12 — CHD-621: riff is dropped (owner)
+
+The owner dropped riff, chord's built-in agent (CHD-485, released in
+0.69.0), in the milestone after 0.70.0. On a ChatGPT plan riff competes
+with Codex, which chord already runs over ACP on OpenAI's own harness.
+riff cost about 10.7k lines under `src/`, about 10 MiB per binary for
+libfx, an exact-pinned pre-1.0 dependency with its layout checks, native
+and Wasm self-tests and Linux runs, and it carried the risk of signing in
+to ChatGPT and Grok plans from a third-party client.
+
+What went: `src/riff/` and its hidden `--riff-agent`, the window's sign-in
+box, `/login` and `/logout`, `chord riff` and `--fake riff`, riff's
+credential notices, `platform/secrets.ts` (Bun.secrets),
+`platform/loopback.ts`, libfx with its compile plugin and asset checks,
+fff with its Worker, `CHORD_LIBFX_ALL_TARGETS`, riff's self-test turn,
+`bun dev riff-models`, riff's screenshots, its picker row, and the
+dependencies only riff used (`libfx`, `@ff-labs/fff-bun`, `unbash`,
+`escape-html`). The CHD-485, CHD-608, CHD-609 and CHD-610 entries above
+stay as history.
+
+No migration and no notice (owner): `chord riff`, `agents.riff`,
+`agent: "riff"` and riff's records get what chord does for any unknown
+agent. riff's credentials in the system store and its sessions on disk
+are left as they are; chord does not clean them up.
+
+What stays, as every agent uses it:
+
+- `_meta["chord/permission"]` (`session/permission_review.ts`, the
+  permission dialog's review and its deadline), documented for any agent;
+  nothing in chord sends or fills it now, and ordinary permission requests
+  are not turned into it.
+- `ui/transcript/tools/paths.ts`: files and commands drawn relative to the
+  session's directory (CHD-611).
+- Proposed diffs in permission requests (`dialogs/Permission.tsx`,
+  `dialogs/permission.ts`).

@@ -8763,3 +8763,14 @@ Not in this task: boolean config options (they would make cline's
 auto-approve and dirac's `yolo` settable), global keys, an id rule for fx
 (asked upstream instead), `--fast` and a `fast` setting, a timeout on config
 calls. A refused effort keeps the model; changes are sent mid-turn as today.
+
+## 2026-11-13 — CHD-627: `/new`'s words by chord's own reader (owner)
+
+`/new [agent] --name <name>` takes the rest of the line after `--name`,
+trimmed, as the name, so a name may hold spaces as `/fork <name>`'s does.
+Tried against the syntax: `node:util` `parseArgs` and Cliffy. Both take argv
+tokens, so a spaced name (`--name code review`) splits into a name and a
+stray positional, and joining the tokens back would be a workaround around
+the library. The owner chose chord's own reader, `src/session/new_args.ts`.
+Options put: that reader; quoted names through a tokenizer and `parseArgs`;
+`parseArgs` with names that hold no space.

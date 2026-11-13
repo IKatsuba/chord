@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
+import stringWidth from 'string-width';
 import { findAgent } from '../../src/agents.ts';
 import {
   fastOption,
@@ -260,5 +261,118 @@ describe('the settings line', () => {
     expect(line(CLAUDE, { pending: 'gone' })?.text).toStartWith(
       'Medium effort  ←/→',
     );
+  });
+});
+
+describe('CHD-626 tester: parameter reader boundaries', () => {
+  test('metadata takes precedence over a recorded id; other metadata never guesses fast', () => {
+    const recorded = select(
+      'known-fast',
+      'Fast',
+      'model_config',
+      'off',
+      ON_OFF,
+    );
+    const marked = select('speed', 'Speed', 'model_config', 'on', ON_OFF, {
+      'chord/parameter': 'fast',
+    });
+
+    expect(fastOption([recorded, marked], 'known-fast')?.id).toBe('speed');
+
+    for (const marker of ['context', 'Fast', true, null, { fast: true }]) {
+      const other = select('speed', 'Fast', 'model_config', 'on', ON_OFF, {
+        'chord/parameter': marker,
+      });
+
+      expect(fastOption([other])).toBeUndefined();
+      expect(fastOption([other, recorded], 'known-fast')?.id).toBe(
+        'known-fast',
+      );
+    }
+  });
+
+  test('grouped model settings preserve value order and fall back to an unlisted current id', () => {
+    const grouped: SessionConfigOption = {
+      id: 'context',
+      name: 'Context',
+      category: 'model_config',
+      type: 'select',
+      currentValue: 'server-selected',
+      options: [
+        {
+          group: 'Small',
+          name: 'Small',
+          options: [{ value: '256k', name: 'Standard' }],
+        },
+        {
+          group: 'Large',
+          name: 'Large',
+          options: [{ value: '500k', name: 'Extended' }],
+        },
+      ],
+    };
+    const options = [...CURSORS_DEFAULT, grouped];
+
+    expect(modelConfigOptions(options)).toEqual([
+      {
+        id: 'context',
+        name: 'Context',
+        current: 'server-selected',
+        values: [
+          { value: '256k', name: 'Standard' },
+          { value: '500k', name: 'Extended' },
+        ],
+      },
+    ]);
+    expect(hasOtherOptions(options)).toBe(false);
+    expect(line(options)?.text).toBe('Context  server-selected');
+  });
+
+  test('only the first thought-level option is the effort; another remains reachable through config', () => {
+    const extra = select(
+      'secondary',
+      'Secondary',
+      'thought_level',
+      'on',
+      ON_OFF,
+    );
+
+    expect(hasOtherOptions([...CODEX, extra])).toBe(true);
+    expect(line([...CODEX, extra])?.text).toBe(
+      'High effort  ←/→ to adjust · Fast mode  Off · /config for all settings',
+    );
+    expect(line([...CODEX, extra], { pending: 'on' })?.text).not.toContain('•');
+  });
+
+  test('wide characters and combining marks fit each positive terminal width', () => {
+    const options = [
+      ...CURSORS_DEFAULT,
+      select('effort', 'Effort', 'thought_level', 'high', [
+        ['high', '高 e\u0301'],
+        ['low', '低'],
+      ]),
+      select('context', '窗口', 'model_config', 'large', [['large', '長い値']]),
+    ];
+
+    for (const width of [1, 2, 3, 8, 20, 76, 116]) {
+      for (const more of [
+        {},
+        { pending: 'low', highlighted: '模型 e\u0301' },
+      ]) {
+        const result = line(options, { ...more, width })!;
+
+        expect(stringWidth(result.text)).toBeLessThanOrEqual(width);
+        expect(result.text).not.toContain('\n');
+      }
+
+      const empty = settingsLine({
+        options: CURSORS_DEFAULT,
+        inUse: '模型 e\u0301',
+        width,
+      })!;
+
+      expect(stringWidth(empty.text)).toBeLessThanOrEqual(width);
+      expect(empty.dim).toBe(true);
+    }
   });
 });

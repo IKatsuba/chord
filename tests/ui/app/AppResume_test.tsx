@@ -1054,3 +1054,44 @@ describe('CHD-476 U2 tester: resume refusal image ownership', () => {
     });
   }
 });
+
+describe('CHD-621 tester: resume filters removed agents normally', () => {
+  for (const [columns, rows] of [
+    [120, 40],
+    [80, 24],
+  ] as const) {
+    test(`riff and another unknown agent stay out of fake resume at ${columns} by ${rows}`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/resume');
+          await window.shows('Current fake session');
+          expect(window.frame()).not.toContain('Legacy riff session');
+          expect(window.frame()).not.toContain('Other unknown session');
+          expect(window.frame()).not.toContain('ChatGPT');
+          await window.press(ESC);
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+        },
+        {
+          columns,
+          rows,
+          readRecords: (stateDir) =>
+            Promise.resolve(
+              [
+                ['riff', 'Legacy riff session'],
+                ['not-registered', 'Other unknown session'],
+                ['fake', 'Current fake session'],
+              ].map(([agent, prompt], index) => ({
+                path: join(stateDir, `record-${index}.jsonl`),
+                sessionId: `record-${index}`,
+                agent: agent!,
+                cwd: join(stateDir, '..'),
+                lastUsedAt: Date.now() - index * 60_000,
+                prompt: prompt!,
+              })),
+            ),
+        },
+      ));
+  }
+});

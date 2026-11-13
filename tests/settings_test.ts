@@ -2537,3 +2537,44 @@ describe('CHD-620 tester: suppression source on reopening', () => {
     expect(unconfigured.mcpServersFrom).toBeUndefined();
   });
 });
+
+describe('CHD-621 tester: legacy riff settings use ordinary resolution', () => {
+  test('a default named riff is kept without inventing a start command', () => {
+    const parsed = parseSettings(
+      'fixture.json',
+      JSON.stringify({ agent: 'riff' }),
+    );
+
+    expect(parsed.problems).toStrictEqual([]);
+    expect(
+      resolveStartup(
+        {},
+        [{ file: 'fixture.json', settings: parsed.settings }],
+        'claude',
+      ),
+    ).toStrictEqual({ agent: 'riff' });
+  });
+
+  test('agents.riff keeps its explicit command and model like any custom agent', () => {
+    const parsed = parseSettings(
+      'fixture.json',
+      JSON.stringify({
+        agent: 'riff',
+        agents: { riff: { command: ['fixture', '--acp'], model: 'example' } },
+      }),
+    );
+
+    expect(parsed.problems).toStrictEqual([]);
+    expect(
+      resolveStartup(
+        {},
+        [{ file: 'fixture.json', settings: parsed.settings }],
+        'claude',
+      ),
+    ).toStrictEqual({
+      agent: 'riff',
+      agentCommand: ['fixture', '--acp'],
+      model: { id: 'example', from: 'fixture.json' },
+    });
+  });
+});

@@ -441,3 +441,20 @@ describe('CHD-621 tester: removed sign-in commands', () => {
     });
   });
 });
+
+describe('CHD-621 tester: generic offered-agent boundaries', () => {
+  test('an empty list offers none and duplicates keep the first position', () => {
+    const listed = [
+      { name: 'alpha', title: undefined, start: 'fixture', from: 'settings' },
+      { name: 'beta', title: 'Beta', start: 'fixture', from: 'npx' },
+    ] as const;
+    const names = ['alpha', 'beta'];
+
+    expect(agentItems(names, listed, [])).toStrictEqual([]);
+    expect(
+      agentItems(names, listed, ['beta', 'missing', 'alpha', 'beta']).map(
+        ({ name }) => name,
+      ),
+    ).toStrictEqual(['beta', 'alpha']);
+  });
+});

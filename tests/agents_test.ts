@@ -853,3 +853,30 @@ describe("cursor-cloud, chord's own npx agent (CHD-622)", () => {
     ).toMatchObject({ name: 'cursor-cloud', via: 'npx' });
   });
 });
+
+describe('CHD-621 tester: riff is an ordinary unregistered agent', () => {
+  test('the catalog lacks riff and only an explicit command makes it startable', async () => {
+    expect(findAgent('riff')).toBeUndefined();
+    expect(listAgents().some(({ name }) => name === 'riff')).toBe(false);
+    expect(() => agentStart('riff')).toThrow('Unknown agent "riff".');
+    expect(agentStart('riff', ['fixture', '--acp'])).toStrictEqual({
+      command: ['fixture', '--acp'],
+      env: {},
+    });
+
+    const lookup = () => Promise.resolve(undefined);
+    const plain = await listedAgents({}, lookup);
+    const configured = await listedAgents(
+      { riff: ['fixture', '--acp'] },
+      lookup,
+    );
+
+    expect(plain.some(({ name }) => name === 'riff')).toBe(false);
+    expect(configured.find(({ name }) => name === 'riff')).toStrictEqual({
+      name: 'riff',
+      title: undefined,
+      start: 'fixture --acp',
+      from: 'settings',
+    });
+  });
+});

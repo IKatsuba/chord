@@ -1322,6 +1322,55 @@ Lead it.
     await host.sessions.closeAll();
   });
 
+  test("/new --name opens the child by that name, on the runtime named or main's", async () => {
+    const { host } = await withMain();
+
+    expect(await host.newTyped('--name the scout', () => {})).toMatchObject({
+      kind: 'ran',
+      call: { tool: 'open_agent', input: { agent: 'fake' } },
+    });
+    expect(await host.newTyped('fake --name parser', () => {})).toMatchObject({
+      kind: 'ran',
+    });
+    expect(host.sessions.agents.children.map((child) => child.name)).toEqual([
+      'the scout',
+      'parser',
+    ]);
+
+    await host.sessions.closeAll();
+  });
+
+  test.each([
+    [
+      'fake scout',
+      '/new takes an agent, then --name <name> · /new [agent] --name <name>',
+    ],
+    ['fake --name', '--name needs a name · /new [agent] --name <name>'],
+    ['--name a"b', 'An agent name must not contain the character "'],
+    ['nope --name main', 'The name main is taken in this window'],
+    ['--name chord', 'The name chord is taken in this window'],
+  ])('/new %s is refused and opens nothing', async (typed, words) => {
+    const { host } = await withMain();
+
+    expect(await host.newTyped(typed, () => {})).toEqual(said(words));
+    expect(host.sessions.agents.children).toEqual([]);
+
+    await host.sessions.closeAll();
+  });
+
+  test("/new --name refuses an open child's name rather than numbering it", async () => {
+    const { host } = await withMain();
+
+    await host.newTyped('--name scout', () => {});
+
+    expect(await host.newTyped('--name scout', () => {})).toEqual(
+      said('The name scout is taken in this window'),
+    );
+    expect(host.sessions.agents.children).toHaveLength(1);
+
+    await host.sessions.closeAll();
+  });
+
   test('/new opens an idle child after an established main agent exits', async () => {
     const exited = Promise.withResolvers<void>();
     let first = true;

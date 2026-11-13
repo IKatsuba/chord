@@ -2861,6 +2861,11 @@ describe("chord's commands", () => {
     ['/team show', 'Which team? /team lists them'],
     ['/team nope', '/team has no nope; it takes list, new, show, run or stop'],
     ['/new nope', 'No agent named nope; chord knows fake'],
+    [
+      '/new fake scout',
+      '/new takes an agent, then --name <name> · /new [agent] --name <name>',
+    ],
+    ['/new --name main', 'The name main is taken in this window'],
   ])('%s is refused in a chunk, not an error', (typed, words) =>
     onAcp(
       [],
@@ -2933,6 +2938,18 @@ describe("chord's commands", () => {
           "Opened fake (fake). It is idle, with no prompt yet; main's send_message starts it, so ask main to send it the work.",
         );
         expect(meta).toEqual({ name: 'new', failed: false });
+      },
+      server(),
+    ));
+
+  test('/new --name opens the child by that name', () =>
+    onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const sessionId = await newSession();
+        const { text } = await ran(client, sessionId, '/new --name the scout');
+
+        expect(text).toStartWith('Opened the scout (fake).');
       },
       server(),
     ));

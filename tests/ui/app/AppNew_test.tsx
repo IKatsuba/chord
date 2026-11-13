@@ -210,6 +210,28 @@ describe('CHD-565 /new with a list of offered agents', () => {
     ));
 });
 
+describe('CHD-627 /new --name', () => {
+  for (const columns of [80, 120]) {
+    test(`names the child, and a taken name is refused where it was typed, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/new --name the scout');
+          await window.shows('╭─ the scout ');
+          await send(window, '/new fake --name the scout');
+          await window.shows('The name the scout is taken in this window');
+          await send(window, '/new fake scout');
+          await window.shows(
+            '/new takes an agent, then --name <name> · /new [agent] --name <name>',
+          );
+          expect(window.frame()).toContain('╭─ the scout ');
+          expect(window.frame()).not.toContain('the scout 2');
+        },
+        { columns, rows: columns === 80 ? 24 : 40 },
+      ));
+  }
+});
+
 describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () => {
   const command = fakeAgentCommand();
   const states = new WeakMap<Window, () => WindowedState>();
@@ -482,22 +504,6 @@ describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () =>
               : { agentCommand: command },
         },
       ));
-
-    test(`--name names the child, and a taken name is refused where it was typed, at ${columns} columns`, () =>
-      run(columns, async (window, _callers, sessions) => {
-        await connected(window);
-        await send(window, '/new --name the scout');
-        await window.shows('╭─ the scout ');
-        await connected(window);
-        await send(window, '/new fake --name the scout');
-        await window.shows('The name the scout is taken in this window');
-        await send(window, '/new fake scout');
-        await window.shows(
-          '/new takes an agent, then --name <name> · /new [agent] --name <name>',
-        );
-        expect(window.frame()).toContain('╭─ the scout ');
-        expect(sessions).toHaveLength(2);
-      }));
   }
 
   test('eight idle children fill the cap in their invoking view; x frees a place and /clear reaps the rest', () =>

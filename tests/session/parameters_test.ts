@@ -114,7 +114,12 @@ const CURSORS_DEFAULT = CURSOR.slice(0, 2);
 
 const line = (
   options: unknown,
-  more: { highlighted?: string; pending?: string; width?: number } = {},
+  more: {
+    highlighted?: string;
+    pending?: string;
+    width?: number;
+    keys?: string | null;
+  } = {},
 ) => settingsLine({ options, inUse: 'Opus 5.5', width: 116, ...more });
 
 describe('the options the settings line shows', () => {
@@ -260,6 +265,18 @@ describe('the settings line', () => {
     expect(
       line([select('mode', 'Mode', 'mode', 'default', [['default', 'D']])]),
     ).toBeUndefined();
+  });
+
+  test('the keys as bound: one direction alone, or none and no cue', () => {
+    expect(line(CLAUDE, { keys: 'h' })?.text).toStartWith(
+      'Medium effort  h to adjust · Fast  Off',
+    );
+    expect(line(CLAUDE, { keys: null })?.text).toBe(
+      'Medium effort · Fast  Off · Ultracode  Off · /config for all settings',
+    );
+    expect(line(CLAUDE, { keys: null, width: 60 })?.text).toBe(
+      'Medium effort · Fast Off · Ultracode Off · /config…',
+    );
   });
 
   test('a moved effort the agent no longer lists shows the one in use, unmarked', () => {

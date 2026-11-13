@@ -33,7 +33,7 @@ import {
   useColours,
   useHintKey,
 } from '../app/context.ts';
-import { keysOf, sequencePanel } from '../shortcuts/bindings.ts';
+import { type Action, keysOf, sequencePanel } from '../shortcuts/bindings.ts';
 import { usePress } from '../app/input.ts';
 import type { ListedTeam, TeamListing } from '../../session/team_command.ts';
 import {
@@ -265,14 +265,18 @@ export function ModelPicker({
   const closeHint = useCloseHint();
   const { width: columns } = useTerminalDimensions();
   const [highlighted, setHighlighted] = useState(models?.current);
-  // The keys as arrows, as the design draws them, and as bound when rebound.
+  // The keys as arrows, as the design draws them, as bound when rebound, and
+  // only those that act: none when neither direction is bound.
   const keymap = useContext(Keys);
-  const [decrease] = keysOf(keymap, 'modelPicker:decreaseEffort');
-  const [increase] = keysOf(keymap, 'modelPicker:increaseEffort');
-  const keys =
-    decrease === undefined || increase === undefined
-      ? undefined
-      : `${sequencePanel(decrease)}/${sequencePanel(increase)}`;
+  const named = [
+    'modelPicker:decreaseEffort',
+    'modelPicker:increaseEffort',
+  ].flatMap((action) =>
+    keysOf(keymap, action as Action)
+      .slice(0, 1)
+      .map(sequencePanel),
+  );
+  const keys = named.length === 0 ? null : named.join('/');
   const efforts = effortsFrom(configOptions);
   const other =
     highlighted === undefined || highlighted === models?.current
@@ -287,7 +291,7 @@ export function ModelPicker({
       ? {}
       : { pending: effort.value }),
     width: Math.max(1, columns - 4),
-    ...(keys === undefined ? {} : { keys }),
+    keys,
   });
   const moved =
     effort !== undefined &&
@@ -345,7 +349,7 @@ export function ModelPicker({
               : moved && other === undefined
                 ? 'Enter to set'
                 : 'Enter to switch',
-            listed === 0 || efforts === undefined || keys === undefined
+            listed === 0 || efforts === undefined || keys === null
               ? undefined
               : `${keys} ${line?.narrow === true ? 'effort' : 'for effort'}`,
             closeHint,

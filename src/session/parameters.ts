@@ -76,8 +76,11 @@ export interface SettingsLineInput {
   readonly pending?: string;
   /** The cells the line may take. */
   readonly width: number;
-  /** The keys that move the effort, as the hint names them; `←/→` unbound. */
-  readonly keys?: string;
+  /**
+   * The keys that move the effort, as the hint names them: `←/→` when not
+   * given; null when neither is bound, and then the line names none.
+   */
+  readonly keys?: string | null;
 }
 
 export interface SettingsLine {
@@ -129,11 +132,15 @@ export function settingsLine(
     pending ?? effort?.available.find((each) => each.id === effort.current);
   const name = shown?.name ?? effort?.current ?? '';
   const mark = pending === undefined ? '' : ' •';
-  const keys = input.keys ?? '←/→';
+  const keys = input.keys === undefined ? '←/→' : input.keys;
   const wide: string[] =
-    effort === undefined ? [] : [`${name} effort${mark}  ${keys} to adjust`];
+    effort === undefined
+      ? []
+      : [`${name} effort${mark}${keys === null ? '' : `  ${keys} to adjust`}`];
   const narrow: string[] =
-    effort === undefined ? [] : [`${name} effort${mark} ${keys}`];
+    effort === undefined
+      ? []
+      : [`${name} effort${mark}${keys === null ? '' : ` ${keys}`}`];
 
   if (input.highlighted !== undefined) {
     // Another model's parameters are unknown until the session is on it; the

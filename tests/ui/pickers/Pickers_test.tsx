@@ -1817,6 +1817,39 @@ describe("/model's settings line and effort (CHD-626)", () => {
       { agentCommand: parameters, columns: 120, rows: 40 },
     ));
 
+  for (const [what, bindings, cue, hint] of [
+    [
+      'both unbound: no cue on the line or in the hint',
+      { left: null, right: null },
+      'Medium effort · Fast  Off',
+      'Enter to switch · Esc to close',
+    ],
+    [
+      'one unbound, the other rebound: only the key that acts',
+      { left: null, right: null, l: 'modelPicker:increaseEffort' },
+      'Medium effort  l to adjust · Fast  Off',
+      'Enter to switch · l for effort · Esc to close',
+    ],
+  ] as const) {
+    test(`the effort keys ${what}`, () =>
+      withWindow(
+        async (window) => {
+          await opened(window);
+          await window.shows(cue);
+          await window.shows(hint);
+          expect(window.frame()).not.toContain('←/→');
+        },
+        {
+          agentCommand: parameters,
+          columns: 120,
+          rows: 40,
+          keybindings: JSON.stringify({
+            bindings: [{ context: 'ModelPicker', bindings }],
+          }),
+        },
+      ));
+  }
+
   test('the narrow line and hint where the wide one does not fit', () =>
     withWindow(
       async (window) => {

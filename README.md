@@ -80,8 +80,9 @@ ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
 
 ### Agents beside the main one
 
-`/new [agent]` opens an idle agent beside main and goes to it. The list
-under the prompt shows agents and teams, their state and unseen news.
+`/new [agent] [--name <name>]` opens an idle agent beside main and goes to
+it; `--name` names it. The list under the prompt shows agents and teams,
+their state and unseen news.
 `/fork [name]` continues the current conversation in a separate agent where
 the runtime supports it. `/clear` starts the picked agent afresh.
 `ctrl+x a` takes you to what waits.

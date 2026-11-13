@@ -1,0 +1,24 @@
+      ✓ test 34
+      ✓ test 35
+      ✓ test 36
+      ✓ test 37
+      ✓ test 38
+       Tests  41 passed (41)
+       Time   6.2s
+
+ ⏺ The login page is in src/pages/Login.tsx; its tests pass in the cloud VM.
+
+ ⏺ Pushed to cursor/login-page-5e1f on github.com/acme/web.
+
+ › request
+
+ ⏺ Cursor's agent is waiting for input or approval (request r-81c2). This
+   adapter cannot answer it; Esc stops the run.
+   https://cursor.com/agents/bc-1
+
+ ››› Working… (1s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                             Cursor's default

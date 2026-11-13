@@ -1,0 +1,24 @@
+
+ ⏺ The VM ran out of disk
+
+ › busy
+
+ ⏺ Agent bc-1 already has an active run.
+   https://cursor.com/agents/bc-1
+
+ › lost
+
+ ⏺ Starting…
+
+ ⏺ Lost the connection to Cursor; the agent keeps running there: https://
+   cursor.com/agents/bc-1. Reopen the session to see where it got to.
+
+  Plan · 1 of 3 done
+  ⎿  ☒ Read the routes
+     ◐ Write the page
+     ☐ Test it
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                             Cursor's default

@@ -1325,3 +1325,73 @@ describe('opens, closes and choices that overtake each other', () => {
     expect([first, second]).toEqual([true, true]);
   });
 });
+
+describe('CHD-622 tester: independent ACP sessions', () => {
+  test('two running sessions cancel independently on one connection', async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    const a = await newSession(at);
+    const b = await newSession(at);
+
+    at.cursor.scripts.push({ hang: true }, { hang: true });
+
+    const prompt = (sessionId: string) =>
+      at.request<{ stopReason: string }>('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text: 'wait' }],
+      });
+    const answerA = prompt(a.sessionId);
+    const answerB = prompt(b.sessionId);
+    const deadline = performance.now() + 3000;
+
+    while (
+      !at.cursor.runs.get(a.sessionId)?.length ||
+      !at.cursor.runs.get(b.sessionId)?.length
+    ) {
+      if (performance.now() > deadline) {
+        throw new Error('both session runs did not start');
+      }
+
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
+
+    await at.connection.agent.notify('session/cancel', {
+      sessionId: a.sessionId,
+    });
+    expect(await answerA).toEqual({ stopReason: 'cancelled' });
+    expect(at.cursor.runs.get(a.sessionId)?.[0]?.cancelled).toBe(true);
+    expect(at.cursor.runs.get(b.sessionId)?.[0]?.cancelled).toBe(false);
+    await at.connection.agent.notify('session/cancel', {
+      sessionId: b.sessionId,
+    });
+    expect(await answerB).toEqual({ stopReason: 'cancelled' });
+  });
+
+  test('a sign-in while the connection is open applies to the next new session', async () => {
+    const env: Record<string, string> = {};
+    const at = connect({ env, store: store() });
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+    expect((await refusal(newSession(at))).code).toBe(-32000);
+    expect(at.cursor.calls).toEqual([]);
+
+    env.CURSOR_API_KEY = 'key_good';
+
+    const { sessionId } = await newSession(at);
+
+    expect(sessionId).toBe('bc-1');
+    expect(at.cursor.calls.map((call) => call.apiKey)).toEqual([
+      'key_good',
+      'key_good',
+      'key_good',
+    ]);
+  });
+});

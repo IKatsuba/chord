@@ -978,3 +978,63 @@ describe('CHD-604c tester: catalog environment boundaries', () => {
     }
   });
 });
+
+describe("cursor-cloud, chord's own npx agent (CHD-622)", () => {
+  test('starts its package through npx at the version chord pins, given no MCP servers', () => {
+    const agent = findAgent('cursor-cloud');
+
+    expect(agent).toMatchObject({
+      name: 'cursor-cloud',
+      title: 'Cursor Cloud Agents',
+      runner: 'npx',
+      pinned: '@chorded/cursor-cloud-acp@0.1.0',
+      mcpServers: false,
+      start: {
+        command: ['npx', '-y', '@chorded/cursor-cloud-acp@0.1.0'],
+        env: {},
+      },
+    });
+    expect(takesMcpServers('cursor-cloud')).toBe(false);
+    expect(takesMcpServers('cursor-cloud', true)).toBe(true);
+  });
+
+  test('sits among the npx agents in name order, right after codex', () => {
+    const names = listAgents().map(({ name }) => name);
+
+    expect(names.indexOf('cursor-cloud')).toBe(names.indexOf('codex') + 1);
+  });
+
+  test("Cursor's own CLI keeps its name and title", () => {
+    expect(findAgent('cursor')).toMatchObject({
+      name: 'cursor',
+      title: 'Cursor',
+      runner: 'cli',
+    });
+  });
+
+  test('chord agents lists it as npx, and --json says so', async () => {
+    const row = (await listedAgents({}, () => Promise.resolve(undefined))).find(
+      ({ name }) => name === 'cursor-cloud',
+    );
+
+    assert(row !== undefined);
+    expect(row).toEqual({
+      name: 'cursor-cloud',
+      title: 'Cursor Cloud Agents',
+      start: 'npx -y @chorded/cursor-cloud-acp@0.1.0',
+      from: 'npx',
+    });
+    expect(agentTable([row])).toBe(
+      'cursor-cloud  Cursor Cloud Agents  npx  npx -y @chorded/cursor-cloud-acp@0.1.0',
+    );
+    expect(
+      agentsJson({
+        listed: [row],
+        offered: undefined,
+        preferred: 'claude',
+        problems: [],
+        refused: new Set(),
+      }).agents[0],
+    ).toMatchObject({ name: 'cursor-cloud', via: 'npx' });
+  });
+});

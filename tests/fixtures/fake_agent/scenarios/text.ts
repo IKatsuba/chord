@@ -57,6 +57,24 @@ const costWait: Play = async (turn) => {
 };
 
 export const TEXT = {
+  // A request Cursor's agent waits on, said as cursor-cloud says it, then
+  // the turn held until it is cancelled, as the adapter's is (CHD-622).
+  async cloudrequest(turn) {
+    await turn.send({
+      sessionUpdate: 'agent_message_chunk',
+      messageId: crypto.randomUUID(),
+      content: {
+        type: 'text',
+        text: "Cursor's agent is waiting for input or approval (request r-81c2). This adapter cannot answer it; Esc stops the run.  \nhttps://cursor.com/agents/bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10",
+      },
+    });
+    turn.signal.throwIfAborted();
+    await once(turn.signal, 'abort', { signal: lifetime.signal });
+    turn.signal.throwIfAborted();
+
+    return 'end_turn';
+  },
+
   async text(turn) {
     await turn.say('Hello', ', world', '. This reply', ' came in chunks.');
 

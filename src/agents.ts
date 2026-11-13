@@ -4,6 +4,7 @@ import { Table } from '@cliffy/table';
 import stringWidth from 'string-width';
 import process from 'node:process';
 import wrapAnsi from 'wrap-ansi';
+import { CHORDED_AGENTS, type ChordedAgent } from './chorded.ts';
 import { CLI_AGENTS, type CliAgent } from './clis.ts';
 import { REGISTRY_AGENTS, type RegistryAgent } from './registry.ts';
 import { RIFF, riffAgentStart } from './riff/start.ts';
@@ -57,7 +58,7 @@ const BY_ID = new Map<string, string>(
   Object.entries(ALIASES).map(([alias, id]) => [id, alias]),
 );
 
-function fromRegistry(agent: RegistryAgent): KnownAgent {
+function fromRegistry(agent: RegistryAgent | ChordedAgent): KnownAgent {
   const pinned = `${agent.package}@${agent.version}`;
 
   return {
@@ -73,6 +74,7 @@ function fromRegistry(agent: RegistryAgent): KnownAgent {
     runner: agent.runner,
     install: agent.website ?? agent.repository,
     pinned,
+    ...('mcpServers' in agent ? { mcpServers: agent.mcpServers } : {}),
   };
 }
 
@@ -87,7 +89,10 @@ function fromCli(agent: CliAgent): KnownAgent {
   };
 }
 
-const REGISTERED = REGISTRY_AGENTS.map(fromRegistry);
+/** The registry's npx and uvx agents and chord's own, in id order. */
+const REGISTERED = [...REGISTRY_AGENTS, ...CHORDED_AGENTS]
+  .toSorted((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+  .map(fromRegistry);
 
 /**
  * The registry's agents, then the table's. A name in both is the registry's:

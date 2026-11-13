@@ -156,7 +156,7 @@ const INVALID_PARAMS = -32602;
 
 /** The line that names what chord ran for a registry agent. */
 export function pinLine(pinned: string): string {
-  return `chord ran ${pinned}, the version the ACP Registry names.`;
+  return `chord ran ${pinned}, the version this chord pins.`;
 }
 
 /** The line before the end of the agent's stderr. */

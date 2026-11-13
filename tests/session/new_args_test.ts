@@ -2,6 +2,25 @@ import { describe, expect, test } from 'bun:test';
 
 import { newArgs, NO_NAME, NOT_NAME } from '../../src/session/new_args.ts';
 
+describe('CHD-627 tester: literal name boundaries', () => {
+  test.each([
+    ['--name a --name b', { name: 'a --name b' }],
+    ['--name x codex', { name: 'x codex' }],
+    ['fake --name --name=x', { agent: 'fake', name: '--name=x' }],
+    ['  fake\t--name  code  review  ', { agent: 'fake', name: 'code  review' }],
+    ['--name $HOME; a | b', { name: '$HOME; a | b' }],
+  ])('%j preserves the name as literal text', (typed, expected) => {
+    expect(newArgs(typed)).toEqual(expected);
+  });
+
+  test.each(['fake --name\t  ', 'fake\t--name\n'])(
+    '%j refuses a whitespace-only name',
+    (typed) => {
+      expect(newArgs(typed)).toEqual({ problem: NO_NAME });
+    },
+  );
+});
+
 describe('newArgs', () => {
   test.each([
     ['', {}],

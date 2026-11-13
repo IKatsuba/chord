@@ -35,8 +35,6 @@ export interface DevActions {
   screenshots(names: readonly string[]): void | Promise<void>;
   social(): void | Promise<void>;
   memory(options: MemoryOptions): void | Promise<void>;
-  /** The owner's live check of riff's model list for `plan`. */
-  riffModels(plan: 'codex' | 'grok', out: string): void | Promise<void>;
   selftest(binary: string, arch: string | undefined): void | Promise<void>;
   /** Releases `name`'s `stages`, at `bump` if given. */
   release(
@@ -52,15 +50,6 @@ export interface DevActions {
     fake: boolean,
     args: readonly string[],
     fixtureResources?: boolean,
-    state?: string,
-  ): void | Promise<void>;
-  /**
-   * chord on riff and its fake provider, `args` chord's after the agent:
-   * `bun dev chord --fake riff`.
-   */
-  riff(
-    args: readonly string[],
-    qa?: boolean,
     state?: string,
   ): void | Promise<void>;
   /** Makes `dir` and `state`, a capture's places for `chord --qa`, afresh. */
@@ -135,23 +124,6 @@ const RUN: DevActions = {
     (await import('./dev/screenshots.ts')).screenshots(names),
   social: async () => (await import('./dev/social.ts')).social(),
   memory: async (options) => (await import('./dev/memory.ts')).memory(options),
-  riffModels: async (plan, out) => {
-    const { riffModels } = await import('./dev/riff_models.ts');
-    const { systemSecrets } = await import('../src/platform/secrets.ts');
-    const { libfxBackend } = await import('../src/platform/libfx.ts');
-    const { chordStateDir } = await import('../src/session/state_dir.ts');
-
-    await riffModels({
-      plan,
-      // The owner's own sign-in: this command is never run by a test.
-      secrets: systemSecrets(),
-      fetch: globalThis.fetch,
-      backend: await libfxBackend(),
-      stateDir: chordStateDir(),
-      out,
-      say: (line) => process.stdout.write(`${line}\n`),
-    });
-  },
   selftest: async (binary, arch) => {
     const { dying, release } = await import('./dev/release/lib.ts');
     const { selftest } = await import('./dev/release/selftest.ts');
@@ -173,24 +145,13 @@ const RUN: DevActions = {
     process.exitCode = 1;
   },
   chord: async (fake, args, fixtureResources, state) => {
-    const tools = await import('./dev/tools.ts');
-
-    process.exitCode =
-      fake || fixtureResources === true
-        ? await tools.chordWithRiff(
-            fake,
-            args,
-            fixtureResources,
-            undefined,
-            undefined,
-            state,
-          )
-        : tools.chord(fake, args, undefined, fixtureResources);
-  },
-  riff: async (args, qa, state) => {
-    process.exitCode = await (
-      await import('./dev/tools.ts')
-    ).chordOnRiff(args, undefined, undefined, qa, state);
+    process.exitCode = (await import('./dev/tools.ts')).chord(
+      fake,
+      args,
+      undefined,
+      fixtureResources,
+      state,
+    );
   },
   qa: async (dir, state) =>
     (await import('./dev/tools.ts')).qaPlace(dir, state),
@@ -274,7 +235,7 @@ export function devCommand(
           )
           .option(
             '--fake',
-            "On the fake agent in tests/fixtures/fake_agent/ instead of a real one; with riff as the agent, riff on its tests' fake provider.",
+            'On the fake agent in tests/fixtures/fake_agent/ instead of a real one.',
             { default: false },
           )
           .option(
@@ -286,10 +247,6 @@ export function devCommand(
           .stopEarly()
           .example('an agent', 'bun dev chord codex')
           .example('the fake agent, one prompt', 'bun dev chord --fake -p hi')
-          .example(
-            'riff on its fake provider, a read by the prompt',
-            'bun dev chord --fake riff',
-          )
           .example("chord's own help", 'bun dev chord -- --help')
           .example(
             'a capture of the fake, in /tmp/chord-qa.tabs',
@@ -297,25 +254,23 @@ export function devCommand(
           )
           .action(async function ({ fake, qa }, ...args) {
             const given = [...args, ...this.getLiteralArgs()];
-            // riff has no agent command to stand in for: it runs as itself,
-            // on a fake provider in place of a plan.
-            const riff = fake && given[0] === 'riff';
 
             if (qa === undefined) {
-              return riff
-                ? actions.riff(given.slice(1), false, FAKE_STATE)
-                : fake
-                  ? actions.chord(fake, given, undefined, FAKE_STATE)
-                  : actions.chord(fake, given);
+              return fake
+                ? actions.chord(fake, given, undefined, FAKE_STATE)
+                : actions.chord(fake, given);
             }
 
             const dir = qaDir(qa);
 
             await actions.qa(dir, qaState(dir));
 
-            return riff
-              ? actions.riff(['-C', dir, ...given.slice(1)], true, qaState(dir))
-              : actions.chord(fake, ['-C', dir, ...given], true, qaState(dir));
+            return actions.chord(
+              fake,
+              ['-C', dir, ...given],
+              true,
+              qaState(dir),
+            );
           }),
       )
       .command(
@@ -372,29 +327,6 @@ export function devCommand(
           )
           .arguments('[names...:string]')
           .action((_options, ...names) => actions.screenshots(names)),
-      )
-      .command(
-        'riff-models',
-        new Command()
-          .description(
-            "The owner's live check of riff's model list: one turn of 'Reply with the word ok.' on the stored ChatGPT (codex) or Grok (grok) sign-in, as chord riff made it, printing each model the plan's endpoint lists, with its context window and reasoning levels, as libfx's engine fetched them. It spends the plan; never run by a test.",
-          )
-          .type('plan', new EnumType(['codex', 'grok']))
-          .arguments('<plan:plan>')
-          .option(
-            '--out <file:string>',
-            'Where the raw responses are written.',
-            {
-              default: 'dist/riff-models-<plan>.json',
-            },
-          )
-          .example('ChatGPT', 'bun dev riff-models codex')
-          .action(({ out }, plan) =>
-            actions.riffModels(
-              plan as 'codex' | 'grok',
-              out.replace('<plan>', plan),
-            ),
-          ),
       )
       .command(
         'social',

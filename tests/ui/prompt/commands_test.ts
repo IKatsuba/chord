@@ -338,41 +338,6 @@ test('/new puts what will start on top, and marks an own CLI PATH lacks', () => 
   ]);
 });
 
-describe('CHD-604c riff in /new', () => {
-  const riff = {
-    name: 'riff',
-    title: "chord's own agent · on a ChatGPT or Grok plan",
-    start: 'chord --riff-agent',
-    from: 'builtin',
-  } as const;
-  const listed = [
-    { name: 'claude', title: 'Claude', start: 'npx c', from: 'npx' },
-    riff,
-    { name: 'mine', title: undefined, start: 'mine', from: 'settings' },
-  ] as const;
-
-  test('riff is the first row, above settings agents and an unlisted one', () => {
-    expect(
-      agentItems(['fake', 'claude', 'riff', 'mine'], listed).map(
-        ({ name, description }) => [name, description],
-      ),
-    ).toStrictEqual([
-      ['riff', "chord's own agent · on a ChatGPT or Grok plan"],
-      ['fake', undefined],
-      ['mine', 'from settings'],
-      ['claude', 'Claude'],
-    ]);
-  });
-
-  test("offeredAgents' order still wins", () => {
-    expect(
-      agentItems(['claude', 'riff', 'mine'], listed, ['mine', 'riff']).map(
-        ({ name }) => name,
-      ),
-    ).toStrictEqual(['mine', 'riff']);
-  });
-});
-
 describe('CHD-565 /new with a list of offered agents', () => {
   const listed = [
     { name: 'claude', title: 'Claude', start: 'npx c', from: 'npx' },
@@ -442,40 +407,6 @@ test('Tab and Enter on an agent are /new with its name', () => {
     type: 'chord',
     name: 'new',
     args: 'mine',
-  });
-});
-
-describe('CHD-604c tester: new-agent ordering boundaries', () => {
-  test('a settings-owned riff keeps the normal settings order', () => {
-    const listed = [
-      { name: 'mine', title: undefined, start: 'fixture', from: 'settings' },
-      {
-        name: 'riff',
-        title: 'riff override',
-        start: 'fixture',
-        from: 'settings',
-      },
-      { name: 'claude', title: 'Claude', start: 'fixture', from: 'npx' },
-    ] as const;
-
-    expect(
-      agentItems(['claude', 'mine', 'riff'], listed).map(({ name }) => name),
-    ).toStrictEqual(['mine', 'riff', 'claude']);
-  });
-
-  test('an explicit empty list hides riff and duplicate names keep their first place', () => {
-    const listed = [
-      { name: 'riff', title: 'riff', start: 'fixture', from: 'builtin' },
-      { name: 'claude', title: 'Claude', start: 'fixture', from: 'npx' },
-    ] as const;
-    const names = ['riff', 'claude'];
-
-    expect(agentItems(names, listed, [])).toStrictEqual([]);
-    expect(
-      agentItems(names, listed, ['claude', 'missing', 'riff', 'claude']).map(
-        ({ name }) => name,
-      ),
-    ).toStrictEqual(['claude', 'riff']);
   });
 });
 

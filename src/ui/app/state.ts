@@ -777,8 +777,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     }
     case 'sessions_noted':
       return { ...state, sessionsNote: action.message };
-    case 'credentials':
-      return state;
     case 'commands':
       return {
         ...state,

@@ -9,7 +9,6 @@ import {
   NO_MCP_SERVERS,
   serversFor,
 } from '../../src/session/servers.ts';
-import { riffInit } from '../../src/riff/adapter.ts';
 
 const STDIO: McpServer = {
   name: 'docs',
@@ -333,32 +332,6 @@ describe('an agent set to take no MCP servers is given none, whatever it adverti
     expect(
       serversFor('openclaw', { http: true }, [STDIO, HTTP, SSE], CHORD).servers,
     ).toStrictEqual([STDIO, HTTP, CHORD]);
-  });
-});
-
-describe('riff takes no SSE server (CHD-610)', () => {
-  test("chord's own server goes to riff over HTTP like any agent's", () => {
-    expect(
-      serversFor(
-        'riff',
-        riffInit('1.2.3').agentCapabilities?.mcpCapabilities ?? undefined,
-        [],
-        CHORD,
-      ).servers,
-    ).toEqual([CHORD]);
-  });
-
-  test('an SSE server is held back from riff with the usual reason', () => {
-    const given = serversFor(
-      'riff',
-      riffInit('1.2.3').agentCapabilities?.mcpCapabilities ?? undefined,
-      [STDIO, HTTP, SSE],
-    );
-
-    expect(given.servers).toEqual([STDIO, HTTP]);
-    expect(given.heldBack).toEqual([
-      expect.objectContaining({ server: 'logs', transport: 'sse' }),
-    ]);
   });
 });
 

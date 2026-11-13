@@ -3,7 +3,6 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import { CYCLE_WORK, cycleMark } from './cycles.ts';
-import type { CredentialNotice } from './credentials.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ResourceLink } from '../files.ts';
 import { type AgentOption, sameOptions, valueName } from './config.ts';
@@ -80,7 +79,6 @@ import { emptyTranscript, type Transcript } from './transcript/types.ts';
  * session's own coming and going, which no turn carries.
  */
 export type ConversationEvent =
-  | ({ readonly type: 'credentials' } & CredentialNotice)
   | TranscriptAction
   /**
    * The session is up; `sessionId` is the agent's id for it, and `at` when it
@@ -848,18 +846,10 @@ export class Conversation {
    * or after `SETTLE_LIMIT_MS`, so what it cost to the end is said
    * (`retired_usage`) and kept in its record; settles when it has closed.
    */
-  clear(firstPart?: TeamPart, restart = true): Promise<void> {
+  clear(firstPart?: TeamPart): Promise<void> {
     const opening = this.#opening;
 
-    if (this.#closing) {
-      return Promise.resolve();
-    }
-
-    if (!opening) {
-      if (restart) {
-        this.start();
-      }
-
+    if (!opening || this.#closing) {
       return Promise.resolve();
     }
 
@@ -1019,11 +1009,7 @@ export class Conversation {
       ),
       monitors,
     );
-
-    // Logout keeps the reset conversation idle until an explicit sign-in.
-    if (restart) {
-      this.start();
-    }
+    this.start();
 
     return retired.then(
       () => {},
@@ -3063,12 +3049,6 @@ export class Conversation {
     session.subscribe((update, subagentId) =>
       this.#updated(session, update, subagentId),
     );
-    session.subscribeCredentials?.((notice) => {
-      if (this.#current(session)) {
-        this.#show({ type: 'credentials', ...notice });
-      }
-    });
-
     // An agent that goes on its own takes its subagents with it; a close or
     // a `/clear` is not news.
     void session.exited.then(() => {

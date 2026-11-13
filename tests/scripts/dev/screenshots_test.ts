@@ -105,29 +105,11 @@ describe('CHD-564 the title page shots', () => {
   });
 
   test('every other shot is named, on the prompt', () => {
-    for (const { name, args, first, riff } of SHOTS) {
-      if (name !== 'start' && riff === undefined) {
+    for (const { name, args, first } of SHOTS) {
+      if (name !== 'start') {
         expect(args).toBeUndefined();
         expect(first).toBeUndefined();
       }
-    }
-  });
-
-  test("riff's shots start riff, and wait for its own first screen", () => {
-    const riffs = SHOTS.filter(({ riff }) => riff !== undefined);
-
-    expect(riffs.map(({ name }) => name)).toEqual([
-      'riff-sign-in',
-      'riff-session',
-      'riff-ask',
-      'riff-review',
-      'riff-skill',
-      'riff-model',
-    ]);
-
-    for (const { args, first } of riffs) {
-      expect(args).toEqual(['riff']);
-      expect(first).toBeDefined();
     }
   });
 });
@@ -251,61 +233,5 @@ describe('CHD-564 tester: logo cell boundaries and background paint', () => {
     ].join('\n');
 
     expect(logoRows(moved)).toEqual(logoRows(plain));
-  });
-});
-
-describe('CHD-611 tester: riff screenshot isolation', () => {
-  test('each documented scene types human text, with Enter after every typed prompt', () => {
-    for (const shot of SHOTS.filter((shot) => shot.riff !== undefined)) {
-      expect(shot.args).toEqual(['riff']);
-
-      shot.steps.forEach((step, index) => {
-        if ('type' in step) {
-          expect(step.type).not.toMatch(/^\s*call\s/u);
-          expect(shot.steps[index + 1]).toEqual({ keys: ['Enter'] });
-        }
-      });
-    }
-  });
-
-  test('the destructive review scene stays behind caution and waits for its box', () => {
-    const shot = SHOTS.find((shot) => shot.name === 'riff-review');
-
-    assert(shot?.riff?.scene !== undefined);
-    expect(shot.riff.scene.review).toBe('caution');
-    expect(shot.riff.scene.rationale).toBeTruthy();
-    expect(shot.steps).toContainEqual({ until: 'The safety review held this' });
-    expect(
-      shot.steps.some((step) => 'keys' in step && step.keys.includes('1')),
-    ).toBe(false);
-  });
-
-  test('the sign-in scene selects only the waiting fixture and its example code', () => {
-    const shot = SHOTS.find((shot) => shot.name === 'riff-sign-in');
-
-    assert(shot !== undefined);
-    expect(shot.env).toContain('CHORD_RIFF_QA=1');
-    expect(shot.env).toContain('CHORD_RIFF_QA_STATE=signed-out');
-    expect(shot.env).toContain('CHORD_RIFF_QA_SIGN_IN=waiting');
-    expect(shot.steps).toContainEqual({ until: 'WXYZ-1234' });
-  });
-
-  test('the skill scene supplies its own project skill and local MCP fixture', () => {
-    const shot = SHOTS.find((shot) => shot.name === 'riff-skill');
-
-    assert(shot?.riff !== undefined);
-    expect(
-      shot.riff.files?.['.agents/skills/release-notes/SKILL.md'],
-    ).toContain('name: release-notes');
-
-    const server = shot.riff.mcpServers?.['notes'] as
-      { command?: string; args?: string[] } | undefined;
-
-    expect(server?.command).toBe(process.execPath);
-    expect(server?.args?.[0]).toEndWith('/tests/fixtures/riff/mcp_stdio.ts');
-    expect(shot.riff.scene?.calls.map((call) => call.name)).toEqual([
-      'skill',
-      'notes__save_note',
-    ]);
   });
 });

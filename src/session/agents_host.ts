@@ -1192,7 +1192,6 @@ export function createAgentsHost(
     args: OpenArgs,
     kind: string,
     name = args.name?.trim() || args.agent,
-    idleRiffParent = false,
   ): Promise<string | undefined> => {
     const named = kind === 'agent' ? agentNameProblem(name) : undefined;
 
@@ -1204,10 +1203,7 @@ export function createAgentsHost(
       ? place.startupOf(args.agent)
       : undefined;
 
-    if (
-      parent?.session === undefined &&
-      !(idleRiffParent && parent !== undefined && !parent.launchSignal.aborted)
-    ) {
+    if (parent?.session === undefined) {
       return `This session is closing; no ${kind} can start from it`;
     }
 
@@ -2819,28 +2815,10 @@ export function createAgentsHost(
     }
 
     const args = { agent: named === '' ? main.agent : named, prompt: '' };
-    const parent = conversationAt(main.key);
-    const signal = parent?.launchSignal;
-    const idleRiffParent =
-      main.agent === 'riff' && parent?.session === undefined;
     const refused =
-      (await startRefusal(
-        main.key,
-        parent,
-        args,
-        'agent',
-        args.agent,
-        // The person can leave riff's sign-in without ever opening ACP.
-        idleRiffParent,
-      )) ?? fullRefusal(main.key);
+      (await startRefusal(main.key, conversationAt(main.key), args, 'agent')) ??
+      fullRefusal(main.key);
     const agents = ownedBy(sessions.agents, main.key);
-
-    if (
-      idleRiffParent &&
-      (conversationAt(main.key) !== parent || signal?.aborted)
-    ) {
-      return said('This session is closing; no agent can start from it');
-    }
 
     if (agents === undefined || refused !== undefined) {
       return said(refused ?? 'This session has closed');

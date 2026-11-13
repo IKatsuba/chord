@@ -1,10 +1,9 @@
 /**
- * Login refusals keep the agent's own words and protocol-provided ways in,
- * never guesses from error text. Riff signs in through chord's window;
- * other agents provide their own external sign-in (CHD-435).
+ * A start that failed because the agent needs a login: chord does not sign
+ * agents in (CHD-435), so it says so with the agent's own words and the ways
+ * in the agent offers, read from the protocol, never from the text.
  */
 import type { AuthMethod } from '@agentclientprotocol/sdk/unstable';
-import { riffStoreFailure, type RiffStoreFailure } from './credentials.ts';
 
 /** ACP's `authRequired`: the agent needs a login before it opens a session. */
 export const AUTH_REQUIRED = -32000;
@@ -20,7 +19,6 @@ export interface SignIn {
   /** The agent's own words for the failure. */
   readonly message: string;
   readonly ways: readonly SignInWay[];
-  readonly store?: RiffStoreFailure;
 }
 
 /** A start that failed for want of a login; its message is the agent's. */
@@ -65,7 +63,6 @@ export function waysOf(
 export function asSignIn(
   error: unknown,
   methods: readonly AuthMethod[] | null | undefined,
-  riff = false,
 ): unknown {
   let code: unknown;
 
@@ -77,9 +74,7 @@ export function asSignIn(
     code = 'code' in each ? each.code : undefined;
   }
 
-  const store = riff ? riffStoreFailure(error) : undefined;
-
-  if (code !== AUTH_REQUIRED && store === undefined) {
+  if (code !== AUTH_REQUIRED) {
     return error;
   }
 
@@ -87,7 +82,6 @@ export function asSignIn(
     {
       message: error instanceof Error ? error.message : String(error),
       ways: waysOf(methods),
-      ...(store === undefined ? {} : { store }),
     },
     { cause: error },
   );
@@ -108,12 +102,8 @@ export function signInOf(error: unknown): SignIn | undefined {
   return undefined;
 }
 
-/** Keeps failures actionable through riff's window or an external agent's CLI. */
+/** chord's own line, the way on: the sign-in is the agent's, outside chord. */
 export function wayOn(agent: string): string {
-  if (agent === 'riff') {
-    return 'run chord riff to sign in';
-  }
-
   return `chord does not sign agents in. Sign in with ${agent}'s own CLI in a terminal, or set its API key where it offers one.`;
 }
 

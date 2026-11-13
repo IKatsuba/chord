@@ -1523,7 +1523,6 @@ export function useSessions(
   };
 
   return {
-    conversationAt,
     sessions,
     place,
     lines,

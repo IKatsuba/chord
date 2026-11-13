@@ -87,7 +87,7 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
   },
   {
     name: 'new',
-    description: 'Open a new agent beside main and go to it',
+    description: 'Open a new agent beside main and go to it; --name names it',
     owner: 'chord',
   },
   {

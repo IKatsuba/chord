@@ -1,0 +1,40 @@
+ ▀▄     chord v0.70.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.des627w
+ ▀▀     ? for shortcuts · /help
+
+ › /new --name the scout
+
+ ⏺ Open(the scout) · fake
+   ⎿  opened with /new
+
+ › /new fake --name the scout
+ ⏺ The name the scout is taken in this window
+
+ › /new fake scout
+ ⏺ /new takes an agent, then --name <name> · /new [agent] --name <name>
+
+ › /new --name
+ ⏺ --name needs a name · /new [agent] --name <name>
+
+ › /new --name a"b
+ ⏺ An agent name must not contain the character "
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    main       fake · Fake Large with a 1M context window · medium  ◦ idle 26s
+    the scout  fake · Fake Large with a 1M context window · medium  ◦ idle 18s

@@ -24,6 +24,7 @@ import {
   runName,
   forgetClosed,
   shownKey,
+  takenNames,
   type WindowAgents,
 } from '../../src/session/window_agents.ts';
 import {
@@ -167,6 +168,17 @@ test('a child is named as asked, or by its runtime, numbered past the first, nev
   expect(childName(tab, undefined, 'codex')).toStrictEqual('codex 2');
   expect(childName(tab, ' ', 'gemini')).toStrictEqual('gemini');
   expect(childName(tab, 'main', 'codex')).toStrictEqual('main 2');
+});
+
+test('the taken names are main, chord and every open child', () => {
+  const tab = withChildren(opened('claude'), 'codex', 'the scout');
+
+  expect([...takenNames(tab)]).toStrictEqual([
+    'main',
+    'chord',
+    'codex',
+    'the scout',
+  ]);
 });
 
 test("a child's agent that exits tells its parent its last words, and how to open it again", () => {

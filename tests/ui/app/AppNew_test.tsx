@@ -113,7 +113,9 @@ test("/new opens an agent of main's runtime for main, idle, and goes to it; main
       await window.shows('This reply came in chunks.');
       await until('the turn to end', () => !window.frame().includes('Working'));
       await window.type('/new');
-      await window.shows('Open a new agent beside main and go to it');
+      await window.shows(
+        'Open a new agent beside main and go to it; --name names it',
+      );
       expect(window.frame()).not.toContain('/clear (new)');
       await window.press('\r');
       await window.shows('╭─ fake ');
@@ -206,6 +208,85 @@ describe('CHD-565 /new with a list of offered agents', () => {
       },
       { columns: 120, rows: 40, ...start },
     ));
+});
+
+describe('CHD-627 /new --name', () => {
+  for (const columns of [80, 120]) {
+    test(`names the child, and a taken name is refused where it was typed, at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/new --name the scout');
+          await window.shows('╭─ the scout ');
+          await send(window, '/new fake --name the scout');
+          await window.shows('The name the scout is taken in this window');
+          await send(window, '/new fake scout');
+          await window.shows(
+            '/new takes an agent, then --name <name> · /new [agent] --name <name>',
+          );
+          expect(window.frame()).toContain('╭─ the scout ');
+          expect(window.frame()).not.toContain('the scout 2');
+        },
+        { columns, rows: columns === 80 ? 24 : 40 },
+      ));
+  }
+});
+
+describe('CHD-627 tester: named children across cancellation and startup', () => {
+  for (const columns of [80, 120]) {
+    test(`cancelled work leaves literal names and several children usable at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, 'costwait');
+          await window.shows('Working until stopped.');
+          await window.press(ESC);
+          await window.shows('Interrupted by user');
+          await send(window, '/new --name a --name b');
+          await window.shows('╭─ a --name b ');
+          await window.shows('? for shortcuts');
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+          await send(window, '/new --name x codex');
+          await window.shows('╭─ x codex ');
+          await window.shows('? for shortcuts');
+          await send(window, '/new --name a --name b');
+          await window.shows('The name a --name b is taken in this window');
+          expect(window.frame()).toContain('╭─ x codex ');
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+        },
+        { columns, rows: columns === 80 ? 24 : 40 },
+      ));
+  }
+
+  for (const behavior of ['invalid', 'start'] as const) {
+    test(`a named child with --hang ${behavior} is cleaned up with its window`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/new other --name slow scout');
+          await window.shows('╭─ slow scout ');
+          await window.shows(
+            behavior === 'start' ? 'Starting other' : 'other did not start:',
+          );
+          await send(window, '/new --name slow scout');
+          await window.shows('The name slow scout is taken in this window');
+          expect(window.frame()).not.toContain('slow scout 2');
+        },
+        {
+          columns: 80,
+          rows: 24,
+          runtimes: ['fake', 'other'],
+          startupOf: (agent) => ({
+            agentCommand:
+              agent === 'other'
+                ? fakeAgentCommand(undefined, '--hang', behavior)
+                : fakeAgentCommand(),
+          }),
+        },
+      ));
+  }
 });
 
 describe('CHD-493 U6 tester: person-opened agents keep main and its menu', () => {

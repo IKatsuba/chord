@@ -129,15 +129,22 @@ switches the list's directory scope, and Esc quits with nothing started.
 
 `/clear` starts a fresh session for the picked agent with an empty transcript;
 your queued prompts return to its draft with their images. `/new` opens
-an idle child of main on main's runtime and goes to it; `/new <agent>`
-uses the named runtime. It starts as `open_agent` would with no model,
-effort or mode named: the runtime's own model and effort, the settings'
-mode. Its first turn is your first prompt to it. Main hears of the child
-ahead of its next prompt; its running turn continues. `/new` followed by
-a space lists the agents chord can start; Tab completes one. The child
-belongs to main even when opened from another child's view, and closes
-with `x`, main's `close_agent` or main's `/clear`. `/fork [name]` continues
-main or a picked fork in a new top-level agent and picks it; see
+an idle child on main's runtime and goes to it; `/new <agent>` uses the
+named runtime. Add `--name <name>` to name it, as in
+`/new codex --name code review` or `/new --name scout`. The first word
+before `--name` is always an agent; the name is the rest of the line,
+trimmed, with spaces allowed. A missing name, a word other than `--name`
+after the agent (including `--name=x`), or a name containing `"` or control
+characters is refused where you typed it. Names `main`, `chord` and any
+open child's name are taken and refused, without numbering. Omit `--name`
+for the usual runtime-based name. It starts on the runtime's own model
+and effort and the settings' mode, idle until your first prompt. Main
+hears of it before its next prompt; its running turn continues. `/new`
+followed by a space lists agents; Tab completes one, without `--name`
+completion. The child belongs to main even when opened from another
+child's view, and closes with `x`, main's `close_agent` or main's `/clear`.
+`/fork [name]` continues main or a picked fork in a new top-level agent
+and picks it; see
 [forking a conversation](#forking-a-conversation).
 
 An agent asking for permission or a form, or ending its turn, never takes
@@ -749,7 +756,7 @@ agent as typed.
 | `/team run <name> <job>` | Starts a saved team and answers once started |
 | `/team stop <run>` | Closes the run's lead and members |
 | `/team new <words>` | Sends a normal turn asking main to propose a team |
-| `/new <agent>` | Opens an idle child; omitting the agent uses main's runtime; send work with `_chord/agents/send` or ask main to use `send_message` |
+| `/new [agent] [--name <name>]` | Opens an idle child; omitting the agent uses main's runtime. `--name` takes the trimmed rest of the line; the window's name rules and refusals apply. Send work with `_chord/agents/send` or main's `send_message` |
 
 Commands take a single text block; other blocks beside one are refused.
 Except `/team new`, they run immediately, even during a turn, and return

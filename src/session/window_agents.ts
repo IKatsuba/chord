@@ -284,14 +284,15 @@ export function childName<C>(
   asked: string | undefined,
   runtime: string,
 ): string {
-  const base = asked?.trim() || runtime;
-  const taken = new Set([
-    'main',
-    'chord',
-    ...agents.children.map((c) => c.name),
-  ]);
+  return numbered(asked?.trim() || runtime, takenNames(agents));
+}
 
-  return numbered(base, taken);
+/**
+ * The names a child may not be given as they are: `main`, `chord` and every
+ * open child's, as a message names its sender so.
+ */
+export function takenNames<C>(agents: WindowAgents<C>): ReadonlySet<string> {
+  return new Set(['main', 'chord', ...agents.children.map((c) => c.name)]);
 }
 
 /**

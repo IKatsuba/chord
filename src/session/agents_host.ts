@@ -41,6 +41,7 @@ import {
   type ConversationEvent,
   type OpenSession,
 } from './conversation.ts';
+import { newArgs } from './new_args.ts';
 import { OpenAgents } from './open_agents.ts';
 import type { Place } from './place.ts';
 import { FileRecording } from './record.ts';
@@ -101,6 +102,7 @@ import {
   runName,
   shownKey,
   type StartedAgents,
+  takenNames,
 } from './window_agents.ts';
 
 export interface AgentsHostOptions {
@@ -2793,11 +2795,12 @@ export function createAgentsHost(
   };
 
   /**
-   * `/new`: an agent opened for main as `open_agent` opens one, of `named`
-   * or of main's runtime (Q188), on what `open_agent` gives with none named
-   * (Q189), and idle until the person's first prompt in its view (Q187). The
-   * view goes to it at once; main hears of it ahead of its next prompt, the
-   * call drawn as its own; or why not, if it was refused as `open_agent` is.
+   * `/new`: an agent opened for main as `open_agent` opens one, of the agent
+   * `named` or of main's runtime (Q188), by the name `--name` gives or on what
+   * `open_agent` gives with none named (Q189), and idle until the person's
+   * first prompt in its view (Q187). The view goes to it at once; main hears
+   * of it ahead of its next prompt, the call drawn as its own; or why not, if
+   * it was refused as `open_agent` is, or its name is taken.
    */
   const newTyped = async (
     named: string,
@@ -2814,10 +2817,44 @@ export function createAgentsHost(
       return said('This session has closed');
     }
 
-    const args = { agent: named === '' ? main.agent : named, prompt: '' };
+    const asked = newArgs(named);
+
+    if ('problem' in asked) {
+      return said(asked.problem);
+    }
+
+    const args = {
+      agent: asked.agent ?? main.agent,
+      prompt: '',
+      ...(asked.name === undefined ? {} : { name: asked.name }),
+    };
+    // Asked for by name, a taken one is refused, not numbered as chord's are;
+    // the name is read before the agent, as the design orders the refusals.
+    const nameRefusal = (): string | undefined => {
+      const problem =
+        args.name === undefined ? undefined : agentNameProblem(args.name);
+      const agents = ownedBy(sessions.agents, main.key);
+
+      return problem !== undefined
+        ? `An agent name ${problem}`
+        : args.name !== undefined &&
+            agents !== undefined &&
+            takenNames(agents).has(args.name)
+          ? `The name ${args.name} is taken in this window`
+          : undefined;
+    };
+
+    const early = nameRefusal();
+
+    if (early !== undefined) {
+      return said(early);
+    }
+
     const refused =
       (await startRefusal(main.key, conversationAt(main.key), args, 'agent')) ??
-      fullRefusal(main.key);
+      fullRefusal(main.key) ??
+      // Another child may have taken it while the agent was looked up.
+      nameRefusal();
     const agents = ownedBy(sessions.agents, main.key);
 
     if (agents === undefined || refused !== undefined) {
@@ -2825,7 +2862,7 @@ export function createAgentsHost(
     }
 
     const { opened, started } = startChild(main.key, args, {
-      name: childName(agents, undefined, args.agent),
+      name: childName(agents, args.name, args.agent),
       parent: () => conversationAt(main.key),
       from: MAIN,
       asked: 'asked by /new',

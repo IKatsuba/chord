@@ -1371,6 +1371,52 @@ Lead it.
     await host.sessions.closeAll();
   });
 
+  test("/new --name opens a child of the runtime named, not main's", async () => {
+    const { host } = await withMain({}, {}, { runtimes: ['fake', 'other'] });
+
+    expect(await host.newTyped('other --name parser', () => {})).toMatchObject({
+      kind: 'ran',
+      call: { tool: 'open_agent', input: { agent: 'other' } },
+    });
+    expect(
+      host.sessions.agents.children.map(({ name, runtime }) => [name, runtime]),
+    ).toEqual([['parser', 'other']]);
+
+    await host.sessions.closeAll();
+  });
+
+  test('/new --name refuses a name taken while its runtime was looked up', async () => {
+    let take: (() => void) | undefined;
+    const { host, open } = await withMain(
+      {
+        startupOf: (agent) => {
+          if (agent === 'other') {
+            take?.();
+          }
+
+          return {};
+        },
+      },
+      {},
+      { runtimes: ['fake', 'other'] },
+    );
+
+    take = () => {
+      take = undefined;
+
+      open('scout');
+    };
+
+    expect(await host.newTyped('other --name scout', () => {})).toEqual(
+      said('The name scout is taken in this window'),
+    );
+    expect(host.sessions.agents.children.map(({ name }) => name)).toEqual([
+      'scout',
+    ]);
+
+    await host.sessions.closeAll();
+  });
+
   test('/new opens an idle child after an established main agent exits', async () => {
     const exited = Promise.withResolvers<void>();
     let first = true;

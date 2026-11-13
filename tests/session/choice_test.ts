@@ -216,3 +216,86 @@ describe('the rows', () => {
     );
   });
 });
+
+describe('CHD-626 tester: choice value identity and changing sets', () => {
+  test('matching labels never substitute for the requested value id', () => {
+    const renamed: SessionConfigOption = {
+      ...efforts('thinking', 'Thinking', 'slow', ['slow', 'fast']),
+      type: 'select',
+      currentValue: 'slow',
+      options: [
+        { value: 'slow', name: 'Low' },
+        { value: 'fast', name: 'High' },
+      ],
+    };
+
+    expect(effortStep(toHaiku, [renamed])).toBeUndefined();
+    expect(
+      effortStep({ ...toHaiku, effort: { ...HIGH, value: 'fast' } }, [renamed]),
+    ).toEqual({ option: 'thinking', value: 'fast', name: 'Thinking' });
+  });
+
+  test('grouped duplicate labels preserve the exact case-sensitive id across model changes', () => {
+    const grouped: SessionConfigOption = {
+      id: 'reasoning',
+      name: 'Reasoning',
+      category: 'thought_level',
+      type: 'select',
+      currentValue: 'low',
+      options: [
+        {
+          group: 'efforts',
+          name: 'Efforts',
+          options: [
+            { value: 'high', name: 'Same' },
+            { value: 'High', name: 'Same' },
+          ],
+        },
+      ],
+    };
+
+    for (const value of ['high', 'High']) {
+      expect(
+        effortStep({ model: HAIKU_MODEL, effort: { ...HIGH, value } }, [
+          grouped,
+        ])?.value,
+      ).toBe(value);
+    }
+
+    expect(
+      effortStep({ model: HAIKU_MODEL, effort: { ...HIGH, value: 'HIGH' } }, [
+        grouped,
+      ]),
+    ).toBeUndefined();
+  });
+
+  test('an empty first effort set does not borrow a value from a later effort option', () => {
+    const empty = efforts('first', 'First', 'low', []);
+    const later = efforts('later', 'Later', 'high', ['high']);
+
+    expect(effortStep(toHaiku, [empty, later])).toBeUndefined();
+    expect(effortStep({ effort: HIGH }, [later])).toBeUndefined();
+  });
+
+  test('outcomes report the agent-confirmed value rather than the requested display name', () => {
+    const confirmed = [efforts('effort', 'Effort', 'low', ['low', 'high'])];
+
+    expect(
+      choiceNote(
+        toHaiku,
+        { model: 'switched', effort: 'set' },
+        confirmed,
+        'Opus',
+      ),
+    ).toEqual({ text: 'Switched to Haiku 5.5 · Low effort', failed: false });
+    expect(
+      choiceNote({ effort: HIGH }, { effort: 'set' }, confirmed, 'Opus'),
+    ).toEqual({ text: 'Effort set to Low', failed: false });
+    expect(
+      choiceNote({ effort: HIGH }, { effort: 'not_offered' }, [], 'Opus'),
+    ).toEqual({
+      text: 'High effort was not sent: Opus no longer offers it.',
+      failed: false,
+    });
+  });
+});

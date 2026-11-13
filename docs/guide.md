@@ -199,11 +199,12 @@ interleave in its record; close it in the other pane before resuming here.
 
 Command and skill completions, `/new` and `/team` completions, `@` and `@@`,
 history search and `?` float over the transcript above the prompt, topped
-by a dim rule. The `/model`, `/config`, `/resume`, `/theme`, `/team`, `/mcp`
-and notice pickers float there too, with only their frame. The transcript
-keeps its height and scroll; new output arrives beneath the list and shows
-when it closes. Opening and closing keep the prompt, its gap row, status,
-leader-key hints, agents and background summary on their rows, uncovered.
+by a dim rule. The `/model`, `/effort`, `/config`, `/resume`, `/theme`,
+`/team`, `/mcp` and notice pickers float there too, with only their frame.
+The transcript keeps its height and scroll; new output arrives beneath
+the list and shows when it closes. Opening and closing keep the prompt,
+its gap row, status, leader-key hints, agents and background summary on
+their rows, uncovered.
 
 Lists can reach the window's top, covering the header. They shrink to the
 available space and scroll to the selection. In a short window, a picker
@@ -285,9 +286,29 @@ so. While the agent starts, ctrl+v says `X has not started yet`. That notice
 goes when the agent starts; if it fails, `X did not start: …` replaces it.
 Other paste failures after startup stay until the next key.
 
-`/config` lists the agent's own settings for the session other than its
-model and mode, such as Claude's effort, each with its value; Enter on one
-lists its values and Enter on a value sets it.
+`/model` lists models with a settings line for the model in use: effort,
+then the agent's model settings, such as fast mode and context size, and
+`/config for all settings` when more are available. ←/→ moves effort in
+the agent's order, stopping at either end; `•` marks a change waiting for
+Enter or 1–9. Esc closes without sending it. With another model
+highlighted, only a moved effort is requested after the
+switch, if that model offers the same value id. Otherwise a note says it
+was not set; the model stays. A model with no settings says so; agents
+that offer only legacy models have no settings line.
+
+`/effort` lists the model's efforts in the agent's order, `✔` on the one
+in use. Enter sets one; Esc closes. `/effort <id>` sets an exact value id,
+not a display name; an unknown id gets a note listing those offered.
+`/fast` toggles the agent's fast mode between its two values. It recognises
+Claude's and Codex's recorded fast options, or any agent's option marked
+`_meta["chord/parameter"]: "fast"`. When no effort or fast mode is offered,
+the command says so.
+
+`/config` lists every session setting except model and mode, including
+effort, fast mode and context size where offered. Enter on a setting lists
+its values; Enter on a value sets it. Model, mode and setting changes run
+in order per session, including during a turn. A pending transcript row is
+replaced by the outcome when the agent answers.
 
 Each session's transcript opens with a header: Chorded's mark in its
 gradient, drawn in half blocks, and beside it chord's version, the agent and
@@ -1153,10 +1174,12 @@ in the agents list or stops an item in the background view;
 `autocomplete:accept`, `dismiss`, `previous` and `next` in `Autocomplete`;
 `historySearch:next`, `accept` and `cancel` in `HistorySearch`;
 `confirm:no` in `Confirmation`; `help:dismiss` in `Help`; `select:cancel`
-and `select:toggleScope` (`/resume`'s ctrl+a, chord's own name) in `Select`; and `scroll:pageUp`, `pageDown`, `lineUp`, `lineDown`, `top`
-and `bottom` in `Scroll`. ctrl+c and ctrl+d cannot be rebound, nor can the
-keys inside lists, forms and vim mode. An unknown context, action or key,
-and a key that would mean two actions at once, such as a key the
+and `select:toggleScope` (`/resume`'s ctrl+a, chord's own name) in `Select`;
+`modelPicker:decreaseEffort` (←) and `modelPicker:increaseEffort` (→) in
+`ModelPicker`; and `scroll:pageUp`, `pageDown`, `lineUp`, `lineDown`, `top`
+and `bottom` in `Scroll`. ctrl+c and ctrl+d cannot be rebound, nor can
+other keys inside lists, forms and vim mode. An unknown context, action
+or key, and a key that would mean two actions at once, such as a key the
 transcript scrolls on bound in `Chat`, is left out and named as a
 warning in the transcript and on stderr, and the status line counts them; the
 rest of the file still applies. The `?` panel and hints name the bound keys.
@@ -1707,7 +1730,7 @@ and says what it gives the agent, or why it was not passed: the agent does
 not take HTTP or is set to take no MCP servers. `-p` gets no such server.
 
 Models, efforts and modes are set per agent because their ids are the
-agent's own: `/model`, `/config` and shift+tab show what an agent offers, and
+agent's own: `/model`, `/effort`, `/config` and shift+tab show what it offers;
 `chord agents` lists the names. An effort is one the model the session starts
 on offers. A starting model, effort or mode the agent refuses is said in the
 transcript, with where it was set and what the agent offers, and the session
@@ -1865,11 +1888,14 @@ is empty: top up or enable auto top-up. `usage_limit_exceeded` appears as
 one plain line with Cursor's message.
 
 `shift+tab` switches Agent and Plan modes; `/model` offers one entry per
-model and `/config` its parameters. A chosen model starts on a variant
-outside max mode when it has one. Text, thinking, tool results and plans
-appear in the transcript. A Cursor request for input or approval appears
-as text; the adapter cannot answer it. Esc stops the run. If Cursor does
-not confirm the stop within 10 seconds, a line says it may still be going.
+model with its effort and settings below. `/effort` changes reasoning
+effort, `/fast` toggles fast mode, and `/config` includes context size and
+all other parameters offered by the chosen model. Cursor's default offers
+none. A chosen model starts outside max mode when possible. Text, thinking,
+tool results and plans appear in the transcript. A Cursor request for
+input or approval appears as text; the adapter cannot answer it. Esc stops
+the run. If Cursor does not confirm the stop within 10 seconds, a line
+says it may still be going.
 A lost connection ends the turn with the link; reopen to see its state.
 
 `/resume` lists chord's records. `chord cursor-cloud --resume bc-…` also

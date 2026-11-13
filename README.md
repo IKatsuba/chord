@@ -160,7 +160,10 @@ git diff | chord -p "Review this" --output-format json
 
 Inside the window, completion lists, history search, `?` and command pickers
 float over the transcript above the prompt, keeping its height and scroll.
-The prompt, status and agents stay on their rows:
+The prompt, status and agents stay on their rows. `/model` shows the model's
+settings; ←/→ changes its effort, waiting for Enter. `/effort` picks an
+effort, `/fast` toggles fast mode where offered, and `/config` lists all
+session settings except model and mode:
 
 | Key               | Does                                         |
 | ----------------- | -------------------------------------------- |

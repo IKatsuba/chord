@@ -21,6 +21,13 @@ These rules also cover `src/acp/`.
 - Clear replaces the agent session, not the child's identity. Old calls and
   task reports lose delivery authority immediately. The next surviving prompt
   carries any team part exactly once; a withdrawn prompt does not spend it.
+- Model, mode and option changes run in one chain per session. A model
+  choice switches first, then requests a moved effort only if the new set
+  offers its value id. Recheck the current session before and after awaits;
+  fold option sets in arrival order. A refused effort keeps the model.
+- Recognise effort by `thought_level`, model settings by `model_config`,
+  and fast by `chord/parameter` metadata or the agent's recorded option id.
+  Keep every non-model, non-mode option in `/config` and session records.
 - The window's and `acp`'s sessions are recorded; `-p`'s are not.
 - `acp` accepts embedded resources only when the agent advertises
   `embeddedContext`; otherwise refuse the whole prompt before sending it.

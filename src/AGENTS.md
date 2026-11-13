@@ -1,7 +1,8 @@
 # Source rules
 
 - `registry.ts` (`bun dev registry`) and `ui/header/mark.ts`
-  (`bun dev mark`) are generated; never edit them.
+  (`bun dev mark`) are generated; never edit them. Recheck `agents.ts`'s
+  recorded fast-option ids when their adapters' pins change.
 - `chorded.ts` holds chord's own npx agents, merged by name with the
   registry. Pins are literals; bump one only after its package is on npm.
   `cursor-cloud` defaults to `mcpServers: false`: cloud agents cannot reach

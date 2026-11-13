@@ -19,7 +19,11 @@
   parsing error words, guessed event shapes or answered Cursor requests.
 - Models have one option each and separate parameter options. Start a
   chosen model outside max mode when possible; offer only combinations
-  the SDK's variants contain. Mode and model changes apply next turn.
+  the SDK's variants contain. Mark `reasoning_effort` as `thought_level`,
+  and `context` and `fast` as `model_config` with
+  `_meta["chord/parameter"]` set to `"context"` and `"fast"` respectively.
+  Other parameters stay uncategorised; Cursor's default offers none.
+  Mode and model changes apply next turn.
 - Cancel is bounded at 10 seconds. Drop late updates after the turn ends.
   Closing a session or process closes handles without cancelling cloud
   runs. A resumed run still going is reported, never followed live.

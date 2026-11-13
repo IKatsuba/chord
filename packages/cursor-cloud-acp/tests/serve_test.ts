@@ -723,6 +723,27 @@ describe('list, resume, load, close', () => {
     ]);
   });
 
+  test('resume tells of the latest run: listRuns gives it first (newest first, verified live)', async () => {
+    const { at, sessionId } = await withHistory();
+
+    at.cursor.scripts.push({
+      result: { status: 'error', error: { message: 'The VM ran out of disk' } },
+    });
+    await at
+      .request('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text: 'three' }],
+      })
+      .catch(() => undefined);
+
+    const before = at.texts().length;
+
+    await at.request('session/resume', { sessionId, cwd: CWD });
+    expect(at.texts().slice(before)[0]).toStartWith(
+      'Cursor cloud agent on github.com/acme/web. Its last run failed: The VM ran out of disk.',
+    );
+  });
+
   test('load: each run replayed oldest first, then the first message, then the answer', async () => {
     const { at, sessionId } = await withHistory();
     const runs = at.cursor.runs.get(sessionId)!;
@@ -856,4 +877,287 @@ describe('the fixture over real pipes', () => {
     expect(stdout).toContain('"title":"src/routes.ts"');
     expect(child.exitCode).toBe(0);
   }, 20_000);
+});
+
+describe('shutdown', () => {
+  const served = (dispose: () => Promise<void>) => {
+    const cursor = fakeCursor();
+    const toAgent = new TransformStream<Uint8Array, Uint8Array>();
+    const toClient = new TransformStream<Uint8Array, Uint8Array>();
+    const server = serve(ndJsonStream(toClient.writable, toAgent.readable), {
+      port: {
+        ...cursor.port,
+        create: async (options) => ({
+          ...(await cursor.port.create(options)),
+          [Symbol.asyncDispose]: dispose,
+        }),
+      },
+      git: fakeGit(),
+      credentials: () => ({ env: {}, store: store('key_good'), now: () => 0 }),
+      version: '0.1.0',
+    });
+    const connection = client({ name: 'test' }).connect(
+      ndJsonStream(toAgent.writable, toClient.readable),
+    );
+
+    open.push(connection);
+
+    return { server, connection };
+  };
+
+  test("lets go of each agent with the SDK's own release, cancelling no run", async () => {
+    let released = 0;
+    const { server, connection } = served(() => {
+      released += 1;
+
+      return Promise.resolve();
+    });
+
+    await connection.agent.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+    await connection.agent.request('session/new', { cwd: CWD, mcpServers: [] });
+    await connection.agent.request('session/new', { cwd: CWD, mcpServers: [] });
+    await server.shutdown();
+    expect(released).toBe(2);
+  });
+
+  test('an agent the SDK does not let go of ends the shutdown within its bound', async () => {
+    const { server, connection } = served(() => new Promise(() => undefined));
+
+    await connection.agent.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+    await connection.agent.request('session/new', { cwd: CWD, mcpServers: [] });
+
+    const started = performance.now();
+
+    await server.shutdown();
+    expect(performance.now() - started).toBeLessThan(1500);
+  });
+});
+
+describe('sessions held, released and reopened', () => {
+  const started = async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    const { sessionId } = await newSession(at);
+
+    return { at, sessionId };
+  };
+
+  const prompt = (
+    at: ReturnType<typeof connect>,
+    sessionId: string,
+    text = 'go',
+  ) =>
+    at.request<{ stopReason: string }>('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text }],
+    });
+  const settle = () => new Promise((resolve) => setTimeout(resolve, 20));
+
+  test('a run still going at reopen is said so at once, not waited on', async () => {
+    const { at, sessionId } = await started();
+
+    at.cursor.scripts.push({ hang: true });
+
+    const running = prompt(at, sessionId);
+
+    await settle();
+
+    const before = at.texts().length;
+
+    await at.request('session/resume', { sessionId, cwd: CWD });
+    expect(at.texts().slice(before)[0]).toStartWith(
+      'Cursor cloud agent on github.com/acme/web. Its last run is still going; a prompt is refused until it ends.',
+    );
+    // The earlier hold on the agent let go; its run goes on in the cloud.
+    expect(at.cursor.closed).toEqual([sessionId]);
+    expect(at.cursor.runs.get(sessionId)?.[0]?.cancelled).toBe(false);
+    void running.catch(() => undefined);
+  });
+
+  test('a prompt while one runs leaves the running one the one a cancel stops', async () => {
+    const { at, sessionId } = await started();
+
+    at.cursor.scripts.push(
+      { hang: true },
+      {
+        refuse: new CursorError('busy', 'Agent has an active run', {
+          sdkClass: 'AgentBusyError',
+        }),
+      },
+    );
+
+    const first = prompt(at, sessionId, 'a');
+
+    await settle();
+    await expect(prompt(at, sessionId, 'b')).rejects.toMatchObject({
+      code: -32603,
+    });
+    await at.connection.agent.notify('session/cancel', { sessionId });
+    expect(await first).toEqual({ stopReason: 'cancelled' });
+    expect(at.cursor.runs.get(sessionId)?.[0]?.cancelled).toBe(true);
+  });
+
+  test('a run that changes the options sends the whole set again: the model it ran, the default gone', async () => {
+    const { at, sessionId } = await started();
+
+    at.cursor.scripts.push({ result: { model: { id: 'claude-x' } } });
+    await prompt(at, sessionId);
+
+    const updates = at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'config_option_update'
+        ? [each.params.update.configOptions]
+        : [],
+    );
+
+    expect(updates).toHaveLength(1);
+    expect(updates[0]?.[1]).toMatchObject({
+      id: 'model',
+      currentValue: 'claude-x',
+    });
+
+    const sent = () =>
+      at.seen.flatMap((each) =>
+        each.kind === 'update' &&
+        each.params.update.sessionUpdate === 'config_option_update'
+          ? [each.params.update.configOptions]
+          : [],
+      );
+
+    // The next send carries that model: Cursor's default leaves the list.
+    await prompt(at, sessionId);
+    expect(sent()).toHaveLength(2);
+    expect(
+      (sent()[1]?.[1] as { options: { value: string }[] }).options.map(
+        (each) => each.value,
+      ),
+    ).not.toContain('cursor-default');
+
+    // A turn that changes nothing sends none.
+    await prompt(at, sessionId);
+    expect(sent()).toHaveLength(2);
+  });
+
+  test('a closed session forwards nothing of a run still going', async () => {
+    const { at, sessionId } = await started();
+
+    at.cursor.scripts.push({
+      hang: true,
+      deltas: [{ type: 'text-delta', text: 'before' }],
+    });
+
+    const running = prompt(at, sessionId);
+
+    await settle();
+    await at.request('session/close', { sessionId });
+
+    const run = at.cursor.runs.get(sessionId)![0]!;
+    const forwarded = at.seen.length;
+
+    // A late delta from the run, through the onDelta the send was given.
+    await at.cursor.onDeltas[0]!({
+      update: { type: 'text-delta', text: 'after close' },
+    });
+    await settle();
+    expect(run.cancelled).toBe(false);
+    expect(at.texts()).not.toContain('after close');
+    expect(at.cursor.closed).toEqual([sessionId]);
+    expect(at.seen.length).toBe(forwarded);
+    void running.catch(() => undefined);
+  });
+
+  test('a reopen that fails after Cursor gave the agent lets go of it', async () => {
+    const { at, sessionId } = await started();
+
+    await prompt(at, sessionId);
+
+    at.cursor.failGet = new CursorError('network', 'Service unavailable');
+
+    expect(
+      (await refusal(at.request('session/resume', { sessionId, cwd: CWD })))
+        .code,
+    ).toBe(-32603);
+    expect(at.cursor.closed).toEqual([sessionId]);
+  });
+
+  test('load replays every page of runs, oldest first', async () => {
+    const { at, sessionId } = await started();
+
+    for (const text of ['one', 'two', 'three']) {
+      await prompt(at, sessionId, text);
+    }
+
+    at.cursor.pageSize = 2;
+
+    const runs = at.cursor.runs.get(sessionId)!;
+    const before = at.texts().length;
+
+    await at.request('session/load', { sessionId, cwd: CWD, mcpServers: [] });
+    expect(at.texts().slice(before, -1)).toEqual(
+      runs.map((run) => `answered ${run.id}`),
+    );
+  });
+});
+
+describe('an open that ends after shutdown', () => {
+  test('a create Cursor answers after shutdown is let go, never held', async () => {
+    const cursor = fakeCursor();
+    let answer: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      answer = resolve;
+    });
+
+    const toAgent = new TransformStream<Uint8Array, Uint8Array>();
+    const toClient = new TransformStream<Uint8Array, Uint8Array>();
+    const server = serve(ndJsonStream(toClient.writable, toAgent.readable), {
+      port: {
+        ...cursor.port,
+        create: async (options) => {
+          await held;
+
+          return cursor.port.create(options);
+        },
+      },
+      git: fakeGit(),
+      credentials: () => ({ env: {}, store: store('key_good'), now: () => 0 }),
+      version: '0.1.0',
+    });
+    const connection = client({ name: 'test' }).connect(
+      ndJsonStream(toAgent.writable, toClient.readable),
+    );
+
+    open.push(connection);
+    await connection.agent.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    // Its answer never comes: the connection is closed by then.
+    void connection.agent
+      .request('session/new', { cwd: CWD, mcpServers: [] })
+      .catch(() => undefined);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await server.shutdown();
+    answer();
+
+    const deadline = performance.now() + 2000;
+
+    while (cursor.closed.length === 0 && performance.now() < deadline) {
+      await new Promise((resolve) => setTimeout(resolve, 10));
+    }
+
+    expect(cursor.closed).toEqual(['bc-1']);
+  });
 });

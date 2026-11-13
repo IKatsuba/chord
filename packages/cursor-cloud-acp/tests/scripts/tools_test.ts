@@ -4,7 +4,14 @@ import { mkdtemp, readdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { build, foreign, here, PACKED, tooOld } from '../../scripts/tools.ts';
+import {
+  build,
+  foreign,
+  here,
+  PACKED,
+  serveOnce,
+  tooOld,
+} from '../../scripts/tools.ts';
 
 test("foreign names a build's inputs outside the package's src/, by a path from the cwd or absolute", () => {
   const root = join(here, '..', '..');
@@ -169,4 +176,86 @@ test('the tarball holds dist, README.md, LICENSE and package.json alone, as file
     'dist/main.js',
     'package.json',
   ]);
+});
+
+describe('the smoke talks to its child as a client, and leaves none behind', () => {
+  /** A child that answers each request as `answer` says, run by Bun. */
+  const child = async (body: string) => {
+    const dir = await mkdtemp(join(tmpdir(), 'cursor-cloud-acp-child-'));
+    const file = join(dir, 'child.ts');
+
+    await writeFile(
+      file,
+      `process.stdout.write(\`\${JSON.stringify({ jsonrpc: '2.0', method: 'started', params: { pid: process.pid } })}\\n\`);
+${body}
+`,
+    );
+
+    return { dir, argv: [process.execPath, file] };
+  };
+
+  const ANSWERS = `let buffered = '';
+process.stdin.setEncoding('utf8').on('data', (chunk) => {
+  buffered += chunk;
+  const lines = buffered.split('\\n');
+  buffered = lines.pop();
+  for (const line of lines) {
+    const { id } = JSON.parse(line);
+    process.stdout.write(\`\${JSON.stringify({ jsonrpc: '2.0', id, result: { id } })}\\n\`);
+  }
+});`;
+
+  test('answers both requests, every line JSON-RPC', async () => {
+    const at = await child(ANSWERS);
+
+    try {
+      expect(await serveOnce(at.argv, at.dir, process.env)).toEqual([
+        { jsonrpc: '2.0', id: 1, result: { id: 1 } },
+        { jsonrpc: '2.0', id: 2, result: { id: 2 } },
+      ]);
+    } finally {
+      await rm(at.dir, { recursive: true, force: true });
+    }
+  });
+
+  test('a line of JSON that is not JSON-RPC fails it', async () => {
+    const at = await child(
+      `process.stdout.write('{"level":"info","msg":"hi"}\\n');\n${ANSWERS}`,
+    );
+
+    try {
+      await expect(serveOnce(at.argv, at.dir, process.env)).rejects.toThrow(
+        'a stdout line is not JSON-RPC: {"level":"info","msg":"hi"}',
+      );
+    } finally {
+      await rm(at.dir, { recursive: true, force: true });
+    }
+  });
+
+  test('a child that never answers is killed and reaped when the bound passes', async () => {
+    const at = await child(
+      `await Bun.write(${JSON.stringify('PID_FILE')}, String(process.pid));\nprocess.stdin.resume();`,
+    );
+    const pidFile = join(at.dir, 'pid');
+
+    await writeFile(
+      at.argv[1]!,
+      (await readFile(at.argv[1]!, 'utf8')).replace('PID_FILE', pidFile),
+    );
+
+    try {
+      await expect(
+        serveOnce(at.argv, at.dir, process.env, 1500),
+      ).rejects.toThrow('the adapter did not answer initialize within 1.5 s');
+
+      const pid = Number(await readFile(pidFile, 'utf8'));
+
+      expect(Number.isSafeInteger(pid) && pid > 0).toBe(true);
+      expect(() => process.kill(pid, 0)).toThrow(
+        expect.objectContaining({ code: 'ESRCH' }),
+      );
+    } finally {
+      await rm(at.dir, { recursive: true, force: true });
+    }
+  });
 });

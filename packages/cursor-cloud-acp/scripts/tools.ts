@@ -150,7 +150,7 @@ export async function smokeTarball(
     }
 
     const bin = join(scratch, 'node_modules', NAME, 'dist', 'bin.js');
-    const answers = await serveOnce(node, bin, outside, release.env);
+    const answers = await serveOnce([node, bin], outside, release.env);
     const [initialized, refused] = answers;
 
     if (
@@ -184,27 +184,39 @@ function npmLess(release: Release, node: string, args: string[]): string {
   return child.stdout.toString().trim();
 }
 
+/** A JSON-RPC 2.0 message, as ACP sends them. */
+function isRpc(value: unknown): value is { readonly id?: number } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as { jsonrpc?: unknown }).jsonrpc === '2.0'
+  );
+}
+
 /**
- * Runs `bin` on `node`, asks it initialize then session/new in `cwd`, and
- * answers both; every stdout line must be JSON-RPC, and the process must
- * end within 1.5 s of stdin ending.
+ * Runs `argv` in `cwd`, asks it initialize then session/new there, and
+ * answers both. Every stdout line must be a JSON-RPC message, with nothing
+ * left unended, and the process must end within 1.5 s of stdin ending. On
+ * any failure the child is killed and reaped before the error goes up.
  */
-async function serveOnce(
-  node: string,
-  bin: string,
+export async function serveOnce(
+  argv: readonly string[],
   cwd: string,
   env: NodeJS.ProcessEnv,
+  bound = 30_000,
 ): Promise<unknown[]> {
-  const child = spawn(node, [bin], {
+  const [command = '', ...args] = argv;
+  const child = spawn(command, args, {
     cwd,
     // No key from the environment: the refusal must come first regardless.
     env: { ...env, CURSOR_API_KEY: '' },
     stdio: ['pipe', 'pipe', 'inherit'],
   });
+  const exited = once(child, 'exit');
   const answers = new Map<number, unknown>();
-  let pending = '';
-  let notJson: string | undefined;
   const waiting = new Map<number, () => void>();
+  let pending = '';
+  let notRpc: string | undefined;
 
   child.stdout.setEncoding('utf8').on('data', (chunk: string) => {
     pending += chunk;
@@ -214,62 +226,76 @@ async function serveOnce(
     pending = lines.pop() ?? '';
 
     for (const each of lines) {
-      try {
-        const message = JSON.parse(each) as { id?: number };
+      let message: unknown;
 
-        if (message.id !== undefined) {
-          answers.set(message.id, message);
-          waiting.get(message.id)?.();
-        }
+      try {
+        message = JSON.parse(each);
       } catch {
-        notJson ??= each;
+        message = undefined;
+      }
+
+      if (!isRpc(message)) {
+        notRpc ??= each;
+
+        continue;
+      }
+
+      if (message.id !== undefined) {
+        answers.set(message.id, message);
+        waiting.get(message.id)?.();
       }
     }
   });
 
-  const exited = once(child, 'exit');
-  const send = (id: number, method: string, params: unknown) =>
-    child.stdin.write(
-      `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`,
-    );
-
-  const bound = AbortSignal.timeout(30_000);
+  const deadline = AbortSignal.timeout(bound);
   /** Sends a request and waits for its answer, as a client does. */
   const ask = (id: number, method: string, params: unknown) =>
     Promise.race([
       new Promise<void>((resolve) => {
         waiting.set(id, resolve);
-        send(id, method, params);
+        child.stdin.write(
+          `${JSON.stringify({ jsonrpc: '2.0', id, method, params })}\n`,
+        );
       }),
-      once(bound, 'abort').then(() =>
-        die(`the adapter did not answer ${method} within 30 s`),
+      once(deadline, 'abort').then(() =>
+        die(`the adapter did not answer ${method} within ${bound / 1000} s`),
       ),
       exited.then(() => die(`the adapter exited before answering ${method}`)),
     ]);
 
-  await ask(1, 'initialize', { protocolVersion: 1, clientCapabilities: {} });
-  await ask(2, 'session/new', { cwd, mcpServers: [] });
+  try {
+    await ask(1, 'initialize', { protocolVersion: 1, clientCapabilities: {} });
+    await ask(2, 'session/new', { cwd, mcpServers: [] });
 
-  const ended = performance.now();
+    const ended = performance.now();
 
-  child.stdin.end();
-  await Promise.race([
-    exited,
-    once(AbortSignal.timeout(5000), 'abort').then(() => {
+    child.stdin.end();
+    await Promise.race([
+      exited,
+      once(AbortSignal.timeout(5000), 'abort').then(() =>
+        die('the adapter did not exit after stdin ended'),
+      ),
+    ]);
+
+    if (performance.now() - ended > 1500) {
+      die('the adapter took more than 1.5 s to exit after stdin ended');
+    }
+
+    if (notRpc !== undefined) {
+      die(`a stdout line is not JSON-RPC: ${notRpc}`);
+    }
+
+    if (pending !== '') {
+      die(`stdout ended inside a line: ${pending}`);
+    }
+
+    return [answers.get(1), answers.get(2)];
+  } finally {
+    if (child.exitCode === null && child.signalCode === null) {
       child.kill('SIGKILL');
-      die('the adapter did not exit after stdin ended');
-    }),
-  ]);
-
-  if (performance.now() - ended > 1500) {
-    die('the adapter took more than 1.5 s to exit after stdin ended');
+      await exited;
+    }
   }
-
-  if (notJson !== undefined) {
-    die(`a stdout line is not JSON-RPC: ${notJson}`);
-  }
-
-  return [answers.get(1), answers.get(2)];
 }
 
 /** `npm pack` of the package into `destination`; answers the tarball's path. */

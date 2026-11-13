@@ -27,8 +27,8 @@ import {
   selection,
 } from './config.ts';
 import { apiKey, type CredentialSource } from './credentials.ts';
-import { INVALID_PARAMS, signedOut, toAcp } from './errors.ts';
-import type { Port, PortAgent } from './port.ts';
+import { INTERNAL_ERROR, INVALID_PARAMS, signedOut, toAcp } from './errors.ts';
+import type { Port, PortAgent, PortRun } from './port.ts';
 import { cursorUrl, type Git, repository } from './repo.ts';
 import { Turn } from './turn.ts';
 import {
@@ -41,6 +41,8 @@ import {
 } from './updates.ts';
 
 export const NAME = '@chorded/cursor-cloud-acp';
+/** How long a shutdown waits for the SDK to let go of its agents. */
+export const RELEASE_MS = 1000;
 
 /** What the agent reaches. */
 export interface ServeContext {
@@ -122,7 +124,7 @@ export interface Served {
    * Stops forwarding and closes the adapter's hold on each cloud agent,
    * cancelling no run: the agents go on in Cursor's cloud.
    */
-  shutdown(): void;
+  shutdown(): Promise<void>;
 }
 
 /** Serves ACP on `stream` over `context` until the stream ends. */
@@ -160,6 +162,72 @@ export function serve(stream: Stream, context: ServeContext): Served {
   const options = (open: Session) =>
     configOptions(open.choice, open.models, open.agent.model === undefined);
 
+  /** Whether serving has ended: an agent opened after is let go at once. */
+  let ended = false;
+
+  /** The adapter's hold on `agent` let go: the cloud agent goes on. */
+  const release = (agent: PortAgent) =>
+    agent[Symbol.asyncDispose]().catch(() => undefined);
+
+  /**
+   * `open` kept as its agent's session, unless serving ended while it was
+   * being opened: then the request fails, and `opening` lets the agent go.
+   */
+  const hold = async (open: Session): Promise<void> => {
+    if (ended) {
+      throw new RequestError(INTERNAL_ERROR, 'The adapter is shutting down.');
+    }
+
+    const replaced = sessions.get(open.agent.agentId);
+
+    sessions.set(open.agent.agentId, open);
+
+    // A session opened again: the earlier hold lets go, and what its run
+    // still sends is no longer forwarded.
+    if (replaced !== undefined) {
+      await release(replaced.agent);
+    }
+  };
+
+  /**
+   * `agent` let go when `opening` fails before the session is held, so a
+   * failed start or reopen leaves no handle behind.
+   */
+  const opening = async <T>(
+    agent: PortAgent,
+    work: () => Promise<T>,
+  ): Promise<T> => {
+    try {
+      return await work();
+    } catch (error) {
+      if (sessions.get(agent.agentId)?.agent !== agent) {
+        await release(agent);
+      }
+
+      throw error;
+    }
+  };
+
+  /** Every run of agent `id`, page after page, newest first as listRuns gives them. */
+  const allRuns = async (id: string, apiKey: string) => {
+    const runs: PortRun[] = [];
+    let cursor: string | undefined;
+
+    do {
+      const page = await port.listRuns(id, {
+        runtime: 'cloud',
+        apiKey,
+        ...(cursor === undefined ? {} : { cursor }),
+      });
+
+      runs.push(...page.items);
+
+      cursor = page.nextCursor;
+    } while (cursor !== undefined);
+
+    return runs;
+  };
+
   /** Reopens agent `id`: its session, and how its latest run stands. */
   const reopen = async (
     id: string,
@@ -171,35 +239,37 @@ export function serve(stream: Stream, context: ServeContext): Served {
   }> => {
     const found = await key();
     const reopened = await port.resume(id, { apiKey: found });
-    const listed = await port.listRuns(id, { runtime: 'cloud', apiKey: found });
-    const latest = oldestFirst(listed.items).at(-1);
-    const result = latest === undefined ? undefined : await latestState(latest);
-    const info = (
-      await port.list({ runtime: 'cloud', apiKey: found })
-    ).items.find((each) => each.agentId === id);
-    const open: Session = {
-      agent: reopened,
-      apiKey: found,
-      mcpServers: serverNames(mcpServers),
-      choice: {
-        mode: 'default',
-        ...(reopened.model === undefined
-          ? {}
-          : { model: chosen(reopened.model) }),
-      },
-      models: await models(found),
-      turn: undefined,
-    };
 
-    sessions.set(id, open);
+    return opening(reopened, async () => {
+      // listRuns gives the latest run first (Q9, fact 3).
+      const [latest] = (
+        await port.listRuns(id, { runtime: 'cloud', apiKey: found })
+      ).items;
+      const last = latest === undefined ? undefined : await latestState(latest);
+      const info = await port.get(id, { apiKey: found });
+      const repo = info.runtime === 'cloud' ? info.repos?.[0] : undefined;
+      const open: Session = {
+        agent: reopened,
+        apiKey: found,
+        mcpServers: serverNames(mcpServers),
+        choice: {
+          mode: 'default',
+          ...(reopened.model === undefined
+            ? {}
+            : { model: chosen(reopened.model) }),
+        },
+        models: await models(found),
+        turn: undefined,
+      };
 
-    const repo = info?.runtime === 'cloud' ? info.repos?.[0] : undefined;
+      await hold(open);
 
-    return {
-      open,
-      last: result,
-      url: repo === undefined ? undefined : cursorUrl(repo),
-    };
+      return {
+        open,
+        last,
+        url: repo === undefined ? undefined : cursorUrl(repo),
+      };
+    });
   };
 
   const connection = agent({ name: NAME })
@@ -225,16 +295,21 @@ export function serve(stream: Stream, context: ServeContext): Served {
             autoCreatePR: false,
           },
         });
-        const open: Session = {
-          agent: created,
-          apiKey: found,
-          mcpServers: serverNames(params.mcpServers),
-          choice: { mode: 'default' },
-          models: await models(found),
-          turn: undefined,
-        };
+        const open = await opening(created, async () => {
+          const opened: Session = {
+            agent: created,
+            apiKey: found,
+            mcpServers: serverNames(params.mcpServers),
+            choice: { mode: 'default' },
+            models: await models(found),
+            turn: undefined,
+          };
 
-        sessions.set(created.agentId, open);
+          await hold(opened);
+
+          return opened;
+        });
+
         // Before the answer: the ACP SDK's agent side has no way to write
         // after one, and a client holds an update for a session it is being
         // answered (owner, CHD-622).
@@ -258,6 +333,9 @@ export function serve(stream: Stream, context: ServeContext): Served {
     })
     .onRequest('session/prompt', async ({ params, client }) => {
       const open = session(params.sessionId);
+      /** Whether the session is still this one: closed, it forwards nothing. */
+      const current = () => sessions.get(params.sessionId) === open;
+      const before = JSON.stringify(options(open));
       const turn = new Turn({
         agentId: open.agent.agentId,
         send: (onDelta) => {
@@ -273,16 +351,24 @@ export function serve(stream: Stream, context: ServeContext): Served {
         artifacts: () => open.agent.listArtifacts().catch(() => []),
         // A model Cursor ran that the list lacks shows under its own id.
         ran: (model) => {
-          open.choice = { ...open.choice, model: chosen(model) };
+          if (current()) {
+            open.choice = { ...open.choice, model: chosen(model) };
+          }
         },
         emit: (update: SessionUpdate) =>
-          client.notify('session/update', {
-            sessionId: params.sessionId,
-            update,
-          }),
+          current()
+            ? client.notify('session/update', {
+                sessionId: params.sessionId,
+                update,
+              })
+            : Promise.resolve(),
       });
 
-      open.turn = turn;
+      // A prompt while one runs is Cursor's to refuse (AgentBusyError); the
+      // running one stays the one a cancel stops.
+      if (open.turn === undefined) {
+        open.turn = turn;
+      }
 
       try {
         return await turn.run();
@@ -291,6 +377,22 @@ export function serve(stream: Stream, context: ServeContext): Served {
       } finally {
         if (open.turn === turn) {
           open.turn = undefined;
+        }
+
+        // The whole set again when the run changed it: the model Cursor ran,
+        // or Cursor's default gone once a model was sent.
+        const after = options(open);
+
+        if (current() && JSON.stringify(after) !== before) {
+          await client
+            .notify('session/update', {
+              sessionId: params.sessionId,
+              update: {
+                sessionUpdate: 'config_option_update',
+                configOptions: after,
+              },
+            })
+            .catch(() => undefined);
         }
       }
     })
@@ -397,12 +499,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
             sessionId: params.sessionId,
             update,
           });
-        const runs = (
-          await port.listRuns(params.sessionId, {
-            runtime: 'cloud',
-            apiKey: open.apiKey,
-          })
-        ).items;
+        const runs = await allRuns(params.sessionId, open.apiKey);
 
         for (const run of oldestFirst(runs)) {
           const updates = run.supports('conversation')
@@ -430,12 +527,17 @@ export function serve(stream: Stream, context: ServeContext): Served {
         throw toAcp(error);
       }
     })
-    .onRequest('session/close', ({ params }) => {
+    .onRequest('session/close', async ({ params }) => {
       const open = sessions.get(params.sessionId);
 
-      // The cloud agent goes on; only the adapter's hold on it ends.
-      open?.agent.close();
       sessions.delete(params.sessionId);
+
+      try {
+        // The cloud agent goes on; only the adapter's hold on it ends.
+        await open?.agent[Symbol.asyncDispose]();
+      } catch (error) {
+        throw toAcp(error);
+      }
 
       return {};
     })
@@ -443,40 +545,45 @@ export function serve(stream: Stream, context: ServeContext): Served {
 
   return {
     connection,
-    shutdown: () => {
+    shutdown: async () => {
+      ended = true;
+
       connection.close();
 
-      for (const each of sessions.values()) {
-        each.agent.close();
-      }
+      const releasing = Promise.allSettled(
+        [...sessions.values()].map((each) => release(each.agent)),
+      );
 
       sessions.clear();
+      // Within the process's 1.5 s to exit: an agent that does not let go
+      // in time is left to the SDK; it runs on in Cursor's cloud regardless.
+      await Promise.race([
+        releasing,
+        new Promise((resolve) => setTimeout(resolve, RELEASE_MS).unref()),
+      ]);
     },
   };
 }
 
 /**
- * Runs by when they began, as the SDK dates them: its docs say nothing of
- * the order listRuns gives. Undated runs come first, as listed.
+ * Runs oldest first. listRuns gives them newest first, as a live run showed
+ * (Q9, fact 3), so its first item is the latest run.
  */
-function oldestFirst<T extends { readonly createdAt?: number | undefined }>(
-  runs: readonly T[],
-): T[] {
-  return [...runs].sort(
-    (a, b) =>
-      (a.createdAt ?? Number.NEGATIVE_INFINITY) -
-        (b.createdAt ?? Number.NEGATIVE_INFINITY) || 0,
-  );
+function oldestFirst<T>(runs: readonly T[]): T[] {
+  return [...runs].reverse();
 }
 
-/** How a run stands, from what the SDK gives of it. */
-async function latestState(run: {
-  wait: () => Promise<{
-    status: string;
-    git?: { branches: { branch?: string }[] };
-    error?: { message: string };
-  }>;
-}): Promise<LastRun> {
+/**
+ * How a run stands, from what the SDK gives of it: one still going is said
+ * so at once, never waited on, as the adapter does not follow it.
+ */
+async function latestState(
+  run: Pick<PortRun, 'status' | 'wait'>,
+): Promise<LastRun> {
+  if (run.status === 'running') {
+    return { status: 'running' };
+  }
+
   const result = await run.wait();
 
   return {
@@ -503,8 +610,7 @@ export function serveStdio(context: ServeContext): Promise<number> {
 
   return new Promise((resolve) => {
     const stop = () => {
-      served.shutdown();
-      resolve(0);
+      void served.shutdown().then(() => resolve(0));
     };
 
     for (const signal of ['SIGTERM', 'SIGINT', 'SIGHUP'] as const) {

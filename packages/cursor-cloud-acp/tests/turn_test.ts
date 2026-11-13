@@ -43,6 +43,7 @@ function fakeRun() {
     agentId: ID,
     supports: () => true,
     unsupportedReason: () => undefined,
+    status: 'running',
     conversation: () => Promise.resolve([]),
     wait: () => result.promise,
     cancel: () => {

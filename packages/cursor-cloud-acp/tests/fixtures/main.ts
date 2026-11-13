@@ -209,42 +209,37 @@ cursor.listed.push({
   repos: ['https://github.com/acme/web'],
 });
 cursor.runs.set(EARLIER, [
-  fakeRun(
-    EARLIER,
-    {
-      // The design's resume mock: the person's prompt and the agent's answer.
-      conversation: [
-        {
-          type: 'agentConversationTurn',
-          turn: {
-            userMessage: {
-              text: 'add a login page with email and password, tests included',
-            },
-            steps: [
-              {
-                type: 'assistantMessage',
-                message: {
-                  text: 'The login page is in src/pages/Login.tsx with its route in src/routes.ts; its tests pass in the cloud VM.',
-                },
-              },
-            ],
+  fakeRun(EARLIER, {
+    // The design's resume mock: the person's prompt and the agent's answer.
+    conversation: [
+      {
+        type: 'agentConversationTurn',
+        turn: {
+          userMessage: {
+            text: 'add a login page with email and password, tests included',
           },
-        },
-      ],
-      result: {
-        git: {
-          branches: [
+          steps: [
             {
-              repoUrl: 'https://github.com/acme/web',
-              branch: 'cursor/login-page-5e1f',
+              type: 'assistantMessage',
+              message: {
+                text: 'The login page is in src/pages/Login.tsx with its route in src/routes.ts; its tests pass in the cloud VM.',
+              },
             },
           ],
         },
       },
+    ],
+    result: {
+      git: {
+        branches: [
+          {
+            repoUrl: 'https://github.com/acme/web',
+            branch: 'cursor/login-page-5e1f',
+          },
+        ],
+      },
     },
-    undefined,
-    Date.now() - 3 * 3600 * 1000,
-  ),
+  }),
 ]);
 
 if (START === 'key-refused') {

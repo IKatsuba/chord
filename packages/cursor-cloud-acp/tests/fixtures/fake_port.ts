@@ -53,6 +53,12 @@ export interface FakeCursor {
   readonly runs: Map<string, FakeRun[]>;
   /** Agents closed, by id. */
   readonly closed: string[];
+  /** How many runs listRuns gives a page; all of them when unset. */
+  pageSize: number | undefined;
+  /** What Agent.get does; by default answers for an agent Cursor knows. */
+  failGet: Error | undefined;
+  /** Each send's onDelta, so a test can deliver an update late. */
+  readonly onDeltas: NonNullable<SendOptions['onDelta']>[];
 }
 
 export interface FakeRun extends PortRun {
@@ -72,7 +78,6 @@ export function fakeRun(
   agentId: string,
   script: Script,
   onDelta?: SendOptions['onDelta'],
-  createdAt?: number,
 ): FakeRun {
   let cancelled = false;
   let finish: (result: RunResult) => void = () => undefined;
@@ -83,8 +88,13 @@ export function fakeRun(
     streamed = resolve;
   });
 
+  let status: RunResult['status'] | 'running' = 'running';
   const ended = new Promise<RunResult>((resolve) => {
-    finish = resolve;
+    finish = (done) => {
+      status = done.status;
+
+      resolve(done);
+    };
   });
 
   const id = `run-${Math.random().toString(36).slice(2, 8)}`;
@@ -96,9 +106,11 @@ export function fakeRun(
   const run: FakeRun = {
     id,
     agentId,
-    ...(createdAt === undefined ? {} : { createdAt }),
     get cancelled() {
       return cancelled;
+    },
+    get status() {
+      return status;
     },
     supports: (operation) => operation !== 'conversation' || !script.hang,
     unsupportedReason: (operation) =>
@@ -182,10 +194,10 @@ export function fakeCursor(
   const scripts: Script[] = [];
   const runs = new Map<string, FakeRun[]>();
   const closed: string[] = [];
+  const onDeltas: NonNullable<SendOptions['onDelta']>[] = [];
   /** Created and not yet sent to: unknown to Cursor. */
   const pending = new Map<string, SDKAgentInfo>();
   let next = 0;
-  let clock = Date.now();
 
   const agent = (agentId: string, model?: ModelSelection): PortAgent => {
     let current = model;
@@ -195,7 +207,11 @@ export function fakeCursor(
       get model() {
         return current;
       },
-      close: () => void closed.push(agentId),
+      [Symbol.asyncDispose]: () => {
+        closed.push(agentId);
+
+        return Promise.resolve();
+      },
       listArtifacts: () => Promise.resolve([]),
       send: (message, options) => {
         calls.push({
@@ -225,8 +241,11 @@ export function fakeCursor(
           current = options.model;
         }
 
-        // Strictly later than the last, as two runs may start in one millisecond.
-        const run = fakeRun(agentId, script, options?.onDelta, (clock += 1));
+        if (options?.onDelta !== undefined) {
+          onDeltas.push(options.onDelta);
+        }
+
+        const run = fakeRun(agentId, script, options?.onDelta);
 
         runs.set(agentId, [...(runs.get(agentId) ?? []), run]);
 
@@ -303,11 +322,44 @@ export function fakeCursor(
       });
       known(agentId);
 
+      // Newest first, as Cursor's listRuns gives them (Q9, fact 3).
+      const all = [...(runs.get(agentId) ?? [])].reverse();
+      const from = Number(options.cursor ?? 0);
+      const size = fake.pageSize ?? all.length;
+      const items = all.slice(from, from + size);
+
       return Promise.resolve({
-        items: [...(runs.get(agentId) ?? [])].reverse(),
+        items,
+        ...(from + size < all.length
+          ? { nextCursor: String(from + size) }
+          : {}),
       });
     },
+    get: (agentId, options) => {
+      calls.push({ method: 'get', apiKey: options?.apiKey, args: agentId });
+
+      if (fake.failGet !== undefined) {
+        return Promise.reject(fake.failGet);
+      }
+
+      known(agentId);
+
+      return Promise.resolve(listed.find((each) => each.agentId === agentId)!);
+    },
+  };
+  const fake: FakeCursor = {
+    port,
+    calls,
+    keys,
+    models,
+    listed,
+    scripts,
+    runs,
+    closed,
+    pageSize: undefined,
+    failGet: undefined,
+    onDeltas,
   };
 
-  return { port, calls, keys, models, listed, scripts, runs, closed };
+  return fake;
 }

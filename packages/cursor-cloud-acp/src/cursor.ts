@@ -76,7 +76,10 @@ function run(real: sdk.Run, from: typeof sdk): PortRun {
     agentId: real.agentId,
     supports: (operation) => real.supports(operation),
     unsupportedReason: (operation) => real.unsupportedReason(operation),
-    ...(real.createdAt === undefined ? {} : { createdAt: real.createdAt }),
+    // A getter: the SDK moves it as the run goes.
+    get status() {
+      return real.status;
+    },
     async *stream() {
       try {
         yield* real.stream();
@@ -97,7 +100,9 @@ function agent(real: sdk.SDKAgent, from: typeof sdk): PortAgent {
     get model() {
       return real.model;
     },
-    close: () => real.close(),
+    // The SDK's own release of an agent, where it declares one (owner).
+    [Symbol.asyncDispose]: () =>
+      guarded(() => real[Symbol.asyncDispose](), from),
     listArtifacts: () => guarded(() => real.listArtifacts(), from),
     send: async (...args) =>
       run(await guarded(() => real.send(...args), from), from),
@@ -119,6 +124,7 @@ export function cursorPort(from: typeof sdk = sdk): Port {
     resume: async (id, options) =>
       agent(await guarded(() => Agent.resume(id, options), from), from),
     list: (options) => guarded(() => Agent.list(options), from),
+    get: (id, options) => guarded(() => Agent.get(id, options), from),
     listRuns: async (id, options) => {
       const { items, nextCursor } = await guarded(
         () => Agent.listRuns(id, options),

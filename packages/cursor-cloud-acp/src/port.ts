@@ -25,13 +25,13 @@ export type PortRun = Pick<
   | 'wait'
   | 'cancel'
   | 'conversation'
-  | 'createdAt'
+  | 'status'
 >;
 
 /** One cloud agent, a session of the adapter's. */
 export interface PortAgent extends Pick<
   SDKAgent,
-  'agentId' | 'model' | 'close' | 'listArtifacts'
+  'agentId' | 'model' | 'listArtifacts' | typeof Symbol.asyncDispose
 > {
   send(...args: Parameters<SDKAgent['send']>): Promise<PortRun>;
 }
@@ -49,6 +49,7 @@ export interface Port {
     options: Partial<AgentOptions>,
   ) => Promise<PortAgent>;
   readonly list: typeof Agent.list;
+  readonly get: typeof Agent.get;
   readonly listRuns: (
     agentId: string,
     options: ListRunsOptions,

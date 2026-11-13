@@ -65,7 +65,6 @@ function failingRun(error: Error): sdk.Run {
     agentId: 'bc-1',
     supports: () => true,
     unsupportedReason: () => 'Not for this run',
-    createdAt: 1_800_000_000_000,
     async *stream() {
       yield { type: 'status', status: 'RUNNING' } as unknown as sdk.SDKMessage;
 
@@ -78,6 +77,8 @@ function failingRun(error: Error): sdk.Run {
 }
 
 /** The SDK with its Agent and Cursor replaced, its error classes real. */
+let disposed = 0;
+
 function fakeSdk(error: Error, run = failingRun(error)): typeof sdk {
   let model: sdk.ModelSelection | undefined;
   const agent = {
@@ -85,7 +86,11 @@ function fakeSdk(error: Error, run = failingRun(error)): typeof sdk {
     get model() {
       return model;
     },
-    close: () => undefined,
+    [Symbol.asyncDispose]: () => {
+      disposed += 1;
+
+      return Promise.resolve();
+    },
     listArtifacts: () => Promise.reject(error),
     send: (_message: unknown, options?: sdk.SendOptions) => {
       model = options?.model;
@@ -144,7 +149,6 @@ describe("the Port throws the adapter's errors from every call", () => {
     expect(run).toMatchObject({
       id: 'run-1',
       agentId: 'bc-1',
-      createdAt: 1_800_000_000_000,
     });
     expect(run.unsupportedReason('conversation')).toBe('Not for this run');
     await expect(
@@ -172,6 +176,8 @@ describe("the Port throws the adapter's errors from every call", () => {
     const agent = await port.create({ apiKey: 'k' });
 
     expect(agent.model).toBeUndefined();
+    await agent[Symbol.asyncDispose]();
+    expect(disposed).toBe(1);
     await agent.send('hi', { model: { id: 'composer-2' } });
     expect(agent.model).toEqual({ id: 'composer-2' });
   });

@@ -9,6 +9,7 @@ import { Readable, Writable } from 'node:stream';
 import {
   agent,
   type AgentConnection,
+  type AgentContext,
   ndJsonStream,
   type ContentBlock,
   type InitializeResponse,
@@ -170,12 +171,33 @@ export function serve(stream: Stream, context: ServeContext): Served {
     agent[Symbol.asyncDispose]().catch(() => undefined);
 
   /**
-   * `open` kept as its agent's session, unless serving ended while it was
-   * being opened: then the request fails, and `opening` lets the agent go.
+   * Each session id's open generation: an open or a close moves it on, so
+   * an open that a close overtook while it waited on Cursor holds nothing.
    */
-  const hold = async (open: Session): Promise<void> => {
+  const generations = new Map<string, number>();
+  const begin = (id: string) => {
+    const next = (generations.get(id) ?? 0) + 1;
+
+    generations.set(id, next);
+
+    return next;
+  };
+
+  /**
+   * `open` kept as its agent's session, unless serving ended, or the id was
+   * closed or opened again, while it was being opened: then the request
+   * fails, and `opening` lets the agent go.
+   */
+  const hold = async (open: Session, generation: number): Promise<void> => {
     if (ended) {
       throw new RequestError(INTERNAL_ERROR, 'The adapter is shutting down.');
+    }
+
+    if (generations.get(open.agent.agentId) !== generation) {
+      throw new RequestError(
+        INTERNAL_ERROR,
+        `Session ${open.agent.agentId} was closed or opened again while it opened.`,
+      );
     }
 
     const replaced = sessions.get(open.agent.agentId);
@@ -208,6 +230,17 @@ export function serve(stream: Stream, context: ServeContext): Served {
     }
   };
 
+  /** `update` to the client while `open` is still the id's session. */
+  const notifyWhile = (
+    open: Session,
+    client: AgentContext,
+    sessionId: string,
+    update: SessionUpdate,
+  ) =>
+    sessions.get(sessionId) === open
+      ? client.notify('session/update', { sessionId, update })
+      : Promise.resolve();
+
   /** Every run of agent `id`, page after page, newest first as listRuns gives them. */
   const allRuns = async (id: string, apiKey: string) => {
     const runs: PortRun[] = [];
@@ -237,6 +270,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
     last: LastRun | undefined;
     url: string | undefined;
   }> => {
+    const generation = begin(id);
     const found = await key();
     const reopened = await port.resume(id, { apiKey: found });
 
@@ -262,7 +296,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         turn: undefined,
       };
 
-      await hold(open);
+      await hold(open, generation);
 
       return {
         open,
@@ -270,6 +304,26 @@ export function serve(stream: Stream, context: ServeContext): Served {
         url: repo === undefined ? undefined : cursorUrl(repo),
       };
     });
+  };
+
+  let shutting: Promise<void> | undefined;
+
+  const shutdown = async () => {
+    ended = true;
+
+    connection.close();
+
+    const releasing = Promise.allSettled(
+      [...sessions.values()].map((each) => release(each.agent)),
+    );
+
+    sessions.clear();
+    // Within the process's 1.5 s to exit: an agent that does not let go in
+    // time is left to the SDK; it runs on in Cursor's cloud regardless.
+    await Promise.race([
+      releasing,
+      new Promise((resolve) => setTimeout(resolve, RELEASE_MS).unref()),
+    ]);
   };
 
   const connection = agent({ name: NAME })
@@ -295,6 +349,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
             autoCreatePR: false,
           },
         });
+        const generation = begin(created.agentId);
         const open = await opening(created, async () => {
           const opened: Session = {
             agent: created,
@@ -305,7 +360,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
             turn: undefined,
           };
 
-          await hold(opened);
+          await hold(opened, generation);
 
           return opened;
         });
@@ -336,6 +391,8 @@ export function serve(stream: Stream, context: ServeContext): Served {
       /** Whether the session is still this one: closed, it forwards nothing. */
       const current = () => sessions.get(params.sessionId) === open;
       const before = JSON.stringify(options(open));
+      /** The choice this prompt was sent with; one made since is newer. */
+      const sentWith = open.choice;
       const turn = new Turn({
         agentId: open.agent.agentId,
         send: (onDelta) => {
@@ -351,7 +408,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         artifacts: () => open.agent.listArtifacts().catch(() => []),
         // A model Cursor ran that the list lacks shows under its own id.
         ran: (model) => {
-          if (current()) {
+          if (current() && open.choice === sentWith) {
             open.choice = { ...open.choice, model: chosen(model) };
           }
         },
@@ -471,9 +528,11 @@ export function serve(stream: Stream, context: ServeContext): Served {
           params.mcpServers,
         );
 
-        await client.notify('session/update', {
-          sessionId: params.sessionId,
-          update: line(
+        await notifyWhile(
+          open,
+          client,
+          params.sessionId,
+          line(
             resumedMessage({
               url,
               agentId: params.sessionId,
@@ -481,7 +540,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
               mcpServers: open.mcpServers,
             }),
           ),
-        });
+        );
 
         return { configOptions: options(open) };
       } catch (error) {
@@ -495,10 +554,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
           params.mcpServers,
         );
         const notify = (update: SessionUpdate) =>
-          client.notify('session/update', {
-            sessionId: params.sessionId,
-            update,
-          });
+          notifyWhile(open, client, params.sessionId, update);
         const runs = await allRuns(params.sessionId, open.apiKey);
 
         for (const run of oldestFirst(runs)) {
@@ -530,6 +586,8 @@ export function serve(stream: Stream, context: ServeContext): Served {
     .onRequest('session/close', async ({ params }) => {
       const open = sessions.get(params.sessionId);
 
+      // An open of this id still waiting on Cursor holds nothing after this.
+      begin(params.sessionId);
       sessions.delete(params.sessionId);
 
       try {
@@ -545,23 +603,9 @@ export function serve(stream: Stream, context: ServeContext): Served {
 
   return {
     connection,
-    shutdown: async () => {
-      ended = true;
-
-      connection.close();
-
-      const releasing = Promise.allSettled(
-        [...sessions.values()].map((each) => release(each.agent)),
-      );
-
-      sessions.clear();
-      // Within the process's 1.5 s to exit: an agent that does not let go
-      // in time is left to the SDK; it runs on in Cursor's cloud regardless.
-      await Promise.race([
-        releasing,
-        new Promise((resolve) => setTimeout(resolve, RELEASE_MS).unref()),
-      ]);
-    },
+    // One shutdown, however many ask: a signal and the connection's close
+    // both await the same release, bound included.
+    shutdown: () => (shutting ??= shutdown()),
   };
 }
 

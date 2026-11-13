@@ -259,3 +259,68 @@ process.stdin.setEncoding('utf8').on('data', (chunk) => {
     }
   });
 });
+
+describe('the smoke takes only JSON-RPC envelopes, and all of stdout', () => {
+  const lines = (...json: string[]) =>
+    `${json.map((each) => `process.stdout.write(${JSON.stringify(`${each}\n`)});`).join('\n')}`;
+
+  test.each([
+    ['no method, result or error', '{"jsonrpc":"2.0"}'],
+    ['an id alone', '{"jsonrpc":"2.0","id":1}'],
+  ])('%s is not JSON-RPC', async (_, envelope) => {
+    const dir = await mkdtemp(join(tmpdir(), 'cursor-cloud-acp-env-'));
+    const file = join(dir, 'child.ts');
+
+    await writeFile(
+      file,
+      `${lines(envelope)}
+let buffered = '';
+process.stdin.setEncoding('utf8').on('data', (chunk) => {
+  buffered += chunk;
+  const parts = buffered.split('\\n');
+  buffered = parts.pop();
+  for (const line of parts) {
+    const { id } = JSON.parse(line);
+    process.stdout.write(\`\${JSON.stringify({ jsonrpc: '2.0', id: id + 10, result: {} })}\\n\`);
+    process.stdout.write(\`\${JSON.stringify({ jsonrpc: '2.0', id, result: {} })}\\n\`);
+  }
+});`,
+    );
+
+    try {
+      await expect(
+        serveOnce([process.execPath, file], dir, process.env),
+      ).rejects.toThrow(`a stdout line is not JSON-RPC: ${envelope}`);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  test('output left without its newline when the child ends fails it', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'cursor-cloud-acp-tail-'));
+    const file = join(dir, 'child.ts');
+
+    await writeFile(
+      file,
+      `let buffered = '';
+process.stdin.setEncoding('utf8').on('data', (chunk) => {
+  buffered += chunk;
+  const parts = buffered.split('\\n');
+  buffered = parts.pop();
+  for (const line of parts) {
+    const { id } = JSON.parse(line);
+    process.stdout.write(\`\${JSON.stringify({ jsonrpc: '2.0', id, result: {} })}\\n\`);
+  }
+});
+process.stdin.on('end', () => process.stdout.write('bye'));`,
+    );
+
+    try {
+      await expect(
+        serveOnce([process.execPath, file], dir, process.env),
+      ).rejects.toThrow('stdout ended inside a line: bye');
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+});

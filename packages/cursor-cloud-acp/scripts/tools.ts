@@ -18,6 +18,7 @@ import {
   type Release,
   ReleaseError,
 } from '../../../scripts/dev/release/lib.ts';
+import { JSONRPCMessageSchema } from '@modelcontextprotocol/sdk/types.js';
 import { tarball, tarballs } from '../../../scripts/dev/release/publish.ts';
 import { recordSums } from '../../../scripts/dev/release/sums.ts';
 import type { StepContext } from '../../../scripts/dev/steps.ts';
@@ -184,13 +185,12 @@ function npmLess(release: Release, node: string, args: string[]): string {
   return child.stdout.toString().trim();
 }
 
-/** A JSON-RPC 2.0 message, as ACP sends them. */
+/**
+ * A JSON-RPC 2.0 request, notification or response, by the MCP SDK's
+ * schema of one: a maintained validator, not one of the smoke's own.
+ */
 function isRpc(value: unknown): value is { readonly id?: number } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    (value as { jsonrpc?: unknown }).jsonrpc === '2.0'
-  );
+  return JSONRPCMessageSchema.safeParse(value).success;
 }
 
 /**
@@ -213,6 +213,9 @@ export async function serveOnce(
     stdio: ['pipe', 'pipe', 'inherit'],
   });
   const exited = once(child, 'exit');
+  // After 'exit' the child's stdout may still hold lines: 'close' is when
+  // it has all been read.
+  const closed = once(child, 'close');
   const answers = new Map<number, unknown>();
   const waiting = new Map<number, () => void>();
   let pending = '';
@@ -271,7 +274,7 @@ export async function serveOnce(
 
     child.stdin.end();
     await Promise.race([
-      exited,
+      closed,
       once(AbortSignal.timeout(5000), 'abort').then(() =>
         die('the adapter did not exit after stdin ended'),
       ),
@@ -293,8 +296,9 @@ export async function serveOnce(
   } finally {
     if (child.exitCode === null && child.signalCode === null) {
       child.kill('SIGKILL');
-      await exited;
     }
+
+    await closed;
   }
 }
 

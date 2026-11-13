@@ -1161,3 +1161,167 @@ describe('an open that ends after shutdown', () => {
     expect(cursor.closed).toEqual(['bc-1']);
   });
 });
+
+describe('opens, closes and choices that overtake each other', () => {
+  /** The adapter over a Cursor whose resume waits for `release`. */
+  const heldResume = () => {
+    const cursor = fakeCursor();
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    const toAgent = new TransformStream<Uint8Array, Uint8Array>();
+    const toClient = new TransformStream<Uint8Array, Uint8Array>();
+
+    serve(ndJsonStream(toClient.writable, toAgent.readable), {
+      port: {
+        ...cursor.port,
+        resume: async (id, options) => {
+          await held;
+
+          return cursor.port.resume(id, options);
+        },
+      },
+      git: fakeGit(),
+      credentials: () => ({ env: {}, store: store('key_good'), now: () => 0 }),
+      version: '0.1.0',
+    });
+
+    const connection = client({ name: 'test' }).connect(
+      ndJsonStream(toAgent.writable, toClient.readable),
+    );
+
+    open.push(connection);
+
+    return { cursor, connection, release: () => release() };
+  };
+
+  test('a close that overtakes a resume still waiting on Cursor leaves the session closed', async () => {
+    const at = heldResume();
+
+    await at.connection.agent.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    const { sessionId } = (await at.connection.agent.request('session/new', {
+      cwd: CWD,
+      mcpServers: [],
+    })) as { sessionId: string };
+
+    await at.connection.agent.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'one' }],
+    });
+
+    const resuming = at.connection.agent
+      .request('session/resume', { sessionId, cwd: CWD })
+      .catch((error: unknown) => error);
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await at.connection.agent.request('session/close', { sessionId });
+    at.release();
+    expect(await resuming).toMatchObject({ code: -32603 });
+    expect(
+      await at.connection.agent
+        .request('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: 'two' }],
+        })
+        .catch((error: { code: number }) => error.code),
+    ).toBe(-32002);
+  });
+
+  test('a model chosen while a run goes on survives the model that run reports', async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+    at.cursor.models.push({
+      id: 'next-model',
+      displayName: 'Next',
+      variants: [{ displayName: 'Next', params: [] }],
+    });
+
+    const { sessionId } = await newSession(at);
+
+    at.cursor.scripts.push({
+      hang: true,
+      result: { model: { id: 'composer-2' } },
+    });
+
+    const running = at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'a' }],
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    await at.request('session/set_config_option', {
+      sessionId,
+      configId: 'model',
+      value: 'next-model',
+    });
+    await at.connection.agent.notify('session/cancel', { sessionId });
+    await running;
+    await at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'b' }],
+    });
+
+    const sends = at.cursor.calls.filter((each) => each.method === 'send');
+
+    expect(
+      (sends.at(-1)?.args as { options: { model?: unknown } }).options.model,
+    ).toEqual({ id: 'next-model' });
+  });
+
+  test('a second shutdown awaits the same release as the first', async () => {
+    let released: () => void = () => undefined;
+    const releasing = new Promise<void>((resolve) => {
+      released = resolve;
+    });
+
+    const cursor = fakeCursor();
+    const toAgent = new TransformStream<Uint8Array, Uint8Array>();
+    const toClient = new TransformStream<Uint8Array, Uint8Array>();
+    const server = serve(ndJsonStream(toClient.writable, toAgent.readable), {
+      port: {
+        ...cursor.port,
+        create: async (options) => ({
+          ...(await cursor.port.create(options)),
+          [Symbol.asyncDispose]: () => releasing,
+        }),
+      },
+      git: fakeGit(),
+      credentials: () => ({ env: {}, store: store('key_good'), now: () => 0 }),
+      version: '0.1.0',
+    });
+    const connection = client({ name: 'test' }).connect(
+      ndJsonStream(toAgent.writable, toClient.readable),
+    );
+
+    open.push(connection);
+    await connection.agent.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+    await connection.agent.request('session/new', {
+      cwd: CWD,
+      mcpServers: [],
+    });
+
+    let first = false;
+    let second = false;
+
+    void server.shutdown().then(() => (first = true));
+    void server.shutdown().then(() => (second = true));
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect([first, second]).toEqual([false, false]);
+    released();
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect([first, second]).toEqual([true, true]);
+  });
+});

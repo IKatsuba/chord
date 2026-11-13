@@ -208,7 +208,7 @@ describe('parameters', () => {
     expect(startingParams(COMPOSER)).toEqual({});
   });
 
-  test('one option per parameter, named by its displayName else id, no category', () => {
+  test('one option per parameter, named by its displayName else id', () => {
     const choice = choose({ mode: 'default' }, MODELS, true, 'model', 'gpt-5')!;
 
     expect(configOptions(choice, MODELS, true).slice(2)).toEqual([
@@ -225,6 +225,8 @@ describe('parameters', () => {
       {
         id: 'parameter:context',
         name: 'context',
+        category: 'model_config',
+        _meta: { 'chord/parameter': 'context' },
         type: 'select',
         currentValue: '200k',
         options: [
@@ -232,6 +234,65 @@ describe('parameters', () => {
           { value: '1m', name: '1m' },
         ],
       },
+    ]);
+  });
+
+  test("Cursor's recorded ids are marked, any other id is not", () => {
+    const cursor: ModelListItem = {
+      id: 'gpt-5.5',
+      displayName: 'GPT-5.5',
+      parameters: [
+        { id: 'context', values: [{ value: '256k' }, { value: '500k' }] },
+        {
+          id: 'reasoning_effort',
+          values: ['low', 'medium', 'high', 'xhigh'].map((value) => ({
+            value,
+          })),
+        },
+        { id: 'fast', values: [{ value: 'false' }, { value: 'true' }] },
+        { id: 'thinking', values: [{ value: 'on' }] },
+      ],
+      variants: [
+        {
+          displayName: 'GPT-5.5',
+          isDefault: true,
+          params: [
+            { id: 'context', value: '256k' },
+            { id: 'reasoning_effort', value: 'medium' },
+            { id: 'fast', value: 'false' },
+            { id: 'thinking', value: 'on' },
+          ],
+        },
+      ],
+    };
+    const choice = choose(
+      { mode: 'default' },
+      [cursor],
+      true,
+      'model',
+      'gpt-5.5',
+    )!;
+    const marks = configOptions(choice, [cursor], true)
+      .slice(2)
+      .map(({ id, category, _meta }) => ({ id, category, _meta }));
+
+    expect(marks).toEqual([
+      {
+        id: 'parameter:context',
+        category: 'model_config',
+        _meta: { 'chord/parameter': 'context' },
+      },
+      {
+        id: 'parameter:reasoning_effort',
+        category: 'thought_level',
+        _meta: undefined,
+      },
+      {
+        id: 'parameter:fast',
+        category: 'model_config',
+        _meta: { 'chord/parameter': 'fast' },
+      },
+      { id: 'parameter:thinking', category: undefined, _meta: undefined },
     ]);
   });
 

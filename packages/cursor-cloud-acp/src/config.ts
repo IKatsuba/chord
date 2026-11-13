@@ -18,6 +18,23 @@ export const CURSORS_DEFAULT = 'cursor-default';
 /** A parameter's option id, apart from the mode's and the model's. */
 const PARAMETER = 'parameter:';
 
+/**
+ * What ACP and chord are told of a parameter, by the ids Cursor gives
+ * (recorded on CHD-622 from a live run). ACP has no category for speed or
+ * context, so chord's `_meta["chord/parameter"]` names those two; any other
+ * id is a plain option.
+ */
+const MARKED: Readonly<
+  Record<string, Pick<SelectOption, 'category' | '_meta'>>
+> = {
+  reasoning_effort: { category: 'thought_level' },
+  context: {
+    category: 'model_config',
+    _meta: { 'chord/parameter': 'context' },
+  },
+  fast: { category: 'model_config', _meta: { 'chord/parameter': 'fast' } },
+};
+
 /** The only kind of option the adapter offers: a choice among values. */
 export type SelectOption = Extract<SessionConfigOption, { type: 'select' }>;
 
@@ -164,11 +181,10 @@ export function configOptions(
 
     const allowed = offered(listed, parameter.id, current.params);
 
-    // No category: the ids Cursor gives are not recorded yet, and a guessed
-    // one would misname the parameter.
     options.push({
       id: `${PARAMETER}${parameter.id}`,
       name: parameter.displayName ?? parameter.id,
+      ...(Object.hasOwn(MARKED, parameter.id) ? MARKED[parameter.id] : {}),
       type: 'select',
       currentValue: value,
       options: parameter.values

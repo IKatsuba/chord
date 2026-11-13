@@ -4384,6 +4384,13 @@ Non-standard stop reasons read as completed (`src/session/session.ts:579`).
 Ignored: titles, the empty command list, `elicitation/complete`, every
 `_meta.fx` key and `command_result`.
 
+**Asked upstream (CHD-626).** fx's `fast` and `ultrafast` are category
+`model`, and its first `model` select is `provider`, so chord's `/model`
+sets fx's provider and the settings line in `/model` shows neither speed
+option. chord matches no option ids, so it asks fx to send `fast` and
+`ultrafast` as `model_config` and the provider under a `_`-prefixed
+category of its own.
+
 **Sources.**
 
 - fx v0.0.14, <https://github.com/vercel-labs/fx/tree/v0.0.14>, and `main` at
@@ -5359,6 +5366,24 @@ MCP server is not offered (`http: false`).
   and `master` at 3f2f028.
 - `docs/book/src/channels/acp.md` in that repository.
 - `@agentclientprotocol/sdk` 1.8.0, `dist/schema/zod.gen.js:318-323`.
+
+### chord's own adapters (`src/chorded.ts`)
+
+#### cursor-cloud
+
+- Name: Cursor cloud
+- Run as: `@chorded/cursor-cloud-acp`, chord's own package
+  (`packages/cursor-cloud-acp/`)
+
+**Model parameters (CHD-622, CHD-626).** Each model's parameters are one
+select each, `parameter:<id>`, sent only while the session is on that model;
+on Cursor's default there are none. The ids Cursor gave on the owner's run
+(CHD-622) are `context` (`256k`, `500k`), `reasoning_effort` (`low`,
+`medium`, `high`, `xhigh`) and `fast` (`false`, `true`). The package
+marks `reasoning_effort` `thought_level`, and `context` and `fast`
+`model_config` with `_meta["chord/parameter"]` `"context"` and `"fast"`:
+ACP has no category telling speed from context. Any other id stays
+uncategorised.
 
 ## 4. What this changes on the board
 

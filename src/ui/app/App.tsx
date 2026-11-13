@@ -1813,6 +1813,8 @@ export function App({
                           {picking && (
                             <ModelPicker
                               models={state.models}
+                              configOptions={state.configOptions}
+                              effort={state.modelEffort}
                               rows={menuRows}
                               room={room}
                               agent={shownAgent}

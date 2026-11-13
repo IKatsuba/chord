@@ -256,6 +256,7 @@ const looked = (record?: string) =>
     models: () => ({ current: 'm', available: [] }),
     modes: () => undefined,
     options: () => [],
+    configOptions: () => [],
   }) as unknown as Session;
 
 /** The agent's own cycle, with no prompt sent, as the conversation reports it. */
@@ -3145,7 +3146,10 @@ test("effort and fast stay in the record's state line beside the settings line's
   ]);
 
   expect(
-    entryOf({ type: 'options', options }, { type: 'state', options: {} }),
+    entryOf(
+      { type: 'options', options, configOptions: [] },
+      { type: 'state', options: {} },
+    ),
   ).toStrictEqual({
     type: 'state',
     options: { effort: 'high', fast: 'on' },

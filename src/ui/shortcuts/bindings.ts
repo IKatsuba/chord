@@ -23,6 +23,7 @@ export const CONTEXTS = [
   'Help',
   'HistorySearch',
   'Select',
+  'ModelPicker',
   'Scroll',
   'Agents',
   'Selection',
@@ -90,6 +91,9 @@ export const ACTIONS = {
   'codeBlock:cancel': { context: 'CodeBlock', keys: ['escape'] },
   'select:cancel': { context: 'Select', keys: ['escape'] },
   'select:toggleScope': { context: 'Select', keys: ['ctrl+a'] },
+  // `/model`'s effort, by Claude Code's names; sent only on Enter (CHD-626).
+  'modelPicker:decreaseEffort': { context: 'ModelPicker', keys: ['left'] },
+  'modelPicker:increaseEffort': { context: 'ModelPicker', keys: ['right'] },
   // Terminal.app keeps pgup, pgdn, home and end for its own scrollback and
   // passes them on only with shift held.
   'scroll:pageUp': { context: 'Scroll', keys: ['pageup', 'shift+pageup'] },

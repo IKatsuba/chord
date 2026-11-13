@@ -1761,3 +1761,85 @@ test('an agent started with --no-mcp-servers is given none, and its start line a
     await server.close();
   }
 });
+
+describe("/model's settings line and effort (CHD-626)", () => {
+  const RIGHT = '\x1b[C';
+  const LEFT = '\x1b[D';
+  const parameters = fakeAgentCommand(undefined, '--model-parameters');
+  const opened = async (window: Window) => {
+    await ready(window);
+    await send(window, '/model');
+    await window.shows('Select model');
+  };
+
+  test('M1, M2, M3: the line, → waiting for Enter, and carried to another model', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        // The fake has nothing beyond these, so no /config tail.
+        await window.shows('Medium effort  ←/→ to adjust · Fast  Off');
+        expect(window.frame()).not.toContain('/config');
+        await window.shows('Enter to switch · ←/→ for effort · Esc to close');
+        await window.press(RIGHT);
+        await window.shows('High effort •  ←/→ to adjust · Fast  Off');
+        await window.shows('Enter to set · ←/→ for effort · Esc to close');
+        await window.press(DOWN);
+        await window.shows(
+          'High effort •  ←/→ to adjust · asked for once Fake Small is in use, if it offers High',
+        );
+        await window.shows('Enter to switch · ←/→ for effort');
+        await window.press('\r');
+        await window.shows(
+          'Switched to Fake Small; it offers no High effort, it is on Medium.',
+        );
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('a digit sends the pending effort with its model; Esc sends nothing', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        await window.press(LEFT);
+        await window.shows('Low effort •');
+        await window.press(ESC);
+        await until(
+          'the picker closed',
+          () => !window.frame().includes('Select model'),
+        );
+        expect(window.frame()).not.toContain('Effort set to');
+        await send(window, '/model');
+        await window.shows('Medium effort  ←/→');
+        await window.press(LEFT);
+        await window.press('2');
+        await window.shows('Switched to Fake Small · Low effort');
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('the narrow line and hint where the wide one does not fit', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        await window.shows('Medium effort ←/→ · Fast Off');
+        await window.shows('←/→ effort');
+      },
+      { agentCommand: parameters, columns: 40, rows: 24 },
+    ));
+
+  test('M4: a model with nothing to change says so, and ← → do nothing', () =>
+    withWindow(
+      async (window) => {
+        await opened(window);
+        await window.shows(
+          'Fake Large with a 1M context window has no effort or settings to change',
+        );
+        await window.press(RIGHT);
+        await window.shows('Enter to switch · Esc to close');
+        expect(window.frame()).not.toContain('•');
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--no-config', '--no-modes'),
+      },
+    ));
+});

@@ -167,6 +167,9 @@ export type KeyCommand =
   | 'close_menu'
   /** Esc closes the model picker rather than interrupting the turn. */
   | 'close_model_picker'
+  /** ← and → in the model picker move the effort waiting for Enter. */
+  | 'decrease_effort'
+  | 'increase_effort'
   /** Esc closes the session picker, and the session on screen stays. */
   | 'close_resume_picker'
   /** ctrl+a in the session picker: this directory's sessions or every one's. */

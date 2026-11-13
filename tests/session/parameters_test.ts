@@ -171,6 +171,7 @@ describe('the settings line', () => {
     expect(line(CLAUDE)).toEqual({
       text: 'Medium effort  ←/→ to adjust · Fast  Off · Ultracode  Off · /config for all settings',
       dim: false,
+      narrow: false,
     });
   });
 
@@ -187,6 +188,8 @@ describe('the settings line', () => {
     expect(line(CLAUDE, { width: 76 })?.text).toBe(
       'Medium effort ←/→ · Fast Off · Ultracode Off · /config…',
     );
+    expect(line(CLAUDE, { width: 76 })?.narrow).toBe(true);
+    expect(line(CLAUDE)?.narrow).toBe(false);
   });
 
   test('then cut with … from the right, the effort last to go', () => {
@@ -234,6 +237,7 @@ describe('the settings line', () => {
     ).toEqual({
       text: "Cursor's default has no effort or settings to change",
       dim: true,
+      narrow: false,
     });
   });
 
@@ -246,6 +250,7 @@ describe('the settings line', () => {
     expect(line(options)).toEqual({
       text: '/config for all settings',
       dim: false,
+      narrow: false,
     });
   });
 

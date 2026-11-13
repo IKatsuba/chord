@@ -58,6 +58,7 @@ export function heldSession() {
     commands: () => [],
     models: () => undefined,
     options: snapshot,
+    configOptions: () => [],
     setOption: (_id: string, value: string) => {
       state.current = value;
 

@@ -1,26 +1,39 @@
 import process from 'node:process';
 import type { ListedAgent } from '../../agents.ts';
 import { useTerminalDimensions } from '@opentui/react';
-import { type ReactNode, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  type ReactNode,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import wrapAnsi from 'wrap-ansi';
 import type { DefinedServer, Ignored } from '../../mcp.ts';
 import { DIMCODE_WORDS, NOTICE_CHOICES } from '../../notices.ts';
 import type { AgentOption } from '../../session/config.ts';
-import type { AgentModels } from '../../session/models.ts';
+import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
+import { effortsFrom } from '../../session/efforts.ts';
+import { type AgentModels, modelName } from '../../session/models.ts';
+import { settingsLine } from '../../session/parameters.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { HeldBack } from '../../session/servers.ts';
 import { capital } from '../shortcuts/state.ts';
 import {
+  type PendingEffort,
   resumeChoices,
   type ResumePicker as ResumePickerState,
 } from './state.ts';
 import {
   hintOf,
+  Keys,
   paint,
   useCloseHint,
   useColours,
   useHintKey,
 } from '../app/context.ts';
+import { keysOf, sequencePanel } from '../shortcuts/bindings.ts';
 import { usePress } from '../app/input.ts';
 import type { ListedTeam, TeamListing } from '../../session/team_command.ts';
 import {
@@ -221,11 +234,14 @@ function Body({
 
 /**
  * `/model`: the agent's models, inline above the prompt as the permission
- * prompt is, the one in use marked. The list takes 1–9, ↑/↓, j/k and Enter;
- * Esc is the window's.
+ * prompt is, the one in use marked, and under them the settings line of the
+ * model in use (CHD-626). The list takes 1–9, ↑/↓, j/k and Enter; Esc and
+ * ←/→, which move the effort waiting for Enter, are the window's.
  */
 export function ModelPicker({
   models,
+  configOptions = [],
+  effort,
   rows,
   room = Number.POSITIVE_INFINITY,
   agent,
@@ -233,6 +249,10 @@ export function ModelPicker({
   onPick,
 }: {
   models: AgentModels | undefined;
+  /** The agent's whole set of options, which the settings line reads. */
+  configOptions?: readonly SessionConfigOption[];
+  /** The effort moved with ←/→, waiting for Enter. */
+  effort?: PendingEffort | undefined;
   /** The most models shown at once; a longer list scrolls. */
   rows: number;
   /** The rows the layer it floats in has; none outside one. */
@@ -243,6 +263,37 @@ export function ModelPicker({
 }) {
   const choices = modelChoices(models);
   const closeHint = useCloseHint();
+  const { width: columns } = useTerminalDimensions();
+  const [highlighted, setHighlighted] = useState(models?.current);
+  // The keys as arrows, as the design draws them, and as bound when rebound.
+  const keymap = useContext(Keys);
+  const [decrease] = keysOf(keymap, 'modelPicker:decreaseEffort');
+  const [increase] = keysOf(keymap, 'modelPicker:increaseEffort');
+  const keys =
+    decrease === undefined || increase === undefined
+      ? undefined
+      : `${sequencePanel(decrease)}/${sequencePanel(increase)}`;
+  const efforts = effortsFrom(configOptions);
+  const other =
+    highlighted === undefined || highlighted === models?.current
+      ? undefined
+      : models?.available.find((model) => model.id === highlighted)?.name;
+  // The frame's border and padding take two columns each side.
+  const line = settingsLine({
+    options: configOptions,
+    inUse: modelName(models) ?? '',
+    ...(other === undefined ? {} : { highlighted: other }),
+    ...(effort === undefined || effort.option !== efforts?.option
+      ? {}
+      : { pending: effort.value }),
+    width: Math.max(1, columns - 4),
+    ...(keys === undefined ? {} : { keys }),
+  });
+  const moved =
+    effort !== undefined &&
+    efforts?.available.some(
+      (each) => each.id === effort.value && each.id !== efforts.current,
+    ) === true;
   // None where it has no choice, or the room no row for one: the list, and
   // its keys, go.
   const listed =
@@ -275,12 +326,30 @@ export function ModelPicker({
             rows={listed}
             active={active}
             onPick={onPick}
+            onMove={setHighlighted}
           />
+        )}
+        {listed > 0 && line !== undefined && (
+          <box marginTop={1}>
+            <text {...CUT} {...(line.dim ? { attributes: DIM } : {})}>
+              {line.text}
+            </text>
+          </box>
         )}
       </Body>
       <box marginTop={1} flexShrink={0}>
         <text {...TEXT} attributes={DIM}>
-          {hintOf(listed === 0 ? undefined : 'Enter to switch', closeHint)}
+          {hintOf(
+            listed === 0
+              ? undefined
+              : moved && other === undefined
+                ? 'Enter to set'
+                : 'Enter to switch',
+            listed === 0 || efforts === undefined || keys === undefined
+              ? undefined
+              : `${keys} ${line?.narrow === true ? 'effort' : 'for effort'}`,
+            closeHint,
+          )}
         </text>
       </box>
     </box>

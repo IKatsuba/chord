@@ -35,6 +35,7 @@ import {
   typedTakenBack,
 } from '../prompt/prompt.ts';
 import { mine } from '../../session/busy.ts';
+import { effortsFrom } from '../../session/efforts.ts';
 import { restoredDraft } from '../prompt/queue.ts';
 import {
   editedQuery,
@@ -792,6 +793,21 @@ function commandSteps(
       return [dispatch({ type: 'menu_dismissed' })];
     case 'close_model_picker':
       return [dispatch({ type: 'model_picker_closed' })];
+    case 'decrease_effort':
+    case 'increase_effort': {
+      const efforts = effortsFrom(state.configOptions);
+
+      // None to move on this model: the keys do nothing (M4).
+      return efforts === undefined
+        ? []
+        : [
+            dispatch({
+              type: 'model_effort_moved',
+              efforts,
+              by: command === 'decrease_effort' ? -1 : 1,
+            }),
+          ];
+    }
     case 'close_resume_picker':
       return [dispatch({ type: 'resume_picker_closed' })];
     case 'toggle_resume_scope':

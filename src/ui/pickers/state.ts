@@ -4,6 +4,7 @@
  * where it stands, and the theme in use.
  */
 import type { AgentOption } from '../../session/config.ts';
+import type { AgentEfforts } from '../../session/efforts.ts';
 import type { EarlierSession } from '../../session/sessions.ts';
 import type { TeamListing } from '../../session/team_command.ts';
 import type { Transcript } from '../../session/transcript/types.ts';
@@ -13,6 +14,11 @@ import type { ThemeSetting } from '../theme/theme.ts';
 export interface PickersState {
   /** `/model`: the model picker is open. */
   readonly modelPicker: boolean;
+  /**
+   * `/model`: the effort moved with ←/→ and not sent yet, kept as asked
+   * until Enter, whatever the agent sends meanwhile (CHD-626).
+   */
+  readonly modelEffort?: PendingEffort;
   /** `/resume`: the session picker is open. */
   readonly resumePicker?: ResumePicker;
   /**
@@ -33,6 +39,14 @@ export interface PickersState {
   readonly mcpPanel: boolean;
   /** `/team`: the teams picker is open on the teams and runs it read. */
   readonly teamsPicker?: TeamListing;
+}
+
+/** An effort as the person asked for it: the option's and value's ids. */
+export interface PendingEffort {
+  readonly option: string;
+  readonly value: string;
+  /** The agent's name for the value, as notes say it. */
+  readonly name: string;
 }
 
 export interface ConfigPicker {
@@ -60,6 +74,15 @@ export type PickersAction =
   | { readonly type: 'model_picker_opened' }
   /** Esc, or a model picked, closes it. */
   | { readonly type: 'model_picker_closed' }
+  /**
+   * ← or → in it: the effort one down or up `efforts`, the agent's order,
+   * stopping at either end.
+   */
+  | {
+      readonly type: 'model_effort_moved';
+      readonly efforts: AgentEfforts;
+      readonly by: -1 | 1;
+    }
   /** `/resume` went to read the sessions. */
   | { readonly type: 'resume_asked'; readonly asked: string }
   /** ctrl+a: the picker shows every directory's sessions, or this one's again. */
@@ -115,8 +138,13 @@ export function reducePickers(
     }
     case 'model_picker_opened':
       return state.modelPicker ? state : { ...state, modelPicker: true };
-    case 'model_picker_closed':
-      return state.modelPicker ? { ...state, modelPicker: false } : state;
+    case 'model_picker_closed': {
+      const { modelEffort: _, ...rest } = state;
+
+      return state.modelPicker ? { ...rest, modelPicker: false } : state;
+    }
+    case 'model_effort_moved':
+      return state.modelPicker ? movedEffort(state, action) : state;
     case 'config_picker_opened':
       return { ...state, configPicker: {} };
     case 'config_option_opened':
@@ -173,6 +201,39 @@ export function reducePickers(
       return state.resumePicker === undefined ? state : rest;
     }
   }
+}
+
+/**
+ * `state` with its pending effort one step from where it stands: the one
+ * asked, while the agent still lists it, else the one in use. Back on the
+ * one in use, nothing is pending.
+ */
+function movedEffort(
+  state: PickersState,
+  { efforts, by }: { readonly efforts: AgentEfforts; readonly by: -1 | 1 },
+): PickersState {
+  const { available } = efforts;
+  const asked = state.modelEffort;
+  const from = available.findIndex(
+    (each) =>
+      each.id ===
+      (asked?.option === efforts.option ? asked.value : efforts.current),
+  );
+  const start =
+    from >= 0
+      ? from
+      : available.findIndex((each) => each.id === efforts.current);
+  const to = available[Math.min(available.length - 1, Math.max(0, start + by))];
+  const { modelEffort: _, ...rest } = state;
+
+  if (to === undefined || start < 0 || to.id === efforts.current) {
+    return start < 0 ? state : rest;
+  }
+
+  return {
+    ...state,
+    modelEffort: { option: efforts.option, value: to.id, name: to.name },
+  };
 }
 
 /**

@@ -76,12 +76,16 @@ export interface SettingsLineInput {
   readonly pending?: string;
   /** The cells the line may take. */
   readonly width: number;
+  /** The keys that move the effort, as the hint names them; `←/→` unbound. */
+  readonly keys?: string;
 }
 
 export interface SettingsLine {
   readonly text: string;
   /** Q4's line: nothing to change, drawn dim. */
   readonly dim: boolean;
+  /** Whether the narrow text was taken, which the hint follows (N1). */
+  readonly narrow: boolean;
 }
 
 /**
@@ -111,6 +115,7 @@ export function settingsLine(
             input.width,
           ),
           dim: true,
+          narrow: false,
         };
   }
 
@@ -124,10 +129,11 @@ export function settingsLine(
     pending ?? effort?.available.find((each) => each.id === effort.current);
   const name = shown?.name ?? effort?.current ?? '';
   const mark = pending === undefined ? '' : ' •';
+  const keys = input.keys ?? '←/→';
   const wide: string[] =
-    effort === undefined ? [] : [`${name} effort${mark}  ←/→ to adjust`];
+    effort === undefined ? [] : [`${name} effort${mark}  ${keys} to adjust`];
   const narrow: string[] =
-    effort === undefined ? [] : [`${name} effort${mark} ←/→`];
+    effort === undefined ? [] : [`${name} effort${mark} ${keys}`];
 
   if (input.highlighted !== undefined) {
     // Another model's parameters are unknown until the session is on it; the
@@ -165,12 +171,12 @@ function fitted(
   const long = wide.join(' · ');
   const short = narrow.join(' · ');
 
+  const fits = stringWidth(long) <= width;
+
   return {
-    text:
-      stringWidth(long) <= width
-        ? long
-        : cliTruncate(short, Math.max(1, width)),
+    text: fits ? long : cliTruncate(short, Math.max(1, width)),
     dim: false,
+    narrow: !fits,
   };
 }
 

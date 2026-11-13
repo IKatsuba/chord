@@ -49,6 +49,7 @@ function looked(id: string): Session {
     models: () => undefined,
     modes: () => undefined,
     options: () => [],
+    configOptions: () => [],
   } as unknown as Session;
 }
 

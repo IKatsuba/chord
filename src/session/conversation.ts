@@ -1,5 +1,6 @@
 import type {
   AvailableCommand,
+  SessionConfigOption,
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import { CYCLE_WORK, cycleMark } from './cycles.ts';
@@ -159,7 +160,15 @@ export type ConversationEvent =
    * The agent's config options other than its mode and model, when they
    * differ from the last reported.
    */
-  | { readonly type: 'options'; readonly options: readonly AgentOption[] }
+  | {
+      readonly type: 'options';
+      readonly options: readonly AgentOption[];
+      /**
+       * The whole set as the agent sent it, categories and `_meta` kept, for
+       * `/model`'s settings line (CHD-626).
+       */
+      readonly configOptions: readonly SessionConfigOption[];
+    }
   /** A mode was asked for; the agent has not answered yet. */
   | { readonly type: 'mode_asked'; readonly id: string }
   /** The agent answered for that mode, and what it reports has been read. */
@@ -616,6 +625,7 @@ export class Conversation {
   #modes: AgentModes | undefined;
   #commands: readonly AvailableCommand[] = [];
   #options: readonly AgentOption[] = [];
+  #configOptions: readonly SessionConfigOption[] = [];
   /**
    * The session's mode, model and option changes, one after another, so they
    * land in order: an effort asked after a model must not overtake it. A
@@ -3042,6 +3052,7 @@ export class Conversation {
     const models = session.models();
     const modes = session.modes();
     const options = session.options();
+    const configOptions = session.configOptions();
     const commands = session.commands();
 
     if (!sameModels(models, this.#models)) {
@@ -3056,10 +3067,15 @@ export class Conversation {
       this.#emit({ type: 'modes', modes });
     }
 
-    if (!sameOptions(options, this.#options)) {
+    // A category or `_meta` moved is news too: the settings line reads them.
+    if (
+      !sameOptions(options, this.#options) ||
+      JSON.stringify(configOptions) !== JSON.stringify(this.#configOptions)
+    ) {
       this.#options = options;
+      this.#configOptions = configOptions;
 
-      this.#emit({ type: 'options', options });
+      this.#emit({ type: 'options', options, configOptions });
     }
 
     if (!sameCommands(commands, this.#commands)) {

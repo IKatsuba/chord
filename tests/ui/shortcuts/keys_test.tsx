@@ -5,9 +5,6 @@
  */
 import { describe, expect, spyOn, test } from 'bun:test';
 import ru from 'convert-layout/ru.js';
-import { SignInBox } from '../../../src/ui/riff/SignIn.tsx';
-import { initialRiff } from '../../../src/ui/riff/state.ts';
-import { initialSignIn } from '../../../src/riff/sign_in.ts';
 import * as harness from '../harness.tsx';
 import type {
   ElicitationPropertySchema,
@@ -448,49 +445,6 @@ test('every key the permission prompt answers is in the panel', () =>
       onChoose={onPick}
     />
   )));
-
-test('every choice key the sign-in box answers is in the panel', () =>
-  listKeys(
-    'sign-in box',
-    (onPick) => (
-      <SignInBox
-        state={{ ...initialRiff(), flow: initialSignIn() }}
-        store='fixture store'
-        width={100}
-        room={24}
-        onChoose={onPick}
-        onBack={() => {}}
-      />
-    ),
-    2,
-    ['', '\x1b[B'],
-  ));
-
-test('the sign-in box escape key is in the panel and gives up', async () => {
-  let left = false;
-  const app = await harness.draw(
-    <SignInBox
-      state={{ ...initialRiff(), flow: initialSignIn() }}
-      store='fixture store'
-      width={100}
-      room={24}
-      onChoose={() => {}}
-      onBack={() => {
-        left = true;
-      }}
-    />,
-  );
-
-  try {
-    await app.write('\x1b');
-    await until('sign-in Esc', () => left);
-    expect(SHORTCUTS.some((shortcut) => shortcut.signIn?.includes('esc'))).toBe(
-      true,
-    );
-  } finally {
-    await app.unmount();
-  }
-});
 
 /** A form of one field of `property`'s kind. */
 function oneField(property: ElicitationPropertySchema): ElicitationSchema {
@@ -1775,13 +1729,13 @@ describe('CHD-386 tester: movement panel entries', () => {
       'cmd + ← → to line start or end',
       '↑ ↓ for prompts, agents, background',
     ]);
-    expect(lines).toHaveLength(44);
+    expect(lines).toHaveLength(43);
     expect(
       inColumns(lines, columnCount(lines, 80)).map((c) => c.length),
-    ).toStrictEqual([22, 22]);
+    ).toStrictEqual([22, 21]);
     expect(
       inColumns(lines, columnCount(lines, 120)).map((c) => c.length),
-    ).toStrictEqual([15, 15, 14]);
+    ).toStrictEqual([15, 15, 13]);
     expect(lines).toContain('/ @ @@ for commands, files or agents');
     expect(lines).toContain('↑ ↓ to pick a completion');
     expect(lines).toContain('tab to complete a command');

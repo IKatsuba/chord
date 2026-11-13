@@ -137,7 +137,6 @@ export type Connection =
  * event from a session behind changes only its own.
  */
 export interface SessionState extends PromptSession, ViewSession, DialogsState {
-  readonly riffKeepTranscript?: true;
   readonly connection: Connection;
   /** The agent's id for the session, once it is up. */
   readonly sessionId?: string;
@@ -292,8 +291,6 @@ export interface Copied {
 export interface AppState extends WindowState, SessionState {}
 
 export type AppAction =
-  | { readonly type: 'riff_restarting' }
-  | { readonly type: 'riff_agent'; readonly enabled: boolean }
   | ConversationEvent
   | ViewAction
   | PromptAction
@@ -499,10 +496,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
   // A feature's reducer spreads the state it is handed, so what comes back is
   // the whole window with only that feature's slice changed.
   switch (action.type) {
-    case 'riff_restarting':
-      return { ...state, riffKeepTranscript: true };
-    case 'riff_agent':
-      return { ...state, riffAgent: action.enabled };
     case 'queued':
     case 'prompt_capabilities':
     case 'menu_moved':
@@ -764,18 +757,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
       // aside (Q191).
       return {
         ...initialAppState,
-        ...(state.riffAgent === undefined
-          ? {}
-          : { riffAgent: state.riffAgent }),
-        ...(state.riffKeepTranscript
-          ? {
-              transcript: {
-                ...emptyTranscript,
-                entries: state.transcript.entries,
-              },
-              scroll: state.scroll,
-            }
-          : {}),
         ...(state.agents === undefined ? {} : { agents: state.agents }),
         // What closed agents and let-go sessions spent, which still counts.
         ...(state.keptSpend === undefined
@@ -1122,8 +1103,6 @@ function reduceStep(state: AppState, action: AppAction): AppState {
  * added to a session cannot be left with the window by mistake.
  */
 const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
-  riffAgent: true,
-  riffKeepTranscript: true,
   overflowing: true,
   attended: true,
   connection: true,

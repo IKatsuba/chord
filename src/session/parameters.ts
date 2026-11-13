@@ -10,6 +10,7 @@ import cliTruncate from 'cli-truncate';
 import stringWidth from 'string-width';
 import {
   type AgentOption,
+  type AgentOptionValue,
   optionsFromConfigOptions,
   valueName,
 } from './config.ts';
@@ -203,4 +204,30 @@ function parameterOf(option: SessionConfigOption): unknown {
   return typeof meta === 'object' && meta !== null
     ? (meta as Record<string, unknown>)[PARAMETER_KEY]
     : undefined;
+}
+
+/**
+ * `/fast`'s other value of `option`: of an on/off select, the one not in
+ * use, whatever the agent calls them; undefined for any other option.
+ */
+export function fastToggled(option: AgentOption): AgentOptionValue | undefined {
+  return option.values.length === 2
+    ? option.values.find((each) => each.value !== option.current)
+    : undefined;
+}
+
+/**
+ * The effort `/effort <value>` asks for: an id the agent lists, exactly;
+ * names are not matched, as two values may share one.
+ */
+export function effortById(
+  options: unknown,
+  value: string,
+): { option: string; value: string; name: string } | undefined {
+  const efforts = effortsFrom(options);
+  const found = efforts?.available.find((each) => each.id === value);
+
+  return efforts === undefined || found === undefined
+    ? undefined
+    : { option: efforts.option, value: found.id, name: found.name };
 }

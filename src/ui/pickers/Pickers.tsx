@@ -80,6 +80,7 @@ import {
   agentChoices,
   choiceKey,
   initialChoice,
+  effortChoices,
   modelChoices,
   fromFirstLine,
   lineKey,
@@ -354,6 +355,80 @@ export function ModelPicker({
               : `${keys} ${line?.narrow === true ? 'effort' : 'for effort'}`,
             closeHint,
           )}
+        </text>
+      </box>
+    </box>
+  );
+}
+
+/**
+ * `/effort` (CHD-626, E1): the model in use's efforts in the agent's order,
+ * the one in use marked, on the picker the model's have. Enter sets one; Esc
+ * is the window's.
+ */
+export function EffortPicker({
+  configOptions,
+  model,
+  rows,
+  room = Number.POSITIVE_INFINITY,
+  agent,
+  active,
+  onPick,
+}: {
+  configOptions: readonly SessionConfigOption[];
+  /** The model in use, by name. */
+  model: string;
+  rows: number;
+  room?: number;
+  agent: string;
+  active: boolean;
+  onPick: (id: string) => void;
+}) {
+  const choices = effortChoices(effortsFrom(configOptions));
+  const closeHint = useCloseHint();
+  const { width: columns } = useTerminalDimensions();
+  const listed =
+    choices.length === 0 ? 0 : framedRows(rows, room, choices.length);
+  const wide = `${agent}'s effort for ${model}, in the order it gives them.`;
+  // The frame's border and padding take two columns each side (N4).
+  const said =
+    choices.length === 0
+      ? `${agent} offers no effort for ${model}.`
+      : wide.length <= columns - 4
+        ? wide
+        : `${agent}'s effort for ${model}.`;
+
+  return (
+    <box
+      {...borderOf(useColours().permission)}
+      paddingX={1}
+      flexShrink={1}
+      minHeight={0}
+    >
+      <text
+        {...TEXT}
+        {...fg(useColours().permission)}
+        attributes={BOLD}
+        flexShrink={0}
+      >
+        Effort
+      </text>
+      <Body room={room}>
+        <text {...CUT} attributes={DIM}>
+          {said}
+        </text>
+        {listed > 0 && (
+          <PickerList
+            choices={choices}
+            rows={listed}
+            active={active}
+            onPick={onPick}
+          />
+        )}
+      </Body>
+      <box marginTop={1} flexShrink={0}>
+        <text {...TEXT} attributes={DIM}>
+          {hintOf(listed === 0 ? undefined : 'Enter to set', closeHint)}
         </text>
       </box>
     </box>

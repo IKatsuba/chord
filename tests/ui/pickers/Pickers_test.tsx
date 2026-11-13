@@ -2014,3 +2014,93 @@ describe('CHD-626 tester: model picker effort lifecycle', () => {
       },
     ));
 });
+
+describe('/effort and /fast (CHD-626)', () => {
+  const parameters = fakeAgentCommand(undefined, '--model-parameters');
+
+  test("E1: /effort lists the model's efforts, the one in use marked; Enter sets one", () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort');
+        await window.shows(
+          "fake's effort for Fake Large with a 1M context window, in the order it gives them.",
+        );
+        await window.shows('2. Medium ✔');
+        await window.shows('5. Max');
+        await window.shows('Enter to set · Esc to close');
+        await window.press(DOWN);
+        await window.press('\r');
+        await window.shows('Effort set to High');
+        expect(window.frame()).not.toContain('Setting Effort to High…');
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('N4 at 80x24: the short line; Esc sets nothing', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort');
+        await window.shows(
+          "fake's effort for Fake Large with a 1M context window.",
+        );
+        await window.press(ESC);
+        await until(
+          'the picker closed',
+          () => !window.frame().includes('Enter to set'),
+        );
+        expect(window.frame()).not.toContain('Effort set to');
+      },
+      { agentCommand: parameters, columns: 80, rows: 24 },
+    ));
+
+  test('/effort <value> by its id exactly, else the ids', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort max');
+        await window.shows('Effort set to Max');
+        await send(window, '/effort High');
+        await window.shows(
+          'fake offers low, medium, high, xhigh, max effort for Fake Large with a 1M context window.',
+        );
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('/fast toggles the marked option and says it; a model without one says so', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/fast');
+        await window.shows(
+          'Fast mode On for Fake Large with a 1M context window',
+        );
+        await send(window, '/fast');
+        await window.shows(
+          'Fast mode Off for Fake Large with a 1M context window',
+        );
+        await send(window, '/model');
+        await window.shows('Select model');
+        await window.press('2');
+        await window.shows('Switched to Fake Small');
+        await send(window, '/fast');
+        await window.shows('fake offers no fast mode for Fake Small.');
+      },
+      { agentCommand: parameters, columns: 120, rows: 40 },
+    ));
+
+  test('an agent with no effort: /effort opens nothing and says so', () =>
+    withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, '/effort');
+        await window.shows(
+          'fake offers no effort for Fake Large with a 1M context window.',
+        );
+        expect(window.frame()).not.toContain('Enter to set');
+      },
+      { agentCommand: fakeAgentCommand(undefined, '--no-config') },
+    ));
+});

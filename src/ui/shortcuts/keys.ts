@@ -406,6 +406,7 @@ export const SHORTCUTS: readonly Shortcut[] = [
       'close_background',
       'background_back',
       'close_model_picker',
+      'close_effort_picker',
       'close_resume_picker',
       'close_config_picker',
       'close_theme_picker',

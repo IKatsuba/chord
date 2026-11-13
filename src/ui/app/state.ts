@@ -74,6 +74,7 @@ import {
   initialPickers,
   mcpShown,
   modelPickerShown,
+  effortPickerShown,
   type PickersAction,
   type PickersState,
   reducePickers,
@@ -544,6 +545,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
     case 'model_picker_opened':
     case 'model_picker_closed':
     case 'model_effort_moved':
+    case 'effort_picker_opened':
+    case 'effort_picker_closed':
     case 'resume_asked':
     case 'resume_scope_toggled':
     case 'resume_picker_closed':
@@ -663,6 +666,7 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         backgroundView: __________,
         agentsView: ___________,
         modelEffort: ____________,
+        effortPicker: _____________,
         ...rest
       } = state;
 
@@ -1613,6 +1617,7 @@ function pickerShown(state: AppState): boolean {
 function otherPickerShown(state: AppState): boolean {
   return (
     modelPickerShown(state) ||
+    effortPickerShown(state) ||
     resumePickerShown(state) ||
     configPickerShown(state) ||
     themePickerShown(state) ||
@@ -2047,6 +2052,10 @@ function boundCommand(
 
   if (closing && modelPickerShown(state)) {
     return 'close_model_picker';
+  }
+
+  if (closing && effortPickerShown(state)) {
+    return 'close_effort_picker';
   }
 
   if (on('modelPicker:decreaseEffort') && modelPickerShown(state)) {

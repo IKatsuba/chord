@@ -2899,6 +2899,65 @@ export class Conversation {
   }
 
   /**
+   * Sets option `id` to `value` as a command of its own, `/fast`
+   * (CHD-626): its row under `command` shows the step pending until the
+   * outcome, `said` of the option as the agent answered, replaces it.
+   */
+  setNoted(
+    id: string,
+    value: string,
+    command: string,
+    said: (option: AgentOption) => string,
+  ): Promise<void> {
+    const session = this.#session;
+
+    if (!session || this.#closing) {
+      return notUp();
+    }
+
+    const turnId = `option-${crypto.randomUUID()}`;
+    const asked = this.#options.find((option) => option.id === id);
+    const what = `${asked?.name ?? id} to ${
+      asked ? valueName(asked, value) : value
+    }`;
+    const note = (text: string, failed: boolean) => {
+      if (this.#current(session)) {
+        this.#emit({ type: 'noted', turnId, command, text, failed });
+      }
+    };
+
+    note(`Setting ${what}…`, false);
+
+    const change = this.#changes.then(async () => {
+      if (!this.#current(session)) {
+        return;
+      }
+
+      try {
+        await session.setOption(id, value);
+      } catch (error) {
+        note(`Could not set ${what}: ${agentMessageOf(error)}`, true);
+
+        throw error;
+      } finally {
+        this.#report(session);
+      }
+
+      // An option the answer no longer lists is said as it was asked, so
+      // the pending row never stays.
+      const option =
+        this.#options.find((candidate) => candidate.id === id) ??
+        (asked && { ...asked, current: value });
+
+      note(option ? said(option) : `Set ${what}`, false);
+    });
+
+    this.#changes = change.catch(() => {});
+
+    return change;
+  }
+
+  /**
    * Makes a choice of `/model` or `/effort` (CHD-626): the model, if it
    * changed, then the moved effort, read against the set the model's answer
    * left. Its row under `command` shows the pending step until the outcome

@@ -11,6 +11,7 @@ import { resolve } from 'node:path';
 import type { Wait } from '../../notify.ts';
 import { busyOf, mine } from '../../session/busy.ts';
 import { withContext } from '../../session/context.ts';
+import { effortById } from '../../session/parameters.ts';
 import {
   Conversation,
   type ConversationEvent,
@@ -1439,6 +1440,17 @@ export function useSessions(
     );
   };
 
+  /** Enter, or a digit, on `/effort`'s list. */
+  const pickEffort = (id: string) => {
+    dispatch({ type: 'effort_picker_closed' });
+
+    const effort = effortById(state.configOptions, id);
+
+    if (effort !== undefined) {
+      conversation()?.makeChoice({ effort }, 'effort');
+    }
+  };
+
   /** Enter on one of `/config`'s values. */
   const pickOption = (option: AgentOption, value: string) => {
     dispatch({ type: 'config_picker_closed' });
@@ -1556,6 +1568,7 @@ export function useSessions(
     openResume,
     pickResume,
     pickModel,
+    pickEffort,
     pickOption,
     moveAgent,
     closePicked,

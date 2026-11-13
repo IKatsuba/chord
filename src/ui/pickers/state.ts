@@ -19,6 +19,8 @@ export interface PickersState {
    * until Enter, whatever the agent sends meanwhile (CHD-626).
    */
   readonly modelEffort?: PendingEffort;
+  /** `/effort`: the picker of the model in use's efforts is open. */
+  readonly effortPicker?: true;
   /** `/resume`: the session picker is open. */
   readonly resumePicker?: ResumePicker;
   /**
@@ -78,6 +80,9 @@ export type PickersAction =
    * ← or → in it: the effort one down or up `efforts`, the agent's order,
    * stopping at either end.
    */
+  /** `/effort` opens its picker; Esc, or an effort picked, closes it. */
+  | { readonly type: 'effort_picker_opened' }
+  | { readonly type: 'effort_picker_closed' }
   | {
       readonly type: 'model_effort_moved';
       readonly efforts: AgentEfforts;
@@ -142,6 +147,13 @@ export function reducePickers(
       const { modelEffort: _, ...rest } = state;
 
       return state.modelPicker ? { ...rest, modelPicker: false } : state;
+    }
+    case 'effort_picker_opened':
+      return { ...state, effortPicker: true };
+    case 'effort_picker_closed': {
+      const { effortPicker: _, ...rest } = state;
+
+      return state.effortPicker === undefined ? state : rest;
     }
     case 'model_effort_moved':
       return state.modelPicker ? movedEffort(state, action) : state;
@@ -253,6 +265,18 @@ interface Under {
 export function modelPickerShown(state: PickersState & Under): boolean {
   return (
     state.modelPicker &&
+    state.connection.status === 'ready' &&
+    !asksPerson(state.transcript)
+  );
+}
+
+/**
+ * Whether `/effort`'s picker is on screen: opened, and the session up, as
+ * the model picker is; a permission asked meanwhile takes its place.
+ */
+export function effortPickerShown(state: PickersState & Under): boolean {
+  return (
+    state.effortPicker === true &&
     state.connection.status === 'ready' &&
     !asksPerson(state.transcript)
   );

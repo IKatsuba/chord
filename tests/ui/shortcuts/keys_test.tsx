@@ -276,6 +276,12 @@ const STATES: Record<string, AppState> = {
   'picker, busy': after({ type: 'connected', sessionId: 'session-1' }, prompt, {
     type: 'model_picker_opened',
   }),
+  // `/effort`'s picker, which Esc closes (CHD-626).
+  'effort picker': after(
+    { type: 'connected', sessionId: 'session-1' },
+    EFFORT_OPTIONS,
+    { type: 'effort_picker_opened' },
+  ),
   // An effort moved with → waits for Enter, or a digit (CHD-626).
   'picker, effort pending': after(
     { type: 'connected', sessionId: 'session-1' },

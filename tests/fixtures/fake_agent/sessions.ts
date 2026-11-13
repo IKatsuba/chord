@@ -180,6 +180,8 @@ export function configOptions(sessionId: string): acp.SessionConfigOption[] {
           id: 'fast',
           name: 'Fast',
           category: 'model_config',
+          // Marked as chord's own adapters mark theirs, so `/fast` finds it.
+          _meta: { 'chord/parameter': 'fast' },
           type: 'select',
           currentValue: fasts.get(sessionId) ?? 'off',
           options: FAST_VALUES,

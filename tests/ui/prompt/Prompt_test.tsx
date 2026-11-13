@@ -381,7 +381,7 @@ test("a / opens chord's commands and the agent's, and typing filters", () =>
     await window.shows('/echo');
 
     // A quarter of the window's rows: the list scrolls to the rest.
-    for (const name of ['/clear', '/config', '/context', '/cost', '/exit']) {
+    for (const name of ['/clear', '/config', '/context', '/cost', '/effort']) {
       expect(window.frame()).toContain(name);
     }
 

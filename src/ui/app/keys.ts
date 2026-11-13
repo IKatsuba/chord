@@ -793,6 +793,8 @@ function commandSteps(
       return [dispatch({ type: 'menu_dismissed' })];
     case 'close_model_picker':
       return [dispatch({ type: 'model_picker_closed' })];
+    case 'close_effort_picker':
+      return [dispatch({ type: 'effort_picker_closed' })];
     case 'decrease_effort':
     case 'increase_effort': {
       const efforts = effortsFrom(state.configOptions);

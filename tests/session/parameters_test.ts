@@ -3,7 +3,9 @@ import type { SessionConfigOption } from '@agentclientprotocol/sdk/unstable';
 import stringWidth from 'string-width';
 import { findAgent } from '../../src/agents.ts';
 import {
+  effortById,
   fastOption,
+  fastToggled,
   hasOtherOptions,
   modelConfigOptions,
   settingsLine,
@@ -396,5 +398,44 @@ describe('CHD-626 tester: parameter reader boundaries', () => {
       expect(stringWidth(empty.text)).toBeLessThanOrEqual(width);
       expect(empty.dim).toBe(true);
     }
+  });
+});
+
+describe("/fast's toggle and /effort's id (CHD-626)", () => {
+  test("the other value of an on/off select, by the agent's ids", () => {
+    const fast = fastOption(CLAUDE, 'fast')!;
+
+    expect(fastToggled(fast)).toEqual({ value: 'on', name: 'On' });
+    expect(fastToggled({ ...fast, current: 'on' })).toEqual({
+      value: 'off',
+      name: 'Off',
+    });
+    expect(fastToggled(fastOption(CURSOR)!)).toEqual({
+      value: 'true',
+      name: 'true',
+    });
+  });
+
+  test('none for an option of more or fewer than two values', () => {
+    const fast = fastOption(CLAUDE, 'fast')!;
+
+    expect(
+      fastToggled({
+        ...fast,
+        values: [...fast.values, { value: 'x', name: 'X' }],
+      }),
+    ).toBeUndefined();
+    expect(fastToggled({ ...fast, values: [fast.values[0]!] })).toBeUndefined();
+  });
+
+  test('an effort by its id exactly, never by its name', () => {
+    expect(effortById(CLAUDE, 'high')).toEqual({
+      option: 'effort',
+      value: 'high',
+      name: 'High',
+    });
+    expect(effortById(CLAUDE, 'High')).toBeUndefined();
+    expect(effortById(CLAUDE, 'ultra')).toBeUndefined();
+    expect(effortById(CURSORS_DEFAULT, 'high')).toBeUndefined();
   });
 });

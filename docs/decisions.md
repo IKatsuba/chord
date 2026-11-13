@@ -8774,3 +8774,72 @@ stray positional, and joining the tokens back would be a workaround around
 the library. The owner chose chord's own reader, `src/session/new_args.ts`.
 Options put: that reader; quoted names through a tokenizer and `parseArgs`;
 `parseArgs` with names that hold no space.
+
+## 2026-11-13 — CHD-624: the catch-up in two PRs, dependencies first (owner)
+
+The owner took every recommendation of the CHD-624 survey
+(`docs/design/evidence/CHD-624/survey.md`). Options for shipping: one PR;
+dependencies and Claude's new defaults first, then the features; a PR per
+feature. Chosen: two in order. CHD-624 bumps `@agentclientprotocol/sdk` to
+2.6.0, OpenTUI to 0.8.4 after a visual pass, claude-agent-sdk and
+genai-prices, refreshes the registry, and handles what claude-agent-acp
+0.107 changes for a person; `/rename`, the account in `/status`, initial
+options for model and effort, notices and the `session` tool-call content
+are CHD-629, cursor-cloud's extras CHD-630. Not taken: ACP v2 (alpha, its
+RFDs back to Draft, many agents echo any version asked), string-width 9 (a
+major that must agree with OpenTUI's width method), proxy chains and
+`session/archive` (no agent serves them). Libraries: the SDK's own types for
+every new method; nothing is written that the SDK carries.
+
+## 2026-11-13 — CHD-624: Claude starts in Manual by initial config options
+
+claude-agent-acp 0.101 starts a session in Auto. The owner chose (D1 b) that
+chord starts it in Manual unless chord's settings name a mode. Options for
+how: set the mode after `session/new`, as named modes are today; initial
+`configOptions` on `session/new` (ACP schema 1.31,
+`sessionCapabilities.options`). Chosen: initial options, by one general
+path (`initialEntries`) any agent advertising `options` takes, with
+`#applyStarting` kept as the
+read-back and fallback; CHD-629 adds model and effort to the same path.
+Options for knowing the config id before the session exists: a table of ids
+read from the adapter's source; `session/options` before every start;
+ids learned from an earlier session. Chosen: the table, keyed by the
+adapter's `agentInfo.name` (unlike `/fast`'s, keyed by registry id) so any
+command running the adapter gets the safe default; `session/options` makes
+Claude start a throwaway Claude Code and run the person's `SessionStart`
+hooks on every start, and learning leaves the first session without. The
+default goes on `session/new` only; load and resume keep the session's own
+mode. The mode step reads the current mode at its turn and checks it after a
+fallback, so a model change or a fallback that does not hold is caught. No
+retry without the entries on -32602. Consequence: a mode set in Claude's own
+settings no longer decides chord's start (owner question O2).
+
+## 2026-11-13 — CHD-624: an unasked compaction is chord's state, not an enricher's
+
+Claude 0.101 compacts an idle session on its own; the trigger goes only to
+JetBrains AIR. The owner chose (D2 a) to keep it and draw it "compacted
+while idle". Options for deciding which compaction is unasked: an enricher
+marking `_meta` when no request of chord's is open; `Conversation`, which
+knows turns and cycles. Chosen: `Conversation`, once per compaction at its
+first update; an enricher would mark a compaction inside Claude's own cycle
+as idle. The mark is an `unasked` field on the update action and on
+`Compaction`, carried explicitly through the record's entry mappings; it is
+not relayed by `chord acp`. Compaction updates open no cycle today, so no
+cycle change is made. Rejected: holding cycles off for a while after a
+compaction, which would also stop real cycles and codebuddy's start marks,
+latch on a missing end, and still miss a chunk arriving after its window;
+a chunk the adapter may forward around `/compact` carries nothing to
+attribute it, so what to do with it is the owner's (O1). The compaction's
+cost stays the last turn's late cost, as every late Claude cost.
+
+## 2026-11-13 — CHD-624: Kimi Code by the registry under the name `kimi`
+
+The registry added npx `kimi-code`, the program chord ran as its own CLI
+`kimi`. The owner chose (D6) the registry's. Options for the name: keep
+`kimi` through `ALIASES` as `claude` maps to `claude-acp`; rename to
+`kimi-code` and map recorded `kimi` on resume; rename with no mapping.
+Chosen: the alias, which keeps records, settings, `offeredAgents`, team
+files and `chord kimi` working together; a record-only mapping leaves the
+others broken. autohand, binary-only in the registry now, becomes an own CLI
+(`autohand --acp`); kiro passes `--agent-engine=v3` as the registry does;
+the generator names each agent it drops for being binary-only.

@@ -4,7 +4,6 @@ import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import { useState } from 'react';
 import { draw } from '../harness.tsx';
-import { agentChoices } from '../../../src/ui/pickers/picker.ts';
 import { usePress } from '../../../src/ui/app/input.ts';
 import {
   ConfigPicker,
@@ -1715,56 +1714,6 @@ describe('CHD-564 tester: a framed list keeps its width and choice', () => {
       await app.unmount();
     }
   });
-});
-
-describe('CHD-604c tester: riff picker row and keys', () => {
-  for (const columns of [80, 120]) {
-    test(`riff reads whole and is reachable while claude stays preferred at ${columns} columns`, async () => {
-      const picked: string[] = [];
-      const choices = agentChoices(
-        [
-          {
-            name: 'riff',
-            title: "chord's own agent · on a ChatGPT or Grok plan",
-            start: 'fixture',
-            from: 'builtin',
-          },
-          {
-            name: 'claude',
-            title: 'Claude Agent',
-            start: 'fixture',
-            from: 'npx',
-          },
-        ],
-        'claude',
-      );
-      const app = await draw(
-        <PickerList
-          choices={choices}
-          rows={6}
-          active
-          onPick={(id) => picked.push(id)}
-        />,
-        { columns, rows: columns === 80 ? 24 : 40 },
-      );
-
-      try {
-        const frame = stripAnsi(app.frame());
-
-        expect(frame).toContain(
-          "1. riff · chord's own agent · on a ChatGPT or Grok plan",
-        );
-        expect(frame).toContain('❯ 2. claude');
-        await app.write('\r');
-        await app.write('1');
-        await app.write('k');
-        await app.write('\r');
-        expect(picked).toStrictEqual(['claude', 'riff', 'riff']);
-      } finally {
-        await app.unmount();
-      }
-    });
-  }
 });
 
 test('an agent started with --no-mcp-servers is given none, and its start line and /mcp name the flag (CHD-620)', async () => {

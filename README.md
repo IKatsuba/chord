@@ -46,8 +46,7 @@ then the picker.
 
 ## Why chord
 
-- **Any agent, one interface.** riff, chord's own agent on a ChatGPT or
-  Grok plan, beside agents from the
+- **Any agent, one interface.** Agents from the
   [ACP Registry](https://agentclientprotocol.com) and their own CLIs. Switch
   agents without relearning keys.
 - **Agents that work together.** Open a second agent beside the one you talk
@@ -76,9 +75,6 @@ Each permission the agent asks for is a choice under the transcript, answered
 with a number or the arrows. Proposed diffs scroll above the choices.
 Between turns, it leaves your typing alone:
 ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
-riff defaults to auto: admitted commands, including project installs and
-tests, run without review. Other calls get a safety review that can clear
-them or ask you; an unanswered review ask is denied after 5 minutes.
 
 <img src="docs/images/permission.png" alt="The permission prompt: Allow, Always allow, Deny" width="900">
 
@@ -135,17 +131,11 @@ The package is a small shim around a prebuilt binary for macOS and Linux,
 arm64 and x64; the macOS binaries are signed and notarised. `chord upgrade`
 updates it through the package manager that installed it.
 
-`chord riff` runs chord's own agent on your ChatGPT or Grok plan. Sign in
-in chord's box, in the browser or with a device code; `/login` switches
-plans and `/logout` signs out. Credentials stay in the system store.
-riff reads `AGENTS.md` instructions, loads `.agents/skills/` skills on
-demand, and uses your configured MCP servers and chord's team tools.
-For other agents, chord starts `npx`, `uvx` or their own CLI; sign in to
+chord starts agents through `npx`, `uvx` or their own CLI; sign in to
 Claude Code, Codex or Gemini as you normally would.
 
 Build from source with [Bun](https://bun.sh) 1.4.4 or newer. Compilation
-installs all target packages and checks the pinned libfx layout before
-embedding its native addon, WebAssembly core and fff's target library:
+installs all target packages and embeds OpenTUI's native library:
 
 ```sh
 git clone https://github.com/IKatsuba/chord && cd chord
@@ -157,7 +147,6 @@ bun dev compile --install   # into ~/.local/bin/chord
 
 ```sh
 chord                  # choose an agent in this directory
-chord riff             # chord's own agent; sign in to a ChatGPT or Grok plan
 chord gemini -C ~/src/app
 chord agents           # agents, startup commands and own CLI availability
 chord agents --json    # versioned agent list for scripts
@@ -206,7 +195,7 @@ recorded.
 
 ## Supported agents
 
-riff, Claude Code, Codex, Gemini CLI, Copilot, Cursor, OpenCode, Cline, Qwen Code,
+Claude Code, Codex, Gemini CLI, Copilot, Cursor, OpenCode, Cline, Qwen Code,
 Kimi Code, Kiro, Goose, Junie, Factory Droid, Auggie, Kilo, bob, Devin, fx,
 [Cursor Cloud Agents](docs/guide.md#cursor-cloud) and more: `chord agents`
 prints the full list, and any other ACP agent runs with `chord --agent-command "my-agent --acp"`.

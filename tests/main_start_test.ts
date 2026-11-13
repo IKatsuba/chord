@@ -823,3 +823,88 @@ try {
     });
   }
 });
+
+describe('CHD-621 tester: removed agent startup routes', () => {
+  for (const mode of [
+    'explicit',
+    'default',
+    'agent-settings',
+    'resume',
+  ] as const) {
+    test(`${mode} refuses riff with the ordinary unknown-agent error`, () => {
+      const place = mkdtempSync(join(tmpdir(), 'chord-removed-agent-'));
+      const project = join(place, 'project');
+      const state = join(place, 'state');
+      const record = join(state, 'chord', 'records', 'riff.jsonl');
+      const args = ['-C', project];
+
+      mkdirSync(join(project, '.chord'), { recursive: true });
+      writeFileSync(
+        join(project, '.chord', 'settings.json'),
+        JSON.stringify({
+          agent: mode === 'default' ? 'riff' : 'not-registered-fixture',
+          ...(mode === 'agent-settings'
+            ? { agents: { riff: { model: 'example' } } }
+            : {}),
+        }),
+      );
+      mkdirSync(join(state, 'chord', 'records'), { recursive: true });
+
+      const stored =
+        JSON.stringify({
+          type: 'session',
+          version: 1,
+          sessionId: 'legacy-riff',
+          agent: 'riff',
+          cwd: project,
+          at: 1,
+        }) +
+        '\n' +
+        JSON.stringify({
+          type: 'prompt',
+          turnId: 'old-turn',
+          at: 2,
+          prompt: 'Earlier work',
+          images: 0,
+        }) +
+        '\n';
+
+      writeFileSync(record, stored);
+
+      if (mode === 'resume') {
+        args.push('-r', 'legacy-riff');
+      } else if (mode !== 'default') {
+        args.push('riff');
+      }
+
+      try {
+        const ran = spawnSync(
+          process.execPath,
+          [fileURLToPath(new URL('../src/main.tsx', import.meta.url)), ...args],
+          {
+            env: {
+              ...process.env,
+              PATH: project,
+              XDG_CONFIG_HOME: join(place, 'config'),
+              XDG_STATE_HOME: state,
+              CHORD_RESOURCE_FIXTURE: 'true',
+            },
+            encoding: 'utf8',
+            timeout: 15_000,
+          },
+        );
+
+        expect(ran.error).toBeUndefined();
+        expect(ran.status).toBe(2);
+        expect(ran.stderr).toContain(
+          'Unknown agent "riff". `chord agents` lists them.',
+        );
+        expect(ran.stderr).not.toContain('ChatGPT');
+        expect(ran.stderr).not.toContain('Grok');
+        expect(readFileSync(record, 'utf8')).toBe(stored);
+      } finally {
+        rmSync(place, { recursive: true, force: true });
+      }
+    });
+  }
+});

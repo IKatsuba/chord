@@ -17,13 +17,6 @@ export const TARGETS: readonly Target[] = [
   { bun: 'bun-linux-arm64', os: 'linux', cpu: 'arm64' },
 ];
 
-/** This machine's release target, if it is one. */
-export function hostTarget(): Target | undefined {
-  return TARGETS.find(
-    (target) => target.os === process.platform && target.cpu === process.arch,
-  );
-}
-
 export const SCOPE = '@chorded';
 
 export function platformPackage(target: Target): string {

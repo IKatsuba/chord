@@ -71,7 +71,6 @@ import { heldContext } from '../prompt/state.ts';
 import { vimReset } from '../prompt/vim.ts';
 import { hintKey } from '../shortcuts/bindings.ts';
 import { betweenNotice, waitsNotice } from '../status/status.ts';
-import { credentialWords } from '../status/credentials.ts';
 import { askedPermission } from '../dialogs/permission.ts';
 import { heldBack } from '../dialogs/state.ts';
 import {
@@ -157,12 +156,6 @@ export interface SessionsOptions {
 
 /** What the sessions read of the window and do to it. */
 export interface SessionsWindow {
-  readonly riffStatus?: (key: number) => 'waiting' | 'signed_out' | undefined;
-  readonly riffHeard?: (
-    key: number,
-    agent: string,
-    event: ConversationEvent,
-  ) => void;
   all: WindowedState;
   /** The session in front, as the window was last drawn. */
   state: AppState;
@@ -224,20 +217,6 @@ export function useSessions(
   };
 
   const heard = (key: number, event: ConversationEvent, wait?: Wait) => {
-    const who = agentOf(sessions.agents, key);
-
-    host.riffHeard?.(
-      key,
-      who?.child?.runtime ?? who?.main?.agent ?? agent,
-      event,
-    );
-
-    if (event.type === 'credentials') {
-      dispatch({ type: 'sessions_noted', message: credentialWords(event) });
-
-      return;
-    }
-
     if (retiredHeard(key, event)) {
       return;
     }
@@ -1018,19 +997,12 @@ export function useSessions(
 
     const describe = (key: number) => {
       const session = all.sessions[key];
-      const signIn = host.riffStatus?.(key);
 
       return {
         model:
-          signIn !== undefined || session?.models === undefined
-            ? undefined
-            : modelName(session.models),
-        effort:
-          signIn === undefined
-            ? conversationAt(key)?.session?.efforts()?.current
-            : undefined,
-        failed: signIn === undefined && session?.connection.status === 'failed',
-        ...(signIn === undefined ? {} : { signIn }),
+          session?.models === undefined ? undefined : modelName(session.models),
+        effort: conversationAt(key)?.session?.efforts()?.current,
+        failed: session?.connection.status === 'failed',
       };
     };
 
@@ -1551,77 +1523,6 @@ export function useSessions(
   };
 
   return {
-    conversationAt,
-    endRiff: (key: number) => {
-      if (agentOf(sessions.agents, key) === undefined) {
-        return;
-      }
-
-      dispatch({
-        type: 'in_session',
-        key,
-        action: { type: 'riff_restarting' },
-      });
-      void conversationAt(key)?.clear(undefined, false);
-    },
-    restartRiff: (key: number, preserve: boolean) => {
-      const found = agentOf(sessions.agents, key);
-
-      if (found === undefined) {
-        return;
-      }
-
-      if (preserve) {
-        dispatch({
-          type: 'in_session',
-          key,
-          action: { type: 'riff_restarting' },
-        });
-      }
-
-      if (found?.child !== undefined) {
-        void clearByPerson(found.child);
-      } else {
-        for (const child of sessions.agents.children) {
-          if (child.forkedFrom === undefined) {
-            dropChild(child.key);
-          }
-        }
-
-        sessions.forgetClosed();
-
-        if (found?.main !== undefined) {
-          keepSpend(
-            retiredKey(),
-            { name: 'main', kind: 'main', agent: found.main.agent },
-            key,
-          )(conversationAt(key)?.clear());
-        }
-      }
-    },
-    cancelRiff: () => {
-      const agents = sessions.agents;
-      const mainRiff = agents.main?.agent === 'riff';
-      const leads = new Set(
-        agents.children
-          .filter((child) => child.runtime === 'riff')
-          .map((child) => child.id),
-      );
-
-      if (mainRiff) {
-        agents.main?.conversation.interrupt();
-      }
-
-      for (const child of agents.children) {
-        if (
-          child.runtime === 'riff' ||
-          (mainRiff && child.forkedFrom === undefined) ||
-          (child.lead !== undefined && leads.has(child.lead))
-        ) {
-          child.conversation.interrupt();
-        }
-      }
-    },
     sessions,
     place,
     lines,

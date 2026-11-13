@@ -23,8 +23,6 @@ export type ChordCommand =
   | 'team'
   | 'theme'
   | 'vim'
-  | 'login'
-  | 'logout'
   | 'exit';
 
 export interface CommandItem {
@@ -39,12 +37,6 @@ export interface CommandItem {
 }
 
 const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
-  {
-    name: 'login',
-    description: 'Sign in to a ChatGPT or Grok plan for riff',
-    owner: 'chord',
-  },
-  { name: 'logout', description: "Sign out of riff's plan", owner: 'chord' },
   {
     name: 'clear',
     description: 'Start a new session with an empty transcript',
@@ -121,13 +113,8 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
  */
 export function commandItems(
   agent: readonly AvailableCommand[],
-  riff = false,
 ): CommandItem[] {
-  const ours = new Set<string>(
-    CHORD_COMMANDS.filter((command) => command.name !== 'logout' || riff).map(
-      ({ name }) => name,
-    ),
-  );
+  const ours = new Set<string>(CHORD_COMMANDS.map(({ name }) => name));
   const theirs = agent
     .filter(({ name }) => !ours.has(name))
     .map(({ name, description }): CommandItem => {
@@ -142,10 +129,9 @@ export function commandItems(
       };
     });
 
-  return [
-    ...CHORD_COMMANDS.filter((command) => command.name !== 'logout' || riff),
-    ...theirs,
-  ].sort((a, b) => a.name.localeCompare(b.name));
+  return [...CHORD_COMMANDS, ...theirs].sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
 }
 
 /**
@@ -213,10 +199,9 @@ export function teamItems(
 /**
  * The agents `/new` offers, by name, as chord can start them in the window,
  * each described as `chord agents` lists it in `listed`; one it does not
- * list, as `--agent-command` names, by its name alone. riff comes first,
- * as on the start screen (CHD-485), then those the settings files start,
- * then own CLIs PATH has, then the registry's, and own CLIs PATH lacks
- * last, so what will start is on top. With the
+ * list, as `--agent-command` names, by its name alone. Those the settings
+ * files start come first, then own CLIs PATH has, then the registry's, and
+ * own CLIs PATH lacks last, so what will start is on top. With the
  * `offeredAgents` setting, its known names alone and in its order, as the
  * person chose them; `names` is then only what a typed `/new` may start.
  */
@@ -245,7 +230,7 @@ export function agentItems(
     const agent = listed.find((each) => each.name === name);
 
     return {
-      rank: agent === undefined ? 1 : readiness(agent),
+      rank: agent === undefined ? 0 : readiness(agent),
       item: itemOf(name, agent),
     };
   });
@@ -255,14 +240,12 @@ export function agentItems(
 
 function readiness({ from, found }: ListedAgent): number {
   switch (from) {
-    case 'builtin':
-      return 0;
     case 'settings':
-      return 1;
+      return 0;
     case 'cli':
-      return found === true ? 2 : found === false ? 4 : 3;
+      return found === true ? 1 : found === false ? 3 : 2;
     default:
-      return 3;
+      return 2;
   }
 }
 
@@ -374,11 +357,7 @@ export type Submitted =
  * draft that names one of chord's commands runs it, whatever follows the name;
  * anything else, an agent's command among it, goes to the agent as written.
  */
-export function submitted(
-  draft: string,
-  highlighted?: CommandItem,
-  riff = false,
-): Submitted {
+export function submitted(draft: string, highlighted?: CommandItem): Submitted {
   // A team's run needs its job after the name, which is still to be typed.
   if (highlighted?.verb === 'run') {
     return { type: 'complete', text: completion(highlighted) };
@@ -397,9 +376,7 @@ export function submitted(
 
   const typed = /^\/(\S+)(?:\s+([\s\S]*))?$/.exec(draft.trim());
   const name = highlighted?.name ?? typed?.[1];
-  const ours = CHORD_COMMANDS.find(
-    (command) => command.name === name && (name !== 'logout' || riff),
-  );
+  const ours = CHORD_COMMANDS.find((command) => command.name === name);
 
   if (ours) {
     return {

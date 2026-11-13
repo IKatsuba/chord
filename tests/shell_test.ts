@@ -136,32 +136,3 @@ test("a lone \\r stays in its line, as a progress bar's redraw", async () => {
   expect(await run.ended).toStrictEqual({ code: 0 });
   expect(lines).toStrictEqual(['10%\r50%\r100%', 'done']);
 });
-
-test('an explicit complete environment selects its shell without inheriting the caller', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'chord-shell-env-'));
-  const startup = join(dir, 'bashenv');
-
-  await writeFile(startup, 'export CHORD_STARTUP=fixture\n');
-
-  let output = '';
-
-  try {
-    const run = runShell('printf "%s:%s" "$CHORD_STARTUP" "${HOME-unset}"', {
-      cwd: dir,
-      environment: {
-        SHELL: '/bin/bash',
-        BASH_ENV: startup,
-        PATH: '/usr/bin:/bin',
-        CHORD_RESOURCE_FIXTURE: 'true',
-      },
-      onOutput: (_stream, text) => {
-        output += text;
-      },
-    });
-
-    expect(await run.ended).toEqual({ code: 0 });
-    expect(output).toBe('fixture:unset');
-  } finally {
-    await rm(dir, { recursive: true, force: true });
-  }
-});

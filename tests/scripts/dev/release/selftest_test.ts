@@ -3,34 +3,13 @@ import { spawn } from 'node:child_process';
 import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join } from 'node:path';
-import {
-  RIFF_TOOLS,
-  riffProblems,
-  riffStep,
-  selftest,
-} from '../../../../scripts/dev/release/selftest.ts';
+import { selftest } from '../../../../scripts/dev/release/selftest.ts';
 import { type Scratch, scratch } from './scratch.ts';
 
 // The self-test in a process of its own, on a fake chord and a fake tmux
 // whose window never shows anything, ended by a signal while it waits.
 
 const SCRIPTS = join(import.meta.dir, '..', '..', '..', '..', 'scripts');
-
-/** The two turns a binary's riff runs when libfx loads on both backends. */
-const RIFF_TURNS = [
-  {
-    backend: 'native',
-    stopReason: 'end_turn',
-    text: 'done',
-    tools: RIFF_TOOLS,
-  },
-  {
-    backend: 'wasm-jspi',
-    stopReason: 'end_turn',
-    text: 'done',
-    tools: RIFF_TOOLS,
-  },
-];
 
 let at: Scratch;
 
@@ -55,9 +34,6 @@ acp)
     *'"id":9'*) echo '{"id":3,"result":{"stopReason":"end_turn"}}' ;;
     esac
   done
-  ;;
---riff-agent)
-  exec ${JSON.stringify(process.execPath)} ${JSON.stringify(join(import.meta.dir, '..', '..', '..', 'fixtures', 'fake_riff.ts'))}
   ;;
 *) echo "Hello, world." ;;
 esac
@@ -274,98 +250,5 @@ await selftest({ ...release(), root: ${JSON.stringify(at.root)} }, 'chord');`,
         await ended;
       }
     });
-  }
-});
-
-describe('the riff step', () => {
-  const [native, wasm] = RIFF_TURNS;
-
-  test('two turns, native then Wasm, a search and a read, done after three requests each, hold', () => {
-    expect(riffProblems(RIFF_TURNS, 6)).toBeUndefined();
-  });
-
-  test('each way the turns fall short is named', () => {
-    expect(riffProblems([native!], 6)).toBe('ran 1 turns, not 2');
-    expect(riffProblems([native!, native!], 6)).toBe(
-      'ran turn 2 on native, not wasm-jspi',
-    );
-    expect(riffProblems([{ ...native!, backend: undefined }, wasm!], 6)).toBe(
-      'ran turn 1 on undefined, not native',
-    );
-    expect(
-      riffProblems([native!, { ...wasm!, stopReason: 'cancelled' }], 6),
-    ).toBe('ended its wasm-jspi turn cancelled with "done"');
-    expect(riffProblems([{ ...native!, text: '' }, wasm!], 6)).toBe(
-      'ended its native turn end_turn with ""',
-    );
-
-    // fff's search failing in the binary, or the read refused.
-    const failed = [
-      { ...RIFF_TOOLS[0]!, status: 'failed', text: 'fff: no library' },
-      RIFF_TOOLS[1]!,
-    ];
-
-    expect(riffProblems([native!, { ...wasm!, tools: failed }], 6)).toBe(
-      `called ${JSON.stringify(failed)} on wasm-jspi, not ${JSON.stringify(RIFF_TOOLS)}`,
-    );
-    expect(riffProblems([{ ...native!, tools: [] }, wasm!], 6)).toBe(
-      `called [] on native, not ${JSON.stringify(RIFF_TOOLS)}`,
-    );
-    expect(riffProblems(RIFF_TURNS, 2)).toBe('made 2 model requests, not 6');
-  });
-});
-
-describe('tester: riff selftest backend and exit contract', () => {
-  test('a caller forcing wasm does not prevent the native leg', async () => {
-    await expect(
-      riffStep(
-        {
-          ...at.release,
-          env: { ...at.release.env, CHORD_RIFF_BACKEND: 'wasm' },
-        },
-        join(at.root, 'chord'),
-        undefined,
-        at.root,
-      ),
-    ).resolves.toBeUndefined();
-  });
-
-  test('a correct reply followed by a nonzero exit fails the step', async () => {
-    const fake = join(import.meta.dir, '../../../fixtures/fake_riff.ts');
-
-    writeFileSync(
-      join(at.root, 'chord'),
-      `#!/bin/bash\n${JSON.stringify(process.execPath)} ${JSON.stringify(fake)}\nexit 7\n`,
-      { mode: 0o755 },
-    );
-
-    await expect(
-      riffStep(at.release, join(at.root, 'chord'), undefined, at.root),
-    ).rejects.toThrow('did not leave at EOF (7)');
-  });
-});
-
-describe('tester: done cannot hide incomplete binary tool proof', () => {
-  const [search, read] = RIFF_TOOLS;
-  const incomplete = [
-    ['unfinished search', [{ ...search, status: 'in_progress' }, read!]],
-    ['missing search output', [{ ...search, text: '' }, read!]],
-    ['wrong read output', [search!, { ...read, text: '1\twrong' }]],
-    ['reversed calls', [read!, search!]],
-    ['extra call', [search!, read!, read!]],
-  ] as const;
-
-  for (const index of [0, 1]) {
-    for (const [name, tools] of incomplete) {
-      test(`${RIFF_TURNS[index]!.backend}: ${name} fails despite done and six requests`, () => {
-        const turns = RIFF_TURNS.map((turn, at) =>
-          at === index ? { ...turn, tools } : turn,
-        );
-        const problem = riffProblems(turns, 6);
-
-        expect(problem).toContain(`on ${RIFF_TURNS[index]!.backend}`);
-        expect(problem).toContain('called ');
-      });
-    }
   }
 });

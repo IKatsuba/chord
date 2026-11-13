@@ -748,9 +748,8 @@ describe('CHD-544 tester: every offered fixture command starts', () => {
         offeredAgents(listed, undefined).agents,
         'zeroclaw',
       );
-      const offered = listed.filter(
-        ({ name, from }) =>
-          from !== 'builtin' && choices.some(({ value }) => value === name),
+      const offered = listed.filter(({ name }) =>
+        choices.some(({ value }) => value === name),
       );
 
       expect(new Set(offered.map(({ from }) => from))).toStrictEqual(
@@ -792,24 +791,4 @@ describe('CHD-544 tester: every offered fixture command starts', () => {
       await rm(dir, { recursive: true, force: true });
     }
   });
-});
-
-test("CHD-604c riff's row reads as the design shows, claude still highlighted", () => {
-  const choices = agentChoices(
-    [
-      {
-        name: 'riff',
-        title: "chord's own agent · on a ChatGPT or Grok plan",
-        start: 'chord --riff-agent',
-        from: 'builtin',
-      },
-      { name: 'claude', title: 'Claude Agent', start: 'npx c', from: 'npx' },
-    ],
-    'claude',
-  );
-
-  expect(choices[0]?.label).toBe(
-    "riff\x1b[2m · chord's own agent · on a ChatGPT or Grok plan\x1b[22m",
-  );
-  expect(openView(choices, 6).highlighted).toBe(1);
 });

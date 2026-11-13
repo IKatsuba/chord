@@ -12,7 +12,6 @@ import {
   createRendererClipboardAdapter,
 } from '@opentui/core';
 import process from 'node:process';
-import { riffWindowAccess } from './riff/window_access.ts';
 import { text as readText } from 'node:stream/consumers';
 import { Readable, type Writable } from 'node:stream';
 import { join, resolve } from 'node:path';
@@ -69,8 +68,6 @@ import {
   RESOURCE_WORKER_FLAG,
   runResourceWorker,
 } from './platform/resource_worker.ts';
-import { RIFF_AGENT_FLAG } from './riff/start.ts';
-import { runRiffAgent } from './riff/serve.ts';
 import { serveChord } from './server/server.ts';
 import { upgradeCommand } from './upgrade.ts';
 import { chordStateDir } from './session/state_dir.ts';
@@ -528,10 +525,6 @@ export const cli = chordCommand().action(async (options, named) => {
 
   const window = (
     <App
-      riffAccess={riffWindowAccess(process.env)}
-      {...(process.env['CHORD_RIFF_FAKE_PROVIDER']
-        ? { openUrl: () => Promise.resolve(undefined) }
-        : {})}
       open={startServices.openSession}
       resources={resources.read}
       teamSelection={first.teamSelection}
@@ -891,9 +884,6 @@ if (import.meta.main) {
 
   if (args[0] === RESOURCE_WORKER_FLAG) {
     await runResourceWorker(args.slice(1));
-  } else if (args[0] === RIFF_AGENT_FLAG) {
-    // Before Cliffy, so no help lists it: chord starts it, never a person.
-    await runRiffAgent(manifest.version);
   } else {
     try {
       await cli.parse(args);

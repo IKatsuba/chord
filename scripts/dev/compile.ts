@@ -6,13 +6,12 @@
  *   bun dev compile --install   this machine's target, into ~/.local/bin/chord
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, readFileSync } from 'node:fs';
+import { readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { BuildConfig, BunPlugin } from 'bun';
 import manifest from '../../package.json' with { type: 'json' };
-import { hostTarget, type Target, TARGETS } from '../targets.ts';
-import { assertLibfxAssets, libfxAddon, libfxPackage } from './libfx_assets.ts';
+import { TARGETS } from '../targets.ts';
 
 /** `bun dev compile`'s options. */
 export interface CompileOptions {
@@ -21,49 +20,6 @@ export interface CompileOptions {
 }
 
 const root = new URL('../..', import.meta.url).pathname;
-
-const MAIN = join(root, 'src', 'main.tsx');
-
-const FFF_WORKER = join(root, 'src', 'platform', 'fff_worker.ts');
-
-/**
- * `entry` with fff's Worker (CHD-485): a binary finds a Worker's script
- * only when it was built as one of its entry points, as Bun documents for
- * `--compile`. Entries named flat put the Worker beside the code that starts
- * it, so its `new URL('./fff_worker.ts', import.meta.url)` holds in the
- * binary as from source.
- */
-export function withFffWorker(
-  entry: string,
-): Pick<BuildConfig, 'entrypoints' | 'naming'> {
-  return {
-    entrypoints: [entry, FFF_WORKER],
-    naming: { entry: '[name].[ext]' },
-  };
-}
-
-/** The fff library a binary for `target` embeds: its own, glibc's on Linux. */
-export function fffLibrary(target: Target): string {
-  return target.os === 'linux'
-    ? `@ff-labs/fff-bin-linux-${target.cpu}-gnu/libfff_c.so`
-    : `@ff-labs/fff-bin-${target.os}-${target.cpu}/libfff_c.dylib`;
-}
-
-/**
- * Why a build's inputs do not hold `target`'s fff library and no other,
- * or undefined when they do: search needs it in the binary (CHD-485).
- */
-export function fffProblem(
-  inputs: readonly string[],
-  target: Target,
-): string | undefined {
-  const embedded = inputs.filter((input) => input.includes('/fff-bin-'));
-  const wanted = fffLibrary(target);
-
-  return embedded.length === 1 && embedded[0]!.endsWith(wanted)
-    ? undefined
-    : `${target.bun} embeds ${JSON.stringify(embedded)}, not ${wanted} alone`;
-}
 
 /**
  * The inputs of a build that come from cursor-cloud-acp, its SDK or its
@@ -102,51 +58,6 @@ const jsxDevRuntime: BunPlugin = {
     );
   },
 };
-
-/**
- * `chord:libfx-native`, which src/platform/libfx.ts imports only in a
- * compiled binary, resolved to `target`'s libfx addon and embedded as a
- * file. Only that one addon goes into the binary: a plain import of every
- * platform's, or one picked by a define, embeds all four (CHD-485). A
- * missing addon fails the build, naming the package and version.
- */
-export function libfxNative(target: Target | undefined): BunPlugin {
-  return {
-    name: 'libfx-native',
-    setup(build) {
-      build.onResolve({ filter: /^chord:libfx-native$/ }, () => {
-        if (target === undefined) {
-          throw new Error(
-            `libfx has no addon for ${process.platform}-${process.arch}`,
-          );
-        }
-
-        const path = libfxAddon(target);
-
-        if (!existsSync(path)) {
-          throw new Error(
-            `${libfxPackage(target)}@${libfxVersion()} has no libfx.node for ${target.bun}; run bun install ${EVERY_PLATFORM.join(' ')}`,
-          );
-        }
-
-        return { path, namespace: 'libfx-native' };
-      });
-
-      build.onLoad({ filter: /.*/, namespace: 'libfx-native' }, ({ path }) => ({
-        contents: readFileSync(path),
-        loader: 'file',
-      }));
-    },
-  };
-}
-
-function libfxVersion(): string {
-  const libfx = JSON.parse(
-    readFileSync(join(root, 'node_modules', 'libfx', 'package.json'), 'utf8'),
-  ) as { version: string };
-
-  return libfx.version;
-}
 
 /**
  * The native package OpenTUI loads on `platform` and `arch`, as its own
@@ -199,8 +110,7 @@ export function buildOptions(
   {
     host = false,
     compiled = false,
-    target = hostTarget(),
-  }: { host?: boolean; compiled?: boolean; target?: Target | undefined } = {},
+  }: { host?: boolean; compiled?: boolean } = {},
 ): BuildConfig & { target: 'bun' } {
   return {
     entrypoints: [entry],
@@ -219,11 +129,8 @@ export function buildOptions(
     define: {
       'process.env.NODE_ENV': '"production"',
       ...(compiled ? { CHORD_RESOURCE_COMPILED: 'true' } : {}),
-      // fff picks its Linux library by this at build time and embeds it;
-      // without it, it looks for the library at run time (its README).
-      ...(target?.os === 'linux' ? { FFF_LIBC: '"gnu"' } : {}),
     },
-    plugins: [jsxDevRuntime, libfxNative(target)],
+    plugins: [jsxDevRuntime],
   };
 }
 
@@ -236,7 +143,9 @@ export async function compile(args: CompileOptions): Promise<void> {
     process.exit(1);
   }
 
-  const host = hostTarget();
+  const host = TARGETS.find(
+    (target) => target.os === process.platform && target.cpu === process.arch,
+  );
   const targets = args.all ? TARGETS : host ? [host] : [];
 
   if (targets.length === 0) {
@@ -249,8 +158,6 @@ export async function compile(args: CompileOptions): Promise<void> {
   // A binary embeds only the clipboard addon that is installed, which is
   // otherwise the host's alone, so a cross-compiled one could not read it.
   run(['install', ...EVERY_PLATFORM]);
-  // A libfx layout change fails here, not in the binary it would break.
-  assertLibfxAssets(targets);
 
   for (const target of targets) {
     const output = args.install
@@ -259,8 +166,7 @@ export async function compile(args: CompileOptions): Promise<void> {
 
     // The JS API, as the command line takes no plugin.
     const built = await Bun.build({
-      ...buildOptions(MAIN, { compiled: true, target }),
-      ...withFffWorker(MAIN),
+      ...buildOptions(join(root, 'src', 'main.tsx'), { compiled: true }),
       compile: { target: target.bun, outfile: output },
       metafile: true,
     });
@@ -273,14 +179,7 @@ export async function compile(args: CompileOptions): Promise<void> {
       process.exit(1);
     }
 
-    const inputs = Object.keys(built.metafile?.inputs ?? {});
-    const fff = fffProblem(inputs, target);
-    const cursor = cursorInputs(inputs);
-
-    if (fff !== undefined) {
-      console.error(fff);
-      process.exit(1);
-    }
+    const cursor = cursorInputs(Object.keys(built.metafile?.inputs ?? {}));
 
     if (cursor.length > 0) {
       console.error(

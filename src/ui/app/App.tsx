@@ -232,12 +232,8 @@ import { stepWords } from '../../session/start_failure.ts';
 import { Header } from '../header/Header.tsx';
 import { Splash } from '../splash/Splash.tsx';
 import { splashShown } from '../splash/splash.ts';
-import { useRiffSignIn, type RiffAccess } from '../riff/sign_in_run.ts';
-import { SignInBox, RiffNotice } from '../riff/SignIn.tsx';
-import { providerName } from '../riff/state.ts';
 
 export interface AppProps {
-  riffAccess?: RiffAccess | undefined;
   resources?: ReadLimits | undefined;
   teamSelection?: TeamSelection | undefined;
   selectionPolicy?: (() => Promise<TeamSelectionPolicy>) | undefined;
@@ -394,7 +390,6 @@ const FIRST_SESSION = noAgents().nextKey;
  * and the commands are driven by the hooks beside it.
  */
 export function App({
-  riffAccess,
   resources,
   teamSelection,
   selectionPolicy,
@@ -552,12 +547,6 @@ export function App({
   latestHistory.current = history;
 
   const notify = useNotify(notifications);
-  const riffHear = useRef<ReturnType<typeof useRiffSignIn>['heard']>(() => {});
-
-  const riffStatus = useRef<ReturnType<typeof useRiffSignIn>['status']>(
-    () => undefined,
-  );
-
   const sessionVar = useSessionVar(notifications?.env.tmux ?? false);
   const sessions = useSessions(
     {
@@ -586,8 +575,6 @@ export function App({
     },
     {
       all,
-      riffHeard: (key, agent, event) => riffHear.current(key, agent, event),
-      riffStatus: (key) => riffStatus.current(key),
       state,
       dispatch,
       redraw,
@@ -602,34 +589,10 @@ export function App({
   // Main's agent, in the window's one place.
   const frontAgent = sessions.sessions.agents.main?.agent ?? agent;
   const here = sessions.place;
-  const riff = useRiffSignIn({
-    access: riffAccess,
-    key: all.front,
-    agent: sessions.picked()?.runtime ?? frontAgent,
-    state,
-    stateDir,
-    sessions,
-    dispatch,
-    openUrl,
-    copy,
-  });
-
-  riffHear.current = riff.heard;
-  riffStatus.current = riff.status;
-
-  useEffect(() => {
-    dispatch({
-      type: 'riff_agent',
-      enabled: (sessions.picked()?.runtime ?? frontAgent) === 'riff',
-    });
-  }, [all.front, frontAgent]);
-
   // Once it has given way, the splash never comes back: not for /clear's
   // session.
   const [splashLeft, setSplashLeft] = useState(false);
-  const splashing =
-    splashShown(splash, splashLeft, state.connection) &&
-    !(riff.enabled && riff.box);
+  const splashing = splashShown(splash, splashLeft, state.connection);
 
   useEffect(() => {
     if (
@@ -643,12 +606,6 @@ export function App({
       onReady?.();
     }
   }, [state.connection.status]);
-
-  useEffect(() => {
-    if (riff.enabled && riff.box) {
-      setSplashLeft(true);
-    }
-  }, [riff.enabled, riff.box]);
 
   useTimers(state, dispatch);
 
@@ -684,7 +641,6 @@ export function App({
   const listFocus = agentsHaveKeys(state);
   // Any picker holds the keys the prompt would otherwise take.
   const choosing =
-    riff.box ||
     viewing ||
     picking ||
     resumingShown ||
@@ -981,12 +937,7 @@ export function App({
     },
     state,
     dispatch,
-    {
-      ...sessions,
-      login: riff.login,
-      logout: riff.logout,
-      stopCommand: () => bash.stop(all.front),
-    },
+    { ...sessions, stopCommand: () => bash.stop(all.front) },
   );
 
   // What vim's keys work on: the latest draft, cursor and vim state, kept
@@ -997,8 +948,6 @@ export function App({
 
   /** What a key is read against: the window as last drawn. */
   const context = (): KeyContext => ({
-    riffBox: riff.box,
-    riffSignedOut: riff.enabled && riff.state.signedOut,
     state,
     history,
     rows,
@@ -1566,31 +1515,19 @@ export function App({
               entry, as the entries above the window are not mounted. */}
                         {first > 0 ? null : child ? (
                           <ChildLine
-                            child={{
-                              ...child,
-                              runtime: riff.enabled
-                                ? `riff · ${riff.state.signedOut || riff.state.provider === undefined ? 'not signed in' : providerName(riff.state.provider)}`
-                                : child.runtime,
-                            }}
+                            child={child}
                             model={
-                              riff.enabled && riff.state.signedOut
-                                ? undefined
-                                : state.models === undefined
-                                  ? child.model
-                                  : (state.startedModel ?? child.model)
+                              state.models === undefined
+                                ? child.model
+                                : (state.startedModel ?? child.model)
                             }
                           />
                         ) : (
                           <Header
                             facts={{
                               version: manifest.version,
-                              agent: riff.enabled
-                                ? `riff · ${riff.state.signedOut ? 'not signed in' : riff.state.provider === undefined ? 'not signed in' : providerName(riff.state.provider)}`
-                                : frontAgent,
-                              model:
-                                riff.enabled && riff.state.signedOut
-                                  ? undefined
-                                  : state.startedModel,
+                              agent: frontAgent,
+                              model: state.startedModel,
                               directory,
                               helpKey: hintKey(state.keys, 'help:toggle'),
                               resumed: state.resumed && {
@@ -1624,11 +1561,7 @@ export function App({
                           />
                         )}
                         {first === 0 &&
-                          state.connection.status === 'failed' &&
-                          !(
-                            riff.enabled &&
-                            state.connection.signIn !== undefined
-                          ) && (
+                          state.connection.status === 'failed' && (
                             <>
                               <Failure
                                 text={`${shownAgent} did not start: ${stepWords(
@@ -1670,18 +1603,7 @@ export function App({
                                 ref={place(index)}
                                 flexShrink={0}
                               >
-                                {riff.state.notices
-                                  .filter((notice) => notice.at === index)
-                                  .map((notice, at) => (
-                                    <RiffNotice
-                                      key={`riff-${at}`}
-                                      notice={notice}
-                                    />
-                                  ))}
-                                {entry.kind === 'error' &&
-                                riff.state.hiddenErrors.includes(
-                                  entry.turnId,
-                                ) ? null : group === undefined ? (
+                                {group === undefined ? (
                                   // Its code blocks named by its place, as the
                                   // transcript lists them (CHD-394).
                                   <ListedEntry.Provider
@@ -1713,17 +1635,6 @@ export function App({
                               </box>
                             );
                           })}
-                        {riff.state.notices
-                          .filter(
-                            (notice) =>
-                              notice.at >= state.transcript.entries.length,
-                          )
-                          .map((notice, at) => (
-                            <RiffNotice
-                              key={`riff-end-${at}`}
-                              notice={notice}
-                            />
-                          ))}
                         {recordedReceipts(state.transcript).map((call) => (
                           <RecordedReceipt
                             key={call.asked}
@@ -1740,18 +1651,16 @@ export function App({
                     </Clip>
                     <Below scroll={state.scroll} width={columns - 2} />
                   </Clip>
-                  {!riff.box && (
-                    <Working
-                      turn={state.transcript.turn}
-                      asking={
-                        inputAsked ??
-                        (planAsked === undefined ? undefined : { plan: true })
-                      }
-                      compacting={state.transcript.entries.some((entry) =>
-                        inSpinner(entry, state.transcript.turn),
-                      )}
-                    />
-                  )}
+                  <Working
+                    turn={state.transcript.turn}
+                    asking={
+                      inputAsked ??
+                      (planAsked === undefined ? undefined : { plan: true })
+                    }
+                    compacting={state.transcript.entries.some((entry) =>
+                      inSpinner(entry, state.transcript.turn),
+                    )}
+                  />
                   {state.transcript.plan.length > 0 && (
                     <Plan
                       plan={state.transcript.plan}
@@ -1869,7 +1778,7 @@ export function App({
                   <Overlay
                     columns={columns}
                     list={(room) =>
-                      riff.box ? null : state.search ? (
+                      state.search ? (
                         <SearchLine search={state.search} />
                       ) : finder ? (
                         <FileList
@@ -1899,16 +1808,7 @@ export function App({
                       ) : null
                     }
                     picker={(room) =>
-                      riff.box && riffAccess !== undefined ? (
-                        <SignInBox
-                          state={riff.state}
-                          store={riffAccess.store.name}
-                          width={columns}
-                          room={room}
-                          onChoose={riff.choose}
-                          onBack={riff.back}
-                        />
-                      ) : pickerShown ? (
+                      pickerShown ? (
                         <>
                           {picking && (
                             <ModelPicker
@@ -2106,28 +2006,12 @@ export function App({
                   >
                     {state.pendingKeys === undefined ? (
                       <StatusLine
-                        state={
-                          riff.enabled && riff.state.signedOut
-                            ? {
-                                ...initialAppState,
-                                connection: { status: 'ready' },
-                                keys: state.keys,
-                                theme: state.theme,
-                                draft: state.draft,
-                                ...(state.sessionsNote === undefined
-                                  ? {}
-                                  : { sessionsNote: state.sessionsNote }),
-                              }
-                            : state
-                        }
+                        state={state}
                         agent={shownAgent}
                         // The shown session's, main's or the picked child's, read
                         // where the list's row reads it.
                         effort={
-                          riff.enabled && riff.state.signedOut
-                            ? undefined
-                            : sessions.conversation()?.session?.efforts()
-                                ?.current
+                          sessions.conversation()?.session?.efforts()?.current
                         }
                         // While the list has the keys, the line says what they
                         // do; its rows show what waits.

@@ -3,8 +3,7 @@
  * its tool from the repository's root with the terminal handed over and
  * answers the tool's exit status, which the calling command exits with.
  */
-import { spawn as spawnChild, spawnSync } from 'node:child_process';
-import { once } from 'node:events';
+import { spawnSync } from 'node:child_process';
 import { mkdirSync, rmSync } from 'node:fs';
 import { constants } from 'node:os';
 import { join } from 'node:path';
@@ -12,17 +11,21 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import { quote } from 'shell-quote';
 
-/** Runs one command to its end and answers its exit status. */
-export type Run = (argv: readonly string[]) => number;
+/** Runs one command, `env` added, to its end and answers its exit status. */
+export type Run = (
+  argv: readonly string[],
+  env?: Readonly<Record<string, string>>,
+) => number;
 
 // A file path, not the URL's percent-encoded one, for a checkout under a name with a space.
 const root = fileURLToPath(new URL('../..', import.meta.url));
 
 /** `argv` from the root, on this terminal; a signal is 128 + its number. */
-export const spawn: Run = ([command, ...args]) => {
+export const spawn: Run = ([command, ...args], env) => {
   const child = spawnSync(command ?? '', args, {
     cwd: root,
     stdio: 'inherit',
+    ...(env === undefined ? {} : { env: { ...process.env, ...env } }),
   });
 
   if (child.error !== undefined) {
@@ -35,88 +38,9 @@ export const spawn: Run = ([command, ...args]) => {
 };
 
 /**
- * Runs `argv` from the root on this terminal, `env` added, to its end and
- * answers its status as `spawn` does, leaving this process free to serve.
- */
-export type RunServing = (
-  argv: readonly string[],
-  env: Readonly<Record<string, string>>,
-) => Promise<number>;
-
-export const spawnServing: RunServing = async ([command, ...args], env) => {
-  const child = spawnChild(command ?? '', args, {
-    cwd: root,
-    stdio: 'inherit',
-    env: { ...process.env, ...env },
-  });
-  const [status, signal] = (await once(child, 'exit')) as [
-    number | null,
-    NodeJS.Signals | null,
-  ];
-
-  return signal === null ? (status ?? 1) : 128 + constants.signals[signal];
-};
-
-/** A fake provider served while chord runs: its base URL and its stop. */
-export interface FakeProvider {
-  readonly url: string;
-  stop(): Promise<void>;
-}
-
-/** Riff's tests' fake Chat Completions server, in this process. */
-async function serveFakeProvider(): Promise<FakeProvider> {
-  const { serveFakeChat } =
-    await import('../../tests/fixtures/riff/fake_chat.ts');
-
-  return serveFakeChat();
-}
-
-/**
- * chord from source on riff, `args` after it, with React's production build
- * and fixture resources. Its provider, which also lists riff (CHD-485), is
- * the fake Chat Completions server of its tests, served here
- * while chord runs, whose scenarios answer by the prompt's words
- * (`call read {"path":"a.txt"}` calls a tool).
- */
-export async function chordOnRiff(
-  args: readonly string[],
-  run: RunServing = spawnServing,
-  serve: () => Promise<FakeProvider> = serveFakeProvider,
-  qa = false,
-  state?: string,
-): Promise<number> {
-  const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
-  const { QA_ENV } = await import('../../src/riff/qa.ts');
-  const kept = stateEnv(state);
-  const provider = await serve();
-
-  try {
-    return await run(
-      [
-        process.execPath,
-        '--define',
-        'process.env.NODE_ENV:"production"',
-        '--define',
-        'process.env.CHORD_RESOURCE_FIXTURE:"true"',
-        'src/main.tsx',
-        'riff',
-        ...args,
-      ],
-      {
-        [FAKE_PROVIDER_ENV]: provider.url,
-        [QA_ENV]: qa ? '1' : '',
-        ...kept,
-      },
-    );
-  } finally {
-    await provider.stop();
-  }
-}
-
-/**
  * chord's state kept in `state`, made if missing, instead of the person's
- * own: a fake or QA run writes its records and riff's store there
- * (CHD-616). Nothing given, the child keeps the environment's.
+ * own: a fake or QA run writes its records there (CHD-616). Nothing given,
+ * the child keeps the environment's.
  */
 function stateEnv(state: string | undefined): Record<string, string> {
   if (state === undefined) {
@@ -134,36 +58,9 @@ export function chord(
   args: readonly string[],
   run: Run = spawn,
   fixtureResources = false,
-): number {
-  return run(chordArgv(fake, args, fixtureResources));
-}
-
-/**
- * `chord` with riff's fake provider served while it runs, which lists riff
- * and lets it be picked: what `--fake` and `--qa` start (CHD-604c).
- */
-export async function chordWithRiff(
-  fake: boolean,
-  args: readonly string[],
-  fixtureResources = false,
-  run: RunServing = spawnServing,
-  serve: () => Promise<FakeProvider> = serveFakeProvider,
   state?: string,
-): Promise<number> {
-  const { FAKE_PROVIDER_ENV } = await import('../../src/riff/start.ts');
-  const { QA_ENV } = await import('../../src/riff/qa.ts');
-  const kept = stateEnv(state);
-  const provider = await serve();
-
-  try {
-    return await run(chordArgv(fake, args, fixtureResources), {
-      [FAKE_PROVIDER_ENV]: provider.url,
-      [QA_ENV]: fixtureResources ? '1' : '',
-      ...kept,
-    });
-  } finally {
-    await provider.stop();
-  }
+): number {
+  return run(chordArgv(fake, args, fixtureResources), stateEnv(state));
 }
 
 function chordArgv(

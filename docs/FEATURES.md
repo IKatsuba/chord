@@ -19,7 +19,6 @@ agent and chord passes it through untouched.
 | Full-screen window             | client     | OpenTUI (React), alternate screen, fixed layout |
 | `chord <agent>`, `chord agents` | client     | the ACP Registry's npx and uvx agents, frozen in `src/registry.ts`; agents' own CLIs in `src/clis.ts`, marked by whether PATH has them; names the settings files alone define |
 | Standalone binary, npm shim    | client     | `bun build --compile`, `bun dev npm` |
-| riff, chord's built-in agent (CHD-485, implemented) | client + ACP | `chord riff` on a ChatGPT or Grok plan; system-store sign-in, file and shell tools, ask/auto review, MCP, teams, `AGENTS.md` and on-demand skills; [guide](guide.md#riff) |
 | cursor-cloud, Cursor cloud agents (CHD-622, implemented) | client + ACP | `chord cursor-cloud` runs `@chorded/cursor-cloud-acp` with npx: Cursor cloud agents on the pushed current branch, sign-in by the package's `login` into the system keychain, list and resume; [guide](guide.md#cursor-cloud) |
 
 ## M1 — talk to an agent (the MVP)

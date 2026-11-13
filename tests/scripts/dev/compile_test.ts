@@ -10,13 +10,10 @@ import {
   buildOptions,
   cursorInputs,
   EVERY_PLATFORM,
-  fffLibrary,
-  fffProblem,
   loadedNative,
   otherNatives,
 } from '../../../scripts/dev/compile.ts';
 import { Fragment, jsxDEV } from '../../../scripts/dev/jsx_dev_runtime.ts';
-import { TARGETS } from '../../../scripts/targets.ts';
 
 const FIXTURE = fileURLToPath(
   new URL('../../fixtures/boundary/main.tsx', import.meta.url),
@@ -152,32 +149,4 @@ describe('CHD-468 tester: host native selection across libc and architectures', 
       expect(new Set(external).size).toBe(7);
     });
   }
-});
-
-describe("a binary's fff library", () => {
-  const linux = TARGETS.find((target) => target.bun === 'bun-linux-x64')!;
-  const mac = TARGETS.find((target) => target.bun === 'bun-darwin-arm64')!;
-
-  test("each target's own, glibc's on Linux", () => {
-    expect(fffLibrary(linux)).toBe(
-      '@ff-labs/fff-bin-linux-x64-gnu/libfff_c.so',
-    );
-    expect(fffLibrary(mac)).toBe(
-      '@ff-labs/fff-bin-darwin-arm64/libfff_c.dylib',
-    );
-  });
-
-  test('a build holding it alone passes; none, another, or two fail, named', () => {
-    const own = 'node_modules/@ff-labs/fff-bin-linux-x64-gnu/libfff_c.so';
-    const musl = 'node_modules/@ff-labs/fff-bin-linux-x64-musl/libfff_c.so';
-
-    expect(fffProblem(['src/main.tsx', own], linux)).toBeUndefined();
-    expect(fffProblem(['src/main.tsx'], linux)).toBe(
-      'bun-linux-x64 embeds [], not @ff-labs/fff-bin-linux-x64-gnu/libfff_c.so alone',
-    );
-    expect(fffProblem([musl], linux)).toBe(
-      `bun-linux-x64 embeds ${JSON.stringify([musl])}, not @ff-labs/fff-bin-linux-x64-gnu/libfff_c.so alone`,
-    );
-    expect(fffProblem([own, musl], linux)).toBeDefined();
-  });
 });

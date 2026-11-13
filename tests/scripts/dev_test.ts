@@ -48,12 +48,10 @@ async function parsed(argv: string[]): Promise<unknown[][]> {
     screenshots: record('screenshots'),
     social: record('social'),
     memory: record('memory'),
-    riffModels: record('riffModels'),
     selftest: record('selftest'),
     release: record('release'),
     unclear: record('unclear'),
     chord: record('chord'),
-    riff: record('riff'),
     qa: record('qa'),
     test: record('test'),
   };
@@ -210,27 +208,6 @@ describe('chord', () => {
     ]);
   });
 
-  test('--fake with riff as the agent runs riff on its fake provider, --qa ahead of it', async () => {
-    expect(await parsed(['chord', '--fake', 'riff'])).toStrictEqual([
-      ['riff', [], false, '/tmp/chord-fake'],
-    ]);
-    expect(
-      await parsed(['chord', '--qa', 'read', '--fake', 'riff', '-p', 'hi']),
-    ).toStrictEqual([
-      ['qa', '/tmp/chord-qa.read', '/tmp/chord-qa.read.state'],
-      [
-        'riff',
-        ['-C', '/tmp/chord-qa.read', '-p', 'hi'],
-        true,
-        '/tmp/chord-qa.read.state',
-      ],
-    ]);
-    // Without --fake, riff is an agent name like any other.
-    expect(await parsed(['chord', 'riff'])).toStrictEqual([
-      ['chord', false, ['riff']],
-    ]);
-  });
-
   test("--fake after chord's first word is chord's", async () => {
     expect(await parsed(['chord', 'codex', '--fake'])).toStrictEqual([
       ['chord', false, ['codex', '--fake']],
@@ -371,24 +348,6 @@ test('--help lists every command, and names the packages', () => {
   }
 });
 
-describe('riff-models', () => {
-  test('takes a plan, and writes under dist/ by default', async () => {
-    expect(await parsed(['riff-models', 'codex'])).toStrictEqual([
-      ['riffModels', 'codex', 'dist/riff-models-codex.json'],
-    ]);
-    expect(
-      await parsed(['riff-models', 'grok', '--out', '/tmp/models.json']),
-    ).toStrictEqual([['riffModels', 'grok', '/tmp/models.json']]);
-  });
-
-  test('refuses to run without a plan, or with another one', async () => {
-    await expect(parsed(['riff-models'])).rejects.toThrow(ValidationError);
-    await expect(parsed(['riff-models', 'fake'])).rejects.toThrow(
-      ValidationError,
-    );
-  });
-});
-
 test('an unknown command is refused', async () => {
   await expect(parsed(['publish'])).rejects.toThrow(ValidationError);
 });
@@ -468,8 +427,6 @@ describe('tester: migrated command boundaries', () => {
       selftest: unexpected,
       release: unexpected,
       chord: unexpected,
-      riff: unexpected,
-      riffModels: unexpected,
       qa: unexpected,
       test: unexpected,
     };
@@ -948,28 +905,6 @@ describe('tester: CHD-577 channel argument boundaries', () => {
   });
 });
 
-describe('CHD-611 tester: model-check command arguments', () => {
-  test('Grok gets its own default output and an explicit path keeps spaces', async () => {
-    expect(await parsed(['riff-models', 'grok'])).toEqual([
-      ['riffModels', 'grok', 'dist/riff-models-grok.json'],
-    ]);
-    expect(
-      await parsed([
-        'riff-models',
-        'codex',
-        '--out',
-        'evidence/model list.json',
-      ]),
-    ).toEqual([['riffModels', 'codex', 'evidence/model list.json']]);
-  });
-
-  test('an extra positional argument is refused before any action', async () => {
-    await expect(parsed(['riff-models', 'codex', 'extra'])).rejects.toThrow(
-      ValidationError,
-    );
-  });
-});
-
 describe("a fake or QA run keeps chord's state off the person's (CHD-616)", () => {
   /** Every file under `dir`, relative to it; none when it is missing. */
   const files = (dir: string): string[] =>
@@ -981,7 +916,7 @@ describe("a fake or QA run keeps chord's state off the person's (CHD-616)", () =
 
   /**
    * `bun dev` with `args`, its home and XDG places in `person`, standing in
-   * for the person's own; riff's `-p` keeps its session in chord's state.
+   * for the person's own.
    */
   const run = (person: string, args: readonly string[]) => {
     const result = spawnSync(
@@ -1005,21 +940,18 @@ describe("a fake or QA run keeps chord's state off the person's (CHD-616)", () =
       },
     );
 
-    expect(result.stdout).toContain('Hello from riff.');
+    expect(result.stdout).toContain('Hello, world.');
   };
 
-  test('--qa keeps it beside its directory, out of it, and leaves the person nothing', () => {
+  test("--qa leaves the person's state and its own directory nothing", () => {
     const person = mkdtempSync(join(tmpdir(), 'chord-person-'));
     const name = `dev-test-${process.pid}`;
     const dir = `/tmp/chord-qa.${name}`;
 
     try {
-      run(person, ['chord', '--qa', name, '--fake', 'riff', '-p', 'hi']);
+      run(person, ['chord', '--qa', name, '--fake', '-p', 'hi']);
 
       expect(files(join(person, 'state'))).toStrictEqual([]);
-      expect(
-        files(join(`${dir}.state`, 'chord', 'riff', 'sidecars')),
-      ).toHaveLength(1);
       // Nothing in the run's own directory, where @ would list it.
       expect(files(dir)).toStrictEqual([]);
     } finally {

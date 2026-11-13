@@ -7,7 +7,7 @@
   a turn's usage; it plays one table spread from a module per family under
   `scenarios/`: `text.ts`
   (`text`, `texttillsteered`, `texttillsteeredheld`, `readsheld`, `thought`,
-  `todos`, `mcp`, `opened`, `markdown`,
+  `todos`, `mcp`, `opened`, `cloudrequest`, `markdown`,
   `markdownwrap`, `markdowncode`, `titled`, `retitled`, `titledlook`,
   `titledfix`, `titledlong`, `slow`, `long`, `longheld`,
   `costwait`, `costwaitlate`),
@@ -346,6 +346,10 @@
   10 s, so a test can steer and stop the same running turn;
   `readsheld` says `Working`, reads each steered message visibly and otherwise
   stays silent until cancelled, bounded at 60 s on the monotonic clock;
+  `cloudrequest` sends Cursor's request-for-input line with its link,
+  then holds until cancelled. `--first-message <text>`
+  (`CHORD_FAKE_FIRST_MESSAGE`) sends an agent message with its own id
+  before each `session/new` answer, without starting a turn.
   `costwait` reports a cost, then works on until it is cancelled, and
   `costwaitlate` also says a cost of 0.02 just after its cancelled answer; `plan`
   moves its three steps along about 2 s apart, to see the list mid-turn;
@@ -452,8 +456,11 @@
   on `session/new`, `session/fork`, `session/load` and `session/resume`:
   `methods` refuses with `authRequired` (-32000), naming `fake login` or
   `FAKE_API_KEY` and offering two methods at `initialize`, one with a
-  description; `bare` refuses with `Authentication required` and no methods. `link` asks a
-  sign-in link first and fails with `authRequired` unless accepted;
+  description; `cloud` refuses with `Not signed in to Cursor.` and offers
+  Cursor login with `npx -y @chorded/cursor-cloud-acp@0.1.0 login` or
+  `CURSOR_API_KEY`; `bare` refuses with `Authentication required` and no
+  methods. `link` asks a sign-in link first and fails with `authRequired`
+  unless accepted;
   `linkother` asks the same link but fails with -32603 unless accepted, so
   it gets no sign-in guidance (CHD-435).
   `--start-fails <kind>` (`CHORD_FAKE_START_FAILS`) checks startup failures

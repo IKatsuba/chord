@@ -14,9 +14,14 @@
   and kept across runs. QA takes precedence. Both set only `XDG_STATE_HOME`,
   never writing records or riff's state into the person's own state; config,
   data and cache stay unchanged. Plain `bun dev chord` keeps the person's
-  XDG state.
+  XDG state. A bare `--fake --qa` opens the fake agent; plain `--qa` shows
+  the picker. The cursor-cloud fixture uses `--qa` with its explicit
+  `--agent-command`, never `--fake`, which supplies a command of its own.
 - `bun dev release <package> [--bump <version|major|minor|patch|fix>]` is
   the owner's (`docs/decisions.md`, "Releasing"); nobody else publishes.
+  chord's preflight checks every `src/chorded.ts` pin on npm; release the
+  agent package first. cursor-cloud-acp runs install, quality, build, pack
+  and publish, tags `cursor-cloud-acp-v<version>` and makes no GitHub release.
   A bare release releases nothing. Use `--bump` instead of editing the version
   by hand. `--channel <name>` makes `<base>-<channel>.<n>`; bumps count from
   npm's latest stable. If package.json holds that base on that channel, its
@@ -66,7 +71,8 @@
   libfx layout for each target it builds with `dev/libfx_assets.ts`; a mismatch
   names the package and version and stops the build. A plugin embeds only the
   target's `libfx.node`. The binary includes fff's Worker and exactly its
-  target's fff library (gnu on Linux); the build checks that selection.
+  target's fff library (gnu on Linux); the build checks that selection
+  and refuses any Cursor SDK or keyring file.
   Its `buildOptions` also builds the boundary test.
 - `bun dev selftest <binary>` checks the version, `-p`, ACP stdio, the window
   and clipboard with the fake agent. On native and WebAssembly, riff

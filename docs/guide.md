@@ -2021,17 +2021,18 @@ a kind it does not know.
 
 A problem's `file` is the settings file's path; `message` describes the
 problem. Offered entries come first in the start screen's order, then the
-rest in catalog order: built-in agents, registry agents, own-CLI agents absent
-from the registry, then settings-only names in settings order. The start
-command is omitted because it can contain environment values. stderr keeps
+rest in catalog order: built-in agents, registry and chord's own npx agents,
+own-CLI agents absent from the registry, then settings-only names in
+settings order. The start command is omitted because it can contain
+environment values. stderr keeps
 the table's problem lines. Making the list exits `0`, even with problems
 or unstartable entries. Without `--json`, the table is unchanged.
 
 If an agent does not start, chord says which request it refused or was
 answering when it exited or closed its connection, with its exit code or
-signal when known. A Registry agent's failure also names the `package@version`
-chord ran, including on a sign-in failure; an old Registry pin may be the
-cause. Below it, when available, are stderr's last six non-empty lines,
+signal when known. A pinned agent's failure also names the `package@version`
+chord ran, including on a sign-in failure, as "the version this chord pins".
+Below it, when available, are stderr's last six non-empty lines,
 with `… +N lines` for omitted lines and `…` on cut long lines. Plain stdout
 messages are not shown. `-p` reports the same details on stderr; a lead's
 failed-child note keeps the step, pin and stderr's last line.
@@ -2072,6 +2073,47 @@ user settings file. `2. Show it again next time` or Esc records nothing.
 the notice until answered. With `-p`, its two paragraphs go once to stderr
 and no dismissal is recorded.
 
+### cursor-cloud
+
+`chord cursor-cloud` starts Cursor Cloud Agents through
+`npx -y @chorded/cursor-cloud-acp@0.1.0`, on Node 22.13 or newer. The
+package's first release is not on npm yet; its owner must publish 0.1.0
+before this command can start it. `chord cursor` uses Cursor's local CLI.
+
+Sign in from a terminal with
+`npx -y @chorded/cursor-cloud-acp@0.1.0 login`; `status` checks the login
+and `logout` removes its key from the OS keychain. `CURSOR_API_KEY` takes
+precedence. Without a keychain (on Linux, a Secret Service), use that
+variable; the adapter stores no key in a file and does not use the SDK's
+own login file.
+
+Start in a git work tree on a pushed branch with a push remote. The check
+uses the local remote-tracking ref, without fetching; local changes are
+not uploaded. A refusal says what to fix. The first message names the
+repository, starting branch and link. Work runs in Cursor's cloud, pushes
+to a branch of its own and keeps running after chord closes; nothing is
+pulled to this machine. chord holds MCP servers back, including its team
+tools, with a notice above the first message.
+
+Creating a session is refused while the Cursor account's prepaid balance
+is empty: top up or enable auto top-up. `usage_limit_exceeded` appears as
+one plain line with Cursor's message.
+
+`shift+tab` switches Agent and Plan modes; `/model` offers one entry per
+model and `/config` its parameters. A chosen model starts on a variant
+outside max mode when it has one. Text, thinking, tool results and plans
+appear in the transcript. A Cursor request for input or approval appears
+as text; the adapter cannot answer it. Esc stops the run. If Cursor does
+not confirm the stop within 10 seconds, a line says it may still be going.
+A lost connection ends the turn with the link; reopen to see its state.
+
+`/resume` lists chord's records. `chord cursor-cloud --resume bc-…` also
+opens an agent started on cursor.com or another machine, replaying the
+history Cursor provides. A run still going is reported with its link;
+the adapter does not follow it live and refuses prompts until it ends.
+The adapter's ACP `session/list` lists the account's cloud agents for
+this repository; chord's picker keeps using its own records.
+
 ## Development
 
 ```sh
@@ -2097,6 +2139,7 @@ for the test agent, `--fake riff` for riff on its fake provider), `test`,
 recreates `/tmp/chord-qa.<name>` for captures and its sibling
 `/tmp/chord-qa.<name>.state` for chord's state. Without a name, these are
 `/tmp/chord-qa` and `/tmp/chord-qa.state`; an empty name disables QA.
+`--fake --qa` opens the scripted agent; a plain `--qa` start shows the picker.
 `--fake` without `--qa`, for chord or riff, uses `/tmp/chord-fake`, made if
 missing and kept across runs so fake sessions resume. `--qa` takes precedence.
 These runs set only `XDG_STATE_HOME`: records, riff's store, sidecars and
@@ -2106,6 +2149,21 @@ Both `--fake` and `--qa` run riff on its fake
 provider. A settings command ranks riff with other settings agents in
 `/new`. For riff captures, use `bun dev chord --fake --qa capture riff`:
 both flags must come before `riff`.
+
+For the cursor-cloud adapter's offline fixture, use `--qa` without
+`--fake`, which supplies its own `--agent-command`:
+
+```sh
+bun dev chord --qa capture cursor-cloud --agent-command "bun packages/cursor-cloud-acp/tests/fixtures/main.ts"
+```
+
+The fixture uses fake git, credentials and Cursor; it needs no repository,
+keychain or network. `CURSOR_CLOUD_QA` selects a refused start:
+`signed-out`, `key-refused`, `outside`, `detached`, `no-remote` or
+`not-pushed`. A prompt's first word selects `think`, `tool`, `plan`,
+`request`, `hang` (until Esc), `fail`, `busy` or `lost`; other prompts
+answer `ok`. Add `--resume bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10`
+to replay the fixture's earlier agent.
 
 With `--qa`, `CHORD_RIFF_QA_STATE` selects a credential fixture:
 `signed-in`, `signed-out`, `no-store`, `timeout`, `unsaved`, `saved`,
@@ -2160,8 +2218,12 @@ files: Bun uses it to balance shards and start each worker's slowest files
 first; an unlisted file takes the median. No refresh is required.
 On pull requests and pushes to `main` and `next`, CI runs `static`
 (`bun dev quality chord --static`), three `tests` shards
-(`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
-passes only when all of them succeed.
+(`--shard=1/3`, `2/3`, `3/3`), `compile` and `node`. The `node` job uses
+Node 22.13 and runs `bun dev quality cursor-cloud-acp`: its Node and
+tooling types, coverage, ESLint, format, tests, build and packed Node smoke.
+`--static` leaves out its tests, build and smoke. The smoke installs the
+package's dependencies, then checks ACP startup outside git without
+reaching Cursor or a keychain. The required `check` job needs every job to pass.
 
 The owner's `bun dev release <package>` releases the package's version;
 a bare `bun dev release` releases nothing. Use
@@ -2180,6 +2242,12 @@ needs an exact version, such as `--bump 1.0.0` over `1.0.0-next.5`.
 Without `--bump`, `--channel` requires package.json already on that channel.
 A fresh release refuses a different version while package.json's is not on npm.
 
+`bun dev release cursor-cloud-acp` runs `install`, `quality`, `build`,
+`pack` and `publish`; a new version needs `build`. It publishes only
+`@chorded/cursor-cloud-acp`, tags `cursor-cloud-acp-v<version>` and creates
+no GitHub release. Publish 0.1.0 before releasing chord: chord's preflight
+checks every pin in `src/chorded.ts` on npm and refuses a missing version.
+
 chord's release runs `install`, `quality` (`bun dev quality chord`),
 `natives`, `compile`, `sign`, `selftest`, `notarise`, `pack`, `publish` in
 order. `--skip` and `--only` take comma-separated stages; `--from` and
@@ -2195,8 +2263,9 @@ One release at a time holds a lock in git's common directory, shared by
 worktrees. It never goes stale: a lock left by SIGKILL, a crash or reboot
 is refused with its pid and path, to remove by hand. Preflight checks a
 clean tree and the version. Publishing needs the channel's branch, or
-`main` for a stable release, level with origin, no `v<version>` tag the
-release did not make, and signed-in `gh`, checked with `gh auth status`.
+`main` for a stable release, level with origin, and no package tag the
+release did not make. chord also needs signed-in `gh`, checked with
+`gh auth status`.
 After the guards, every named release requires successful `npm whoami`,
 including dry runs and runs without publish. Success needs no terminal.
 On failure, stdin and stdout must be terminals for one plain `npm login`
@@ -2206,7 +2275,7 @@ a browser and save credentials or registry settings, even in a dry run.
 Stage selection cannot skip authentication.
 
 A new version is written into package.json and committed alone as
-`chore: chord v<version>` before any stage. A publishing run pushes that
+`chore: <package> v<version>` before any stage. A publishing run pushes that
 branch first. A run that publishes, or one at package.json's version
 without `--dry-run`, records its progress in gitignored
 `.release/<package>/state.json`: stages and output sums, each npm package,

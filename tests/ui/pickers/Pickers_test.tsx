@@ -2104,3 +2104,47 @@ describe('/effort and /fast (CHD-626)', () => {
       { agentCommand: fakeAgentCommand(undefined, '--no-config') },
     ));
 });
+
+describe('CHD-626 tester: effort command picker acceptance', () => {
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`digits choose the offered effort and Esc preserves the current one at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await ready(window);
+          await send(window, '/effort');
+          await window.shows('2. Medium ✔');
+          await window.press(DOWN);
+          await window.shows('❯ 3. High');
+          await window.press(ESC);
+          await until(
+            'effort picker dismissed',
+            () => !window.frame().includes('Enter to set'),
+          );
+          expect(
+            window
+              .session()
+              ?.options()
+              .find((option) => option.id === 'effort')?.current,
+          ).toBe('medium');
+          await send(window, '/effort');
+          await window.shows('2. Medium ✔');
+          await window.press('5');
+          await window.shows('Effort set to Max');
+          expect(
+            window
+              .session()
+              ?.options()
+              .find((option) => option.id === 'effort')?.current,
+          ).toBe('max');
+        },
+        {
+          columns,
+          rows,
+          agentCommand: fakeAgentCommand(undefined, '--model-parameters'),
+        },
+      ));
+  }
+});

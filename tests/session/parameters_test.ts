@@ -454,3 +454,54 @@ describe("/fast's toggle and /effort's id (CHD-626)", () => {
     expect(effortById(CURSORS_DEFAULT, 'high')).toBeUndefined();
   });
 });
+
+describe('CHD-626 tester: effort ids and toggle labels', () => {
+  test('two values with the same label still toggle by id, without coercing string booleans', () => {
+    const option = {
+      id: 'speed',
+      name: 'Speed',
+      current: 'false',
+      values: [
+        { value: 'false', name: 'Same' },
+        { value: 'true', name: 'Same' },
+      ],
+    };
+
+    expect(fastToggled(option)).toEqual({ value: 'true', name: 'Same' });
+    expect(fastToggled({ ...option, current: 'true' })).toEqual({
+      value: 'false',
+      name: 'Same',
+    });
+    expect(fastToggled({ ...option, current: 'False' })).toBeUndefined();
+    expect(fastToggled({ ...option, values: [] })).toBeUndefined();
+  });
+
+  test('grouped duplicate effort names resolve only the exact id from the first effort option', () => {
+    const grouped: SessionConfigOption = {
+      id: 'thinking',
+      name: 'Thinking',
+      category: 'thought_level',
+      type: 'select',
+      currentValue: 'auto',
+      options: [
+        {
+          group: 'values',
+          name: 'Values',
+          options: [
+            { value: 'auto', name: 'High' },
+            { value: 'high', name: 'High' },
+          ],
+        },
+      ],
+    };
+
+    expect(effortById([grouped], 'auto')).toEqual({
+      option: 'thinking',
+      value: 'auto',
+      name: 'High',
+    });
+    expect(effortById([grouped], 'high')?.value).toBe('high');
+    expect(effortById([grouped], 'High')).toBeUndefined();
+    expect(effortById([grouped, ...CODEX], 'low')).toBeUndefined();
+  });
+});

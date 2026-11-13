@@ -461,3 +461,61 @@ describe('/fast and /effort <value> read the set when their turn comes (CHD-626)
     );
   });
 });
+
+describe('CHD-626 tester: command chain lifecycle', () => {
+  test('clear drops queued fast and effort commands from a hung old session and readies a fresh chain', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--hang', 'effort'],
+      async (conversation, events) => {
+        const hung = conversation.setEffortById('fake', 'high', 'effort high');
+        const oldFast = conversation.toggleFast('fake', undefined);
+        const oldEffort = conversation.setEffortById(
+          'fake',
+          'low',
+          'effort low',
+        );
+
+        void hung.catch(() => {});
+
+        await until(() => calls.includes('effort high'));
+        await conversation.clear();
+        await until(
+          () =>
+            events.filter((event) => event.type === 'connected').length === 2,
+        );
+        await conversation.toggleFast('fake', undefined);
+        await Promise.allSettled([hung, oldFast, oldEffort]);
+        expect(calls).toEqual(['effort high', 'fast on']);
+        expect(
+          notes(events).filter((text) => text.startsWith('Fast mode')),
+        ).toEqual(['Fast mode On for Fake Large with a 1M context window']);
+        expect(notes(events)).not.toContain('Setting Effort to Low…');
+      },
+      logged(calls),
+    );
+  });
+
+  test('a refused effort command releases the next fast command', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--refuse-config'],
+      async (conversation, events) => {
+        await Promise.all([
+          conversation.setEffortById('fake', 'high', 'effort high'),
+          conversation.toggleFast('fake', undefined),
+        ]);
+        expect(calls).toEqual(['effort high', 'fast on']);
+        expect(notes(events)).toContain(
+          'Could not set Effort to High: The fake agent holds its effort.',
+        );
+        expect(notes(events).at(-1)).toBe(
+          'Fast mode On for Fake Large with a 1M context window',
+        );
+      },
+      logged(calls),
+    );
+  });
+});

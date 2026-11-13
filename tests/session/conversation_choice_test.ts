@@ -4,7 +4,7 @@ import {
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
 import type { Session } from '../../src/session/session.ts';
-import { heldSession, onFake, until } from './conversation_fake.ts';
+import { heldSession, onFake, saidIn, until } from './conversation_fake.ts';
 
 /** The rows a choice wrote, by their order in `events`. */
 function notes(events: readonly ConversationEvent[]): string[] {
@@ -246,4 +246,147 @@ test('legacy session/set_model answers with no options: the effort step skips wi
     'Switched to Small; it offers no High effort.',
   );
   await conversation.close();
+});
+
+describe('CHD-626 tester: choice lifecycle boundaries', () => {
+  test('an effort refusal preserves the switched model and releases the chain for mode changes', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--refuse-config'],
+      async (conversation, events) => {
+        const made = conversation.makeChoice(
+          { model: SMALL, effort: effort('low', 'Low') },
+          'model',
+        );
+        const mode = conversation.setMode('plan');
+
+        await Promise.all([made, mode]);
+        expect(calls).toEqual(['model fake-small', 'effort low', 'mode plan']);
+        expect(notes(events)).toContain(
+          'Switched to Fake Small; could not set Effort to Low: The fake agent holds its effort.',
+        );
+        expect(
+          events
+            .flatMap((event) =>
+              event.type === 'model' ? [event.models?.current] : [],
+            )
+            .at(-1),
+        ).toBe('fake-small');
+        expect(
+          events.some(
+            (event) => event.type === 'noted' && event.failed === true,
+          ),
+        ).toBe(true);
+      },
+      logged(calls),
+    );
+  });
+
+  test('mode, model-plus-effort and a later option remain in one ordered chain', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--config-delay', '25'],
+      async (conversation) => {
+        const mode = conversation.setMode('plan');
+        const model = conversation.makeChoice(
+          { model: SMALL, effort: effort('low', 'Low') },
+          'model',
+        );
+        const option = conversation.setOption('effort', 'medium');
+
+        await Promise.all([mode, model, option]);
+        expect(calls).toEqual([
+          'mode plan',
+          'model fake-small',
+          'effort low',
+          'effort medium',
+        ]);
+      },
+      logged(calls),
+    );
+  });
+
+  test('cancelling an active turn does not cancel its session configuration choice', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--config-delay', '50'],
+      async (conversation, events) => {
+        expect(conversation.send('slow')).toBe(true);
+        await until(() => saidIn(events).startsWith('Working'));
+
+        const made = conversation.makeChoice(
+          { model: SMALL, effort: effort('low', 'Low') },
+          'model',
+        );
+
+        await until(() => calls.includes('model fake-small'));
+        conversation.interrupt();
+        await until(() => events.some((event) => event.type === 'result'));
+        await made;
+        expect(calls).toEqual(['model fake-small', 'effort low']);
+        expect(notes(events).at(-1)).toBe(
+          'Switched to Fake Small · Low effort',
+        );
+      },
+      logged(calls),
+    );
+  });
+
+  test('one hung session never holds another session configuration chain', async () => {
+    const hungCalls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--hang', 'effort'],
+      async (hung, hungEvents) => {
+        const waiting = hung.makeChoice(
+          { effort: effort('high', 'High') },
+          'effort',
+        );
+
+        void waiting.catch(() => {});
+
+        await until(() => hungCalls.includes('effort high'));
+        await onFake(['--model-parameters'], async (other, otherEvents) => {
+          await other.makeChoice(
+            { model: SMALL, effort: effort('low', 'Low') },
+            'model',
+          );
+          expect(notes(otherEvents).at(-1)).toBe(
+            'Switched to Fake Small · Low effort',
+          );
+          expect(notes(hungEvents)).toEqual(['Setting Effort to High…']);
+        });
+      },
+      logged(hungCalls),
+    );
+  });
+
+  test('an agent exiting during the model step never receives the following effort', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--config-delay', '500'],
+      async (conversation, events) => {
+        expect(conversation.send('crash')).toBe(true);
+
+        const made = conversation.makeChoice(
+          { model: SMALL, effort: effort('low', 'Low') },
+          'model',
+        );
+
+        await until(() =>
+          events.some((event) => event.type === 'disconnected'),
+        );
+        await made;
+        expect(calls).toEqual(['model fake-small']);
+        expect(
+          notes(events).some((text) => text.startsWith('Switched to')),
+        ).toBe(false);
+      },
+      logged(calls),
+    );
+  });
 });

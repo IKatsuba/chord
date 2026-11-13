@@ -41,9 +41,7 @@ owner's consent.
 ```sh
 bun install                    # the dependencies, as bun.lock pins them
 bun dev chord [agent]           # run from source
-bun dev chord riff              # sign in to a ChatGPT or Grok plan
 bun dev chord --fake            # run against the scripted test agent
-bun dev chord --fake riff       # riff on its fake provider
 bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
 bun dev quality chord          # types, lint, format and all tests
 bun dev quality chord --static # types, coverage, lint, format and lint/ tests
@@ -68,14 +66,10 @@ first; an unlisted file takes the median. No refresh is required.
 CI runs `static` (`bun dev quality chord --static`), three `tests` shards
 (`--shard=1/3`, `2/3`, `3/3`), `compile` and `node` (Node 22.13,
 `bun dev quality cursor-cloud-acp`). The required `check` job needs all to pass.
-The libfx layout check covers the host's installed package and every target's
-metadata locally; CI's static job installs all platforms and sets
-`CHORD_LIBFX_ALL_TARGETS=1` to check all four packages.
 
 The binary is built by Bun's compile API, Bun 1.4.4 or newer. Compilation
-installs all target packages, then checks the pinned libfx layout for each
-target it builds; a mismatch names the package and version and stops the build.
-Build, release and maintenance commands share `bun dev <command>` (Cliffy):
+installs all target packages. Build, release and maintenance commands share
+`bun dev <command>` (Cliffy):
 
 ```sh
 bun dev compile           # this machine's binary into dist/<target>/chord
@@ -83,7 +77,7 @@ bun dev compile --all     # every release target
 bun dev compile --install # this machine's binary into ~/.local/bin/chord
 bun dev npm               # lay out npm/ from dist/
 bun dev release chord [--bump <version|major|minor|patch|fix>] # owner's release
-bun dev selftest <binary> # fake-agent CLI/window, riff on native and Wasm
+bun dev selftest <binary> # fake-agent CLI/window
 bun dev registry          # refetch the ACP Registry into src/registry.ts
 bun dev mark              # rasterise scripts/mark.svg into the header mark
 bun dev screenshots       # retake docs/images/, including title pages and logos
@@ -151,8 +145,7 @@ to remove by hand. See `docs/guide.md` for continuation guards and cleanup.
   `lint/` tests and `bun dev test`. Tests use `test`, `describe`, `expect`
   and the fake timers of `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
   folder holds Bun's runtime calls. The binary embeds OpenTUI's native
-  library, libfx's target addon and WebAssembly core, and fff's target library
-  with its Worker. Linux builds use glibc. Dependencies go in `package.json`;
+  library. Linux builds use glibc. Dependencies go in `package.json`;
   jsr packages come from `npm.jsr.io` under their own names
   (`bunfig.toml`, `.npmrc`). No `node_modules` checked in.
 - **Versions are pinned for things that move.** A pre-1.0 package is
@@ -222,14 +215,9 @@ its sibling `/tmp/chord-qa.<name>.state` for chord's state, never a directory
 from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa` and `/tmp/chord-qa.state`;
 an empty name is treated as no `--qa`. Without `--qa`, `--fake` uses
 `/tmp/chord-fake`, made if missing and kept across runs so sessions resume.
-`--qa` takes precedence. These runs set only `XDG_STATE_HOME`: records,
-riff's store, sidecars and provider record stay out of the person's state;
-config, data and cache are unchanged. Plain `bun dev chord` keeps the
-person's XDG state. For riff on its fake provider, use
-`bun dev chord --fake --qa <name> riff`. Both flags select riff's fake
-provider and come before `riff`. `CHORD_RIFF_QA_SIGN_IN` selects offline
-sign-in outcomes documented in the guide; never use a live sign-in for QA.
-Fake/QA riff reads no user `AGENTS.md` or home skills.
+`--qa` takes precedence. These runs set only `XDG_STATE_HOME`: records
+stay out of the person's state; config, data and cache are unchanged.
+Plain `bun dev chord` keeps the person's XDG state.
 A bare `--fake --qa` opens the fake agent; plain `--qa` shows the picker.
 For cursor-cloud's offline fixture, use `--qa` without `--fake`, which
 supplies its own agent command:

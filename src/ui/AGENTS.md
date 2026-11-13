@@ -15,10 +15,6 @@
   single log of the caught error and passes every other console error on.
 - A string an agent sent goes through `theme/Ansi.tsx` unless something cleaned it: OpenTUI's text draws escape bytes as text.
 - Choose colours by role from `theme/theme.ts`.
-- riff's sign-in box belongs to its conversation and attempt. Ignore late
-  callbacks and cancel effects when that conversation ends. Keep the transcript
-  through sign-in; clear stale model/config when signed out. Keep recovery
-  choices and their printed keys reachable at 80x24.
 - Permission review reasons, transcript outcomes and deadline countdowns
   come from generic `chord/permission` metadata, never an agent-name check.
   Keep the reason, choices and timeout hint visible at 80x24; scroll the

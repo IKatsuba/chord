@@ -51,7 +51,6 @@ bun dev compile --install   # compiles into ~/.local/bin/chord
 
 ```sh
 chord                 # choose an agent here
-chord riff            # chord's own agent, on a ChatGPT or Grok plan
 chord codex           # any agent `chord agents` lists
 chord gemini -C ~/src/app
 chord --continue      # the default agent's latest session here, again
@@ -82,9 +81,7 @@ as the art gives way; resizing keeps the highlight. With full art, at most
 14 list rows show; `… +N more` counts hidden rows above and below.
 
 By default, agents whose own CLI is not on PATH are hidden; npx/uvx entries
-and settings-defined names stay. riff is first, labelled
-`riff · chord's own agent · on a ChatGPT or Grok plan`; Claude Code stays
-the default selection. Set `offeredAgents` in your user settings,
+and settings-defined names stay. Set `offeredAgents` in your user settings,
 for example `["claude", "codex", "my-agent"]`, to choose what `Select agent`
 and `/new` completion offer, in that order. Repeats keep their first place.
 A listed CLI missing from PATH stays as `not on PATH`; choosing it refuses
@@ -581,231 +578,6 @@ Forks close on quit and are not reopened automatically. `/resume` or
 at the divider: the copied source transcript is only in the original view,
 while the agent retains the fork's conversation context.
 
-## riff
-
-`chord riff` runs chord's own coding agent on a ChatGPT or Grok plan,
-with no separate agent CLI to install. It is the startup picker's first
-row, labelled `riff · chord's own agent · on a ChatGPT or Grok plan`.
-Claude Code remains the default. `/new riff` opens it beside the current
-agent; `agents.riff` in settings sets its starting model, effort and mode.
-
-### Sign in and out
-
-When riff needs sign-in, chord opens a box: choose the provider, then
-browser or device code. ↑/↓ or j/k and Enter choose; 1–9 picks a numbered
-choice. Esc follows the step's printed action. The box offers opening and copying the address,
-and copying a device code; the code has an expiry countdown. Failures,
-expiry and cancellation each show their own recovery choices.
-
-<img src="images/riff-sign-in.png" alt="riff's ChatGPT device-code sign-in box with the address, code, expiry and open and copy choices" width="900">
-
-Browser sign-in listens only while waiting, for at most 10 minutes:
-ChatGPT uses `localhost:1455`, Grok a free port on `127.0.0.1`. If 1455 is
-taken, chord says so and offers device code. Credentials stay only in
-macOS Keychain, Secret Service on Linux or Windows Credential Manager.
-Without the system store, riff cannot start; the box names the store and
-offers `Try the store again`. Store calls time out after 20 seconds.
-
-`/login` is listed for every agent. On riff it opens the box in place,
-marking the current provider with ✔. Successful sign-in starts a new
-session in place and keeps the transcript above. Cancelling keeps the
-existing session. On another agent, `/login` opens riff as `/new riff`
-does. `?` lists `/login /logout` with the sign-in keys.
-
-`/logout` is chord's command only on riff. After confirmation it deletes
-that provider's local sign-in, cancels this window's riff turns and its
-children's turns, and ends the session signed out. ChatGPT tokens are not
-revoked; the confirmation says so. Grok's refresh token is then revoked
-at xAI; a failure is reported after the local sign-out. Use `/login` to
-sign in again or `/new` for another agent. Other windows discover a
-removed sign-in or changed account at their next prompt and open the
-sign-in box. The failed
-prompt and transcript stay; the prompt is not resent after sign-in.
-
-A new riff session uses the last provider signed in to if still stored,
-otherwise the available plan, preferring ChatGPT when both are stored.
-Resume uses its recorded provider and account. A failed refresh keeps the
-stored entry. The status line reports unsaved refreshes, successful saves,
-removal and account changes for the current session. `-p` and `chord acp`
-open no sign-in box: a missing sign-in reports the failure with
-`run chord riff to sign in`.
-
-### The session
-
-riff keeps its conversation under chord's state directory. `--continue`,
-`--resume` and `/resume` bring it back with its provider, account, model,
-effort and mode; chord's record supplies the transcript you see. Session
-permission grants last only while that agent session is open. riff has no
-conversation fork. Messages sent while it works queue for a later turn;
-it does not take steering into a running turn.
-
-Esc interrupts the turn and its tools, including a running shell's process
-groups and an MCP form waiting for input. On resume, a journaled turn left
-open by a crash is cancelled, with `The interrupted turn was cancelled.`;
-its model requests and tools are not rerun. A prompt accepted just before
-its turn was journaled can run once on resume, with read-only calls;
-edits, writes, shell and non-idempotent MCP calls cannot rerun this way.
-
-Replies, thoughts, tool calls and diffs use chord's usual transcript.
-The context gauge uses the last model request's tokens and the listed
-model's window. `/cost` uses chord's API-price estimate from tokens when
-that model has a price; it is not a statement of plan charges.
-
-### Tools
-
-riff has `read`, `list`, `search`, `edit`, `write`, `shell` and `skill` tools,
-plus the session's MCP tools.
-`edit` replaces one unique exact string; `write` replaces a whole file or
-creates one under an existing directory. Both propose a diff and refuse
-without writing if the file or its destination changed while approval waited.
-Paths are checked at their real destination; a link outside the session
-directory counts as outside. `shell` runs in the session directory, streams
-output into the transcript, and Esc stops its process groups.
-
-<img src="images/riff-session.png" alt="riff in auto mode editing greet.ts as a diff, running bun test and reporting the passing test" width="900">
-
-`read` reads text with line ranges; it refuses binary files. `list` and
-`search` reach only the session directory, through fff. `list` matches
-files by glob (`*` crosses `/`), or directories by fuzzy query; `search`
-finds text or regular expressions, with pages for more results. Results
-keep fff's order and ignore behavior: tracked files matching ignore rules
-and symlinks are left out, `.git/info/exclude` is not read, and outside git
-dotfiles and `node_modules` are left out. Read an outside file with `read`
-and permission instead.
-
-### Ask and auto
-
-riff defaults to auto; shift+tab toggles ask and auto, kept per session.
-Ask mode asks for every call without a session grant except `skill`, which
-never asks. Ask-mode prompts have no timeout. Auto admits reads, lists
-and searches inside the session directory, edits and writes on non-sensitive paths inside it, calls
-covered by a grant, and the shell commands below.
-Other calls go to a safety review: outside reads, outside or sensitive edits
-and writes, every MCP call, and other shell commands. Sensitive paths
-include `.git/`, `.ssh/`, `.env*`, key files (`*.pem`, `*.key`, `*.p12`,
-`*.pfx`, `id_rsa`, `id_dsa`, `id_ecdsa`, `id_ed25519`), shell startup files
-and `Library/LaunchAgents/`.
-`Allow edits to <path> for this session` covers edit and write at that real
-path; `Allow this exact command for this session` covers only that command
-string, never a prefix. `Allow <server> - <tool> for this session` covers
-that MCP tool with any arguments. Grants hold in both modes for that session.
-
-<img src="images/riff-ask.png" alt="riff's shell permission box showing bun test, its directory and Allow, session grant and Deny choices" width="900">
-
-Auto admits two command sets adapted from fx v0.0.16, with restricted
-arguments and syntax:
-
-- Read-only commands run without a shell: `printf`, `pwd`, `ls`, supported
-  forms of `git status`, `git diff` and `git log`, and `wc`, `cat`, `head`,
-  `tail` and `grep` as pipe filters, up to 8 stages. They use fixed programs
-  in `/bin` and `/usr/bin`, `PATH=/usr/bin:/bin` and the C locale, with
-  output capped at 64 KiB. Git ignores repository-configured fsmonitor,
-  hooks, filters, pager and textconv. If chord cannot prepare git safely,
-  it refuses the command and tells the model.
-- Reversible commands run through `$SHELL -c`: supported forms of `node -v`,
-  `which`, `git status`, `git remote -v`, `git worktree list`, `git fetch`,
-  package-manager version checks, `npm ci`, `npm`/`bun`/`pnpm`/`yarn`
-  installs, tests and `run <script>`, and `zig build`. These can reach the
-  network, change files and run project scripts. Before each command,
-  chord captures alias and function names from the same non-interactive
-  shell. A matching word or an uncertain capture sends it to review;
-  capture supports bash and zsh, with other shells going to review.
-
-Commands outside these rules, including global installs and anything that
-does not parse, go to review. Session grants take precedence; ask mode
-still asks for every ungranted call except `skill`.
-
-The reviewer is `gpt-6-luna` on ChatGPT or `grok-4.5` on Grok, using your
-plan. Each attempt has 30 seconds; transport failures/timeouts and malformed
-decisions each get one retry. A caution is final. Reviews use plan requests.
-The review sees the pending action, relevant request text, prior tool results
-marked untrusted and the branch when available. Its policy, adapted from fx,
-checks for prompt injection, malicious activity and destructive or
-irreversible actions. A clear review runs the call
-without a prompt. A caution, input beyond the review's caps, a failed review
-or the limit of 64 reviews per turn asks you instead. A failed review leaves
-the mode on auto.
-
-The box shows `The safety review held this:` and the reason, or why the
-review could not run, with only `Allow once` and `Deny`. These choices grant
-nothing for later calls. The working line counts down to denial after
-5 minutes; a timeout tells the model the call was denied. The transcript
-keeps `Reviewed: caution`, `Reviewed: incomplete` or `Reviewed: failed` on
-the call. In `-p`, reviewed asks are denied even with
-`--dangerously-skip-permissions`. `chord acp` forwards them to its client,
-with the same 5-minute deadline.
-
-<img src="images/riff-review.png" alt="riff's auto review holding a shell command with a caution, its reason, Allow once and Deny choices and the denial countdown" width="900">
-
-### MCP and teams
-
-riff takes stdio and streamable HTTP servers. SSE servers are held back
-with the usual notice because the MCP SDK cannot bound their connection
-time. A failed start shows `MCP server <name> was not started: <reason>`,
-with the stderr tail when available. Calls use the original server and
-tool names, titled `mcp__<server>__<tool>`. MCP elicitations open chord's
-form or link prompt. Interrupted non-idempotent MCP calls are not rerun
-on resume.
-
-riff receives the [configured MCP servers](#settings), including chord's
-own server when enabled. It can spawn tasks, open agents, exchange messages,
-run monitors and work as a child, team member or lead. A riff lead in ask
-mode asks before each ungranted chord tool call, including `open_agent`
-and `send_message`; auto reviews them as it does every MCP call.
-`list_agents`, `get_budgets` and `list_monitors` are marked read-only for
-crash recovery; that does not exempt them from permission checks.
-
-### Instructions and skills
-
-At session start, riff reads chord's base instructions, then `AGENTS.md`
-files from the git repository root down to the session directory, then
-the user config file (`~/.config/chord/AGENTS.md` by default). Outside a
-repository, only the session directory's project file is read. Instructions
-are capped at 32 KiB with a truncation note. An unreadable file stops the session with its path and
-reason. riff reads no `CLAUDE.md`; it is instructed to read deeper
-`AGENTS.md` files when working in those folders.
-
-Skills are `SKILL.md` files in `<session directory>/.agents/skills/*/` and
-`~/.agents/skills/*/`; a project skill wins on a name clash. Their names
-and descriptions enter the instructions. The `skill` tool loads one by
-name, then its resources, with `offset` paging; it never asks permission.
-Resources must stay inside the skill's folder. Invalid metadata or a link
-outside the session directory (project skills) or home (home skills) skips
-the skill with `Skill <name> was not loaded: <reason>` in the transcript.
-`--fake` and `--qa` read no home skills or user `AGENTS.md`.
-
-<img src="images/riff-skill.png" alt="riff loading the release-notes skill and saving the release notes through an MCP tool" width="900">
-
-### Model and effort
-
-`/model` chooses from the current plan's list; `/config` offers `default`
-(the model's own effort) plus the current model's levels: `low`, `medium`,
-`high`, `xhigh`, `max` or `ultra`, where supported. Changes apply to the next
-turn and keep the conversation. Switching or resuming with an effort the
-model lacks resets it to `default`. A model that rejects an effort ends
-that turn with `LIBFX_MODEL_UNSUPPORTED_EFFORT`; riff resets effort to
-`default`. Mode changes take effect during the session.
-
-The model list, context windows and effort levels were checked against the
-live ChatGPT and Grok plans on 2026-11-12. The list ships with chord rather
-than being fetched; a plan's later change may refuse a model or effort.
-
-<img src="images/riff-model.png" alt="riff's model picker showing the checked ChatGPT model list" width="900">
-
-### Failures
-
-If a refresh fails during a turn, its prompt fails and sign-in opens;
-the stored entry stays. The failed prompt is not resent. A removed or
-changed credential is detected before the next prompt. If a credential
-rotation cannot be saved, the status line reports it; sign in again if
-saving remains unavailable.
-
-riff runs in a separate process. If that process crashes, chord reports
-the agent gone with its stderr tail. If the native engine cannot load,
-riff uses WebAssembly; if neither backend loads, startup fails with the
-reasons. libfx may retry provider failures; Esc cancels a turn that is
-still running. If the turn ends with an error, chord reports it.
-
 ## `chord acp`
 
 `chord acp [agent]` serves ACP v1 on stdin and stdout, without a window.
@@ -875,7 +647,7 @@ chord sends `session/update`, calls `session/request_permission` for
 permissions and plan approvals, and relays `elicitation/create` and
 `elicitation/complete`. chord's own asks carry a title and content
 describing the choice. Errors and unknown choices refuse them. Ordinary
-permissions have no timeout; riff's review asks are denied after 5 minutes.
+permissions have no timeout.
 `--permission-mode` is a starting value; there is no
 `--dangerously-skip-permissions` here. A plan answer cannot carry the
 window's note on "keep planning"; send that as the next prompt.
@@ -1134,13 +906,8 @@ unsupported prompt blocks are -32602. An agent without `embeddedContext`
 refuses the whole prompt with -32602 and
 `<agent> does not take embedded resources`; nothing is sent. This applies
 to `session/prompt`, `_chord/session/steer` and `_chord/agents/send`.
-riff takes text resources but refuses blobs with
-`riff takes no binary resources`. Through `chord acp riff`, that is
--32603: chord reports every agent's failed turn as -32603 with its words.
-A text resource without a text block is refused by riff with -32603 and
-`prompt is empty`. Unknown or closed main sessions are -32002. Requests
-while chord is shutting down are -32603. Unknown extension methods are
--32601.
+Unknown or closed main sessions are -32002. Requests while chord is shutting
+down are -32603. Unknown extension methods are -32601.
 
 `session/load` and `session/resume` may return `_meta["chord/left_open"]`,
 an array of children left open in the record, each with `name`, `runtime`
@@ -1966,9 +1733,7 @@ children start on their own agent's settings or the values their caller gives.
 starts, including `open_agent` children and team members with the same
 agent name. Other agents keep their MCP settings from the files.
 
-`chord agents` lists riff first, as `built in`, without checking sign-in.
-Its `--json` entry has `via: "builtin"`; the format stays at version 1.
-chord also knows the agents the [ACP Registry](https://agentclientprotocol.com/registry)
+`chord agents` lists the agents the [ACP Registry](https://agentclientprotocol.com/registry)
 offers through npx or uvx, with all pins refreshed together: `claude` and
 `codex` for Claude's and Codex's adapters, every other one by its registry
 id, including `bob` and `github-copilot-cli` (Copilot). It starts one as
@@ -2043,13 +1808,13 @@ serve ACP sessions: it is not an ACP agent, or not at this version. If
 zeroclaw needs an agent alias, set `[acp] default_agent = "<alias>"` in
 ZeroClaw's config, or start it with `zeroclaw acp --agent <alias>`.
 
-For agents other than riff, chord leaves sign-in to their own CLI. If a
-new or resumed session needs a login, its `did not start` row keeps the
-agent's words and lists any sign-in methods it offers, each as
-`name · description`. Sign in with the agent's own CLI in a terminal, or set its API key where it offers one, then start chord again.
+chord leaves sign-in to each agent's own CLI. If a new or resumed session
+needs a login, its `did not start` row keeps the agent's words and lists
+any sign-in methods it offers, each as `name · description`. Sign in with
+the agent's CLI in a terminal, or set its API key where it offers one,
+then start chord again.
 The same guidance goes to `-p`'s stderr and to a lead whose child failed to
 start. Sign-in guidance appears only for ACP's `authRequired` error.
-For sigit, sign in from its own CLI; `/login` in chord opens riff.
 
 `dimcode` may start up to 18 other CLIs it finds on PATH through its own
 `agent` tool, with their approvals bypassed and on your accounts. Their
@@ -2131,8 +1896,7 @@ bun dev registry           # refetch the ACP Registry's agents into src/registry
 needs. `docs/decisions.md` records why the stack is what it is.
 
 `bun dev --help` lists runtime, test and build commands: `chord` (`--fake`
-for the test agent, `--fake riff` for riff on its fake provider), `test`,
-`compile` (`--all` or `--install`), `npm`,
+for the test agent), `test`, `compile` (`--all` or `--install`), `npm`,
 `registry`, `mark`, `screenshots` (optionally shot names or `logo`), `memory`,
 `selftest <binary>`, `quality <package>`, `lint <package> [args…]` and
 `release <package> [--bump <version>]`. `bun dev chord --qa [name]`
@@ -2140,15 +1904,10 @@ recreates `/tmp/chord-qa.<name>` for captures and its sibling
 `/tmp/chord-qa.<name>.state` for chord's state. Without a name, these are
 `/tmp/chord-qa` and `/tmp/chord-qa.state`; an empty name disables QA.
 `--fake --qa` opens the scripted agent; a plain `--qa` start shows the picker.
-`--fake` without `--qa`, for chord or riff, uses `/tmp/chord-fake`, made if
-missing and kept across runs so fake sessions resume. `--qa` takes precedence.
-These runs set only `XDG_STATE_HOME`: records, riff's store, sidecars and
-provider record stay out of your own state; config, data and cache are
-unchanged. Plain `bun dev chord` keeps your XDG state.
-Both `--fake` and `--qa` run riff on its fake
-provider. A settings command ranks riff with other settings agents in
-`/new`. For riff captures, use `bun dev chord --fake --qa capture riff`:
-both flags must come before `riff`.
+`--fake` without `--qa` uses `/tmp/chord-fake`, made if missing and kept
+across runs so fake sessions resume. `--qa` takes precedence.
+These runs set only `XDG_STATE_HOME`: records stay out of your own state;
+config, data and cache are unchanged. Plain `bun dev chord` keeps your XDG state.
 
 For the cursor-cloud adapter's offline fixture, use `--qa` without
 `--fake`, which supplies its own `--agent-command`:
@@ -2165,37 +1924,12 @@ keychain or network. `CURSOR_CLOUD_QA` selects a refused start:
 answer `ok`. Add `--resume bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10`
 to replay the fixture's earlier agent.
 
-With `--qa`, `CHORD_RIFF_QA_STATE` selects a credential fixture:
-`signed-in`, `signed-out`, `no-store`, `timeout`, `unsaved`, `saved`,
-`removed` or `account-changed`. `CHORD_RIFF_QA_PROVIDER` selects `codex`
-(ChatGPT, the default) or `grok`; `CHORD_RIFF_QA_STORE` selects the store's
-platform name with `darwin`, `linux` or `win32`. For example,
-`CHORD_RIFF_QA_STATE=unsaved bun dev chord --fake --qa credentials riff`
-shows a failed save after refresh. `removed` and `account-changed` let the
-first prompt succeed and refuse the next. `timeout` waits the real 20 s
-bound. Fake and QA launches use an in-memory credential store and fake
-providers; they never reach the system store or a live provider.
-
-`CHORD_RIFF_QA_SIGN_IN` selects the offline sign-in outcome for `--fake`
-or `--qa`: `waiting` (default), `success`, `failure`, `denied`, `expired`
-or `port-taken` (ChatGPT browser only). For example,
-`CHORD_RIFF_QA_STATE=signed-out CHORD_RIFF_QA_SIGN_IN=success bun dev chord --fake --qa sign-in riff`
-starts signed out and completes the chosen sign-in with fixture credentials.
-The fixture uses an example address and code; it contacts no sign-in endpoint.
-
-`bun dev compile` installs all target packages and checks the pinned libfx
-layout for each target it builds; a mismatch names the package and version
-and stops the build. Each binary embeds libfx's WebAssembly core and only
-its target's native addon, plus fff's Worker and target library (gnu on
-Linux). The build checks that exactly that fff library is embedded. `--all`
-builds every release target; `--install` puts this machine's binary in
-`~/.local/bin/chord`.
+`bun dev compile` installs all target packages and embeds OpenTUI's native
+library. `--all` builds every release target; `--install` puts this machine's
+binary in `~/.local/bin/chord`.
 
 `bun dev selftest <binary>` needs tmux and checks the version, `-p`, ACP
-stdio, the window and clipboard with the fake agent. It also runs a
-riff turn through ACP on native and WebAssembly: search with fff, read
-`needle.txt`, then answer `done`, with three requests per backend to a local
-fake provider.
+stdio, the window and clipboard with the fake agent.
 
 `bun dev quality <package>` runs that package's checks in its root
 `steps.ts`, which also defines its lint arguments and release stages,
@@ -2204,10 +1938,6 @@ by its npm name without the scope; chord's `steps.ts` is at the repository
 root. Its checks run types, tracked-file coverage, ESLint, format, `lint/`
 tests and the suite, in order; `--static` leaves out the suite. They leave
 `packages/` out; format uses `bun fmt --check --ignore-pattern=packages/ .`.
-A plain `bun install` suffices locally: the libfx layout check covers the
-host's installed package and every target's metadata, while CI's static job
-installs all platforms and sets `CHORD_LIBFX_ALL_TARGETS=1` to check all four
-packages.
 `bun dev lint chord` runs ESLint. Arguments after `bun dev chord`, `bun dev test`
 and `bun dev lint chord` pass on as written; empty arguments need `--`
 (`bun dev test -- -t ''`), as does the tool's help (`bun dev lint chord -- --help`

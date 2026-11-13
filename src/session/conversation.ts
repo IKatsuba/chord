@@ -6,7 +6,7 @@ import { CYCLE_WORK, cycleMark } from './cycles.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ResourceLink } from '../files.ts';
 import { type AgentOption, sameOptions, valueName } from './config.ts';
-import { type AgentModels, sameModels } from './models.ts';
+import { type AgentModels, modelName, sameModels } from './models.ts';
 import type { ElicitationReply, PendingElicitation } from './elicitations.ts';
 import type { PendingPlan } from './plan_asks.ts';
 import { type AgentModes, sameModes } from './modes.ts';
@@ -30,10 +30,18 @@ import {
 } from './monitors.ts';
 import { type PendingPermission, waitFor } from './permissions.ts';
 import {
+  agentMessageOf,
   askStarting,
   type StartingAsk,
   type StartingValue,
 } from './starting.ts';
+import {
+  type ChoiceResult,
+  choiceNote,
+  effortStep,
+  type ModelChoice,
+  pendingText,
+} from './choice.ts';
 import type {
   Attachment,
   EmbeddedResource,
@@ -608,12 +616,12 @@ export class Conversation {
   #modes: AgentModes | undefined;
   #commands: readonly AvailableCommand[] = [];
   #options: readonly AgentOption[] = [];
-  /** Mode changes asked for, one after another, so they land in order. */
-  #modeChanges: Promise<void> = Promise.resolve();
-  /** Model changes, for the same reason. */
-  #modelChanges: Promise<void> = Promise.resolve();
-  /** Config option changes, for the same reason. */
-  #optionChanges: Promise<void> = Promise.resolve();
+  /**
+   * The session's mode, model and option changes, one after another, so they
+   * land in order: an effort asked after a model must not overtake it. A
+   * session `clear` replaces starts a new one.
+   */
+  #changes: Promise<void> = Promise.resolve();
   #failures = 0;
   /** Lines to go ahead of the person's next prompt, as held output does. */
   #ahead: string[] = [];
@@ -918,6 +926,9 @@ export class Conversation {
 
     this.#opening = undefined;
     this.#session = undefined;
+    // A change the old session's agent never answers must not hold the new
+    // session's.
+    this.#changes = Promise.resolve();
     this.#firstPrompt = undefined;
     this.#title = undefined;
     // The next session's first prompt is not in any record yet.
@@ -2731,9 +2742,13 @@ export class Conversation {
 
     this.#emit({ type: 'mode_asked', id });
 
-    const asked = this.#modeChanges.then(async () => {
+    const asked = this.#changes.then(async () => {
       let answered = true;
       let refusal: unknown;
+
+      if (!this.#current(session)) {
+        return;
+      }
 
       try {
         await session.setMode(id);
@@ -2763,7 +2778,7 @@ export class Conversation {
       }
     });
 
-    this.#modeChanges = asked.catch(() => {});
+    this.#changes = asked.catch(() => {});
 
     return asked;
   }
@@ -2780,9 +2795,13 @@ export class Conversation {
       return notUp();
     }
 
-    const asked = this.#modelChanges.then(async () => {
+    const asked = this.#changes.then(async () => {
       let refused = false;
       let refusal: unknown;
+
+      if (!this.#current(session)) {
+        return;
+      }
 
       try {
         await session.setModel(id);
@@ -2806,7 +2825,7 @@ export class Conversation {
       }
     });
 
-    this.#modelChanges = asked.catch(() => {});
+    this.#changes = asked.catch(() => {});
 
     return asked;
   }
@@ -2824,8 +2843,12 @@ export class Conversation {
       return notUp();
     }
 
-    const change = this.#optionChanges.then(async () => {
+    const change = this.#changes.then(async () => {
       const asked = this.#options.find((option) => option.id === id);
+
+      if (!this.#current(session)) {
+        return;
+      }
 
       try {
         await session.setOption(id, value);
@@ -2860,9 +2883,99 @@ export class Conversation {
       }
     });
 
-    this.#optionChanges = change.catch(() => {});
+    this.#changes = change.catch(() => {});
 
     return change;
+  }
+
+  /**
+   * Makes a choice of `/model` or `/effort` (CHD-626): the model, if it
+   * changed, then the moved effort, read against the set the model's answer
+   * left. Its row under `command` shows the pending step until the outcome
+   * replaces it. No timeout: a hung agent holds the chain, as any change.
+   */
+  makeChoice(choice: ModelChoice, command: string): Promise<void> {
+    const session = this.#session;
+
+    if (!session || this.#closing) {
+      return notUp();
+    }
+
+    const turnId = `choice-${crypto.randomUUID()}`;
+    const inUse = modelName(session.models()) ?? '';
+    const note = (text: string, failed: boolean) => {
+      if (this.#current(session)) {
+        this.#emit({ type: 'noted', turnId, command, text, failed });
+      }
+    };
+
+    note(pendingText(choice, session.configOptions()), false);
+
+    const made = this.#changes.then(async () => {
+      if (!this.#current(session)) {
+        return;
+      }
+
+      const result = await this.#chosen(session, choice);
+
+      if (result !== undefined) {
+        const said = choiceNote(choice, result, session.configOptions(), inUse);
+
+        note(said.text, said.failed);
+      }
+    });
+
+    this.#changes = made.catch(() => {});
+
+    return made;
+  }
+
+  /** The steps of `choice`; undefined once `session` is no longer current. */
+  async #chosen(
+    session: Session,
+    choice: ModelChoice,
+  ): Promise<ChoiceResult | undefined> {
+    const switched =
+      choice.model === undefined ? {} : { model: 'switched' as const };
+
+    if (choice.model !== undefined) {
+      try {
+        await session.setModel(choice.model.id);
+      } catch (error) {
+        return { model: 'refused', reason: agentMessageOf(error) };
+      } finally {
+        this.#report(session);
+      }
+
+      if (!this.#current(session)) {
+        return undefined;
+      }
+    }
+
+    if (choice.effort === undefined) {
+      return { ...switched, effort: 'unmoved' };
+    }
+
+    const step = effortStep(choice, session.configOptions());
+
+    if (step === undefined) {
+      return { ...switched, effort: 'not_offered' };
+    }
+
+    try {
+      await session.setOption(step.option, step.value);
+    } catch (error) {
+      return {
+        ...switched,
+        effort: 'refused',
+        option: step.name,
+        reason: agentMessageOf(error),
+      };
+    } finally {
+      this.#report(session);
+    }
+
+    return { ...switched, effort: 'set' };
   }
 
   /**

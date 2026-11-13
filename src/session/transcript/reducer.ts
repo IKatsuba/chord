@@ -223,17 +223,27 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
           rows: action.rows,
         }),
       };
-    case 'noted':
+    case 'noted': {
+      const note = {
+        kind: 'note',
+        turnId: action.turnId,
+        command: action.command,
+        text: action.text,
+        failed: action.failed,
+      } as const;
+      // A note under the same id is a pending one's outcome, in its place.
+      const at = state.entries.findIndex(
+        (entry) => entry.kind === 'note' && entry.turnId === action.turnId,
+      );
+
       return {
         ...state,
-        entries: appended(state.entries, {
-          kind: 'note',
-          turnId: action.turnId,
-          command: action.command,
-          text: action.text,
-          failed: action.failed,
-        }),
+        entries:
+          at < 0
+            ? appended(state.entries, note)
+            : replacedAt(state.entries, at, note),
       };
+    }
     case 'team_shown':
       return {
         ...state,

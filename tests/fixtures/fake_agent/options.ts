@@ -97,6 +97,17 @@ export const MCP_TRANSPORTS: McpCapabilities = (() => {
 export const NO_CONFIG =
   ARGS.includes('--no-config') || process.env.CHORD_FAKE_NO_CONFIG === '1';
 
+/**
+ * Each model offers its own parameters, as Claude's and Codex's adapters do
+ * (CHD-626): the large one efforts `low` to `max` and a `fast` option of
+ * category `model_config`, the small one `low` and `medium` only. A switch
+ * keeps the effort where the new model lists it, else `medium`. Off by
+ * default: other scenarios rely on `max` not being offered.
+ */
+export const MODEL_PARAMETERS =
+  ARGS.includes('--model-parameters') ||
+  process.env.CHORD_FAKE_MODEL_PARAMETERS === '1';
+
 export const NO_MODES =
   ARGS.includes('--no-modes') || process.env.CHORD_FAKE_NO_MODES === '1';
 
@@ -323,7 +334,7 @@ export const TESTER_PLAYS = ARGS.includes('--tester-plays')
   ? ARGS[ARGS.indexOf('--tester-plays') + 1]
   : process.env.CHORD_FAKE_TESTER_PLAYS;
 
-const HANGS = ['start', 'config', 'turn'] as const;
+const HANGS = ['start', 'config', 'effort', 'turn'] as const;
 
 function hangStep(): (typeof HANGS)[number] | undefined {
   const flag = ARGS.indexOf('--hang');
@@ -341,6 +352,27 @@ function hangStep(): (typeof HANGS)[number] | undefined {
 }
 
 export const HANG = hangStep();
+
+const RESENDS = ['before', 'after'] as const;
+
+/**
+ * `--resend-config <before|after>` (`CHORD_FAKE_RESEND_CONFIG`): a model
+ * switch also sends the new set by `config_option_update`, before or after
+ * its answer, with the effort on `low` where the answer says otherwise:
+ * sets that differ, to fold in arrival order (CHD-626).
+ */
+export const RESEND_CONFIG = (() => {
+  const chosen = valueOf('--resend-config', 'CHORD_FAKE_RESEND_CONFIG');
+
+  if (
+    chosen !== undefined &&
+    !RESENDS.includes(chosen as (typeof RESENDS)[number])
+  ) {
+    throw new Error(`unknown time to resend config at "${chosen}"`);
+  }
+
+  return chosen as (typeof RESENDS)[number] | undefined;
+})();
 
 export const PLAN_CAPABILITY_ONLY =
   ARGS.includes('--plan-capability-only') ||

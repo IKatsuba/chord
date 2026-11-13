@@ -1,0 +1,24 @@
+ the scout · fake · Fake Large with a 1M context window · opened by main 2s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ the scout ──────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    main       fake · Fake Large with a 1M context window · medium  ◦ idle 9s
+    the scout  fake · Fake Large with a 1M context window · medium  ◦ idle 1s

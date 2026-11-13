@@ -27,6 +27,7 @@ import {
   runPasts,
   taskPasts,
 } from '../../src/session/record.ts';
+import { optionsFromConfigOptions } from '../../src/session/config.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { readRecords, type Resume } from '../../src/session/sessions.ts';
 import { TaskAgent } from '../../src/session/tasks.ts';
@@ -3107,4 +3108,46 @@ describe('CHD-613 tester: resource record boundaries', () => {
         expect(stored).not.toContain(secret);
       }
     }));
+});
+
+test("effort and fast stay in the record's state line beside the settings line's readers (CHD-626)", () => {
+  const options = optionsFromConfigOptions([
+    {
+      id: 'model',
+      name: 'Model',
+      category: 'model',
+      type: 'select',
+      currentValue: 'opus',
+      options: [{ value: 'opus', name: 'Opus' }],
+    },
+    {
+      id: 'effort',
+      name: 'Effort',
+      category: 'thought_level',
+      type: 'select',
+      currentValue: 'high',
+      options: [
+        { value: 'medium', name: 'Medium' },
+        { value: 'high', name: 'High' },
+      ],
+    },
+    {
+      id: 'fast',
+      name: 'Fast',
+      category: 'model_config',
+      type: 'select',
+      currentValue: 'on',
+      options: [
+        { value: 'off', name: 'Off' },
+        { value: 'on', name: 'On' },
+      ],
+    },
+  ]);
+
+  expect(
+    entryOf({ type: 'options', options }, { type: 'state', options: {} }),
+  ).toStrictEqual({
+    type: 'state',
+    options: { effort: 'high', fast: 'on' },
+  });
 });

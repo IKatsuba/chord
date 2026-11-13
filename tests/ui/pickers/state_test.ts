@@ -500,3 +500,60 @@ describe("/model's effort waiting for Enter (CHD-626)", () => {
     expect(shrunk.modelEffort?.value).toBe('low');
   });
 });
+
+describe('CHD-626 tester: pending effort state boundaries', () => {
+  const efforts = {
+    option: 'effort',
+    available: [
+      { id: 'auto', name: 'Auto' },
+      { id: 'high', name: 'High' },
+    ],
+    current: 'auto',
+  };
+  const open = reduceApp(ready, { type: 'model_picker_opened' });
+  const pending = reduceApp(open, {
+    type: 'model_effort_moved',
+    efforts,
+    by: 1,
+  });
+
+  test('an option update cannot silently discard the pending request; clear and closing do discard it', () => {
+    const updated = reduceApp(pending, {
+      type: 'options',
+      options: [],
+      configOptions: [],
+    });
+
+    expect(updated.modelEffort).toEqual({
+      option: 'effort',
+      value: 'high',
+      name: 'High',
+    });
+    expect(reduceApp(updated, { type: 'cleared' }).modelEffort).toBeUndefined();
+    expect(reduceApp(updated, { type: 'closing' }).modelEffort).toBeUndefined();
+  });
+
+  test('agent order includes Auto; an unknown current value cannot invent a starting position', () => {
+    expect(
+      reduceApp(open, {
+        type: 'model_effort_moved',
+        efforts,
+        by: -1,
+      }).modelEffort,
+    ).toBeUndefined();
+    expect(
+      reduceApp(pending, {
+        type: 'model_effort_moved',
+        efforts,
+        by: -1,
+      }).modelEffort,
+    ).toBeUndefined();
+    expect(
+      reduceApp(open, {
+        type: 'model_effort_moved',
+        efforts: { ...efforts, current: 'not-listed' },
+        by: 1,
+      }).modelEffort,
+    ).toBeUndefined();
+  });
+});

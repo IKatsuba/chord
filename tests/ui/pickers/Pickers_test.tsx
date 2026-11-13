@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
+import stringWidth from 'string-width';
 import { useState } from 'react';
 import { draw } from '../harness.tsx';
 import { usePress } from '../../../src/ui/app/input.ts';
@@ -1873,6 +1874,143 @@ describe("/model's settings line and effort (CHD-626)", () => {
       },
       {
         agentCommand: fakeAgentCommand(undefined, '--no-config', '--no-modes'),
+      },
+    ));
+});
+
+describe('CHD-626 tester: model picker effort lifecycle', () => {
+  const RIGHT = '\x1b[C';
+  const LEFT = '\x1b[D';
+  const parameters = fakeAgentCommand(undefined, '--model-parameters');
+  const open = async (window: Window) => {
+    await ready(window);
+    await send(window, '/model');
+    await window.shows('Medium effort');
+  };
+
+  const current = (window: Window) =>
+    window
+      .session()
+      ?.options()
+      .find((option) => option.id === 'effort')?.current;
+
+  for (const [columns, rows] of [
+    [80, 24],
+    [120, 40],
+  ] as const) {
+    test(`same-model Enter sends only the pending effort at ${columns} columns`, () =>
+      withWindow(
+        async (window) => {
+          await open(window);
+          await window.press(LEFT);
+          await window.shows('Low effort •');
+          expect(current(window)).toBe('medium');
+          await window.press('\r');
+          await window.shows('Effort set to Low');
+          expect(window.session()?.models()?.current).toBe('fake-large');
+          expect(current(window)).toBe('low');
+          expect(window.frame()).not.toContain('Switched to');
+        },
+        { columns, rows, agentCommand: parameters },
+      ));
+  }
+
+  test('rebound keys act, unbound arrows do not, and returning to current clears the pending value', () =>
+    withWindow(
+      async (window) => {
+        await open(window);
+        expect(window.frame()).not.toContain('←/→');
+        await window.press(RIGHT);
+        expect(window.frame()).not.toContain('•');
+        await window.press('l');
+        await window.shows('High effort •');
+        await window.press('h');
+        await window.shows('Medium effort');
+        expect(window.frame()).not.toContain('•');
+        await window.press('h');
+        await window.shows('Low effort •');
+        await window.press('1');
+        await window.shows('Effort set to Low');
+        expect(current(window)).toBe('low');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        agentCommand: parameters,
+        keybindings: JSON.stringify({
+          bindings: [
+            {
+              context: 'ModelPicker',
+              bindings: {
+                left: null,
+                right: null,
+                h: 'modelPicker:decreaseEffort',
+                l: 'modelPicker:increaseEffort',
+              },
+            },
+          ],
+        }),
+      },
+    ));
+
+  test('resize preserves the pending effort; both ends clamp without sending before Enter', () =>
+    withWindow(
+      async (window) => {
+        await open(window);
+
+        for (let i = 0; i < 7; i++) {
+          await window.press(RIGHT);
+        }
+
+        await window.shows('Max effort •');
+        await window.resize({ columns: 80, rows: 24 });
+        await window.shows('Max effort •');
+        expect(
+          stripAnsi(window.frame())
+            .split('\n')
+            .every((row) => stringWidth(row) <= 80),
+        ).toBe(true);
+
+        for (let i = 0; i < 7; i++) {
+          await window.press(LEFT);
+        }
+
+        await window.shows('Low effort •');
+        expect(current(window)).toBe('medium');
+        await window.press(ESC);
+        await until(
+          'picker closes after resize',
+          () => !window.frame().includes('Select model'),
+        );
+        expect(current(window)).toBe('medium');
+      },
+      { columns: 120, rows: 40, agentCommand: parameters },
+    ));
+
+  test('an agent update removing a pending effort keeps the request until Enter and explains why it was not sent', () =>
+    withWindow(
+      async (window) => {
+        await open(window);
+        await window.press(RIGHT);
+        await window.shows('High effort •');
+        await window.session()!.setModel('fake-small');
+        await window.shows('Low effort');
+        expect(window.frame()).not.toContain('High effort •');
+        await window.press('2');
+        await window.shows(
+          'High effort was not sent: Fake Small no longer offers it; it is on Low.',
+        );
+        expect(current(window)).toBe('low');
+      },
+      {
+        columns: 80,
+        rows: 24,
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--model-parameters',
+          '--resend-config',
+          'after',
+        ),
       },
     ));
 });

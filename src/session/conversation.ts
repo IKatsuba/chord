@@ -8,6 +8,8 @@ import { setTimeout as delay } from 'node:timers/promises';
 import type { ResourceLink } from '../files.ts';
 import { type AgentOption, sameOptions, valueName } from './config.ts';
 import { type AgentModels, modelName, sameModels } from './models.ts';
+import { effortsFrom } from './efforts.ts';
+import { effortById, fastOption, fastToggled } from './parameters.ts';
 import type { ElicitationReply, PendingElicitation } from './elicitations.ts';
 import type { PendingPlan } from './plan_asks.ts';
 import { type AgentModes, sameModes } from './modes.ts';
@@ -2899,15 +2901,15 @@ export class Conversation {
   }
 
   /**
-   * Sets option `id` to `value` as a command of its own, `/fast`
-   * (CHD-626): its row under `command` shows the step pending until the
-   * outcome, `said` of the option as the agent answered, replaces it.
+   * One command's change in the chain, `body` run once its turn comes with
+   * the session's set as it is then, writing the command's row (CHD-626).
    */
-  setNoted(
-    id: string,
-    value: string,
+  #changeLink(
     command: string,
-    said: (option: AgentOption) => string,
+    body: (
+      session: Session,
+      note: (text: string, failed: boolean) => void,
+    ) => Promise<void>,
   ): Promise<void> {
     const session = this.#session;
 
@@ -2915,26 +2917,48 @@ export class Conversation {
       return notUp();
     }
 
-    const turnId = `option-${crypto.randomUUID()}`;
-    const asked = this.#options.find((option) => option.id === id);
-    const what = `${asked?.name ?? id} to ${
-      asked ? valueName(asked, value) : value
-    }`;
+    const turnId = `${command}-${crypto.randomUUID()}`;
     const note = (text: string, failed: boolean) => {
       if (this.#current(session)) {
         this.#emit({ type: 'noted', turnId, command, text, failed });
       }
     };
 
-    note(`Setting ${what}…`, false);
+    const made = this.#changes.then(async () => {
+      if (this.#current(session)) {
+        await body(session, note);
+      }
+    });
 
-    const change = this.#changes.then(async () => {
-      if (!this.#current(session)) {
+    this.#changes = made.catch(() => {});
+
+    return made;
+  }
+
+  /**
+   * `/fast`: the fast option, found by chord's `_meta` key or `recorded`,
+   * the agent entry's id, set to its other value, both read when its turn in
+   * the chain comes, so a change queued before it is counted (CHD-626, Q2).
+   */
+  toggleFast(agent: string, recorded: string | undefined): Promise<void> {
+    return this.#changeLink('fast', async (session, note) => {
+      const options = session.configOptions();
+      const model = modelName(session.models()) ?? '';
+      const option = fastOption(options, recorded);
+      const other = option === undefined ? undefined : fastToggled(option);
+
+      if (option === undefined || other === undefined) {
+        note(`${agent} offers no fast mode for ${model}.`, false);
+
         return;
       }
 
+      const what = `${option.name} to ${other.name}`;
+
+      note(`Setting ${what}…`, false);
+
       try {
-        await session.setOption(id, value);
+        await session.setOption(option.id, other.value);
       } catch (error) {
         note(`Could not set ${what}: ${agentMessageOf(error)}`, true);
 
@@ -2943,18 +2967,55 @@ export class Conversation {
         this.#report(session);
       }
 
-      // An option the answer no longer lists is said as it was asked, so
-      // the pending row never stays.
-      const option =
-        this.#options.find((candidate) => candidate.id === id) ??
-        (asked && { ...asked, current: value });
+      // One the answer no longer lists is said as it was asked.
+      const now = session.options().find((each) => each.id === option.id);
 
-      note(option ? said(option) : `Set ${what}`, false);
+      note(
+        `Fast mode ${
+          now === undefined ? other.name : valueName(now, now.current)
+        } for ${model}`,
+        false,
+      );
     });
+  }
 
-    this.#changes = change.catch(() => {});
+  /**
+   * `/effort <value>`: the effort of that id exactly, looked up when its
+   * turn in the chain comes, as a model change queued before it may change
+   * what is offered (CHD-626, Q2).
+   */
+  setEffortById(agent: string, value: string, command: string): Promise<void> {
+    return this.#changeLink(command, async (session, note) => {
+      const options = session.configOptions();
+      const model = modelName(session.models()) ?? '';
+      const efforts = effortsFrom(options);
+      const effort = effortById(options, value);
 
-    return change;
+      if (efforts === undefined || effort === undefined) {
+        note(
+          efforts === undefined
+            ? `${agent} offers no effort for ${model}.`
+            : `${agent} offers ${efforts.available
+                .map(({ id }) => id)
+                .join(', ')} effort for ${model}.`,
+          false,
+        );
+
+        return;
+      }
+
+      const choice = { effort };
+
+      note(pendingText(choice, options), false);
+
+      const result = await this.#chosen(session, choice);
+
+      if (result !== undefined) {
+        const said = choiceNote(choice, result, session.configOptions(), model);
+
+        note(said.text, said.failed);
+      }
+    });
   }
 
   /**

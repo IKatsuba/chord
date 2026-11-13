@@ -390,3 +390,74 @@ describe('CHD-626 tester: choice lifecycle boundaries', () => {
     );
   });
 });
+
+describe('/fast and /effort <value> read the set when their turn comes (CHD-626)', () => {
+  test('two /fast queued before the first answer toggle on, then off', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--config-delay', '100'],
+      async (conversation, events) => {
+        await Promise.all([
+          conversation.toggleFast('fake', undefined),
+          conversation.toggleFast('fake', undefined),
+        ]);
+        expect(calls).toEqual(['fast on', 'fast off']);
+        expect(notes(events)).toEqual([
+          'Setting Fast to On…',
+          'Fast mode On for Fake Large with a 1M context window',
+          'Setting Fast to Off…',
+          'Fast mode Off for Fake Large with a 1M context window',
+        ]);
+      },
+      logged(calls),
+    );
+  });
+
+  test('after a model switch queued before them, they read the new model', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--config-delay', '100'],
+      async (conversation, events) => {
+        await Promise.all([
+          conversation.makeChoice({ model: SMALL }, 'model'),
+          conversation.toggleFast('fake', undefined),
+          conversation.setEffortById('fake', 'max', 'effort max'),
+          conversation.setEffortById('fake', 'low', 'effort low'),
+        ]);
+        expect(calls).toEqual(['model fake-small', 'effort low']);
+        expect(notes(events)).toEqual([
+          'Switching to Fake Small…',
+          'Switched to Fake Small',
+          'fake offers no fast mode for Fake Small.',
+          'fake offers low, medium effort for Fake Small.',
+          'Setting Effort to Low…',
+          'Effort set to Low',
+        ]);
+      },
+      logged(calls),
+    );
+  });
+
+  test('an effort the model in use offers only once a queued switch lands is set', async () => {
+    const calls: string[] = [];
+
+    await onFake(
+      ['--model-parameters', '--config-delay', '100'],
+      async (conversation, events) => {
+        await conversation.makeChoice({ model: SMALL }, 'model');
+        await Promise.all([
+          conversation.makeChoice(
+            { model: { id: 'fake-large', name: 'Fake Large' } },
+            'model',
+          ),
+          conversation.setEffortById('fake', 'max', 'effort max'),
+        ]);
+        expect(calls.at(-1)).toBe('effort max');
+        expect(notes(events).at(-1)).toBe('Effort set to Max');
+      },
+      logged(calls),
+    );
+  });
+});

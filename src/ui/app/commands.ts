@@ -6,14 +6,8 @@ import type { SpendPart } from '../transcript/spend.ts';
 import { type Dispatch, useRef } from 'react';
 import { findAgent } from '../../agents.ts';
 import type { Conversation } from '../../session/conversation.ts';
-import { valueName } from '../../session/config.ts';
 import { effortsFrom } from '../../session/efforts.ts';
 import { modelName } from '../../session/models.ts';
-import {
-  effortById,
-  fastOption,
-  fastToggled,
-} from '../../session/parameters.ts';
 import type { TeamShown } from '../../session/transcript/types.ts';
 import type { EditorMode } from '../../settings.ts';
 import { type TeamListing, teamCommand } from '../../session/team_command.ts';
@@ -222,30 +216,22 @@ export function useCommands(
   const effort = (value: string) => {
     const typed = ['effort', value].filter(Boolean).join(' ');
     const model = modelName(state.models) ?? '';
-    const efforts = effortsFrom(state.configOptions);
 
-    if (efforts === undefined) {
+    // A value is looked up in the chain, against the set as it is then.
+    if (value !== '') {
+      void conversation()
+        ?.setEffortById(agent, value, typed)
+        .catch(() => {});
+
+      return;
+    }
+
+    // The picker shows the efforts there are now.
+    if (effortsFrom(state.configOptions) === undefined) {
       return said(typed, `${agent} offers no effort for ${model}.`);
     }
 
-    if (value === '') {
-      return dispatch({ type: 'effort_picker_opened' });
-    }
-
-    const asked = effortById(state.configOptions, value);
-
-    if (asked === undefined) {
-      return said(
-        typed,
-        `${agent} offers ${efforts.available
-          .map(({ id }) => id)
-          .join(', ')} effort for ${model}.`,
-      );
-    }
-
-    void conversation()
-      ?.makeChoice({ effort: asked }, typed)
-      .catch(() => {});
+    dispatch({ type: 'effort_picker_opened' });
   };
 
   /**
@@ -253,24 +239,8 @@ export function useCommands(
    * `_meta` key or the agent's recorded id (CHD-626, O3).
    */
   const fast = () => {
-    const model = modelName(state.models) ?? '';
-    const option = fastOption(
-      state.configOptions,
-      findAgent(agent)?.fastOption,
-    );
-    const other = option === undefined ? undefined : fastToggled(option);
-
-    if (option === undefined || other === undefined) {
-      return said('fast', `${agent} offers no fast mode for ${model}.`);
-    }
-
     void conversation()
-      ?.setNoted(
-        option.id,
-        other.value,
-        'fast',
-        (now) => `Fast mode ${valueName(now, now.current)} for ${model}`,
-      )
+      ?.toggleFast(agent, findAgent(agent)?.fastOption)
       .catch(() => {});
   };
 

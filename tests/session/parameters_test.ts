@@ -416,6 +416,21 @@ describe("/fast's toggle and /effort's id (CHD-626)", () => {
     });
   });
 
+  test('none where the value in use is not listed once, or the two are the same', () => {
+    const fast = fastOption(CLAUDE, 'fast')!;
+
+    expect(fastToggled({ ...fast, current: 'auto' })).toBeUndefined();
+    expect(
+      fastToggled({
+        ...fast,
+        values: [
+          { value: 'off', name: 'Off' },
+          { value: 'off', name: 'Off too' },
+        ],
+      }),
+    ).toBeUndefined();
+  });
+
   test('none for an option of more or fewer than two values', () => {
     const fast = fastOption(CLAUDE, 'fast')!;
 

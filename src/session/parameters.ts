@@ -208,11 +208,16 @@ function parameterOf(option: SessionConfigOption): unknown {
 
 /**
  * `/fast`'s other value of `option`: of an on/off select, the one not in
- * use, whatever the agent calls them; undefined for any other option.
+ * use, whatever the agent calls them. Undefined unless the option lists two
+ * values, the one in use once and one other: any other shape leaves which
+ * to send a guess.
  */
 export function fastToggled(option: AgentOption): AgentOptionValue | undefined {
-  return option.values.length === 2
-    ? option.values.find((each) => each.value !== option.current)
+  const using = option.values.filter((each) => each.value === option.current);
+  const others = option.values.filter((each) => each.value !== option.current);
+
+  return option.values.length === 2 && using.length === 1 && others.length === 1
+    ? others[0]
     : undefined;
 }
 

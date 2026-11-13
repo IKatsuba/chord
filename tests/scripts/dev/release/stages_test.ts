@@ -74,6 +74,7 @@ beforeEach(() => {
       '',
     );
   }
+
   writeFileSync(
     join(at.root, 'package.json'),
     JSON.stringify({ version: VERSION }),

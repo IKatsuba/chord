@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { Fragment as ReactFragment, isValidElement } from 'react';
 import {
   buildOptions,
+  cursorInputs,
   EVERY_PLATFORM,
   fffLibrary,
   fffProblem,
@@ -82,6 +83,24 @@ test('a build for this machine leaves out every OpenTUI native but the one its r
   expect(otherNatives('@opentui/core-win32-x64').toSorted()).toStrictEqual(
     without('@opentui/core-win32-x64').toSorted(),
   );
+});
+
+test('cursorInputs names what of cursor-cloud-acp, its SDK or its keyring a build holds, and nothing else (CHD-622)', () => {
+  const theirs = [
+    'packages/cursor-cloud-acp/src/serve.ts',
+    'node_modules/.bun/@cursor+sdk@1.3.1/node_modules/@cursor/sdk/dist/esm/index.js',
+    'node_modules/@napi-rs/keyring/index.js',
+    'node_modules/.bun/@napi-rs+keyring-darwin-arm64@2.1.2/node_modules/@napi-rs/keyring-darwin-arm64/keyring.darwin-arm64.node',
+  ];
+  const chords = [
+    'src/main.tsx',
+    'src/agents.ts',
+    'node_modules/@agentclientprotocol/sdk/dist/acp.js',
+    'node_modules/@napi-rs/canvas/index.js',
+    'src/ui/cursor/sdk.ts',
+  ];
+
+  expect(cursorInputs([...chords, ...theirs])).toStrictEqual(theirs);
 });
 
 test("compile's install selects every platform and libc, as Bun's --os and --cpu keep only the machine's libc on Linux (CHD-561)", () => {

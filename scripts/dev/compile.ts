@@ -66,6 +66,19 @@ export function fffProblem(
 }
 
 /**
+ * The inputs of a build that come from cursor-cloud-acp, its SDK or its
+ * keyring: that package runs on Node under npx, and none of it may enter
+ * the binary (CHD-622).
+ */
+export function cursorInputs(inputs: readonly string[]): string[] {
+  return inputs.filter((input) =>
+    /(^|\/)(packages\/cursor-cloud-acp|@cursor\/sdk|@napi-rs\/keyring)[/-]/.test(
+      input,
+    ),
+  );
+}
+
+/**
  * `bun install`'s selection of every platform's optional packages. A compile
  * build keeps every OpenTUI native import, and Bun skips the packages whose
  * `libc` is not the machine's on Linux, whatever `--os` and `--cpu` say.
@@ -260,10 +273,19 @@ export async function compile(args: CompileOptions): Promise<void> {
       process.exit(1);
     }
 
-    const fff = fffProblem(Object.keys(built.metafile?.inputs ?? {}), target);
+    const inputs = Object.keys(built.metafile?.inputs ?? {});
+    const fff = fffProblem(inputs, target);
+    const cursor = cursorInputs(inputs);
 
     if (fff !== undefined) {
       console.error(fff);
+      process.exit(1);
+    }
+
+    if (cursor.length > 0) {
+      console.error(
+        `${target.bun} holds cursor-cloud-acp's files: ${cursor.join(', ')}`,
+      );
       process.exit(1);
     }
 

@@ -51,10 +51,26 @@ jobs:
       - run: bun install --frozen-lockfile
       - run: bun dev compile
 
+  # cursor-cloud-acp on the Node it runs on: its checks, tests, build and
+  # the smoke of its packed tarball under Node 22 from 22.13, the floor its
+  # engines name (owner, CHD-622 Q8).
+  node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.13'
+      - run: bun install --frozen-lockfile
+      - run: bun dev quality cursor-cloud-acp
+
   # The check branch protection requires by name: it passes only when the
-  # static checks, every shard and the compile did, as one job did before.
+  # static checks, every shard, the compile and the package's node job did.
   check:
-    needs: [static, tests, compile]
+    needs: [static, tests, compile, node]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -62,3 +78,4 @@ jobs:
           test '${{ needs.static.result }}' = success
           test '${{ needs.tests.result }}' = success
           test '${{ needs.compile.result }}' = success
+          test '${{ needs.node.result }}' = success

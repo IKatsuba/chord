@@ -47,6 +47,7 @@ bun dev chord --fake riff       # riff on its fake provider
 bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
 bun dev quality chord          # types, lint, format and all tests
 bun dev quality chord --static # types, coverage, lint, format and lint/ tests
+bun dev quality cursor-cloud-acp # package checks, tests, build and Node smoke
 bun check                      # Bun's native type checker
 bun dev test [args…]            # tests, a worker per core; Bun's test arguments
 bun dev test -t '…'             # matching tests
@@ -65,10 +66,11 @@ the tool's own help does too (`bun dev lint chord -- --help`).
 files: Bun uses it to balance shards and start each worker's slowest files
 first; an unlisted file takes the median. No refresh is required.
 CI runs `static` (`bun dev quality chord --static`), three `tests` shards
-(`--shard=1/3`, `2/3`, `3/3`) and `compile`. The required `check` job
-passes only when all of them succeed. The libfx layout check covers the host's
-installed package and every target's metadata locally; CI's static job installs
-all platforms and sets `CHORD_LIBFX_ALL_TARGETS=1` to check all four packages.
+(`--shard=1/3`, `2/3`, `3/3`), `compile` and `node` (Node 22.13,
+`bun dev quality cursor-cloud-acp`). The required `check` job needs all to pass.
+The libfx layout check covers the host's installed package and every target's
+metadata locally; CI's static job installs all platforms and sets
+`CHORD_LIBFX_ALL_TARGETS=1` to check all four packages.
 
 The binary is built by Bun's compile API, Bun 1.4.4 or newer. Compilation
 installs all target packages, then checks the pinned libfx layout for each
@@ -94,6 +96,10 @@ bun dev memory            # long-run memory check; options in docs/memory.md
 Only `quality`, `lint` and `release` take a package, by its npm name without
 the scope; each runs that package's `steps.ts`. chord's is at the repository
 root. It defines checks, lint arguments and release stages, with publish last.
+`bun dev release cursor-cloud-acp` runs install, quality, build, pack and
+publish, tags `cursor-cloud-acp-v<version>` and creates no GitHub release.
+A new package version needs build. Publish its 0.1.0 before chord: chord's
+preflight checks every `src/chorded.ts` pin on npm and refuses a miss.
 A bare `bun dev release` releases nothing. Use
 `--bump <version|major|minor|patch|fix>` instead of editing the version by hand.
 Add `--channel <name>` for
@@ -150,8 +156,9 @@ to remove by hand. See `docs/guide.md` for continuation guards and cleanup.
   jsr packages come from `npm.jsr.io` under their own names
   (`bunfig.toml`, `.npmrc`). No `node_modules` checked in.
 - **Versions are pinned for things that move.** A pre-1.0 package is
-  exact-pinned (`@replit/codemirror-vim-core`); the rest use caret ranges, and
-  `bun.lock` is committed.
+  exact-pinned (`@replit/codemirror-vim-core`); the rest use caret ranges.
+  The owner excepted `@cursor/sdk`, exact at 1.3.1 in cursor-cloud-acp.
+  One workspace install and committed `bun.lock` cover all packages.
 - **The style is what the tools hold.** `tsconfig.json` holds the strict
   compiler flags, `eslint.config.ts` the lint rules, `lint/style.ts` what
   the formatter cannot express (blank lines, imports first), and
@@ -223,6 +230,14 @@ person's XDG state. For riff on its fake provider, use
 provider and come before `riff`. `CHORD_RIFF_QA_SIGN_IN` selects offline
 sign-in outcomes documented in the guide; never use a live sign-in for QA.
 Fake/QA riff reads no user `AGENTS.md` or home skills.
+A bare `--fake --qa` opens the fake agent; plain `--qa` shows the picker.
+For cursor-cloud's offline fixture, use `--qa` without `--fake`, which
+supplies its own agent command:
+
+```sh
+bun dev chord --qa capture cursor-cloud \
+  --agent-command "bun packages/cursor-cloud-acp/tests/fixtures/main.ts"
+```
 
 ```sh
 tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord --fake --qa capture'
@@ -238,7 +253,8 @@ did it.
 
 ## Folder rules
 
-Folders with rules of their own have an `AGENTS.md`: `src/`,
+Folders with rules of their own have an `AGENTS.md`:
+`packages/cursor-cloud-acp/`, `src/`,
 `src/platform/`, `src/session/`, `src/ui/`, `tests/`,
 `tests/fixtures/fake_agent/` and `scripts/`. Read the one for the folder you
 change; `src/session/AGENTS.md` also covers `src/acp/`. Codex loads

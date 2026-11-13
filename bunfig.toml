@@ -1,3 +1,9 @@
+# The layout chord has always had: with workspaces, Bun would otherwise
+# isolate each package's dependencies, and chord's own would no longer
+# share one node_modules (CHD-622).
+[install]
+linker = "hoisted"
+
 [install.scopes]
 "@jsr" = "https://npm.jsr.io"
 

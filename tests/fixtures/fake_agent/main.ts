@@ -279,6 +279,7 @@ import { readCapabilities } from './client.ts';
 import {
   ARGS,
   AUTH_REQUIRED,
+  FIRST_MESSAGE,
   HANG,
   CONFIG_IN_RESPONSES,
   NO_CONFIG,
@@ -389,6 +390,7 @@ const SCENARIOS = [
   'guardian',
   'guardiangated',
   'text',
+  'cloudrequest',
   'texttillsteered',
   'texttillsteeredheld',
   'readsheld',
@@ -1218,6 +1220,16 @@ const AUTH_METHODS: acp.AuthMethod[] = [
   { id: 'fake-sso', name: 'Log in with SSO' },
 ];
 
+/** cursor-cloud's one way in, as `--auth-required cloud` offers it (CHD-622). */
+export const CLOUD_AUTH_METHODS: acp.AuthMethod[] = [
+  {
+    id: 'cursor-login',
+    name: 'Cursor login',
+    description:
+      'Run `npx -y @chorded/cursor-cloud-acp@0.1.0 login` in a terminal, or set CURSOR_API_KEY',
+  },
+];
+
 /**
  * Refuses a session request under `--auth-required`, as an agent nobody
  * signed in to does (CHD-435): `authRequired`; with `link`, after a sign-in
@@ -1237,6 +1249,10 @@ async function refuseUnsigned(
 
   if (AUTH_REQUIRED === 'bare') {
     throw acp.RequestError.authRequired();
+  }
+
+  if (AUTH_REQUIRED === 'cloud') {
+    throw new acp.RequestError(-32000, 'Not signed in to Cursor.');
   }
 
   if (AUTH_REQUIRED === 'link' || AUTH_REQUIRED === 'linkother') {
@@ -1310,6 +1326,9 @@ const connection = acp
       : {
           protocolVersion: acp.PROTOCOL_VERSION,
           ...(AUTH_REQUIRED === 'methods' ? { authMethods: AUTH_METHODS } : {}),
+          ...(AUTH_REQUIRED === 'cloud'
+            ? { authMethods: CLOUD_AUTH_METHODS }
+            : {}),
           agentCapabilities: {
             loadSession: !NO_LOAD,
             mcpCapabilities: MCP_TRANSPORTS,
@@ -1349,6 +1368,19 @@ const connection = acp
     openedWith.set(sessionId, opened('session/new', params._meta));
     cwds.set(sessionId, params.cwd);
     created.push({ sessionId, cwd: params.cwd });
+
+    // Before the answer, as cursor-cloud's first message comes (CHD-622).
+    if (FIRST_MESSAGE !== undefined) {
+      await client.notify('session/update', {
+        sessionId,
+        update: {
+          sessionUpdate: 'agent_message_chunk',
+          messageId: crypto.randomUUID(),
+          content: { type: 'text', text: FIRST_MESSAGE },
+        },
+      });
+    }
+
     // The client hears of the commands only once the session is already up.
     advertiseCommands(client, sessionId);
     titleAtStart(client, sessionId);

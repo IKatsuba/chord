@@ -7,7 +7,7 @@
 
 <p align="center">
   <strong>One terminal for every coding agent.</strong><br>
-  Claude Code, Codex, Gemini CLI, Cursor, OpenCode and 31 more, in one
+  Claude Code, Codex, Gemini CLI, Cursor, OpenCode and 32 more, in one
   keyboard-driven window, side by side, working as a team.
 </p>
 
@@ -207,9 +207,9 @@ recorded.
 ## Supported agents
 
 riff, Claude Code, Codex, Gemini CLI, Copilot, Cursor, OpenCode, Cline, Qwen Code,
-Kimi Code, Kiro, Goose, Junie, Factory Droid, Auggie, Kilo, bob, Devin, fx
-and more: `chord agents` prints the full list, and any other ACP agent runs
-with `chord --agent-command "my-agent --acp"`.
+Kimi Code, Kiro, Goose, Junie, Factory Droid, Auggie, Kilo, bob, Devin, fx,
+[Cursor Cloud Agents](docs/guide.md#cursor-cloud) and more: `chord agents`
+prints the full list, and any other ACP agent runs with `chord --agent-command "my-agent --acp"`.
 
 ## Contributing
 

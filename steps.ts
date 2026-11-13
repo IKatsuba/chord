@@ -114,4 +114,11 @@ export default {
       githubRelease: true,
     },
   ],
+  // Every agent of this repository chord pins must be on npm (CHD-622).
+  preflight: async (release) => {
+    const { npmView, pinsOnNpm } =
+      await import('./scripts/dev/release/pins.ts');
+
+    pinsOnNpm(npmView(release));
+  },
 } satisfies PackageSteps;

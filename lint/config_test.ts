@@ -106,6 +106,21 @@ const cases: [rule: string, code: string, file?: string][] = [
     "export const a = await import('../../scripts/dev/steps.ts');\n",
     'ui/app/probe.ts',
   ],
+  // The binary holds nothing of cursor-cloud-acp, its SDK or its keyring
+  // (CHD-622).
+  ['no-restricted-syntax', "export { Agent } from '@cursor/sdk';\n"],
+  [
+    'no-restricted-syntax',
+    "export const a = await import('@napi-rs/keyring');\n",
+  ],
+  [
+    'no-restricted-syntax',
+    "export { main } from '@chorded/cursor-cloud-acp/src/main.ts';\n",
+  ],
+  [
+    'no-restricted-syntax',
+    "export { main } from '../packages/cursor-cloud-acp/src/main.ts';\n",
+  ],
 ];
 
 for (const [rule, code, file = 'probe.ts'] of cases) {

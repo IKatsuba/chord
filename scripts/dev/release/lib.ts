@@ -117,7 +117,7 @@ export function npm(
 }
 
 /** The first `name` on PATH that is not Bun itself, by its realpath. */
-function notBun(release: Release, name: string): string {
+export function notBun(release: Release, name: string): string {
   const bun = realpathSync(process.execPath);
 
   for (const dir of (release.env['PATH'] ?? '').split(delimiter)) {

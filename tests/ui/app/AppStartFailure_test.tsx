@@ -122,9 +122,7 @@ describe('the block under a start failure, by what chord knows (CHD-454)', () =>
           }}
         />,
       ),
-    ).toBe(
-      '⎿ chord ran agoragentic-mcp@1.3.0, the version the ACP Registry names.',
-    );
+    ).toBe('⎿ chord ran agoragentic-mcp@1.3.0, the version this chord pins.');
     expect(
       await block(
         <SignInBlock
@@ -134,7 +132,7 @@ describe('the block under a start failure, by what chord knows (CHD-454)', () =>
         />,
       ),
     ).toBe(
-      "⎿ chord ran @qoder-ai/qodercli@0.2.14, the version the ACP Registry names. chord does not sign agents in. Sign in with qoder's own CLI in a terminal, or set its API key where it offers one.",
+      "⎿ chord ran @qoder-ai/qodercli@0.2.14, the version this chord pins. chord does not sign agents in. Sign in with qoder's own CLI in a terminal, or set its API key where it offers one.",
     );
   });
 

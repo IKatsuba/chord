@@ -442,10 +442,12 @@ export const STEP_MS = Number(
  * alone; `bare` says only `Authentication required` and offers none, as
  * kimi does; `link` asks a sign-in link first, as droid does, and fails so
  * unless it is accepted; `linkother` asks the same link and, unless it is
- * accepted, fails for some other reason (-32603), which needs no login.
+ * accepted, fails for some other reason (-32603), which needs no login;
+ * `cloud` refuses as cursor-cloud does signed out, its one way in naming
+ * the versioned command that signs in (CHD-622).
  */
 export const AUTH_REQUIRED:
-  'methods' | 'bare' | 'link' | 'linkother' | undefined = (() => {
+  'methods' | 'bare' | 'link' | 'linkother' | 'cloud' | undefined = (() => {
   const flag = ARGS.indexOf('--auth-required');
   const kind =
     flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_AUTH_REQUIRED;
@@ -453,7 +455,8 @@ export const AUTH_REQUIRED:
   return kind === 'methods' ||
     kind === 'bare' ||
     kind === 'link' ||
-    kind === 'linkother'
+    kind === 'linkother' ||
+    kind === 'cloud'
     ? kind
     : undefined;
 })();
@@ -484,3 +487,13 @@ export const START_FAILS:
 /** The last line of `--start-fails traceback`'s traceback. */
 export const TRACEBACK_ERROR =
   "ImportError: cannot import name 'AuthMethod' from 'acp.schema'";
+
+/**
+ * `--first-message <text>` (`CHORD_FAKE_FIRST_MESSAGE`): every `session/new`
+ * sends an agent message with `text`, an id of its own, before its answer,
+ * as cursor-cloud says where its agent runs (CHD-622).
+ */
+export const FIRST_MESSAGE = valueOf(
+  '--first-message',
+  'CHORD_FAKE_FIRST_MESSAGE',
+);

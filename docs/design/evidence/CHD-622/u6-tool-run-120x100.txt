@@ -1,0 +1,100 @@
+ ▀▄     chord v0.69.0
+ ▀▀▀▄   cursor-cloud · Cursor's default
+ ▄▀▀▀   /tmp/chord-qa.des-u6
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ 1 MCP server was not passed to cursor-cloud, which takes none: chord (chord's own). Without it, cursor-cloud cannot
+   start other agents or use chord's tools. /mcp lists it.
+
+ ⏺ Cursor cloud agent on github.com/acme/web, starting from branch login-page on origin. It runs in Cursor's cloud, not
+   on this machine, pushes its work to a branch of its own, and keeps running if chord closes.
+   https://cursor.com/agents/bc-1
+
+ › tool please
+
+ ⏺ Cursor is starting the agent's machine…
+
+ ⏺ Read(src/routes.ts)
+   ⎿  {
+        "status": "success",
+        "value": {
+      … +3 lines (ctrl+o to expand)
+
+ ⏺ Search(semSearch)
+   ⎿  {
+        "status": "success",
+        "value": {
+          "query": "form validation",
+          "results": [
+            "src/forms/validate.ts",
+            "src/forms/Field.tsx"
+          ]
+        }
+      }
+
+ ⏺ Bash(npm test)
+   ⎿  ✓ test 1
+      ✓ test 2
+      ✓ test 3
+      ✓ test 4
+      ✓ test 5
+      ✓ test 6
+      ✓ test 7
+      ✓ test 8
+      ✓ test 9
+      ✓ test 10
+      ✓ test 11
+      ✓ test 12
+      ✓ test 13
+      ✓ test 14
+      ✓ test 15
+      ✓ test 16
+      ✓ test 17
+      ✓ test 18
+      ✓ test 19
+      ✓ test 20
+      ✓ test 21
+      ✓ test 22
+      ✓ test 23
+      ✓ test 24
+      ✓ test 25
+      ✓ test 26
+      ✓ test 27
+      ✓ test 28
+      ✓ test 29
+      ✓ test 30
+      ✓ test 31
+      ✓ test 32
+      ✓ test 33
+      ✓ test 34
+      ✓ test 35
+      ✓ test 36
+      ✓ test 37
+      ✓ test 38
+       Tests  41 passed (41)
+       Time   6.2s
+
+ ⏺ The login page is in src/pages/Login.tsx; its tests pass in the cloud VM.
+
+ ⏺ Pushed to cursor/login-page-5e1f on github.com/acme/web.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                                     Cursor's default

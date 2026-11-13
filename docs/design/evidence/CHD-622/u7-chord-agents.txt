@@ -1,0 +1,3 @@
+codex               Codex                                          npx                    npx -y @agentclientprotocol/codex-acp@2.5.0
+cursor-cloud        Cursor Cloud Agents                            npx                    npx -y @chorded/cursor-cloud-acp@0.1.0
+cursor              Cursor                                         own CLI · found        agent acp

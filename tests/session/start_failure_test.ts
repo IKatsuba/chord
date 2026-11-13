@@ -5,6 +5,7 @@ import { asSignIn } from '../../src/session/sign_in.ts';
 import {
   failureLines,
   failureNote,
+  pinLine,
   sentence,
   startFailed,
   startFailureOf,
@@ -139,7 +140,7 @@ test('the block as lines: the pin, the end of stderr with what was cut, the way 
       stderr: { lines: ['Traceback', '  File "x"', 'ImportError: y'], cut: 1 },
     }),
   ).toStrictEqual([
-    'chord ran minion-code@0.1.44, the version the ACP Registry names.',
+    'chord ran minion-code@0.1.44, the version this chord pins.',
     'The end of its stderr:',
     '  … +1 line',
     '  Traceback',
@@ -171,7 +172,7 @@ test("an agent that opened one hears the pin, the tail's last line and the perso
       stderr: { lines: ['  File "x"', '  ImportError: y'], cut: 0 },
     }),
   ).toBe(
-    ' chord ran minion-code@0.1.44, the version the ACP Registry names. Its stderr ended: "ImportError: y".',
+    ' chord ran minion-code@0.1.44, the version this chord pins. Its stderr ended: "ImportError: y".',
   );
   expect(failureNote('zeroclaw', { step: 'session/new', code: -32602 })).toBe(
     ' The person sets a default agent: [acp] default_agent = "<alias>" in ZeroClaw\'s config, or start it with zeroclaw acp --agent <alias>.',
@@ -180,4 +181,10 @@ test("an agent that opened one hears the pin, the tail's last line and the perso
     'it refused session/new: no.',
   );
   expect(sentence('it exited.')).toBe('it exited.');
+});
+
+test("the pin line says the version this chord pins, for chord's own agents as for the registry's (CHD-622)", () => {
+  expect(pinLine('@chorded/cursor-cloud-acp@0.1.0')).toBe(
+    'chord ran @chorded/cursor-cloud-acp@0.1.0, the version this chord pins.',
+  );
 });

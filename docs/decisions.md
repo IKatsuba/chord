@@ -8519,3 +8519,139 @@ a timer beyond that fires at once in Node and Bun. A lock a run left behind
 the holder wrote and `<git common dir>/chord-release.lock`, removed by hand
 as S1's state is; proper-lockfile itself removes the lock on exit and on
 signals it can catch.
+
+## 2026-11-12 — CHD-622: `@chorded/cursor-cloud-acp`, written on `@cursor/sdk`
+
+Cursor's cloud agents reach chord through a package of this repository,
+`@chorded/cursor-cloud-acp`, an ACP v1 agent on stdio started with `npx`
+(owner, CHD-622's comments). `docs/design/CHD-622.md` is the design.
+
+Libraries tried under the one rule: no ACP adapter over `@cursor/sdk` or
+for cloud agents exists (cursor-acp, `@blowmage/cursor-agent-acp` and
+Vercel's AI SDK Cursor harness wrap Cursor's CLI, which has no cloud).
+Cursor's Cloud Agents HTTP API and its SDK Bridge were the other bases; the
+owner chose the SDK. The adapter is ours: `@agentclientprotocol/sdk`'s agent
+side for ACP, `@cursor/sdk` for Cursor, `hosted-git-info` for repository
+URLs, `@napi-rs/keyring` for the keychain, git itself for the branch. The
+session id is the cloud agent's id; the adapter keeps no state.
+
+## 2026-11-12 — CHD-622: the package is a Bun workspace checked as Node code
+
+Options: a Bun workspace under `packages/` with one `bun.lock`; the same
+folder with its own npm install and lockfile; a separate repository (ruled
+out by the owner). Chosen: the workspace: one install and one lockfile.
+"Bun runs chord" holds for chord: the package's `tsconfig.json` has Node's
+types, ESLint keeps `Bun` and `bun:*` out of its `src/`, and chord's
+`src/` may import nothing of it. Its tests and fixture live in
+`packages/cursor-cloud-acp/tests/`; its checks, build and release are
+defined in its `steps.ts` and run by `bun dev` (CHD-623), so chord's
+checks never reach it and the reverse. A required `node` CI job runs
+`bun dev quality cursor-cloud-acp` on Node 22.13 (owner, Q8). TypeScript
+project references were tried and need `composite` and emitted
+declarations, which do not fit the root's `noEmit`.
+
+## 2026-11-12 — CHD-622: built by `bun build --target=node`
+
+Options: `bun build --target=node --packages=external`; `tsc` with an emit
+config of its own; tsdown or tsup. Chosen: Bun's bundler, already the
+toolchain, no new dependency. Tried: the output keeps the shebang, leaves
+packages as imports and runs on Node 22.13.0, which cannot run TypeScript.
+The build fails unless Bun's metafile lists only the package's own files,
+so `@cursor/sdk` and the keyring are never bundled.
+
+## 2026-11-12 — CHD-622: the keychain through `@napi-rs/keyring`
+
+Tried on Node 22.13.0 and 24 (set, read, delete of a dummy entry):
+`@napi-rs/keyring` 2.1.2 (MIT, active, prebuilt for macOS and Linux arm64
+and x64, no install script); `keytar` 7.9.0 (archived, builds from source
+when no prebuild fits); `cross-keychain` 2.0.0 (wraps `@napi-rs/keyring`,
+pulls a CLI's dependencies, and falls on its own to an encrypted file or a
+null store); `@zowe/secrets-for-zowe-sdk` (EPL-2.0, builds on install; not
+installed). Chosen: `@napi-rs/keyring`, as the SDK's `SdkCredentialStore`
+for `Cursor.auth.login/logout/status`, one JSON entry, pinned on Linux to
+the Secret Service: unpinned it falls silently to the kernel keyring, lost
+at reboot. Every call bounded at 10 s (macOS's access dialog).
+
+The store reaches only the SDK's auth calls; every other call takes
+`apiKey`. The adapter resolves `CURSOR_API_KEY`, else its keychain entry,
+and always passes the result, so the SDK's own login file is not read
+(owner, Q3). Where no keychain exists, `login` refuses and
+points to `CURSOR_API_KEY` (owner, Q2).
+
+## 2026-11-12 — CHD-622: content from `onDelta`, not `run.stream()`'s text
+
+`run.stream()`'s `assistant` events carry no id, and neither the types nor
+the docs say whether each is a piece or the message so far; drawing them
+would be a guess. `SendOptions.onDelta` is the SDK's documented
+token-by-token stream (`text-delta`, `thinking-delta`, `tool-call-*`,
+awaited for backpressure), and its tool calls are the SDK's typed
+`ToolCall` union. Chosen: content from `onDelta`; `run.stream()` only for
+`status`, `task`, `request` and `usage`. Whether `onDelta` fires for cloud
+runs is checked in one authorized live run before the stream lands (Q9); if
+it does not, the mapping goes back to the owner.
+
+## 2026-11-12 — CHD-622: refusals, turns and what is not served
+
+- `session/new` checks git first (work tree, branch, push remote, pushed),
+  then the key (`Cursor.me`), then creates the agent with
+  `workOnCurrentBranch` and `autoCreatePR` false: the agent pushes a branch
+  of its own, and the person tells it what to do with it. "Pushed" is read
+  from the local remote-tracking ref, with no network (owner, Q4).
+- `authenticate` is answered with an error naming the `login` command.
+- `request` events: a line with the request id and the link, never an
+  answer; the turn stays open, Esc stops it.
+- Cancel is bounded at 10 s, answered `cancelled` once, with a line when
+  Cursor did not confirm; late events of an answered run are dropped.
+- Stream loss ends the turn with the link; no reattach (no event ids to
+  deduplicate by). A run still going at reopen refuses prompts until it
+  ends; the adapter does not follow it live.
+- Modes as a `mode` config option, ids `default` (the SDK's `agent`) and
+  `plan`, sent on every send. Models one option per variant; the default
+  option leaves once a model is set, as the SDK has no way back to it.
+- `session/list`: every cloud agent on the account for the cwd's
+  repository. chord's `/resume` keeps reading chord's records.
+- Not served: fork, delete, steering, `usage_update` (no context size),
+  env vars, artifact downloads. chord's entry takes no MCP servers; servers
+  sent anyway are taken and named unreachable in the first message
+  (owner, Q5).
+
+## 2026-11-12 — CHD-622: chord's changes
+
+chord's own npx agents live in `src/chorded.ts`, merged by name into the
+npx agents, `cursor-cloud` titled `Cursor Cloud Agents` (owner, Q1). The
+start-failure pin line says "the version this chord pins" for every
+pinned agent, true for the registry's as for this one. No remote marker, no
+`/resume` from `session/list`.
+
+## 2026-11-12 — CHD-622: the owner's answers
+
+The owner answered the design's questions (CHD-622, Q1–Q9):
+
+- The agent is `cursor-cloud`, titled `Cursor Cloud Agents`.
+- Where no keychain exists, `login` refuses and points to
+  `CURSOR_API_KEY`; no key is written to a file.
+- The SDK's own login file is not used: the adapter always passes `apiKey`
+  from `CURSOR_API_KEY` or its keychain entry.
+- "Pushed" is read from the local remote-tracking ref, with no network.
+- MCP servers given to a session anyway are taken, as ACP asks, and the
+  first message says they are unreachable from Cursor's cloud.
+- `@cursor/sdk` is exact-pinned at 1.3.1, an approved exception to
+  AGENTS.md's caret rule: bun.lock does not reach a person's `npx`.
+- The required `node` CI job runs on Node 22 only, from 22.13, with no LTS
+  run.
+- Ship makes one live run against Cursor on the owner's account, tiny
+  prompt, before the stream lands.
+
+The release (Q6) became a review of `bun dev` for several packages,
+CHD-623, which records it.
+
+## 2026-11-12 — CHD-622: chord pins the package by an exact version
+
+`src/chorded.ts` holds chord's own npx agents in the registry's shape;
+`cursor-cloud` starts `npx -y @chorded/cursor-cloud-acp@<version>`, the
+version an exact literal bumped by a chord commit after a package release,
+so main never pins a version npm does not have. Reading it from the
+package's `package.json` was rejected: that would pin a version still being
+released. chord's release preflight (its `steps.ts`, CHD-623) stops on a
+pin npm does not have. 0.70.0's order: CHD-623, this package's 0.1.0, then
+chord.

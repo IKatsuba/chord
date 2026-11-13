@@ -1,0 +1,40 @@
+ ▀▄     chord v0.69.0
+ ▀▀▀▄   cursor-cloud
+ ▄▀▀▀   /tmp/chord-qa.des-u7
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ cursor-cloud did not start: Not signed in to Cursor.
+   ⎿  cursor-cloud offers this sign-in:
+        Cursor login · Run `npx -y @chorded/cursor-cloud-acp@0.1.0 login` in a terminal, or set CURSOR_API_KEY
+      chord does not sign agents in. Sign in with cursor-cloud's own CLI in a terminal, or set its API key where it
+      offers one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

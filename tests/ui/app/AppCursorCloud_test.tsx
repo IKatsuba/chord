@@ -3,7 +3,7 @@
  * its first message before any prompt, its sign-in, and a request it
  * cannot answer, each through what chord already draws for any agent.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { openSession } from '../../../src/session/session.ts';
 import { SignInBlock } from '../../../src/ui/app/SignIn.tsx';
 import { fakeAgentCommand } from '../../fixtures/fake.ts';
@@ -128,4 +128,35 @@ test('a request Cursor waits on draws as a line, the turn running until Esc', as
     },
     { columns: 120, rows: 30, agent: 'cursor-cloud' },
   );
+});
+
+describe('CHD-622 tester: narrow request cancellation', () => {
+  test('Esc stops a request at 80 by 24 and the next prompt still works', async () => {
+    await withWindow(
+      async (window) => {
+        await ready(window);
+        await send(window, 'cloudrequest');
+        await until('the request and its link', () => {
+          const frame = window.frame();
+
+          return (
+            frame.replace(/\s+/g, ' ').includes('Esc stops the run.') &&
+            frame.split('\n').some((row) => row.trim() === LINK)
+          );
+        });
+
+        expect(window.frame()).toContain('Working…');
+        await window.press('\u001b');
+        await until(
+          'the narrow turn stopped',
+          () => !window.frame().includes('Working…'),
+        );
+        await send(window, 'text');
+        await until('a new reply after cancelling', () =>
+          window.frame().replace(/\s+/g, ' ').includes('Hello, world.'),
+        );
+      },
+      { columns: 80, rows: 24, agent: 'cursor-cloud' },
+    );
+  });
 });

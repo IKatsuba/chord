@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import { CHORDED_AGENTS } from '../../../../src/chorded.ts';
 import { pinsOnNpm } from '../../../../scripts/dev/release/pins.ts';
 import steps from '../../../../steps.ts';
@@ -39,4 +39,25 @@ test("chord's pins are src/chorded.ts's, and chord's steps ask for them", () => 
     CHORDED_AGENTS.map((agent) => `${agent.package}@${agent.version}`),
   ).toEqual(['@chorded/cursor-cloud-acp@0.1.0']);
   expect(steps.preflight).toBeFunction();
+});
+
+describe('CHD-622 tester: release pin refusal', () => {
+  test('a different published version refuses the first pin before checking later agents', () => {
+    const asked: string[] = [];
+
+    expect(() =>
+      pinsOnNpm(
+        (spec) => {
+          asked.push(spec);
+
+          return '0.1.1';
+        },
+        [
+          { package: '@chorded/cursor-cloud-acp', version: '0.1.0' },
+          { package: '@chorded/other-acp', version: '1.2.3' },
+        ],
+      ),
+    ).toThrow('release @chorded/cursor-cloud-acp first');
+    expect(asked).toEqual(['@chorded/cursor-cloud-acp@0.1.0']);
+  });
 });

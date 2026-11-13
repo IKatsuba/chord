@@ -40,8 +40,6 @@ export interface ShellProcess {
 
 export interface ShellOptions {
   readonly cwd: string;
-  /** Complete child environment; omitted inherits the current process. */
-  readonly environment?: Readonly<Record<string, string>>;
   /** The shell and the flag before the command; the user's own by default. */
   readonly shell?: readonly [string, ...string[]];
   /** Each piece of output as it comes, bash mode's. */
@@ -69,25 +67,19 @@ const KILL_AFTER_MS = 2000;
  */
 const GONE_AFTER_KILL_MS = 5000;
 
-function defaultShell(
-  environment: NodeJS.ProcessEnv = process.env,
-): readonly [string, ...string[]] {
+function defaultShell(): readonly [string, ...string[]] {
   return WINDOWS
     ? ['cmd.exe', '/d', '/s', '/c']
-    : [environment['SHELL'] || '/bin/sh', '-c'];
+    : [process.env['SHELL'] || '/bin/sh', '-c'];
 }
 
 export function runShell(command: string, options: ShellOptions): ShellProcess {
-  const [program, ...flags] =
-    options.shell ?? defaultShell(options.environment);
+  const [program, ...flags] = options.shell ?? defaultShell();
   const { onOutput, onLine } = options;
   // Its own process group, so a stop reaches what the shell started too: a
   // `sleep` left behind would hold the pipes open, and the run with them.
   const group = spawnGroup(program, [...flags, command], {
     cwd: options.cwd,
-    ...(options.environment === undefined
-      ? {}
-      : { env: options.environment, inheritEnv: false }),
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: onLine === undefined ? 'pipe' : 'ignore',

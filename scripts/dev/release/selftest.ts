@@ -3,9 +3,7 @@
  * version, -p answers, acp answers a prompt and a permission on stdio and goes
  * at EOF, and the window opens, answers a prompt and reads the
  * clipboard on ctrl+v, each of which a native library the binary could not
- * load would stop; a riff turn on each backend, through the hidden
- * --riff-agent, proves libfx is in the binary. The
- * window runs in a tmux of its own, on temporary state
+ * load would stop. The window runs in a tmux of its own, on temporary state
  * and config directories. ARCH x86_64 runs it all under `arch -x86_64`
  * (Rosetta).
  */
@@ -17,13 +15,9 @@ import {
   rmSync,
   statSync,
 } from 'node:fs';
-import { writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { join, resolve } from 'node:path';
-import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
-import { type Agent, openAgent } from '../../../src/acp/connection.ts';
-import { DONE, NEEDLE, NEEDLE_FILE, serveFakeChat } from './fake_chat.ts';
 import { die, type Release, run, said } from './lib.ts';
 import { packageVersion } from './preflight.ts';
 
@@ -159,218 +153,6 @@ async function acpStep(
   }
 }
 
-/**
- * One riff turn through the binary's hidden `--riff-agent`, started and
- * driven by chord's own ACP client as the window starts riff, against the
- * fake Chat Completions server: `session/new`, one prompt, then the close,
- * which ends stdin and must see riff exit 0. `wasm` turns the native addon
- * off; the native leg clears it, whatever the caller's environment says.
- */
-async function riffTurn(
-  release: Release,
-  binary: string,
-  arch: string | undefined,
-  cwd: string,
-  url: string,
-  wasm: boolean,
-): Promise<RiffTurn> {
-  let stderr = '';
-  let text = '';
-  const tools = new Map<string, RiffToolCall>();
-  const env = Object.fromEntries(
-    Object.entries({
-      ...release.env,
-      CHORD_RIFF_FAKE_PROVIDER: url,
-      CHORD_RIFF_BACKEND: wasm ? 'wasm' : '',
-    }).filter((entry): entry is [string, string] => entry[1] !== undefined),
-  );
-  let agent: Agent;
-
-  try {
-    agent = await openAgent({
-      command: [
-        ...(arch === undefined ? [] : ['arch', `-${arch}`]),
-        binary,
-        '--riff-agent',
-      ],
-      env,
-      cwd,
-      // Long enough for an exit at EOF, which the self-test requires.
-      stop: { exitMs: 20_000, termMs: 2000, killMs: 2000 },
-      onTraffic: (traffic) => {
-        if (traffic.from === 'stderr') {
-          stderr += traffic.text;
-        } else if (traffic.from === 'agent') {
-          const { update } =
-            (traffic.message as { params?: { update?: SessionUpdate } })
-              .params ?? {};
-
-          if (
-            update?.sessionUpdate === 'agent_message_chunk' &&
-            update.content.type === 'text'
-          ) {
-            text += update.content.text;
-          } else if (update?.sessionUpdate === 'tool_call') {
-            tools.set(update.toolCallId, { title: update.title });
-          } else if (
-            update?.sessionUpdate === 'tool_call_update' &&
-            (update.status === 'completed' || update.status === 'failed')
-          ) {
-            const [first] = update.content ?? [];
-
-            tools.set(update.toolCallId, {
-              ...tools.get(update.toolCallId),
-              status: update.status,
-              ...(first?.type === 'content' && first.content.type === 'text'
-                ? { text: first.content.text }
-                : {}),
-            });
-          }
-        }
-      },
-      onPermission: () =>
-        Promise.resolve({ outcome: { outcome: 'cancelled' } }),
-      onElicitation: () => Promise.resolve({ action: 'decline' }),
-      signal: AbortSignal.timeout(60_000),
-    });
-  } catch (error) {
-    die(
-      `${binary} --riff-agent did not start: ${String(error)}; stderr: ${stderr}`,
-    );
-  }
-
-  let stopReason: string | undefined;
-
-  try {
-    const { sessionId } = (await agent.newSession(
-      { cwd, mcpServers: [] },
-      AbortSignal.timeout(60_000),
-    )) as { sessionId: string };
-
-    ({ stopReason } = await agent.prompt(
-      { sessionId, prompt: [{ type: 'text', text: 'Say done.' }] },
-      AbortSignal.timeout(60_000),
-    ));
-  } catch (error) {
-    await agent.close().catch(() => {});
-
-    die(
-      `${binary} --riff-agent's turn failed: ${String(error)}; stderr: ${stderr}`,
-    );
-  }
-
-  await agent.close();
-
-  const exit = await agent.exited;
-
-  if (exit.code !== 0) {
-    die(
-      `${binary} --riff-agent did not leave at EOF (${exit.signal ?? exit.code}); stderr: ${stderr}`,
-    );
-  }
-
-  return {
-    backend: /^riff: backend (\S+)$/m.exec(stderr)?.[1],
-    stopReason,
-    text,
-    tools: [...tools.values()],
-  };
-}
-
-/**
- * A real riff turn through `--riff-agent` on each backend: native, then
- * with native turned off (Wasm), each reported by riff, searching the
- * project for the needle with fff in its Worker, reading the file it is in,
- * and ending `end_turn` with `done` after three model requests.
- */
-export async function riffStep(
-  release: Release,
-  binary: string,
-  arch: string | undefined,
-  cwd: string,
-): Promise<void> {
-  // The needle first: a write that fails leaves no server running.
-  await writeFile(join(cwd, NEEDLE_FILE), `${NEEDLE}\n`);
-
-  const fake = serveFakeChat();
-
-  try {
-    const turns = [
-      await riffTurn(release, binary, arch, cwd, fake.url, false),
-      await riffTurn(release, binary, arch, cwd, fake.url, true),
-    ];
-    const wrong = riffProblems(turns, fake.requests());
-
-    if (wrong !== undefined) {
-      die(`${binary} --riff-agent ${wrong}: ${JSON.stringify(turns)}`);
-    }
-  } finally {
-    await fake.stop();
-  }
-}
-
-/** A tool call of a riff turn, as the window would draw it. */
-export interface RiffToolCall {
-  readonly title?: string;
-  readonly status?: string;
-  /** The text the window would show under it. */
-  readonly text?: string;
-}
-
-/** The calls every turn makes, in order: fff's search, then the read. */
-export const RIFF_TOOLS: readonly RiffToolCall[] = [
-  {
-    title: `Search ${NEEDLE}`,
-    status: 'completed',
-    text: `${NEEDLE_FILE}:1: ${NEEDLE}`,
-  },
-  { title: `Read ${NEEDLE_FILE}`, status: 'completed', text: NEEDLE },
-];
-
-/** The model requests of a turn: one per call, and the answer. */
-const TURN_REQUESTS = RIFF_TOOLS.length + 1;
-
-/** What one riff turn did, as the self-test checks it. */
-export interface RiffTurn {
-  /** The backend riff said on stderr it loaded. */
-  readonly backend?: string | undefined;
-  readonly stopReason?: string | undefined;
-  readonly text?: string;
-  readonly tools?: readonly RiffToolCall[];
-}
-
-/** What is wrong with the two turns, or undefined when it all holds. */
-export function riffProblems(
-  turns: readonly RiffTurn[],
-  requests: number,
-): string | undefined {
-  const backends = ['native', 'wasm-jspi'];
-
-  if (turns.length !== backends.length) {
-    return `ran ${turns.length} turns, not ${backends.length}`;
-  }
-
-  for (const [index, turn] of turns.entries()) {
-    if (turn.backend !== backends[index]) {
-      return `ran turn ${index + 1} on ${turn.backend}, not ${backends[index]}`;
-    }
-
-    if (turn.stopReason !== 'end_turn' || turn.text !== DONE) {
-      return `ended its ${turn.backend} turn ${turn.stopReason} with ${JSON.stringify(turn.text)}`;
-    }
-
-    if (JSON.stringify(turn.tools) !== JSON.stringify(RIFF_TOOLS)) {
-      return `called ${JSON.stringify(turn.tools)} on ${turn.backend}, not ${JSON.stringify(RIFF_TOOLS)}`;
-    }
-  }
-
-  if (requests !== backends.length * TURN_REQUESTS) {
-    return `made ${requests} model requests, not ${backends.length * TURN_REQUESTS}`;
-  }
-
-  return undefined;
-}
-
 export async function selftest(
   release: Release,
   given: string,
@@ -499,7 +281,6 @@ export async function selftest(
     }
 
     await acpStep(inScratch, binary, arch, fake, join(scratch, 'project'));
-    await riffStep(inScratch, binary, arch, join(scratch, 'project'));
 
     tmux(
       'new-session',

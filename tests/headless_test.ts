@@ -10,6 +10,7 @@ import {
   failureOf,
   type HeadlessOptions,
   joinPiped,
+  noticeLine,
   Reply,
   resultJson,
   runHeadless,
@@ -283,6 +284,38 @@ test('-p --output-format json marks a cost chord worked out from the tokens', as
     turnCost('gpt-5.3-codex', TURN_TOKENS),
   );
   expect(result.cost_estimated).toStrictEqual(true);
+});
+
+test("an agent's notice goes to stderr as a line of chord's, in text and JSON, and stdout keeps the reply alone (CHD-629)", async () => {
+  const notice =
+    'chord: Fast mode turned off: Rate limit for fast mode reached; it comes back after the limit resets.\n';
+
+  expect(await headless('notice')).toStrictEqual({
+    code: 0,
+    stdout: 'Running the lexer suite with coverage now. Done.\n',
+    stderr: notice,
+  });
+
+  const json = await headless('notice', 'json');
+
+  expect(json.code).toStrictEqual(0);
+  expect(json.stderr).toStrictEqual(notice);
+  expect(JSON.parse(json.stdout).result).toStrictEqual(
+    'Running the lexer suite with coverage now. Done.',
+  );
+});
+
+test("a notice's line is cleaned and folded to one, its description left out when it has none", () => {
+  expect(
+    noticeLine({
+      severity: 'warning',
+      title: '\x1b[1mMCP server\x1b[0m failed',
+      description: 'one\n\n  two',
+    }),
+  ).toStrictEqual('chord: MCP server failed: one two\n');
+  expect(
+    noticeLine({ severity: 'info', title: 'Alone', description: null }),
+  ).toStrictEqual('chord: Alone\n');
 });
 
 test('a failing agent exits 1 with its error on stderr', async () => {

@@ -607,6 +607,46 @@ describe('one surface', () => {
     ));
 });
 
+describe('notices (CHD-629)', () => {
+  test("a client that declares notices gets the agent's notice as it came", () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'notice'));
+
+      expect(
+        client
+          .updates(sessionId)
+          .filter((update) => update.sessionUpdate === 'notice'),
+      ).toEqual([
+        {
+          sessionUpdate: 'notice',
+          severity: 'warning',
+          title: 'Fast mode turned off',
+          description:
+            'Rate limit for fast mode reached; it comes back after the limit resets.',
+        },
+      ]);
+      expect(client.said(sessionId)).not.toContain('Fast mode');
+    }));
+
+  test('a client that does not gets what the agent sends one that does not declare it: chord declares nothing for it and rewrites nothing', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'notice'));
+
+        expect(kinds(client, sessionId)).not.toContain('notice');
+        expect(client.said(sessionId)).toContain(
+          '> **Fast mode turned off**\n> Rate limit',
+        );
+      },
+      { capabilities: { ...FULL, session: { compaction: {} } } },
+    ));
+});
+
 describe('sessions side by side', () => {
   test('the same id from a second process takes an alias, and both route', () =>
     onAcp(['--session-id', 's1'], async ({ client, newSession, prompt }) => {

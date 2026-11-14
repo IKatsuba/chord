@@ -32,6 +32,7 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, fg, FILL, ROWS, TEXT } from '../theme/text.ts';
 import { compactionLine, inSpinner } from './compaction.ts';
 import { endedLine } from './ended.ts';
+import { noticeDescription, noticeMarker } from './notice.ts';
 import { Reply } from './Reply.tsx';
 import {
   inArrow,
@@ -152,6 +153,8 @@ export const TranscriptEntry = memo(function TranscriptEntry({
       return <Failure text={entry.message} />;
     case 'warning':
       return <Failure text={entry.message} tone='warning' />;
+    case 'notice':
+      return <Notice entry={entry} />;
     case 'cancelled':
       return <Outcome text='Interrupted by user' failed />;
     case 'stopped':
@@ -264,6 +267,37 @@ export const TranscriptEntry = memo(function TranscriptEntry({
       );
   }
 });
+
+/**
+ * An agent's notice (CHD-629): its title by a `⏺` in the severity's role,
+ * dim for `info`, and its description on the rows under it at the text's
+ * column, all of it dim, wrapped and never cut.
+ */
+function Notice({ entry }: { entry: Extract<Entry, { kind: 'notice' }> }) {
+  const gap = useGap();
+  const marker = noticeMarker(entry.severity, useColours());
+
+  return (
+    <>
+      {gap.spacer}
+      <box flexDirection='row' {...gap.props} flexShrink={0}>
+        <Gutter {...paint(marker)} dimColor={marker === undefined}>
+          ⏺
+        </Gutter>
+        <box flexDirection='column' flexGrow={1} flexShrink={1}>
+          <text {...FILL} attributes={DIM}>
+            <Ansi text={entry.title} />
+          </text>
+          {entry.description === undefined ? null : (
+            <text {...FILL} attributes={DIM}>
+              <Ansi text={noticeDescription(entry.description)} />
+            </text>
+          )}
+        </box>
+      </box>
+    </>
+  );
+}
 
 /**
  * The close of a turn the agent started on its own, which chord cancelled:

@@ -1716,8 +1716,14 @@ export function createAgentsHost(
 
                   validation.resolve(undefined);
                 } else if (child !== undefined) {
+                  // A start refused for a value it read back keeps the receipt's
+                  // own words for it, from what the session is on (CHD-629);
+                  // one with no session left says the start failed.
                   refuse(
-                    'Initialization failed before the first job; the attempted agent is closing.',
+                    (child.conversation.session === undefined
+                      ? undefined
+                      : opening.checkStarted?.(child.conversation)) ??
+                      'Initialization failed before the first job; the attempted agent is closing.',
                   );
 
                   if (opening.checkStarted !== undefined) {

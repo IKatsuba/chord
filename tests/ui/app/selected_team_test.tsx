@@ -331,21 +331,25 @@ describe('selected frozen team startup', () => {
         expect(prompts).toEqual([]);
         expect((await main.window.teams(main)).runs).toEqual([]);
 
-        const records = await readRecords(join(window.dir, 'state'));
-        const parent = records.find(
-          (record) => record.sessionId === window.session()?.id,
-        );
+        // A refused attempt's receipt is kept in the caller's record: the
+        // lead never started, so it has none of its own (src/session/AGENTS.md).
+        await until("refusal kept in the caller's record", async () => {
+          for (const record of await readRecords(join(window.dir, 'state'))) {
+            const kept = (await readPast(record.path)).some(
+              (entry) =>
+                entry.type === 'served' &&
+                recordedSelection(entry.call)?.runId === answer.id &&
+                recordedSelection(entry.call)?.roles[0]?.note ===
+                  answer.receipt?.roles[0]?.note,
+            );
 
-        assert(parent !== undefined);
-        await until('refusal kept in parent record', async () =>
-          (await readPast(parent.path)).some(
-            (entry) =>
-              entry.type === 'served' &&
-              recordedSelection(entry.call)?.runId === answer.id &&
-              recordedSelection(entry.call)?.roles[0]?.note ===
-                answer.receipt?.roles[0]?.note,
-          ),
-        );
+            if (kept) {
+              return true;
+            }
+          }
+
+          return false;
+        });
       },
       {
         open: async (args) => {

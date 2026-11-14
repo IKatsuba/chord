@@ -1375,3 +1375,86 @@ describe("Claude's compaction of an idle session (CHD-624 D2)", () => {
       ).not.toBe('idle');
     }));
 });
+
+describe('CHD-624 U2 tester: idle compaction interruption boundaries', () => {
+  const entries = (events: readonly ConversationEvent[]) =>
+    events
+      .reduce(reduceApp, initialAppState)
+      .transcript.entries.flatMap((entry) =>
+        entry.kind === 'compaction' ? [entry] : [],
+      );
+
+  test('interrupting the prompt queued behind an idle compaction cancels it in place and the next turn runs', async () => {
+    let cwd = '';
+
+    await onFake(
+      ['--adapter', 'claude'],
+      async (conversation, events) => {
+        await mkdir(join(cwd, '.fake-gate'));
+        conversation.send('idlecompact');
+        await until(() => entries(events).length === 1);
+
+        const original = entries(events)[0];
+
+        assert(original);
+        expect(original.compaction.unasked).toBe(true);
+        conversation.send('text');
+        await until(() =>
+          events.some(
+            (event) => event.type === 'prompt' && event.text === 'text',
+          ),
+        );
+        conversation.interrupt();
+        await until(() =>
+          entries(events).some(
+            ({ compaction }) => compaction.status === 'cancelled',
+          ),
+        );
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'result' && event.result.status === 'cancelled',
+          ),
+        );
+        expect(entries(events)).toHaveLength(1);
+        expect(entries(events)[0]).toMatchObject({
+          turnId: original.turnId,
+          compaction: {
+            id: original.compaction.id,
+            status: 'cancelled',
+            unasked: true,
+          },
+        });
+        expect(events.some((event) => event.type === 'cycle_started')).toBe(
+          false,
+        );
+        conversation.send('text');
+        await until(() => saidIn(events).includes('Hello, world.'));
+      },
+      (session) => {
+        cwd = session.cwd;
+
+        return session;
+      },
+    );
+  });
+
+  test('a compaction requested in a person’s turn remains plain when cancelled', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('compact');
+      await until(() => entries(events).length === 1);
+      expect(entries(events)[0]?.compaction.unasked).toBeUndefined();
+      conversation.interrupt();
+      await until(() =>
+        entries(events).some(
+          ({ compaction }) => compaction.status === 'cancelled',
+        ),
+      );
+      expect(entries(events)[0]?.compaction.unasked).toBeUndefined();
+      expect(
+        events.filter(
+          (event) => event.type === 'update' && event.unasked === true,
+        ),
+      ).toEqual([]);
+    }));
+});

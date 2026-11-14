@@ -876,6 +876,250 @@ describe('session/set_title (CHD-629)', () => {
     ));
 });
 
+describe('CHD-629 tester: pending ACP rename lifecycle', () => {
+  const watchTitles =
+    (answers: string[]): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+
+      return {
+        ...session,
+        setTitle: async (title) => {
+          const answer = await session.setTitle(title);
+
+          answers.push(answer);
+
+          return answer;
+        },
+      };
+    };
+
+  async function answered(acp: Acp, sessionId: string) {
+    const response = await acp.client.answerTo(acp.prompt(sessionId, 'text'));
+
+    expect(response.error).toBeUndefined();
+    expect(response.result?.stopReason).toBe('end_turn');
+  }
+
+  const heardTitles = (cwd: string) => {
+    try {
+      return readFileSync(join(cwd, '.fake-gate', 'titles-heard'), 'utf8')
+        .split('\n')
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
+
+  const relayedTitles = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .flatMap((update) =>
+        update.sessionUpdate === 'session_info_update' ? [update.title] : [],
+      );
+
+  async function park(acp: Acp, title: string) {
+    const sessionId = await acp.newSession();
+
+    await answered(acp, sessionId);
+    expect(
+      (await acp.client.request('session/close', { sessionId })).error,
+    ).toBeUndefined();
+    expect(
+      (await acp.client.request('session/set_title', { sessionId, title }))
+        .result,
+    ).toEqual({ title });
+
+    return sessionId;
+  }
+
+  const reopen = (
+    acp: Acp,
+    sessionId: string,
+    method: 'session/load' | 'session/resume',
+  ) => acp.client.request(method, { sessionId, cwd: acp.cwd, mcpServers: [] });
+
+  async function recordedLines(acp: Acp, sessionId: string) {
+    const record = (await readRecords(acp.stateDir)).find(
+      (entry) => entry.sessionId === sessionId,
+    );
+
+    assert(record);
+
+    return parseRecord(await readFile(record.path, 'utf8'));
+  }
+
+  const recordedRenames = async (acp: Acp, sessionId: string) =>
+    (await recordedLines(acp, sessionId)).filter(
+      (entry) => entry.type === 'renamed',
+    );
+
+  for (const method of ['session/load', 'session/resume'] as const) {
+    test(`${method} sends only the last pending title, records the normalized answer, and never retries a taken rename`, async () => {
+      const answers: string[] = [];
+
+      await onAcp(
+        ['--set-title', 'silent', '--resume-only'],
+        async (acp) => {
+          const long = 'x'.repeat(200);
+          const normalized = 'x'.repeat(80);
+          const sessionId = await park(acp, 'Superseded pending title');
+
+          await acp.client.request('session/set_title', {
+            sessionId,
+            title: long,
+          });
+
+          const before = (await recordedLines(acp, sessionId)).length;
+
+          expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+          await until(() => answers.includes(normalized));
+          expect(
+            (
+              await acp.client.request('session/set_config_option', {
+                sessionId,
+                configId: 'effort',
+                value: 'high',
+              })
+            ).error,
+          ).toBeUndefined();
+          await acp.client.request('session/close', { sessionId });
+
+          expect(heardTitles(acp.cwd)).toEqual([long]);
+
+          const last = (await recordedRenames(acp, sessionId)).at(-1);
+
+          expect(last?.title).toBe(normalized);
+          expect(last?.pending).toBeUndefined();
+
+          const added = (await recordedLines(acp, sessionId)).slice(before);
+          const renamedAt = added.findIndex(
+            (entry) => entry.type === 'renamed',
+          );
+
+          expect(added.slice(0, 2).map((entry) => entry.type)).toEqual([
+            'opened',
+            'state',
+          ]);
+          expect(renamedAt).toBeGreaterThan(1);
+          expect(added[renamedAt]).toEqual({
+            type: 'renamed',
+            title: normalized,
+            at: expect.any(Number),
+          });
+          expect(
+            added
+              .slice(renamedAt + 1)
+              .some(
+                (entry) =>
+                  entry.type === 'state' && entry.options.effort === 'high',
+              ),
+          ).toBe(true);
+          expect(added.some((entry) => entry.type === 'prompt')).toBe(false);
+          expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+          await answered(acp, sessionId);
+          expect(heardTitles(acp.cwd)).toEqual([long]);
+
+          const listed = await acp.client.request('session/list', {
+            cwd: acp.cwd,
+          });
+          const sessions = listed.result?.sessions as {
+            sessionId: string;
+            title: string;
+          }[];
+
+          expect(
+            sessions.find((session) => session.sessionId === sessionId)?.title,
+          ).toBe(normalized);
+        },
+        { open: watchTitles(answers) },
+      );
+    });
+
+    test(`${method} stays usable after a pending refusal and retries on the next opening without losing the recorded title`, () =>
+      onAcp(['--set-title', 'refuse', '--resume-only'], async (acp) => {
+        const sessionId = await park(acp, 'Still pending');
+
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+        await until(() => heardTitles(acp.cwd).length === 1);
+        await acp.client.request('session/close', { sessionId });
+
+        const first = (await recordedRenames(acp, sessionId)).at(-1);
+
+        expect(first?.title).toBe('Still pending');
+        expect(first?.pending).toBe(true);
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+        await until(() => heardTitles(acp.cwd).length === 2);
+        expect(heardTitles(acp.cwd)).toEqual([
+          'Still pending',
+          'Still pending',
+        ]);
+        expect(acp.lines.join('')).not.toContain('cannot rename');
+      }));
+
+    test(`${method} keeps a pending title in chord only when the agent takes no title`, () =>
+      onAcp(['--resume-only'], async (acp) => {
+        const sessionId = await park(acp, 'Local pending title');
+
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+
+        if (method === 'session/load') {
+          expect(relayedTitles(acp.client, sessionId)).toContain(
+            'Local pending title',
+          );
+        }
+
+        const listed = await acp.client.request('session/list', {
+          cwd: acp.cwd,
+        });
+        const sessions = listed.result?.sessions as {
+          sessionId: string;
+          title: string;
+        }[];
+
+        expect(
+          sessions.find((session) => session.sessionId === sessionId)?.title,
+        ).toBe('Local pending title');
+        expect(heardTitles(acp.cwd)).toEqual([]);
+        await acp.client.request('session/close', { sessionId });
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+        expect(heardTitles(acp.cwd)).toEqual([]);
+      }));
+  }
+
+  test('a hung pending rename leaves load and prompts usable, and stays first in the live rename FIFO', () =>
+    onAcp(['--set-title', 'hang'], async (acp) => {
+      const sessionId = await park(acp, 'Pending title');
+
+      expect(
+        (await reopen(acp, sessionId, 'session/load')).error,
+      ).toBeUndefined();
+      await until(() => heardTitles(acp.cwd).length === 1);
+
+      const next = acp.client.send('session/set_title', {
+        sessionId,
+        title: 'Fresh title',
+      });
+
+      await answered(acp, sessionId);
+      expect(heardTitles(acp.cwd)).toEqual(['Pending title']);
+
+      const other = await acp.newSession();
+
+      await answered(acp, other);
+      await mkdir(join(acp.cwd, '.fake-gate'), { recursive: true });
+      await writeFile(join(acp.cwd, '.fake-gate', 'release'), '');
+      expect((await acp.client.answerTo(next)).result).toEqual({
+        title: 'Fresh title',
+      });
+      expect(heardTitles(acp.cwd)).toEqual(['Pending title', 'Fresh title']);
+    }));
+});
+
 describe('a rename the agent takes at the load (CHD-629)', () => {
   /** Every `renamed` line in the records under `stateDir`. */
   const renamedIn = (stateDir: string) =>

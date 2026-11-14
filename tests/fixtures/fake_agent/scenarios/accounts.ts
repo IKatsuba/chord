@@ -4,6 +4,9 @@
  * after `initialize`, and another account mid-turn.
  */
 import * as acp from '@agentclientprotocol/sdk/unstable';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import process from 'node:process';
 import { AUTH_RACE, AUTH_STATUS } from '../options.ts';
 import type { Client, Play } from '../turn.ts';
 
@@ -84,7 +87,24 @@ export async function authStatus(
     await new Promise<never>(() => {});
   }
 
+  if (AUTH_STATUS === 'held') {
+    await released();
+  }
+
   return statusOf();
+}
+
+/**
+ * Until `<cwd>/.fake-gate/release` exists in the agent's own directory, the
+ * session's, or 10 s on the monotonic clock.
+ */
+async function released(): Promise<void> {
+  const at = join(process.cwd(), '.fake-gate', 'release');
+  const deadline = performance.now() + 10_000;
+
+  while (!existsSync(at) && performance.now() < deadline) {
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
 }
 
 /** Pushes the account, as Claude's adapter does once its probe lands. */

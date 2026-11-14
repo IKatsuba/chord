@@ -205,7 +205,7 @@ export const CHILD_MODEL = valueOf('--child-model', 'CHORD_FAKE_CHILD_MODEL');
 export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
 
 /**
- * `--auth-status <authenticated|unauthenticated|unknown|error|hang|several>`
+ * `--auth-status <authenticated|unauthenticated|unknown|error|hang|held|several>`
  * (`CHORD_FAKE_AUTH_STATUS`): it advertises `agentCapabilities.auth.status`
  * and answers `auth/status` as `scenarios/accounts.ts` plays it (CHD-629).
  */
@@ -219,6 +219,7 @@ export const AUTH_STATUS = (() => {
     chosen === 'unknown' ||
     chosen === 'error' ||
     chosen === 'hang' ||
+    chosen === 'held' ||
     chosen === 'several'
   ) {
     return chosen;
@@ -233,6 +234,15 @@ export const AUTH_STATUS = (() => {
  */
 export const AUTH_PUSH =
   ARGS.includes('--auth-push') || process.env.CHORD_FAKE_AUTH_PUSH === '1';
+
+/**
+ * `--auth-push-early` (`CHORD_FAKE_AUTH_PUSH_EARLY=1`): it pushes an API
+ * key's account before it answers `initialize`, whether or not it
+ * advertises `auth.status` (CHD-629).
+ */
+export const AUTH_PUSH_EARLY =
+  ARGS.includes('--auth-push-early') ||
+  process.env.CHORD_FAKE_AUTH_PUSH_EARLY === '1';
 
 /**
  * `--auth-race <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`): an API

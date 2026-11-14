@@ -356,7 +356,12 @@
   organization), the state alone, an error, never, or, for `several`, two
   accounts neither marked active, the first long past 80 columns; `--auth-push`
   (`CHORD_FAKE_AUTH_PUSH=1`) pushes that account in an `auth/status_update`
-  just after `initialize` (the subscription for `error` and `hang`), and
+  just after `initialize` (the subscription for `error` and `hang`);
+  `--auth-status held` answers the subscription once
+  `<cwd>/.fake-gate/release` exists in the agent's directory (at most
+  10 s); `--auth-push-early` (`CHORD_FAKE_AUTH_PUSH_EARLY=1`) pushes an API
+  key's account before the `initialize` answer, with or without
+  `--auth-status`; and
   `authchanged` pushes an API key's account mid-turn; `--auth-race
   <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`) pushes that account
   just before `auth/status`'s answer, or just after it (CHD-629).

@@ -285,6 +285,7 @@ import {
   SET_TITLE,
   AUTH_STATUS,
   AUTH_PUSH,
+  AUTH_PUSH_EARLY,
   AUTO_FALLBACK,
   HANG,
   RESEND_CONFIG,
@@ -333,7 +334,12 @@ import {
 } from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
 import { setTitle, TITLES } from './scenarios/titles.ts';
-import { ACCOUNTS, authStatus, pushStatus } from './scenarios/accounts.ts';
+import {
+  ACCOUNTS,
+  API_KEY,
+  authStatus,
+  pushStatus,
+} from './scenarios/accounts.ts';
 import { LINKS } from './scenarios/links.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
@@ -1585,11 +1591,15 @@ async function setConfig(
 
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
-  .onRequest('initialize', ({ params, client }) => {
+  .onRequest('initialize', async ({ params, client }) => {
     readCapabilities(params);
 
     if (AUTH_PUSH) {
       pushStatus(client);
+    }
+
+    if (AUTH_PUSH_EARLY) {
+      await client.notify('auth/status_update', API_KEY);
     }
 
     return HANG === 'start'

@@ -2464,6 +2464,25 @@ describe("the agent's account (CHD-629)", () => {
       });
     }));
 
+  for (const [race, last] of [
+    ['push-first', SIGNED_IN],
+    ['answer-first', API_KEY],
+  ] as const) {
+    test(`an answer and a push fold in the order they came over the wire, the later winning (${race})`, () =>
+      accountOn(
+        ['--auth-status', 'authenticated', '--auth-race', race],
+        async (session) => {
+          // A turn's round trip: whatever either sent has been heard by then.
+          await run(session, 'text');
+
+          expect(session.account()).toStrictEqual({
+            phase: 'heard',
+            status: last,
+          });
+        },
+      ));
+  }
+
   test('a request that never answers does not hold the start: the account stays pending', () =>
     accountOn(['--auth-status', 'hang'], (session) => {
       expect(session.account()).toStrictEqual({ phase: 'pending' });

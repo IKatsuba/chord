@@ -446,6 +446,8 @@ export async function openSession(
   /** Updates no listener has heard yet, for the first one to come. */
   const held: Heard[] = [];
   let accountState: AccountState = NO_ACCOUNT;
+  /** The id chord sent `auth/status` under, whose answer is the account. */
+  let accountAsked: unknown;
   const accountListeners = new Set<(account: AccountState) => void>();
   const account = (event: AccountEvent) => {
     const next = foldAccount(accountState, event);
@@ -492,9 +494,17 @@ export async function openSession(
   };
 
   const onTraffic = (traffic: Traffic) => {
-    // A push of the account, a notification of the connection's and not a
-    // session's: never held in `early`, and from before `initialize` too.
+    // The account's answer and pushes fold here, in the order they came
+    // over the wire (CHD-629): a push is the connection's and not a
+    // session's, never held in `early`, and heard from before `initialize`.
     if (
+      traffic.from === 'chord' &&
+      'method' in traffic.message &&
+      traffic.message.method === 'auth/status' &&
+      'id' in traffic.message
+    ) {
+      accountAsked = traffic.message.id;
+    } else if (
       traffic.from === 'agent' &&
       'method' in traffic.message &&
       traffic.message.method === 'auth/status_update'
@@ -503,6 +513,21 @@ export async function openSession(
         type: 'heard',
         status: traffic.message.params as AuthStatusResponse,
       });
+    } else if (
+      traffic.from === 'agent' &&
+      !('method' in traffic.message) &&
+      'id' in traffic.message &&
+      accountAsked !== undefined &&
+      traffic.message.id === accountAsked
+    ) {
+      account(
+        'result' in traffic.message
+          ? {
+              type: 'heard',
+              status: traffic.message.result as AuthStatusResponse,
+            }
+          : { type: 'failed' },
+      );
     }
 
     // The tap keeps notifications from the SDK: this is the one place to hear it.
@@ -557,10 +582,9 @@ export async function openSession(
   // wait for it, and Claude's adapter joins the probe `initialize` began.
   if (connection.init.agentCapabilities?.auth?.status) {
     account({ type: 'asked' });
-    connection.authStatus().then(
-      (status) => account({ type: 'heard', status }),
-      () => account({ type: 'failed' }),
-    );
+    // Its answer is heard on the wire; an agent gone before answering is
+    // a failed request.
+    connection.authStatus().catch(() => account({ type: 'failed' }));
   }
 
   live.add(connection.pid);

@@ -234,6 +234,25 @@ export const AUTH_PUSH =
   ARGS.includes('--auth-push') || process.env.CHORD_FAKE_AUTH_PUSH === '1';
 
 /**
+ * `--auth-race <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`): `auth/status`'s
+ * answer and a push of an API key's account go in one write, in that order,
+ * so a test sees the two folded in the order they came (CHD-629).
+ */
+export const AUTH_RACE = (() => {
+  const chosen = valueOf('--auth-race', 'CHORD_FAKE_AUTH_RACE');
+
+  if (
+    chosen === undefined ||
+    chosen === 'push-first' ||
+    chosen === 'answer-first'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --auth-race "${chosen}"`);
+})();
+
+/**
  * `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`): it
  * advertises `sessionCapabilities.title` and answers `session/set_title` as
  * `scenarios/titles.ts` plays the mode (CHD-629).

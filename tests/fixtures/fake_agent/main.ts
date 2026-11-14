@@ -1668,7 +1668,7 @@ const connection = acp
       configOptions: configOptions(sessionId),
     };
   })
-  .onRequest('auth/status', () => authStatus())
+  .onRequest('auth/status', ({ requestId }) => authStatus(requestId))
   .onRequest('session/set_title', ({ params, client }) =>
     setTitle(client, params),
   )

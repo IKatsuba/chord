@@ -354,7 +354,10 @@
   organization), the state alone, an error, or never; `--auth-push`
   (`CHORD_FAKE_AUTH_PUSH=1`) pushes that account in an `auth/status_update`
   just after `initialize` (the subscription for `error` and `hang`), and
-  `authchanged` pushes an API key's account mid-turn (CHD-629).
+  `authchanged` pushes an API key's account mid-turn; `--auth-race
+  <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`) writes `auth/status`'s
+  answer itself, with a push of that account before or after it, in one
+  write, so chord reads both in one chunk (CHD-629).
   `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
   advertises `sessionCapabilities.title` and stores a `session/set_title`
   title trimmed, its whitespace folded and cut at 80: `echo` sends it in a

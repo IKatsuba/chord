@@ -4,6 +4,7 @@
  * line from the answer.
  */
 import { describe, expect, test } from 'bun:test';
+import assert from 'node:assert/strict';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -274,4 +275,199 @@ describe('a rename (CHD-629)', () => {
       await release(dir);
       await until(() => conversation.title === 'Tidy the parser tests');
     }));
+});
+
+describe('CHD-629 tester: rename lifecycle boundaries', () => {
+  test('a refused empty title does not poison the next rename or change the record', () =>
+    renaming(
+      ['--set-title', 'silent', '--title', 'Existing title'],
+      async ({ conversation, lines }) => {
+        await expect(conversation.rename(' \n ')).rejects.toThrow('empty');
+        expect(conversation.title).toBe('Existing title');
+        expect(await lines('renamed')).toEqual([]);
+        expect(await conversation.rename('Next title')).toEqual({
+          title: 'Next title',
+          agent: true,
+        });
+        expect(await lines('renamed')).toEqual([
+          { type: 'renamed', title: 'Next title' },
+        ]);
+      },
+    ));
+
+  test('a rename before any prompt does not keep a session record', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-rename-only-'));
+    const stateDir = join(dir, 'state');
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(undefined, '--set-title', 'silent'),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      await conversation.rename('No prompt yet');
+      await conversation.close();
+      await recording.flushed();
+      expect(await readRecords(stateDir)).toEqual([]);
+    } finally {
+      await conversation.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('a config request hung at the agent cannot hold a rename', () =>
+    renaming(
+      ['--set-title', 'echo', '--hang', 'config'],
+      async ({ conversation, events, lines }) => {
+        void conversation.setMode('plan').catch(() => {});
+
+        const from = events.length;
+
+        conversation.send('configsheard');
+        await until(() =>
+          events
+            .slice(from)
+            .some(
+              (event) =>
+                event.type === 'update' &&
+                event.update.sessionUpdate === 'agent_message_chunk' &&
+                event.update.content.type === 'text' &&
+                event.update.content.text.includes('"configId": "mode"'),
+            ),
+        );
+
+        expect(await conversation.rename('While config waits')).toEqual({
+          title: 'While config waits',
+          agent: true,
+        });
+        expect(await lines('renamed')).toEqual([
+          { type: 'renamed', title: 'While config waits' },
+        ]);
+      },
+    ));
+
+  test('a held rename holds neither the config chain nor another session', () =>
+    renaming(['--set-title', 'hang'], async ({ conversation, dir }) => {
+      const pending = conversation.rename('First connection');
+
+      await hearing(dir, 1);
+      await conversation.setMode('plan');
+      expect(conversation.session?.modes()?.current).toBe('plan');
+      await renaming(['--set-title', 'echo'], async (other) => {
+        expect(await other.conversation.rename('Other connection')).toEqual({
+          title: 'Other connection',
+          agent: true,
+        });
+        expect(conversation.title).toBeUndefined();
+      });
+
+      await release(dir);
+      expect(await pending).toEqual({ title: 'First connection', agent: true });
+    }));
+
+  test('an agent exiting with a rename pending leaves the last title and records no rename', () =>
+    renaming(
+      ['--set-title', 'hang', '--title', 'Existing title'],
+      async ({ conversation, dir, lines }) => {
+        const pending = conversation.rename('Never answered').then(
+          () => undefined,
+          (error: unknown) => error,
+        );
+
+        await hearing(dir, 1);
+
+        const session = conversation.session;
+
+        assert(session);
+        await session.close();
+        expect(await pending).toBeInstanceOf(Error);
+        expect(conversation.title).toBe('Existing title');
+        expect(await lines('renamed')).toEqual([]);
+      },
+    ));
+
+  test('cancelling a turn does not revoke subsequent title changes', () =>
+    renaming(['--set-title', 'silent'], async ({ conversation, events }) => {
+      const from = events.length;
+
+      conversation.send('slow');
+      await until(() =>
+        events
+          .slice(from)
+          .some(
+            (event) =>
+              event.type === 'update' &&
+              event.update.sessionUpdate === 'agent_message_chunk',
+          ),
+      );
+      conversation.interrupt();
+      await until(() =>
+        events.slice(from).some((event) => event.type === 'result'),
+      );
+
+      expect(await conversation.rename('After cancellation')).toEqual({
+        title: 'After cancellation',
+        agent: true,
+      });
+      expect(conversation.title).toBe('After cancellation');
+    }));
+
+  test('a silent normalized title is identical live, in the picker record, and after resume', () =>
+    renaming(
+      ['--set-title', 'silent'],
+      async ({ conversation, dir, lines }) => {
+        const title = 'x'.repeat(80);
+
+        await conversation.rename('x'.repeat(120));
+        await lines('renamed');
+        await conversation.close();
+
+        const [record] = await readRecords(join(dir, 'state'));
+
+        assert(record);
+        expect(record.title).toBe(title);
+
+        const events: ConversationEvent[] = [];
+        const resumed = new Conversation(
+          () =>
+            openSession({
+              agent: 'fake',
+              cwd: dir,
+              agentCommand: fakeAgentCommand(
+                undefined,
+                '--set-title',
+                'silent',
+                '--resume-only',
+              ),
+              resume: {
+                sessionId: record.sessionId,
+                cwd: dir,
+                record: record.path,
+              },
+            }),
+          (event) => events.push(event),
+        );
+
+        try {
+          resumed.start();
+          await until(() => events.some((event) => event.type === 'connected'));
+          expect(resumed.title).toBe(title);
+          expect(conversation.title).toBe(title);
+        } finally {
+          await resumed.close();
+        }
+      },
+    ));
 });

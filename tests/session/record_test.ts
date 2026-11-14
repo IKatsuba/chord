@@ -42,6 +42,7 @@ import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { compactionLine } from '../../src/ui/transcript/compaction.ts';
 import { endedLine } from '../../src/ui/transcript/ended.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { until as waitFor } from './conversation_fake.ts';
 import { recordSession } from '../fixtures/records.ts';
 
 async function withDir(body: (dir: string) => Promise<void>) {
@@ -3237,5 +3238,65 @@ describe('an unasked compaction in the record (CHD-624)', () => {
         action.type === 'update' ? ['unasked' in action] : [],
       ),
     ).toStrictEqual([false]);
+  });
+});
+
+describe("a sign-in's account is never recorded (CHD-629)", () => {
+  test("a prompt refused for a login keeps its block live, and the record holds none of the account's fields", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-signin-record-'));
+    const stateDir = join(dir, 'state');
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--auth-required',
+            'prompt',
+            '--auth-status',
+            'authenticated',
+          ),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+    const results = () => events.filter((event) => event.type === 'result');
+
+    try {
+      conversation.start();
+      await waitFor(() => events.some((event) => event.type === 'connected'));
+      conversation.send('text');
+      await waitFor(() => results().length === 1);
+
+      const [refused] = results();
+
+      assert(refused?.type === 'result' && refused.result.status === 'failed');
+      expect(refused.result.error.signIn?.account?.phase).toBe('heard');
+
+      conversation.send('text');
+      await waitFor(() => results().length === 2);
+      await conversation.close();
+      await recording.flushed();
+
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const text = await recordFiles.readFile(record.path, 'utf8');
+
+      expect(text).toContain('Authentication required');
+
+      for (const field of ['name@example.com', 'Example Org', 'Claude Max']) {
+        expect(text).not.toContain(field);
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
   });
 });

@@ -459,6 +459,8 @@ export async function openSession(
   /** Updates no listener has heard yet, for the first one to come. */
   const held: Heard[] = [];
   let accountState: AccountState = NO_ACCOUNT;
+  /** Aborted as the session closes: a wait on the account stops then. */
+  const ending = new AbortController();
   /** The id chord sent `auth/status` under, whose answer is the account. */
   let accountAsked: unknown;
   const accountListeners = new Set<(account: AccountState) => void>();
@@ -653,6 +655,7 @@ export async function openSession(
   );
 
   const shutdown = async () => {
+    ending.abort();
     permissions.close();
     elicitations.close();
     plans.close();
@@ -840,6 +843,8 @@ export async function openSession(
     ) => {
       const blocks = [...promptBlocks(text, attachments), ...resources];
       let cancelled = false;
+      /** Aborted by a cancel: a wait on the account for its refusal stops. */
+      const stopped = new AbortController();
       /** Whether the prompt has gone to the agent, which a cancel then tells. */
       let gone = false;
       const { promise: sent, resolve: went } = Promise.withResolvers<
@@ -895,7 +900,9 @@ export async function openSession(
                 ? {
                     message,
                     ways: waysOf(connection.init.authMethods),
-                    account: await settledAccount(),
+                    account: await settledAccount(
+                      AbortSignal.any([stopped.signal, ending.signal]),
+                    ),
                   }
                 : undefined;
 
@@ -911,6 +918,8 @@ export async function openSession(
         ),
         cancel: () => {
           cancelled = true;
+
+          stopped.abort();
 
           // A prompt still waiting on its mentions never reached the agent:
           // the cancel only keeps it back. Told the agent, it could land on

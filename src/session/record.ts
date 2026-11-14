@@ -1021,7 +1021,7 @@ export function historyEntries(actions: readonly PastAction[]): RecordEntry[] {
         entries.push({
           type: 'result',
           turnId: action.turnId,
-          result: action.result,
+          result: recordedResult(action.result),
         });
 
         break;
@@ -1154,7 +1154,11 @@ export function entryOf(
         ? undefined
         : { type: 'disconnected', at: event.at };
     case 'result':
-      return { type: 'result', turnId: event.turnId, result: event.result };
+      return {
+        type: 'result',
+        turnId: event.turnId,
+        result: recordedResult(event.result),
+      };
     case 'usage':
       return event;
     case 'model':
@@ -1170,6 +1174,23 @@ export function entryOf(
     default:
       return undefined;
   }
+}
+
+/**
+ * A turn's result as the record keeps it: a sign-in's account is shown
+ * live and never written (CHD-629).
+ */
+function recordedResult(result: TurnResult): TurnResult {
+  if (
+    result.status !== 'failed' ||
+    result.error.signIn?.account === undefined
+  ) {
+    return result;
+  }
+
+  const { account: _, ...signIn } = result.error.signIn;
+
+  return { ...result, error: { ...result.error, signIn } };
 }
 
 /** The state line with `moved` over it; none when nothing moved. */

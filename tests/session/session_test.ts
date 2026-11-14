@@ -30,6 +30,7 @@ import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import type { PendingPermission } from '../../src/session/permissions.ts';
 import {
+  AUTH_WAIT_MS,
   openSession,
   type OpenSessionOptions,
   type Session,
@@ -2603,4 +2604,30 @@ describe("a sign-in worded from the agent's account (CHD-629, the owner's Q2 c)"
       '--auth-status',
       'unauthenticated',
     ));
+});
+
+describe('a wait on the account for a refused prompt stops on a cancel or a close (CHD-629)', () => {
+  for (const how of ['cancel', 'close'] as const) {
+    test(`a ${how} while the account is still unheard ends the wait at once`, () =>
+      withSession(
+        async (session) => {
+          const began = performance.now();
+          const turn = session.prompt('text');
+
+          await turn.sent;
+          await (how === 'cancel' ? turn.cancel() : session.close());
+
+          const result = await turn.result;
+
+          expect(result.status).toBe('failed');
+          // Well inside AUTH_WAIT_MS: nothing waited for the hung ask.
+          expect(performance.now() - began).toBeLessThan(AUTH_WAIT_MS);
+        },
+        undefined,
+        '--auth-required',
+        'prompt',
+        '--auth-status',
+        'hang',
+      ));
+  }
 });

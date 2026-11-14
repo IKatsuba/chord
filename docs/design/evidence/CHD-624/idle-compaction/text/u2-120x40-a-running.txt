@@ -1,0 +1,40 @@
+ ▀▄     chord v0.70.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d624
+ ▀▀     ? for shortcuts · /help
+
+ › idlecompact
+
+ ⏺ Done: three tests merged into one table, all green.
+
+ ✻ Compacting conversation while idle…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

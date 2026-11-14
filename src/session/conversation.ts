@@ -4202,11 +4202,14 @@ export class Conversation {
     }
 
     // The end of a turn whose prompt never went is the window's alone; in
-    // the record it would end a turn that is not there.
-    const ended = went
-      ? emit
-      : (event: ConversationEvent) =>
-          this.#session === session && this.#show(event);
+    // the record it would end a turn that is not there. So is the end of one
+    // a close cut short, which the record leaves without a result, as after
+    // a crash: the close has flushed the record by the time it comes (the
+    // owner's ruling, CHD-629).
+    const ended = (event: ConversationEvent) =>
+      went && this.#closing === undefined
+        ? emit(event)
+        : this.#session === session && this.#show(event);
 
     // The turn stays on screen, still working, through the wait, so the
     // queued prompt reads as waiting behind it and Esc can still take it back.

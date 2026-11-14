@@ -5,7 +5,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { run } from '../fixtures/recorder.ts';
 import {
   API_KEY,
@@ -17,8 +17,10 @@ import { RequestError } from '@agentclientprotocol/sdk/unstable';
 import {
   Conversation,
   type ConversationEvent,
+  type Recording,
   type Starting,
 } from '../../src/session/conversation.ts';
+import { FileRecording } from '../../src/session/record.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { TaskAgent } from '../../src/session/tasks.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
@@ -680,6 +682,73 @@ test('closing kills a cleared agent that never answered its starting model', () 
     { model: { id: 'fake-small', from: 'set by --model' } },
     (conversation) => conversation.clear(),
   ));
+
+test('a close cutting a turn short leaves it without a result in the record, and writes nothing after it resolves (CHD-629)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const events: ConversationEvent[] = [];
+  const file = new FileRecording(join(root, 'state'), (message) => {
+    throw new Error(message);
+  });
+
+  // Set once the close has begun, then once it asks for its last flush:
+  // what the record hears after that, the close has left behind.
+  let closing = false;
+  let closed = false;
+  const late: string[] = [];
+  const recording: Recording = {
+    opened: (session) => file.opened(session),
+    sent: (...args) => file.sent(...args),
+    heard: (event) => {
+      closing ||= event.type === 'closing';
+
+      if (closed) {
+        late.push(event.type);
+      }
+
+      file.heard(event);
+    },
+    flushed: () => {
+      closed ||= closing;
+
+      return file.flushed();
+    },
+  };
+  const conversation = new Conversation(
+    () =>
+      openSession({
+        agent: 'fake',
+        cwd: root,
+        agentCommand: fakeAgentCommand(),
+      }),
+    (event) => events.push(event),
+    Date.now,
+    {},
+    recording,
+  );
+
+  try {
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+    // Its agent holds the turn open until it goes.
+    conversation.send('ignorescancel');
+    await until(() => saidIn(events).includes('Holding on.'));
+    await conversation.close();
+    // The window still hears the turn end, once the agent has gone.
+    await until(() => events.some((event) => event.type === 'result'));
+    await file.flushed();
+
+    const lines = (await readFile(file.path!, 'utf8'))
+      .split('\n')
+      .filter((line) => line !== '')
+      .map((line) => JSON.parse(line) as { type: string });
+
+    expect(lines.some((line) => line.type === 'prompt')).toBe(true);
+    expect(lines.some((line) => line.type === 'result')).toBe(false);
+    expect(late).toStrictEqual([]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("a task's refused starting effort reaches the parent's transcript, named, and the task runs on", async () => {
   const { parent, events } = await parentUp();

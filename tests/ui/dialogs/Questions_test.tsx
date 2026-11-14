@@ -1376,3 +1376,13 @@ describe('CHD-524 tester: Note request ownership', () => {
       ));
   }
 });
+
+test("codex 2.6's async questions outlive their turn, and its withdrawal closes the box (CHD-624)", () =>
+  withWindow(async (window) => {
+    await send(window, 'askcodexasync');
+    // Asked in the turn, it is open once the turn has ended.
+    await window.shows('asks you 2 questions · between turns');
+    await window.shows('⎿  fake asked · Next step, Token · Cancelled');
+    expect(window.frame()).toContain('I asked; the answer can come later.');
+    expect(window.frame()).not.toContain('asks you 2 questions');
+  }));

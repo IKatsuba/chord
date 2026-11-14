@@ -57,7 +57,7 @@
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
   `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`, `authstatus`,
-  `flood`, `ignorescancel`). Beside it, what the scenarios read too:
+  `turnfailed`, `flood`, `ignorescancel`). Beside it, what the scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
   `sessions.ts` each session's directory, MCP servers, model, mode and
@@ -98,7 +98,7 @@
   `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
   `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
-  `longheld`,
+  `longheld`, `turnfailed`,
   `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
   `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
@@ -163,7 +163,11 @@
   each adapter's question form (`tests/fixtures/questions.ts`), claude's
   after AskUserQuestion's tool call as claude-agent-acp sends it,
   `askcodexwait` codex's with a wait of 300 ms, withdrawn 50 ms after it
-  runs out, as codex-acp withdraws it once it does, and each says what came back, and
+  runs out, as codex-acp withdraws it once it does, and each says what came back,
+  `askcodexasync` codex's delivered async, as codex-acp 2.6 asks: its turn
+  ends at once and the form, outliving it, is withdrawn by `$/cancel_request`
+  2 s after, or once `<cwd>/.fake-gate/release` exists where the gate is (at
+  most 10 s), and
   an accepted link is followed by `elicitation/complete`;
   `multidiffask` asks for two proposed file diffs in one permission request;
   `permissionsteer` asks for a write as `permission` does, with Allow and
@@ -187,7 +191,9 @@
   sends a chunk after answering the prompt; `unknown` sends an update of a
   kind ACP does not have and a notification of its own; `authstatus`
   sends Claude's `_auth/status_update` and `auth/status_update`, which chord
-  takes no handler for, then a line; `cancels` says how
+  takes no handler for, then a line; `turnfailed` says a line, then fails
+  its prompt with -32603 `{reason: "turn_failed"}`, as goose from 1.59 does
+  on a model's error; `cancels` says how
   many `session/cancel` notifications its session got with no turn playing,
   `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) acknowledges each such cancel
   with `Cancel heard with no turn.`, so tests can wait for its arrival;
@@ -551,7 +557,8 @@
   `CHORD_FAKE_REFUSE_FORK=1` refuses the advertised method;
   `CHORD_FAKE_HANG_FORK=1` leaves it unanswered. These fixtures prove transport
   and lifecycle behavior, not live cross-process context inheritance.
-  `--steering claude`, `--steering codex24` or `--steering codex`
+  `--steering claude`, `--steering codex24`, `--steering codex` or
+  `--steering opencode`
   (`CHORD_FAKE_STEERING`) advertises `_session/steering`: during a turn it
   answers `injected`, read at the next step or the end with
   `Read the message from <sender>.`, then images', links' and resources'
@@ -560,6 +567,8 @@
   `startedNewTurn` before it speaks. `codex` ignores `promptRequired`,
   as codex-acp before 2.4 did,
   covering an adapter that advertises steering but starts an idle turn.
+  `opencode`, as opencode v2 from 2.2.7, never starts a turn: with no turn
+  it answers `promptRequired` whatever was asked.
   Without the flag the method is unadvertised and refused. `--steer-refuse`
   (`CHORD_FAKE_STEER_REFUSE=1`) answers every steer `promptRequired`.
   `--steer-late` (`CHORD_FAKE_STEER_LATE=1`) lands it after the turn ends;

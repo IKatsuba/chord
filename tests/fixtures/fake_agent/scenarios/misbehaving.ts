@@ -10,6 +10,9 @@ import { lifetime, pause, type Play } from '../turn.ts';
 const FLOOD_CHUNK = 64 * 1024;
 const FLOOD_BYTES = 64 * 1024 * 1024;
 
+/** What `turnfailed`'s turn fails with, as goose words a model error. */
+export const TURN_FAILED = 'Request failed: the model is overloaded.';
+
 export const MISBEHAVING = {
   // More than any pipe holds, as fast as chord takes it, for a client that
   // stopped reading; a cancel or the client's going ends it.
@@ -50,6 +53,14 @@ export const MISBEHAVING = {
     await pause(turn.signal);
 
     throw new acp.RequestError(-32603, 'The fake agent failed on purpose.');
+  },
+
+  // A turn that ends on the model's error, as goose from 1.59 fails
+  // `session/prompt`: -32603 with `reason: "turn_failed"`.
+  async turnfailed(turn) {
+    await turn.say('Reading the tests.');
+
+    throw new acp.RequestError(-32603, TURN_FAILED, { reason: 'turn_failed' });
   },
 
   // An update after the answer, as some adapters send their last chunks or

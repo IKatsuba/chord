@@ -488,6 +488,7 @@ const SCENARIOS = [
   'askopencode',
   'askdimcode',
   'askcodexwait',
+  'askcodexasync',
   'taskask',
   'taskaskstays',
   'taskaskas',
@@ -505,6 +506,7 @@ const SCENARIOS = [
   'bigasktwice',
   'unknown',
   'authstatus',
+  'turnfailed',
   'cancels',
   'flood',
   'ignorescancel',
@@ -1765,8 +1767,9 @@ const connection = acp
       }
 
       if (
-        STEERING !== 'codex' &&
-        params._meta?.steering?.idleBehavior === 'promptRequired'
+        STEERING === 'opencode' ||
+        (STEERING !== 'codex' &&
+          params._meta?.steering?.idleBehavior === 'promptRequired')
       ) {
         return { outcome: 'promptRequired', reason: 'noRunningTurn' };
       }

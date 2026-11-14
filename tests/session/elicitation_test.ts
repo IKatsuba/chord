@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
@@ -21,6 +21,7 @@ import {
   type Entry,
   type TranscriptAction,
 } from '../../src/session/transcript/types.ts';
+import { emptyWatch, watchWaits } from '../../src/notify.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { FORM_SCHEMA, LINK_URL } from '../fixtures/forms.ts';
 import { run, said as saidIn } from '../fixtures/recorder.ts';
@@ -483,4 +484,64 @@ describe('CHD-1 tester: receipt-relative timeout outcomes', () => {
       }
     });
   }
+});
+
+describe("codex 2.6's async question, withdrawn after its turn (CHD-624)", () => {
+  test('outlives its turn, the withdrawal settles it unanswered, asking empties and the queue goes on', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-question-async-'));
+    const events: ConversationEvent[] = [];
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+        }),
+      (event) => void events.push(event),
+    );
+
+    try {
+      await mkdir(join(dir, '.fake-gate'));
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      conversation.send('askcodexasync');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      // The turn is over and the form still open.
+      expect(
+        events.some((event) => event.type === 'elicitation_requested'),
+      ).toBe(true);
+      expect(events.some((event) => event.type === 'elicitation_settled')).toBe(
+        false,
+      );
+
+      await writeFile(join(dir, '.fake-gate', 'release'), '');
+      await until(() =>
+        events.some((event) => event.type === 'elicitation_settled'),
+      );
+
+      const settled = events.find(
+        (event) => event.type === 'elicitation_settled',
+      );
+
+      assert(settled?.type === 'elicitation_settled');
+      expect(settled.answer).toStrictEqual({ type: 'withdrawn' });
+      expect(
+        events.reduce(
+          (watch, event) => watchWaits(watch, event).watch,
+          emptyWatch,
+        ).asking.size,
+      ).toBe(0);
+
+      conversation.send('text');
+      await until(
+        () => events.filter((event) => event.type === 'result').length === 2,
+      );
+
+      expect(events.some((event) => event.type === 'queued')).toBe(false);
+    } finally {
+      await conversation.close();
+      await rm(dir, { recursive: true });
+    }
+  });
 });

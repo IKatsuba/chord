@@ -10,9 +10,12 @@ import {
   OPENCODE_QUESTIONS,
   type QuestionForm,
 } from '../../questions.ts';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { STEP_MS } from '../options.ts';
-import { pause, type Play, type Turn } from '../turn.ts';
-import { GATE_RELEASE, gateOpened } from './agents.ts';
+import { cwds } from '../sessions.ts';
+import { lifetime, pause, type Play, type Turn } from '../turn.ts';
+import { GATE, GATE_RELEASE, gateOpened } from './agents.ts';
 
 /**
  * Asks the client for input and says what came back: the action, and an
@@ -219,6 +222,55 @@ export const FORMS = {
         ? 'Elicitation answer: timed out'
         : `Elicitation answer: ${answer?.action ?? 'none'}`,
     );
+
+    return 'end_turn';
+  },
+
+  // codex's questions delivered async, as codex-acp 2.6 asks them: the turn
+  // ends without waiting, and the form, outliving it, is withdrawn by
+  // `$/cancel_request` a while after; where `<cwd>/.fake-gate` is, once
+  // `release` is in it (at most 10 s), so a test sees it open first.
+  async askcodexasync(turn) {
+    const withdraw = new AbortController();
+
+    void turn.client
+      .request(
+        'elicitation/create',
+        {
+          ...CODEX_QUESTIONS,
+          _meta: { codex: { delivery: 'async' } },
+          sessionId: turn.sessionId,
+        },
+        { cancellationSignal: withdraw.signal },
+      )
+      .catch(() => {});
+
+    void (async () => {
+      try {
+        await turn.over;
+
+        const gate = join(cwds.get(turn.sessionId) ?? '.', GATE);
+
+        if (existsSync(gate)) {
+          const deadline = performance.now() + 10_000;
+
+          while (
+            !existsSync(join(gate, GATE_RELEASE)) &&
+            performance.now() < deadline
+          ) {
+            await pause(lifetime.signal, STEP_MS * 2);
+          }
+        } else {
+          await pause(lifetime.signal, 2000);
+        }
+
+        withdraw.abort();
+      } catch {
+        // The client went first.
+      }
+    })();
+
+    await turn.say('I asked; the answer can come later.');
 
     return 'end_turn';
   },

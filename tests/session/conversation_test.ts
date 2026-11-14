@@ -19,6 +19,7 @@ import { TaskAgent } from '../../src/session/tasks.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { TRACEBACK_ERROR } from '../fixtures/fake_agent/options.ts';
+import { TURN_FAILED } from '../fixtures/fake_agent/scenarios/misbehaving.ts';
 import {
   heldSession,
   until,
@@ -1403,4 +1404,33 @@ test("on Claude's adapter, a message held behind an open call goes as the next t
       ['Then the docs.', undefined],
     ]);
     expect(queued).toStrictEqual(1);
+  }));
+
+test("goose's turn_failed ends the turn failed in its words, not the connection, and the next prompt runs (CHD-624)", () =>
+  onFake([], async (conversation, events) => {
+    conversation.send('turnfailed');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    const result = events.find((event) => event.type === 'result');
+
+    assert(result?.type === 'result');
+    expect(result.result).toMatchObject({
+      status: 'failed',
+      error: { message: TURN_FAILED },
+    });
+
+    conversation.send('text');
+    await until(
+      () => events.filter((event) => event.type === 'result').length === 2,
+    );
+
+    expect(
+      events.filter((event) => event.type === 'result').at(-1),
+    ).toMatchObject({ result: { status: 'completed' } });
+    expect(
+      events.some(
+        (event) =>
+          event.type === 'disconnected' || event.type === 'connect_failed',
+      ),
+    ).toBe(false);
   }));

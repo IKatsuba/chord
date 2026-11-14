@@ -348,10 +348,11 @@
   before each `session/new` answer, without starting a turn.
   `configsheard` answers with JSON of every `session/set_config_option`
   request the session received, as it came over the wire (CHD-629).
-  `--auth-status <authenticated|unauthenticated|unknown|error|hang>`
+  `--auth-status <authenticated|unauthenticated|unknown|error|hang|several>`
   (`CHORD_FAKE_AUTH_STATUS`) advertises `agentCapabilities.auth.status` and
   answers `auth/status`: a subscription (`Claude Max`, an email and an
-  organization), the state alone, an error, or never; `--auth-push`
+  organization), the state alone, an error, never, or, for `several`, two
+  accounts neither marked active, the first long past 80 columns; `--auth-push`
   (`CHORD_FAKE_AUTH_PUSH=1`) pushes that account in an `auth/status_update`
   just after `initialize` (the subscription for `error` and `hang`), and
   `authchanged` pushes an API key's account mid-turn; `--auth-race

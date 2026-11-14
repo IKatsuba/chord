@@ -34,6 +34,22 @@ export const API_KEY: acp.AuthStatusResponse = {
 };
 
 /**
+ * Two accounts, neither marked active, the first's parts together longer
+ * than an 80-column row, for `--auth-status several`.
+ */
+export const SEVERAL: acp.AuthStatusResponse = {
+  state: 'authenticated',
+  accounts: [
+    {
+      label: 'Claude Max',
+      email: 'a.very.long.address.for.the.capture@engineering.example.com',
+      organization: 'Example Organisation of Long Names',
+    },
+    { label: 'Anthropic API key', description: 'ANTHROPIC_API_KEY' },
+  ],
+};
+
+/**
  * What `--auth-status` says: `authenticated` a subscription,
  * `unauthenticated` and `unknown` their state alone; `error` and `hang`
  * answer nothing, and a push says the subscription.
@@ -41,7 +57,9 @@ export const API_KEY: acp.AuthStatusResponse = {
 function statusOf(): acp.AuthStatusResponse {
   return AUTH_STATUS === 'unauthenticated' || AUTH_STATUS === 'unknown'
     ? { state: AUTH_STATUS }
-    : SIGNED_IN;
+    : AUTH_STATUS === 'several'
+      ? SEVERAL
+      : SIGNED_IN;
 }
 
 /**

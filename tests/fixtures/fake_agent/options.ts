@@ -205,7 +205,7 @@ export const CHILD_MODEL = valueOf('--child-model', 'CHORD_FAKE_CHILD_MODEL');
 export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
 
 /**
- * `--auth-status <authenticated|unauthenticated|unknown|error|hang>`
+ * `--auth-status <authenticated|unauthenticated|unknown|error|hang|several>`
  * (`CHORD_FAKE_AUTH_STATUS`): it advertises `agentCapabilities.auth.status`
  * and answers `auth/status` as `scenarios/accounts.ts` plays it (CHD-629).
  */
@@ -218,7 +218,8 @@ export const AUTH_STATUS = (() => {
     chosen === 'unauthenticated' ||
     chosen === 'unknown' ||
     chosen === 'error' ||
-    chosen === 'hang'
+    chosen === 'hang' ||
+    chosen === 'several'
   ) {
     return chosen;
   }

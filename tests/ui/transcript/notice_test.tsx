@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
 import stripAnsi from 'strip-ansi';
 import type { Entry } from '../../../src/session/transcript/types.ts';
@@ -90,6 +90,80 @@ test('a notice is its title by ⏺, its description under it at the text column,
 });
 
 const DIM = '\x1b[2m';
+
+describe('CHD-629 tester: notice display boundaries', () => {
+  async function noticeFrame(
+    entry: Extract<Entry, { kind: 'notice' }>,
+    theme: 'dark' | 'light',
+    expanded: boolean,
+  ): Promise<string> {
+    const drawn = await draw(
+      <Colours.Provider value={paletteOf(theme, true)}>
+        <TranscriptEntry
+          entry={entry}
+          turn={{ status: 'idle' }}
+          agent='fake'
+          expanded={expanded}
+          width={76}
+        />
+      </Colours.Provider>,
+      { columns: 80, rows: 24 },
+    );
+
+    try {
+      return drawn.frame();
+    } finally {
+      await drawn.unmount();
+    }
+  }
+
+  for (const theme of ['dark', 'light'] as const) {
+    test(`long title and description wrap without loss in ${theme}, expanded or folded`, async () => {
+      const title = 'A long notice title that must stay readable. '.repeat(5);
+      const description =
+        'The selected model does not support this setting; use another model or choose an available setting. '.repeat(
+          4,
+        );
+      const entry = {
+        kind: 'notice',
+        turnId: 't',
+        severity: 'warning',
+        title,
+        description,
+      } as const;
+      const folded = rowsOf(await noticeFrame(entry, theme, false));
+      const expanded = rowsOf(await noticeFrame(entry, theme, true));
+
+      expect(expanded).toStrictEqual(folded);
+      expect(folded.length).toBeGreaterThan(6);
+      expect(folded.every((row) => row.length <= 80)).toBe(true);
+      expect(folded.slice(1).every((row) => row.startsWith('  '))).toBe(true);
+      expect(folded.join('').replace(/\s/g, '')).toBe(
+        `⏺${title}${description}`.replace(/\s/g, ''),
+      );
+    });
+  }
+
+  test('agent escape sequences are rendered as text styling without raw control commands', async () => {
+    const escaped =
+      '\x1b[31mred\x1b[0m\x1b[2K \x1b]8;;https://example.com\x07link\x1b]8;;\x07';
+    const rows = rowsOf(
+      await noticeFrame(
+        {
+          kind: 'notice',
+          turnId: 't',
+          severity: 'error',
+          title: escaped,
+          description: `${escaped}\n\n\nFinal line`,
+        },
+        'dark',
+        false,
+      ),
+    );
+
+    expect(rows).toStrictEqual(['⏺ red link', '  red link', '  Final line']);
+  });
+});
 
 for (const [severity, marker] of [
   ['info', `${DIM}⏺`],

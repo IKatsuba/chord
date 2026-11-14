@@ -433,6 +433,59 @@ test('notices are declared per open: an open that does not declare them leaves o
     { ...REFUSE, capabilities: clientCapabilities({ notices: false }) },
   ));
 
+describe('CHD-629 tester: capability isolation per open', () => {
+  test('an explicit empty capability set stays empty', () =>
+    withAgent(
+      [],
+      (_agent, seen) => {
+        const initialize = seen.all.find(
+          (traffic) =>
+            traffic.from === 'chord' &&
+            'method' in traffic.message &&
+            traffic.message.method === 'initialize',
+        );
+
+        assert(initialize?.from === 'chord' && 'params' in initialize.message);
+        expect(
+          (initialize.message.params as acp.InitializeRequest)
+            .clientCapabilities,
+        ).toStrictEqual({});
+      },
+      { ...REFUSE, capabilities: {} },
+    ));
+
+  test('simultaneous opens keep their own notice declaration', () =>
+    withAgent(
+      [],
+      async (_agent, seen) => {
+        await withAgent([], (_other, otherSeen) => {
+          for (const [trafficSeen, notices] of [
+            [seen, false],
+            [otherSeen, true],
+          ] as const) {
+            const initialize = trafficSeen.all.find(
+              (traffic) =>
+                traffic.from === 'chord' &&
+                'method' in traffic.message &&
+                traffic.message.method === 'initialize',
+            );
+
+            assert(
+              initialize?.from === 'chord' && 'params' in initialize.message,
+            );
+            expect(
+              (initialize.message.params as acp.InitializeRequest)
+                .clientCapabilities?.session,
+            ).toStrictEqual(
+              notices ? { compaction: {}, notices: {} } : { compaction: {} },
+            );
+          }
+        });
+      },
+      { ...REFUSE, capabilities: clientCapabilities({ notices: false }) },
+    ));
+});
+
 test('session/new takes the directory and the MCP servers', () =>
   withAgent([], async (agent, seen, cwd) => {
     const servers: acp.McpServer[] = [

@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import { useState } from 'react';
+import { paletteOf } from '../../../../src/ui/theme/theme.ts';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { draw } from '../../harness.tsx';
 import { PathViews } from '../../../../src/ui/app/context.ts';
@@ -18,11 +20,14 @@ import type {
 } from '@agentclientprotocol/sdk/unstable';
 import assert from 'node:assert/strict';
 import type {
+  Entry,
+  Subagent,
   ToolCall,
   TurnState,
 } from '../../../../src/session/transcript/types.ts';
 import {
   ChordServerName,
+  Colours,
   type CodeActions,
   CodeBlockActions,
   type DrawnBlock,
@@ -2254,4 +2259,141 @@ describe('a call that names a subagent (CHD-629)', () => {
     ).toContain(long);
     expect(linked).not.toContain('[31m');
   });
+});
+
+describe('CHD-629 tester: linked subagent draw lifecycle', () => {
+  const grandchild: Subagent = {
+    id: 'grandchild',
+    title: 'Lint the parser',
+    state: 'completed',
+    entries: [],
+    plan: [],
+  };
+  const tree: Entry[] = [
+    {
+      kind: 'subagent',
+      turnId: 't',
+      subagent: {
+        id: 'child',
+        title: 'Watch the build',
+        state: 'completed',
+        plan: [],
+        entries: [{ kind: 'subagent', turnId: 't', subagent: grandchild }],
+      },
+    },
+  ];
+  const reference: ToolCallContent = {
+    type: 'session',
+    sessionId: 'grandchild',
+  };
+  const call: ToolCall = {
+    id: 'stop',
+    title: 'TaskStop',
+    kind: 'other',
+    status: 'in_progress',
+    content: [reference, reference],
+  };
+
+  for (const columns of [80, 120]) {
+    test(`a late grandchild announcement resolves the existing running call at ${columns} columns, and an ended child stays linked`, async () => {
+      let change: ((entries: readonly Entry[]) => void) | undefined;
+
+      function Live() {
+        const [entries, setEntries] = useState<readonly Entry[]>([]);
+
+        change = setEntries;
+
+        return (
+          <TranscriptEntries.Provider value={entries}>
+            <Tool
+              call={call}
+              expanded={false}
+              ended={false}
+              width={columns - 2}
+            />
+          </TranscriptEntries.Provider>
+        );
+      }
+
+      const drawn = await draw(<Live />, { columns, rows: 12 });
+
+      try {
+        expect(stripAnsi(drawn.frame())).toContain('Running…');
+        expect(stripAnsi(drawn.frame())).not.toContain('Agent(');
+        assert(change);
+        change(tree);
+        await until('late grandchild link', () =>
+          stripAnsi(drawn.frame()).includes('Agent(Lint the parser)'),
+        );
+
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame.match(/Agent\(Lint the parser\)/g)).toHaveLength(1);
+        expect(frame.indexOf('Agent(Lint the parser)')).toBeLessThan(
+          frame.indexOf('Running…'),
+        );
+        expect(frame).not.toContain('Agent(Watch the build)');
+        expect(frame).not.toContain('Done');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+
+  for (const theme of ['dark', 'light'] as const) {
+    test(`call status and expansion do not colour or replace the grandchild annotation in ${theme}`, async () => {
+      const linkRows: string[] = [];
+
+      for (const status of [
+        'pending',
+        'in_progress',
+        'failed',
+        'completed',
+      ] as const) {
+        for (const expanded of [false, true]) {
+          const drawn = await draw(
+            <Colours.Provider value={paletteOf(theme, true)}>
+              <TranscriptEntries.Provider value={tree}>
+                <Tool
+                  call={{ ...call, status }}
+                  expanded={expanded}
+                  ended={false}
+                  width={78}
+                />
+              </TranscriptEntries.Provider>
+            </Colours.Provider>,
+            { columns: 80, rows: 12 },
+          );
+
+          try {
+            const raw = drawn.frame();
+            const frame = stripAnsi(raw);
+
+            expect(frame.match(/Agent\(Lint the parser\)/g)).toHaveLength(1);
+
+            if (status === 'failed') {
+              expect(frame).toContain('Failed');
+            }
+
+            if (status === 'in_progress') {
+              expect(frame).toContain('Running…');
+            }
+
+            const row = raw
+              .split('\n')
+              .find((line) =>
+                stripAnsi(line).includes('Agent(Lint the parser)'),
+              );
+
+            assert(row);
+            linkRows.push(row);
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      }
+
+      expect(new Set(linkRows).size).toBe(1);
+    });
+  }
 });

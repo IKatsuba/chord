@@ -165,6 +165,12 @@ export interface Agent {
     request: acp.SetSessionTitleRequest,
     signal?: AbortSignal,
   ): Promise<acp.SetSessionTitleResponse>;
+  /**
+   * The account the connection is signed in to (ACP's unstable
+   * `auth/status`); throws without asking when the agent does not offer
+   * `agentCapabilities.auth.status` (CHD-629).
+   */
+  authStatus(signal?: AbortSignal): Promise<acp.AuthStatusResponse>;
   /** Throws without asking when the agent does not offer `session/list`. */
   listSessions(
     request: acp.ListSessionsRequest,
@@ -537,6 +543,14 @@ export async function connectAgent(
 
       return await ask(
         () => connection.agent.request('session/fork', request),
+        signal,
+      );
+    },
+    authStatus: async (signal) => {
+      offered('auth/status', offers.auth?.status);
+
+      return await ask(
+        () => connection.agent.request('auth/status', {}),
         signal,
       );
     },

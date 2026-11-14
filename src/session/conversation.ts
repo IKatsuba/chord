@@ -4,6 +4,7 @@ import type {
   SessionConfigOption,
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
+import type { AccountState } from './auth_status.ts';
 import { CYCLE_WORK, cycleMark } from './cycles.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ResourceLink } from '../files.ts';
@@ -132,6 +133,11 @@ export type ConversationEvent =
    * advertises none.
    */
   | { readonly type: 'model'; readonly models: AgentModels | undefined }
+  /**
+   * What the agent says of its connection's account, as it changes; never
+   * recorded (CHD-629).
+   */
+  | { readonly type: 'account'; readonly account: AccountState }
   /**
    * The agent's modes, when they differ from the last reported, and after
    * every mode change the agent answered.
@@ -3344,6 +3350,12 @@ export class Conversation {
     this.#models = session.models();
 
     this.#emit({ type: 'model', models: this.#models });
+    this.#emit({ type: 'account', account: session.account() });
+    session.subscribeAccount((account) => {
+      if (this.#current(session)) {
+        this.#emit({ type: 'account', account });
+      }
+    });
 
     // The servers its agent was not given, said afresh by every session it
     // opens, a resumed one's too, after the settings problems and before its

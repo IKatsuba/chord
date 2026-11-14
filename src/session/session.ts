@@ -1,4 +1,5 @@
 import type {
+  AuthStatusResponse,
   AvailableCommand,
   CompleteElicitationNotification,
   ContentBlock,
@@ -18,6 +19,12 @@ import {
 } from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
 import { agentStart, findAgent } from '../agents.ts';
+import {
+  type AccountEvent,
+  type AccountState,
+  foldAccount,
+  NO_ACCOUNT,
+} from './auth_status.ts';
 import { initialEntries, type InitialValues } from './initial_options.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
@@ -278,6 +285,13 @@ export interface Session {
    * `initialize` answer advertises `_session/steering`.
    */
   steers(): boolean;
+  /**
+   * What the agent says of the account its connection is signed in to, as
+   * its `auth/status` answer and pushes leave it (CHD-629).
+   */
+  account(): AccountState;
+  /** Hears each change of `account()`; the returned function stops it. */
+  subscribeAccount(listener: (account: AccountState) => void): () => void;
   /** Whether the agent forks a session, as `initialize` says (CHD-101). */
   forks(): boolean;
   /**
@@ -431,6 +445,21 @@ export async function openSession(
   >();
   /** Updates no listener has heard yet, for the first one to come. */
   const held: Heard[] = [];
+  let accountState: AccountState = NO_ACCOUNT;
+  const accountListeners = new Set<(account: AccountState) => void>();
+  const account = (event: AccountEvent) => {
+    const next = foldAccount(accountState, event);
+
+    if (next === accountState) {
+      return;
+    }
+
+    accountState = next;
+
+    for (const listener of accountListeners) {
+      listener(next);
+    }
+  };
 
   /** Where `notification` belongs, the tree grown by what it announces. */
   const route = (notification: SessionNotification): Heard | undefined => {
@@ -463,6 +492,19 @@ export async function openSession(
   };
 
   const onTraffic = (traffic: Traffic) => {
+    // A push of the account, a notification of the connection's and not a
+    // session's: never held in `early`, and from before `initialize` too.
+    if (
+      traffic.from === 'agent' &&
+      'method' in traffic.message &&
+      traffic.message.method === 'auth/status_update'
+    ) {
+      account({
+        type: 'heard',
+        status: traffic.message.params as AuthStatusResponse,
+      });
+    }
+
     // The tap keeps notifications from the SDK: this is the one place to hear it.
     if (
       traffic.from === 'agent' &&
@@ -510,6 +552,16 @@ export async function openSession(
   }).catch((error: unknown) => {
     throw signal?.aborted ? error : startFailed(error, 'initialize', pinned);
   });
+
+  // Beside `session/new`, never awaited: a start that succeeds does not
+  // wait for it, and Claude's adapter joins the probe `initialize` began.
+  if (connection.init.agentCapabilities?.auth?.status) {
+    account({ type: 'asked' });
+    connection.authStatus().then(
+      (status) => account({ type: 'heard', status }),
+      () => account({ type: 'failed' }),
+    );
+  }
 
   live.add(connection.pid);
   void connection.exited.then(() => live.delete(connection.pid));
@@ -787,6 +839,12 @@ export async function openSession(
       connection.init.agentCapabilities?.promptCapabilities?.embeddedContext ===
       true,
     steers: () => connection.steering,
+    account: () => accountState,
+    subscribeAccount: (listener) => {
+      accountListeners.add(listener);
+
+      return () => accountListeners.delete(listener);
+    },
     forks: () =>
       Boolean(connection.init.agentCapabilities?.sessionCapabilities?.fork),
     takesTitles: () =>

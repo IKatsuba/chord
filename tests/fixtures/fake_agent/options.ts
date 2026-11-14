@@ -205,6 +205,35 @@ export const CHILD_MODEL = valueOf('--child-model', 'CHORD_FAKE_CHILD_MODEL');
 export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
 
 /**
+ * `--auth-status <authenticated|unauthenticated|unknown|error|hang>`
+ * (`CHORD_FAKE_AUTH_STATUS`): it advertises `agentCapabilities.auth.status`
+ * and answers `auth/status` as `scenarios/accounts.ts` plays it (CHD-629).
+ */
+export const AUTH_STATUS = (() => {
+  const chosen = valueOf('--auth-status', 'CHORD_FAKE_AUTH_STATUS');
+
+  if (
+    chosen === undefined ||
+    chosen === 'authenticated' ||
+    chosen === 'unauthenticated' ||
+    chosen === 'unknown' ||
+    chosen === 'error' ||
+    chosen === 'hang'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --auth-status "${chosen}"`);
+})();
+
+/**
+ * `--auth-push` (`CHORD_FAKE_AUTH_PUSH=1`): it pushes the account in an
+ * `auth/status_update` just after answering `initialize` (CHD-629).
+ */
+export const AUTH_PUSH =
+  ARGS.includes('--auth-push') || process.env.CHORD_FAKE_AUTH_PUSH === '1';
+
+/**
  * `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`): it
  * advertises `sessionCapabilities.title` and answers `session/set_title` as
  * `scenarios/titles.ts` plays the mode (CHD-629).

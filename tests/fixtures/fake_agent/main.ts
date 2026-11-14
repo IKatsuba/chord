@@ -283,6 +283,8 @@ import {
   START_NOTICE,
   INITIAL_OPTIONS,
   SET_TITLE,
+  AUTH_STATUS,
+  AUTH_PUSH,
   AUTO_FALLBACK,
   HANG,
   RESEND_CONFIG,
@@ -331,6 +333,7 @@ import {
 } from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
 import { setTitle, TITLES } from './scenarios/titles.ts';
+import { ACCOUNTS, authStatus, pushStatus } from './scenarios/accounts.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORM_SCHEMA } from '../forms.ts';
@@ -405,6 +408,7 @@ const SCENARIOS = [
   'noticeidle',
   'noticelong',
   'titledlater',
+  'authchanged',
   'cloudrequest',
   'texttillsteered',
   'texttillsteeredheld',
@@ -801,6 +805,7 @@ const PLAY: Record<Scenario, Play> = {
   ...MODES,
   ...NOTICES,
   ...TITLES,
+  ...ACCOUNTS,
   ...SUBAGENTS,
   ...MISBEHAVING,
   ...FX,
@@ -1572,8 +1577,12 @@ async function setConfig(
 
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
-  .onRequest('initialize', ({ params }) => {
+  .onRequest('initialize', ({ params, client }) => {
     readCapabilities(params);
+
+    if (AUTH_PUSH) {
+      pushStatus(client);
+    }
 
     return HANG === 'start'
       ? never()
@@ -1584,6 +1593,7 @@ const connection = acp
             ? { authMethods: CLOUD_AUTH_METHODS }
             : {}),
           agentCapabilities: {
+            ...(AUTH_STATUS === undefined ? {} : { auth: { status: {} } }),
             loadSession: !NO_LOAD,
             mcpCapabilities: MCP_TRANSPORTS,
             promptCapabilities: {
@@ -1658,6 +1668,7 @@ const connection = acp
       configOptions: configOptions(sessionId),
     };
   })
+  .onRequest('auth/status', () => authStatus())
   .onRequest('session/set_title', ({ params, client }) =>
     setTitle(client, params),
   )

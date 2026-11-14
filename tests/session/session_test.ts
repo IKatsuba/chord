@@ -44,6 +44,10 @@ import { CRASH_WORDS } from '../fixtures/fake_agent/scenarios/agents.ts';
 import { FX_ERROR_NOTICE } from '../fixtures/fake_agent/scenarios/fx.ts';
 import { mentionsIn } from '../../src/ui/prompt/mentions.ts';
 import { run, said } from '../fixtures/recorder.ts';
+import {
+  API_KEY,
+  SIGNED_IN,
+} from '../fixtures/fake_agent/scenarios/accounts.ts';
 import { isAlive, withSession, collect, calls } from './session_fake.ts';
 
 describe('CHD-534 synthetic fx failure', () => {
@@ -2422,4 +2426,79 @@ describe('CHD-613 embedded resource fixture', () => {
       '--steering',
       'claude',
     ));
+});
+
+describe("the agent's account (CHD-629)", () => {
+  /** A session on the fake under `flags`, handed to `body`, then closed. */
+  const accountOn = async (
+    flags: readonly string[],
+    body: (session: Session) => void | Promise<void>,
+  ) => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-account-'));
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, ...flags),
+    });
+
+    try {
+      await body(session);
+    } finally {
+      await session.close();
+      await rm(dir, { recursive: true });
+    }
+  };
+
+  test('none where auth.status is not advertised', () =>
+    accountOn([], (session) => {
+      expect(session.account()).toStrictEqual({ phase: 'none' });
+    }));
+
+  test('asked beside session/new and folded once answered', () =>
+    accountOn(['--auth-status', 'authenticated'], async (session) => {
+      await until(() => session.account().phase === 'heard');
+
+      expect(session.account()).toStrictEqual({
+        phase: 'heard',
+        status: SIGNED_IN,
+      });
+    }));
+
+  test('a request that never answers does not hold the start: the account stays pending', () =>
+    accountOn(['--auth-status', 'hang'], (session) => {
+      expect(session.account()).toStrictEqual({ phase: 'pending' });
+    }));
+
+  test('a failed request is failed, and a push after it is heard', async () => {
+    await accountOn(['--auth-status', 'error'], async (session) => {
+      await until(() => session.account().phase === 'failed');
+    });
+
+    await accountOn(
+      ['--auth-status', 'error', '--auth-push'],
+      async (session) => {
+        await until(() => session.account().phase === 'heard');
+
+        expect(session.account()).toStrictEqual({
+          phase: 'heard',
+          status: SIGNED_IN,
+        });
+      },
+    );
+  });
+
+  test('a push mid-turn is the account from then on, and each change is told', () =>
+    accountOn(['--auth-status', 'authenticated'], async (session) => {
+      const told: unknown[] = [];
+
+      session.subscribeAccount((account) => told.push(account));
+      await until(() => session.account().phase === 'heard');
+      await run(session, 'authchanged');
+
+      expect(session.account()).toStrictEqual({
+        phase: 'heard',
+        status: API_KEY,
+      });
+      expect(told.at(-1)).toStrictEqual({ phase: 'heard', status: API_KEY });
+    }));
 });

@@ -16,6 +16,7 @@ const NOT_ACTIONS: Record<
   Exclude<ConversationEvent, TranscriptAction>['type'],
   true
 > = {
+  account: true,
   agent_closed: true,
   cleared: true,
   closing: true,

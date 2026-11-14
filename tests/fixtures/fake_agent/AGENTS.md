@@ -33,6 +33,7 @@
   `idlecompactfail`, `idlecompactsays`),
   `notices.ts` (`notice`, `noticeidle`, `noticelong`),
   `titles.ts` (`titledlater`),
+  `accounts.ts` (`authchanged`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`,
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -98,7 +99,7 @@
   `compact`,
   `codexcompact`,
   `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
-  `notice`, `noticeidle`, `noticelong`, `titledlater`,
+  `notice`, `noticeidle`, `noticelong`, `titledlater`, `authchanged`,
   `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
   `longheld`, `turnfailed`,
@@ -347,6 +348,13 @@
   before each `session/new` answer, without starting a turn.
   `configsheard` answers with JSON of every `session/set_config_option`
   request the session received, as it came over the wire (CHD-629).
+  `--auth-status <authenticated|unauthenticated|unknown|error|hang>`
+  (`CHORD_FAKE_AUTH_STATUS`) advertises `agentCapabilities.auth.status` and
+  answers `auth/status`: a subscription (`Claude Max`, an email and an
+  organization), the state alone, an error, or never; `--auth-push`
+  (`CHORD_FAKE_AUTH_PUSH=1`) pushes that account in an `auth/status_update`
+  just after `initialize` (the subscription for `error` and `hang`), and
+  `authchanged` pushes an API key's account mid-turn (CHD-629).
   `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
   advertises `sessionCapabilities.title` and stores a `session/set_title`
   title trimmed, its whitespace folded and cut at 80: `echo` sends it in a

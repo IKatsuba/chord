@@ -2,13 +2,13 @@
 
 Every agent chord can start, read for what it can do over ACP and how: the
 25 in the ACP Registry, at the versions `src/registry.ts` pins (fetched
-2026-11-01, refreshed by CHD-561), and the 11 CLIs in `src/clis.ts`, at
+2026-11-14, refreshed by CHD-624), and the 11 CLIs in `src/clis.ts`, at
 the release current when they were read. Section 1 is the summary, agents as
 rows; section 2 is what chord itself uses of each capability and what it
 leaves unused; section 3 has a part per agent with the details and sources;
 section 4 is what this changes on the board, for the owner. Agents go by their
-registry id or CLI name; chord itself calls `claude-acp` `claude` and
-`codex-acp` `codex`.
+registry id or CLI name; chord itself calls `claude-acp` `claude`,
+`codex-acp` `codex` and `kimi-code` `kimi`.
 
 It builds on CHD-432's study of the earlier registry pins, and on
 [`design/CHD-1.md`](design/CHD-1.md) for forms and permissions. Nothing was
@@ -17,7 +17,10 @@ were read only. CHD-561 refreshed the registry pins and the Claude 0.99.1
 and Codex 2.5.0 findings named below from source, not observation. Other
 findings retain their stated reading versions; a newer pin does not verify
 them again. Live CHD-561 checks are recorded separately in
-[the design](design/CHD-561.md).
+[the design](design/CHD-561.md). CHD-624 moved the pins again; only the
+cells [its survey](design/evidence/CHD-624/survey.md) read anew changed, and
+each part says the version its cells were read at. Kimi Code moved from the
+own CLIs to the registry, Autohand the other way.
 
 For an agent whose licence limits reverse-engineering (bob, cursor, nova,
 auggie, factory-droid, poolside), the owner's rule of 2026-10-18, recorded on
@@ -45,12 +48,11 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- |
 | agoragentic-acp | echoes the client's, 1 c [ag1] | none, own JSON-RPC c [ag2] | `initialize` only c [ag3] |
 | auggie | 1 c | SDK 0.14.1 c [au1] | v1 + unstable c [au2] |
-| autohand | 1, the client's echoed c [ah1] | SDK 0.12.0 c [ah2] | v1 + unstable c [ah3] |
 | bob | 1 c [bo1] | SDK 1.3.0 c [bo2] | v1 + private `_bob/*` n, c [bo3] |
-| claude-acp | 1 + 2, negotiated c [cl1] | SDK 2.1.0, pinned c [cl2] | v1 + v2, RFDs, own c [cl1, cl3] |
+| claude-acp | 1 + 2, negotiated c [cl1] | SDK 2.6.0, pinned c [cl2] | v1 + v2, RFDs, own c [cl1, cl3] |
 | cline | 1, whatever is asked c [ci1] | SDK 0.16.1 c [ci2] | v1 + `set_model` c [ci3] |
 | codebuddy-code | 1 c [cb1] | SDK 1.7.0 c [cb2] | v1 + `set_model`, `resume` c [cb3] |
-| codex-acp | 1 + 2, negotiated c [cx1] | SDK ~2.1.0 c [cx2] | v1 + v2, subagents, own c [cx1, cx3, cx19] |
+| codex-acp | 1 + 2, negotiated c [cx1] | SDK ~2.4.0 c [cx2] | v1 + v2, subagents, own c [cx1, cx3, cx19] |
 | deepagents | 1, the client's echoed c [da1] | SDK ^0.17.0 (0.17.1) c [da2] | v1 only c [da3] |
 | dimcode | 1 c [dm1] | SDK 0.21.1 c [dm2] | v1 + unstable, `_lody/*` c [dm3] |
 | dirac | 1, always c [di1] | SDK 1.3.0 c [di2] | v1 + unstable and drafts c [di3] |
@@ -61,6 +63,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | 1 c [gl1] | SDK 0.20.0, pinned c [gl2] | v1 + unstable fork, set_model c [gl3] |
 | grok-build | 1 c [gr1] | Rust crate 0.10.4 c [gr2] | v1 + unstable, 300+ `x.ai/*` c [gr3] |
 | kilo | 1, whatever is asked c [ki1] | SDK 0.21.0 c [ki2] | v1 + fork, set_model c [ki3] |
+| kimi-code | 1 c [km1] | SDK ^1.3.0 c [km2] | v1 + fork, set_model c [km3] |
 | minimax-code | 1, whatever is asked c [mm1] | SDK 1.x (≤ 1.4.0), bundled c [mm2] | v1 + fork, `plan_update` c [mm3] |
 | minion-code | min(asked, 1) c [mi1] | Python acp ≥ 0.7.0, unbounded c [mi2] | v1; unstable unreachable c [mi3] |
 | nova | 1 to chord, 2 if asked c [no1] | none, own JSON-RPC c [no2] | v1, a v2 permission, own c [no3] |
@@ -68,12 +71,12 @@ columns; section 3 uses them too.
 | qoder | 1, whatever is asked c [qo1] | own schema copy, version ? c [qo2] | v1 + `set_model` c [qo3] |
 | qwen-code | 1 c [qw1] | SDK 0.14.1 c [qw2] | v1 + unstable, large own c [qw3] |
 | sigit | 1 c [si1] | Rust crate 2.2.0 c [si2] | v1 + unstable fork c [si3] |
+| autohand | 1, the client's echoed c [ah1] | SDK 0.12.0 c [ah2] | v1 + unstable c [ah3] |
 | cursor | 1 c | SDK 0.14.1 c [cu1] | v1 + unstable c [cu2] |
 | devin | ? | ? (Rust, crate unknown) n [dv1] | v1, rest ? n [dv2] |
 | fx | 1, whatever is asked c [fx1] | none, own Zig layer c [fx2] | v1 + list, resume, close, RFDs c [fx3] |
 | goose | 1, even if 2 is offered c [go1] | Rust crate 2.2.0 c [go2] | v1 + list, delete, close c [go3] |
 | junie | ? n [ju1] | ? (JVM app) n [ju2] | ◐ "ACP V1" · "ACP V2" n [ju3] |
-| kimi | 1 c [km1] | SDK ^1.3.0 c [km2] | v1 + fork, set_model c [km3] |
 | kiro | 1 n [kr1] | ? · V3 Node @kiro/agent n [kr2] | v1 · V3 adds list, fork n [kr3] |
 | openclaw | 1 c [oc1] | SDK 1.5.0 c [oc2] | v1 + list, resume, close c [oc1] |
 | opencode | 1 c [op1] | v1 SDK 0.21.0 · v2 SDK 1.6.0 c [op2] | v1 + unstable · v2 + more c [op3] |
@@ -86,7 +89,6 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ Method not found c [ag4] | ✗ c | ✗ c | ✗ c | ✗ c | ✗ · ✗ c |
 | auggie | ✓; `authRequired` c [au3] | ✓ no plans c [au4] | ✗ c | ✓ cwd filter c [au4] | ✗ c | ✗ · ✗ c |
-| autohand | ✓; `authRequired` r [ah4] | ✓ text only r [ah5] | ◐ the CLI's ids only r [ah6] | ◐ lists turns c [ah6] | ◐ this process only r [ah6] | ✗ · ✗ c |
 | bob | ✓ needs login n, c [bo4] | ✓ full replay n [bo5] | ✓ no replay n [bo5] | ✓ paged n, c [bo6] | ✗ c [bo6] | ✓ · ✓ n, c [bo6] |
 | claude-acp | ✓ + `_meta`, no `models` c [cl4] | ✓ replays subagents c [cl5] | ✓ r [cl5] | ✓ paged, cwd filter n [cl6] | ✓; fork point by `_meta` c [cl7] | ✓ · ✓ n [cl8] |
 | cline | ✓ needs a login c [ci4] | ✓ model back to default r [ci5] | ✗ r [ci5] | ✗ c [ci6] | ✗ c [ci6] | ✗ · ✗ c [ci6] |
@@ -102,6 +104,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | ✓ c [gl4] | ✓ text only c [gl5] | ✓ no replay c [gl5] | ✓ no paging c [gl6] | ◐ unstable, latest only c [gl7] | ✗ · ✓ c [gl8] |
 | grok-build | ✓ no `modes` c [gr4] | ✓ replays history c [gr5] | ✓ unstable, no extra dirs c [gr5] | ✓ not in chat mode c [gr6] | ✗; own `x.ai/session/fork` c [gr6] | ✗ own method · ✓ c [gr6] |
 | kilo | ✓ r [ki4] | ✓ with replay r [ki4] | ✓ no replay r [ki4] | ✓ 100 per page c [ki5] | ✓ last 20 replayed c [ki6] | ✗ · ✓ r [ki4] |
+| kimi-code | ✓ c [km4] | ✓ c [km5] | ✓ c | ✓ c [km6] | ✓ unstable c [km7] | ✓ · ✓ c [km8] |
 | minimax-code | ✓ needs a login c [mm4] | ✓ stored cwd only c [mm5] | ✓ stored cwd only c [mm5] | ✓ no subagent sessions c [mm6] | ✓ unstable, stored cwd c [mm5] | ✗ · ✓ c [mm7] |
 | minion-code | ✓ needs a key or login c [mi4] | ✗ in memory only c [mi5] | ✗ unreachable c [mi3] | ✗ unreachable c [mi3] | ✗ unreachable c [mi3] | ✗ · ✗ c [mi5] |
 | nova | ✓ + `systemPrompt` c [no4] | ✓ c [no4] | ✓ c [no4] | ✓ + own search c [no4] | ◐ advertised c [no4] | ✓ · ◐ c [no4] |
@@ -109,12 +112,12 @@ columns; section 3 uses them too.
 | qoder | ✓ needs a login c [qo4] | ✓ replay may trail answer c [qo5] | ✗ no handler c [qo3] | ✓ by cwd, with titles c [qo6] | ✗ no handler c [qo3] | ✗ · ✗ c [qo3] |
 | qwen-code | ✓ c [qw4] | ✓ c [qw4] | ✓ unstable c [qw4] | ✓ unstable c [qw4] | ✗; own `fork_agent` c [qw4] | ✗ · ✗; own methods c [qw4] |
 | sigit | ✓ c [si4] | ✓ full replay c [si5] | ✓ saved sessions only c [si6] | ✓ paged c [si7] | ✓ unstable, latest only c [si8] | ✓ · ✓ c [si9] |
+| autohand | ✓; `authRequired` r [ah4] | ✓ text only r [ah5] | ◐ the CLI's ids only r [ah6] | ◐ lists turns c [ah6] | ◐ this process only r [ah6] | ✗ · ✗ c |
 | cursor | ✓ c [cu3] | ✓ c [cu4] | ✗ c | ✓ unstable c [cu5] | ✗ c | ✗ · ✗ c |
 | devin | ✓ n [dv3] | ✓ n [dv4] | ? n [dv5] | ✓ n [dv6] | ? n [dv7] | ? · ? |
 | fx | ✓ c [fx4] | ✓ full replay c [fx5] | ✓ c [fx5] | ✓ across workspaces c [fx6] | ✗ c | ✗ · ✓ c [fx7] |
 | goose | ✓ needs a provider c [go4] | ✓ full replay c [go5] | ✗ c | ✓ c [go6] | ◐ not advertised c [go7] | ✓ · ✓ c [go8] |
 | junie | ✓ n [ju4] | ? n [ju5] | ? | ? | ? n [ju5] | ? · ? |
-| kimi | ✓ c [km4] | ✓ c [km5] | ✓ c | ✓ c [km6] | ✓ unstable c [km7] | ✓ · ✓ c [km8] |
 | kiro | ✓ n | ◐ n [kr4] | ✗ n [kr5] | ✗ · V3 ✓ n [kr5] | ✗ · V3 ✓ n [kr5] | ✗ · ✗ n [kr5] |
 | openclaw | ✓ c [oc3] | ✓ c [oc4] | ◐ c [oc5] | ✓ Gateway keys c [oc6] | ✗ c | ✗ · ✓ c |
 | opencode | ✓ c [op4] | ✓ with replay c [op4] | ✓ no replay c [op4] | ✓ 100 per page c [op4] | ✓ c [op4] | v1 ✗ · ✓; v2 ✓ · ✓ c [op4] |
@@ -127,7 +130,6 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ c | ✗ c | ✗ c | ✗ c |
 | auggie | default · ask c [au5] | ✓ legacy, may be null c [au5] | ✗ c | ✗ over ACP c [au5] |
-| autohand | ✓ six, legacy r [ah7] | ✓ legacy, next run r [ah7] | ✓ nine selects r [ah7] | ◐ no `thought_level` r [ah8] |
 | bob | ✓ `set_mode` n, c [bo7] | ✗ n, c [bo8] | ✗ c [bo8] | ✗ c [bo8] |
 | claude-acp | ✓ five, `auto` per model n [cl9] | ◐ option only, no set_model c [cl3] | ✓ up to six incl. effort, fast, ultracode c [cl10] | ✓ `thought_level` c [cl10] |
 | cline | ✓ plan · act r [ci7] | ◐ `provider` select first c [ci8] | ✓ five, one boolean c [ci8] | ✗ `--thinking` flag only c [ci9] |
@@ -143,6 +145,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | default · accept_edits · bypass r [gl9] | ✓ r [gl10] | thought_level · mode · model c [gl11] | ✓ per model c [gl11] |
 | grok-build | ◐ undeclared, `plan` works c [gr7] | ✓ unstable `models` c [gr8] | model · reasoning_effort c [gr9] | ✓ five levels c [gr9] |
 | kilo | ✓ as option `mode` r [ki7] | ✓ as option `model` r [ki7] | ✓ model, effort, mode c [ki8] | ✓ `thought_level` r [ki7] |
+| kimi-code | default · plan · auto · yolo c [km9] | ◐ option only c [km10] | model · thinking · mode c [km11] | ✓ `thinking` c [km11] |
 | minimax-code | ◐ default · plan, next prompt c [mm8] | ✓ `model` option c [mm9] | ✓ three, one process-wide c [mm10] | ✓ `thinkingEffort` c [mm10] |
 | minion-code | ✓ five, legacy c [mi6] | ◐ after login; `set_model` ✗ c [mi7] | ✗ c | ✗ c |
 | nova | ◐ set_mode taken c [no5] | ◐ set_model taken c [no5] | ✗ r [no6] | ✗ r [no6] |
@@ -150,12 +153,12 @@ columns; section 3 uses them too.
 | qoder | ✓ four, legacy c, n [qo7] | ✓ legacy + `set_model` c [qo8] | ◐ only in a set's answer c [qo9] | ✗ c [qo9] |
 | qwen-code | ✓ `set_mode` and option c [qw5] | ✓; inside change private c [qw5] | mode, model, effort c [qw5] | ◐ `thought_level`, per model c [qw5] |
 | sigit | Manual · Auto · Plan c [si10] | ◐ config option only c [si11] | model · inference · mode c [si12] | ✗ c |
+| autohand | ✓ six, legacy r [ah7] | ✓ legacy, next run r [ah7] | ✓ nine selects r [ah7] | ◐ no `thought_level` r [ah8] |
 | cursor | agent · plan · ask n, c [cu6] | ✓ c [cu7] | mode · model c [cu7] | ◐ opt-in `_meta` c [cu7] |
 | devin | ✓ six, shape ? n [dv8] | ✓ config option n [dv9] | model · effort · speed · dirs n [dv10] | ✓ option, category ? n [dv11] |
 | fx | auto · ask · full-access c [fx8] | ✗ set_model; config only c [fx9] | provider · model · mode · effort c [fx9] | ✓ `effort` c [fx10] |
 | goose | auto · approve · smart · chat c [go9] | ✗ set_model; config only c [go10] | provider · mode · model · effort c [go10] | ✓ `thinking_effort` c [go11] |
 | junie | ◐ /plan, /goal as text n [ju6] | ✓ config option n [ju7] | ◐ model · brave_mode n [ju8] | ? n [ju9] |
-| kimi | default · plan · auto · yolo c [km9] | ◐ option only c [km10] | model · thinking · mode c [km11] | ✓ `thinking` c [km11] |
 | kiro | ✓ agent configs n [kr6] | ✓ · V3 option only n [kr7] | ? · V3 ✓ n [kr8] | flag only · V3 ◐ n [kr8] |
 | openclaw | ◐ thought levels c [oc7] | ✗ `/model` only c [oc7] | 7, `thought_level` too c [oc8] | ✓ `thought_level` c [oc8] |
 | opencode | ◐ option `mode` only c [op5] | ◐ option `model`; v1 + set_model c [op5] | ✓ model, effort, mode c [op5] | ✓ `thought_level` c [op5] |
@@ -168,7 +171,6 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ no `session/prompt` c [ag4] | ✗ c | ✗ c | ✗ c | ✗ c |
 | auggie | ✓ c [au6] | ✓ c [au6] | ✗ dropped c [au6] | ✗ dropped c [au6] | ◐ `file://` path only c [au6] |
-| autohand | ✓ c | ◐ never reaches the model c [ah9] | ✗ placeholder text c [ah9] | ✓ inlined c [ah10] | ✓ read, inlined c [ah10] |
 | bob | ✓ c [bo9] | ✓ n, c [bo9] | ◐ as `[audio]` c [bo9] | ✓ text inlined c [bo9] | ◐ as text, not fetched c [bo9] |
 | claude-acp | ✓ c [cl11] | ✓ base64 · URL c [cl11] | ✗ dropped c [cl11] | ◐ text, image, PDF blobs c [cl11] | ◐ as a markdown link c [cl11] |
 | cline | ✓ c [ci10] | ✗ though advertised c [ci10] | ✗ c [ci10] | ✗ c [ci10] | ✗ c [ci10] |
@@ -184,6 +186,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | ✓ c | ✓ c [gl12] | ✗ a text note c [gl12] | ✓ text c [gl12] | ◐ name only c [gl12] |
 | grok-build | ✓ c | ◐ taken, not advertised c [gr10] | ✗ invalid_params c [gr10] | ✓ c | ✓ also as `@path` c [gr10] |
 | kilo | ✓ c [ki9] | ✓ c [ki9] | ✗ c [ki9] | ✓ c [ki9] | ✓ `file://`, `zed://` c [ki9] |
+| kimi-code | ✓ c | ✓ c | ✗ c | ✓ text only c [km12] | ◐ as a path c [km12] |
 | minimax-code | ✓ c [mm11] | ✗ refused c [mm11] | ✗ refused c [mm11] | ✗ refused c [mm11] | ◐ as a text line c [mm11] |
 | minion-code | ✓ joined by newlines c [mi8] | ✗ dropped c [mi8] | ✗ dropped c [mi8] | ✗ dropped c [mi8] | ✗ dropped c [mi8] |
 | nova | ✓ c [no7] | ✓ c [no7] | ✗ c [no7] | ✓ c [no7] | ? [no7] |
@@ -191,12 +194,12 @@ columns; section 3 uses them too.
 | qoder | ✓ c [qo10] | ✓ c, n [qo10] | ✓ as inline data c [qo10] | ◐ as an `@uri` mention c [qo10] | ✓ `file://` read, else text c [qo10] |
 | qwen-code | ✓ c | ✓ c [qw6] | ✓ inline, clamped c [qw6] | ✓ embedded c [qw6] | ◐ `file://` as @-path c [qw6] |
 | sigit | ✓ c | ✓ if the model takes it c [si13] | ✓ if the model takes it c [si13] | ✓ inlined c [si13] | ✓ `file:` read from disk c [si13] |
+| autohand | ✓ c | ◐ never reaches the model c [ah9] | ✗ placeholder text c [ah9] | ✓ inlined c [ah10] | ✓ read, inlined c [ah10] |
 | cursor | ✓ c | ✓ c | ✗ c | ✓ inlined c [cu8] | ✓ inlined c [cu8] |
 | devin | ✓ n | ? | ? | ? | ◐ inferred n [dv12] |
 | fx | ✓ c | ✓ c | ✗ c | ✓ inlined c [fx11] | ✗ dropped silently c [fx11] |
 | goose | ✓ c | ✓ c | ✗ dropped c [go12] | ◐ text only c [go12] | ✓ inlined if readable c [go12] |
 | junie | ✓ n [ju10] | ? | ? | ? | ? |
-| kimi | ✓ c | ✓ c | ✗ c | ✓ text only c [km12] | ◐ as a path c [km12] |
 | kiro | ✓ n | ✓ n [kr1] | ? | ? | ? |
 | openclaw | ✓ c | ✓ c | ✗ c | ✓ as text c [oc9] | ◐ as text c [oc9] |
 | opencode | ✓ c [op6] | ✓ c [op6] | ✗ c [op6] | ✓ c [op6] | ✓ `file://` c [op6] |
@@ -209,7 +212,6 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ no updates sent c [ag5] | ✗ c | ✗ c | ✗ · ✗ · ✗ c | ✗ c | ✗ c |
 | auggie | 7 standard kinds c [au7] | ✓ c [au7] | ✓ output only here c [au7] | ◐ · ✓ · ✗ c [au7] | ✓ read, edit c [au7] | pending → completed c [au8] |
-| autohand | 8 from a name map c [ah11] | ✓ c [ah11] | ✓ result text c [ah11] | ✓ · ✗ · ◐ c [ah12] | ◐ path as given c [ah11] | pending → completed/failed c [ah13] |
 | bob | 7 standard kinds c [bo10] | ✓ c [bo10] | ✓ `{result}` c [bo10] | ◐ · ✓ · ✗ n, c [bo10] | ✓ arguments, results n, c [bo10] | ◐ can stick `pending` c [bo11] |
 | claude-acp | 8 incl. `switch_mode` n [cl12] | ✓ `{}` first, then partial n [cl12] | ✓ n [cl12] | ✓ · ✓ · ✗ for chord n [cl12] | ✓ n [cl12] | Bash `pending` to the end r [cl13] |
 | cline | all but `switch_mode` c [ci11] | ✓ c [ci11] | ✓ only at the end c [ci11] | ✗ · ✗ · ✗ c [ci11] | ✗ c [ci11] | `in_progress` if approved c [ci12] |
@@ -225,6 +227,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | read, edit, execute, fetch, other c [gl13] | ✓ elided c [gl13] | ✓ elided c [gl13] | ✓ · ✗ · ✗ c [gl13] | ✓ files, URLs c [gl13] | pending → in_progress → end c [gl13] |
 | grok-build | 7, no delete or move c [gr11] | ✓ c [gr11] | ◐ some tools c [gr11] | ✓ · ✓ · ✗ c [gr12] | ✓ file tools c [gr11] | pending → in_progress → end c [gr11] |
 | kilo | execute, edit, read, search… c [ki10] | ✓ + workdir c [ki10] | ✓ c [ki10] | ✓ · ✓ · ✗ c [ki10] | ✓ c [ki10] | pending → in_progress → end c [ki10] |
+| kimi-code | 6, by tool name c [km13] | ✓ c | ✓ c | ✓ · ✓ · ◐ c [km14] | ✓ absolute c | full, `pending` lazy c [km13] |
 | minimax-code | all ten, from the name c [mm12] | ✓ c [mm12] | ✓ output only here c [mm12] | ◐ · ◐ excerpts · ✗ c [mm12] | ✓ c [mm12] | ✓; ids restart each turn c [mm13] |
 | minion-code | six + `other` c [mi9] | ✓ c [mi9] | ✓ output only here c [mi9] | ◐ code calls · ✗ · ✗ c [mi9] | ✗ c [mi9] | in_progress → completed c [mi10] |
 | nova | ? [no8] | ✓ c [no8] | ? [no8] | ? · ? · ✗ c [no8] | ✓ c [no8] | ? `pending` at an ask c [no8] |
@@ -232,12 +235,12 @@ columns; section 3 uses them too.
 | qoder | ACP kinds, one as `think` c [qo11] | ✓ c [qo11] | ✓ result as a string c [qo11] | ✓ · ◐ in asks · ? c [qo11] | ✓ from path args c [qo11] | late; live status ? c [qo12] |
 | qwen-code | core's kinds, `switch_mode` c [qw7] | ✓ c [qw7] | ✓ when shown c [qw7] | ✓ · ✓ · ✗ c [qw7] | ✓ c [qw7] | full; extra `_meta` update c [qw7] |
 | sigit | 8 kinds, status as `think` c [si14] | ✓ c [si14] | ✓ c [si14] | ✓ · ✓ · ✓ if declared c [si14] | ✓ file tools c [si14] | full, `failed` too c [si14] |
+| autohand | 8 from a name map c [ah11] | ✓ c [ah11] | ✓ result text c [ah11] | ✓ · ✗ · ◐ c [ah12] | ◐ path as given c [ah11] | pending → completed/failed c [ah13] |
 | cursor | 9, `switch_mode` too c [cu9] | ✓ trimmed c [cu9] | ✓ per tool c [cu9] | ◐ · ✓ · ✗ c [cu9] | ✓ c | pending → completed c [cu10] |
 | devin | ? | ? | ? | ? · ? · ◐ n [dv13] | ? | ◐ n [dv14] |
 | fx | 6 kinds, skills `other` c [fx12] | ✓ c | ✗ c [fx12] | ✓ · ✗ · ✗ c [fx13] | ✗ c | pending → in_progress → done c [fx14] |
 | goose | none on its own calls c [go13] | ✓ c | ✓ c | ✓ · ✗ · ✗ c [go13] | ✓ c [go13] | pending → done c [go14] |
 | junie | ? | ? | ? | ? · ? · ? | ? | ✓ pending first n [ju11] |
-| kimi | 6, by tool name c [km13] | ✓ c | ✓ c | ✓ · ✓ · ◐ c [km14] | ✓ absolute c | full, `pending` lazy c [km13] |
 | kiro | ? | ? n [kr9] | ? n [kr9] | ? · ? · ? | ? | ? · V3 failureReason n [kr9] |
 | openclaw | 8, by tool name c [oc10] | ✓ c | ✓ c | ✓ · ? · ✗ c [oc10] | ✓ c | in_progress → end c [oc10] |
 | opencode | execute, edit, read, search… c [op7] | ✓ c [op7] | ✓ `{metadata}` c [op7] | ✓ · ✓ · ✗ c [op7] | ✓ c [op7] | v1 live · v2 no live output c [op8] |
@@ -250,7 +253,6 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ no requests sent c [ag5] | ✗ c | ✗ · ✗ c | ✗ c |
 | auggie | once · reject c [au9] | error denies c [au9] | ✗ · ✗ c | ✓ task-list tools c [au10] |
-| autohand | once · always · reject, opt-in r [ah14] | ?; chord's SDK refuses all r [ah14] | ✗ · ✗ r | ✓ todo and plan tools r [ah15] |
 | bob | once · always · reject n, c [bo12] | cancelled; no timeout c [bo12] | ✓ · ✗ c [bo13] | ✓ n [bo14] |
 | claude-acp | once · always · reject once c [cl14] | aborts or denies tool · no timeout c [cl14] | ✓ · ✓ c [cl15] | ✓ + `plan_update` r [cl16] |
 | cline | once · always · reject c [ci13] | reject · no timeout c [ci13] | ✗ · ✗ r [ci14] | ✗ r [ci15] |
@@ -266,6 +268,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | once · reject r [gl14] | rejected; no timeout c [gl14] | ✗ · ✗ r [gl15] | ✗ todos as a tool call r [gl16] |
 | grok-build | once · always · reject c [gr13] | cancelled; backstop timeout n [gr14] | ✗ · ✗; own `x.ai/mcp/elicit` c [gr15] | ✓ todo list c [gr16] |
 | kilo | once · always · reject r [ki11] | reject r [ki11] | ✗ · ✗ r [ki12] | ✗ r [ki13] |
+| kimi-code | once · always · reject c [km15] | cancelled; no timeout c [km15] | ✓ · ✗ c [km16] | ✓ todo list c [km17] |
 | minimax-code | once · always · reject c [mm14] | deny · no timeout c [mm14] | ✓ · ✗ c [mm15] | ◐ markdown `plan_update` c [mm16] |
 | minion-code | once · always · reject c [mi11] | **allow** · no timeout c [mi11] | ✗ · ✗ c | ✗ `todo_write` is a call c [mi12] |
 | nova | once · reject r [no9] | rejected; timeout ? c [no10] | ✗ · ✗; own method r [no11] | ◐ one entry r [no12] |
@@ -273,12 +276,12 @@ columns; section 3 uses them too.
 | qoder | once · always · Reject c [qo13] | rejects after 30 s c [qo13] | ✗ · ✗ c [qo14] | ✗ plan in a permission c [qo15] |
 | qwen-code | once · always ×3 · reject c [qw8] | cancel; no timeout c [qw8] | ✗ · ✗; questions in `_meta` c [qw8] | ✓ from its todos c [qw9] |
 | sigit | all four c [si15] | cancelled ends turn; no timeout c [si15] | ✗ · ◐ in authenticate c [si16] | ✓ c [si17] |
+| autohand | once · always · reject, opt-in r [ah14] | ?; chord's SDK refuses all r [ah14] | ✗ · ✗ r | ✓ todo and plan tools r [ah15] |
 | cursor | once · always · reject n, c [cu11] | rejected; no timeout c [cu11] | ✗ · ✗ n, c [cu12] | ◐ plan mode only c [cu13] |
 | devin | once · session · 2 always n [dv15] | ? | ✓ · ? n [dv16] | ? |
 | fx | once · session · reject c [fx15] | deny; no timeout c [fx15] | ◐ · ◐ MCP servers only c [fx16] | ✗ c |
 | goose | all four kinds c [go15] | tool cancelled; no timeout c [go15] | ✓ · ✗ cancelled inside c [go16] | ✗ c [go17] |
 | junie | once · always n [ju12] | ? | ◐ · ? n [ju13] | ? |
-| kimi | once · always · reject c [km15] | cancelled; no timeout c [km15] | ✓ · ✗ c [km16] | ✓ todo list c [km17] |
 | kiro | own _meta · V3 all four n [kr10] | ? n [kr10] | ? · ? n [kr11] | ? n [kr11] |
 | openclaw | exec only: 3 kinds c [oc11] | deny c [oc11] | ✗ · ✗ c [oc12] | ✗ c |
 | opencode | once · always · reject c [op9] | reject c [op9] | v1 ✗ · ✗; v2 ✓ · ✗ c [op10] | ✗ c [op11] |
@@ -291,7 +294,6 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ error line with no id c [ag6] | ✗ c | ✗ c | ✗ · ✗ · ✗ c |
 | auggie | the whole loop c [au11] | ✗; a prompt runs twice c [au11] | as one call c [au12] | ✗ · ✗ · ✗ c |
-| autohand | kills the CLI run r [ah16] | ✗ queued r [ah16] | ✗ r | ✗ · ✗ · ✗ r [ah17] |
 | bob | turn and task c [bo15] | ✗ refused c [bo16] | as one call c [bo17] | ✗ · ✗ · ✗ c [bo18] |
 | claude-acp | ◐ foreground only n [cl17] | ✓ `_session/steering` c [cl18] | RFD subagent_update c [cl19] | ✓ · ✓ · at the end c [cl20] |
 | cline | ◐ lost after a 2nd prompt r [ci16] | ✗ queued r [ci16] | flat in parent r [ci17] | ✗ · ✗ · ✗ r [ci18] |
@@ -307,6 +309,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | turn, stream, permission c [gl17] | ✗; a prompt aborts the turn c [gl18] | ✗ r [gl19] | ✗ · ✓ turn sum · ✗ c [gl20] |
 | grok-build | turn and subagents c [gr17] | queued; own `sendNow` c [gr18] | own notification c [gr19] | ✗ · ✗ · ✗; `_meta` only c [gr20] |
 | kilo | ✓ aborts the run c [ki14] | ◐ supersedes at next step r [ki15] | as one call, asks dropped r [ki16] | ✓ · ✓ · ✓ at turn end r [ki17] |
+| kimi-code | main turn only c [km18] | ✗; refused -32600 c [km19] | as one call c [km20] | ◐ · ✗ · ✗ c [km21] |
 | minimax-code | ◐ turn; subagents ? c [mm17] | ✗ refused; own `steer` c [mm18] | own extension, opt-in c [mm19] | ✓ · ✗ · ✓ c [mm20] |
 | minion-code | ◐ between chunks only c [mi13] | ✗ 2nd prompt runs at once c [mi14] | as one call c [mi15] | ✗ · ✗ · ✗ c |
 | nova | ✓ process tree n [no13] | ✗ not offered c | ? r [no14] | ✗ · ✗ · ✗ r [no15] |
@@ -314,12 +317,12 @@ columns; section 3 uses them too.
 | qoder | ◐ may end `end_turn` c [qo16] | ✗ 2nd prompt aborts 1st c [qo17] | ? n [qo18] | ? · `_meta.quota` · ✗ c [qo19] |
 | qwen-code | prompt and waiting ones c [qw10] | own `drainMidTurnQueue` c [qw11] | own `_meta`, flat r [qw12] | ✓ · ✗ · ✗; `_meta.usage` c [qw13] |
 | sigit | turn, foreground command c [si18] | ✗; a prompt waits c [si19] | ◐ one call, mostly off c [si20] | ✓ · ✗ · ✗ c [si21] |
+| autohand | kills the CLI run r [ah16] | ✗ queued r [ah16] | ✗ r | ✗ · ✗ · ✗ r [ah17] |
 | cursor | turn and subagents n, c [cu14] | ✗; a prompt cancels c [cu15] | draft shape n, c [cu16] | ✗ · ✗ · ✗ c |
 | devin | ◐ parks subagents n [dv17] | ? (CLI steers) n [dv18] | fore- and background, shape ? n [dv19] | ? · ? · ? n [dv20] |
 | fx | turn, tools, subagents c [fx17] | own `_meta.fx.steer` c [fx18] | flat, on the parent id c [fx19] | ✓ · ✓ · ✗ since 0.0.14 c [fx20] |
 | goose | turn and subagents c [go18] | own `_goose/unstable` c [go19] | as one call c [go20] | ✓ · ✓ · ◐ when known c [go21] |
 | junie | ? n [ju14] | ? (CLI steers) n [ju15] | ? (CLI has them) n [ju16] | ? · ◐ · ? n [ju17] |
-| kimi | main turn only c [km18] | ✗; refused -32600 c [km19] | as one call c [km20] | ◐ · ✗ · ✗ c [km21] |
 | kiro | ✓ turn n [kr12] | own _session/steer n [kr13] | own _session/spawn n [kr14] | ✗ · ✗ · ✗ n [kr15] |
 | openclaw | prompt, approval, run c [oc13] | ✗; a prompt aborts c [oc13] | never reach ACP c [oc14] | ◐ · ✗ · ✗ c [oc15] |
 | opencode | v1 all · v2 not children c [op12] | ✗ c [op13] | v1 as one call · v2 flat c [op14] | ✓ · ✓ · ✓ at turn end c [op15] |
@@ -332,7 +335,6 @@ columns; section 3 uses them too.
 | --- | --- | --- | --- | --- | --- |
 | agoragentic-acp | ✗ c [ag5] | ✗ c | ✗ malformed method c [ag7] | ✗ · ✗ c [ag5] | ✗ · ✗ · ✗ c |
 | auggie | ✓ before a prompt c [au13] | ✗ c [au14] | **needed** c [au15] | ✗ · ✗ c [au15] | ✓ · ◐ · ◐ c [au16] |
-| autohand | ✓ 24 by default c [ah18] | ✗ on purpose c [ah19] | **needed**, terminal-auth r [ah20] | ◐ · ◐ if declared c [ah21] | ✗ · ✗ · ✗ dropped c [ah22] |
 | bob | ✓ c [bo19] | ✓ after a turn n, c [bo20] | ◐ `sso`, browser n, c [bo21] | ✗ · ✗ n, c [bo22] | ✓ · ✓ · ✗ n, c [bo23] |
 | claude-acp | ✓ the CLI's + 2 own c [cl21] | ✓ a model call per session c [cl22] | ✗ none offered to chord c [cl23] | ✗ · ✗ c [cl24] | ✓ · ✓ · ✓ c [cl25] |
 | cline | ✗ c [ci19] | ◐ `updatedAt`, no title c [ci20] | 3 agent-run OAuth c [ci21] | ✗ · ✗ c [ci22] | ✗ · ✗ · ✗ ignored c [ci23] |
@@ -348,6 +350,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | ✓ from `.claude/` c [gl21] | ✓ after each turn c [gl22] | not needed r [gl23] | ◐ fs if declared · ✗ c [gl24] | ✓ · ✓ · ✗ fails session c [gl25] |
 | grok-build | ✓ c [gr21] | ✓ c [gr22] | 4 agent methods c [gr23] | ✓ · ✓ if declared c [gr24] | ✓ · ✓ · ✓ c [gr25] |
 | kilo | ✓ no input hint c [ki18] | ✗ titles in list only c [ki19] | `kilo-login`, no-op c [ki20] | ◐ write, undeclared · ✗ r [ki21] | ✓ · ✓ · ✓ c [ki22] |
+| kimi-code | ✓ c [km22] | ✓ c | **needed** c [km23] | ✓ · ✓ if declared c [km24] | ✓ · ✓ · ✓ c |
 | minimax-code | ✓ ten, answered locally c [mm21] | ✓ also outside turns c [mm22] | 1 terminal, if declared c [mm23] | ✗ · ✗ c [mm24] | ✓ · ✓ · ✓ c [mm25] |
 | minion-code | ✗ c | ✗ c | 1 agent-run OAuth c [mi16] | ✗ · ✗ c [mi17] | ✗ · ✗ · ✗ ignored c [mi18] |
 | nova | ✓ likely c [no16] | ✗ c [no17] | terminal method c [no18] | ✗ · ✗; own `file/write` c [no19] | ✓ · ✓ · ✓ c [no20] |
@@ -355,12 +358,12 @@ columns; section 3 uses them too.
 | qoder | ✓ after new, load c, n [qo20] | ? [qo21] | agent-run · env_var c, n [qo22] | fs if declared · ? c [qo23] | ✓ · ✓ · ✓ c, n [qo24] |
 | qwen-code | ✓ with skills c [qw14] | ✓ c [qw15] | terminal by `_meta` c [qw16] | ✓ if declared · ✗ c [qw17] | ✓ · ✓ · ✓ c [qw18] |
 | sigit | ✓ c [si22] | ✓ c [si23] | optional, agent type c [si24] | ✓ · ✓ if declared c [si25] | ✓ · ✓ · ✗ ignored c [si26] |
+| autohand | ✓ 24 by default c [ah18] | ✗ on purpose c [ah19] | **needed**, terminal-auth r [ah20] | ◐ · ◐ if declared c [ah21] | ✗ · ✗ · ✗ dropped c [ah22] |
 | cursor | ✓ c | ✓ c | **needed** n, c [cu17] | ✗ · ✗ c | ✓ · ✓ · ✓ c |
 | devin | ✓ n [dv21] | ? n [dv22] | ✓ n [dv23] | ? · ? | ✓ · ✓ · ✓ n [dv24] |
 | fx | ◐ always `[]` c [fx21] | ✓ c [fx22] | ✗ `fx login` outside c [fx23] | ✗ · ✗ c [fx24] | ✓ · ✓ · ✓, + `acp` c [fx25] |
 | goose | ✓ c | ✓ c [go22] | ◐ no-op `agent` method c [go23] | ✓ · ✓ when declared c [go24] | ✓ · ✓ · ✗ c [go25] |
 | junie | ✓ n [ju18] | ? n [ju19] | ? n [ju20] | ◐ · ? n [ju21] | ? · ? · ? n [ju22] |
-| kimi | ✓ c [km22] | ✓ c | **needed** c [km23] | ✓ · ✓ if declared c [km24] | ✓ · ✓ · ✓ c |
 | kiro | ✗ own · V3 ✓ n [kr16] | ✗ · V3 ◐ n [kr17] | CLI login · V3 optional n [kr18] | ? · ? (V3 terminal ✓) n [kr19] | ? · ? · ? n [kr20] |
 | openclaw | ✓ Gateway commands c [oc16] | ✓ c [oc17] | not needed c [oc18] | ✗ · ✗ c | ✗ · ✗ · ✗ refused c [oc3] |
 | opencode | ✓ c [op16] | v1 ✗ · v2 ◐ `_meta` only c [op17] | `opencode-login`, no-op c [op18] | v1 ◐ · ✗; v2 ✗ · ✗ c [op19] | v1 ✓ · ✓ · ✓; v2 ✓ · ✓ · ✗ c [op20] |
@@ -373,7 +376,6 @@ columns; section 3 uses them too.
 | --- | --- | --- |
 | agoragentic-acp | `loadSession: false` only c [ag8] | none c [ag9] |
 | auggie | load, image, list c [au17] | `terminal-auth` only c [au15] |
-| autohand | load, list, resume, fork, http… c [ah23] | fs, terminal, terminal-auth c [ah24] |
 | bob | load, list, resume, http c [bo24] | `elicitation` only c [bo25] |
 | claude-acp | load, image, sse, fork +13 c [cl26] | form, url, plan, AIR +10 c [cl27] |
 | cline | load, image c [ci1] | none c [ci1] |
@@ -389,6 +391,7 @@ columns; section 3 uses them too.
 | glm-acp-agent | load, http, image, list, fork… c [gl26] | `fs` only c [gl27] |
 | grok-build | load, list, resume, close c [gr26] | fs, terminal, own `_meta` c [gr27] |
 | kilo | load, image, http, sse, list… c [ki1] | `_meta` terminal-auth only c [ki1] |
+| kimi-code | load, all session caps c [km25] | fs, terminal, form c [km25] |
 | minimax-code | load, http, sse, 4 session c [mm26] | auth, form, plan, `_meta` c [mm27] |
 | minion-code | `streaming` only: defaults c [mi19] | none c [mi19] |
 | nova | load, sse, list, fork… c [no21] | version, auth, delegation c [no22] |
@@ -396,12 +399,12 @@ columns; section 3 uses them too.
 | qoder | load, list, prompt, MCP c [qo25] | `fs` c [qo26] |
 | qwen-code | load, list, resume, prompt ×3 c [qw19] | fs, own `_meta` keys c [qw17] |
 | sigit | load, audio, http, list, fork… c [si27] | fs, terminal, URL, boolean c [si28] |
+| autohand | load, list, resume, fork, http… c [ah23] | fs, terminal, terminal-auth c [ah24] |
 | cursor | load, list, image c [cu18] | `subagents`, `_meta` c [cu18] |
 | devin | ? n [dv25] | elicitation, rest ? n [dv26] |
 | fx | load, list, resume, close c [fx26] | elicitation, notices, `_meta` c [fx27] |
 | goose | load, list, delete, close c [go26] | fs, terminal, form, `_meta` c [go27] |
 | junie | ? | fs, form n [ju23] |
-| kimi | load, all session caps c [km25] | fs, terminal, form c [km25] |
 | kiro | loadSession, image n [kr1] | ? · V3 terminal, _meta.kiro n [kr19] |
 | openclaw | load, list, resume, close c [oc1] | none c [oc1] |
 | opencode | load, image, http, list… c [op21] | v1 terminal-auth · v2 + form c [op22] |
@@ -418,7 +421,6 @@ rest.
 | --- | --- | --- | --- |
 | agoragentic-acp | MCP `tools/*` and 3 more c [ag10] | MCP calls on the ACP pipe | none |
 | auggie | history, terminal-auth, indexing | ext method, `_meta`, flag | none |
-| autohand | terminal-auth, terminal `_meta` | `_meta`, env | none |
 | bob | `bob/extensions`, `_bob/task/*`, `bob/mode` | `_meta`, flag, form | none |
 | claude-acp | SDK options, AIR, usage +7 c [cl28] | `_meta`; AIR for most | steering, `nonExecutionKind` +2 |
 | cline | `--thinking`, `provider` +2 c [ci24] | flag; config options | `provider`, read as the model |
@@ -434,6 +436,7 @@ rest.
 | glm-acp-agent | none; off-spec behaviour only | none | none |
 | grok-build | `x.ai/*`: questions, plan, 300+ more | none: questions on by default | none |
 | kilo | terminal-auth, fs write +2 c [ki23] | `_meta`, env | none |
+| kimi-code | `session/set_model`, `terminal-auth` | none | none |
 | minimax-code | `mcode/*`, `permissionMode` +3 c [mm28] | `_meta` capability; methods | `permissionMode` in `/config` |
 | minion-code | `agent-auth`, skip flag, stubs c [mi20] | none; flag | none |
 | nova | `_meta.compass`, peers, delegation… | `_meta`, version 2, methods | none |
@@ -441,12 +444,12 @@ rest.
 | qoder | `_meta.quota`, hidden opts +5 c [qo27] | none; `_meta`, env | none |
 | qwen-code | `_qwencode/*` turns, `qwen/*` [qw20] | none for turns; call | none |
 | sigit | `_meta.sigit`, out-of-band commands | none | none |
+| autohand | terminal-auth, terminal `_meta` | `_meta`, env | none |
 | cursor | `cursor/*` methods, picker `_meta` | answer methods, `_meta` | none |
 | devin | tool _meta, timestamps n [dv27] | ? | none |
 | fx | `_meta.fx.steer` and 11 more c [fx28] | `_meta`, flag, capability | none |
 | goose | `_goose/unstable/*`, `_meta` c [go28] | methods, capability `_meta` | none |
 | junie | brave_mode, late chunks n [ju24] | config option | none |
-| kimi | `session/set_model`, `terminal-auth` | none | none |
 | kiro | _kiro.dev/* · V3 _kiro/* n [kr21] | none · V3 flag, capability | none |
 | openclaw | routing `_meta`, lineage `_meta` | `_meta`, flags | none |
 | opencode | child updates, retry, terminal-auth | capability, `_meta` | none |
@@ -455,84 +458,111 @@ rest.
 
 ## 2. What chord uses today and leaves unused
 
-Read in chord's own client at HEAD 287fedc3: `src/acp/`, `src/session/`,
-`src/headless.ts` and the launch in `src/agents.ts` and `src/clis.ts`, on
-`@agentclientprotocol/sdk` 1.8.0; chord has since moved to 2.2.0's `/unstable`
-entry. Each entry says what chord uses and what it leaves unused, in the
-summary's codes.
+Read in chord's own client for CHD-624, on `@agentclientprotocol/sdk` 2.6.0's
+`/unstable` entry: `src/acp/`, `src/session/`, the launch in `src/agents.ts`
+and `src/clis.ts`, and `chord acp`'s side in `src/acp_agent.ts` and
+`src/acp/agent_app.ts`. It was first read at HEAD 287fedc3 on SDK 1.8.0; line
+references are the current ones. Each entry says what chord uses and what it
+leaves unused, in the summary's codes.
 
-Four things are not as earlier notes had them: chord never calls
-`session/list`; a cost of 0 from an agent counts as a cost and stops chord's
-estimate (CHD-380 is still open); a subagent is never cancelled on its own
-session id; and steering carries only messages from other agents, never the
-person's own prompts.
+Since that first reading chord has taken titles, fork, a stop per subagent,
+steering of the person's queued prompts, `session_message`, `authMethods` for
+a failed sign-in's words, and every MCP server checked against the agent's
+capabilities. Still as first noted: chord never calls `session/list`, and a
+cost of 0 from an agent counts as a cost and stops chord's estimate.
 
 ### What chord asks for and declares
 
 - **A1–A3, ACP.** chord asks for protocol version 1, the SDK's
   `PROTOCOL_VERSION`, as `clientInfo {name: 'chord', version}`
-  (`src/acp/connection.ts:356-360`). It also calls `session/set_model`,
-  which version 1 has not made stable (`src/acp/connection.ts:60`). Unused:
-  anything of a later protocol version.
+  (`src/acp/connection.ts:456-462`). It still calls `session/set_model`,
+  which version 1 has not made stable, but only for an agent with no `model`
+  config option (`src/acp/connection.ts:563-564`,
+  `src/session/session.ts:780-795`). Unused: anything of a later protocol
+  version.
 - **B1, agent capabilities.** Read: `loadSession`,
-  `sessionCapabilities.resume`, `promptCapabilities.image`,
-  `mcpCapabilities.http` and `_meta.steering.supported`. Unused: `authMethods`,
-  `promptCapabilities.audio` and `embeddedContext`, `mcpCapabilities.sse`, and
-  `sessionCapabilities` list, fork, close and delete.
-- **B2, client capabilities.** Declared: `elicitation` (form and URL), `plan`,
-  `session.compaction`, `subagents`, and `_meta.terminal_output_delta`
-  (`src/acp/connection.ts:184-190`). Not declared: `fs` and `terminal`. chord
-  answers only `session/request_permission` and `elicitation/create`; every
-  other request from an agent, `fs/*`, `terminal/*` and extension methods
-  included, gets the SDK's method-not-found. Notifications other than
-  `session/update` are dropped without a trace, `elicitation/complete` and
-  extension notifications included (`src/acp/traffic.ts`,
-  `src/session/session.ts`).
+  `sessionCapabilities.resume` and `fork` (`src/acp/connection.ts:500-516`,
+  `src/session/session.ts:749-750,912-915`), `promptCapabilities.image` and
+  `embeddedContext` (`src/session/session.ts:743-747`), `mcpCapabilities`
+  http, sse and acp (`src/session/servers.ts:59-115`),
+  `_meta.steering.supported` (`src/acp/connection.ts:584-593`),
+  `agentInfo.name` (`src/session/session.ts:751-752,891`), and `authMethods`,
+  only to word a start that failed for want of a sign-in
+  (`src/session/session.ts:588-591`, `src/session/sign_in.ts`). Unused:
+  `promptCapabilities.audio`, and `sessionCapabilities` list, close and
+  delete (list only guards a call nothing makes).
+- **B2, client capabilities.** Declared: `elicitation` (form and URL),
+  `plan`, `session.compaction`, `subagents`, and
+  `_meta.terminal_output_delta` (`src/acp/connection.ts:228-234`). Not
+  declared: `fs` and `terminal`. chord answers `session/request_permission`,
+  `elicitation/create` (a mode other than form or URL is cancelled), and the
+  plan requests `cursor/create_plan` and `x.ai/exit_plan_mode`, an unreadable
+  plan answered `cancelled` (`src/acp/connection.ts:312-354`,
+  `src/acp/plans.ts`). Every other request from an agent, `fs/*`,
+  `terminal/*` and other extension methods included, gets the SDK's
+  method-not-found (`core/jsonrpc.js:654-656` in the SDK). Notifications
+  other than `session/update` are dropped without a trace: the SDK answers
+  only requests, so Claude's `auth/status_update` and `_auth/status_update`
+  pass silently (`authstatus`, `tests/acp/connection_test.ts`).
+  `elicitation/complete` is read off the traffic
+  (`src/session/session.ts:433-441`) and only `chord acp` passes it on.
 
 ### Sessions (B3–B8)
 
-- **B3, new.** `{cwd, mcpServers}`, with no `_meta`
-  (`src/session/session.ts:415`). Unused: `_meta` on `session/new`, such as
-  instructions, or Claude's `promptSuggestions: false` (CHD-432).
+- **B3, new.** `{cwd, mcpServers}`, and for Claude's adapter alone
+  `_meta.claudeCode.options.promptSuggestions: false`; the same `_meta` goes
+  on fork, load and resume (`src/session/session.ts:508-523,888-894`). No
+  `_meta` of chord's own goes to an agent.
 - **B4–B5, load and resume.** Resume when the agent offers it and chord has
   its own record of the session, or the agent has no `loadSession`; load
-  otherwise, with the same MCP servers (`src/session/session.ts:713-727`).
-- **B6, list.** The SDK call is wrapped (`src/acp/connection.ts:404`) but
+  otherwise, with the same MCP servers (`src/session/session.ts:902-930`).
+- **B6, list.** The SDK call is wrapped (`src/acp/connection.ts:523-530`) but
   never made. `/resume` and the other pickers read chord's own records
-  (`src/session/sessions.ts`).
-- **B7–B8, fork, delete, close.** Never called.
+  (`src/session/sessions.ts`); `chord acp` serves `session/list` from them.
+- **B7–B8, fork, delete, close.** `session/fork` runs `/fork` where the agent
+  offers it (`src/ui/app/sessions.ts:692-730`,
+  `src/session/session.ts:508-518`). `session/close` and `session/delete`
+  are never called.
 
 ### Modes, models and options (B9–B12)
 
 - **B9, modes.** Through the agent's mode config option if it has one, else
   `session/set_mode`; `current_mode_update` is read. An enricher fills in the
-  mode Codex leaves out after `set_mode` (`src/session/enrichers.ts`).
+  mode Codex leaves out after `set_mode` (`src/session/session.ts:808-826`,
+  `src/session/enrichers.ts`).
 - **B10, models.** Through the `model` config option if there is one, else
   `session/set_model`; the list comes from the `session/new` answer
-  (`src/session/session.ts:622-647`, `src/session/agent_state.ts`).
+  (`src/session/session.ts:779-805`, `src/session/agent_state.ts`).
 - **B11, config options.** `session/set_config_option` and
-  `config_option_update`.
+  `config_option_update` (`src/session/session.ts:827-837`).
 - **B12, effort.** Only a select option of category `thought_level`, never by
   its id; chord keeps no effort list of its own per agent
-  (`src/session/efforts.ts`).
+  (`src/session/session.ts:838-853`, `src/session/efforts.ts`).
 
 ### Prompt content (B13)
 
-- **Used:** text, base64 images when `promptCapabilities.image` is set, and
-  one `resource_link` per `@` mention (`src/session/session.ts:538-556`).
-- **Unused:** audio and embedded `resource` blocks are never sent. Images and
-  resources inside an agent's message and thought chunks are dropped
-  (`src/session/transcript/messages.ts`); only a replayed history shows them.
+- **Used:** text, then base64 images when `promptCapabilities.image` is set,
+  then embedded `resource` blocks, then one `resource_link` per `@` mention;
+  a steer keeps the same order (`src/session/session.ts:670-687,867-879`).
+  The window sends no embedded resources; only a `chord acp` client does,
+  refused whole unless the agent advertises `embeddedContext`
+  (`src/session/upstream.ts:704-740`).
+- **Unused:** audio is never sent. Images and resources inside an agent's
+  message and thought chunks are dropped (`src/session/transcript/messages.ts`);
+  only a replayed history shows them.
 
 ### Tool calls (B14)
 
 - **Used:** title, kind, status (only forward), locations, content, rawInput
   and rawOutput are kept (`src/session/transcript/tools.ts`). Text content and
-  diffs are drawn; other content shows as its type. Without the `terminal`
+  diffs are drawn, other known content shows as its type, and a kind chord
+  does not know, SDK 2.6's `session` content among them, draws nothing
+  (`src/ui/transcript/tools/tools.ts:518-533`). Without the `terminal`
   capability a `terminal` content block names only an id, so a command's
   output comes from the tool call's `_meta` (`terminal_info`,
   `terminal_output_delta`, `terminal_output`, `terminal_exit`). Claude's
-  `_meta.claudeCode.nonExecutionKind` marks an interrupted call.
+  `_meta.claudeCode.nonExecutionKind` marks an interrupted call. Codex's
+  Guardian reviews are read into their calls (`src/session/guardian_review.ts`).
 - **Unused:** locations show only in the permission box. rawOutput is drawn
   only on a call with no content, as that content (CHD-440).
 
@@ -541,96 +571,143 @@ person's own prompts.
 - **B15, permissions.** All four option kinds are offered. Esc answers
   `reject_once`, else `reject_always`, else `cancelled`; a withdrawn request
   or a closed session also answers `cancelled`
-  (`src/session/permissions.ts`). A request with no turn running is rejected
-  without being shown (CHD-158). Under `-p` a request is refused unless
-  `--dangerously-skip-permissions` allows it, with `allow_once` before
-  `allow_always`.
+  (`src/session/permissions.ts:52-69`). A request asked with no turn running,
+  or still open when its turn ends, is shown and holds the next prompt
+  (CHD-158, the owner's Q53; `src/session/conversation.ts:1320-1357`). Under
+  `-p` a request is refused unless `--dangerously-skip-permissions` allows
+  it, with `allow_once` before `allow_always`, and one carrying a
+  `chord/permission` review is refused always (`src/session/oneshot.ts`).
 - **B16, elicitation.** Forms: string fields (text, or a choice by `enum` or
   `oneOf`), number, integer, boolean, and a multiple choice by `enum` or
   `anyOf`; any other field stays unset (`src/ui/dialogs/form.ts`). Esc
   cancels, Decline declines. The question shapes of Claude, Codex, droid,
   OpenCode and DimCode are read into one question box
   (`src/session/enrichers.ts`, `src/session/questions.ts`). URL: Open or
-  Decline. Unused: `elicitation/complete`. A form with no turn running is
-  cancelled (CHD-158); `-p` declines forms and cancels URLs.
+  Decline. A form with no turn running, or outliving its turn, is shown as a
+  permission is, and an agent's withdrawal by `$/cancel_request` closes it
+  (`askcodexasync`). `elicitation/complete` reaches only `chord acp`'s
+  client. `-p` declines forms and cancels URLs.
 - **B17, plans.** `plan` replaces the live list; `plan_update` keeps its items
   as the live list and draws a markdown plan as reply text; `plan_removed`
-  takes it away (`src/session/transcript/plans.ts`).
+  takes it away (`src/session/transcript/plans.ts`). cursor's and grok's plan
+  requests are asked as plans to take or leave (B2).
 
 ### The turn (B18–B21)
 
-- **B18, cancel.** `session/cancel` on the root session only. Pending
-  permissions and forms of the parent and of every known subagent are
-  answered `cancelled` at once (`src/acp/connection.ts:426-434`); running
+- **B18, cancel.** A turn's `session/cancel` goes to the root session.
+  Pending permissions and forms of the parent and of every known subagent are
+  answered `cancelled` at once (`src/acp/connection.ts:545-553`); running
   subagents are marked cancelled when the turn settles
-  (`src/session/transcript/turn.ts`). Tool calls are not marked; they move
-  only on the agent's updates. Unused: `session/cancel` on one subagent's
-  session id (CHD-432).
+  (`src/session/transcript/turn.ts`). A subagent that announces
+  `capabilities.cancel` can be stopped alone, by `session/cancel` on its own
+  session id (`src/acp/connection.ts:554-555`,
+  `src/session/transcript/subagents.ts:444-448`). Tool calls are not marked;
+  they move only on the agent's updates.
 - **B19, steering.** `_session/steering` when the agent answers
-  `_meta.steering.supported: true`, sent with
-  `_meta.steering.idleBehavior: 'promptRequired'`, for messages from other
-  agents only (`send_message`, task reports). A prompt the person sends
-  mid-turn is always queued until the turn ends
-  (`src/session/conversation.ts`).
+  `_meta.steering.supported: true` (Claude, Codex from 2.4, opencode v2 from
+  2.2.7), sent with `_meta.steering.idleBehavior: 'promptRequired'`
+  (`src/session/session.ts:767-771`): messages from other agents
+  (`send_message`, task reports), and a queued prompt of the person's that
+  Tab sends into the running turn (CHD-535,
+  `src/session/conversation.ts:1156-1258`). A steer refused as
+  `promptRequired` goes as the next prompt.
 - **B20, subagents.** The RFD's `subagent_update`, and Codex's draft
-  `subagent_spawned` reshaped into it by an enricher. `running` and
-  `requires_action` read running, `idle` completed whatever its stopReason,
-  and `unknown` keeps the previous state
+  `subagent_spawned` reshaped into it by an enricher
+  (`src/session/enrichers.ts:313-329`). `running` and `requires_action` read
+  running; `idle` reads by its stopReason: `end_turn` completed, `error`
+  failed, `cancelled` cancelled, any other ended; `unknown` keeps the
+  previous state (`src/session/transcript/subagents.ts:643-668`).
+  `session_message` is read as a subagent's task or its messages
   (`src/session/transcript/subagents.ts`). A child's traffic is routed by its
   session id; its usage, modes and commands are not folded into the
-  session's. Unused: `session_message` (a subagent's full task), the
-  stopReason of `idle`, and a stop per subagent.
+  session's. A stop per subagent is B18's.
 - **B21, usage and cost.** `usage_update` (used, size, cost) and
   `PromptResponse.usage`; with no cost from the agent, chord estimates one
   from the tokens through `@pydantic/genai-prices` (`src/session/prices.ts`,
-  `src/session/enrichers.ts`). Any cost the agent sends, 0 included, stops
-  the estimate for the rest of the session (`src/session/enrich.ts:304-325`).
-  Unused: usage or cost an agent sends in its own `_meta` or methods.
+  `src/session/enrichers.ts:63-98`). Any cost the agent sends, 0 included,
+  stops the estimate for the rest of the session
+  (`src/session/enrich.ts:430-454`). Unused: usage or cost an agent sends in
+  its own `_meta` or methods.
 
 ### Commands, titles, login and calls back (B22–B26)
 
 - **B22, available commands.** `available_commands_update` is kept as the
   agent's slash commands (`src/session/agent_state.ts`).
-- **B23, session title.** `session_info_update` is dropped.
-- **B24, login.** chord never calls `authenticate` and does not read
-  `authMethods`. An `authRequired` error shows as a failed start or a failed
-  turn, with its message.
+- **B23, session title.** `session_info_update`'s title is kept as the
+  session's, recorded, and read back on resume; a task agent's is not shown
+  (CHD-445, CHD-491; `src/session/conversation.ts:766-784`,
+  `src/session/sessions.ts`). chord never sets one (`session/set_title`).
+- **B24, login.** chord never calls `authenticate`. `authMethods` only words
+  a start that failed for a sign-in (B1); an `authRequired` error shows as a
+  failed start or a failed turn, with its message.
 - **B25, `fs` and `terminal`.** Not declared, so never called back; requests
   get method-not-found.
-- **B26, MCP servers.** The person's servers from settings and `.mcp.json`
-  (stdio, http, sse) are passed as they are, never checked against the
-  agent's `mcpCapabilities`. chord's own server goes in, over http, only when
-  `mcpCapabilities.http` is true, and never under `-p`.
+- **B26, MCP servers.** The person's servers from settings and `.mcp.json`,
+  and chord's own over http, go through `src/session/servers.ts` on new,
+  fork, load and resume: stdio always, http, sse and acp only where the
+  agent's `mcpCapabilities` advertise them, each held back said once. An
+  agent's `mcpServers: false` setting holds every server back
+  (`src/session/session.ts:486-493`). `-p` never passes chord's own server.
 
 ### Other updates
 
 - **Used:** `compaction_update` and summary chunks are drawn
-  (`src/session/transcript/compactions.ts`); chord never starts a compaction
-  itself. A user's own message chunks are read only when a history is
-  replayed. codebuddy's `session_info_update` unsolicited-turn marker starts
-  its own cycle; `session_end` ends it.
-- **Dropped:** other `session_info_update` content, `notice`, `session_message`,
-  `session_message_chunk`, a live `user_message_chunk`, and any kind chord
-  does not know.
+  (`src/session/transcript/compactions.ts`); one that opens with no turn,
+  cycle or wait for a turn's tail under way is marked unasked and drawn "while
+  idle" (CHD-624). chord never starts a compaction itself. A user's own
+  message chunks are read only when a history is replayed. codebuddy's
+  `session_info_update` unsolicited-turn marker starts its own cycle and
+  `session_end` ends it; Claude's `_claude/origin` usage ends one
+  (`src/session/cycles.ts`).
+- **Dropped:** `notice`, `session_message_chunk`, a live
+  `user_message_chunk`, and any kind chord does not know
+  (`src/session/transcript/reducer.ts`).
 
 ### Custom (C)
 
 - **Read:** `_meta.steering.supported`; `_meta.claudeCode.nonExecutionKind`;
   the `terminal_*` keys of a tool call's `_meta`; Codex's
-  `_meta.is_mcp_tool_call` and `_meta.codex` (`autoResolutionMs`, a
-  `user_note` role, `isSecret`); `_claude/askUserQuestionOption` previews;
-  DimCode's `_meta.lody.elicitation.customAnswerFor`; Claude's
-  `_claude/origin` to end an autonomous cycle, and codebuddy's
-  `codebuddy.ai/unsolicitedTurn` to start one.
+  `_meta.is_mcp_tool_call`, `_meta.codex` (`autoResolutionMs`, a `user_note`
+  role, `isSecret`) and Guardian's `guardian_assessment:` call ids;
+  `_claude/askUserQuestionOption` previews; DimCode's
+  `_meta.lody.elicitation.customAnswerFor`; Claude's `_claude/origin` to end
+  an autonomous cycle, and codebuddy's `codebuddy.ai/unsolicitedTurn` to
+  start one; any agent's `chord/permission` review.
 - **Sent:** `_meta.terminal_output_delta` in the client capabilities,
-  `_meta.steering.idleBehavior` on a steer, and
-  `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in Claude's environment
-  (`src/session/session.ts:99-105`).
+  `_meta.steering.idleBehavior` on a steer, Claude's `promptSuggestions:
+  false` on opening, and `CLAUDE_CODE_ENABLE_TODO_TOOLS=1` in Claude's
+  environment unless set (`src/session/session.ts:128-134`).
 - **Unused:** every other extension, listed per agent in section 1's custom
-  table, among them Claude's `asyncTasks` and prompt suggestions, which its
-  adapter gives only to JetBrains AIR,
-  qwen's `_qwencode` turns, DimCode's `_lody` notifications and codebuddy's
-  terminal output.
+  table, among them Claude's `asyncTasks`, its idle-compaction trigger and
+  prompt suggestions, which its adapter gives only to JetBrains AIR, Codex's
+  `_meta.codex.delivery`, qwen's `_qwencode` turns, DimCode's `_lody`
+  notifications and codebuddy's terminal output.
+
+### `chord acp`'s own side
+
+`chord acp` serves ACP v1 on stdin and stdout, an agent to its client over
+the agent chord runs.
+
+- **Advertised.** Protocol version 1, `agentInfo {name: 'chord'}`,
+  `authMethods: []`, `loadSession`, `promptCapabilities` image and
+  `embeddedContext` (no audio), `mcpCapabilities` http and sse,
+  `sessionCapabilities` list, resume and close, and `_meta['chord/acp']`
+  with its extensions (`src/acp_agent.ts:1791-1814`). Not advertised: fork,
+  steering, `options`.
+- **Served.** `initialize`, `session/new`, `list`, `load`, `resume`,
+  `prompt`, `cancel`, `set_config_option` (models go through it), `set_mode`
+  and `close`, and chord's own `_chord/session/steer`, `_chord/agents/send`,
+  `_chord/agents/close` and `_chord/monitors/stop`
+  (`src/acp/agent_app.ts:150-174`).
+- **Not served.** `session/set_model`, `session/fork`, `_session/steering`,
+  `authenticate`, and SDK 2.6's `session/options`, `session/set_title`,
+  `session/status`, `session/archive` and `auth/status` have no handler, so
+  the SDK answers -32601.
+- **Relayed.** Updates go upstream through `mapUpdate`: a child's session id
+  becomes `<main>/<child>`, and a kind the client did not declare is dropped
+  (`src/acp_agent.ts:329-351`, `src/session/upstream.ts:44-91`). An unasked
+  compaction's mark is chord's state and is not relayed. `elicitation/complete`
+  goes on to the client (`src/acp_agent.ts:1201-1203`).
 
 ## 3. The agents
 
@@ -723,8 +800,8 @@ another agent, which is the person's choice.
 #### auggie
 
 - Name: Auggie CLI
-- Pinned: `@augmentcode/auggie` 0.36.0
-- Run as: `npx -y @augmentcode/auggie@0.36.0 --acp`
+- Pinned: `@augmentcode/auggie` 0.37.0
+- Run as: `npx -y @augmentcode/auggie@0.37.0 --acp`
 - Source: <https://github.com/augmentcode/auggie>
 
 Read at `@augmentcode/auggie` 0.36.0, the ACP Registry's pin, unchanged since
@@ -847,145 +924,11 @@ which keeps a second loop from starting.
 - https://github.com/augmentcode/auggie, `CHANGELOG.md`.
 - CHD-432's study, auggie 0.36.0.
 
-#### autohand
-
-- Name: Autohand Code
-- Pinned: `@autohandai/autohand-acp` 0.2.1
-- Run as: `npx -y @autohandai/autohand-acp@0.2.1`
-- Source: <https://github.com/autohandai/autohand-acp>
-
-Read at `@autohandai/autohand-acp` 0.2.1, the ACP Registry's pin, unchanged
-since CHD-432: the npm package, plain `tsc` output, Apache-2.0, with nothing
-restricting reading. Paths are in that package; `dist/acp-agent.js` unless
-named. It is an adapter: each `session/prompt` spawns the separate `autohand`
-CLI (`autohand-cli`, not read), which must be installed globally beside the
-npx package. The registry launches it with no arguments and no environment,
-so it never asks permission (ah14) and its telemetry stays on (Custom).
-
-**Footnotes.**
-
-- **ah1.** `initialize` answers `params.protocolVersion ?? 1` (`:271`), so 1
-  to chord; it echoes whatever a client asks for, on a v1 SDK.
-- **ah2.** `@agentclientprotocol/sdk` 0.12.0, exact pin (`package.json`).
-- **ah3.** v1 plus the SDK's unstable handlers `unstable_setSessionModel`
-  (`:444`), `unstable_setSessionConfigOption` (`:455`),
-  `unstable_forkSession` (`:481`), `unstable_resumeSession` (`:557`) and
-  `unstable_listSessions` (`:1115`). No v2.
-- **ah4.** `session/new` and prompts throw `authRequired` with "run
-  `autohand login`" when the CLI is not signed in (CHD-432).
-- **ah5.** Load replays user and assistant text only and answers `{}`
-  (CHD-432).
-- **ah6.** Each turn is a fresh CLI run. Resume needs an id in the CLI's
-  index, which chord's ids are not; fork copies in-memory sessions of this
-  process (CHD-432). `session/list` lists the CLI's per-turn sessions,
-  titled `Session <8 chars>`, filtered by cwd, never paged (`:1115-1134`).
-- **ah7.** Six legacy modes with `current_mode_update`; legacy `models`,
-  where `set_model` stores the id for the next CLI run; nine select options
-  (thinking level, auto-commit, history, auto-mode and its caps,
-  temperature, streaming), answered but never sent as `config_option_update`
-  (CHD-432).
-- **ah8.** `thinking_level` carries no `thought_level` category (CHD-432).
-- **ah9.** `promptToText` turns an image into the lines `[Image 1]`,
-  `Type: …`, `Size: ~N KB`; the data never reaches the CLI (`:2325-2343`,
-  "Future enhancement" at `:766-768`). Audio is advertised only under
-  `AUTOHAND_SUPPORTS_AUDIO` and becomes placeholder text.
-- **ah10.** An embedded resource is pasted as `[resource: <uri>]` and its
-  text. A `file:` `resource_link` is read through `fs/read_text_file` when
-  the client declares it, else from disk by the adapter, then inlined the
-  same way (`:2078-2124`, `:2187`).
-- **ah11.** Kinds `read`, `search`, `edit`, `move`, `delete`, `execute`,
-  `think`, `other` from a tool-name map (`:121-159`). `rawInput` is the
-  call's args, `rawOutput` its result text. Locations are
-  `[{path: args.path}]` as given, possibly relative (`:2909-2918`).
-- **ah12.** Content is text only, no diff. To a client with `terminal`,
-  `run_command` gets `terminal` content with an id that was never created,
-  and output as `_meta.terminal_output` (`:1916-2004`); to one without, each
-  update resends the whole output as text (CHD-432).
-- **ah13.** `pending`, then `in_progress` only when output streams, then
-  `completed` or `failed`; `failed` is guessed by a regex (`:1909-2070`).
-- **ah14.** Asks only under `AUTOHAND_PERMISSION_MODE=external`, through a
-  localhost permission server (`dist/permission-server.js:76-170`); the
-  registry does not set it. Every request lacks `toolCall`, so chord's SDK
-  refuses it and the CLI hears "denied" (CHD-432).
-- **ah15.** `plan` from `todo_write` and `plan` tools (CHD-432).
-- **ah16.** Cancel kills the CLI child; a prompt sent meanwhile is queued and
-  runs next (CHD-432).
-- **ah17.** No usage; the CLI's token line is scraped into reply text
-  (CHD-432).
-- **ah18.** 24 default commands, or a JSON list from the environment, after
-  `session/new` (via `setImmediate`) and after load; some run in the adapter,
-  the rest go to the CLI as text (`:65-90`, `:404-411`, `:1239`).
-- **ah19.** Titles are made from the first message but never sent, being
-  "not a valid ACP notification type in Zed" (`:622`, `:750`).
-- **ah20.** `_meta["terminal-auth"]` methods `autohand-install` and
-  `autohand-login` (`:236-266`, `:290-313`).
-- **ah21.** `fs/read_text_file` only for links (ah10) and `terminal/*` only
-  when declared; `fs.writeTextFile` is read but its only user,
-  `delegatedWriteFile`, is never called (`:824`, `:1420`, `:2094-2110`,
-  `:2212`).
-- **ah22.** `parseMcpServers` keeps name, type and URL (for stdio only the
-  command, no args or env) on the session, and nothing ever reads them or
-  passes them to the CLI (`:2702-2717`).
-- **ah23.** `{promptCapabilities: {embeddedContext: true, image: true,
-  audio: <env> | undefined}, loadSession: true, mcpCapabilities: {http:
-  true, sse: true}, sessionCapabilities: {list: {}, resume: {}, fork: {}}}`,
-  `agentInfo._meta.cliVersion`, and top-level `_meta.{warning, installUrl}`
-  when the CLI is missing (`:216-286`).
-- **ah24.** `fs.readTextFile`, `fs.writeTextFile`, `terminal`,
-  `_meta["terminal-auth"]` (`:298`, `:326`), and `clientInfo`, passed to the
-  CLI as environment. Elicitation, plan and subagents are not read.
-
-**Custom.**
-
-- `_meta["terminal-auth"]` methods: a login and an install run in a
-  terminal. A client must declare the key, run the command, then call
-  `authenticate`. Without it every start fails `authRequired`.
-- `_meta.terminal_info` and `_meta.terminal_output` on tool calls: live
-  command output under a terminal id that does not exist. A client must
-  declare `terminal` and read the keys.
-- `AUTOHAND_PERMISSION_MODE=external`: approvals, selects and confirms as
-  permissions without `toolCall`; text inputs are always denied. A client
-  must set the variable and accept the off-spec shape.
-- Telemetry to `https://api.autohand.ai/v1/telemetry`, on by default
-  (`dist/telemetry.js:10-22`, `:146-200`; `:403`, `:1077`, `:1248`): a device
-  id kept in the home directory, session start and end, model and
-  slash-command names, OS and Node versions, all labelled
-  `clientType: "zed"` whatever the client. A client stops it only with
-  `AUTOHAND_TELEMETRY=false` or `0` in the agent's environment.
-- Unprompted text: a "Hey <name>!" welcome after `session/new`
-  (`:412-421`) and a feedback request after turns 5 to 10.
-- `agentInfo._meta.cliVersion` and `_meta.{warning, installUrl}`: the CLI's
-  version and an install hint. Free to read.
-- History: turns share no memory unless `include_history` is on, which
-  pastes the last 6 turns, up to 8000 characters, as text.
-
-**In chord.** chord sends each @-mention as a `resource_link`; chord
-declares no `fs`, so the adapter reads the file from disk itself and pastes
-it in. A pasted image goes out because `image` is advertised, but the model
-gets only `[Image 1]` and a size, and the person is not told. autohand drops
-every MCP server: chord adds its own over http because `mcpCapabilities.http`
-is true, and the person's servers go too, and none reach the CLI. No
-permission ever reaches the person under the registry launch, and with the
-variable set chord's SDK would refuse each request. Effort is not found,
-having no category. Command output arrives as whole-output resends. No usage
-arrives, so chord estimates nothing. chord reopens a recorded session with
-`session/resume`, which the CLI's index does not know; it never calls
-`session/list`. Without `autohand-cli` on PATH, `initialize` offers only an
-install method and the first `session/new` fails. The welcome and feedback
-lines show as agent text. chord does not see the telemetry.
-
-**Sources.**
-
-- `@autohandai/autohand-acp` 0.2.1, npm, and
-  https://github.com/autohandai/autohand-acp.
-- `@agentclientprotocol/sdk` 0.12.0, npm.
-- CHD-432's reading of autohand.
-
 #### bob
 
 - Name: Bob
-- Pinned: `@ibm/bob` 2.0.9
-- Run as: `npx -y @ibm/bob@2.0.9 acp`
+- Pinned: `@ibm/bob` 2.1.0
+- Run as: `npx -y @ibm/bob@2.1.0 acp`
 - Source: <https://bob.ibm.com>
 
 `@ibm/bob` 2.0.8, the registry pin (release date 2026-10-14), read from its
@@ -1131,8 +1074,8 @@ correction: after a cancel the next prompt waits rather than being refused
 #### claude-acp
 
 - Name: Claude Agent
-- Pinned: `@agentclientprotocol/claude-agent-acp` 0.99.1
-- Run as: `npx -y @agentclientprotocol/claude-agent-acp@0.99.1`
+- Pinned: `@agentclientprotocol/claude-agent-acp` 0.107.0
+- Run as: `npx -y @agentclientprotocol/claude-agent-acp@0.107.0`
 - Source: <https://github.com/agentclientprotocol/claude-agent-acp>
 
 `@agentclientprotocol/claude-agent-acp` 0.99.1, the registry pin, reread for
@@ -1149,8 +1092,10 @@ reach every client, and chord's `/mcp` hides its own.
 - **cl1.** Read at 0.99.1, not observed: `dist/serve.js:6-19,51-57`
   negotiates v1 or v2 by default. `CLAUDE_AGENT_ACP_PROTOCOL` selects
   `auto`, `v1` or `v2`.
-- **cl2.** Read at 0.99.1: `package.json:68` pins ACP SDK 2.1.0;
-  `dist/acp-agent.js:1` uses its `/unstable` entry. chord uses 2.2.0.
+- **cl2.** Read at 0.107.0 for CHD-624: `package.json:71` pins ACP SDK
+  2.6.0 ([the survey](design/evidence/CHD-624/survey.md)); 0.99.1 pinned
+  2.1.0, its `dist/acp-agent.js:1` on the `/unstable` entry. chord uses
+  2.6.0.
 - **cl3.** The handler list `dist/acp-agent.js:10420-10447`: v1 methods plus
   `session/fork`, `providers/*`, `logout`, the subagents RFD, `notice`,
   `plan_update`, and own `_session/steering`, `_session/async_task/stop`,
@@ -1431,8 +1376,8 @@ auto-approve boolean and `session_info_update`.
 #### codebuddy-code
 
 - Name: Codebuddy Code
-- Pinned: `@tencent-ai/codebuddy-code` 2.179.1
-- Run as: `npx -y @tencent-ai/codebuddy-code@2.179.1 --acp`
+- Pinned: `@tencent-ai/codebuddy-code` 2.184.0
+- Run as: `npx -y @tencent-ai/codebuddy-code@2.184.0 --acp`
 - Source: <https://www.codebuddy.cn/cli/>
 
 `@tencent-ai/codebuddy-code` 2.168.2, the registry pin, dated 2026-10-16 in
@@ -1577,8 +1522,8 @@ capability keys.
 #### codex-acp
 
 - Name: Codex
-- Pinned: `@agentclientprotocol/codex-acp` 2.5.0
-- Run as: `npx -y @agentclientprotocol/codex-acp@2.5.0`
+- Pinned: `@agentclientprotocol/codex-acp` 2.6.0
+- Run as: `npx -y @agentclientprotocol/codex-acp@2.6.0`
 - Source: <https://github.com/agentclientprotocol/codex-acp>
 
 `@agentclientprotocol/codex-acp` 2.5.0 (2026-10-29), the registry pin,
@@ -1594,7 +1539,9 @@ calls into it. These refreshed findings were read, not observed.
 - **cx1.** Read at 2.5.0: `src/AcpAgentRouter.ts:214` serves both v1
   and v2 through the SDK protocol router; `src/CodexAcpServer.ts:595-603`
   selects the connection for the negotiated version.
-- **cx2.** Read at 2.5.0: `package.json:71` declares SDK ~2.1.0;
+- **cx2.** Read at 2.6.0 for CHD-624: `package.json:71` declares SDK
+  ~2.4.0 ([the survey](design/evidence/CHD-624/survey.md)); 2.5.0 declared
+  ~2.1.0. Read at 2.5.0:
   `src/CodexAcpServer.ts:1,55` imports `/unstable` and
   `/experimental/v2/unstable`.
 - **cx3.** Methods `src/CodexAcpServer.ts:453-4004`, `extMethod` switch
@@ -1850,8 +1797,8 @@ is queued, which keeps a second stream from starting. chord never calls
 #### dimcode
 
 - Name: DimCode
-- Pinned: `dimcode` 0.5.22
-- Run as: `npx -y dimcode@0.5.22 acp`
+- Pinned: `dimcode` 0.5.28
+- Run as: `npx -y dimcode@0.5.28 acp`
 - Source: <https://dimcode.dev/docs/acp.html>
 
 Read at 0.5.19, the registry's pin, from the npm wrapper `dimcode@0.5.19`
@@ -2001,8 +1948,8 @@ no `_lody` method.
 #### dirac
 
 - Name: Dirac
-- Pinned: `dirac-cli` 0.5.24
-- Run as: `npx -y dirac-cli@0.5.24 --acp`
+- Pinned: `dirac-cli` 0.6.0
+- Run as: `npx -y dirac-cli@0.6.0 --acp`
 - Source: <https://github.com/dirac-run/dirac>
 
 Read at `dirac-cli` 0.5.21, the ACP Registry's pin, from the repository
@@ -2151,8 +2098,8 @@ which avoids dirac's busy error. Titles, close, delete and every
 #### factory-droid
 
 - Name: Factory Droid
-- Pinned: `droid` 1.1.0
-- Run as: `npx -y droid@1.1.0 exec --output-format acp-daemon`
+- Pinned: `droid` 1.11.0
+- Run as: `npx -y droid@1.11.0 exec --output-format acp-daemon`
 - Source: <https://factory.ai/product/cli>
 
 Read at 0.244.0, the registry pin, released 2026-10-16 by Factory's
@@ -2409,8 +2356,8 @@ prompt is queued, which keeps a second turn from running at once.
 #### gemini
 
 - Name: Gemini CLI
-- Pinned: `@google/gemini-cli` 0.66.0
-- Run as: `npx -y @google/gemini-cli@0.66.0 --acp`
+- Pinned: `@google/gemini-cli` 0.68.0
+- Run as: `npx -y @google/gemini-cli@0.68.0 --acp`
 - Source: <https://github.com/google-gemini/gemini-cli>
 
 Read at `@google/gemini-cli` 0.64.0, the ACP Registry's pin, from the
@@ -2535,8 +2482,8 @@ are ignored; chord never calls `session/list`.
 #### github-copilot-cli
 
 - Name: Copilot
-- Pinned: `@github/copilot` 1.0.105
-- Run as: `npx -y @github/copilot@1.0.105 --acp`
+- Pinned: `@github/copilot` 1.0.112
+- Run as: `npx -y @github/copilot@1.0.112 --acp`
 - Source: <https://github.com/github/copilot-cli>
 
 Read at `@github/copilot` 1.0.98, the ACP Registry's pin; the display name is
@@ -2656,8 +2603,8 @@ Copilot's questions reach chord as forms, now that chord declares
 #### glm-acp-agent
 
 - Name: GLM Agent
-- Pinned: `glm-acp-agent` 1.17.0
-- Run as: `npx -y glm-acp-agent@1.17.0`
+- Pinned: `glm-acp-agent` 1.17.1
+- Run as: `npx -y glm-acp-agent@1.17.1`
 - Source: <https://github.com/stefandevo/glm-acp-agent>
 
 Read at 1.15.0, the registry's pin, from the npm package
@@ -2790,8 +2737,8 @@ itself.
 #### grok-build
 
 - Name: Grok Build
-- Pinned: `@xai-official/grok` 1.0.73
-- Run as: `npx -y @xai-official/grok@1.0.73 agent stdio`
+- Pinned: `@xai-official/grok` 1.0.85
+- Run as: `npx -y @xai-official/grok@1.0.85 agent stdio`
 - Source: <https://x.ai/cli>
 
 Read at two versions, kept apart. The registry pins `@xai-official/grok`
@@ -2965,8 +2912,8 @@ unused.
 #### kilo
 
 - Name: Kilo
-- Pinned: `@kilocode/cli` 7.8.18
-- Run as: `npx -y @kilocode/cli@7.8.18 acp`
+- Pinned: `@kilocode/cli` 7.8.27
+- Run as: `npx -y @kilocode/cli@7.8.27 acp`
 - Source: <https://github.com/Kilo-Org/kilocode>
 
 Kilo CLI 7.8.12, the registry pin (`@kilocode/cli`), read at tag `v7.8.12` of
@@ -3085,6 +3032,143 @@ close, the titles and `terminal-auth`.
 - Kilo `v7.8.12`, <https://github.com/Kilo-Org/kilocode/tree/v7.8.12>;
   `@kilocode/cli` 7.8.12 on npm.
 - CHD-432's notes on kilo.
+
+#### kimi-code
+
+- Name: Kimi Code
+- Pinned: `@moonshot-ai/kimi-code` 2.6.2
+- Run as: `npx -y @moonshot-ai/kimi-code@2.6.2 acp`
+- Source: <https://github.com/MoonshotAI/kimi-code>
+
+Read at Kimi Code 2.2.0, `@moonshot-ai/kimi-code` on npm, published
+2026-10-14, from https://github.com/MoonshotAI/kimi-code at its 2.2.0 commit
+`472192c`; `packages/acp-server/` is unchanged at main `4a82a07`
+(2026-10-18). MIT, plain TypeScript, no limits on reading. chord ran it
+as its own CLI `kimi` until CHD-624, which takes the registry's npx
+`kimi-code` instead and keeps the name: chord calls `kimi-code` `kimi`
+(`ALIASES`, `src/agents.ts`). The cells were read at 2.2.0 and are not
+read again at the 2.6.2 pin. The ACP Registry's `kimi` entry is a
+different program: the archived Python Kimi CLI 1.52.0, a binary archive,
+which chord does not take, since it takes only npx and uvx registry entries.
+Kimi CLI 1.52.0 prints a deprecation line on stdout and exits without
+answering `initialize` (`src/kimi_cli/__main__.py:12-45` in the Python
+package). The cells are Kimi Code 2.x. Paths below are under `packages/acp-server/src/` unless they name
+another root.
+
+**Footnotes.**
+
+- **km1.** It answers the highest version it has at or below the client's;
+  1 is the only one (`version.ts:18-50`). Its comments still name ACP 0.23.
+- **km2.** `packages/acp-server/package.json:22`; the SDK's `agent()` builder
+  (`server.ts:700-721`).
+- **km3.** SDK-unstable `session/fork` (`server.ts:211-215`), and
+  `session/set_model`, which SDK 1.x dropped, registered by hand
+  (`server.ts:662-687`).
+- **km4.** Reads `cwd`, `additionalDirectories` and `mcpServers`; answers
+  `configOptions` and `modes` (`server.ts:242-253`). Needs sign-in (km23).
+- **km5.** Replays the main agent's history before it answers
+  (`server.ts:296-310`, `replay.ts`); replayed tool ids use a fresh turn
+  counter, not the live ids.
+- **km6.** Every session, filtered by `cwd` when given; the request's
+  `cursor` is ignored (`server.ts:323-330, 736-763`).
+- **km7.** Ignores `cwd`, `additionalDirectories` and `mcpServers`
+  (`server.ts:266-294`).
+- **km8.** Close cancels the turn, best effort; delete of an unknown id is
+  `invalid_params` (`server.ts:340-377`).
+- **km9.** As `modes` and as a `mode` config option; `set_mode` sends
+  `current_mode_update` and `config_option_update` (`modes.ts:22-87`).
+- **km10.** No `models` field in any answer; the model is the `model` config
+  option. `session/set_model` is accepted too, and a `<id>,thinking` suffix
+  turns thinking on (`config-options.ts:31-48`, `session.ts:1048-1064`).
+- **km11.** `model`, `thinking` (category `thought_level`, only for a model
+  that can think: `off` plus its efforts, or `off`/`on`) and `mode`; every
+  change sends `config_option_update` (`config-options.ts:59-137`).
+- **km12.** A text resource becomes `<resource uri>…</resource>`, blobs are
+  dropped; a `file://` link becomes the bare path, with `:L1-L2` from a line
+  fragment (`convert.ts:33-71, 229-272`).
+- **km13.** Kinds `read`, `edit`, `execute`, `fetch`, `think`, `other` by a
+  tool-name table; `FetchURL` is not in it and reads `other`. `pending` from
+  the first argument delta, `in_progress` on each delta, then `completed` or
+  `failed` (`events-map.ts:106-391`).
+- **km14.** While a call streams and runs, its content is the raw argument
+  JSON, replaced by the result text or a `diff`. `terminal` content only with
+  a client terminal; without one, Bash output arrives in the final update.
+- **km15.** `allow_once`, `allow_always` (for the session) and `reject_once`.
+  Leaving plan mode asks one `allow_once` per plan option plus
+  `plan_revise` and `plan_reject_and_exit`. A `cancelled` outcome is
+  cancelled; an unknown id or an RPC error is rejected (`approval.ts:65-188`).
+- **km16.** AskUserQuestion as a form when `elicitation.form` is declared:
+  fields `q0…qN` titled by header, `oneOf` or `anyOf` choices, all required,
+  no "Other"; decline, cancel or an empty accept is "dismissed"
+  (`question.ts:96-196`). Without a form it asks the first question as a
+  permission with `q0_skip` "Skip" (`interaction-bridge.ts:196-231`).
+- **km17.** A `todo_list` becomes `plan`, every entry `medium`
+  (`events-map.ts:393-445`); the plan-mode document goes only as text in the
+  exit permission.
+- **km18.** Cancels the main agent's turn (`session.ts:980-1010`); background
+  tasks and subagents stop only through the model's own `TaskStop`.
+- **km19.** A concurrent prompt is refused with -32600 "another turn is
+  already in progress" (`session.ts:621-648`). A turn the engine started by
+  itself is not seen by that check; a prompt then answers `end_turn` at once
+  and runs later, unseen (`session.ts:666-673, 728-740`).
+- **km20.** The `Agent` tool runs a child in the same engine session; its
+  events are not forwarded, but its approvals and questions are, under a
+  tool call id that matches no card (`interaction-bridge.ts:61-93`).
+- **km21.** `usage_update {used, size}` after each turn, sent after the
+  prompt has answered, skipped for a model not in its catalog; no cost, no
+  `PromptResponse.usage` (`session.ts:907-944`).
+- **km22.** `/compact`, `/status`, `/usage`, `/mcp`, `/tasks`, `/help` and
+  skills, answered locally as agent text (`builtin-commands.ts:17-42`).
+- **km23.** One terminal method, `login` (`--login`), plus a legacy
+  `_meta['terminal-auth']`; `authenticate` only re-checks. new, load, resume
+  and fork answer `auth_required` with no data unless a model key or an OAuth
+  login exists (`auth-methods.ts:28-61`, `server.ts:379-401, 625-646`).
+- **km24.** `fs/*` and `terminal/*` only when declared
+  (`acp-fs/acpConnection.ts:144-163`,
+  `acp-terminal/acpTerminalRunner.ts:57-70`); otherwise all runs locally.
+- **km25.** `loadSession`, image and embedded context, `sessionCapabilities`
+  list, resume, close, delete, fork and `additionalDirectories`, MCP http and
+  sse, `auth.logout` (`server.ts:192-240`). Reads only `fs`, `terminal` and
+  `elicitation.form` (`server.ts:193-196, 572`).
+
+**Custom.**
+
+- `session/set_model`: the same switch as the `model` config option, called
+  by name; nothing gained.
+- `_meta['terminal-auth']` on the auth method: a command a client runs in a
+  terminal of its own to sign in.
+- Local slash commands, sent as prompt text: status, usage, tasks and
+  compaction as one agent message with no turn; they skip the busy check.
+- Compaction notices arrive as agent text outside any turn, not as ACP
+  compaction.
+- Launch: `kimi acp --login [--region …]`, and `KIMI_CODE_HOME`.
+- A failed turn with a non-auth error answers `end_turn` with no message
+  (`events-map.ts:61-76`).
+
+**In chord.** chord starts, reopens with `session/resume`, and takes models,
+modes and efforts from the config options, `thinking` as the effort. Usage
+fills the meter; with no cost from kimi, chord's own estimate is the cost.
+Questions arrive through chord's form, as no canonical shape: no enricher
+reads them, and with a header the question text is only in the form's
+message. chord never calls `authenticate`, so without a Kimi login or a model
+key the start fails with a bare "Authentication required". Since CHD-624
+chord starts it by npx, so a Python `kimi` on PATH no longer stands in.
+Approvals and questions from a background subagent with no turn running are
+refused (CHD-158). A turn kimi starts by itself is invisible, and a prompt
+sent then reads as an empty reply. Tool cards show argument JSON while a
+call runs. kimi's `/help`, `/mcp` and `/status` are hidden behind chord's own.
+chord queues mid-turn prompts, which avoids kimi's -32600. chord never calls
+`session/list`, drops titles, and leaves fork, delete, close and logout
+unused.
+
+**Sources.**
+
+- `@moonshot-ai/kimi-code` 2.2.0, https://github.com/MoonshotAI/kimi-code
+  (472192c and main 4a82a07), its CHANGELOG and `git log` of
+  `packages/acp-server`.
+- Python `kimi-cli` 1.52.0, the final release of the archived Kimi CLI.
+- https://www.kimi.com/code/docs/en/kimi-code-cli/reference/kimi-acp.
+- The ACP Registry's `registry.json`, fetched 2026-10-18.
 
 #### minimax-code
 
@@ -3328,8 +3412,8 @@ reading).
 #### nova
 
 - Name: Nova
-- Pinned: `@compass-ai/nova` 1.1.62
-- Run as: `npx -y @compass-ai/nova@1.1.62 acp`
+- Pinned: `@compass-ai/nova` 1.1.65
+- Run as: `npx -y @compass-ai/nova@1.1.65 acp`
 - Source: <https://github.com/Compass-Agentic-Platform/nova>
 
 Read at 1.1.55, the registry's pin, from the npm package
@@ -3572,8 +3656,8 @@ prompts, so the adapter's queue is not reached.
 #### qoder
 
 - Name: Qoder CLI
-- Pinned: `@qoder-ai/qodercli` 0.2.14
-- Run as: `npx -y @qoder-ai/qodercli@0.2.14 --acp`
+- Pinned: `@qoder-ai/qodercli` 1.1.89
+- Run as: `npx -y @qoder-ai/qodercli@1.1.89 --acp`
 - Source: <https://qoder.com>
 
 `@qoder-ai/qodercli` 0.2.14, the registry pin, published 2026-05-13; npm's
@@ -3714,8 +3798,8 @@ prompts, so the abort on a second prompt is not hit.
 #### qwen-code
 
 - Name: Qwen Code
-- Pinned: `@qwen-code/qwen-code` 0.26.5
-- Run as: `npx -y @qwen-code/qwen-code@0.26.5 --acp --experimental-skills`
+- Pinned: `@qwen-code/qwen-code` 0.27.3
+- Run as: `npx -y @qwen-code/qwen-code@0.27.3 --acp --experimental-skills`
 - Source: <https://github.com/QwenLM/qwen-code>
 
 Read at `@qwen-code/qwen-code` 0.25.2, the ACP Registry's pin, from the
@@ -3864,8 +3948,8 @@ cancel can hold a queued prompt up to 5 s (CHD-432). chord never calls
 #### sigit
 
 - Name: siGit Code
-- Pinned: `@smbcloud/sigit` 1.7.7
-- Run as: `npx -y @smbcloud/sigit@1.7.7`
+- Pinned: `@smbcloud/sigit` 1.7.10
+- Run as: `npx -y @smbcloud/sigit@1.7.10`
 - Source: <https://github.com/getsigit/sigit>
 
 Read at 1.7.0, the registry's pin, in the npm wrapper `@smbcloud/sigit@1.7.0`
@@ -4003,6 +4087,144 @@ chord drops titles and `_meta.sigit`, and does not draw `name`.
 - CHD-432's study.
 
 ### Own CLIs (`src/clis.ts`)
+
+#### autohand
+
+- Name: Autohand Code
+- Run as: `autohand --acp`, from PATH
+- Install: <https://github.com/autohandai/code-cli#installation>
+
+The ACP Registry now offers Autohand only as the native CLI's binary, which
+chord does not take; since CHD-624 chord starts `autohand --acp` from PATH,
+the CLI's own ACP server
+(<https://github.com/autohandai/code-cli/blob/main/docs/guides/ACP.md>),
+which was not read. The cells below are the archived npx adapter chord ran
+before, read at `@autohandai/autohand-acp` 0.2.1, the ACP Registry's pin
+then, unchanged since CHD-432: the npm package, plain `tsc` output, Apache-2.0, with nothing
+restricting reading. Paths are in that package; `dist/acp-agent.js` unless
+named. It is an adapter: each `session/prompt` spawns the separate `autohand`
+CLI (`autohand-cli`, not read), which must be installed globally beside the
+npx package. The registry launches it with no arguments and no environment,
+so it never asks permission (ah14) and its telemetry stays on (Custom).
+
+**Footnotes.**
+
+- **ah1.** `initialize` answers `params.protocolVersion ?? 1` (`:271`), so 1
+  to chord; it echoes whatever a client asks for, on a v1 SDK.
+- **ah2.** `@agentclientprotocol/sdk` 0.12.0, exact pin (`package.json`).
+- **ah3.** v1 plus the SDK's unstable handlers `unstable_setSessionModel`
+  (`:444`), `unstable_setSessionConfigOption` (`:455`),
+  `unstable_forkSession` (`:481`), `unstable_resumeSession` (`:557`) and
+  `unstable_listSessions` (`:1115`). No v2.
+- **ah4.** `session/new` and prompts throw `authRequired` with "run
+  `autohand login`" when the CLI is not signed in (CHD-432).
+- **ah5.** Load replays user and assistant text only and answers `{}`
+  (CHD-432).
+- **ah6.** Each turn is a fresh CLI run. Resume needs an id in the CLI's
+  index, which chord's ids are not; fork copies in-memory sessions of this
+  process (CHD-432). `session/list` lists the CLI's per-turn sessions,
+  titled `Session <8 chars>`, filtered by cwd, never paged (`:1115-1134`).
+- **ah7.** Six legacy modes with `current_mode_update`; legacy `models`,
+  where `set_model` stores the id for the next CLI run; nine select options
+  (thinking level, auto-commit, history, auto-mode and its caps,
+  temperature, streaming), answered but never sent as `config_option_update`
+  (CHD-432).
+- **ah8.** `thinking_level` carries no `thought_level` category (CHD-432).
+- **ah9.** `promptToText` turns an image into the lines `[Image 1]`,
+  `Type: …`, `Size: ~N KB`; the data never reaches the CLI (`:2325-2343`,
+  "Future enhancement" at `:766-768`). Audio is advertised only under
+  `AUTOHAND_SUPPORTS_AUDIO` and becomes placeholder text.
+- **ah10.** An embedded resource is pasted as `[resource: <uri>]` and its
+  text. A `file:` `resource_link` is read through `fs/read_text_file` when
+  the client declares it, else from disk by the adapter, then inlined the
+  same way (`:2078-2124`, `:2187`).
+- **ah11.** Kinds `read`, `search`, `edit`, `move`, `delete`, `execute`,
+  `think`, `other` from a tool-name map (`:121-159`). `rawInput` is the
+  call's args, `rawOutput` its result text. Locations are
+  `[{path: args.path}]` as given, possibly relative (`:2909-2918`).
+- **ah12.** Content is text only, no diff. To a client with `terminal`,
+  `run_command` gets `terminal` content with an id that was never created,
+  and output as `_meta.terminal_output` (`:1916-2004`); to one without, each
+  update resends the whole output as text (CHD-432).
+- **ah13.** `pending`, then `in_progress` only when output streams, then
+  `completed` or `failed`; `failed` is guessed by a regex (`:1909-2070`).
+- **ah14.** Asks only under `AUTOHAND_PERMISSION_MODE=external`, through a
+  localhost permission server (`dist/permission-server.js:76-170`); the
+  registry does not set it. Every request lacks `toolCall`, so chord's SDK
+  refuses it and the CLI hears "denied" (CHD-432).
+- **ah15.** `plan` from `todo_write` and `plan` tools (CHD-432).
+- **ah16.** Cancel kills the CLI child; a prompt sent meanwhile is queued and
+  runs next (CHD-432).
+- **ah17.** No usage; the CLI's token line is scraped into reply text
+  (CHD-432).
+- **ah18.** 24 default commands, or a JSON list from the environment, after
+  `session/new` (via `setImmediate`) and after load; some run in the adapter,
+  the rest go to the CLI as text (`:65-90`, `:404-411`, `:1239`).
+- **ah19.** Titles are made from the first message but never sent, being
+  "not a valid ACP notification type in Zed" (`:622`, `:750`).
+- **ah20.** `_meta["terminal-auth"]` methods `autohand-install` and
+  `autohand-login` (`:236-266`, `:290-313`).
+- **ah21.** `fs/read_text_file` only for links (ah10) and `terminal/*` only
+  when declared; `fs.writeTextFile` is read but its only user,
+  `delegatedWriteFile`, is never called (`:824`, `:1420`, `:2094-2110`,
+  `:2212`).
+- **ah22.** `parseMcpServers` keeps name, type and URL (for stdio only the
+  command, no args or env) on the session, and nothing ever reads them or
+  passes them to the CLI (`:2702-2717`).
+- **ah23.** `{promptCapabilities: {embeddedContext: true, image: true,
+  audio: <env> | undefined}, loadSession: true, mcpCapabilities: {http:
+  true, sse: true}, sessionCapabilities: {list: {}, resume: {}, fork: {}}}`,
+  `agentInfo._meta.cliVersion`, and top-level `_meta.{warning, installUrl}`
+  when the CLI is missing (`:216-286`).
+- **ah24.** `fs.readTextFile`, `fs.writeTextFile`, `terminal`,
+  `_meta["terminal-auth"]` (`:298`, `:326`), and `clientInfo`, passed to the
+  CLI as environment. Elicitation, plan and subagents are not read.
+
+**Custom.**
+
+- `_meta["terminal-auth"]` methods: a login and an install run in a
+  terminal. A client must declare the key, run the command, then call
+  `authenticate`. Without it every start fails `authRequired`.
+- `_meta.terminal_info` and `_meta.terminal_output` on tool calls: live
+  command output under a terminal id that does not exist. A client must
+  declare `terminal` and read the keys.
+- `AUTOHAND_PERMISSION_MODE=external`: approvals, selects and confirms as
+  permissions without `toolCall`; text inputs are always denied. A client
+  must set the variable and accept the off-spec shape.
+- Telemetry to `https://api.autohand.ai/v1/telemetry`, on by default
+  (`dist/telemetry.js:10-22`, `:146-200`; `:403`, `:1077`, `:1248`): a device
+  id kept in the home directory, session start and end, model and
+  slash-command names, OS and Node versions, all labelled
+  `clientType: "zed"` whatever the client. A client stops it only with
+  `AUTOHAND_TELEMETRY=false` or `0` in the agent's environment.
+- Unprompted text: a "Hey <name>!" welcome after `session/new`
+  (`:412-421`) and a feedback request after turns 5 to 10.
+- `agentInfo._meta.cliVersion` and `_meta.{warning, installUrl}`: the CLI's
+  version and an install hint. Free to read.
+- History: turns share no memory unless `include_history` is on, which
+  pastes the last 6 turns, up to 8000 characters, as text.
+
+**In chord.** chord sends each @-mention as a `resource_link`; chord
+declares no `fs`, so the adapter reads the file from disk itself and pastes
+it in. A pasted image goes out because `image` is advertised, but the model
+gets only `[Image 1]` and a size, and the person is not told. autohand drops
+every MCP server: chord adds its own over http because `mcpCapabilities.http`
+is true, and the person's servers go too, and none reach the CLI. No
+permission ever reaches the person under the registry launch, and with the
+variable set chord's SDK would refuse each request. Effort is not found,
+having no category. Command output arrives as whole-output resends. No usage
+arrives, so chord estimates nothing. chord reopens a recorded session with
+`session/resume`, which the CLI's index does not know; it never calls
+`session/list`. Without `autohand-cli` on PATH, `initialize` offers only an
+install method and the first `session/new` fails. The welcome and feedback
+lines show as agent text. chord does not see the telemetry.
+
+**Sources.**
+
+- `@autohandai/autohand-acp` 0.2.1, npm, and
+  https://github.com/autohandai/autohand-acp.
+- `@agentclientprotocol/sdk` 0.12.0, npm.
+- CHD-432's reading of autohand.
 
 #### cursor
 
@@ -4645,153 +4867,20 @@ mid-turn prompt is queued.
   through 3659.7; issues #23, #53 and #113.
 - npm `@jetbrains/junie` 3110.7.0; ACP Registry entry `junie` 3659.7.0.
 
-#### kimi
-
-- Name: Kimi Code
-- Run as: `kimi acp`, from PATH
-- Install: <https://www.kimi.com/code/docs/en/kimi-code-cli/guides/getting-started.html>
-
-Read at Kimi Code 2.2.0, `@moonshot-ai/kimi-code` on npm, published
-2026-10-14, from https://github.com/MoonshotAI/kimi-code at its 2.2.0 commit
-`472192c`; `packages/acp-server/` is unchanged at main `4a82a07`
-(2026-10-18). MIT, plain TypeScript, no limits on reading. chord's `kimi`
-(`src/clis.ts`) is this Kimi Code 2.x. The ACP Registry's `kimi` entry is a
-different program: the archived Python Kimi CLI 1.52.0, a binary archive,
-which chord does not take, since it takes only npx and uvx registry entries.
-Both packages install a `kimi` binary, so whichever is first on PATH decides
-what `chord kimi` starts. Kimi CLI 1.52.0 prints a deprecation line on stdout
-and exits without answering `initialize`
-(`src/kimi_cli/__main__.py:12-45` in the Python package). The cells are Kimi
-Code 2.x. Paths below are under `packages/acp-server/src/` unless they name
-another root.
-
-**Footnotes.**
-
-- **km1.** It answers the highest version it has at or below the client's;
-  1 is the only one (`version.ts:18-50`). Its comments still name ACP 0.23.
-- **km2.** `packages/acp-server/package.json:22`; the SDK's `agent()` builder
-  (`server.ts:700-721`).
-- **km3.** SDK-unstable `session/fork` (`server.ts:211-215`), and
-  `session/set_model`, which SDK 1.x dropped, registered by hand
-  (`server.ts:662-687`).
-- **km4.** Reads `cwd`, `additionalDirectories` and `mcpServers`; answers
-  `configOptions` and `modes` (`server.ts:242-253`). Needs sign-in (km23).
-- **km5.** Replays the main agent's history before it answers
-  (`server.ts:296-310`, `replay.ts`); replayed tool ids use a fresh turn
-  counter, not the live ids.
-- **km6.** Every session, filtered by `cwd` when given; the request's
-  `cursor` is ignored (`server.ts:323-330, 736-763`).
-- **km7.** Ignores `cwd`, `additionalDirectories` and `mcpServers`
-  (`server.ts:266-294`).
-- **km8.** Close cancels the turn, best effort; delete of an unknown id is
-  `invalid_params` (`server.ts:340-377`).
-- **km9.** As `modes` and as a `mode` config option; `set_mode` sends
-  `current_mode_update` and `config_option_update` (`modes.ts:22-87`).
-- **km10.** No `models` field in any answer; the model is the `model` config
-  option. `session/set_model` is accepted too, and a `<id>,thinking` suffix
-  turns thinking on (`config-options.ts:31-48`, `session.ts:1048-1064`).
-- **km11.** `model`, `thinking` (category `thought_level`, only for a model
-  that can think: `off` plus its efforts, or `off`/`on`) and `mode`; every
-  change sends `config_option_update` (`config-options.ts:59-137`).
-- **km12.** A text resource becomes `<resource uri>…</resource>`, blobs are
-  dropped; a `file://` link becomes the bare path, with `:L1-L2` from a line
-  fragment (`convert.ts:33-71, 229-272`).
-- **km13.** Kinds `read`, `edit`, `execute`, `fetch`, `think`, `other` by a
-  tool-name table; `FetchURL` is not in it and reads `other`. `pending` from
-  the first argument delta, `in_progress` on each delta, then `completed` or
-  `failed` (`events-map.ts:106-391`).
-- **km14.** While a call streams and runs, its content is the raw argument
-  JSON, replaced by the result text or a `diff`. `terminal` content only with
-  a client terminal; without one, Bash output arrives in the final update.
-- **km15.** `allow_once`, `allow_always` (for the session) and `reject_once`.
-  Leaving plan mode asks one `allow_once` per plan option plus
-  `plan_revise` and `plan_reject_and_exit`. A `cancelled` outcome is
-  cancelled; an unknown id or an RPC error is rejected (`approval.ts:65-188`).
-- **km16.** AskUserQuestion as a form when `elicitation.form` is declared:
-  fields `q0…qN` titled by header, `oneOf` or `anyOf` choices, all required,
-  no "Other"; decline, cancel or an empty accept is "dismissed"
-  (`question.ts:96-196`). Without a form it asks the first question as a
-  permission with `q0_skip` "Skip" (`interaction-bridge.ts:196-231`).
-- **km17.** A `todo_list` becomes `plan`, every entry `medium`
-  (`events-map.ts:393-445`); the plan-mode document goes only as text in the
-  exit permission.
-- **km18.** Cancels the main agent's turn (`session.ts:980-1010`); background
-  tasks and subagents stop only through the model's own `TaskStop`.
-- **km19.** A concurrent prompt is refused with -32600 "another turn is
-  already in progress" (`session.ts:621-648`). A turn the engine started by
-  itself is not seen by that check; a prompt then answers `end_turn` at once
-  and runs later, unseen (`session.ts:666-673, 728-740`).
-- **km20.** The `Agent` tool runs a child in the same engine session; its
-  events are not forwarded, but its approvals and questions are, under a
-  tool call id that matches no card (`interaction-bridge.ts:61-93`).
-- **km21.** `usage_update {used, size}` after each turn, sent after the
-  prompt has answered, skipped for a model not in its catalog; no cost, no
-  `PromptResponse.usage` (`session.ts:907-944`).
-- **km22.** `/compact`, `/status`, `/usage`, `/mcp`, `/tasks`, `/help` and
-  skills, answered locally as agent text (`builtin-commands.ts:17-42`).
-- **km23.** One terminal method, `login` (`--login`), plus a legacy
-  `_meta['terminal-auth']`; `authenticate` only re-checks. new, load, resume
-  and fork answer `auth_required` with no data unless a model key or an OAuth
-  login exists (`auth-methods.ts:28-61`, `server.ts:379-401, 625-646`).
-- **km24.** `fs/*` and `terminal/*` only when declared
-  (`acp-fs/acpConnection.ts:144-163`,
-  `acp-terminal/acpTerminalRunner.ts:57-70`); otherwise all runs locally.
-- **km25.** `loadSession`, image and embedded context, `sessionCapabilities`
-  list, resume, close, delete, fork and `additionalDirectories`, MCP http and
-  sse, `auth.logout` (`server.ts:192-240`). Reads only `fs`, `terminal` and
-  `elicitation.form` (`server.ts:193-196, 572`).
-
-**Custom.**
-
-- `session/set_model`: the same switch as the `model` config option, called
-  by name; nothing gained.
-- `_meta['terminal-auth']` on the auth method: a command a client runs in a
-  terminal of its own to sign in.
-- Local slash commands, sent as prompt text: status, usage, tasks and
-  compaction as one agent message with no turn; they skip the busy check.
-- Compaction notices arrive as agent text outside any turn, not as ACP
-  compaction.
-- Launch: `kimi acp --login [--region …]`, and `KIMI_CODE_HOME`.
-- A failed turn with a non-auth error answers `end_turn` with no message
-  (`events-map.ts:61-76`).
-
-**In chord.** chord starts, reopens with `session/resume`, and takes models,
-modes and efforts from the config options, `thinking` as the effort. Usage
-fills the meter; with no cost from kimi, chord's own estimate is the cost.
-Questions arrive through chord's form, as no canonical shape: no enricher
-reads them, and with a header the question text is only in the form's
-message. chord never calls `authenticate`, so without a Kimi login or a model
-key the start fails with a bare "Authentication required". A Python `kimi`
-on PATH fails the start with no reason, and chord cannot tell the two apart.
-Approvals and questions from a background subagent with no turn running are
-refused (CHD-158). A turn kimi starts by itself is invisible, and a prompt
-sent then reads as an empty reply. Tool cards show argument JSON while a
-call runs. kimi's `/help`, `/mcp` and `/status` are hidden behind chord's own.
-chord queues mid-turn prompts, which avoids kimi's -32600. chord never calls
-`session/list`, drops titles, and leaves fork, delete, close and logout
-unused.
-
-**Sources.**
-
-- `@moonshot-ai/kimi-code` 2.2.0, https://github.com/MoonshotAI/kimi-code
-  (472192c and main 4a82a07), its CHANGELOG and `git log` of
-  `packages/acp-server`.
-- Python `kimi-cli` 1.52.0, the final release of the archived Kimi CLI.
-- https://www.kimi.com/code/docs/en/kimi-code-cli/reference/kimi-acp.
-- The ACP Registry's `registry.json`, fetched 2026-10-18.
-
 #### kiro
 
 - Name: Kiro
-- Run as: `kiro-cli acp`, from PATH
+- Run as: `kiro-cli acp --agent-engine=v3`, from PATH
 - Install: <https://kiro.dev/docs/getting-started/installation/>
 
 Kiro CLI 2.31.1 (14 October 2026), the newest CLI entry in the Kiro changelog
 on 2026-10-18; issue #11995 cites a 2.32.0 with no changelog entry yet. Kiro
-CLI is closed source and not in the ACP Registry. No code was read: every cell
+CLI is closed source; the ACP Registry offers it only as a binary, which chord
+does not take. No code was read: every cell
 rests on Kiro's docs, changelog and GitHub issues in kirodotdev/Kiro (`n`),
-some of which quote its bundle. `kiro-cli acp`, which chord runs, starts the
-CLI v2 server. The V3 engine, a Node bundle `@kiro/agent` behind a Rust
+some of which quote its bundle. A bare `kiro-cli acp` starts the CLI v2
+server; since CHD-624 chord passes `--agent-engine=v3`, as the registry's
+binary entry does, so it runs V3. The V3 engine, a Node bundle `@kiro/agent` behind a Rust
 relay, needs `--agent-engine=v3` today; changelog 2.30 says V3 becomes the
 default with CLI 3.0 at the end of October 2026, and whether a bare
 `kiro-cli acp` then switches is not stated. Both answer protocol version 1.

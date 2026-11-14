@@ -412,11 +412,14 @@ export function statusReport(facts: ReportFacts): ReportRow[] {
     ['Session', facts.sessionId ?? 'starting…'],
     ['Directory', facts.cwd],
   ]);
-  // Later accounts go under the first, their label left blank.
-  const more = accounts.slice(1).map((text) => ({
-    label: ' '.repeat(rows[0]?.label?.length ?? 0),
-    text,
-  }));
+  // Later accounts go under the first, their label left blank, each after an
+  // empty line so a wrapped one reads apart from the next (the owner's U12).
+  const more = accounts
+    .slice(1)
+    .flatMap((text) => [
+      { text: '' },
+      { label: ' '.repeat(rows[0]?.label?.length ?? 0), text },
+    ]);
 
   return accounts.length === 0
     ? rows

@@ -171,14 +171,14 @@ describe("/status's account and title (CHD-629)", () => {
         account,
         ...(title === undefined ? {} : { title }),
       }),
-    ).slice(0, 4);
+    );
 
   test('an Account row after Agent, its parts joined, then the Title row', () => {
     expect(
       rows(
         { phase: 'heard', status: { state: 'authenticated', accounts: [MAX] } },
         'Parser test tidy-up',
-      ),
+      ).slice(0, 4),
     ).toStrictEqual([
       'Agent:     fake',
       'Account:   Claude Max · name@example.com · Example Org',
@@ -207,7 +207,7 @@ describe("/status's account and title (CHD-629)", () => {
     );
   });
 
-  test('one row per active account, or every account when none is marked, later labels blank', () => {
+  test('one row per active account, or every account when none is marked, later labels blank, an empty line between', () => {
     const key = {
       label: 'Anthropic API key',
       description: 'ANTHROPIC_API_KEY',
@@ -225,11 +225,18 @@ describe("/status's account and title (CHD-629)", () => {
     expect(
       rows({
         phase: 'heard',
-        status: { state: 'authenticated', accounts: [{ label: 'A' }, key] },
-      }).slice(1, 3),
+        status: {
+          state: 'authenticated',
+          accounts: [{ label: 'A' }, key, { label: 'C' }],
+        },
+      }).slice(1, 7),
     ).toStrictEqual([
       'Account:   A',
+      '',
       '           Anthropic API key · ANTHROPIC_API_KEY',
+      '',
+      '           C',
+      'Title:     not given',
     ]);
   });
 

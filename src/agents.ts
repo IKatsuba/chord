@@ -16,6 +16,9 @@ import { type SettingsProblem, unknownOfferedMessage } from './settings.ts';
 const ALIASES: Readonly<Record<string, string>> = {
   claude: 'claude-acp',
   codex: 'codex-acp',
+  // The registry's Kimi Code, which chord ran as its own CLI `kimi` before
+  // (CHD-624): records, settings and team files keep the name.
+  kimi: 'kimi-code',
 };
 
 /**

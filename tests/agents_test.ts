@@ -19,7 +19,7 @@ import {
 } from '../src/agents.ts';
 import { CLI_AGENTS } from '../src/clis.ts';
 import { REGISTRY_AGENTS } from '../src/registry.ts';
-import { frozenAgents } from '../scripts/dev/registry.ts';
+import { binaryOnly, frozenAgents } from '../scripts/dev/registry.ts';
 
 test('the default agent is one chord knows', () => {
   expect(findAgent(DEFAULT_AGENT) !== undefined).toBeTruthy();
@@ -317,6 +317,10 @@ test('only agents npx or uvx starts are frozen, npx before uvx', () => {
       env: {},
     },
   ]);
+});
+
+test('each agent left out for being binary only is named, so a refresh drops none without a word (CHD-624)', () => {
+  expect(binaryOnly(REGISTRY)).toStrictEqual(['binary-only']);
 });
 
 test('a package without an exact version is refused, not frozen', () => {

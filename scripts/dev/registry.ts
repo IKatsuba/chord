@@ -95,6 +95,18 @@ export function frozenAgents(registry: unknown): FrozenAgent[] {
   });
 }
 
+/**
+ * The ids of the registry's agents neither npx nor uvx starts, which
+ * `frozenAgents` leaves out, so a refresh names each agent it drops.
+ */
+export function binaryOnly(registry: unknown): string[] {
+  return Registry.parse(registry).agents.flatMap((agent) =>
+    agent.distribution.npx === undefined && agent.distribution.uvx === undefined
+      ? [agent.id]
+      : [],
+  );
+}
+
 function npmExact(spec: string) {
   const parsed = npa(spec);
 
@@ -192,7 +204,13 @@ export async function registry(): Promise<void> {
     process.exit(1);
   }
 
-  const agents = frozenAgents(await response.json());
+  const listed: unknown = await response.json();
+  const agents = frozenAgents(listed);
+
+  for (const id of binaryOnly(listed)) {
+    console.log(`${id}: left out, binary only.`);
+  }
+
   const fetched = new Date().toISOString().slice(0, 10);
   const path = new URL('../../src/registry.ts', import.meta.url).pathname;
 

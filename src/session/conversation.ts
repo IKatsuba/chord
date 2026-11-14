@@ -293,6 +293,12 @@ export interface Recording {
   captureServed?(): ((turnId: string, call: ChordCall) => void) | undefined;
 }
 
+/** A rename the session took: its title, and whether its agent took it. */
+export interface Renamed {
+  readonly title: string;
+  readonly agent: boolean;
+}
+
 /** What each session the conversation opens is put on before it is shown. */
 export interface Starting {
   /** A model, as `/model` sets it. */
@@ -643,6 +649,12 @@ export class Conversation {
    * session `clear` replaces starts a new one.
    */
   #changes: Promise<void> = Promise.resolve();
+  /**
+   * The session's renames, one at a time in the order asked, apart from
+   * `#changes`: a hung option change must not hold a title, nor the other
+   * way round (CHD-629). A session `clear` replaces starts a new one.
+   */
+  #renames: Promise<void> = Promise.resolve();
   #failures = 0;
   /** Lines to go ahead of the person's next prompt, as held output does. */
   #ahead: string[] = [];
@@ -717,6 +729,11 @@ export class Conversation {
     this.#emit = (event) => {
       if (event.type === 'update' && event.subagentId === undefined) {
         this.#titled(event.update);
+      }
+
+      // A rename's title, live or from the record, until another (CHD-629).
+      if (event.type === 'renamed') {
+        this.#title = event.title;
       }
 
       told(event);
@@ -845,6 +862,8 @@ export class Conversation {
           for (const action of session.history()) {
             if (action.type === 'update' && action.subagentId === undefined) {
               this.#titled(action.update);
+            } else if (action.type === 'renamed') {
+              this.#title = action.title;
             }
           }
 
@@ -957,6 +976,7 @@ export class Conversation {
     // A change the old session's agent never answers must not hold the new
     // session's.
     this.#changes = Promise.resolve();
+    this.#renames = Promise.resolve();
     this.#firstPrompt = undefined;
     this.#title = undefined;
     // The next session's first prompt is not in any record yet.
@@ -2755,6 +2775,63 @@ export class Conversation {
     this.#emit({ type: 'plan_settled', turnId: asked.turnId, id, answer });
     asked.request.answer(answer);
     this.#release();
+  }
+
+  /**
+   * Renames the session (CHD-629): by `session/set_title` where the agent
+   * takes a title, whose answer is the title kept, else in chord alone, the
+   * typed title folded to one line. Resolves to the title and whether the
+   * agent took it, once the record has its line; to nothing for a session a
+   * `clear` retired meanwhile, whose answer is no one's. A refusal records
+   * nothing and rejects with the agent's error.
+   */
+  rename(typed: string): Promise<Renamed | undefined> {
+    const session = this.#session;
+
+    if (!session || this.#closing) {
+      return notUp().then(() => undefined);
+    }
+
+    const title = typed.replaceAll(/\s+/g, ' ').trim();
+    const renamed = this.#renames.then(async () => {
+      if (!this.#current(session)) {
+        return undefined;
+      }
+
+      const agent = session.takesTitles();
+      let taken: string;
+
+      try {
+        taken = agent ? await session.setTitle(title) : title;
+      } catch (error) {
+        // A retired session's refusal, or its agent gone, is no one's.
+        if (!this.#current(session)) {
+          return undefined;
+        }
+
+        throw error;
+      }
+
+      if (!this.#current(session)) {
+        return undefined;
+      }
+
+      this.#emit({
+        type: 'renamed',
+        turnId: this.#stamp(),
+        title: taken,
+        at: this.#now(),
+      });
+
+      return { title: taken, agent };
+    });
+
+    this.#renames = renamed.then(
+      () => {},
+      () => {},
+    );
+
+    return renamed;
   }
 
   /**

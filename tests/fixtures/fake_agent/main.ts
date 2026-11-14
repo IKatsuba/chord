@@ -282,6 +282,7 @@ import {
   FIRST_MESSAGE,
   START_NOTICE,
   INITIAL_OPTIONS,
+  SET_TITLE,
   AUTO_FALLBACK,
   HANG,
   RESEND_CONFIG,
@@ -329,6 +330,7 @@ import {
   IDLE_COMPACTION,
 } from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
+import { setTitle, TITLES } from './scenarios/titles.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORM_SCHEMA } from '../forms.ts';
@@ -401,6 +403,7 @@ const SCENARIOS = [
   'notice',
   'noticeidle',
   'noticelong',
+  'titledlater',
   'cloudrequest',
   'texttillsteered',
   'texttillsteeredheld',
@@ -795,6 +798,7 @@ const PLAY: Record<Scenario, Play> = {
   ...IDLE_COMPACTION,
   ...MODES,
   ...NOTICES,
+  ...TITLES,
   ...SUBAGENTS,
   ...MISBEHAVING,
   ...FX,
@@ -1589,6 +1593,7 @@ const connection = acp
               ...(RESUME_ONLY ? { resume: {} } : {}),
               ...(FORKS ? { fork: {} } : {}),
               ...(INITIAL_OPTIONS === undefined ? {} : { options: {} }),
+              ...(SET_TITLE === undefined ? {} : { title: {} }),
             },
           },
           // Steering as Claude's adapter, it names itself as that adapter does,
@@ -1651,6 +1656,9 @@ const connection = acp
       configOptions: configOptions(sessionId),
     };
   })
+  .onRequest('session/set_title', ({ params, client }) =>
+    setTitle(client, params),
+  )
   // Counted, for a test that chord never asks it (CHD-629).
   .onRequest('session/options', () => {
     optionsAsked += 1;

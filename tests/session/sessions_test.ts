@@ -1609,3 +1609,40 @@ describe('--no-mcp-servers in a reopen line (CHD-620)', () => {
     );
   });
 });
+
+test("a rename's line is a record's title as an agent's update is, the later of the two winning, and its past draws nothing (CHD-629)", () => {
+  const titled = (title: string): RecordEntry => ({
+    type: 'update',
+    turnId: 't1',
+    update: { sessionUpdate: 'session_info_update', title },
+  });
+  const renamed = (title: string): RecordEntry => ({
+    type: 'renamed',
+    title,
+    at: 20,
+  });
+  const prompt: RecordEntry = {
+    type: 'prompt',
+    turnId: 't1',
+    at: 10,
+    prompt: 'fix the build',
+    images: 0,
+  };
+  const summary = (...entries: RecordEntry[]) =>
+    summaryOf('/r.jsonl', lines(HEADER, prompt, ...entries))?.title;
+
+  expect(summary(titled('Agent'), renamed('Parser  test\ntidy-up'))).toBe(
+    'Parser test tidy-up',
+  );
+  expect(summary(renamed('Mine'), titled('Agent again'))).toBe('Agent again');
+  expect(summary(renamed('   '))).toBe(undefined);
+
+  const past = recordActions([HEADER, prompt, renamed('Mine')]);
+
+  expect(past).toContainEqual(
+    expect.objectContaining({ type: 'renamed', title: 'Mine', at: 20 }),
+  );
+  expect(transcriptOf(past)).toStrictEqual(
+    transcriptOf(recordActions([HEADER, prompt])),
+  );
+});

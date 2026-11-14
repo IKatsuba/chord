@@ -1196,6 +1196,16 @@ export type TranscriptAction =
       readonly turnId: string;
       readonly monitors: readonly PastMonitor[];
     }
+  /**
+   * The session was named `title` at `at`, by a rename the agent took or
+   * chord kept for an agent that takes none (CHD-629); nothing is drawn.
+   */
+  | {
+      readonly type: 'renamed';
+      readonly turnId: string;
+      readonly title: string;
+      readonly at: number;
+    }
   /** The session is a fork of the agent `from`'s, made at `at` (CHD-101). */
   | {
       readonly type: 'forked';

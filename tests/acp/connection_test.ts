@@ -647,6 +647,26 @@ test('session/fork is asked only of an agent that offers it, and answers a new s
   });
 });
 
+test('session/set_title is asked only of an agent that offers a title, and answers the title it stored (CHD-629)', async () => {
+  await withAgent([], async (agent, seen, cwd) => {
+    const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+
+    await expect(
+      agent.setTitle({ sessionId, title: 'Fix the parser' }),
+    ).rejects.toThrow('does not offer session/set_title');
+    expect(!seen.sent().includes('session/set_title')).toBeTruthy();
+  });
+
+  await withAgent(['--set-title', 'silent'], async (agent, seen, cwd) => {
+    const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+
+    expect(
+      await agent.setTitle({ sessionId, title: '  Fix  the parser ' }),
+    ).toStrictEqual({ title: 'Fix the parser' });
+    expect(seen.sent().includes('session/set_title')).toBeTruthy();
+  });
+});
+
 test('session/list gives the sessions in a directory', () =>
   withAgent([], async (agent, _seen, cwd) => {
     const first = await agent.newSession({ cwd, mcpServers: [] });

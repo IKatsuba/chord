@@ -208,6 +208,13 @@ export type RecordEntry =
    * one opening. A record written before these has none.
    */
   | { readonly type: 'opened'; readonly at: number }
+  /**
+   * The session renamed `title` at `at`: the title the agent answered, or
+   * the one typed for an agent that takes none (CHD-629). chord's own line,
+   * as the record holds no ACP event the agent did not send; a record
+   * written before these has none, and an older chord skips it.
+   */
+  | { readonly type: 'renamed'; readonly title: string; readonly at: number }
   /** The model, mode and other config values in use from here on. */
   | {
       readonly type: 'state';
@@ -810,6 +817,15 @@ export function recordActions(
         });
 
         break;
+      case 'renamed':
+        actions.push({
+          type: 'renamed',
+          turnId: open ?? 'session',
+          title: entry.title,
+          at: entry.at,
+        });
+
+        break;
       case 'forked':
         actions.push({
           type: 'forked',
@@ -1107,6 +1123,8 @@ export function entryOf(
       };
     case 'run_typed':
       return { type: 'ran', turnId: event.turnId, call: event.call };
+    case 'renamed':
+      return { type: 'renamed', title: event.title, at: event.at };
     case 'agent_closed':
       return { type: 'closed', agent: event.id };
     case 'disconnected':

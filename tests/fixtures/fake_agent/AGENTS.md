@@ -32,6 +32,7 @@
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`, `idlecompact`,
   `idlecompactfail`, `idlecompactsays`),
   `notices.ts` (`notice`, `noticeidle`, `noticelong`),
+  `titles.ts` (`titledlater`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`,
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -97,7 +98,7 @@
   `compact`,
   `codexcompact`,
   `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
-  `notice`, `noticeidle`, `noticelong`,
+  `notice`, `noticeidle`, `noticelong`, `titledlater`,
   `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
   `longheld`, `turnfailed`,
@@ -344,6 +345,14 @@
   then holds until cancelled. `--first-message <text>`
   (`CHORD_FAKE_FIRST_MESSAGE`) sends an agent message with its own id
   before each `session/new` answer, without starting a turn.
+  `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
+  advertises `sessionCapabilities.title` and stores a `session/set_title`
+  title trimmed, its whitespace folded and cut at 80: `echo` sends it in a
+  `session_info_update`, then answers it; `silent` only answers; `refuse`
+  refuses -32600; `hang` answers as `echo` once
+  `<cwd>/.fake-gate/release` exists (at most 10 s). An empty title is
+  -32602. `titledlater` says a line, then once the gate is released sends a
+  `session_info_update` with a title of its own (CHD-629).
   `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`) offers `auto`, opens
   every session in it, and on `fake-small` takes `auto` as `acceptEdits`
   with an `Auto mode unavailable` notice; switching to `fake-small` moves

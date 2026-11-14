@@ -281,6 +281,16 @@ export interface Session {
   /** Whether the agent forks a session, as `initialize` says (CHD-101). */
   forks(): boolean;
   /**
+   * Whether the agent takes a title for the session, as `initialize`
+   * advertises `sessionCapabilities.title` (CHD-629).
+   */
+  takesTitles(): boolean;
+  /**
+   * Names the session by `session/set_title`, resolving to the title as the
+   * agent stored it; throws without asking an agent that does not take one.
+   */
+  setTitle(title: string): Promise<string>;
+  /**
    * Whether a steer cuts off the tool calls the turn has open: Claude's
    * adapter, told by the name it gives in `initialize`, delivers a steer
    * at a priority that aborts them, a `send_message` among them lost
@@ -779,6 +789,10 @@ export async function openSession(
     steers: () => connection.steering,
     forks: () =>
       Boolean(connection.init.agentCapabilities?.sessionCapabilities?.fork),
+    takesTitles: () =>
+      Boolean(connection.init.agentCapabilities?.sessionCapabilities?.title),
+    setTitle: async (title) =>
+      (await connection.setTitle({ sessionId: id, title })).title,
     cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     startsOwnCycles: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     steer: async (

@@ -205,6 +205,27 @@ export const CHILD_MODEL = valueOf('--child-model', 'CHORD_FAKE_CHILD_MODEL');
 export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
 
 /**
+ * `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`): it
+ * advertises `sessionCapabilities.title` and answers `session/set_title` as
+ * `scenarios/titles.ts` plays the mode (CHD-629).
+ */
+export const SET_TITLE = (() => {
+  const chosen = valueOf('--set-title', 'CHORD_FAKE_SET_TITLE');
+
+  if (
+    chosen === undefined ||
+    chosen === 'echo' ||
+    chosen === 'silent' ||
+    chosen === 'refuse' ||
+    chosen === 'hang'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --set-title "${chosen}"`);
+})();
+
+/**
  * `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`): it offers `auto` and
  * opens every session in it, and on `fake-small`, which has no Auto, takes
  * `auto` as `acceptEdits` and says so in a notice, as Claude's adapter does

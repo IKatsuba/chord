@@ -156,6 +156,15 @@ export interface Agent {
     request: acp.ForkSessionRequest,
     signal?: AbortSignal,
   ): Promise<acp.ForkSessionResponse>;
+  /**
+   * Names a session (ACP's unstable `session/set_title`), answering the title
+   * as the agent stored it; throws without asking when the agent does not
+   * offer `sessionCapabilities.title` (CHD-629).
+   */
+  setTitle(
+    request: acp.SetSessionTitleRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.SetSessionTitleResponse>;
   /** Throws without asking when the agent does not offer `session/list`. */
   listSessions(
     request: acp.ListSessionsRequest,
@@ -528,6 +537,14 @@ export async function connectAgent(
 
       return await ask(
         () => connection.agent.request('session/fork', request),
+        signal,
+      );
+    },
+    setTitle: async (request, signal) => {
+      offered('session/set_title', offers.sessionCapabilities?.title);
+
+      return await ask(
+        () => connection.agent.request('session/set_title', request),
         signal,
       );
     },

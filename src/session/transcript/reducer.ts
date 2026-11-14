@@ -299,6 +299,9 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
       };
     case 'cycle_started':
       return cycleStarted(state, action.turnId, action.at);
+    // A title shows where the agent's own does, never as a line (CHD-445).
+    case 'renamed':
+      return state;
     case 'forked':
       return {
         ...state,

@@ -947,6 +947,55 @@ describe('initial configOptions on session/new (CHD-629)', () => {
   });
 });
 
+describe('CHD-629 tester: initial entries stay on new sessions', () => {
+  test('a recorded session/resume sends neither initial entries nor session/options', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-resume-'));
+    const stateDir = join(dir, 'state');
+    const flags = [
+      '--adapter',
+      'claude',
+      '--options',
+      'apply',
+      '--resume-only',
+    ];
+
+    try {
+      const sessionId = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(undefined, ...flags),
+        prompts: ['text'],
+      });
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const resumed = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(undefined, ...flags),
+        initial: { model: 'fake-small', effort: 'high', mode: 'plan' },
+        resume: { sessionId, cwd: dir, record: record.path },
+      });
+
+      try {
+        const reply = said((await run(resumed, 'opened')).updates).join('');
+        const opened = JSON.parse(reply.replace(/^```json\n|\n```$/g, ''));
+
+        expect(opened).toStrictEqual({
+          method: 'session/resume',
+          meta: NO_SUGGESTIONS,
+          sessionOptions: 0,
+        });
+      } finally {
+        await resumed.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
 describe('a session forked from another (CHD-101)', () => {
   test('it opens in a process of its own by session/fork, from the session named, and outlives it', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-fork-'));

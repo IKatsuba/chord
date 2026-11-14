@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { InitializeResponse } from '@agentclientprotocol/sdk/unstable';
 import {
   initialEntries,
@@ -50,4 +50,49 @@ test('the values are the ids chord holds, where they were set left behind', () =
       effort: undefined,
     }),
   ).toStrictEqual({ model: 'opus', mode: 'plan' });
+});
+
+describe('CHD-629 tester: initial option table boundaries', () => {
+  test('all partial selections preserve order and opaque value ids', () => {
+    const values = {
+      model: 'model:opaque',
+      effort: 'effort:opaque',
+      mode: 'mode:opaque',
+    };
+    const keys = ['model', 'effort', 'mode'] as const;
+
+    for (let mask = 0; mask < 8; mask++) {
+      const selected = Object.fromEntries(
+        keys
+          .filter((_, index) => (mask & (1 << index)) !== 0)
+          .map((key) => [key, values[key]]),
+      );
+
+      expect(initialEntries(init(CLAUDE, true), selected)).toStrictEqual(
+        keys.flatMap((key, index) =>
+          (mask & (1 << index)) !== 0
+            ? [{ configId: key, value: values[key] }]
+            : [],
+        ),
+      );
+    }
+  });
+
+  test('adapter names are exact and an omitted session capability declares nothing', () => {
+    for (const name of [
+      'claude',
+      'claude-acp',
+      `${CLAUDE} `,
+      CLAUDE.toUpperCase(),
+    ]) {
+      expect(initialEntries(init(name, true), ALL)).toStrictEqual([]);
+    }
+
+    expect(
+      initialEntries(
+        { protocolVersion: 1, agentInfo: { name: CLAUDE, version: '0.107.0' } },
+        ALL,
+      ),
+    ).toStrictEqual([]);
+  });
 });

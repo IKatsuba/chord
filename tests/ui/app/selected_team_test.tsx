@@ -1010,10 +1010,6 @@ describe('tester: selected member admission ordering and actual refusal', () => 
 
     return selectedWindow(
       async (window, main, callers, prompts) => {
-        const callerSessionId = window.session()?.id;
-
-        assert(callerSessionId !== undefined);
-
         const run = success(
           await main.window.runTeam(main, {
             team: 'fixture',
@@ -1035,27 +1031,26 @@ describe('tester: selected member admission ordering and actual refusal', () => 
           }),
         ).toHaveProperty('error');
         await until('tester member mismatch cause persisted', async () => {
-          const parent = (await readRecords(join(window.dir, 'state'))).find(
-            (record) => record.sessionId === callerSessionId,
-          );
+          // The caller keeps the receipt even when its refused member has no record.
+          for (const record of await readRecords(join(window.dir, 'state'))) {
+            const receipts = (await readPast(record.path)).flatMap((entry) =>
+              entry.type === 'served' &&
+              recordedSelection(entry.call)?.runId === run.id
+                ? [recordedSelection(entry.call)!]
+                : [],
+            );
+            const role = receipts.at(-1)?.roles[1];
 
-          if (parent === undefined) {
-            return false;
+            if (
+              role?.state === 'refused' &&
+              role.note ===
+                'reviewer.model: the runtime did not confirm the requested model fake-small.'
+            ) {
+              return true;
+            }
           }
 
-          const receipts = (await readPast(parent.path)).flatMap((entry) =>
-            entry.type === 'served' &&
-            recordedSelection(entry.call)?.runId === run.id
-              ? [recordedSelection(entry.call)!]
-              : [],
-          );
-          const role = receipts.at(-1)?.roles[1];
-
-          return (
-            role?.state === 'refused' &&
-            role.note ===
-              'reviewer.model: the runtime did not confirm the requested model fake-small.'
-          );
+          return false;
         });
 
         expect((await main.window.teams(main)).runs).toHaveLength(1);

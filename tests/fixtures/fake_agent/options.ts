@@ -561,22 +561,26 @@ export const STEP_MS = Number(
  * unless it is accepted; `linkother` asks the same link and, unless it is
  * accepted, fails for some other reason (-32603), which needs no login;
  * `cloud` refuses as cursor-cloud does signed out, its one way in naming
- * the versioned command that signs in (CHD-622).
+ * the versioned command that signs in (CHD-622). `prompt` opens the session
+ * and refuses its first prompt `authRequired`, as Claude's adapter does
+ * signed out, the next one running (CHD-629).
  */
 export const AUTH_REQUIRED:
-  'methods' | 'bare' | 'link' | 'linkother' | 'cloud' | undefined = (() => {
-  const flag = ARGS.indexOf('--auth-required');
-  const kind =
-    flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_AUTH_REQUIRED;
+  'methods' | 'bare' | 'link' | 'linkother' | 'cloud' | 'prompt' | undefined =
+  (() => {
+    const flag = ARGS.indexOf('--auth-required');
+    const kind =
+      flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_AUTH_REQUIRED;
 
-  return kind === 'methods' ||
-    kind === 'bare' ||
-    kind === 'link' ||
-    kind === 'linkother' ||
-    kind === 'cloud'
-    ? kind
-    : undefined;
-})();
+    return kind === 'methods' ||
+      kind === 'bare' ||
+      kind === 'link' ||
+      kind === 'linkother' ||
+      kind === 'cloud' ||
+      kind === 'prompt'
+      ? kind
+      : undefined;
+  })();
 
 /**
  * `--start-fails <kind>` (`CHORD_FAKE_START_FAILS`): the fake fails to start

@@ -19,6 +19,7 @@ import type { PlanPhase, PlanTodo } from '../../acp/plans.ts';
 import type { Questions } from '../questions.ts';
 import type { OpenEscape, TerminalCursor } from '../terminal_text.ts';
 import type { TokenUsage } from '../usage.ts';
+import type { SignIn } from '../sign_in.ts';
 import type { Team } from '../../teams.ts';
 import type { PermissionReview } from '../permission_review.ts';
 
@@ -481,6 +482,8 @@ export type Entry =
       readonly turnId: string;
       readonly message: string;
       readonly code?: string;
+      /** A prompt refused for want of a login, drawn as its block (CHD-629). */
+      readonly signIn?: SignIn;
     }
   | {
       /**
@@ -962,7 +965,12 @@ export type TurnResult =
     }
   | {
       readonly status: 'failed';
-      readonly error: { readonly message: string; readonly code?: string };
+      readonly error: {
+        readonly message: string;
+        readonly code?: string;
+        /** The login the agent refused the prompt for (CHD-629). */
+        readonly signIn?: SignIn;
+      };
     };
 
 export interface Transcript {

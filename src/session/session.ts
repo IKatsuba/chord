@@ -12,6 +12,7 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import process from 'node:process';
+import { setTimeout as delay } from 'node:timers/promises';
 import {
   type Agent,
   clientCapabilities,
@@ -64,7 +65,13 @@ import { type Heard, pastActions } from './replay.ts';
 import type { Resume } from './sessions.ts';
 import { routed, type SessionTree, sessionTree } from './subagents.ts';
 import type { TranscriptAction, TurnResult } from './transcript/types.ts';
-import { asSignIn } from './sign_in.ts';
+import {
+  asSignIn,
+  AUTH_REQUIRED,
+  signInOf,
+  waysOf,
+  withAccount,
+} from './sign_in.ts';
 import { startFailed, type StartStep } from './start_failure.ts';
 import { tokensOf } from './usage.ts';
 import type { TurnFigures } from './turn_costs.ts';
@@ -193,6 +200,12 @@ export interface Turn {
  * it, as with no turn running.
  */
 export type SteerOutcome = 'injected' | 'startedNewTurn' | 'refused';
+
+/**
+ * How long a sign-in failure waits for an `auth/status` still out before it
+ * is worded from what is known (the owner's Q2 c).
+ */
+export const AUTH_WAIT_MS = 1000;
 
 export { CLAUDE_ADAPTER };
 
@@ -463,6 +476,42 @@ export async function openSession(
     }
   };
 
+  /**
+   * The account once the agent has said, waiting for an `auth/status` still
+   * out at most `AUTH_WAIT_MS`, or until `signal` gives up; then whatever is
+   * known (the owner's Q2 c).
+   */
+  const settledAccount = async (
+    signal?: AbortSignal,
+  ): Promise<AccountState> => {
+    if (accountState.phase !== 'pending') {
+      return accountState;
+    }
+
+    const heard = Promise.withResolvers<void>();
+    const listener = () => heard.resolve();
+    const done = new AbortController();
+
+    accountListeners.add(listener);
+
+    try {
+      await Promise.race([
+        heard.promise,
+        delay(AUTH_WAIT_MS, undefined, {
+          signal:
+            signal === undefined
+              ? done.signal
+              : AbortSignal.any([done.signal, signal]),
+        }).catch(() => {}),
+      ]);
+    } finally {
+      done.abort();
+      accountListeners.delete(listener);
+    }
+
+    return accountState;
+  };
+
   /** Where `notification` belongs, the tree grown by what it announces. */
   const route = (notification: SessionNotification): Heard | undefined => {
     const where = routed(tree, notification);
@@ -702,10 +751,15 @@ export async function openSession(
     // in it offered (CHD-435).
     // Why it failed, under the sign-in it needs when that is why, which
     // stays what the start rejects with (CHD-435).
-    const error = asSignIn(
+    // Worded from what the agent says of its account, which a pending ask
+    // gets a moment to say (the owner's Q2 c).
+    const signIn = asSignIn(
       startFailed(refused, step, pinned),
       connection.init.authMethods,
     );
+    const error = signInOf(signIn)
+      ? withAccount(signIn, await settledAccount(signal))
+      : signIn;
 
     try {
       await shutdown();
@@ -828,17 +882,29 @@ export async function openSession(
             stopReason,
             ...(usage ? { usage: tokensOf(usage) } : {}),
           }),
-          (error: unknown): TurnResult => {
+          async (error: unknown): Promise<TurnResult> => {
             // A prompt that went has said so already; this one never did.
             went(undefined);
 
             const code = codeOf(error);
+            const message = messageOf(error);
+            // A prompt refused for want of a login is its sign-in block,
+            // worded from the account (the owner's Q2 c).
+            const signIn =
+              code === String(AUTH_REQUIRED)
+                ? {
+                    message,
+                    ways: waysOf(connection.init.authMethods),
+                    account: await settledAccount(),
+                  }
+                : undefined;
 
             return {
               status: 'failed',
               error: {
-                message: messageOf(error),
+                message,
                 ...(code === undefined ? {} : { code }),
+                ...(signIn === undefined ? {} : { signIn }),
               },
             };
           },

@@ -4,6 +4,11 @@
  * in the agent offers, read from the protocol, never from the text.
  */
 import type { AuthMethod } from '@agentclientprotocol/sdk/unstable';
+import {
+  accountLine,
+  type AccountState,
+  shownAccounts,
+} from './auth_status.ts';
 
 /** ACP's `authRequired`: the agent needs a login before it opens a session. */
 export const AUTH_REQUIRED = -32000;
@@ -19,6 +24,49 @@ export interface SignIn {
   /** The agent's own words for the failure. */
   readonly message: string;
   readonly ways: readonly SignInWay[];
+  /**
+   * What the agent said of its account when it refused, its first line
+   * worded from it (CHD-629, the owner's Q2 c).
+   */
+  readonly account?: AccountState;
+}
+
+/**
+ * The block's first line, from what the agent says of its account: that
+ * none is signed in, or the account it is signed in to that the request
+ * still refused; nothing when it says nothing, or that it cannot tell.
+ * The agent names no missing account, so chord guesses at none.
+ */
+export function accountReported(
+  agent: string,
+  account: AccountState | undefined,
+): string | undefined {
+  if (account?.phase !== 'heard') {
+    return undefined;
+  }
+
+  const { state, accounts } = account.status;
+
+  if (state === 'unauthenticated') {
+    return `${agent} reports that no account is signed in.`;
+  }
+
+  if (state !== 'authenticated') {
+    return undefined;
+  }
+
+  const shown = shownAccounts(accounts);
+
+  return `${agent} reports ${
+    shown.length === 0 ? 'signed in' : shown.map(accountLine).join(', ')
+  }.`;
+}
+
+/** `signIn` with what the agent said of its account then. */
+export function withAccount(error: unknown, account: AccountState): unknown {
+  return error instanceof SignInNeeded && account.phase !== 'none'
+    ? new SignInNeeded({ ...error.signIn, account }, { cause: error.cause })
+    : error;
 }
 
 /** A start that failed for want of a login; its message is the agent's. */

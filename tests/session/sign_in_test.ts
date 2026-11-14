@@ -1,6 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import { RequestError } from '@agentclientprotocol/sdk/unstable';
 import {
+  accountReported,
   asSignIn,
   offersLine,
   SignInNeeded,
@@ -9,6 +10,7 @@ import {
   signInOf,
   wayOn,
   waysOf,
+  withAccount,
 } from '../../src/session/sign_in.ts';
 
 const METHODS = [
@@ -136,5 +138,60 @@ describe('CHD-435 tester: structured sign-in classification', () => {
     ]);
     expect(methods).toStrictEqual(before);
     expect(signInOf(wrapped)).toBe(signInOf(needed));
+  });
+});
+
+describe("the block's first line, from the agent's account (CHD-629)", () => {
+  test('signed out says no account is signed in; signed in names the accounts the request still refused', () => {
+    expect(
+      accountReported('claude', {
+        phase: 'heard',
+        status: { state: 'unauthenticated' },
+      }),
+    ).toBe('claude reports that no account is signed in.');
+    expect(
+      accountReported('claude', {
+        phase: 'heard',
+        status: {
+          state: 'authenticated',
+          accounts: [
+            { label: 'Claude Max', email: 'name@example.com', active: true },
+            { label: 'Old', active: false },
+          ],
+        },
+      }),
+    ).toBe('claude reports Claude Max · name@example.com.');
+  });
+
+  test('nothing where the agent says nothing, cannot tell, or the ask failed', () => {
+    for (const account of [
+      undefined,
+      { phase: 'none' },
+      { phase: 'pending' },
+      { phase: 'failed' },
+      { phase: 'heard', status: { state: 'unknown' } },
+    ] as const) {
+      expect(accountReported('claude', account)).toBeUndefined();
+    }
+  });
+
+  test('a sign-in takes the account, and anything else is left as it is', () => {
+    const signIn = asSignIn(new RequestError(-32000, 'Signed out'), []);
+    const account = {
+      phase: 'heard',
+      status: { state: 'unauthenticated' },
+    } as const;
+
+    expect(signInOf(withAccount(signIn, account))?.account).toStrictEqual(
+      account,
+    );
+    expect(signInOf(withAccount(signIn, { phase: 'none' }))).toStrictEqual({
+      message: 'Signed out',
+      ways: [],
+    });
+
+    const other = new Error('Something else');
+
+    expect(withAccount(other, account)).toBe(other);
   });
 });

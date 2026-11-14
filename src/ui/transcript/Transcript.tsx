@@ -34,6 +34,7 @@ import { compactionLine, inSpinner } from './compaction.ts';
 import { endedLine } from './ended.ts';
 import { noticeDescription, noticeMarker } from './notice.ts';
 import { Reply } from './Reply.tsx';
+import { SignInBlock } from '../app/SignIn.tsx';
 import {
   inArrow,
   messageHeader,
@@ -150,7 +151,15 @@ export const TranscriptEntry = memo(function TranscriptEntry({
         </>
       );
     case 'error':
-      return <Failure text={entry.message} />;
+      // A prompt refused for want of a login: its block in the turn's place.
+      return entry.signIn === undefined ? (
+        <Failure text={entry.message} />
+      ) : (
+        <>
+          <Failure text={`${agent} needs a sign-in: ${entry.message}`} />
+          <SignInBlock agent={agent} signIn={entry.signIn} />
+        </>
+      );
     case 'warning':
       return <Failure text={entry.message} tone='warning' />;
     case 'notice':

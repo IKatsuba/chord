@@ -359,6 +359,8 @@
   <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`) writes `auth/status`'s
   answer itself, with a push of that account before or after it, in one
   write, so chord reads both in one chunk (CHD-629).
+  `--auth-required prompt` opens the session and refuses its first prompt
+  `authRequired` ("Authentication required"); the next prompt runs (CHD-629).
   `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
   advertises `sessionCapabilities.title` and stores a `session/set_title`
   title trimmed, its whitespace folded and cut at 80: `echo` sends it in a

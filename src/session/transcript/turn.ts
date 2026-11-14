@@ -255,6 +255,9 @@ function endingOf(turnId: string, result: TurnResult): Entry | undefined {
         turnId,
         message: result.error.message,
         ...(result.error.code === undefined ? {} : { code: result.error.code }),
+        ...(result.error.signIn === undefined
+          ? {}
+          : { signIn: result.error.signIn }),
       };
     case 'cancelled':
       return { kind: 'cancelled', turnId };

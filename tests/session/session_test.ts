@@ -2521,3 +2521,86 @@ describe("the agent's account (CHD-629)", () => {
       expect(told.at(-1)).toStrictEqual({ phase: 'heard', status: API_KEY });
     }));
 });
+
+describe("a sign-in worded from the agent's account (CHD-629, the owner's Q2 c)", () => {
+  test('a start refused for a login carries what the agent says of its account', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-signin-'));
+
+    try {
+      const failure = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--auth-required',
+          'bare',
+          '--auth-status',
+          'unauthenticated',
+        ),
+      }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+      expect(signInOf(failure)?.account).toStrictEqual({
+        phase: 'heard',
+        status: { state: 'unauthenticated' },
+      });
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('an account still unheard is waited for about a second at most, then the block is worded from nothing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-signin-'));
+    const began = performance.now();
+
+    try {
+      const failure = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--auth-required',
+          'bare',
+          '--auth-status',
+          'hang',
+        ),
+      }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+      expect(signInOf(failure)?.account).toStrictEqual({ phase: 'pending' });
+      expect(performance.now() - began).toBeLessThan(5000);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('a prompt refused for a login is a failed turn with its sign-in; the next prompt runs', () =>
+    withSession(
+      async (session) => {
+        const refused = await run(session, 'text');
+
+        expect(refused.result).toStrictEqual({
+          status: 'failed',
+          error: {
+            message: 'Authentication required',
+            code: '-32000',
+            signIn: {
+              message: 'Authentication required',
+              ways: [],
+              account: { phase: 'heard', status: { state: 'unauthenticated' } },
+            },
+          },
+        });
+        expect((await run(session, 'text')).result.status).toBe('completed');
+      },
+      undefined,
+      '--auth-required',
+      'prompt',
+      '--auth-status',
+      'unauthenticated',
+    ));
+});

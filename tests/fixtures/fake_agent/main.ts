@@ -1347,6 +1347,9 @@ function opened(
   };
 }
 
+/** The sessions `--auth-required prompt` refused a prompt of already. */
+const promptsRefused = new Set<string>();
+
 /** How many `session/options` requests the fake has heard. */
 let optionsAsked = 0;
 
@@ -1862,6 +1865,14 @@ const connection = acp
     },
   )
   .onRequest('session/prompt', async ({ params, client }) => {
+    // Signed out, the first prompt is refused; signed in elsewhere since, the
+    // next one runs.
+    if (AUTH_REQUIRED === 'prompt' && !promptsRefused.has(params.sessionId)) {
+      promptsRefused.add(params.sessionId);
+
+      throw acp.RequestError.authRequired();
+    }
+
     const gate = join(cwds.get(params.sessionId) ?? '.', '.fake-gate');
     const capture = join(gate, 'capture-prompt');
 

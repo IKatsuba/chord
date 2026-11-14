@@ -1,0 +1,40 @@
+   the prompt keeps its draft\n- Change 12: a turn can be resumed\n- Change 13: headlines wrap\n- Change 14: the box
+   scrolls\n- Change 15: tests run in parallel\n- Change 16: the prompt keeps its draft\n- Change 17: a turn can be
+   resumed\n- Change 18: headlines wrap\n- Change 19: the box scrolls\n- Change 20: tests run in parallel\n- Change 21:
+   the prompt keeps its draft\n- Change 22: a turn can be resumed\n- Change 23: headlines wrap\n- Change 24: the box
+   scrolls\n- Change 25: tests run in parallel\n- Change 26: the prompt keeps its draft\n- Change 27: a turn can be
+   resumed\n- Change 28: headlines wrap\n- Change 29: the box scrolls\n- Change 30: tests run in parallel\n", mode:
+   "overwrite")
+   ⎿  Failed
+   ⎿  Rejected mcp__files__write_file
+
+ ⏺ Permission: deny.
+
+ › multidiffask
+
+ ⏺ Update(files)
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (3s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Update files                                                                                                         │
+│                                                                                                                      │
+│ src/first.ts                                                                                                         │
+│   1 - old value                                                                                                      │
+│   1 + new value                                                                                                      │
+│ src/second.ts                                                                                                        │
+│   1 + created value                                                                                                  │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

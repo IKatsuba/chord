@@ -1,0 +1,40 @@
+      ┌─ sh ─[copy]─[run]─┐
+      │ bun quality       │
+      └───────────────────┘
+   2. Commit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from a
+      build that runs.
+
+   Then build the binary with:
+
+   ┌─ sh ───────────────────────────────────[copy]─[run]─┐
+   │ bun dev compile --all                               │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘
+
+ › markdownwrap
+
+ ⏺ A heading long enough that at eighty columns it has to wrap onto a second row of its own
+
+   - package.json:3: the package @chorded/chord at version 0.54.1 needs Bun 1.4.2 or newer. check runs check:static and
+     then the tests.
+     - a nested item long enough to wrap at eighty columns, whose wrapped lines should hang under its own text
+       1. deeper still, a numbered item that also runs past the edge of the window so its hang shows too
+   - a short item
+
+   │ A quote whose paragraph is long enough to wrap inside its bar at eighty columns, and at a hundred and twenty too,
+   │ once it runs on.
+
+   8. eight
+   9. nine
+   10. ten, with a two-digit marker and text long enough to wrap so the hang under a wider marker shows
+
+   [ ] open task
+   [x] done task
+
+   Soft break and a hard
+   break here.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

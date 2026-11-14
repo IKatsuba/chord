@@ -2085,6 +2085,89 @@ describe('CHD-454 tester: startup fixture wire boundaries', () => {
   }
 });
 
+describe('CHD-624 U1 tester: sign-in notification boundaries', () => {
+  test('notifications from concurrent sessions leave stderr empty and add no transcript update', () =>
+    withAgent([], async (agent, seen, cwd) => {
+      const sessions = await Promise.all([
+        agent.newSession({ cwd, mcpServers: [] }),
+        agent.newSession({ cwd, mcpServers: [] }),
+      ]);
+      const start = seen.all.length;
+      const answers = await Promise.all(
+        sessions.map(({ sessionId }) =>
+          agent.prompt({ sessionId, prompt: [text('authstatus')] }),
+        ),
+      );
+
+      expect(answers.map(({ stopReason }) => stopReason)).toEqual([
+        'end_turn',
+        'end_turn',
+      ]);
+
+      for (const method of ['_auth/status_update', 'auth/status_update']) {
+        expect(seen.notified(method)).toHaveLength(2);
+      }
+
+      const notices = seen.all
+        .slice(start)
+        .flatMap((traffic) =>
+          traffic.from === 'agent' &&
+          'method' in traffic.message &&
+          traffic.message.method === 'session/update'
+            ? [traffic.message.params as acp.SessionNotification]
+            : [],
+        );
+
+      for (const { sessionId } of sessions) {
+        expect(
+          notices
+            .filter(
+              (notice) =>
+                notice.sessionId === sessionId &&
+                notice.update.sessionUpdate !== 'available_commands_update' &&
+                notice.update.sessionUpdate !== 'usage_update',
+            )
+            .map(({ update }) => update),
+        ).toEqual([
+          {
+            sessionUpdate: 'agent_message_chunk',
+            content: { type: 'text', text: 'Sent the sign-in state.' },
+          },
+        ]);
+      }
+
+      await agent.close();
+      expect(seen.all.filter((traffic) => traffic.from === 'stderr')).toEqual(
+        [],
+      );
+      expect(await agent.exited).toEqual({ code: 0 });
+    }));
+
+  test('sign-in notifications still complete after a cancelled turn and leave the next prompt usable', () =>
+    withAgent([], async (agent, seen, cwd) => {
+      const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+      const running = agent.prompt({ sessionId, prompt: [text('slow')] });
+
+      running.catch(() => {});
+
+      await forkUntil(() => seen.said().startsWith('Working'));
+      await agent.cancel(sessionId);
+      expect((await running).stopReason).toBe('cancelled');
+      expect(
+        (await agent.prompt({ sessionId, prompt: [text('authstatus')] }))
+          .stopReason,
+      ).toBe('end_turn');
+      expect(
+        (await agent.prompt({ sessionId, prompt: [text('text')] })).stopReason,
+      ).toBe('end_turn');
+      expect(seen.said()).toContain('Hello, world.');
+      await agent.close();
+      expect(seen.all.filter((traffic) => traffic.from === 'stderr')).toEqual(
+        [],
+      );
+    }));
+});
+
 describe('CHD-101 U1 tester: fork request boundaries', () => {
   const requests = (seen: Seen, method: string) =>
     seen.all.flatMap((traffic) =>

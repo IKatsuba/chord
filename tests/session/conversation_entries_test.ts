@@ -3,7 +3,7 @@
  * opens (CHD-629, the owner's Q4 b), on a session of the test's own whose
  * options depend on its model.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type {
   InitialSessionConfigOption,
   SessionConfigOption,
@@ -121,4 +121,50 @@ test("a refused entry fails the start, worded as chord's own refused values are"
   expect(JSON.stringify(events)).toContain(
     'Could not start with extra on, set by the client: The agent holds it.',
   );
+});
+
+describe('CHD-629 tester: typed client entry handoff', () => {
+  test('boolean values stay typed and metadata stays whole when sent to the session', async () => {
+    let current = false;
+    const sent: InitialSessionConfigOption[] = [];
+    const entries: InitialSessionConfigOption[] = [
+      {
+        configId: 'toggle',
+        type: 'boolean',
+        value: true,
+        _meta: { 'example.com/opaque': { kept: [1, null] } },
+      },
+      { configId: 'toggle', type: 'boolean', value: false, _meta: null },
+    ];
+    const { session } = heldSession();
+    const events = await started(
+      {
+        ...session,
+        configOptions: () => [
+          {
+            id: 'toggle',
+            name: 'Toggle',
+            type: 'boolean',
+            currentValue: current,
+          },
+        ],
+        setConfigOption: (entry) => {
+          sent.push(entry);
+
+          current = entry.value === true;
+
+          return Promise.resolve();
+        },
+      },
+      entries,
+    );
+
+    expect(sent).toStrictEqual(entries);
+    expect(current).toBe(false);
+    expect(
+      events.some(
+        (event) => event.type === 'failed' || event.type === 'connect_failed',
+      ),
+    ).toBe(false);
+  });
 });

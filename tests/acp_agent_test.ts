@@ -679,6 +679,87 @@ describe("a client's initial configOptions (CHD-629, the owner's Q4 b)", () => {
     }));
 });
 
+describe('CHD-629 tester: client entry wire fidelity', () => {
+  const ENTRIES = [
+    {
+      configId: 'effort',
+      value: 'high',
+      _meta: {
+        'example.com/opaque': { kept: [1, null, false], text: 'as sent' },
+      },
+    },
+    {
+      configId: 'unlisted-boolean',
+      type: 'boolean',
+      value: false,
+      _meta: { 'example.com/drop': true },
+    },
+    { configId: 'model', value: 'fake-small', _meta: null },
+  ];
+
+  for (const flags of [[], ['--options', 'ignore']]) {
+    test(`read-back keeps client order and opaque metadata on the wire; unlisted boolean is dropped (${flags.join(' ') || 'no options capability'})`, () =>
+      onAcp(flags, async ({ client, cwd, prompt }) => {
+        const { result, error } = await client.request('session/new', {
+          cwd,
+          mcpServers: [],
+          configOptions: ENTRIES,
+        });
+
+        expect(error).toBeUndefined();
+
+        const sessionId = (result as { sessionId: string }).sessionId;
+
+        await client.answerTo(prompt(sessionId, 'configsheard'));
+
+        const heard = JSON.parse(
+          client.said(sessionId).replace(/^```json\n|\n```$/g, ''),
+        );
+
+        expect(heard).toEqual(
+          ENTRIES.filter((entry) => entry.configId !== 'unlisted-boolean').map(
+            (entry) => ({ ...entry, sessionId }),
+          ),
+        );
+      }));
+  }
+
+  test('session/new forwards the original entries with metadata and the unlisted typed entry intact', () =>
+    onAcp(['--options', 'apply'], async ({ client, cwd, prompt }) => {
+      const { result, error } = await client.request('session/new', {
+        cwd,
+        mcpServers: [],
+        configOptions: ENTRIES,
+      });
+
+      expect(error).toBeUndefined();
+
+      const sessionId = (result as { sessionId: string }).sessionId;
+
+      await client.answerTo(prompt(sessionId, 'opened'));
+
+      const opened = JSON.parse(
+        client.said(sessionId).replace(/^```json\n|\n```$/g, ''),
+      );
+
+      expect(opened.configOptions).toEqual(ENTRIES);
+    }));
+
+  test('a refused client read-back fails session/new and leaves a later start usable', () =>
+    onAcp(['--refuse-config'], async ({ client, cwd, newSession }) => {
+      const { result, error } = await client.request('session/new', {
+        cwd,
+        mcpServers: [],
+        configOptions: [{ configId: 'effort', value: 'high' }],
+      });
+
+      expect(result).toBeUndefined();
+      expect(error?.code).toBe(-32603);
+      expect(error?.message).toContain('The fake agent holds its effort.');
+      expect(await newSession()).toBeString();
+    }));
+});
+
 describe('notices (CHD-629)', () => {
   test("a client that declares notices gets the agent's notice as it came", () =>
     onAcp([], async ({ client, newSession, prompt }) => {

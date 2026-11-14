@@ -1,5 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import type { InitializeResponse } from '@agentclientprotocol/sdk/unstable';
+import type {
+  InitialSessionConfigOption,
+  InitializeResponse,
+} from '@agentclientprotocol/sdk/unstable';
 import {
   initialEntries,
   initialValuesOf,
@@ -94,6 +97,29 @@ describe('CHD-629 tester: initial option table boundaries', () => {
         ALL,
       ),
     ).toStrictEqual([]);
+  });
+});
+
+describe('CHD-629 tester: client entry fidelity', () => {
+  test('an unknown adapter receives the client sequence with typed values and metadata intact', () => {
+    const entries: InitialSessionConfigOption[] = [
+      {
+        configId: 'opaque',
+        type: 'boolean',
+        value: false,
+        _meta: { 'example.com/value': { nullable: null, list: [1, 'x'] } },
+      },
+      { configId: 'model', value: 'first', _meta: null },
+      { configId: 'model', value: 'second' },
+    ];
+
+    expect(
+      initialEntries(init('unknown-adapter', true), { ...ALL, entries }),
+    ).toStrictEqual(entries);
+    expect(
+      initialEntries(init('unknown-adapter', false), { entries }),
+    ).toStrictEqual([]);
+    expect(initialValuesOf({ entries })).toStrictEqual({ entries });
   });
 });
 

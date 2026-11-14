@@ -104,7 +104,7 @@
   `longheld`, `turnfailed`,
   `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
-  `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
+  `mcp`, `opened`, `configsheard`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
   `strangerform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
@@ -345,6 +345,8 @@
   then holds until cancelled. `--first-message <text>`
   (`CHORD_FAKE_FIRST_MESSAGE`) sends an agent message with its own id
   before each `session/new` answer, without starting a turn.
+  `configsheard` answers with JSON of every `session/set_config_option`
+  request the session received, as it came over the wire (CHD-629).
   `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
   advertises `sessionCapabilities.title` and stores a `session/set_title`
   title trimmed, its whitespace folded and cut at 80: `echo` sends it in a

@@ -42,6 +42,12 @@ export const AVAILABLE_MODES: acp.SessionMode[] = [
   ...(BYPASS_MODE ? [{ id: 'bypassPermissions', name: 'Bypass' }] : []),
 ];
 
+/**
+ * Each `session/set_config_option` request a session received, as it came,
+ * which `configsheard` answers with (CHD-629).
+ */
+export const configsHeard = new Map<string, unknown[]>();
+
 /** Each session's mode. */
 export const modes = new Map<string, string>();
 /** Each session's model, once one was asked for. */

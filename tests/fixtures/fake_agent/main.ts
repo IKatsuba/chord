@@ -359,6 +359,7 @@ import {
   AVAILABLE_MODELS,
   AVAILABLE_MODES,
   configNameOf,
+  configsHeard,
   configOptions,
   cwds,
   efforts,
@@ -490,6 +491,7 @@ const SCENARIOS = [
   'lock',
   'mcp',
   'opened',
+  'configsheard',
   'form',
   'link',
   'askclaude',
@@ -1819,9 +1821,14 @@ const connection = acp
   })
   // A model, a mode or an effort is chosen through its config option, and the
   // answer carries every option as it now stands, as ACP asks.
-  .onRequest('session/set_config_option', ({ params, client }) =>
-    setConfig(client, params),
-  )
+  .onRequest('session/set_config_option', ({ params, client }) => {
+    configsHeard.set(params.sessionId, [
+      ...(configsHeard.get(params.sessionId) ?? []),
+      params,
+    ]);
+
+    return setConfig(client, params);
+  })
   // The older way to pick a model, which Claude's adapter still answers.
   .onRequest(
     'session/set_model',

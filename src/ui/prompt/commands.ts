@@ -20,6 +20,7 @@ export type ChordCommand =
   | 'mcp'
   | 'model'
   | 'new'
+  | 'rename'
   | 'resume'
   | 'status'
   | 'team'
@@ -88,6 +89,11 @@ const CHORD_COMMANDS: readonly (CommandItem & { name: ChordCommand })[] = [
   {
     name: 'new',
     description: 'Open a new agent beside main and go to it; --name names it',
+    owner: 'chord',
+  },
+  {
+    name: 'rename',
+    description: "Rename this session; the agent's own title may replace it",
     owner: 'chord',
   },
   {

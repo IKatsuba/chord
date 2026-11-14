@@ -45,6 +45,7 @@ test("the list is chord's commands and the agent's, by name", () => {
     'mcp',
     'model',
     'new',
+    'rename',
     'resume',
     'review',
     'status',
@@ -78,6 +79,7 @@ test("the list is chord's commands and the agent's, by name", () => {
     'mcp',
     'model',
     'new',
+    'rename',
     'resume',
     'status',
     'team',
@@ -461,4 +463,18 @@ describe('CHD-621 tester: generic offered-agent boundaries', () => {
       ),
     ).toStrictEqual(['beta', 'alpha']);
   });
+});
+
+test("chord's /rename is the one listed, an agent's rename left out, as for any clash (CHD-629)", () => {
+  const items = commandItems([
+    { name: 'rename', description: "The agent's own rename" },
+  ]);
+
+  expect(items.filter(({ name }) => name === 'rename')).toStrictEqual([
+    {
+      name: 'rename',
+      description: "Rename this session; the agent's own title may replace it",
+      owner: 'chord',
+    },
+  ]);
 });

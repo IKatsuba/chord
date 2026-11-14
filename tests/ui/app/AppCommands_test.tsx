@@ -430,3 +430,48 @@ describe('CHD-621 tester: sign-in commands reach the agent', () => {
     }
   }
 });
+
+describe('/rename (CHD-629)', () => {
+  test("names the session in front: how with no title, then the agent's title once it took it", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'text');
+        await window.shows('This reply came in chunks.');
+
+        expect(await reported(window, '/rename')).toContain(
+          '⎿  Name the session: /rename <title>',
+        );
+
+        await window.type('/rename Parser test tidy-up');
+        await window.press('\r');
+        await window.shows('⎿  Renamed to Parser test tidy-up');
+
+        expect(await reported(window, '/rename')).toContain(
+          'Name the session: /rename <title>. Now: Parser test tidy-up',
+        );
+      },
+      { agentCommand: fakeAgentCommand(undefined, '--set-title', 'echo') },
+    ));
+
+  test("a refusal is an error note in the agent's words; an agent that takes no title is renamed in chord only", async () => {
+    await withWindow(
+      async (window) => {
+        await window.shows('Fake Large with a 1M context window');
+        await window.type('/rename Parser test tidy-up');
+        await window.press('\r');
+        await window.shows(
+          'Could not rename: fake refused it: This version of the fake agent cannot rename a session.',
+        );
+      },
+      { agentCommand: fakeAgentCommand(undefined, '--set-title', 'refuse') },
+    );
+    await withWindow(async (window) => {
+      await window.shows('Fake Large with a 1M context window');
+      await window.type('/rename Parser test tidy-up');
+      await window.press('\r');
+      await window.shows(
+        'Renamed to Parser test tidy-up in chord only: fake takes no title, and its own may replace it',
+      );
+    });
+  });
+});

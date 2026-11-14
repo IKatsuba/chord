@@ -13,7 +13,15 @@ export interface InitialValues {
   readonly model?: string | undefined;
   readonly effort?: string | undefined;
   readonly mode?: string | undefined;
+  /**
+   * A `chord acp` client's own initial `configOptions`, passed down as sent
+   * and beating chord's value for the same id (the owner's Q4 b).
+   */
+  readonly entries?: readonly InitialSessionConfigOption[] | undefined;
 }
+
+/** The three values the table names, in the order their entries go. */
+type Valued = 'model' | 'effort' | 'mode';
 
 /**
  * The config ids an adapter takes as initial `configOptions` (CHD-629), by
@@ -25,7 +33,7 @@ export interface InitialValues {
  */
 const INITIAL_CONFIG_IDS: ReadonlyMap<
   string,
-  Readonly<Record<keyof InitialValues, string>>
+  Readonly<Record<Valued, string>>
 > = new Map([
   [
     '@agentclientprotocol/claude-agent-acp',
@@ -37,9 +45,11 @@ const INITIAL_CONFIG_IDS: ReadonlyMap<
 const ORDER = ['model', 'effort', 'mode'] as const;
 
 /**
- * `session/new`'s initial entries for `values`: one per value named, model,
- * effort, mode, only where the agent advertises `sessionCapabilities.options`
- * and the table knows it; none otherwise. chord adds no value of its own.
+ * `session/new`'s initial entries for `values`, only where the agent
+ * advertises `sessionCapabilities.options`: one per value named, model,
+ * effort, mode, where the table knows the agent, then a client's entries as
+ * it sent them, which take the place of chord's for the same id. chord adds
+ * no value of its own.
  */
 export function initialEntries(
   init: InitializeResponse,
@@ -50,18 +60,21 @@ export function initialEntries(
       ? undefined
       : INITIAL_CONFIG_IDS.get(init.agentInfo.name);
 
-  if (
-    ids === undefined ||
-    !init.agentCapabilities?.sessionCapabilities?.options
-  ) {
+  if (!init.agentCapabilities?.sessionCapabilities?.options) {
     return [];
   }
 
-  return ORDER.flatMap((key) => {
+  const sent = values.entries ?? [];
+  const taken = new Set(sent.map((entry) => entry.configId));
+  const own = ORDER.flatMap((key) => {
     const value = values[key];
 
-    return value === undefined ? [] : [{ configId: ids[key], value }];
+    return ids === undefined || value === undefined || taken.has(ids[key])
+      ? []
+      : [{ configId: ids[key], value }];
   });
+
+  return [...own, ...sent];
 }
 
 /** A starting value as chord holds it, by the agent's id. */
@@ -74,8 +87,10 @@ export function initialValuesOf(starting: {
   readonly model?: Named | undefined;
   readonly effort?: Named | undefined;
   readonly mode?: Named | undefined;
+  readonly entries?: readonly InitialSessionConfigOption[] | undefined;
 }): InitialValues {
   return {
+    ...(starting.entries === undefined ? {} : { entries: starting.entries }),
     ...(starting.model === undefined ? {} : { model: starting.model.id }),
     ...(starting.effort === undefined ? {} : { effort: starting.effort.id }),
     ...(starting.mode === undefined ? {} : { mode: starting.mode.id }),

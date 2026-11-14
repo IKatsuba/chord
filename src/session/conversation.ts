@@ -1,5 +1,6 @@
 import type {
   AvailableCommand,
+  InitialSessionConfigOption,
   SessionConfigOption,
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
@@ -304,6 +305,12 @@ export interface Starting {
    * on the agent's own.
    */
   readonly effort?: StartingValue | undefined;
+  /**
+   * A `chord acp` client's initial `configOptions` for main, sent down as
+   * they came where the agent takes them, and read back by their own ids
+   * after the values above (the owner's Q4 b).
+   */
+  readonly entries?: readonly InitialSessionConfigOption[] | undefined;
 }
 
 /** A prompt to send: what the transcript shows, and what the agent gets. */
@@ -3355,7 +3362,15 @@ export class Conversation {
    * start, which an effort's never does.
    */
   async #applyStarting(session: Session): Promise<void> {
-    const { model, mode, effort } = this.#starting;
+    const { model, mode, effort, entries = [] } = this.#starting;
+    // A client's entry beats chord's value for the same option.
+    const sent = (category: string) => {
+      const id = session
+        .configOptions()
+        .find((option) => option.category === category)?.id;
+
+      return id !== undefined && entries.some((entry) => entry.configId === id);
+    };
 
     // Its turn in the chain can come after a clear or a close retired it.
     if (!this.#current(session)) {
@@ -3365,7 +3380,7 @@ export class Conversation {
     this.#effortRefused = undefined;
 
     const asks: StartingAsk[] = [
-      ...(model === undefined
+      ...(model === undefined || sent('model')
         ? []
         : [
             {
@@ -3377,7 +3392,7 @@ export class Conversation {
               ask: () => session.setModel(model.id),
             },
           ]),
-      ...(effort === undefined
+      ...(effort === undefined || sent('thought_level')
         ? []
         : [
             {
@@ -3390,7 +3405,7 @@ export class Conversation {
               ask: () => session.setEffort(effort.id),
             },
           ]),
-      ...(mode === undefined
+      ...(mode === undefined || sent('mode')
         ? []
         : [
             {
@@ -3403,6 +3418,30 @@ export class Conversation {
               ask: () => session.setMode(mode.id),
             },
           ]),
+      // An id the session does not list is dropped: nothing is mapped.
+      ...entries.flatMap(({ configId, value }): StartingAsk[] => {
+        const listed = () =>
+          session.configOptions().find((option) => option.id === configId);
+
+        return listed() === undefined
+          ? []
+          : [
+              {
+                value: { id: String(value), from: 'set by the client' },
+                what: `with ${configId} ${String(value)}`,
+                kind: 'values',
+                offered: () => Promise.resolve(undefined),
+                current: () => {
+                  const option = listed();
+
+                  return option === undefined
+                    ? undefined
+                    : String(option.currentValue);
+                },
+                ask: () => session.setOption(configId, String(value)),
+              },
+            ];
+      }),
     ];
 
     for (const ask of asks) {

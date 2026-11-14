@@ -5,7 +5,10 @@
  * the window turns that into the actions it dispatches, each as it comes.
  */
 import { relative } from 'node:path';
-import type { McpServer } from '@agentclientprotocol/sdk/unstable';
+import type {
+  InitialSessionConfigOption,
+  McpServer,
+} from '@agentclientprotocol/sdk/unstable';
 import { agentNameProblem } from '../agent_name.ts';
 import type { Wait } from '../notify.ts';
 import { Runtimes, sessionProbe } from '../server/runtimes.ts';
@@ -131,6 +134,11 @@ export interface AgentsHostOptions {
    * named, and children take the settings' only.
    */
   readonly mainServers?: readonly McpServer[];
+  /**
+   * A client's initial `configOptions` for main alone: children and team
+   * members keep chord's values (CHD-629, the owner's Q4 b).
+   */
+  readonly mainEntries?: readonly InitialSessionConfigOption[];
   /** One claim among hosts that ask one person; none is this host's own. */
   readonly settingsBox?: ReturnType<typeof settingsBoxClaim>;
 }
@@ -277,6 +285,7 @@ export function createAgentsHost(
     resources,
     resume,
     mainServers,
+    mainEntries,
     settingsBox = settingsBoxClaim(),
   }: AgentsHostOptions,
   port: AgentsPort,
@@ -2473,7 +2482,9 @@ export function createAgentsHost(
         emit(event);
       },
       Date.now,
-      starting,
+      mainEntries === undefined
+        ? starting
+        : { ...starting, entries: mainEntries },
       new FileRecording(stateDir ?? chordStateDir(), (message) =>
         emit({
           type: 'failed',

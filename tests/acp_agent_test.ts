@@ -607,6 +607,78 @@ describe('one surface', () => {
     ));
 });
 
+describe("a client's initial configOptions (CHD-629, the owner's Q4 b)", () => {
+  const ENTRIES = [
+    { configId: 'model', value: 'fake-small' },
+    { configId: 'nope', value: 'x' },
+  ];
+
+  /** The session/new answer's current value of option `id`. */
+  const currentOf = (result: unknown, id: string) =>
+    (
+      result as { configOptions?: { id: string; currentValue: unknown }[] }
+    ).configOptions?.find((option) => option.id === id)?.currentValue;
+
+  const openedOn = async (
+    client: AcpClient,
+    cwd: string,
+  ): Promise<{ result: unknown; opened: Record<string, unknown> }> => {
+    const { result, error } = await client.request('session/new', {
+      cwd,
+      mcpServers: [],
+      configOptions: ENTRIES,
+    });
+
+    expect(error).toBeUndefined();
+
+    const sessionId = (result as { sessionId: string }).sessionId;
+
+    await client.answerTo(
+      client.send('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text: 'opened' }],
+      }),
+    );
+
+    return {
+      result,
+      opened: JSON.parse(
+        client.said(sessionId).replace(/^```json\n|\n```$/g, ''),
+      ) as Record<string, unknown>,
+    };
+  };
+
+  test('go down as sent where the agent takes options, an id it does not know too', () =>
+    onAcp(
+      ['--adapter', 'claude', '--options', 'apply'],
+      async ({ client, cwd }) => {
+        const { result, opened } = await openedOn(client, cwd);
+
+        expect(opened.configOptions).toEqual(ENTRIES);
+        expect(currentOf(result, 'model')).toBe('fake-small');
+      },
+    ));
+
+  test('are read back by their ids: one the agent skipped is set after, one the session does not list is dropped', () =>
+    onAcp(
+      ['--adapter', 'claude', '--options', 'ignore'],
+      async ({ client, cwd, lines }) => {
+        const { result } = await openedOn(client, cwd);
+
+        expect(currentOf(result, 'model')).toBe('fake-small');
+        expect(lines.filter((line) => line.includes('nope'))).toEqual([]);
+      },
+    ));
+
+  test('go nowhere on session/new where the agent does not take options, and are set after it opens', () =>
+    onAcp([], async ({ client, cwd }) => {
+      const { result, opened } = await openedOn(client, cwd);
+
+      expect(opened).not.toHaveProperty('configOptions');
+      expect(currentOf(result, 'model')).toBe('fake-small');
+    }));
+});
+
 describe('notices (CHD-629)', () => {
   test("a client that declares notices gets the agent's notice as it came", () =>
     onAcp([], async ({ client, newSession, prompt }) => {

@@ -96,3 +96,22 @@ describe('CHD-629 tester: initial option table boundaries', () => {
     ).toStrictEqual([]);
   });
 });
+
+test("a client's entries go after chord's, as sent, and take the place of chord's for the same id (the owner's Q4 b)", () => {
+  const entries = [
+    { configId: 'effort', value: 'max' },
+    { configId: 'nope', value: 'x' },
+  ];
+
+  expect(initialEntries(init(CLAUDE, true), { ...ALL, entries })).toStrictEqual(
+    [
+      { configId: 'model', value: 'opus' },
+      { configId: 'mode', value: 'plan' },
+      ...entries,
+    ],
+  );
+  expect(
+    initialEntries(init('codex-acp', true), { ...ALL, entries }),
+  ).toStrictEqual(entries);
+  expect(initialEntries(init(CLAUDE, false), { entries })).toStrictEqual([]);
+});

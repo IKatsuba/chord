@@ -7,6 +7,7 @@ import {
   type AgentConnection,
   type ClientCapabilities,
   type CreateElicitationResponse,
+  type InitialSessionConfigOption,
   type JsonRpcId,
   type LoadSessionRequest,
   type LoadSessionResponse,
@@ -1184,6 +1185,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     cwd: string,
     servers: readonly McpServer[],
     resume?: { readonly from: Resume; readonly replays: boolean },
+    configOptions?: readonly InitialSessionConfigOption[],
   ): Entry => {
     starts += 1;
 
@@ -1209,6 +1211,9 @@ export function runAcp(options: AcpOptions): AcpRun {
         resources: options.resources?.read,
         resume: resume?.from,
         mainServers: servers,
+        ...(configOptions === undefined || configOptions.length === 0
+          ? {}
+          : { mainEntries: configOptions }),
         settingsBox,
       },
       {
@@ -1820,7 +1825,17 @@ export function runAcp(options: AcpOptions): AcpRun {
 
         const { place, servers } = await placed(params, signal);
 
-        return up(openEntry(place, params.cwd, servers), requestId, signal);
+        return up(
+          openEntry(
+            place,
+            params.cwd,
+            servers,
+            undefined,
+            params.configOptions ?? undefined,
+          ),
+          requestId,
+          signal,
+        );
       },
       listSessions: async ({ cwd }) => ({
         sessions: earlierSessions(await readRecords(options.stateDir), {

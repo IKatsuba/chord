@@ -1458,3 +1458,114 @@ describe('CHD-624 U2 tester: idle compaction interruption boundaries', () => {
       ).toEqual([]);
     }));
 });
+
+describe('notices (CHD-629)', () => {
+  const notices = (events: readonly ConversationEvent[]) =>
+    events.flatMap((event) =>
+      event.type === 'update' && event.update.sessionUpdate === 'notice'
+        ? [event.update.title]
+        : [],
+    );
+
+  test("Claude's notice after its turn, with no request open, opens no cycle", () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('noticeidle');
+      await until(() => notices(events).length === 1);
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      expect(notices(events)).toStrictEqual(['Auto mode unavailable']);
+      expect(events.some((event) => event.type === 'cycle_started')).toBe(
+        false,
+      );
+    }));
+
+  test('a notice before any turn is held until the session is up and heard before the first prompt', () =>
+    onFake(['--start-notice', 'MCP server "x" failed to start'], (_, events) =>
+      until(() => notices(events).length === 1).then(() => {
+        expect(events.some((event) => event.type === 'prompt')).toBe(false);
+      }),
+    ));
+
+  test('an open that does not declare notices gets the bold text as reply text, as before', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+    const events: ConversationEvent[] = [];
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(),
+          notices: false,
+        }),
+      (event) => events.push(event),
+    );
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      conversation.send('notice');
+      await until(() => events.some((event) => event.type === 'result'));
+
+      expect(notices(events)).toStrictEqual([]);
+      expect(saidIn(events)).toContain('> **Fast mode turned off**\n> Rate');
+    } finally {
+      await conversation.close();
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('a notice is recorded as any update and drawn again from the record on resume', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+    const stateDir = join(dir, 'state');
+    const opened = async (resume?: Resume) => {
+      const events: ConversationEvent[] = [];
+      const recording = new FileRecording(stateDir, () => {});
+
+      const conversation = new Conversation(
+        () =>
+          openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(),
+            ...(resume === undefined ? {} : { resume }),
+          }),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        recording,
+      );
+
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+
+      return { conversation, events, recording };
+    };
+
+    try {
+      const live = await opened();
+
+      live.conversation.send('notice');
+      await until(() => live.events.some((event) => event.type === 'result'));
+      await live.conversation.close();
+      await live.recording.flushed();
+
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const resumed = await opened({
+        sessionId: record.sessionId,
+        cwd: dir,
+        record: record.path,
+      });
+
+      try {
+        expect(notices(resumed.events)).toStrictEqual(['Fast mode turned off']);
+      } finally {
+        await resumed.conversation.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});

@@ -523,6 +523,17 @@ export const TRACEBACK_ERROR =
   "ImportError: cannot import name 'AuthMethod' from 'acp.schema'";
 
 /**
+ * `--start-notice <text>` (`CHORD_FAKE_START_NOTICE`): every `session/new`
+ * sends a `warning` notice titled `text` before its answer, as Claude's
+ * adapter says an MCP server failed to start; as its bold blockquote to a
+ * client that did not declare notices (CHD-629).
+ */
+export const START_NOTICE = valueOf(
+  '--start-notice',
+  'CHORD_FAKE_START_NOTICE',
+);
+
+/**
  * `--first-message <text>` (`CHORD_FAKE_FIRST_MESSAGE`): every `session/new`
  * sends an agent message with `text`, an id of its own, before its answer,
  * as cursor-cloud says where its agent runs (CHD-622).

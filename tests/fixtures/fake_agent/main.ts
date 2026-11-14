@@ -280,6 +280,7 @@ import {
   ARGS,
   AUTH_REQUIRED,
   FIRST_MESSAGE,
+  START_NOTICE,
   HANG,
   RESEND_CONFIG,
   CONFIG_IN_RESPONSES,
@@ -334,6 +335,7 @@ import { FX } from './scenarios/fx.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
 import { MODES } from './scenarios/modes.ts';
+import { NOTICES, noticeUpdate } from './scenarios/notices.ts';
 import { PERMISSIONS } from './scenarios/permissions.ts';
 import { REVIEW_PERMISSIONS } from './scenarios/review_permissions.ts';
 import { PLANS } from './scenarios/plans.ts';
@@ -393,6 +395,8 @@ const SCENARIOS = [
   'guardian',
   'guardiangated',
   'text',
+  'notice',
+  'noticeidle',
   'cloudrequest',
   'texttillsteered',
   'texttillsteeredheld',
@@ -782,6 +786,7 @@ const PLAY: Record<Scenario, Play> = {
   ...COMPACTION,
   ...IDLE_COMPACTION,
   ...MODES,
+  ...NOTICES,
   ...SUBAGENTS,
   ...MISBEHAVING,
   ...FX,
@@ -1448,6 +1453,13 @@ const connection = acp
           messageId: crypto.randomUUID(),
           content: { type: 'text', text: FIRST_MESSAGE },
         },
+      });
+    }
+
+    if (START_NOTICE !== undefined) {
+      await client.notify('session/update', {
+        sessionId,
+        update: noticeUpdate({ severity: 'warning', title: START_NOTICE }),
       });
     }
 

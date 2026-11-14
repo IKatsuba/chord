@@ -25,6 +25,12 @@ export let clientTakesCompaction = false;
  */
 export let clientTakesSubagents = false;
 
+/**
+ * Whether the client said at `initialize` that it presents notices, as both
+ * adapters read `clientCapabilities.session.notices` (CHD-629).
+ */
+export let clientTakesNotices = false;
+
 /** Takes what the client declared in `initialize`. */
 export function readCapabilities(params: acp.InitializeRequest): void {
   const meta = params.clientCapabilities?._meta;
@@ -38,6 +44,9 @@ export function readCapabilities(params: acp.InitializeRequest): void {
   clientTakesCompaction =
     typeof params.clientCapabilities?.session?.compaction === 'object' &&
     params.clientCapabilities.session.compaction !== null;
+  clientTakesNotices =
+    typeof params.clientCapabilities?.session?.notices === 'object' &&
+    params.clientCapabilities.session.notices !== null;
   clientTerminalOutput =
     meta?.terminal_output_delta === true
       ? 'delta'

@@ -409,6 +409,9 @@ export interface Subagent {
   readonly callId?: string;
 }
 
+/** The severities a notice draws by; any other word reads `info`. */
+export type NoticeSeverity = 'info' | 'warning' | 'error';
+
 /** One block in the transcript, in the order it first appeared. */
 export type Entry =
   | { readonly kind: 'user'; readonly turnId: string; readonly text: string }
@@ -487,6 +490,14 @@ export type Entry =
       readonly kind: 'warning';
       readonly turnId: string;
       readonly message: string;
+    }
+  | {
+      /** An agent's `notice`, its severity one chord draws (CHD-629). */
+      readonly kind: 'notice';
+      readonly turnId: string;
+      readonly severity: NoticeSeverity;
+      readonly title: string;
+      readonly description?: string;
     }
   | { readonly kind: 'cancelled'; readonly turnId: string }
   | {

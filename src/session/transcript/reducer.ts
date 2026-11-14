@@ -12,6 +12,7 @@ import { filledIn } from '../enrich.ts';
 import { awaitedCall, replacedCall, served } from './chord.ts';
 import { mergeCompaction } from './compactions.ts';
 import { appendText } from './messages.ts';
+import { addNotice } from './notices.ts';
 import {
   elicitationRequested,
   elicitationSettled,
@@ -359,6 +360,8 @@ function applyUpdate(
 
       return { ...rest, plan: update.entries ?? state.plan };
     }
+    case 'notice':
+      return addNotice(state, turnId, update);
     case 'compaction_update':
     case 'compaction_summary_chunk':
       return mergeCompaction(state, turnId, update, unasked);

@@ -411,6 +411,7 @@ const SCENARIOS = [
   'titledlater',
   'authchanged',
   'subagentlinked',
+  'subagentgrandlinked',
   'subagentstranger',
   'cloudrequest',
   'texttillsteered',

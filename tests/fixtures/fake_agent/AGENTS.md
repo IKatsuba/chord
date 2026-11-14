@@ -34,7 +34,7 @@
   `notices.ts` (`notice`, `noticeidle`, `noticelong`),
   `titles.ts` (`titledlater`),
   `accounts.ts` (`authchanged`),
-  `links.ts` (`subagentlinked`, `subagentstranger`),
+  `links.ts` (`subagentlinked`, `subagentgrandlinked`, `subagentstranger`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`,
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -101,7 +101,7 @@
   `codexcompact`,
   `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
   `notice`, `noticeidle`, `noticelong`, `titledlater`, `authchanged`,
-  `subagentlinked`, `subagentstranger`,
+  `subagentlinked`, `subagentgrandlinked`, `subagentstranger`,
   `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
   `longheld`, `turnfailed`,
@@ -366,6 +366,9 @@
   `subagentlinked` announces a child, then a running TaskStop whose content
   is only a reference to it (`{type: "session"}`), completed with text and
   the reference twice, and a SendMessage of only the reference, failed;
+  `subagentgrandlinked` announces a child that announces a grandchild, then
+  a TaskStop of only a reference to the grandchild, running until
+  `<cwd>/.fake-gate/release` exists (at most 10 s), then completed;
   `subagentstranger` refers to a session never announced (CHD-629).
   `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
   advertises `sessionCapabilities.title` and stores a `session/set_title`

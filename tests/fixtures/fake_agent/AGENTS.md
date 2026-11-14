@@ -353,7 +353,8 @@
   `session_info_update`, then answers it; `silent` only answers; `refuse`
   refuses -32600; `hang` answers as `echo` once
   `<cwd>/.fake-gate/release` exists (at most 10 s). An empty title is
-  -32602. `titledlater` says a line, then once the gate is released sends a
+  -32602. Each request's title goes on a line of
+  `<cwd>/.fake-gate/titles-heard` as it arrives. `titledlater` says a line, then once the gate is released sends a
   `session_info_update` with a title of its own (CHD-629).
   `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`) offers `auto`, opens
   every session in it, and on `fake-small` takes `auto` as `acceptEdits`

@@ -16,6 +16,7 @@ import { readRecords } from '../../src/session/sessions.ts';
 import { openSession } from '../../src/session/session.ts';
 import { agentMessageOf } from '../../src/session/starting.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { TITLES_HEARD } from '../fixtures/fake_agent/scenarios/titles.ts';
 import { until } from './conversation_fake.ts';
 
 /**
@@ -89,6 +90,27 @@ async function renaming(
   }
 }
 
+/** The titles whose `session/set_title` reached the fake, in order. */
+async function heard(dir: string): Promise<string[]> {
+  const text = await readFile(
+    join(dir, '.fake-gate', TITLES_HEARD),
+    'utf8',
+  ).catch(() => '');
+
+  return text.split('\n').filter((line) => line !== '');
+}
+
+/** Until the fake has heard `count` titles. */
+async function hearing(dir: string, count: number): Promise<void> {
+  let titles: string[] = [];
+
+  await until(() => {
+    void heard(dir).then((now) => (titles = now));
+
+    return titles.length >= count;
+  });
+}
+
 /** Opens `dir`'s fake gate, which `--set-title hang` waits on. */
 async function release(dir: string): Promise<void> {
   await mkdir(join(dir, '.fake-gate'), { recursive: true });
@@ -146,13 +168,22 @@ describe('a rename (CHD-629)', () => {
       ]);
     }));
 
-  test('two renames go one at a time, in order, and the second holds', () =>
+  test('two renames go one at a time, in order, the second off the wire until the first is answered, and the second holds', () =>
     renaming(['--set-title', 'hang'], async ({ conversation, dir, lines }) => {
       const first = conversation.rename('First');
+
+      await hearing(dir, 1);
+
       const second = conversation.rename('Second');
+
+      // Its turn in the chain comes only once the first's answer has.
+      await new Promise((resolve) => setTimeout(resolve));
+      expect(await heard(dir)).toStrictEqual(['First']);
 
       await release(dir);
       await Promise.all([first, second]);
+
+      expect(await heard(dir)).toStrictEqual(['First', 'Second']);
 
       expect(conversation.title).toBe('Second');
       expect(await lines('renamed')).toStrictEqual([
@@ -165,11 +196,30 @@ describe('a rename (CHD-629)', () => {
     renaming(['--set-title', 'hang'], async ({ conversation, dir, lines }) => {
       const renamed = conversation.rename('Fix the parser');
 
+      // The request is with the agent, not waiting in chord.
+      await hearing(dir, 1);
       await conversation.clear();
       await release(dir);
 
       expect(await renamed).toBeUndefined();
       expect(conversation.title).toBeUndefined();
+      expect(await lines('renamed')).toStrictEqual([]);
+    }));
+
+  test('a rename still queued when /clear comes is never sent', () =>
+    renaming(['--set-title', 'hang'], async ({ conversation, dir, lines }) => {
+      const first = conversation.rename('First');
+
+      await hearing(dir, 1);
+
+      const queued = conversation.rename('Queued');
+
+      await conversation.clear();
+      await release(dir);
+
+      expect(await first).toBeUndefined();
+      expect(await queued).toBeUndefined();
+      expect(await heard(dir)).toStrictEqual(['First']);
       expect(await lines('renamed')).toStrictEqual([]);
     }));
 

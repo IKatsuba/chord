@@ -5,6 +5,7 @@
  * of the agent's own that comes later and takes over.
  */
 import { existsSync } from 'node:fs';
+import { appendFile, mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import * as acp from '@agentclientprotocol/sdk/unstable';
 import { SET_TITLE } from '../options.ts';
@@ -18,12 +19,21 @@ const TITLE_CUT = 80;
 /** The title the agent gives the session of its own in `titledlater`. */
 export const LATER_TITLE = 'Tidy the parser tests';
 
-/** Until the session's gate is released, or 10 s, or the client goes. */
+/**
+ * The file in the session's gate each `session/set_title` request's title
+ * goes into, a line each, as it arrives: a test sees what reached the agent.
+ */
+export const TITLES_HEARD = 'titles-heard';
+
+/**
+ * Until the session's gate is released, or 10 s on the monotonic clock, or
+ * the client goes.
+ */
 async function released(sessionId: string): Promise<void> {
   const at = join(cwds.get(sessionId) ?? '.', GATE, GATE_RELEASE);
-  const deadline = Date.now() + 10_000;
+  const deadline = performance.now() + 10_000;
 
-  while (!existsSync(at) && Date.now() < deadline) {
+  while (!existsSync(at) && performance.now() < deadline) {
     await pause(lifetime.signal);
   }
 }
@@ -39,6 +49,11 @@ export async function setTitle(
   client: Client,
   params: acp.SetSessionTitleRequest,
 ): Promise<acp.SetSessionTitleResponse> {
+  const gate = join(cwds.get(params.sessionId) ?? '.', GATE);
+
+  await mkdir(gate, { recursive: true });
+  await appendFile(join(gate, TITLES_HEARD), `${params.title}\n`);
+
   const title = params.title.replaceAll(/\s+/g, ' ').trim().slice(0, TITLE_CUT);
 
   if (title === '') {

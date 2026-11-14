@@ -119,8 +119,8 @@ Claude Code; see
 ### Pick up where you left off
 
 `chord --resume` opens a title page listing earlier sessions by the agent's
-title, or the first prompt if untitled. Inside a session, `/resume` opens
-the list. When you quit, chord prints the command to bring main back.
+title, or the first prompt if untitled. `/rename <title>` changes the
+session title; `/resume` opens the list. Quitting prints main's resume command.
 
 <img src="docs/images/resume.png" alt="The chord --resume title page with the logo above a framed list of earlier Claude sessions" width="900">
 

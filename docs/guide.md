@@ -147,6 +147,16 @@ child's view, and closes with `x`, main's `close_agent` or main's `/clear`.
 and picks it; see
 [forking a conversation](#forking-a-conversation).
 
+`/rename <title>` renames the session in front, including a long-lived
+child or team member, even during a turn. Whitespace folds to single spaces.
+The note changes from `Renaming to <title>…` to `Renamed to <title>` using
+the title the agent returns. Without title support it says `in chord only`;
+a later agent title can replace it. A refusal shows the agent's error and
+keeps the title. Tasks keep their assigned title; starting and exited
+sessions cannot be renamed. `/rename` alone shows the usage and current
+title. The title appears in terminal status, `/status` and the next resume
+picker; the header keeps the title it opened with.
+
 An agent asking for permission or a form, or ending its turn, never takes
 the view by itself. The status line names what waits, and ctrl+x a goes to
 the agent that has waited longest, then the next on each press. An unseen
@@ -316,6 +326,15 @@ its values; Enter on a value sets it. Model, mode and setting changes run
 in order per session, including during a turn. A pending transcript row is
 replaced by the outcome when the agent answers.
 
+`/status` reports the session in front: Agent, Account where supported,
+Title, Model, Mode, Session and Directory. Title is `not given` until set.
+Account lists active accounts, or all accounts if none is marked active,
+one per row: label, description, name, email and organization when supplied.
+It says `checking…` while pending, `signed in` without account details,
+`not signed in`, `none needed`, or `not reported by <agent>`. It is a
+snapshot of what the agent last reported; opening it makes no request.
+Account details stay out of session records and agent tools.
+
 Each session's transcript opens with a header: Chorded's mark in its
 gradient, drawn in half blocks, and beside it chord's version, the agent and
 the model the session started on, its directory and the keys to `?` and
@@ -324,6 +343,10 @@ name before the title, or its first prompt if untitled. Titles wrap without
 cutting. The picker and header keep the title read when opened. The
 conversation grows down from the header;
 once it fills the window the header scrolls away, and `home` brings it back.
+
+Agent notices have their own dim title and wrapped description, with a
+`⏺` coloured for info, warning or error. They remain on resume and in
+ctrl+o. A notice outside a turn starts no working status or notification.
 
 Claude's work after a background task and codebuddy's unasked turns show as
 working: `››› Working… (Ns · esc to interrupt)`, timed from the cycle's
@@ -408,10 +431,12 @@ reviews, or reviews with an unknown or missing structured status, keep the
 full `Guardian(Review)` block. This behavior has no setting.
 
 Claude launches and messages draw as `→ to Agent(<title>)` and
-`← from Agent(<title>)` rows in the parent. A launch prompt folds after six
-rows; ctrl+o opens it and the subagent's work. A clipped prompt offers no
-ctrl+x code actions until opened. Other Agent calls show their description;
-ctrl+o shows their whole task and work. A Claude subagent
+`← from Agent(<title>)` rows in the parent. A tool call referring to a known
+subagent shows `Agent(<title>)` above its own output and status, once per
+referenced subagent; unknown references show nothing. A launch prompt folds
+after six rows; ctrl+o opens it and the subagent's work. A clipped prompt
+offers no ctrl+x code actions until opened. Other Agent calls show their
+description; ctrl+o shows their whole task and work. A Claude subagent
 ends `Done`, `Failed` or `Cancelled` by the reason its agent reports;
 `Ended` means no known reason, and `Untracked` means the agent lost sight of
 it and it may still be working. ctrl+o shows any error or explanation.
@@ -545,6 +570,8 @@ runs as the agent chose. `--dangerously-skip-permissions`, only with `-p` and ne
 allows permissions instead, each with a `chord: allowed <title>.` line
 on stderr; reviewed asks are always denied. With both flags, the mode is
 asked for and whatever the agent still asks is allowed, except reviewed asks.
+Agent notices go to stderr as `chord: <title>: <description>`, omitting
+the last colon when there is no description, in both output formats.
 `--output-format json` prints one object at the end instead: `result`,
 `session_id` (which `--resume` takes), `stop_reason`, `is_error`, and `usage`
 and `total_cost_usd` when the agent reports them. An agent that reports its
@@ -662,13 +689,35 @@ client-supplied `acp` transport is refused with -32602.
 | `$/cancel_request`          | Cancels only the named request; removes a queued prompt; does not cancel a chord command in flight                             |
 | `session/set_config_option` | Sets a select option and returns all `configOptions`                                                                                 |
 | `session/set_mode`          | Sets the permission mode for clients using this method                                                                               |
+| `session/set_title`         | Renames a live session or a listed record; returns the stored title                                                                  |
+| `auth/status`               | Returns the oldest live main session's account status, or `unknown`                                                                   |
 
 Models, modes and efforts share `configOptions`; names and values belong
 to the agent. Boolean options are absent and boolean sets are refused.
+A client's initial `session/new.configOptions` pass unchanged to an agent
+that advertises `options`, overriding chord's starting values for the same
+ids. chord reads them back by id and requests values not already current;
+a refused entry fails `session/new`. chord does not advertise `options`
+or serve `session/options`.
 There is no `session/set_model` method: use the model config option.
 `authenticate`, `session/fork`, `session/delete` and `_session/steering`
 are not served; unsupported requests get -32601. Use chord's steering
 extension below.
+
+chord advertises `title` for every agent. `session/set_title` folds
+whitespace and refuses an empty title with -32602 or an unknown id with
+-32002. For a live session the agent's answer wins, or chord stores the
+title locally without agent support; an agent refusal is returned unchanged.
+For an unloaded listed session, chord records the title and sends it to
+the agent on the next load or resume where supported. `session/list` uses
+the title, falling back to the first prompt; load replays recorded renames
+as `session_info_update`.
+
+chord advertises `auth.status` and sends `auth/status_update` once per
+change of account value. Its source is the oldest live main session of the
+startup agent, moving to the next when it closes or exits; children never
+supply it. Without a reported account it returns `unknown`. Account details
+are not recorded.
 
 Prompts take text, resource links, images and embedded `resource` blocks
 where the agent supports them. `initialize` advertises
@@ -731,8 +780,9 @@ plus main's permission and form asks. It can run chord's commands, but
 cannot follow child work or answer child asks. Extension notifications
 still arrive; their declarations gate neither notifications nor requests.
 
-chord uses its full capabilities toward the agent, whatever the client
-declares. One drop-only check applies to live updates and replay alike:
+chord uses its full capabilities toward the agent except `session.notices`,
+which it declares only when its client does. The same capability checks
+apply to live updates and replay:
 
 | Update                                                                              | Client must declare  |
 | ----------------------------------------------------------------------------------- | -------------------- |
@@ -741,6 +791,10 @@ declares. One drop-only check applies to live updates and replay alike:
 | `compaction_update`, `compaction_summary_chunk`                                     | `session.compaction` |
 | `notice`                                                                            | `session.notices`    |
 | Kinds outside the ACP v1 schema                                                     | Never sent           |
+
+Tool-call `session` references use the aliases announced to this client.
+Unknown references, and all references without `subagents`, are removed;
+other content and the call's status remain.
 
 Dropped updates stay in the record. There is no text fallback: a client
 without `plan` can lose a Codex plan, for example. Without `subagents`,
@@ -1074,8 +1128,8 @@ chord also reports the whole window's status through the
 (OSC 7501), always on, independently of `preferredNotifChannel`. One root
 record with `app=chord` covers main and its children.
 Its `title` names the main session, even with a child picked:
-the agent's own session title, updated when it renames the session and
-restored on resume. Until the agent gives a title, it uses the first prompt
+the session title, updated by `/rename` or the agent and restored on
+resume. Until either gives a title, it uses the first prompt
 on one line (`!ls` for that shell command), as `/resume` does.
 With neither, the title is absent; `/clear` resets it.
 The title takes at most 192 UTF-8 bytes (256 in base64 on the wire).
@@ -1751,10 +1805,14 @@ agent's own: `/model`, `/effort`, `/config` and shift+tab show what it offers;
 permissions. To start in another mode, set `agents.claude.permissionMode`
 in chord's settings, pass `--permission-mode`, or set Claude's own
 `permissions.defaultMode`. An effort is one the model the session starts
-on offers. A starting model, effort or mode the agent refuses is said in the
-transcript, with where it was set and what the agent offers, and the session
-goes on as the agent chose; an agent with no effort starts on its own, and
-the line says it offers none. An unknown key or wrong-type value is named
+on offers. New sessions send named model, effort and mode as initial options
+where supported (currently Claude), then check what the agent took; other
+agents, load and resume use changes after opening. Forks keep their source's
+values. An optional value the agent overrides stays as it chose; a required
+launch value that differs fails the start. A refused optional value is
+named in the transcript with its source and what the agent offers; the
+session continues as the agent chose. With no effort offered, the line
+says so. An unknown key or wrong-type value is named
 with its file and left out; the rest still counts. Each bad item in a
 `teamSelection` constraint list gets one warning naming its list, position
 (counted from 1), value and cause, ending in `left out`. A list emptied this
@@ -1851,13 +1909,15 @@ serve ACP sessions: it is not an ACP agent, or not at this version. If
 zeroclaw needs an agent alias, set `[acp] default_agent = "<alias>"` in
 ZeroClaw's config, or start it with `zeroclaw acp --agent <alias>`.
 
-chord leaves sign-in to each agent's own CLI. If a new or resumed session
-needs a login, its `did not start` row keeps the agent's words and lists
-any sign-in methods it offers, each as `name · description`. Sign in with
-the agent's CLI in a terminal, or set its API key where it offers one,
-then start chord again.
-The same guidance goes to `-p`'s stderr and to a lead whose child failed to
-start. Sign-in guidance appears only for ACP's `authRequired` error.
+chord leaves sign-in to each agent's own CLI. ACP's `authRequired` (-32000)
+at start or at a prompt shows a sign-in block with the agent's words and
+methods, each as `name · description`. At a prompt it replaces the turn
+error. When known, a first line gives the account the agent reported, or
+says none is signed in; chord waits at most one second for a pending check.
+A signed-out report alone does not stop a session. Sign in with the agent's
+CLI in a terminal, or set its API key where offered, then start chord again.
+Sign-in methods and CLI guidance also go to `-p`'s stderr and to a lead
+whose child failed to start.
 
 `dimcode` may start up to 18 other CLIs it finds on PATH through its own
 `agent` tool, with their approvals bypassed and on your accounts. Their

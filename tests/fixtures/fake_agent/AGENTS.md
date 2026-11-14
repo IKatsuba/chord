@@ -197,9 +197,9 @@
   sends a chunk after answering the prompt; `unknown` sends an update of a
   kind ACP does not have and a notification of its own; `authstatus`
   sends Claude's `_auth/status_update` and `auth/status_update`, which chord
-  takes no handler for, then a line; `turnfailed` says a line, then fails
-  its prompt with -32603 `{reason: "turn_failed"}`, as goose from 1.59 does
-  on a model's error; `cancels` says how
+  ignores and reads respectively, then a line; `turnfailed` says a line,
+  then fails its prompt with -32603 `{reason: "turn_failed"}`, as goose
+  from 1.59 does on a model's error; `cancels` says how
   many `session/cancel` notifications its session got with no turn playing,
   `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) acknowledges each such cancel
   with `Cancel heard with no turn.`, so tests can wait for its arrival;
@@ -377,8 +377,8 @@
   refuses -32600; `hang` answers as `echo` once
   `<cwd>/.fake-gate/release` exists (at most 10 s). An empty title is
   -32602. Each request's title goes on a line of
-  `<cwd>/.fake-gate/titles-heard` as it arrives. `titledlater` says a line, then once the gate is released sends a
-  `session_info_update` with a title of its own (CHD-629).
+  `<cwd>/.fake-gate/titles-heard` as it arrives. `titledlater` says a line,
+  then sends its own `session_info_update` title once the gate opens (CHD-629).
   `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`) offers `auto`, opens
   every session in it, and on `fake-small` takes `auto` as `acceptEdits`
   with an `Auto mode unavailable` notice; switching to `fake-small` moves

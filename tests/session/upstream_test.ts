@@ -970,3 +970,49 @@ describe('CHD-613 prompt resources', () => {
     }
   });
 });
+
+describe("a call's references to subagents going up (CHD-629)", () => {
+  const announce: SessionUpdate = {
+    sessionUpdate: 'subagent_update',
+    sessionId: 'c',
+    state: { state: 'running' },
+  };
+  const text = { type: 'content', content: { type: 'text', text: 'Stopped.' } };
+  const call = (content: unknown[]): SessionUpdate =>
+    ({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'stop',
+      content,
+    }) as SessionUpdate;
+  const sent = (capabilities: typeof ALL, content: unknown[]) => {
+    const { session } = mapUpdate(
+      upstreamSession('s1', 's1~2'),
+      capabilities,
+      announce,
+    );
+
+    return (
+      mapUpdate(session, capabilities, call(content)).notification?.update as {
+        content?: unknown[];
+      }
+    ).content;
+  };
+
+  test("an announced child's reference goes by its alias; any other id is dropped, never raw", () => {
+    expect(
+      sent(ALL, [
+        text,
+        { type: 'session', sessionId: 'c' },
+        { type: 'session', sessionId: 's1' },
+        { type: 'session', sessionId: 'stranger' },
+      ]),
+    ).toEqual([text, { type: 'session', sessionId: 's1~2/c' }]);
+  });
+
+  test('a client that takes no subagents gets none of them; content of references alone goes empty', () => {
+    expect(sent(NONE, [text, { type: 'session', sessionId: 'c' }])).toEqual([
+      text,
+    ]);
+    expect(sent(ALL, [{ type: 'session', sessionId: 'stranger' }])).toEqual([]);
+  });
+});

@@ -16,6 +16,7 @@ import type {
   SessionUpdate,
   StateUpdate,
   StopReason,
+  ToolCallContent,
 } from '@agentclientprotocol/sdk/unstable';
 import type { ResourceLink } from '../files.ts';
 import {
@@ -331,15 +332,22 @@ export function mapUpdate(
 
   return {
     session: grown,
-    notification: { sessionId, update: rewritten(grown, update) },
+    notification: {
+      sessionId,
+      update: rewritten(grown, capabilities, update),
+    },
   };
 }
 
 function rewritten(
   session: UpstreamSession,
+  capabilities: ClientCapabilities,
   update: SessionUpdate,
 ): SessionUpdate {
   switch (update.sessionUpdate) {
+    case 'tool_call':
+    case 'tool_call_update':
+      return withReferences(session, capabilities, update);
     case 'subagent_update':
       return acpStateWords({
         ...update,
@@ -365,6 +373,43 @@ function rewritten(
     default:
       return update;
   }
+}
+
+/**
+ * A call's references to subagents (`{type: "session"}`) under the client's
+ * ids (CHD-629): one to a child the session announced goes by its alias; one
+ * to any other id is dropped, never passed raw, as it could be another
+ * session's alias; and for a client that takes no subagents, every one is
+ * dropped, as it was never told of the child. Content that was only
+ * references goes empty.
+ */
+function withReferences(
+  session: UpstreamSession,
+  capabilities: ClientCapabilities,
+  update: SessionUpdate & {
+    sessionUpdate: 'tool_call' | 'tool_call_update';
+  },
+): SessionUpdate {
+  const { content } = update;
+
+  if (!content?.some((item) => item.type === 'session')) {
+    return update;
+  }
+
+  return {
+    ...update,
+    content: content.flatMap((item): ToolCallContent[] => {
+      if (item.type !== 'session') {
+        return [item];
+      }
+
+      const alias = capabilities.subagents
+        ? session.children.get(item.sessionId)
+        : undefined;
+
+      return alias === undefined ? [] : [{ ...item, sessionId: alias }];
+    }),
+  };
 }
 
 /** What chord says of a long-lived child, as no agent's update does. */

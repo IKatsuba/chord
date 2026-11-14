@@ -433,3 +433,46 @@ describe('CHD-581 tester: children across session boundaries', () => {
     );
   });
 });
+
+describe("a call's reference to a child going up (CHD-629)", () => {
+  test('names the child by the alias the client was told, an unannounced one dropped', () =>
+    withChildren(async (client, newSession) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(
+        client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: 'subagentlinked' }],
+        }),
+      );
+      await client.answerTo(
+        client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: 'subagentstranger' }],
+        }),
+      );
+
+      const updates = client.updates(sessionId);
+      const child = updates.find(
+        (update) => update.sessionUpdate === 'subagent_update',
+      );
+      const references = updates.flatMap((update) =>
+        update.sessionUpdate === 'tool_call' ||
+        update.sessionUpdate === 'tool_call_update'
+          ? (
+              (update as { content?: { type: string; sessionId?: string }[] })
+                .content ?? []
+            ).filter((item) => item.type === 'session')
+          : [],
+      );
+
+      assert(child?.sessionUpdate === 'subagent_update');
+      expect(references.length).toBeGreaterThan(0);
+      expect(
+        references.every(
+          (item) =>
+            item.type === 'session' && item.sessionId === child.sessionId,
+        ),
+      ).toBe(true);
+    }));
+});

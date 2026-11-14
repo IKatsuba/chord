@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import type { AuthStatusResponse } from '@agentclientprotocol/sdk/unstable';
+import type { AccountState } from '../src/session/auth_status.ts';
 import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
 import {
@@ -1240,6 +1242,183 @@ describe('auth/status (CHD-629)', () => {
         );
       },
     ));
+});
+
+describe('CHD-629 tester: ACP account source isolation', () => {
+  interface Feed {
+    session: Session;
+    current: AccountState;
+    listeners: Set<(account: AccountState) => void>;
+  }
+
+  const A: AuthStatusResponse = {
+    state: 'authenticated',
+    accounts: [{ label: 'Alpha', email: 'alpha@example.test', active: true }],
+    _meta: { 'example.com/identity': { flag: true, tags: ['a', 'b'] } },
+  };
+  const B: AuthStatusResponse = {
+    state: 'authenticated',
+    accounts: [{ label: 'Beta', email: 'beta@example.test', active: true }],
+    _meta: { 'example.com/opaque': { kept: [false, null, 3] } },
+  };
+  const heard = (status: AuthStatusResponse): AccountState => ({
+    phase: 'heard',
+    status,
+  });
+  const pushes = (client: AcpClient) =>
+    client.messages.flatMap((message) =>
+      message.method === 'auth/status_update' ? [message.params] : [],
+    );
+  const inject =
+    (feeds: Feed[], seed: readonly AccountState[]): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+      const feed: Feed = {
+        session,
+        current: seed[feeds.length] ?? { phase: 'none' },
+        listeners: new Set(),
+      };
+
+      feeds.push(feed);
+
+      return {
+        ...session,
+        account: () => feed.current,
+        subscribeAccount: (listener) => {
+          feed.listeners.add(listener);
+
+          return () => {
+            feed.listeners.delete(listener);
+          };
+        },
+      };
+    };
+
+  function publish(feed: Feed | undefined, account: AccountState) {
+    assert(feed);
+
+    feed.current = account;
+
+    for (const listener of feed.listeners) {
+      listener(account);
+    }
+  }
+
+  const status = async (client: AcpClient) => {
+    const response = await client.request('auth/status', {});
+
+    expect(response.error).toBeUndefined();
+
+    return response.result;
+  };
+
+  test('the oldest main stays the source through unknown phases, forwards metadata whole, and ignores retired pushes', async () => {
+    const feeds: Feed[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+        const second = await newSession();
+
+        for (const phase of ['none', 'failed', 'pending'] as const) {
+          publish(feeds[0], { phase });
+          expect(await status(client)).toEqual({ state: 'unknown' });
+        }
+
+        expect(pushes(client)).toEqual([]);
+        publish(feeds[0], heard(A));
+        expect(await status(client)).toEqual(A);
+        publish(feeds[1], heard(B));
+        expect(await status(client)).toEqual(A);
+        expect(pushes(client)).toEqual([A]);
+        await client.request('session/close', { sessionId: first });
+        expect(await status(client)).toEqual(B);
+        publish(feeds[0], heard({ state: 'unauthenticated' }));
+        expect(await status(client)).toEqual(B);
+        expect(pushes(client)).toEqual([A, B]);
+        await client.request('session/close', { sessionId: second });
+        expect(await status(client)).toEqual({ state: 'unknown' });
+        expect(pushes(client)).toEqual([A, B, { state: 'unknown' }]);
+      },
+      { open: inject(feeds, [{ phase: 'pending' }, heard(B)]) },
+    );
+  });
+
+  test('an exited source hands over once and its later account cannot replace the next live main', async () => {
+    const feeds: Feed[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+
+        await newSession();
+        expect(await status(client)).toEqual(A);
+
+        const source = feeds[0];
+
+        assert(source);
+        await source.session.close();
+        await until(() => pushes(client).length === 2);
+        expect(await status(client)).toEqual(B);
+        publish(source, heard({ state: 'unauthenticated' }));
+        expect(await status(client)).toEqual(B);
+        await client.request('session/close', { sessionId: first });
+        expect(pushes(client)).toEqual([A, B]);
+      },
+      { open: inject(feeds, [heard(A), heard(B)]) },
+    );
+  });
+
+  test('a child is never the global source even while its main has no account', async () => {
+    const feeds: Feed[] = [];
+
+    await onAcp(
+      ['--child-runtime', 'fake'],
+      async ({ client, newSession, prompt }) => {
+        const first = await newSession();
+
+        await client.answerTo(prompt(first, 'agentother'));
+        await until(() => feeds.length === 2);
+        publish(feeds[1], heard(B));
+        expect(await status(client)).toEqual({ state: 'unknown' });
+        expect(pushes(client)).toEqual([]);
+        publish(feeds[0], heard(A));
+        expect(await status(client)).toEqual(A);
+        await client.request('session/close', { sessionId: first });
+        expect(await status(client)).toEqual({ state: 'unknown' });
+        expect(pushes(client)).toEqual([A, { state: 'unknown' }]);
+      },
+      {
+        server: serveChord(),
+        open: inject(feeds, [{ phase: 'none' }, heard(B)]),
+      },
+    );
+  });
+
+  test('equivalent account payloads deduplicate across a source handover regardless of object key order', async () => {
+    const feeds: Feed[] = [];
+    const reordered: AuthStatusResponse = {
+      _meta: { 'example.com/identity': { tags: ['a', 'b'], flag: true } },
+      accounts: [{ active: true, email: 'alpha@example.test', label: 'Alpha' }],
+      state: 'authenticated',
+    };
+
+    await onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+
+        await newSession();
+        expect(await status(client)).toEqual(A);
+        await client.request('session/close', { sessionId: first });
+        expect(await status(client)).toEqual(reordered);
+        expect(pushes(client)).toEqual([A]);
+      },
+      { open: inject(feeds, [heard(A), heard(reordered)]) },
+    );
+  });
 });
 
 describe('notices (CHD-629)', () => {

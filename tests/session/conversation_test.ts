@@ -5,7 +5,12 @@
  */
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { run } from '../fixtures/recorder.ts';
+import {
+  API_KEY,
+  SIGNED_IN,
+} from '../fixtures/fake_agent/scenarios/accounts.ts';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RequestError } from '@agentclientprotocol/sdk/unstable';
@@ -1472,4 +1477,89 @@ describe('CHD-624 U3 tester: failed turns release the prompt queue', () => {
         ),
       ).toEqual([]);
     }));
+});
+
+describe('CHD-629 tester: retired account events', () => {
+  test('a held answer and later push from the cleared connection cannot replace the new connection account', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-account-retired-tester-'));
+    const oldCwd = join(cwd, 'old');
+
+    await mkdir(oldCwd, { recursive: true });
+
+    const events: ConversationEvent[] = [];
+    const releaseClose = Promise.withResolvers<void>();
+    const sessions: Session[] = [];
+    const conversation = new Conversation(
+      async () => {
+        const first = sessions.length === 0;
+        const session = await openSession({
+          agent: 'fake',
+          cwd: first ? oldCwd : cwd,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            ...(first ? ['--auth-status', 'held'] : []),
+          ),
+        });
+
+        sessions.push(session);
+
+        return first
+          ? {
+              ...session,
+              close: async () => {
+                await releaseClose.promise;
+                await session.close();
+              },
+            }
+          : session;
+      },
+      (event) => events.push(event),
+    );
+    let retiring: Promise<void> | undefined;
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      expect(events.filter((event) => event.type === 'account').at(-1)).toEqual(
+        { type: 'account', account: { phase: 'pending' } },
+      );
+
+      retiring = conversation.clear();
+
+      await until(
+        () => events.filter((event) => event.type === 'connected').length === 2,
+      );
+
+      const accounts = () => events.filter((event) => event.type === 'account');
+      const before = accounts().length;
+
+      expect(accounts().at(-1)).toEqual({
+        type: 'account',
+        account: { phase: 'none' },
+      });
+      await mkdir(join(oldCwd, '.fake-gate'), { recursive: true });
+      await writeFile(join(oldCwd, '.fake-gate', 'release'), '');
+
+      const old = sessions[0];
+
+      assert(old);
+      await until(() => old.account().phase === 'heard');
+      expect(old.account()).toEqual({ phase: 'heard', status: SIGNED_IN });
+      await run(old, 'authchanged');
+      expect(old.account()).toEqual({ phase: 'heard', status: API_KEY });
+      expect(accounts()).toHaveLength(before);
+      conversation.send('text');
+      await until(() => events.some((event) => event.type === 'result'));
+      expect(accounts().at(-1)).toEqual({
+        type: 'account',
+        account: { phase: 'none' },
+      });
+    } finally {
+      releaseClose.resolve();
+      await retiring;
+      await conversation.close();
+      await Promise.all(sessions.map((session) => session.close()));
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
 });

@@ -1751,3 +1751,44 @@ describe('CHD-620 tester: headless MCP flag boundaries', () => {
     });
   });
 });
+
+describe('CHD-629 tester: headless account privacy', () => {
+  for (const format of ['text', 'json']) {
+    for (const refused of [false, true]) {
+      test(`${format} ${refused ? 'sign-in failure' : 'success'} contains no account payload in either output stream`, async () => {
+        const result = await chord(
+          ['-p', refused ? 'text' : 'authchanged', '--output-format', format],
+          '',
+          undefined,
+          {
+            CHORD_FAKE_AUTH_STATUS: 'authenticated',
+            CHORD_FAKE_AUTH_RACE: 'push-first',
+            ...(refused ? { CHORD_FAKE_AUTH_REQUIRED: 'prompt' } : {}),
+          },
+        );
+
+        expect(result.code).toBe(refused ? 1 : 0);
+
+        for (const marker of [
+          'auth/status',
+          'name@example.com',
+          'ANTHROPIC_API_KEY',
+          'Claude Max',
+          'Anthropic API key',
+        ]) {
+          expect(result.stdout).not.toContain(marker);
+          expect(result.stderr).not.toContain(marker);
+        }
+
+        if (format === 'json') {
+          expect(JSON.parse(result.stdout).is_error).toBe(refused);
+        }
+
+        if (!refused) {
+          expect(result.stdout).toContain('Checking who is signed in. Done.');
+          expect(result.stderr).toBe('');
+        }
+      });
+    }
+  }
+});

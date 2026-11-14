@@ -25,7 +25,11 @@ import { findAgent } from '../../src/agents.ts';
 import { startFailureOf } from '../../src/session/start_failure.ts';
 import { signInOf, SignInNeeded } from '../../src/session/sign_in.ts';
 import { FILLED, GUARDIAN_REVIEW } from '../../src/session/enrich.ts';
-import { recordActions, type RecordEntry } from '../../src/session/record.ts';
+import {
+  parseRecord,
+  recordActions,
+  type RecordEntry,
+} from '../../src/session/record.ts';
 import { pastActions } from '../../src/session/replay.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
@@ -2674,4 +2678,129 @@ describe('CHD-629 tester: sign-in wait process boundaries', () => {
         'hang',
       ));
   }
+});
+
+describe('CHD-629 tester: account request lifecycle and privacy', () => {
+  for (const advertised of [false, true]) {
+    test(`a pre-initialize push ${advertised ? 'is replaced by the later advertised answer' : 'is heard without requesting an unadvertised status'}`, () =>
+      withSession(
+        async (session) => {
+          await run(session, 'text');
+          expect(session.account()).toEqual({
+            phase: 'heard',
+            status: advertised ? SIGNED_IN : API_KEY,
+          });
+        },
+        undefined,
+        '--auth-push-early',
+        ...(advertised ? ['--auth-status', 'authenticated'] : []),
+      ));
+  }
+
+  test('a request failing after its push keeps the account and never reports a turn update or failure for it', () =>
+    withSession(
+      async (session) => {
+        const updates: SessionUpdate[] = [];
+        const stop = session.subscribe((update) => updates.push(update));
+
+        try {
+          expect((await run(session, 'text')).result.status).toBe('completed');
+          expect(session.account()).toEqual({
+            phase: 'heard',
+            status: API_KEY,
+          });
+          expect(JSON.stringify(updates)).not.toContain('auth/status');
+          expect(JSON.stringify(updates)).not.toContain('ANTHROPIC_API_KEY');
+        } finally {
+          stop();
+        }
+      },
+      undefined,
+      '--auth-status',
+      'error',
+      '--auth-race',
+      'push-first',
+    ));
+
+  test('one hung account request holds neither another session nor cancellation of its own turn', () =>
+    withSession(
+      async (pending) => {
+        expect(pending.account()).toEqual({ phase: 'pending' });
+        await withSession(
+          async (other) => {
+            const result = await run(other, 'authchanged');
+
+            expect(result.result.status).toBe('completed');
+            expect(other.account()).toEqual({
+              phase: 'heard',
+              status: API_KEY,
+            });
+            expect(pending.account()).toEqual({ phase: 'pending' });
+          },
+          undefined,
+          '--auth-status',
+          'authenticated',
+        );
+        await cancelSlowTurn(pending, (turn) => turn.cancel());
+        expect(pending.account()).toEqual({ phase: 'pending' });
+      },
+      undefined,
+      '--auth-status',
+      'hang',
+    ));
+
+  test('an agent exiting with its account request unanswered moves only that connection to failed', () =>
+    withSession(
+      async (session) => {
+        expect(session.account()).toEqual({ phase: 'pending' });
+
+        const [pid] = session.agentPids;
+
+        assert(pid !== undefined);
+        process.kill(pid, 'SIGKILL');
+        await session.exited;
+        await until(() => session.account().phase === 'failed');
+        expect(session.account()).toEqual({ phase: 'failed' });
+      },
+      undefined,
+      '--auth-status',
+      'hang',
+    ));
+
+  test('answers and pushes reach the account listeners without entering the conversation record or replay', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-account-record-tester-'));
+    const stateDir = join(cwd, 'state');
+    const events: unknown[] = [];
+
+    try {
+      await recordSession({
+        cwd,
+        stateDir,
+        command: fakeAgentCommand(undefined, '--auth-status', 'authenticated'),
+        prompts: ['authchanged', 'text'],
+        heard: (event) => events.push(event),
+      });
+
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const text = await readFile(record.path, 'utf8');
+      const replay = JSON.stringify(recordActions(parseRecord(text)));
+
+      expect(JSON.stringify(events)).toContain('ANTHROPIC_API_KEY');
+
+      for (const marker of [
+        'auth/status',
+        'name@example.com',
+        'ANTHROPIC_API_KEY',
+        'Claude Max',
+      ]) {
+        expect(text).not.toContain(marker);
+        expect(replay).not.toContain(marker);
+      }
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
 });

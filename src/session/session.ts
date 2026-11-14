@@ -10,7 +10,11 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import process from 'node:process';
-import { type Agent, openAgent } from '../acp/connection.ts';
+import {
+  type Agent,
+  clientCapabilities,
+  openAgent,
+} from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
 import { agentStart, findAgent } from '../agents.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
@@ -110,6 +114,12 @@ export interface OpenSessionOptions {
    * agent that would refuse it never sees it.
    */
   chordServer?: McpServer;
+  /**
+   * Whether `initialize` declares `session.notices`: the window and `-p` do;
+   * `chord acp` only for a client that declared it, so its clients get what
+   * the agent sends them without chord (CHD-629). Yes by default.
+   */
+  notices?: boolean;
   /** The agent says a link it asked for has been followed. */
   onElicitationComplete?: (params: CompleteElicitationNotification) => void;
   /**
@@ -471,6 +481,7 @@ export async function openSession(
     onPermission: permissions.handler,
     onElicitation: elicitations.handler,
     onPlan: plans.handler,
+    capabilities: clientCapabilities({ notices: options.notices !== false }),
     ...(signal === undefined ? {} : { signal }),
   }).catch((error: unknown) => {
     throw signal?.aborted ? error : startFailed(error, 'initialize', pinned);

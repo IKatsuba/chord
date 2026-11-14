@@ -1198,6 +1198,7 @@ export function runAcp(options: AcpOptions): AcpRun {
         open: (opening) =>
           options.open({
             ...opening,
+            notices: Boolean(capabilities?.session?.notices),
             onElicitationComplete: (params) => {
               connection.client
                 .notify('elicitation/complete', params)

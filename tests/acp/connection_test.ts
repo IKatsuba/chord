@@ -10,6 +10,7 @@ import type * as acp from '@agentclientprotocol/sdk/unstable';
 import {
   type Agent,
   AgentGone,
+  clientCapabilities,
   connectAgent,
   openAgent,
   type OpenAgentOptions,
@@ -307,7 +308,10 @@ class Seen {
   }
 }
 
-type Handlers = Pick<OpenAgentOptions, 'onPermission' | 'onElicitation'>;
+type Handlers = Pick<
+  OpenAgentOptions,
+  'onPermission' | 'onElicitation' | 'capabilities'
+>;
 
 const REFUSE: Handlers = {
   onPermission: () => Promise.resolve({ outcome: { outcome: 'cancelled' } }),
@@ -379,7 +383,7 @@ test('a command line splits as a shell would, with nothing expanded', () => {
   expect(() => commandArgv('  ')).toThrow('empty');
 });
 
-test("initialize declares ACP v1, chord, forms and links, plans by id, compactions by id, subagents, terminals' output as meta, and neither files nor terminals; the agent keeps its capabilities", () =>
+test("initialize declares ACP v1, chord, forms and links, plans by id, compactions by id, notices, subagents, terminals' output as meta, and neither files nor terminals; the agent keeps its capabilities", () =>
   withAgent(['--resume-only'], (agent, seen) => {
     const initialize = seen.all.find(
       (traffic) =>
@@ -394,7 +398,7 @@ test("initialize declares ACP v1, chord, forms and links, plans by id, compactio
       clientCapabilities: {
         elicitation: { form: {}, url: {} },
         plan: {},
-        session: { compaction: {} },
+        session: { compaction: {}, notices: {} },
         subagents: {},
         _meta: { terminal_output_delta: true },
       },
@@ -408,6 +412,26 @@ test("initialize declares ACP v1, chord, forms and links, plans by id, compactio
       sessionCapabilities: { list: {}, resume: {} },
     });
   }));
+
+test('notices are declared per open: an open that does not declare them leaves only them out (CHD-629)', () =>
+  withAgent(
+    [],
+    (_agent, seen) => {
+      const initialize = seen.all.find(
+        (traffic) =>
+          traffic.from === 'chord' &&
+          'method' in traffic.message &&
+          traffic.message.method === 'initialize',
+      );
+
+      assert(initialize?.from === 'chord' && 'params' in initialize.message);
+      expect(
+        (initialize.message.params as acp.InitializeRequest).clientCapabilities
+          ?.session,
+      ).toStrictEqual({ compaction: {} });
+    },
+    { ...REFUSE, capabilities: clientCapabilities({ notices: false }) },
+  ));
 
 test('session/new takes the directory and the MCP servers', () =>
   withAgent([], async (agent, seen, cwd) => {

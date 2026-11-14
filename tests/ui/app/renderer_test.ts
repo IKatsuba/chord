@@ -321,3 +321,50 @@ describe('tester: mouse mode restoration', () => {
     expect(written).not.toContain('\x1b[?1003h');
   });
 });
+
+describe('what the processes chord starts inherit of the stdout thread setting', () => {
+  test.each([
+    [{}, 'OTUI_STDOUT_THREAD', undefined],
+    [{ OTUI_STDOUT_THREAD: '1' }, 'OTUI_STDOUT_THREAD', '1'],
+  ])('under %j, %s stays %s, with the thread off', async (env, name, kept) => {
+    const rendererModule = new URL(
+      '../../../src/ui/app/renderer.tsx',
+      import.meta.url,
+    ).href;
+    const code = `
+      import { spawnSync } from 'node:child_process';
+      import { openTerminal, leave } from ${JSON.stringify(rendererModule)};
+      const { renderer } = await openTerminal({ mouse: false });
+      try {
+        const child = spawnSync(process.execPath, ['-e', 'console.log(JSON.stringify(process.env))'], { encoding: 'utf8' });
+        process.stderr.write('CHILD ' + JSON.stringify({
+          child: JSON.parse(child.stdout),
+          writer: renderer.nativeSession.stdoutWriter,
+        }) + '\\n');
+      } finally {
+        await leave(renderer);
+      }
+    `;
+    const {
+      OPENTUI_FORCE_UNICODE: _,
+      OPENTUI_FORCE_WCWIDTH: __,
+      OTUI_STDOUT_THREAD: ___,
+      ...parent
+    } = process.env;
+    const ran = await promisify(execFile)(process.execPath, ['-e', code], {
+      env: { ...parent, ...env },
+      timeout: 15_000,
+    });
+    const line = ran.stderr.split('\n').find((row) => row.startsWith('CHILD '));
+
+    assert(line !== undefined, ran.stderr);
+
+    const { child, writer } = JSON.parse(line.slice('CHILD '.length)) as {
+      child: Record<string, string>;
+      writer: boolean;
+    };
+
+    expect(child[name]).toBe(kept as never);
+    expect(writer).toBe(false);
+  });
+});

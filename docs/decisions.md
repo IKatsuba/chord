@@ -8840,3 +8840,18 @@ files and `chord kimi` working together; a record-only mapping leaves the
 others broken. autohand, binary-only in the registry now, becomes an own CLI
 (`autohand --acp`); kiro passes `--agent-engine=v3` as the registry does;
 the generator names each agent it drops for being binary-only.
+
+## 2026-11-14 — CHD-624: OpenTUI's own width method under tmux (owner)
+
+chord told OpenTUI's renderer to measure by grapheme wherever OpenTUI saw
+tmux (`src/ui/app/terminal_width.ts`), as OpenTUI measured by code point
+there and tmux drew a VS16 emoji two cells wide (anomalyco/opentui#1654).
+OpenTUI 0.8.3 closed that issue: it measures by grapheme under tmux 3.6 and
+newer, by the version tmux answers, and keeps code points for an older or
+unknown tmux. Options: (a) delete the workaround and take OpenTUI's choice
+everywhere; (b) keep it, overruling OpenTUI on older tmux; (c) check an
+older tmux first. The owner chose (a): older tmux is not a concern. The
+module and its tests are gone; a person's own `OPENTUI_FORCE_UNICODE` or
+`OPENTUI_FORCE_WCWIDTH` still reaches OpenTUI from the environment.
+`OTUI_STDOUT_THREAD` is still set off for the renderer and put back for
+the processes chord starts.

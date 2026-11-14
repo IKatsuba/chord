@@ -10,7 +10,6 @@ import {
   createCliRenderer,
   type ProgramStatus,
 } from '@opentui/core';
-import { rendererEnvironment } from './terminal_width.ts';
 import { createRoot, useRenderer } from '@opentui/react';
 import {
   createContext,
@@ -233,10 +232,7 @@ export async function openTerminal({
 
   process.env['OTUI_STDOUT_THREAD'] = '0';
 
-  const opening = createCliRenderer({
-    ...terminalOptions({ mouse }),
-    environment: rendererEnvironment((name) => process.env[name]),
-  });
+  const opening = createCliRenderer(terminalOptions({ mouse }));
 
   if (thread === undefined) {
     delete process.env['OTUI_STDOUT_THREAD'];

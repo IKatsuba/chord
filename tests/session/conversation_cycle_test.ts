@@ -1471,7 +1471,6 @@ describe('notices (CHD-629)', () => {
     onFake(['--adapter', 'claude'], async (conversation, events) => {
       conversation.send('noticeidle');
       await until(() => notices(events).length === 1);
-      await new Promise((resolve) => setTimeout(resolve, 300));
 
       expect(notices(events)).toStrictEqual(['Auto mode unavailable']);
       expect(events.some((event) => event.type === 'cycle_started')).toBe(

@@ -10,7 +10,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -26,6 +26,7 @@ import type { LeaveExit } from '../src/session/leaving.ts';
 import { placeOf, readPlace } from '../src/session/place.ts';
 import {
   parseRecord,
+  recordsDir,
   recordActions,
   type RecordEntry,
 } from '../src/session/record.ts';
@@ -871,6 +872,48 @@ describe('session/set_title (CHD-629)', () => {
             return false;
           }
         });
+      },
+    ));
+});
+
+describe('a rename the agent takes at the load (CHD-629)', () => {
+  /** Every `renamed` line in the records under `stateDir`. */
+  const renamedIn = (stateDir: string) =>
+    readdirSync(recordsDir(stateDir))
+      .filter((file) => file.endsWith('.jsonl'))
+      .flatMap((file) =>
+        parseRecord(readFileSync(join(stateDir, file), 'utf8')),
+      )
+      .flatMap((entry) => (entry.type === 'renamed' ? [entry] : []));
+
+  test("a pending rename the agent takes at the load is written at once, the agent's title and not pending, with no prompt after it", () =>
+    onAcp(
+      ['--set-title', 'echo'],
+      async ({ client, cwd, newSession, prompt, stateDir }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'text'));
+        await client.request('session/close', { sessionId });
+        await client.request('session/set_title', {
+          sessionId,
+          title: 'x'.repeat(100),
+        });
+        await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+        await until(() =>
+          renamedIn(stateDir).some(
+            (entry) => entry.title === 'x'.repeat(80) && !entry.pending,
+          ),
+        );
+        await client.request('session/close', { sessionId });
+
+        expect(renamedIn(stateDir).at(-1)).toMatchObject({
+          title: 'x'.repeat(80),
+        });
+        expect(renamedIn(stateDir).at(-1)).not.toHaveProperty('pending');
       },
     ));
 });

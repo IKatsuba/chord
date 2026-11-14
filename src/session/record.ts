@@ -1234,6 +1234,12 @@ export class FileRecording implements Recording {
   #queue: { path: string; line: string }[] = [];
   /** Whether a prompt was sent in the session on screen. */
   #prompted = false;
+  /**
+   * Whether the session on screen was opened from a record it goes on in:
+   * a rename there is written at once, as the record is kept already
+   * (CHD-629).
+   */
+  #reopened = false;
   #state: StateEntry = stateEntry({});
   /** The forms and links waiting on the person, kept for their answer's line. */
   readonly #asking = new Map<string, ElicitationWait>();
@@ -1298,6 +1304,7 @@ export class FileRecording implements Recording {
     this.#path = path;
     this.#held = [];
     this.#prompted = false;
+    this.#reopened = session.record !== undefined;
     this.#state = stateOfSession(session);
 
     const opened: RecordEntry = { type: 'opened', at: this.#now() };
@@ -1507,7 +1514,11 @@ export class FileRecording implements Recording {
   }
 
   #add(entry: RecordEntry): void {
-    if (!this.#prompted || this.#path === undefined) {
+    // A rename is no mere look at a session, and its record exists: it is
+    // not held for a prompt, as a new session's is (CHD-629).
+    const now = entry.type === 'renamed' && this.#reopened;
+
+    if ((!this.#prompted && !now) || this.#path === undefined) {
       this.#held.push(entry);
 
       return;

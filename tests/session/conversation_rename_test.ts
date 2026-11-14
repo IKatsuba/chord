@@ -13,7 +13,7 @@ import {
   type ConversationEvent,
 } from '../../src/session/conversation.ts';
 import { FileRecording, parseRecord } from '../../src/session/record.ts';
-import { readRecords } from '../../src/session/sessions.ts';
+import { readRecords, type Resume } from '../../src/session/sessions.ts';
 import { openSession } from '../../src/session/session.ts';
 import { agentMessageOf } from '../../src/session/starting.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
@@ -470,4 +470,102 @@ describe('CHD-629 tester: rename lifecycle boundaries', () => {
         }
       },
     ));
+});
+
+describe('a rename and the record (CHD-629)', () => {
+  test('a session opened from its record keeps a rename without a prompt: the line is written at once', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-rename-'));
+    const stateDir = join(dir, 'state');
+    const opened = async (resume?: Resume) => {
+      const events: ConversationEvent[] = [];
+      const recording = new FileRecording(stateDir, () => {});
+
+      const conversation = new Conversation(
+        () =>
+          openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(undefined, '--set-title', 'echo'),
+            ...(resume === undefined ? {} : { resume }),
+          }),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        recording,
+      );
+
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+
+      return { conversation, events, recording };
+    };
+
+    try {
+      const first = await opened();
+
+      first.conversation.send('text');
+      await until(() => first.events.some((event) => event.type === 'result'));
+      await first.conversation.close();
+      await first.recording.flushed();
+
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const again = await opened({
+        sessionId: record.sessionId,
+        cwd: dir,
+        record: record.path,
+      });
+
+      await again.conversation.rename('x'.repeat(100));
+      await again.conversation.close();
+      await again.recording.flushed();
+
+      const [after] = await readRecords(stateDir);
+
+      expect(after?.title).toBe('x'.repeat(80));
+      expect(
+        parseRecord(await readFile(record.path, 'utf8')).filter(
+          (entry) => entry.type === 'renamed',
+        ),
+      ).toStrictEqual([
+        expect.objectContaining({ type: 'renamed', title: 'x'.repeat(80) }),
+      ]);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('a new session renamed and left without a prompt leaves no record', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-rename-'));
+    const stateDir = join(dir, 'state');
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(undefined, '--set-title', 'echo'),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      await conversation.rename('Fix the parser');
+      await conversation.close();
+      await recording.flushed();
+
+      expect(await readRecords(stateDir)).toStrictEqual([]);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
 });

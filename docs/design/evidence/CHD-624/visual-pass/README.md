@@ -32,3 +32,11 @@ captures, both as text and in colour. No regression from the design's list.
 In the wcwidth PNGs the browser draws the emoji narrower than tmux does, so
 the prompt's right border looks short there; the text captures show it in
 place.
+
+## U1b: OpenTUI picks the width method (commit e9cd1cd32)
+
+chord no longer forces `OPENTUI_FORCE_UNICODE` under tmux. `u1b-*`, with no
+`OPENTUI_FORCE_*` set, in tmux 3.6a: a `graphemes` and `naïve 日本語 👩‍💻 ok`
+typed, b cursor moved left, c `‼️ ⚠️ ❤️ 🖥️ end` typed, d cursor moved left.
+All eight frames match origin/main (which still forces unicode) as text and
+in colour, and a and b match U1's `graph-UNICODE-*` captures.

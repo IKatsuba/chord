@@ -1198,6 +1198,24 @@ describe('auth/status (CHD-629)', () => {
       },
     ));
 
+  test('a new source with the same account as the last pushed pushes nothing: the push names no source', () =>
+    onAcp(
+      ['--auth-status', 'authenticated'],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+
+        await newSession();
+        await until(() => pushes(client).length === 1);
+        await client.request('session/close', { sessionId: first });
+
+        // The answer comes after the close has settled whatever it would push.
+        expect((await client.request('auth/status', {})).result).toEqual(
+          SIGNED_IN,
+        );
+        expect(pushes(client)).toEqual([SIGNED_IN]);
+      },
+    ));
+
   test("another session's account is not mixed in until the source closes; then it is pushed once", () =>
     onAcp(
       ['--auth-status', 'authenticated'],

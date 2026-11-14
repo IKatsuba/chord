@@ -29,7 +29,8 @@
   `guardian.ts` (`guardian`, `guardiangated`),
   `shell.ts` (`shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`,
   `bashask`),
-  `compaction.ts` (`compact`, `codexcompact`, `compactfail`),
+  `compaction.ts` (`compact`, `codexcompact`, `compactfail`, `idlecompact`,
+  `idlecompactfail`, `idlecompactsays`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`,
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -94,7 +95,8 @@
   `shell`, `shellcut`, `bash`, `bashone`, `bashtwo`, `bashcut`, `bashask`,
   `compact`,
   `codexcompact`,
-  `compactfail`, `status`,
+  `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
+  `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
   `longheld`,
   `costwait`, `costwaitlate`,
@@ -368,6 +370,16 @@
   `codexcompact` as Codex's does, with no summary, and `compactfail`
   fails with Claude's error; to any other client each is a `Compact
   conversation` tool call of kind `think`;
+  `idlecompact` ends its turn with a line, then, 1.5 s after the turn,
+  compacts as claude-agent-acp 0.107 does an idle session (CHD-624): with no
+  request open, a `compaction_update` in progress, its summary in chunks,
+  completed after 6 s, or once `<cwd>/.fake-gate/release` exists where the
+  gate is (at most 10 s), then two `usage_update`s, the second with a cost;
+  a prompt meanwhile waits for it, as the adapter queues one behind its
+  `/compact`, and a cancel of that prompt cancels it; `idlecompactfail`
+  fails with Claude's error instead, and `idlecompactsays` sends an
+  untagged `agent_message_chunk` 1.2 s after it completes; play them with
+  `--adapter claude`;
   `todos` says whether Claude's task list tools reached it turned on;
   `status` moves to plan mode by `current_mode_update` alone, reports a cost
   and answers with token usage of its own, and `exitplan`

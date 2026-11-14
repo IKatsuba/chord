@@ -104,6 +104,8 @@ export type RecordEntry =
       readonly update: SessionUpdate;
       readonly subagentId?: string;
       readonly at?: number;
+      /** A compaction's opening update, the compaction unasked (CHD-624). */
+      readonly unasked?: true;
     }
   /** A request chord's MCP server served, as the reducer was handed it. */
   | {
@@ -731,6 +733,7 @@ export function recordActions(
             ? {}
             : { subagentId: entry.subagentId }),
           ...(entry.at === undefined ? {} : { at: entry.at }),
+          ...(entry.unasked === true ? { unasked: true } : {}),
         });
 
         break;
@@ -1038,6 +1041,7 @@ function updateEntry(
       ? {}
       : { subagentId: action.subagentId }),
     ...(action.at === undefined ? {} : { at: action.at }),
+    ...(action.unasked === undefined ? {} : { unasked: action.unasked }),
   };
 }
 

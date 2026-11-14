@@ -81,3 +81,51 @@ test('a compaction running in the turn that is goes to the spinner, any other st
     inSpinner({ kind: 'user', turnId: 't2', text: 'hi' }, working),
   ).toStrictEqual(false);
 });
+
+test('an unasked compaction says it ran while idle, in every status (CHD-624)', () => {
+  const unasked: Compaction = { ...base, unasked: true };
+  const done = { ...unasked, status: 'completed', summary: 'Kept this.' };
+
+  expect(compactionLine(unasked, false, 'ctrl+o')).toStrictEqual({
+    text: 'Compacting conversation while idle…',
+    tone: 'running',
+  });
+  expect(compactionLine(done, false, 'ctrl+o')).toStrictEqual({
+    text: 'Conversation compacted while idle (ctrl+o for history)',
+    tone: 'done',
+  });
+  expect(compactionLine(done, true, 'ctrl+o').text).toStrictEqual(
+    'Conversation compacted while idle',
+  );
+  expect(
+    compactionLine({ ...done, summary: '' }, false, 'ctrl+o').text,
+  ).toStrictEqual('Conversation compacted while idle');
+  expect(
+    compactionLine(
+      { ...unasked, status: 'failed', error: 'Not enough messages.' },
+      false,
+      'ctrl+o',
+    ),
+  ).toStrictEqual({
+    text: 'Compaction failed while idle: Not enough messages.',
+    tone: 'failed',
+  });
+  expect(
+    compactionLine({ ...unasked, status: 'cancelled' }, false, 'ctrl+o'),
+  ).toStrictEqual({ text: 'Compaction cancelled while idle', tone: 'failed' });
+});
+
+test('an unasked compaction still running when a turn starts is that turn’s, so the spinner says it (CHD-624)', () => {
+  const working: TurnState = { status: 'working', turnId: 't2', since: 0 };
+  const entry = (status: string): Entry => ({
+    kind: 'compaction',
+    turnId: 't1',
+    compaction: { ...base, status, unasked: true },
+  });
+
+  expect(inSpinner(entry('in_progress'), working)).toStrictEqual(true);
+  expect(inSpinner(entry('in_progress'), { status: 'idle' })).toStrictEqual(
+    false,
+  );
+  expect(inSpinner(entry('completed'), working)).toStrictEqual(false);
+});

@@ -320,7 +320,11 @@ import {
   TITLE_AT_START,
   TOKENS_ONLY,
 } from './options.ts';
-import { COMPACTION } from './scenarios/compaction.ts';
+import {
+  afterIdleCompaction,
+  COMPACTION,
+  IDLE_COMPACTION,
+} from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
@@ -453,6 +457,9 @@ const SCENARIOS = [
   'compact',
   'codexcompact',
   'compactfail',
+  'idlecompact',
+  'idlecompactfail',
+  'idlecompactsays',
   'status',
   'error',
   'slow',
@@ -771,6 +778,7 @@ const PLAY: Record<Scenario, Play> = {
   ...FORMS,
   ...SHELL,
   ...COMPACTION,
+  ...IDLE_COMPACTION,
   ...MODES,
   ...SUBAGENTS,
   ...MISBEHAVING,
@@ -1152,6 +1160,8 @@ async function playPrompt(
   try {
     playing.set(params.sessionId, turn);
     await answered;
+    // Claude's adapter runs a prompt only after its own compaction.
+    await afterIdleCompaction(params.sessionId, controller.signal);
 
     if (alongside) {
       await turn.say('Started alongside a turn still playing. ');

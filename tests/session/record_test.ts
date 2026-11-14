@@ -39,6 +39,7 @@ import {
   type WindowedAction,
 } from '../../src/ui/app/state.ts';
 import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
+import { compactionLine } from '../../src/ui/transcript/compaction.ts';
 import { endedLine } from '../../src/ui/transcript/ended.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { recordSession } from '../fixtures/records.ts';
@@ -3153,5 +3154,88 @@ test("effort and fast stay in the record's state line beside the settings line's
   ).toStrictEqual({
     type: 'state',
     options: { effort: 'high', fast: 'on' },
+  });
+});
+
+describe('an unasked compaction in the record (CHD-624)', () => {
+  /** The idle compaction's last usage, the one with its cost. */
+  const compactionCost = (event: ConversationEvent) =>
+    event.type === 'update' &&
+    event.update.sessionUpdate === 'usage_update' &&
+    event.update.used === 41200 &&
+    event.update.cost !== undefined;
+
+  test('is kept with its mark, and resumed it is drawn as live: compacted while idle', () =>
+    withDir(async (dir) => {
+      const stateDir = join(dir, 'state');
+      const live: ConversationEvent[] = [];
+      const id = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(undefined, '--adapter', 'claude'),
+        prompts: ['idlecompact'],
+        agent: 'claude',
+        heard: (event) => live.push(event),
+        until: compactionCost,
+      });
+      const record = await theRecord(dir);
+      const kept = await readPast(record.path);
+      const opening = kept.find(
+        (entry) =>
+          entry.type === 'update' &&
+          entry.update.sessionUpdate === 'compaction_update',
+      );
+
+      assert(opening?.type === 'update');
+      expect(opening.unasked).toStrictEqual(true);
+      // Only the opening update says it; the rest of the compaction's do not.
+      expect(
+        kept.filter((entry) => entry.type === 'update' && entry.unasked),
+      ).toHaveLength(1);
+
+      const again: ConversationEvent[] = [];
+
+      await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(undefined, '--resume-only'),
+        prompts: ['text'],
+        agent: 'claude',
+        resume: { sessionId: id, cwd: dir, record: record.path },
+        heard: (event) => again.push(event),
+      });
+
+      const drawn = (events: readonly ConversationEvent[]) =>
+        events
+          .filter((event) => event.type === 'update')
+          .reduce(reduceTranscript, emptyTranscript)
+          .entries.flatMap((entry) =>
+            entry.kind === 'compaction'
+              ? [compactionLine(entry.compaction, false, 'ctrl+o').text]
+              : [],
+          );
+
+      expect(drawn(live)).toStrictEqual([
+        'Conversation compacted while idle (ctrl+o for history)',
+      ]);
+      expect(drawn(again)).toStrictEqual(drawn(live));
+    }));
+
+  test('an older record, with no mark, draws its compaction as before', () => {
+    const update: SessionUpdate = {
+      sessionUpdate: 'compaction_update',
+      compactionId: 'k1',
+      status: 'completed',
+    };
+    const actions = recordActions([
+      { type: 'prompt', turnId: 't1', text: 'hi' },
+      { type: 'update', turnId: 't1', update },
+    ] as RecordEntry[]);
+
+    expect(
+      actions.flatMap((action) =>
+        action.type === 'update' ? ['unasked' in action] : [],
+      ),
+    ).toStrictEqual([false]);
   });
 });

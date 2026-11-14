@@ -2933,3 +2933,38 @@ describe("opencode v2's steering, from 2.2.7 (CHD-624)", () => {
       },
     ));
 });
+
+describe('CHD-624 U3 tester: opencode idle steering', () => {
+  test('an idle steer is refused without starting work and the next person’s prompt runs once', async () => {
+    let source: Session | undefined;
+
+    await onFake(
+      ['--steering', 'opencode'],
+      async (conversation, events) => {
+        assert(source);
+        expect(await source.steer('Do not start a turn.')).toBe('refused');
+        expect(
+          events.filter(
+            (event) =>
+              event.type === 'prompt' ||
+              event.type === 'result' ||
+              event.type === 'self_started' ||
+              event.type === 'cycle_started',
+          ),
+        ).toEqual([]);
+        conversation.send('text');
+        await until(() => events.some((event) => event.type === 'result'));
+        expect(promptsIn(events)).toEqual([['text', undefined]]);
+        expect(events.filter((event) => event.type === 'result')).toHaveLength(
+          1,
+        );
+        expect(saidIn(events)).toContain('Hello, world.');
+      },
+      (session) => {
+        source = session;
+
+        return session;
+      },
+    );
+  });
+});

@@ -3,7 +3,7 @@
  * close while the agent never answers, a reply's chunks, and messages held
  * behind Claude's open calls.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -1434,3 +1434,42 @@ test("goose's turn_failed ends the turn failed in its words, not the connection,
       ),
     ).toBe(false);
   }));
+
+describe('CHD-624 U3 tester: failed turns release the prompt queue', () => {
+  test('two failed turns retain their own errors and the queued successful turn completes on the same connection', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('turnfailed');
+      conversation.send('turnfailed');
+      conversation.send('text');
+      await until(
+        () => events.filter((event) => event.type === 'result').length === 3,
+      );
+
+      const results = events.filter((event) => event.type === 'result');
+      const prompts = events.filter((event) => event.type === 'prompt');
+
+      expect(results.map(({ result }) => result.status)).toEqual([
+        'failed',
+        'failed',
+        'completed',
+      ]);
+      expect(results.map(({ turnId }) => turnId)).toEqual(
+        prompts.map(({ turnId }) => turnId),
+      );
+      expect(new Set(results.map(({ turnId }) => turnId)).size).toBe(3);
+
+      for (const result of results.slice(0, 2)) {
+        expect(result.result).toMatchObject({
+          error: { message: TURN_FAILED },
+        });
+      }
+
+      expect(saidIn(events)).toContain('Hello, world.');
+      expect(
+        events.filter(
+          (event) =>
+            event.type === 'disconnected' || event.type === 'connect_failed',
+        ),
+      ).toEqual([]);
+    }));
+});

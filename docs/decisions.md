@@ -8869,7 +8869,7 @@ normalised answer is recorded as answered. The last title wins, whoever set
 it (D3 b). Kept apart from CHD-626's config chain: a hung config change must
 not hold a title. Rejected: writing before sending, which records a title the
 agent may normalise or refuse. A refused `set_title` records nothing
-(recommended, pending the owner's Q1). No key: a typed command, as CHD-626
+(owner, Q1 a). No key: a typed command, as CHD-626
 O6 settled. Libraries: the SDK 2.6 `setSessionTitle` types; nothing written.
 
 ## 2026-11-14 — CHD-629: the account is a fold per connection, never awaited
@@ -8883,9 +8883,9 @@ sends nothing; never recorded or relayed to tools. A failed start or a
 prompt's -32000 words the sign-in block from it, waiting at most 1 s for a
 pending answer. `chord acp` serves one source, its oldest live main session
 of the startup agent, and moves to the next on close with one push; it never
-mixes connections. Signed-out Claude opens and fails the first prompt; whether
-chord fails the start instead is the owner's Q2 (open as today
-recommended). Libraries: SDK 2.6 `AuthStatusResponse`; `strip-ansi` for the
+mixes connections. Signed-out Claude opens and fails the first prompt; the
+owner chose to keep that (Q2 c) over failing the start on `unauthenticated`
+or asking before `session/new`. Libraries: SDK 2.6 `AuthStatusResponse`; `strip-ansi` for the
 account strings.
 
 ## 2026-11-14 — CHD-629: initial options from a table, read back in the chain
@@ -8902,8 +8902,9 @@ required one fails the start. No value is asked more than twice; chord does
 not read why the agent overrode. Rejected: one upfront unmet list, which
 misses a value a model change moved; moving `FAST_OPTIONS` to the adapter
 name, CHD-626's choice and not this task. `chord acp` does not advertise
-`options`; a client's entries pass down verbatim (recommended, the owner's
-Q4). A stale id falls back to set-after-new (Q8). Libraries: SDK 2.6
+`options`; a client's entries pass down verbatim (owner, Q4 b). A stale
+id falls back to set-after-new; the pin-bump checklist rechecks the table
+(owner, Q8 a). Libraries: SDK 2.6
 `InitialSessionConfigOption`; nothing written.
 
 ## 2026-11-14 — CHD-629: notices declared per open, drawn as their own entry
@@ -8915,8 +8916,9 @@ parameter of `openAgent`; the window and `-p` declare it, `chord acp` only
 when its client did, so its clients get what they get today and chord
 rewrites no agent output. A notice is a transcript entry of its own, kept
 whole in the record and drawn on resume; it is no cycle work. The colour
-(dim text with a severity glyph, recommended, or all dim) is the owner's Q7;
-`-p`'s stderr line Q5; accepting Claude's dropped `info` messages Q6.
+is dim text with the `⏺` in the severity's role (owner, Q7 a); `-p` writes
+notices to stderr (Q5 a); Claude's dropped `info` messages are accepted
+(Q6 a).
 Libraries: SDK 2.6 `Notice` types; no library draws transcript entries
 beyond OpenTUI's `text`.
 
@@ -8930,3 +8932,15 @@ the `Error:` prefix as today. `chord acp` aliases known ids and drops unknown
 ones and every reference for a client without `subagents`; a raw id could
 equal an unrelated upstream alias. Libraries: SDK 2.6 `SessionReference`;
 nothing written.
+
+## 2026-11-14 — CHD-629: the owner's answers
+
+The owner took every recommendation of `docs/design/CHD-629.md`: Q1 a (a
+refused `set_title` records nothing), Q2 c (signed-out Claude opens; a -32000
+at start or at a prompt becomes the sign-in block from `auth/status`), Q3 d
+(`chord acp` records a rename of an unloaded session and sends `set_title` at
+its next load), Q4 b (`chord acp` passes a client's initial `configOptions`
+verbatim without advertising `options`), Q5 a (`-p` writes notices to
+stderr), Q6 a (Claude's dropped `info` messages accepted), Q7 a (a notice's
+`⏺` in its severity's role), Q8 a (a renamed config id caught by the
+pin-bump checklist, harmless by the read-back).

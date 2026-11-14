@@ -55,8 +55,8 @@
   `taskchildhold`),
   `cycles.ts` (`claudecycle`, `claudecyclebare`, `claudecycleask`,
   `codebuddycycle`) and
-  `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`, `flood`,
-  `ignorescancel`). Beside it, what the scenarios read too:
+  `misbehaving.ts` (`cancels`, `error`, `late`, `unknown`, `authstatus`,
+  `flood`, `ignorescancel`). Beside it, what the scenarios read too:
   `options.ts` its flags and environment variables, `turn.ts` a turn and
   its call ids, `client.ts` what the client declared at `initialize`, and
   `sessions.ts` each session's directory, MCP servers, model, mode and
@@ -95,7 +95,8 @@
   `compact`,
   `codexcompact`,
   `compactfail`, `status`,
-  `cancels`, `error`, `flood`, `ignorescancel`, `slow`, `long`, `longheld`,
+  `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
+  `longheld`,
   `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
   `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
@@ -182,7 +183,9 @@
   box; `bigasktwice` asks for two such writes at once, the second waiting
   behind the first; `late`
   sends a chunk after answering the prompt; `unknown` sends an update of a
-  kind ACP does not have and a notification of its own; `cancels` says how
+  kind ACP does not have and a notification of its own; `authstatus`
+  sends Claude's `_auth/status_update` and `auth/status_update`, which chord
+  takes no handler for, then a line; `cancels` says how
   many `session/cancel` notifications its session got with no turn playing,
   `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) acknowledges each such cancel
   with `Cancel heard with no turn.`, so tests can wait for its arrival;

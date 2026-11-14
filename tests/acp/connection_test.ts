@@ -688,6 +688,39 @@ test('an update or notification of a kind no schema knows comes through raw, and
   expect(errors).toStrictEqual([]);
 });
 
+test("Claude's sign-in notifications, which chord does not handle, are dropped without a word and the turn completes", async () => {
+  const errors: unknown[] = [];
+  const { error, warn } = console;
+
+  console.error = (...args: unknown[]) => void errors.push(args);
+  console.warn = console.error;
+
+  try {
+    await withAgent([], async (agent, seen, cwd) => {
+      const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });
+      const status = {
+        state: 'authenticated',
+        accounts: [{ label: 'Claude Max', active: true }],
+      };
+
+      const { stopReason } = await agent.prompt({
+        sessionId,
+        prompt: [text('authstatus')],
+      });
+
+      expect(stopReason).toStrictEqual('end_turn');
+      expect(seen.notified('_auth/status_update')).toStrictEqual([status]);
+      expect(seen.notified('auth/status_update')).toStrictEqual([status]);
+      expect(seen.said()).toStrictEqual('Sent the sign-in state.');
+    });
+  } finally {
+    console.error = error;
+    console.warn = warn;
+  }
+
+  expect(errors).toStrictEqual([]);
+});
+
 test('a cancel ends the turn, and the agent answers it cancelled', () =>
   withAgent([], async (agent, seen, cwd) => {
     const { sessionId } = await agent.newSession({ cwd, mcpServers: [] });

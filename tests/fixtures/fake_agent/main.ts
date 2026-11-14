@@ -497,6 +497,7 @@ const SCENARIOS = [
   'bigask',
   'bigasktwice',
   'unknown',
+  'authstatus',
   'cancels',
   'flood',
   'ignorescancel',

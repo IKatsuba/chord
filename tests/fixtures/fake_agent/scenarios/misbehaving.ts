@@ -86,4 +86,19 @@ export const MISBEHAVING = {
 
     return 'end_turn';
   },
+
+  // Claude's sign-in state, which chord takes no handler for: the old
+  // underscore name 0.99.1 sends and the method 0.107 sends on SDK 2.6.
+  async authstatus(turn) {
+    const status: acp.AuthStatusUpdateNotification = {
+      state: 'authenticated',
+      accounts: [{ label: 'Claude Max', active: true }],
+    };
+
+    await turn.client.notify('_auth/status_update', status);
+    await turn.client.notify('auth/status_update', status);
+    await turn.say('Sent the sign-in state.');
+
+    return 'end_turn';
+  },
 } satisfies Record<string, Play>;

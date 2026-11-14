@@ -19,6 +19,7 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { findAgent } from '../../src/agents.ts';
 import { startFailureOf } from '../../src/session/start_failure.ts';
@@ -2622,6 +2623,49 @@ describe('a wait on the account for a refused prompt stops on a cancel or a clos
           expect(result.status).toBe('failed');
           // Well inside AUTH_WAIT_MS: nothing waited for the hung ask.
           expect(performance.now() - began).toBeLessThan(AUTH_WAIT_MS);
+        },
+        undefined,
+        '--auth-required',
+        'prompt',
+        '--auth-status',
+        'hang',
+      ));
+  }
+});
+
+describe('CHD-629 tester: sign-in wait process boundaries', () => {
+  for (const how of ['cancel', 'close', 'exit'] as const) {
+    test(`${how} ends an already-refused prompt's account wait without waiting for its deadline`, () =>
+      withSession(
+        async (session) => {
+          const began = performance.now();
+          const turn = session.prompt('text');
+
+          await turn.sent;
+          // Two round trips after the prompt leave its refusal handled, while
+          // auth/status is still hung; no pause guesses when the wait began.
+          await session.setMode('plan');
+          await session.setEffort('high');
+
+          if (how === 'cancel') {
+            await turn.cancel();
+          } else if (how === 'close') {
+            await session.close();
+          } else {
+            const [pid] = session.agentPids;
+
+            assert(pid !== undefined);
+            process.kill(pid, 'SIGKILL');
+          }
+
+          const result = await turn.result;
+
+          assert(result.status === 'failed');
+          expect(result.error.code).toBe('-32000');
+          expect(result.error.signIn?.account?.phase).toBe(
+            how === 'exit' ? 'failed' : 'pending',
+          );
+          expect(performance.now() - began).toBeLessThan(AUTH_WAIT_MS * 0.8);
         },
         undefined,
         '--auth-required',

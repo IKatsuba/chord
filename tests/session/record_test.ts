@@ -8,7 +8,9 @@ import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
   emptyTranscript,
   type Entry,
+  type TurnResult,
 } from '../../src/session/transcript/types.ts';
+import type { AccountState } from '../../src/session/auth_status.ts';
 import { turnCost } from '../../src/session/prices.ts';
 import { runOneshot } from '../../src/session/oneshot.ts';
 import {
@@ -19,6 +21,7 @@ import {
   childPasts,
   entryOf,
   FileRecording,
+  historyEntries,
   lastTotal,
   readPast,
   promptLine,
@@ -3299,4 +3302,62 @@ describe("a sign-in's account is never recorded (CHD-629)", () => {
       await rm(dir, { recursive: true });
     }
   });
+});
+
+describe('CHD-629 tester: sign-in serialization boundaries', () => {
+  const accounts: AccountState[] = [
+    { phase: 'none' },
+    { phase: 'pending' },
+    { phase: 'failed' },
+    {
+      phase: 'heard',
+      status: {
+        state: 'authenticated',
+        accounts: [
+          {
+            label: 'Live identity only',
+            email: 'never-record-this@example.test',
+            organization: 'Display only organisation',
+          },
+        ],
+      },
+    },
+  ];
+
+  for (const account of accounts) {
+    test(`both result serialization paths omit ${account.phase} account data without changing the live result`, () => {
+      const result: TurnResult = {
+        status: 'failed',
+        error: {
+          code: '-32000',
+          message: 'Authentication required',
+          signIn: {
+            message: 'Authentication required',
+            ways: [{ name: 'Fixture login', description: 'Run fixture login' }],
+            account,
+          },
+        },
+      };
+      const before = structuredClone(result);
+      const expected: TurnResult = {
+        status: 'failed',
+        error: {
+          code: '-32000',
+          message: 'Authentication required',
+          signIn: {
+            message: 'Authentication required',
+            ways: [{ name: 'Fixture login', description: 'Run fixture login' }],
+          },
+        },
+      };
+      const event = { type: 'result', turnId: 't', result } as const;
+      const live = entryOf(event, { type: 'state', options: {} });
+      const history = historyEntries([event]);
+
+      expect(live).toEqual({ ...event, result: expected });
+      expect(history).toEqual([{ ...event, result: expected }]);
+      expect(JSON.stringify([live, history])).not.toContain('account');
+      expect(result).toEqual(before);
+    });
+  }
 });

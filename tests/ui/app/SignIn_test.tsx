@@ -1,5 +1,8 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import stripAnsi from 'strip-ansi';
+import type { SignIn } from '../../../src/session/sign_in.ts';
+import { Colours } from '../../../src/ui/app/context.ts';
+import { paletteOf } from '../../../src/ui/theme/theme.ts';
 import type { Entry } from '../../../src/session/transcript/types.ts';
 import { SignInBlock } from '../../../src/ui/app/SignIn.tsx';
 import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
@@ -66,4 +69,86 @@ test("a prompt refused for a login is the block in the turn error's place, heade
     '⏺ claude needs a sign-in: Authentication required',
     '  ⎿  claude reports that no account is signed in.',
   ]);
+});
+
+describe('CHD-629 tester: sign-in account layout boundaries', () => {
+  for (const [columns, theme] of [
+    [80, 'dark'],
+    [120, 'dark'],
+    [80, 'light'],
+  ] as const) {
+    test(`long active accounts wrap without loss at ${columns} columns in ${theme}`, async () => {
+      const signIn: SignIn = {
+        message: 'Authentication required',
+        ways: [
+          {
+            name: 'Fixture login',
+            description: 'Run fixture login in another terminal',
+          },
+        ],
+        account: {
+          phase: 'heard',
+          status: {
+            state: 'authenticated',
+            accounts: [
+              {
+                label: 'Primary plan',
+                description: 'A long account description for the sign-in block',
+                name: 'Fixture Person',
+                email: 'long.account.for.signin@engineering.example.test',
+                organization: 'Organisation of Long Account Names',
+                active: true,
+              },
+              {
+                label: 'Backup plan',
+                email: 'backup@example.test',
+                active: true,
+              },
+              { label: 'Inactive identity', active: false },
+            ],
+          },
+        },
+      };
+      const drawn = await draw(
+        <Colours.Provider value={paletteOf(theme, true)}>
+          <TranscriptEntry
+            entry={{
+              kind: 'error',
+              turnId: 't',
+              message: signIn.message,
+              code: '-32000',
+              signIn,
+            }}
+            turn={{ status: 'idle' }}
+            agent='fake'
+            expanded={false}
+            width={columns - 4}
+          />
+        </Colours.Provider>,
+        { columns, rows: columns === 80 ? 24 : 40 },
+      );
+
+      try {
+        const frame = stripAnsi(drawn.frame());
+        const compact = frame.replace(/\s/g, '');
+
+        expect(compact).toContain(
+          'fake reports Primary plan · A long account description for the sign-in block · Fixture Person · long.account.for.signin@engineering.example.test · Organisation of Long Account Names, Backup plan · backup@example.test.'.replace(
+            /\s/g,
+            '',
+          ),
+        );
+        expect(frame).not.toContain('Inactive identity');
+        expect(frame).toContain('Fixture login');
+        expect(compact).toContain(
+          'chord does not sign agents in.'.replace(/\s/g, ''),
+        );
+        expect(frame.split('\n').every((row) => row.length <= columns)).toBe(
+          true,
+        );
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
 });

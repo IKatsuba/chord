@@ -318,6 +318,44 @@ test("a notice's line is cleaned and folded to one, its description left out whe
   ).toStrictEqual('chord: Alone\n');
 });
 
+describe('CHD-629 tester: headless notice boundaries', () => {
+  for (const format of ['text', 'json'] as const) {
+    test(`startup and turn notices reach stderr once in order, with ${format} stdout kept clean`, async () => {
+      const output = await headless('notice', format, {
+        agentFlags: ['--start-notice', 'Startup advice'],
+      });
+
+      expect(output.code).toBe(0);
+      expect(output.stderr).toBe(
+        'chord: Startup advice\n' +
+          'chord: Fast mode turned off: Rate limit for fast mode reached; it comes back after the limit resets.\n',
+      );
+      expect(
+        format === 'json'
+          ? JSON.parse(output.stdout).result
+          : output.stdout.trimEnd(),
+      ).toBe('Running the lexer suite with coverage now. Done.');
+    });
+
+    test(`a failed prompt preserves its earlier notice and failure in ${format}`, async () => {
+      const output = await headless('error', format, {
+        agentFlags: ['--start-notice', 'Startup advice'],
+      });
+
+      expect(output.code).toBe(1);
+      expect(output.stderr).toBe(
+        'chord: Startup advice\nchord: The fake agent failed on purpose.\n',
+      );
+
+      if (format === 'json') {
+        expect(JSON.parse(output.stdout).is_error).toBe(true);
+      }
+
+      expect(output.stdout).not.toContain('Startup advice');
+    });
+  }
+});
+
 test('a failing agent exits 1 with its error on stderr', async () => {
   expect(await headless('error')).toStrictEqual({
     code: 1,

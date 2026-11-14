@@ -647,6 +647,65 @@ describe('notices (CHD-629)', () => {
     ));
 });
 
+describe('CHD-629 tester: notice forwarding boundaries', () => {
+  for (const declared of [true, false]) {
+    test(`startup advice is delivered before any prompt with notices ${declared ? 'declared' : 'omitted'}`, () =>
+      onAcp(
+        ['--start-notice', 'Before the first prompt'],
+        async ({ client, newSession }) => {
+          const sessionId = await newSession();
+
+          if (declared) {
+            expect(
+              client
+                .updates(sessionId)
+                .filter((update) => update.sessionUpdate === 'notice'),
+            ).toEqual([
+              {
+                sessionUpdate: 'notice',
+                severity: 'warning',
+                title: 'Before the first prompt',
+              },
+            ]);
+            expect(client.said(sessionId)).not.toContain(
+              'Before the first prompt',
+            );
+          } else {
+            expect(kinds(client, sessionId)).not.toContain('notice');
+            expect(client.said(sessionId)).toContain(
+              '> **Before the first prompt**',
+            );
+          }
+        },
+        { capabilities: declared ? FULL : { subagents: {} } },
+      ));
+  }
+
+  test('two mains with the same downstream id keep their own notices', () =>
+    onAcp(['--session-id', 's1'], async ({ client, newSession, prompt }) => {
+      const first = await newSession();
+      const second = await newSession();
+
+      expect(first).not.toBe(second);
+      await Promise.all([
+        client.answerTo(prompt(first, 'notice')),
+        client.answerTo(prompt(second, 'noticelong')),
+      ]);
+
+      const titles = (sessionId: string) =>
+        client
+          .updates(sessionId)
+          .flatMap((update) =>
+            update.sessionUpdate === 'notice' ? [update.title] : [],
+          );
+
+      expect(titles(first)).toEqual(['Fast mode turned off']);
+      expect(titles(second)).toEqual(['MCP server "files" failed to start']);
+      expect(client.said(first)).not.toContain('MCP server');
+      expect(client.said(second)).not.toContain('Fast mode');
+    }));
+});
+
 describe('sessions side by side', () => {
   test('the same id from a second process takes an alias, and both route', () =>
     onAcp(['--session-id', 's1'], async ({ client, newSession, prompt }) => {

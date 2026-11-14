@@ -10,7 +10,7 @@ import {
 import { initialValuesOf } from '../../src/session/initial_options.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
-import { heldSession, until } from './conversation_fake.ts';
+import { heldSession, isAlive, until } from './conversation_fake.ts';
 
 function fixture() {
   const exits: (() => void)[] = [];
@@ -148,6 +148,114 @@ describe('tester: repeated launch authority revocation', () => {
       await conversation.close();
     }
   });
+});
+
+describe('CHD-629 tester: starting chain process boundaries', () => {
+  async function startingFake(
+    flags: readonly string[],
+    body: (seen: {
+      conversation: Conversation;
+      events: ConversationEvent[];
+      asks: string[];
+      session: Session;
+    }) => Promise<void>,
+  ) {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-starting-boundary-'));
+    const events: ConversationEvent[] = [];
+    const asks: string[] = [];
+    let opened: Session | undefined;
+    const conversation = new Conversation(
+      async (signal, values) => {
+        const session = await openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(undefined, ...flags),
+          signal,
+          initial: initialValuesOf(values),
+        });
+
+        opened = session;
+
+        return {
+          ...session,
+          setModel: (id) => {
+            asks.push(`model ${id}`);
+
+            return session.setModel(id);
+          },
+          setMode: (id) => {
+            asks.push(`mode ${id}`);
+
+            return session.setMode(id);
+          },
+        };
+      },
+      (event) => events.push(event),
+      Date.now,
+      {
+        model: { id: 'fake-small', required: true },
+        mode: { id: 'plan', required: true },
+      },
+    );
+
+    try {
+      conversation.start();
+      await until(() => opened !== undefined && asks.length > 0);
+
+      if (opened === undefined) {
+        throw new Error('the fake session did not open');
+      }
+
+      await body({ conversation, events, asks, session: opened });
+    } finally {
+      const pids = [...(opened?.agentPids ?? [])];
+
+      await conversation.close();
+
+      for (const pid of pids) {
+        expect(await isAlive(pid)).toBe(false);
+      }
+
+      await rm(dir, { recursive: true });
+    }
+  }
+
+  test('a hung startup ask does not hold another session', () =>
+    startingFake(['--hang', 'config'], async (hung) => {
+      await startingFake([], async (healthy) => {
+        await until(() =>
+          healthy.events.some((event) => event.type === 'connected'),
+        );
+        healthy.conversation.send('text');
+        await until(() =>
+          healthy.events.some((event) => event.type === 'result'),
+        );
+
+        expect(healthy.asks).toStrictEqual(['model fake-small', 'mode plan']);
+        expect(hung.asks).toStrictEqual(['model fake-small']);
+        expect(hung.events.some((event) => event.type === 'connected')).toBe(
+          false,
+        );
+      });
+    }));
+
+  test('an agent exiting during the first required ask receives no remaining startup changes', () =>
+    startingFake(['--hang', 'config'], async ({ events, asks, session }) => {
+      await session.close();
+      await until(() =>
+        events.some(
+          (event) =>
+            event.type === 'connect_failed' || event.type === 'disconnected',
+        ),
+      );
+
+      expect(asks).toStrictEqual(['model fake-small']);
+      expect(
+        events.some(
+          (event) => event.type === 'connected' || event.type === 'prompt',
+        ),
+      ).toBe(false);
+    }));
 });
 
 describe('the starting values read back as the chain’s first link (CHD-629)', () => {

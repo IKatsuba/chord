@@ -397,6 +397,7 @@ const SCENARIOS = [
   'text',
   'notice',
   'noticeidle',
+  'noticelong',
   'cloudrequest',
   'texttillsteered',
   'texttillsteeredheld',

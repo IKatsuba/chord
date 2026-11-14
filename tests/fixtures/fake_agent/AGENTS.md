@@ -31,7 +31,7 @@
   `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`, `idlecompact`,
   `idlecompactfail`, `idlecompactsays`),
-  `notices.ts` (`notice`, `noticeidle`),
+  `notices.ts` (`notice`, `noticeidle`, `noticelong`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`,
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -97,7 +97,7 @@
   `compact`,
   `codexcompact`,
   `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
-  `notice`, `noticeidle`,
+  `notice`, `noticeidle`, `noticelong`,
   `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
   `longheld`, `turnfailed`,
@@ -348,7 +348,9 @@
   notice titled `text` before each `session/new` answer (CHD-629).
   `notice` sends a `warning` notice between two reply chunks, and
   `noticeidle` ends its turn with a line, then sends an `info` notice
-  1.5 s after the turn, with no request open. Each is a `notice` to a
+  1.5 s after the turn, with no request open; `noticelong` sends an
+  `error` notice whose description runs past two rows at 80 columns, with
+  blank lines inside, then a line. Each is a `notice` to a
   client that declares `clientCapabilities.session.notices`, and to any
   other Claude's bold blockquote as reply text.
   `costwait` reports a cost, then works on until it is cancelled, and

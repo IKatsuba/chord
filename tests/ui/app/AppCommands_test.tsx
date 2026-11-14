@@ -4,7 +4,23 @@
  * and a start that fails.
  */
 import { describe, expect, test } from 'bun:test';
-import { withChild, openOther, readyAgent } from './child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
+import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { RecordEntry } from '../../../src/session/record.ts';
+import { openSession } from '../../../src/session/session.ts';
+import {
+  earlierSessions,
+  readRecords,
+  summaryOf,
+} from '../../../src/session/sessions.ts';
 import { draw } from '../harness.tsx';
 import { type Resumable } from '../../../src/session/sessions.ts';
 import { App } from '../../../src/ui/app/App.tsx';
@@ -20,10 +36,12 @@ import {
   quitAll,
   ready,
   send,
+  statusReports,
   TAB,
   until,
   UP,
   withWindow,
+  type Window,
 } from './render.tsx';
 import manifest from '../../../package.json' with { type: 'json' };
 
@@ -474,4 +492,248 @@ describe('/rename (CHD-629)', () => {
       );
     });
   });
+});
+
+describe('CHD-629 tester: rename targets and terminal status', () => {
+  interface TitleCall {
+    sessionId: string;
+    title: string;
+  }
+
+  const command = fakeAgentCommand(
+    undefined,
+    '--set-title',
+    'echo',
+    '--child-runtime',
+    'fake',
+  );
+  const captureTitles =
+    (calls: TitleCall[]): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+
+      return {
+        ...session,
+        setTitle: (title) => {
+          calls.push({ sessionId: session.id, title });
+
+          return session.setTitle(title);
+        },
+      };
+    };
+
+  async function rename(window: Window, title: string) {
+    await send(window, `/rename ${title}`);
+    await window.shows(`Renamed to ${title}`);
+  }
+
+  test('an actual starting session refuses rename without queueing a title request', async () => {
+    const calls: TitleCall[] = [];
+
+    await withWindow(
+      async (window) => {
+        await window.shows('Starting');
+        await send(window, '/rename While starting');
+        await window.shows(
+          'The session is not open yet; rename it once it is.',
+        );
+        expect(calls).toEqual([]);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--hang', 'start'),
+        whileStarting: true,
+        openWith: captureTitles(calls),
+      },
+    );
+  });
+
+  test('an exited session refuses rename before calling setTitle', async () => {
+    const calls: TitleCall[] = [];
+
+    await withWindow(
+      async (window) => {
+        const session = window.session();
+
+        assert(session);
+        await session.close();
+        await session.exited;
+        await send(window, '/rename After exit');
+        await window.shows('main has exited; its session cannot be renamed.');
+        expect(calls).toEqual([]);
+      },
+      { agentCommand: command, openWith: captureTitles(calls) },
+    );
+  });
+
+  test('a real task record resumed as main keeps its task title and refuses rename', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-rename-task-'));
+    const path = join(dir, 'task.jsonl');
+    const id = crypto.randomUUID();
+    const calls: TitleCall[] = [];
+    const entries: RecordEntry[] = [
+      {
+        type: 'session',
+        version: 1,
+        sessionId: id,
+        agent: 'fake',
+        cwd: dir,
+        at: 0,
+        parent: 'parent',
+        name: 'Task title',
+        task: 'task-id',
+      },
+      { type: 'prompt', turnId: 't1', at: 1, prompt: 'Do the work', images: 0 },
+      {
+        type: 'result',
+        turnId: 't1',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ];
+
+    try {
+      const text =
+        entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n';
+
+      await writeFile(path, text);
+
+      const record = summaryOf(path, text);
+
+      assert(record);
+
+      const [choice] = earlierSessions([record], { agent: 'fake', cwd: dir });
+
+      assert(choice);
+      await withWindow(
+        async (window) => {
+          expect(window.session()?.resumed?.task).toBe(true);
+          await send(window, '/rename New task title');
+          await window.shows(
+            'main is a task; it keeps the title it was given.',
+          );
+          expect(calls).toEqual([]);
+        },
+        {
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--set-title',
+            'echo',
+            '--resume-only',
+          ),
+          resume: choice.resume,
+          openWith: captureTitles(calls),
+        },
+      );
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  for (const columns of [80, 120]) {
+    test(`the picked child alone is renamed, while OSC status keeps main's title at ${columns} columns`, async () => {
+      const calls: TitleCall[] = [];
+      const log: string[] = [];
+
+      await withChild(
+        async (window) => {
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+
+          const mainId = window.session()?.id;
+
+          assert(mainId);
+          await rename(window, 'Main title');
+          await until(
+            'main OSC title',
+            () => statusReports(log).at(-1)?.title === 'Main title',
+          );
+          await openOther(window);
+          await pickAgent(window, 'other');
+          await readyAgent(window);
+          await rename(window, 'Child title');
+
+          expect(calls[0]).toEqual({ sessionId: mainId, title: 'Main title' });
+          expect(calls[1]?.title).toBe('Child title');
+          expect(calls[1]?.sessionId).not.toBe(mainId);
+          expect(statusReports(log).at(-1)?.title).toBe('Main title');
+          await until('both recorded titles', async () => {
+            const records = await readRecords(join(window.dir, 'state'));
+
+            return (
+              records.some(
+                (record) =>
+                  record.sessionId === mainId && record.title === 'Main title',
+              ) &&
+              records.some(
+                (record) =>
+                  record.sessionId === calls[1]?.sessionId &&
+                  record.title === 'Child title',
+              )
+            );
+          });
+
+          await pickAgent(window, 'main');
+          await readyAgent(window);
+          expect(window.frame()).not.toContain('Renamed to Child title');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          agentCommand: command,
+          startupOf: () => ({ agentCommand: command }),
+          openWith: captureTitles(calls),
+          log,
+        },
+      );
+    });
+  }
+
+  test('a late rename answer keeps its note in the original session after a child is picked', () =>
+    withChild(
+      async (window) => {
+        await openOther(window);
+        await send(window, '/rename Main waits');
+        await window.shows('Renaming to Main waits');
+        await until('rename reached the fake', () => {
+          return readFile(
+            join(window.dir, '.fake-gate', 'titles-heard'),
+            'utf8',
+          ).then(
+            (text) => text.includes('Main waits'),
+            () => false,
+          );
+        });
+
+        await pickAgent(window, 'other');
+        await readyAgent(window);
+        await mkdir(join(window.dir, '.fake-gate'), { recursive: true });
+        await writeFile(join(window.dir, '.fake-gate', 'release'), '');
+        await until('main rename recorded', async () =>
+          (await readRecords(join(window.dir, 'state'))).some(
+            (record) => record.title === 'Main waits',
+          ),
+        );
+        expect(window.frame()).not.toContain('Renamed to Main waits');
+        await pickAgent(window, 'main');
+        await readyAgent(window);
+        await window.shows('Renamed to Main waits');
+      },
+      {
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--set-title',
+          'hang',
+          '--child-runtime',
+          'fake',
+        ),
+        startupOf: () => ({
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--set-title',
+            'hang',
+            '--child-runtime',
+            'fake',
+          ),
+        }),
+      },
+    ));
 });

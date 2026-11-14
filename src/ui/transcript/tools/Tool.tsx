@@ -10,10 +10,16 @@ import {
   useState,
 } from 'react';
 import stripAnsi from 'strip-ansi';
-import type { PlanAsk, ToolCall } from '../../../session/transcript/types.ts';
+import type {
+  PlanAsk,
+  Subagent,
+  ToolCall,
+} from '../../../session/transcript/types.ts';
+import { agentHeadline, linkedSubagents } from '../agents/subagents.ts';
 import {
   ChordServerName,
   PathViews,
+  TranscriptEntries,
   CodeIds,
   paint,
   useAgentColour,
@@ -22,7 +28,16 @@ import {
   useSelectable,
 } from '../../app/context.ts';
 import { Ansi } from '../../theme/Ansi.tsx';
-import { colour, CUT, DIM, fg, FILL, ROWS, TEXT } from '../../theme/text.ts';
+import {
+  BOLD,
+  colour,
+  CUT,
+  DIM,
+  fg,
+  FILL,
+  ROWS,
+  TEXT,
+} from '../../theme/text.ts';
 import type { Palette } from '../../theme/theme.ts';
 import { markdown, type Soft, softMarkdown } from '../markdown.ts';
 import {
@@ -113,6 +128,7 @@ export function Tool({
   const gap = useGap();
 
   const chordServer = useContext(ChordServerName);
+  const entries = useContext(TranscriptEntries);
   const line = headline(call, chordServer);
   const recipient = useAgentColour(line.name);
   const live = toneOf(call, asked);
@@ -161,13 +177,17 @@ export function Tool({
     asked,
   );
   const sent = sentBody(call, chordServer);
+  // The subagents the call refers to, each a line of its own above the
+  // call's own, which are worked out without them (CHD-629).
+  const links = linkedSubagents(call.content ?? [], entries);
+  const linked = links.length > 0;
   // Rows drawn ahead of each terminal's, so only the first row of all has `⎿`.
   const ahead = terminals.reduce<number[]>(
     (counts, view, index) => [
       ...counts,
       counts[index]! + view.lines.length + (view.note ? 1 : 0),
     ],
-    [lines.length],
+    [links.length + lines.length],
   );
 
   return (
@@ -205,6 +225,14 @@ export function Tool({
             </text>
           </Under>
         )}
+        {links.map((subagent, index) => (
+          <Under
+            key={subagent.id}
+            first={index === 0 && call.review === undefined}
+          >
+            <LinkLine subagent={subagent} />
+          </Under>
+        ))}
         {proposal !== undefined && (
           <Proposal
             view={proposal}
@@ -228,7 +256,10 @@ export function Tool({
           sent === undefined &&
           call.plan === undefined &&
           lines.map((line, index) => (
-            <Under key={index} first={index === 0 && call.review === undefined}>
+            <Under
+              key={index}
+              first={index === 0 && call.review === undefined && !linked}
+            >
               <text
                 {...ROWS}
                 {...selectable}
@@ -259,6 +290,22 @@ export function Tool({
         ))}
       </box>
     </>
+  );
+}
+
+/**
+ * A subagent a call refers to, named as its own block names it: `Agent`
+ * bold, its title plain (CHD-629).
+ */
+function LinkLine({ subagent }: { subagent: Subagent }) {
+  const { name, arg, note } = agentHeadline(subagent, false);
+
+  return (
+    <text {...ROWS}>
+      <span attributes={BOLD}>{name}</span>
+      {arg === undefined ? '' : `(${arg})`}
+      {note ?? ''}
+    </text>
   );
 }
 

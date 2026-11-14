@@ -15,8 +15,10 @@ import {
   endNote,
   groupHeader,
   groupRow,
+  linkedSubagents,
   rowLine,
   stillRunning,
+  subagentById,
   toolUses,
   workOf,
 } from '../../../../src/ui/transcript/agents/subagents.ts';
@@ -793,4 +795,42 @@ test('folded progress rows do not count as more uses; an unstructured Guardian c
       [],
     ),
   ).toMatchObject({ kind: 'work', more: 1 });
+});
+
+describe('a subagent a call refers to (CHD-629)', () => {
+  const child = (id: string, title: string, entries: Entry[] = []): Entry => ({
+    kind: 'subagent',
+    turnId: 't',
+    subagent: {
+      id,
+      title,
+      state: { state: 'running' },
+      entries,
+    } as unknown as Subagent,
+  });
+  const entries: Entry[] = [
+    { kind: 'user', turnId: 't', text: 'go' },
+    child('a', 'Watch the build', [child('b', 'Grandchild')]),
+  ];
+
+  test('found depth first, a grandchild at any depth; none for an id drawn nowhere', () => {
+    expect(subagentById(entries, 'a')?.title).toBe('Watch the build');
+    expect(subagentById(entries, 'b')?.title).toBe('Grandchild');
+    expect(subagentById(entries, 'main')).toBeUndefined();
+  });
+
+  test("a call's references in the order sent, each once, an unknown one left out", () => {
+    expect(
+      linkedSubagents(
+        [
+          { type: 'session', sessionId: 'b' },
+          { type: 'content' },
+          { type: 'session', sessionId: 'nobody' },
+          { type: 'session', sessionId: 'a' },
+          { type: 'session', sessionId: 'b' },
+        ],
+        entries,
+      ).map(({ id }) => id),
+    ).toStrictEqual(['b', 'a']);
+  });
 });

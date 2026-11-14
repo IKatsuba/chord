@@ -34,6 +34,7 @@
   `notices.ts` (`notice`, `noticeidle`, `noticelong`),
   `titles.ts` (`titledlater`),
   `accounts.ts` (`authchanged`),
+  `links.ts` (`subagentlinked`, `subagentstranger`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`,
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -100,6 +101,7 @@
   `codexcompact`,
   `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
   `notice`, `noticeidle`, `noticelong`, `titledlater`, `authchanged`,
+  `subagentlinked`, `subagentstranger`,
   `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
   `longheld`, `turnfailed`,
@@ -361,6 +363,10 @@
   write, so chord reads both in one chunk (CHD-629).
   `--auth-required prompt` opens the session and refuses its first prompt
   `authRequired` ("Authentication required"); the next prompt runs (CHD-629).
+  `subagentlinked` announces a child, then a running TaskStop whose content
+  is only a reference to it (`{type: "session"}`), completed with text and
+  the reference twice, and a SendMessage of only the reference, failed;
+  `subagentstranger` refers to a session never announced (CHD-629).
   `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
   advertises `sessionCapabilities.title` and stores a `session/set_title`
   title trimmed, its whitespace folded and cut at 80: `echo` sends it in a

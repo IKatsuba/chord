@@ -334,6 +334,7 @@ import {
 import { RESOURCES } from './scenarios/resources.ts';
 import { setTitle, TITLES } from './scenarios/titles.ts';
 import { ACCOUNTS, authStatus, pushStatus } from './scenarios/accounts.ts';
+import { LINKS } from './scenarios/links.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORM_SCHEMA } from '../forms.ts';
@@ -409,6 +410,8 @@ const SCENARIOS = [
   'noticelong',
   'titledlater',
   'authchanged',
+  'subagentlinked',
+  'subagentstranger',
   'cloudrequest',
   'texttillsteered',
   'texttillsteeredheld',
@@ -806,6 +809,7 @@ const PLAY: Record<Scenario, Play> = {
   ...NOTICES,
   ...TITLES,
   ...ACCOUNTS,
+  ...LINKS,
   ...SUBAGENTS,
   ...MISBEHAVING,
   ...FX,

@@ -12,6 +12,10 @@ import {
 } from '../../../../src/session/record.ts';
 import { reduceTranscript } from '../../../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../../../src/session/transcript/types.ts';
+import type {
+  SessionUpdate,
+  ToolCallContent,
+} from '@agentclientprotocol/sdk/unstable';
 import assert from 'node:assert/strict';
 import type {
   ToolCall,
@@ -22,6 +26,7 @@ import {
   type CodeActions,
   CodeBlockActions,
   type DrawnBlock,
+  TranscriptEntries,
 } from '../../../../src/ui/app/context.ts';
 import {
   MessageBody,
@@ -2120,4 +2125,110 @@ describe('CHD-611 tester: independent path views leave tool data unchanged', () 
       }
     });
   }
+});
+
+describe('a call that names a subagent (CHD-629)', () => {
+  /** The rows the call `id` draws in a transcript folded from `updates`. */
+  const rowsOf = async (updates: SessionUpdate[], id: string) => {
+    const transcript = updates.reduce(
+      (state, update) =>
+        reduceTranscript(state, { type: 'update', turnId: 't', update }),
+      reduceTranscript(emptyTranscript, {
+        type: 'prompt',
+        turnId: 't',
+        text: 'go',
+        at: 0,
+      }),
+    );
+    const entry = transcript.entries.find(
+      (each) => each.kind === 'tool' && each.call.id === id,
+    );
+
+    assert(entry);
+
+    const drawn = await draw(
+      <TranscriptEntries.Provider value={transcript.entries}>
+        <TranscriptEntry
+          entry={entry}
+          turn={{ status: 'working', turnId: 't', since: 0 }}
+          agent='fake'
+          expanded={false}
+          width={76}
+        />
+      </TranscriptEntries.Provider>,
+      { columns: 80, rows: 8 },
+    );
+    const frame = stripAnsi(drawn.frame());
+
+    await drawn.unmount();
+
+    return frame
+      .split('\n')
+      .map((row) => row.trimEnd())
+      .filter((row) => row !== '');
+  };
+
+  const SPAWNED: SessionUpdate = {
+    sessionUpdate: 'subagent_update',
+    sessionId: 'child',
+    title: 'Watch the build',
+    state: { state: 'running' },
+  };
+  const ref = { type: 'session', sessionId: 'child' } as ToolCallContent;
+  const call = (
+    status: 'in_progress' | 'failed' | 'completed',
+    content: ToolCallContent[],
+  ): SessionUpdate => ({
+    sessionUpdate: 'tool_call',
+    toolCallId: 'stop',
+    title: 'TaskStop',
+    kind: 'other',
+    status,
+    content,
+  });
+
+  test("its link line comes first, then the call's own lines as they would be without it", async () => {
+    expect(
+      await rowsOf(
+        [
+          SPAWNED,
+          call('completed', [
+            { type: 'content', content: { type: 'text', text: 'Stopped.' } },
+            ref,
+            ref,
+          ]),
+        ],
+        'stop',
+      ),
+    ).toStrictEqual([
+      '⏺ TaskStop',
+      '  ⎿  Agent(Watch the build)',
+      '     Stopped.',
+    ]);
+  });
+
+  test('a call with only the reference reads Running… while it runs and Failed once it failed, never on the link', async () => {
+    expect(
+      (await rowsOf([SPAWNED, call('in_progress', [ref])], 'stop')).slice(1),
+    ).toStrictEqual(['  ⎿  Agent(Watch the build)', '     Running…']);
+    expect(
+      (await rowsOf([SPAWNED, call('failed', [ref])], 'stop')).slice(1),
+    ).toStrictEqual(['  ⎿  Agent(Watch the build)', '     Failed']);
+  });
+
+  test('a reference to a session never announced names nothing', async () => {
+    expect(
+      (
+        await rowsOf(
+          [
+            call('completed', [
+              { type: 'content', content: { type: 'text', text: 'Stopped.' } },
+              { type: 'session', sessionId: 'stranger' } as ToolCallContent,
+            ]),
+          ],
+          'stop',
+        )
+      ).slice(1),
+    ).toStrictEqual(['  ⎿  Stopped.']);
+  });
 });

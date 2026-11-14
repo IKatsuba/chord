@@ -1,0 +1,24 @@
+                            ▀▄
+                            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            ▀▀
+                          v0.70.0 · /tmp/chord-qa.d624
+
+          Select agent
+
+              1.  agoragentic-acp · Agoragentic
+              2.  auggie · Auggie CLI
+              3.  bob · Bob
+          ❯   4.  claude · Claude Agent
+              5.  cline · Cline
+              6.  codebuddy-code · Codebuddy Code
+              7.  codex · Codex
+              8.  cursor-cloud · Cursor Cloud Agents
+              9.  deepagents · DeepAgents
+              10. dimcode · DimCode
+              11. dirac · Dirac
+            ↓ 12. factory-droid · Factory Droid
+              … +17 more
+
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+

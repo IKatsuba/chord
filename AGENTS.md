@@ -78,7 +78,7 @@ bun dev compile --install # this machine's binary into ~/.local/bin/chord
 bun dev npm               # lay out npm/ from dist/
 bun dev release chord [--bump <version|major|minor|patch|fix>] # owner's release
 bun dev selftest <binary> # fake-agent CLI/window
-bun dev registry          # refetch the ACP Registry into src/registry.ts
+bun dev registry          # refetch the registry; name binary-only omissions
 bun dev mark              # rasterise scripts/mark.svg into the header mark
 bun dev screenshots       # retake docs/images/, including title pages and logos
 bun dev screenshots logo  # the transparent dark and light README logos only

@@ -75,6 +75,8 @@ Each permission the agent asks for is a choice under the transcript, answered
 with a number or the arrows. Proposed diffs scroll above the choices.
 Between turns, it leaves your typing alone:
 ctrl+x a moves into the box to answer. `shift+tab` cycles permission modes.
+Claude opens in Auto, where Claude decides permissions;
+[the guide](docs/guide.md#settings) explains how to start in another mode.
 
 <img src="docs/images/permission.png" alt="The permission prompt: Allow, Always allow, Deny" width="900">
 
@@ -199,7 +201,7 @@ recorded.
 
 ## Supported agents
 
-Claude Code, Codex, Gemini CLI, Copilot, Cursor, OpenCode, Cline, Qwen Code,
+Claude Code, Codex, Gemini CLI, GitHub Copilot, Cursor, OpenCode, Cline, Qwen Code,
 Kimi Code, Kiro, Goose, Junie, Factory Droid, Auggie, Kilo, bob, Devin, fx,
 [Cursor Cloud Agents](docs/guide.md#cursor-cloud) and more: `chord agents`
 prints the full list, and any other ACP agent runs with `chord --agent-command "my-agent --acp"`.

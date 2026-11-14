@@ -1,4 +1,4 @@
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import type { Notice } from '@agentclientprotocol/sdk/unstable';
 import type {
   Transcript,
@@ -138,4 +138,80 @@ test("a subagent's notice goes into that subagent's entries, not its parent's", 
   ).toStrictEqual([
     { kind: 'notice', turnId: 't1', severity: 'info', title: 'From the child' },
   ]);
+});
+
+describe('CHD-629 tester: notice lifecycle boundaries', () => {
+  test('a late notice preserves the cancelled turn and the next prompt starts separately', () => {
+    const cancelled = fold([
+      PROMPT,
+      chunk('Working.'),
+      { type: 'cancel', turnId: 't1', at: 1 },
+      {
+        type: 'result',
+        turnId: 't1',
+        result: { status: 'cancelled', stopReason: 'cancelled' },
+      },
+    ]);
+    const late = fold(
+      [notice({ severity: 'warning', title: 'After cancellation' })],
+      cancelled,
+    );
+
+    expect(late.turn).toStrictEqual(cancelled.turn);
+    expect(late.entries.slice(0, -1)).toStrictEqual([...cancelled.entries]);
+    expect(late.entries.at(-1)).toStrictEqual({
+      kind: 'notice',
+      turnId: 't1',
+      severity: 'warning',
+      title: 'After cancellation',
+    });
+
+    const next = fold(
+      [{ type: 'prompt', turnId: 't2', text: 'Again', at: 2 }],
+      late,
+    );
+
+    expect(next.entries.slice(0, -1)).toStrictEqual([...late.entries]);
+    expect(next.entries.at(-1)).toStrictEqual({
+      kind: 'user',
+      turnId: 't2',
+      text: 'Again',
+    });
+  });
+
+  test('notices preserve reply boundaries across thinking and every severity', () => {
+    const state = fold([
+      PROMPT,
+      chunk('Before'),
+      ...['info', 'warning', 'error', 'WARNING', ''].map((severity) =>
+        notice({ severity, title: severity || 'Empty severity' }),
+      ),
+      {
+        type: 'update',
+        turnId: 't1',
+        update: {
+          sessionUpdate: 'agent_thought_chunk',
+          content: { type: 'text', text: 'Considering' },
+        },
+      },
+      chunk('After'),
+    ]);
+
+    expect(kinds(state)).toStrictEqual([
+      'user',
+      'assistant',
+      'notice',
+      'notice',
+      'notice',
+      'notice',
+      'notice',
+      'thought',
+      'assistant',
+    ]);
+    expect(
+      state.entries.flatMap((entry) =>
+        entry.kind === 'notice' ? [entry.severity] : [],
+      ),
+    ).toStrictEqual(['info', 'warning', 'error', 'info', 'info']);
+  });
 });

@@ -1568,3 +1568,46 @@ describe('notices (CHD-629)', () => {
     }
   });
 });
+
+describe('CHD-629 tester: notices across live sessions', () => {
+  test('early and late notices stay on their own connection and start no idle cycle', () =>
+    onFake(
+      ['--adapter', 'claude', '--start-notice', 'First connection'],
+      async (first, firstEvents) => {
+        await onFake(
+          ['--adapter', 'claude', '--start-notice', 'Second connection'],
+          async (second, secondEvents) => {
+            const titles = (events: readonly ConversationEvent[]) =>
+              events.flatMap((event) =>
+                event.type === 'update' &&
+                event.update.sessionUpdate === 'notice'
+                  ? [event.update.title]
+                  : [],
+              );
+
+            first.send('notice');
+            second.send('noticeidle');
+            await until(
+              () =>
+                firstEvents.some((event) => event.type === 'result') &&
+                titles(secondEvents).includes('Auto mode unavailable'),
+            );
+
+            expect(titles(firstEvents)).toStrictEqual([
+              'First connection',
+              'Fast mode turned off',
+            ]);
+            expect(titles(secondEvents)).toStrictEqual([
+              'Second connection',
+              'Auto mode unavailable',
+            ]);
+            expect(
+              [...firstEvents, ...secondEvents].some(
+                (event) => event.type === 'cycle_started',
+              ),
+            ).toBe(false);
+          },
+        );
+      },
+    ));
+});

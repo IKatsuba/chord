@@ -537,6 +537,83 @@ describe('a rename and the record (CHD-629)', () => {
     }
   });
 
+  test("on a reopened session, the agent's held title then a rename are written in that order, the rename's title live and recorded", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-rename-'));
+    const stateDir = join(dir, 'state');
+    const opened = async (flags: readonly string[], resume?: Resume) => {
+      const events: ConversationEvent[] = [];
+      const recording = new FileRecording(stateDir, () => {});
+
+      const conversation = new Conversation(
+        () =>
+          openSession({
+            agent: 'fake',
+            cwd: dir,
+            agentCommand: fakeAgentCommand(undefined, ...flags),
+            ...(resume === undefined ? {} : { resume }),
+          }),
+        (event) => events.push(event),
+        Date.now,
+        {},
+        recording,
+      );
+
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+
+      return { conversation, events, recording };
+    };
+
+    try {
+      const first = await opened([]);
+
+      first.conversation.send('text');
+      await until(() => first.events.some((event) => event.type === 'result'));
+      await first.conversation.close();
+      await first.recording.flushed();
+
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const again = await opened(
+        ['--title', 'Agent title', '--set-title', 'echo'],
+        {
+          sessionId: record.sessionId,
+          cwd: dir,
+          record: record.path,
+        },
+      );
+
+      await until(() => again.conversation.title === 'Agent title');
+      await again.conversation.rename('Mine');
+
+      expect(again.conversation.title).toBe('Mine');
+
+      await again.conversation.close();
+      await again.recording.flushed();
+
+      const titles = parseRecord(await readFile(record.path, 'utf8')).flatMap(
+        (entry) =>
+          entry.type === 'renamed'
+            ? [`renamed ${entry.title}`]
+            : entry.type === 'update' &&
+                entry.update.sessionUpdate === 'session_info_update'
+              ? [`update ${String(entry.update.title)}`]
+              : [],
+      );
+
+      expect(titles).toStrictEqual([
+        'update Agent title',
+        'update Mine',
+        'renamed Mine',
+      ]);
+      expect((await readRecords(stateDir))[0]?.title).toBe('Mine');
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
   test('a new session renamed and left without a prompt leaves no record', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'chord-rename-'));
     const stateDir = join(dir, 'state');

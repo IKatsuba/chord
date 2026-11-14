@@ -1236,8 +1236,7 @@ export class FileRecording implements Recording {
   #prompted = false;
   /**
    * Whether the session on screen was opened from a record it goes on in:
-   * a rename there is written at once, as the record is kept already
-   * (CHD-629).
+   * a rename there keeps the session as a prompt would (CHD-629).
    */
   #reopened = false;
   #state: StateEntry = stateEntry({});
@@ -1514,11 +1513,14 @@ export class FileRecording implements Recording {
   }
 
   #add(entry: RecordEntry): void {
-    // A rename is no mere look at a session, and its record exists: it is
-    // not held for a prompt, as a new session's is (CHD-629).
-    const now = entry.type === 'renamed' && this.#reopened;
+    // A rename is work on a record that exists, not a mere look: it keeps
+    // what was held for it, in order, as a prompt does; a new session's
+    // rename alone keeps none (CHD-629).
+    if (entry.type === 'renamed' && this.#reopened && !this.#prompted) {
+      this.#begun();
+    }
 
-    if ((!this.#prompted && !now) || this.#path === undefined) {
+    if (!this.#prompted || this.#path === undefined) {
       this.#held.push(entry);
 
       return;

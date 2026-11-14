@@ -3418,30 +3418,6 @@ export class Conversation {
               ask: () => session.setMode(mode.id),
             },
           ]),
-      // An id the session does not list is dropped: nothing is mapped.
-      ...entries.flatMap(({ configId, value }): StartingAsk[] => {
-        const listed = () =>
-          session.configOptions().find((option) => option.id === configId);
-
-        return listed() === undefined
-          ? []
-          : [
-              {
-                value: { id: String(value), from: 'set by the client' },
-                what: `with ${configId} ${String(value)}`,
-                kind: 'values',
-                offered: () => Promise.resolve(undefined),
-                current: () => {
-                  const option = listed();
-
-                  return option === undefined
-                    ? undefined
-                    : String(option.currentValue);
-                },
-                ask: () => session.setOption(configId, String(value)),
-              },
-            ];
-      }),
     ];
 
     for (const ask of asks) {
@@ -3467,6 +3443,51 @@ export class Conversation {
           message: `Could not ${refused}`,
         });
       }
+    }
+
+    for (const entry of entries) {
+      await this.#applyEntry(session, entry);
+
+      if (!this.#current(session)) {
+        return;
+      }
+    }
+  }
+
+  /**
+   * A client's initial entry read back by its id once its turn comes, as the
+   * session is then (the owner's Q4 b): one the session does not list is
+   * dropped, one already current costs nothing, and any other goes to
+   * `session/set_config_option` as the client sent it. A refusal fails the
+   * start, as a required value's does, and so does an agent that answers and
+   * is on another value.
+   */
+  async #applyEntry(
+    session: Session,
+    entry: InitialSessionConfigOption,
+  ): Promise<void> {
+    const listed = () =>
+      session.configOptions().find((option) => option.id === entry.configId);
+    const what = `start with ${entry.configId} ${String(entry.value)}, set by the client`;
+
+    if (listed() === undefined || listed()?.currentValue === entry.value) {
+      return;
+    }
+
+    try {
+      await session.setConfigOption(entry);
+    } catch (error) {
+      if (this.#current(session)) {
+        throw new Error(`Could not ${what}: ${agentMessageOf(error)}`);
+      }
+
+      return;
+    }
+
+    const now = listed()?.currentValue;
+
+    if (this.#current(session) && now !== undefined && now !== entry.value) {
+      throw new Error(`Could not ${what}: the agent is in ${String(now)}`);
     }
   }
 

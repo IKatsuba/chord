@@ -3,6 +3,7 @@ import type {
   CompleteElicitationNotification,
   ContentBlock,
   EmbeddedResource as AcpEmbeddedResource,
+  InitialSessionConfigOption,
   McpServer,
   PromptResponse,
   SessionConfigOption,
@@ -358,6 +359,11 @@ export interface Session {
    * `session/set_config_option`; `options()` then holds what it answered.
    */
   setOption(id: string, value: string): Promise<void>;
+  /**
+   * Sends a client's config entry to `session/set_config_option` as it came,
+   * its type and `_meta` too, only the session's id added (CHD-629).
+   */
+  setConfigOption(entry: InitialSessionConfigOption): Promise<void>;
   /**
    * The config options as the agent last sent them, categories and `_meta`
    * included, for what reads them by those (`parameters.ts`, `choice.ts`).
@@ -855,6 +861,14 @@ export async function openSession(
         sessionId: id,
         configId: key,
         value,
+      });
+
+      state = withOptions(state, answered.configOptions);
+    },
+    setConfigOption: async (entry) => {
+      const answered = await connection.setConfigOption({
+        ...entry,
+        sessionId: id,
       });
 
       state = withOptions(state, answered.configOptions);

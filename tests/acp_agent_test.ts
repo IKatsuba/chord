@@ -43,6 +43,10 @@ import {
   type WireMessage,
 } from './fixtures/acp_client.ts';
 import { fakeAgentCommand, gatedCommand } from './fixtures/fake.ts';
+import {
+  API_KEY,
+  SIGNED_IN,
+} from './fixtures/fake_agent/scenarios/accounts.ts';
 import { recordSession } from './fixtures/records.ts';
 import { until } from './session/conversation_fake.ts';
 
@@ -183,6 +187,7 @@ describe('initialize', () => {
               embeddedContext: true,
             },
             mcpCapabilities: { http: true, sse: true },
+            auth: { status: {} },
             sessionCapabilities: { list: {}, resume: {}, close: {}, title: {} },
           },
           _meta: {
@@ -1158,6 +1163,63 @@ describe('a rename the agent takes at the load (CHD-629)', () => {
           title: 'x'.repeat(80),
         });
         expect(renamedIn(stateDir).at(-1)).not.toHaveProperty('pending');
+      },
+    ));
+});
+
+describe('auth/status (CHD-629)', () => {
+  /** The account pushes the client heard, their payloads in order. */
+  const pushes = (client: AcpClient) =>
+    client.messages.flatMap((message) =>
+      message.method === 'auth/status_update' ? [message.params] : [],
+    );
+
+  test('unknown before any session, then the oldest main session’s account, its changes pushed once each', () =>
+    onAcp(
+      ['--auth-status', 'authenticated'],
+      async ({ client, newSession, prompt }) => {
+        expect((await client.request('auth/status', {})).result).toEqual({
+          state: 'unknown',
+        });
+
+        const sessionId = await newSession();
+
+        await until(() => pushes(client).length === 1);
+        expect((await client.request('auth/status', {})).result).toEqual(
+          SIGNED_IN,
+        );
+
+        await client.answerTo(prompt(sessionId, 'authchanged'));
+        await until(() => pushes(client).length === 2);
+        // The same account again is no news.
+        await client.answerTo(prompt(sessionId, 'text'));
+
+        expect(pushes(client)).toEqual([SIGNED_IN, API_KEY]);
+      },
+    ));
+
+  test("another session's account is not mixed in until the source closes; then it is pushed once", () =>
+    onAcp(
+      ['--auth-status', 'authenticated'],
+      async ({ client, newSession, prompt }) => {
+        const first = await newSession();
+        const second = await newSession();
+
+        await until(() => pushes(client).length === 1);
+        await client.answerTo(prompt(second, 'authchanged'));
+
+        expect((await client.request('auth/status', {})).result).toEqual(
+          SIGNED_IN,
+        );
+        expect(pushes(client)).toEqual([SIGNED_IN]);
+
+        await client.request('session/close', { sessionId: first });
+        await until(() => pushes(client).length === 2);
+
+        expect(pushes(client)).toEqual([SIGNED_IN, API_KEY]);
+        expect((await client.request('auth/status', {})).result).toEqual(
+          API_KEY,
+        );
       },
     ));
 });

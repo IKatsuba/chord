@@ -5,6 +5,8 @@
 import {
   agent,
   type AgentConnection,
+  type AuthStatusRequest,
+  type AuthStatusResponse,
   type AgentRequestContext,
   type CancelNotification,
   type CloseSessionRequest,
@@ -141,6 +143,7 @@ export interface AcpHandlers {
   setTitle(
     request: AcpRequest<SetSessionTitleRequest>,
   ): Promise<SetSessionTitleResponse>;
+  authStatus(request: AcpRequest<AuthStatusRequest>): AuthStatusResponse;
   steer(request: AcpRequest<SteerRequest>): Delivered;
   sendAgent(request: AcpRequest<AgentSendRequest>): Delivered;
   closeAgent(request: AcpRequest<AgentCloseRequest>): AgentsClosed;
@@ -165,6 +168,7 @@ export function connectAgentApp(
     .onRequest('session/set_mode', (request) => handlers.setMode(request))
     .onRequest('session/close', (request) => handlers.close(request))
     .onRequest('session/set_title', (request) => handlers.setTitle(request))
+    .onRequest('auth/status', (request) => handlers.authStatus(request))
     .onRequest('_chord/session/steer', STEER, (request) =>
       handlers.steer(request),
     )

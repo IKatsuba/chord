@@ -5,6 +5,7 @@
  */
 import {
   type AgentConnection,
+  type AuthStatusResponse,
   type ClientCapabilities,
   type CreateElicitationResponse,
   type InitialSessionConfigOption,
@@ -52,6 +53,7 @@ import {
   type LeaveStep,
 } from './session/leaving.ts';
 import type { Place } from './session/place.ts';
+import type { AccountState } from './session/auth_status.ts';
 import { recordPendingRename } from './session/record.ts';
 import type { ReadLimits } from './session/resource_access.ts';
 import type { OpenSessionOptions, Session } from './session/session.ts';
@@ -254,6 +256,8 @@ interface Entry {
     | undefined;
   /** Its agent went: it takes no more prompts, and closes when it can. */
   gone: boolean;
+  /** What its agent says of its connection's account (CHD-629). */
+  account?: AccountState;
   noticed: boolean;
   closing?: Promise<void>;
 }
@@ -292,6 +296,47 @@ export function runAcp(options: AcpOptions): AcpRun {
   const settingsBox = settingsBoxClaim();
 
   const say = (line: string) => options.stderr(line);
+
+  /**
+   * Where `auth/status` is read (CHD-629): the oldest main session still
+   * live, of the startup agent, as every main is; the method names no
+   * session, so no other's account is mixed in.
+   */
+  const accountSource = (): Entry | undefined =>
+    [...entries].find(
+      (entry) =>
+        !entry.gone &&
+        entry.closing === undefined &&
+        entry.conversation.session !== undefined,
+    );
+  /** The source's account, `unknown` while it has said none or there is none. */
+  const sourceStatus = (): AuthStatusResponse => {
+    const account = accountSource()?.account;
+
+    return account?.phase === 'heard' ? account.status : { state: 'unknown' };
+  };
+
+  /** What the client was last told of the account, so only a change goes. */
+  let toldAccount = JSON.stringify(sourceStatus());
+  /**
+   * Tells the client the source's account where it changed: the source's
+   * own push, or another session becoming the source as one closes or exits.
+   */
+  const tellAccount = () => {
+    const status = sourceStatus();
+    const told = JSON.stringify(status);
+
+    if (told === toldAccount) {
+      return;
+    }
+
+    toldAccount = told;
+
+    connection.client.notify('auth/status_update', status).catch(() => {
+      // The connection went; the way out has it from there.
+    });
+  };
+
   const send = (notification: SessionNotification) => {
     connection.client.notify('session/update', notification).catch(() => {
       // The connection went; the way out has it from there.
@@ -323,6 +368,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       })
       .finally(() => {
         entries.delete(entry);
+        tellAccount();
       });
 
     return entry.closing;
@@ -919,6 +965,12 @@ export function runAcp(options: AcpOptions): AcpRun {
         tellConfig(entry);
 
         break;
+      case 'account':
+        entry.account = event.account;
+
+        tellAccount();
+
+        break;
       case 'modes':
       case 'model':
         tellConfig(entry);
@@ -965,6 +1017,8 @@ export function runAcp(options: AcpOptions): AcpRun {
         break;
       case 'disconnected':
         entry.gone = true;
+
+        tellAccount();
 
         if (entry.upstream !== undefined) {
           sessions.delete(entry.upstream.upstreamId);
@@ -1809,6 +1863,8 @@ export function runAcp(options: AcpOptions): AcpRun {
           agentInfo: { name: 'chord', version: options.version },
           authMethods: [],
           agentCapabilities: {
+            // Served from one session's agent, whichever runs (CHD-629).
+            auth: { status: {} },
             loadSession: true,
             promptCapabilities: {
               image: true,
@@ -2037,6 +2093,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       },
       // A live session is renamed as the window renames it; one listed and
       // not loaded is recorded, for its agent to be told at the next load.
+      authStatus: () => sourceStatus(),
       setTitle: async ({ params }) => {
         refuseIfClosing();
 

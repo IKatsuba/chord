@@ -3357,6 +3357,11 @@ export class Conversation {
   async #applyStarting(session: Session): Promise<void> {
     const { model, mode, effort } = this.#starting;
 
+    // Its turn in the chain can come after a clear or a close retired it.
+    if (!this.#current(session)) {
+      return;
+    }
+
     this.#effortRefused = undefined;
 
     const asks: StartingAsk[] = [
@@ -3402,6 +3407,11 @@ export class Conversation {
 
     for (const ask of asks) {
       const refused = await askStarting(ask);
+
+      // A clear or a close while it was out: the rest is nobody's to ask.
+      if (!this.#current(session)) {
+        return;
+      }
 
       if (refused !== undefined && ask.value.required) {
         throw new Error(`Could not ${refused}`);

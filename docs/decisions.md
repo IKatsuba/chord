@@ -8780,16 +8780,16 @@ Options put: that reader; quoted names through a tokenizer and `parseArgs`;
 The owner took the recommendations of the CHD-624 survey
 (`docs/design/evidence/CHD-624/survey.md`), D1 changed below. Options for
 shipping: one PR; dependencies and Claude's new defaults first, then the
-features; a PR per feature. Chosen: two in order. CHD-624 bumps `@agentclientprotocol/sdk` to
-2.6.0, OpenTUI to 0.8.4 after a visual pass, claude-agent-sdk and
-genai-prices, refreshes the registry, and handles what claude-agent-acp
-0.107 changes for a person; `/rename`, the account in `/status`, initial
-options for model and effort, notices and the `session` tool-call content
-are CHD-629, cursor-cloud's extras CHD-630. Not taken: ACP v2 (alpha, its
-RFDs back to Draft, many agents echo any version asked), string-width 9 (a
-major that must agree with OpenTUI's width method), proxy chains and
-`session/archive` (no agent serves them). Libraries: the SDK's own types for
-every new method; nothing is written that the SDK carries.
+features; a PR per feature. Chosen: two in order. CHD-624 bumps
+`@agentclientprotocol/sdk` to 2.6.0, OpenTUI to 0.8.4 after a visual pass,
+claude-agent-sdk and genai-prices, refreshes the registry, and handles what
+claude-agent-acp 0.107 changes for a person; `/rename`, the account in
+`/status`, initial options for model and effort, notices and the `session`
+tool-call content are CHD-629, cursor-cloud's extras CHD-630. Not taken: ACP
+v2 (alpha, its RFDs back to Draft, many agents echo any version asked),
+string-width 9 (a major that must agree with OpenTUI's width method), proxy
+chains and `session/archive` (no agent serves them). Libraries: the SDK's
+own types for every new method; nothing is written that the SDK carries.
 
 ## 2026-11-13 — CHD-624: Claude starts in Auto, the adapter's default (owner)
 

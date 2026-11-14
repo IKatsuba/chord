@@ -17,6 +17,7 @@ import {
 } from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
 import { agentStart, findAgent } from '../agents.ts';
+import { initialEntries, type InitialValues } from './initial_options.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
   type AgentState,
@@ -120,6 +121,13 @@ export interface OpenSessionOptions {
    * the agent sends them without chord (CHD-629). Yes by default.
    */
   notices?: boolean;
+  /**
+   * The model, effort and mode chord was asked to start on, by the agent's
+   * ids, sent as `session/new`'s initial `configOptions` where the agent
+   * takes them (`initialEntries`); never on a load, a resume or a fork. The
+   * conversation still reads each back once the session is up (CHD-629).
+   */
+  initial?: InitialValues;
   /** The agent says a link it asked for has been followed. */
   onElicitationComplete?: (params: CompleteElicitationNotification) => void;
   /**
@@ -528,8 +536,14 @@ export async function openSession(
       tree = sessionTree(sessionId);
       answer = forked;
     } else if (resume === undefined) {
+      const entries = initialEntries(connection.init, options.initial ?? {});
       const created = await connection.newSession(
-        { cwd, mcpServers, ...openingMeta(connection) },
+        {
+          cwd,
+          mcpServers,
+          ...(entries.length === 0 ? {} : { configOptions: entries }),
+          ...openingMeta(connection),
+        },
         signal,
       );
 

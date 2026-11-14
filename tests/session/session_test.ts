@@ -31,6 +31,7 @@ import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import type { PendingPermission } from '../../src/session/permissions.ts';
 import {
   openSession,
+  type OpenSessionOptions,
   type Session,
   type Turn,
 } from '../../src/session/session.ts';
@@ -835,6 +836,116 @@ async function openedBy(
     await session.close();
   }
 }
+
+describe('initial configOptions on session/new (CHD-629)', () => {
+  const STARTING = { model: 'fake-small', effort: 'high', mode: 'plan' };
+
+  /** What the fake says opened a session asked to start on `STARTING`. */
+  const openedOn = async (
+    dir: string,
+    flags: readonly string[],
+    more: Partial<OpenSessionOptions> = {},
+  ) => {
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, ...flags),
+      initial: STARTING,
+      ...more,
+    });
+
+    try {
+      const reply = said((await run(session, 'opened')).updates).join('');
+
+      return {
+        opened: JSON.parse(reply.replace(/^```json\n|\n```$/g, '')),
+        model: session.models()?.current,
+        effort: session.efforts()?.current,
+        mode: session.modes()?.current,
+      };
+    } finally {
+      await session.close();
+    }
+  };
+
+  test('a new Claude session that takes options is sent the values, model, effort, mode, applies them, and is never asked session/options', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-'));
+
+    try {
+      const { opened, model, effort, mode } = await openedOn(dir, [
+        '--adapter',
+        'claude',
+        '--options',
+        'apply',
+      ]);
+
+      expect(opened).toStrictEqual({
+        method: 'session/new',
+        meta: NO_SUGGESTIONS,
+        configOptions: [
+          { configId: 'model', value: 'fake-small' },
+          { configId: 'effort', value: 'high' },
+          { configId: 'mode', value: 'plan' },
+        ],
+        sessionOptions: 0,
+      });
+      expect({ model, effort, mode }).toStrictEqual(STARTING);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("without options advertised, or on an agent the table does not have, session/new is today's", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-'));
+
+    try {
+      expect(
+        (await openedOn(dir, ['--adapter', 'claude'])).opened,
+      ).toStrictEqual({ method: 'session/new', meta: NO_SUGGESTIONS });
+      expect(
+        (await openedOn(dir, ['--options', 'apply'])).opened,
+      ).toStrictEqual({ method: 'session/new', sessionOptions: 0 });
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('a load takes no entries, and neither does a fork', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-'));
+    const flags = ['--adapter', 'claude', '--options', 'apply', '--fork'];
+
+    try {
+      expect(
+        (
+          await openedOn(dir, flags, {
+            resume: { sessionId: crypto.randomUUID(), cwd: dir },
+          })
+        ).opened,
+      ).toStrictEqual({
+        method: 'session/load',
+        meta: NO_SUGGESTIONS,
+        sessionOptions: 0,
+      });
+
+      const source = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(undefined, ...flags),
+      });
+
+      try {
+        const forked = await openedOn(dir, flags, { fork: source.id });
+
+        expect(forked.opened).not.toHaveProperty('configOptions');
+        expect(forked.opened.method).toBe('session/fork');
+      } finally {
+        await source.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
 
 describe('a session forked from another (CHD-101)', () => {
   test('it opens in a process of its own by session/fork, from the session named, and outlives it', async () => {

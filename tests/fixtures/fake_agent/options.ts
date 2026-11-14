@@ -523,6 +523,45 @@ export const TRACEBACK_ERROR =
   "ImportError: cannot import name 'AuthMethod' from 'acp.schema'";
 
 /**
+ * `--options <apply|ignore|reject>` (`CHORD_FAKE_OPTIONS`): it advertises
+ * `sessionCapabilities.options` and, on `session/new`, applies the initial
+ * `configOptions` in list order as `session/set_config_option` would,
+ * skipping one it cannot take, as Claude's adapter does; ignores them; or
+ * refuses the request -32602. Two entries with one id are -32602 whichever
+ * (CHD-629).
+ */
+export const INITIAL_OPTIONS = (() => {
+  const chosen = valueOf('--options', 'CHORD_FAKE_OPTIONS');
+
+  if (
+    chosen === undefined ||
+    chosen === 'apply' ||
+    chosen === 'ignore' ||
+    chosen === 'reject'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --options "${chosen}"`);
+})();
+
+/**
+ * `--config-ids renamed` (`CHORD_FAKE_CONFIG_IDS`): its model, mode and
+ * effort options go by `x-model`, `x-mode` and `x-effort`, as an adapter
+ * that renamed them at a pin bump would; the plain ids are unknown to it
+ * (CHD-629).
+ */
+export const RENAMED_IDS = (() => {
+  const chosen = valueOf('--config-ids', 'CHORD_FAKE_CONFIG_IDS');
+
+  if (chosen !== undefined && chosen !== 'renamed') {
+    throw new Error(`unknown --config-ids "${chosen}"`);
+  }
+
+  return chosen === 'renamed';
+})();
+
+/**
  * `--start-notice <text>` (`CHORD_FAKE_START_NOTICE`): every `session/new`
  * sends a `warning` notice titled `text` before its answer, as Claude's
  * adapter says an MCP server failed to start; as its bold blockquote to a

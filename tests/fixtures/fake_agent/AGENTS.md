@@ -344,6 +344,15 @@
   then holds until cancelled. `--first-message <text>`
   (`CHORD_FAKE_FIRST_MESSAGE`) sends an agent message with its own id
   before each `session/new` answer, without starting a turn.
+  `--options <apply|ignore|reject>` (`CHORD_FAKE_OPTIONS`) advertises
+  `sessionCapabilities.options` and applies `session/new`'s initial
+  `configOptions` in order as `session/set_config_option` would, skipping
+  one it cannot take, ignores them, or refuses the request -32602; two
+  entries with one id are -32602 whichever. `--config-ids renamed`
+  (`CHORD_FAKE_CONFIG_IDS`) gives its model, mode and effort options the ids
+  `x-model`, `x-mode` and `x-effort` (CHD-629). `opened` then also says
+  the initial `configOptions` sent and, under `--options`, how many
+  `session/options` it heard.
   `--start-notice <text>` (`CHORD_FAKE_START_NOTICE`) sends a `warning`
   notice titled `text` before each `session/new` answer (CHD-629).
   `notice` sends a `warning` notice between two reply chunks, and

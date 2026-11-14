@@ -437,7 +437,7 @@ export class Conversation {
    * Opens a session; the signal gives up on one still starting, so a quit or
    * a `/clear` never waits on an agent that does not answer.
    */
-  readonly #open: (signal: AbortSignal) => Promise<Session>;
+  readonly #open: (signal: AbortSignal, starting: Starting) => Promise<Session>;
   readonly #emit: (event: ConversationEvent) => void;
   /** The window alone, for what the record must not keep. */
   readonly #show: (event: ConversationEvent) => void;
@@ -677,7 +677,11 @@ export class Conversation {
   readonly #monitorsStopping = new Set<Promise<void>>();
 
   constructor(
-    open: (signal: AbortSignal) => Promise<Session>,
+    /**
+     * Opens a session, told what it starts on, which a new one may be asked
+     * for as it opens (CHD-629).
+     */
+    open: (signal: AbortSignal, starting: Starting) => Promise<Session>,
     emit: (event: ConversationEvent) => void,
     now: () => number = Date.now,
     starting: Starting = {},
@@ -814,7 +818,10 @@ export class Conversation {
     // Settles once the agent has a session, not once it is set up: a close
     // or a `clear` lets it go from there, whatever the agent leaves unanswered
     // in `#setUp`.
-    const opening: Promise<Session | undefined> = this.#open(stop.signal).then(
+    const opening: Promise<Session | undefined> = this.#open(
+      stop.signal,
+      this.#starting,
+    ).then(
       (session) => {
         // `clear` let this one go while it started; it closes it.
         if (this.#opening === opening) {

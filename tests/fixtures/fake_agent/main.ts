@@ -281,6 +281,7 @@ import {
   AUTH_REQUIRED,
   FIRST_MESSAGE,
   START_NOTICE,
+  INITIAL_OPTIONS,
   HANG,
   RESEND_CONFIG,
   CONFIG_IN_RESPONSES,
@@ -354,6 +355,7 @@ import { TOOLS } from './scenarios/tools.ts';
 import {
   AVAILABLE_MODELS,
   AVAILABLE_MODES,
+  configNameOf,
   configOptions,
   cwds,
   efforts,
@@ -1278,9 +1280,62 @@ interface SteerRequest {
   };
 }
 
-/** How a session was opened, as `opened` says it: `meta` only when sent. */
-function opened(method: string, meta: unknown) {
-  return meta === undefined || meta === null ? { method } : { method, meta };
+/**
+ * How a session was opened, as `opened` says it: `meta` and the initial
+ * `configOptions` only when sent, and under `--options` how many
+ * `session/options` the fake has heard (CHD-629).
+ */
+function opened(
+  method: string,
+  meta: unknown,
+  configOptions?: readonly acp.InitialSessionConfigOption[] | null,
+) {
+  return {
+    method,
+    ...(meta === undefined || meta === null ? {} : { meta }),
+    ...(configOptions ? { configOptions } : {}),
+    ...(INITIAL_OPTIONS === undefined ? {} : { sessionOptions: optionsAsked }),
+  };
+}
+
+/** How many `session/options` requests the fake has heard. */
+let optionsAsked = 0;
+
+/**
+ * `session/new`'s initial entries, as `--options` takes them: applied in
+ * order, each it cannot take skipped, as Claude's adapter does; ignored; or
+ * the request refused. Two with one id fail it whichever, as ACP says.
+ */
+async function applyInitial(
+  client: Client,
+  sessionId: string,
+  entries: readonly acp.InitialSessionConfigOption[],
+): Promise<void> {
+  if (entries.length === 0 || INITIAL_OPTIONS === undefined) {
+    return;
+  }
+
+  if (
+    new Set(entries.map((entry) => entry.configId)).size !== entries.length ||
+    INITIAL_OPTIONS === 'reject'
+  ) {
+    throw acp.RequestError.invalidParams(
+      undefined,
+      'The fake agent takes no such initial configOptions.',
+    );
+  }
+
+  if (INITIAL_OPTIONS === 'ignore') {
+    return;
+  }
+
+  for (const { configId, value } of entries) {
+    await setConfig(client, {
+      sessionId,
+      configId,
+      value: String(value),
+    }).catch(() => {});
+  }
 }
 
 /**
@@ -1392,6 +1447,80 @@ function refuseSession(method: string): void {
   }
 }
 
+/**
+ * Sets one of a session's config options, as `session/set_config_option`
+ * asks and as `--options apply` applies `session/new`'s initial entries.
+ */
+async function setConfig(
+  client: Client,
+  params: acp.SetSessionConfigOptionRequest,
+): Promise<acp.SetSessionConfigOptionResponse> {
+  // An id the fake does not give takes nothing, as an unknown option.
+  const configId = configNameOf(params.configId) ?? '';
+
+  if (HANG === 'config' || (HANG === 'effort' && configId === 'effort')) {
+    await never();
+  }
+
+  if (CONFIG_DELAY_MS > 0) {
+    await new Promise((resolve) => setTimeout(resolve, CONFIG_DELAY_MS));
+  }
+
+  const value = String(params.value);
+  const model = models.get(params.sessionId) ?? FIRST_MODEL;
+  const offered =
+    configId === 'model'
+      ? AVAILABLE_MODELS
+      : configId === 'mode' && !NO_MODES
+        ? AVAILABLE_MODES.map(({ id }) => ({ value: id }))
+        : configId === 'effort' && !NO_CONFIG
+          ? effortsOf(model)
+          : configId === 'fast' && hasFast(model)
+            ? FAST_VALUES
+            : configId === 'permission' && DIMCODE_PERMISSION !== undefined
+              ? DIMCODE_PERMISSIONS
+              : [];
+
+  if (!offered.some((entry) => entry.value === value)) {
+    throw acp.RequestError.invalidParams(
+      undefined,
+      `${params.configId} cannot be ${value}`,
+    );
+  }
+
+  if (configId === 'effort' && REFUSE_CONFIG) {
+    throw new acp.RequestError(-32603, 'The fake agent holds its effort.');
+  }
+
+  if (configId === 'mode' && locked.has(params.sessionId)) {
+    throw new acp.RequestError(-32603, 'The fake agent holds its mode.');
+  }
+
+  const chosen =
+    configId === 'model'
+      ? models
+      : configId === 'mode'
+        ? modes
+        : configId === 'permission'
+          ? permissions
+          : configId === 'fast'
+            ? fasts
+            : efforts;
+
+  chosen.set(params.sessionId, value);
+
+  if (configId === 'model') {
+    return switchedModel(client, params.sessionId);
+  }
+
+  // Codex's adapter says nothing of the mode it moved to.
+  if (configId === 'mode' && SILENT_SET_MODE) {
+    return {} as acp.SetSessionConfigOptionResponse;
+  }
+
+  return { configOptions: configOptions(params.sessionId) };
+}
+
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
   .onRequest('initialize', ({ params }) => {
@@ -1416,6 +1545,7 @@ const connection = acp
               list: {},
               ...(RESUME_ONLY ? { resume: {} } : {}),
               ...(FORKS ? { fork: {} } : {}),
+              ...(INITIAL_OPTIONS === undefined ? {} : { options: {} }),
             },
           },
           // Steering as Claude's adapter, it names itself as that adapter does,
@@ -1441,9 +1571,13 @@ const connection = acp
 
     modes.set(sessionId, 'default');
     mcpServers.set(sessionId, params.mcpServers);
-    openedWith.set(sessionId, opened('session/new', params._meta));
+    openedWith.set(
+      sessionId,
+      opened('session/new', params._meta, params.configOptions),
+    );
     cwds.set(sessionId, params.cwd);
     created.push({ sessionId, cwd: params.cwd });
+    await applyInitial(client, sessionId, params.configOptions ?? []);
 
     // Before the answer, as cursor-cloud's first message comes (CHD-622).
     if (FIRST_MESSAGE !== undefined) {
@@ -1473,6 +1607,12 @@ const connection = acp
       ...sessionModes(),
       configOptions: configOptions(sessionId),
     };
+  })
+  // Counted, for a test that chord never asks it (CHD-629).
+  .onRequest('session/options', () => {
+    optionsAsked += 1;
+
+    return { ...sessionModes(), configOptions: configOptions('') };
   })
   // The sessions this process created, newest first, in the directory asked
   // for or in all of them.
@@ -1625,73 +1765,9 @@ const connection = acp
   })
   // A model, a mode or an effort is chosen through its config option, and the
   // answer carries every option as it now stands, as ACP asks.
-  .onRequest('session/set_config_option', async ({ params, client }) => {
-    if (
-      HANG === 'config' ||
-      (HANG === 'effort' && params.configId === 'effort')
-    ) {
-      await never();
-    }
-
-    if (CONFIG_DELAY_MS > 0) {
-      await new Promise((resolve) => setTimeout(resolve, CONFIG_DELAY_MS));
-    }
-
-    const value = String(params.value);
-    const model = models.get(params.sessionId) ?? FIRST_MODEL;
-    const offered =
-      params.configId === 'model'
-        ? AVAILABLE_MODELS
-        : params.configId === 'mode' && !NO_MODES
-          ? AVAILABLE_MODES.map(({ id }) => ({ value: id }))
-          : params.configId === 'effort' && !NO_CONFIG
-            ? effortsOf(model)
-            : params.configId === 'fast' && hasFast(model)
-              ? FAST_VALUES
-              : params.configId === 'permission' &&
-                  DIMCODE_PERMISSION !== undefined
-                ? DIMCODE_PERMISSIONS
-                : [];
-
-    if (!offered.some((entry) => entry.value === value)) {
-      throw acp.RequestError.invalidParams(
-        undefined,
-        `${params.configId} cannot be ${value}`,
-      );
-    }
-
-    if (params.configId === 'effort' && REFUSE_CONFIG) {
-      throw new acp.RequestError(-32603, 'The fake agent holds its effort.');
-    }
-
-    if (params.configId === 'mode' && locked.has(params.sessionId)) {
-      throw new acp.RequestError(-32603, 'The fake agent holds its mode.');
-    }
-
-    const chosen =
-      params.configId === 'model'
-        ? models
-        : params.configId === 'mode'
-          ? modes
-          : params.configId === 'permission'
-            ? permissions
-            : params.configId === 'fast'
-              ? fasts
-              : efforts;
-
-    chosen.set(params.sessionId, value);
-
-    if (params.configId === 'model') {
-      return switchedModel(client, params.sessionId);
-    }
-
-    // Codex's adapter says nothing of the mode it moved to.
-    if (params.configId === 'mode' && SILENT_SET_MODE) {
-      return {} as acp.SetSessionConfigOptionResponse;
-    }
-
-    return { configOptions: configOptions(params.sessionId) };
-  })
+  .onRequest('session/set_config_option', ({ params, client }) =>
+    setConfig(client, params),
+  )
   // The older way to pick a model, which Claude's adapter still answers.
   .onRequest(
     'session/set_model',

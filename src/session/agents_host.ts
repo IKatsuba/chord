@@ -41,6 +41,7 @@ import {
   type ConversationEvent,
   type OpenSession,
 } from './conversation.ts';
+import { initialValuesOf } from './initial_options.ts';
 import { newArgs } from './new_args.ts';
 import { OpenAgents } from './open_agents.ts';
 import type { Place } from './place.ts';
@@ -1275,7 +1276,7 @@ export function createAgentsHost(
     let forking = fork;
 
     const conversation = new Conversation(
-      (signal) => {
+      (signal, starting) => {
         if (startup.refused !== undefined) {
           throw new Error(startup.refused);
         }
@@ -1319,6 +1320,7 @@ export function createAgentsHost(
               }
             : {}),
           ...(forking === undefined ? {} : { fork: forking }),
+          initial: initialValuesOf(starting),
         };
 
         forking = undefined;
@@ -2388,7 +2390,7 @@ export function createAgentsHost(
     let releaseCurrentCaller = () => {};
 
     const conversation = new Conversation(
-      (signal) => {
+      (signal, opening) => {
         if (refused !== undefined) {
           throw new Error(refused);
         }
@@ -2426,6 +2428,7 @@ export function createAgentsHost(
           signal,
           ...(agentCommand === undefined ? {} : { agentCommand }),
           ...(next === undefined ? {} : { resume: next }),
+          initial: initialValuesOf(opening),
           ...(servers.length === 0 ? {} : { mcpServers: servers }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
           ...(takes === false

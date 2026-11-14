@@ -15,7 +15,10 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { RecordEntry } from '../../../src/session/record.ts';
+import type { AccountState } from '../../../src/session/auth_status.ts';
 import { openSession } from '../../../src/session/session.ts';
+import type { Entry } from '../../../src/session/transcript/types.ts';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
 import {
   earlierSessions,
   readRecords,
@@ -736,4 +739,179 @@ describe('CHD-629 tester: rename targets and terminal status', () => {
         }),
       },
     ));
+});
+
+describe('CHD-629 tester: status account display snapshots', () => {
+  interface AccountFeed {
+    current: AccountState;
+    listeners: Set<(account: AccountState) => void>;
+  }
+
+  const authenticated = (label: string, email: string): AccountState => ({
+    phase: 'heard',
+    status: {
+      state: 'authenticated',
+      accounts: [{ label, email, active: true }],
+    },
+  });
+
+  const injectAccounts =
+    (
+      feeds: AccountFeed[],
+      seed: (index: number) => AccountState,
+    ): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+      const feed: AccountFeed = {
+        current: seed(feeds.length),
+        listeners: new Set(),
+      };
+
+      feeds.push(feed);
+
+      return {
+        ...session,
+        account: () => feed.current,
+        subscribeAccount: (listener) => {
+          feed.listeners.add(listener);
+
+          return () => {
+            feed.listeners.delete(listener);
+          };
+        },
+      };
+    };
+
+  const rows = (entry: Extract<Entry, { kind: 'report' }>) =>
+    entry.rows.map((row) => row.text).join('\n');
+
+  test('pushes and renames change the next report while old reports stay snapshots and account data stays out of records', async () => {
+    const beforeEmail = 'display-before-only@example.test';
+    const afterEmail = 'display-after-only@example.test';
+    const feeds: AccountFeed[] = [];
+    let all: WindowedState | undefined;
+    const snapshots = () =>
+      all?.sessions[all.front]?.transcript.entries.flatMap((entry) =>
+        entry.kind === 'report' && entry.command === 'status' ? [entry] : [],
+      ) ?? [];
+
+    await withWindow(
+      async (window) => {
+        await send(window, 'text');
+        await window.shows('This reply came in chunks.');
+        await send(window, '/rename Before title');
+        await window.shows('Renamed to Before title');
+        await reported(window, '/status');
+        await until('first status snapshot', () => snapshots().length === 1);
+
+        const first = snapshots()[0];
+        const feed = feeds[0];
+
+        assert(first && feed);
+        expect(rows(first)).toContain(beforeEmail);
+        expect(rows(first)).toContain('Before title');
+
+        feed.current = authenticated('After account push', afterEmail);
+
+        for (const listener of feed.listeners) {
+          listener(feed.current);
+        }
+
+        await until('pushed account in window state', () => {
+          const account = all?.sessions[all.front]?.account;
+
+          return (
+            account?.phase === 'heard' &&
+            account.status.accounts?.some(
+              (each) => each.email === afterEmail,
+            ) === true
+          );
+        });
+
+        expect(rows(first)).toContain(beforeEmail);
+        expect(rows(first)).not.toContain(afterEmail);
+        expect(window.frame()).not.toContain(afterEmail);
+        await send(window, '/rename After title');
+        await window.shows('Renamed to After title');
+        await reported(window, '/status');
+        await until('second status snapshot', () => snapshots().length === 2);
+
+        const second = snapshots()[1];
+
+        assert(second);
+        expect(rows(second)).toContain(afterEmail);
+        expect(rows(second)).not.toContain(beforeEmail);
+        expect(rows(second)).toContain('After title');
+        expect(rows(first)).toContain('Before title');
+        await until('latest title flushed to record', async () =>
+          (await readRecords(join(window.dir, 'state'))).some(
+            (record) => record.title === 'After title',
+          ),
+        );
+
+        const records = await readRecords(join(window.dir, 'state'));
+
+        expect(records.length).toBeGreaterThan(0);
+
+        for (const record of records) {
+          const raw = await readFile(record.path, 'utf8');
+
+          expect(raw).not.toContain(beforeEmail);
+          expect(raw).not.toContain(afterEmail);
+          expect(raw).not.toContain('Before account push');
+          expect(raw).not.toContain('After account push');
+        }
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--set-title', 'echo'),
+        openWith: injectAccounts(feeds, () =>
+          authenticated('Before account push', beforeEmail),
+        ),
+        onState: (state) => {
+          all = state;
+        },
+      },
+    );
+  });
+
+  for (const columns of [80, 120]) {
+    test(`a picked child's status reads only its own connection account at ${columns} columns`, async () => {
+      const feeds: AccountFeed[] = [];
+
+      await withChild(
+        async (window) => {
+          const main = await reported(window, '/status');
+
+          expect(main).toContain('main-display-only@example.test');
+          await openOther(window);
+          await pickAgent(window, 'other');
+          await readyAgent(window);
+
+          const child = await reported(window, '/status');
+
+          expect(child).toContain('child-display-only@example.test');
+          expect(child).not.toContain('main-display-only@example.test');
+          await pickAgent(window, 'main');
+          await readyAgent(window);
+
+          const again = await reported(window, '/status');
+
+          expect(again).toContain('main-display-only@example.test');
+          expect(again).not.toContain('child-display-only@example.test');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          openWith: injectAccounts(feeds, (index) =>
+            authenticated(
+              index === 0 ? 'Main account' : 'Child account',
+              index === 0
+                ? 'main-display-only@example.test'
+                : 'child-display-only@example.test',
+            ),
+          ),
+        },
+      );
+    });
+  }
 });

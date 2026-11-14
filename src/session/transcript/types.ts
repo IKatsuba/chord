@@ -1205,6 +1205,12 @@ export type TranscriptAction =
       readonly turnId: string;
       readonly title: string;
       readonly at: number;
+      /**
+       * Recorded by `chord acp` for a session not loaded, which its agent
+       * has not taken yet: the next load or resume sends it (the owner's
+       * Q3 d).
+       */
+      readonly pending?: true;
     }
   /** The session is a fork of the agent `from`'s, made at `at` (CHD-101). */
   | {

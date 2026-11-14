@@ -10,6 +10,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -181,7 +182,7 @@ describe('initialize', () => {
               embeddedContext: true,
             },
             mcpCapabilities: { http: true, sse: true },
-            sessionCapabilities: { list: {}, resume: {}, close: {} },
+            sessionCapabilities: { list: {}, resume: {}, close: {}, title: {} },
           },
           _meta: {
             'chord/acp': {
@@ -758,6 +759,120 @@ describe('CHD-629 tester: client entry wire fidelity', () => {
       expect(error?.message).toContain('The fake agent holds its effort.');
       expect(await newSession()).toBeString();
     }));
+});
+
+describe('session/set_title (CHD-629)', () => {
+  const titled = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .flatMap((update) =>
+        update.sessionUpdate === 'session_info_update' ? [update.title] : [],
+      );
+
+  test("a live session is renamed by its agent, whose echo the client hears, and answers the agent's title", () =>
+    onAcp(['--set-title', 'echo'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+      const { result } = await client.request('session/set_title', {
+        sessionId,
+        title: 'Fix   the parser',
+      });
+
+      expect(result).toEqual({ title: 'Fix the parser' });
+      expect(titled(client, sessionId)).toContain('Fix the parser');
+    }));
+
+  test("an agent that takes no title is renamed in chord's record alone; one that refuses answers its error", async () => {
+    await onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect(
+        (
+          await client.request('session/set_title', {
+            sessionId,
+            title: ' A  b ',
+          })
+        ).result,
+      ).toEqual({ title: 'A b' });
+    });
+
+    await onAcp(['--set-title', 'refuse'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+      const { error } = await client.request('session/set_title', {
+        sessionId,
+        title: 'Fix the parser',
+      });
+
+      expect(error?.message).toContain('cannot rename');
+    });
+  });
+
+  test('an empty title is -32602 and a session chord has no record of -32002', () =>
+    onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect(
+        (await client.request('session/set_title', { sessionId, title: '  ' }))
+          .error?.code,
+      ).toBe(-32602);
+      expect(
+        (
+          await client.request('session/set_title', {
+            sessionId: crypto.randomUUID(),
+            title: 'Fix the parser',
+          })
+        ).error?.code,
+      ).toBe(-32002);
+    }));
+
+  test("a listed session not loaded is renamed in its record, listed by it, and its agent is told at the next load (the owner's Q3 d)", () =>
+    onAcp(
+      ['--set-title', 'echo'],
+      async ({ client, cwd, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'text'));
+        await client.request('session/close', { sessionId });
+
+        expect(
+          (
+            await client.request('session/set_title', {
+              sessionId,
+              title: 'Parser test tidy-up',
+            })
+          ).result,
+        ).toEqual({ title: 'Parser test tidy-up' });
+
+        const listed = await client.request('session/list', { cwd });
+
+        expect(
+          (
+            listed.result as {
+              sessions: { sessionId: string; title: string }[];
+            }
+          ).sessions.find((session) => session.sessionId === sessionId)?.title,
+        ).toBe('Parser test tidy-up');
+
+        const loaded = await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(loaded.error).toBeUndefined();
+        expect(titled(client, sessionId)).toContain('Parser test tidy-up');
+        // The agent is told at the load, as it takes titles.
+        await until(() => {
+          try {
+            return readFileSync(
+              join(cwd, '.fake-gate', 'titles-heard'),
+              'utf8',
+            ).includes('Parser test tidy-up');
+          } catch {
+            return false;
+          }
+        });
+      },
+    ));
 });
 
 describe('notices (CHD-629)', () => {

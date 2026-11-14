@@ -3414,6 +3414,18 @@ export class Conversation {
       }
     });
 
+    // A rename `chord acp` recorded while the session was not loaded goes
+    // to the agent first, where it takes one (the owner's Q3 d).
+    const pending = past.findLast((action) => action.type === 'renamed');
+
+    if (
+      pending?.type === 'renamed' &&
+      pending.pending === true &&
+      session.takesTitles()
+    ) {
+      void this.rename(pending.title).catch(() => {});
+    }
+
     this.#emit({ type: 'prompt_capabilities', image: session.takesImages() });
     this.#emit({ type: 'connected', sessionId: session.id, at: this.#now() });
 

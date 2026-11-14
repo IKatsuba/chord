@@ -52,6 +52,7 @@ import {
   type LeaveStep,
 } from './session/leaving.ts';
 import type { Place } from './session/place.ts';
+import { recordPendingRename } from './session/record.ts';
 import type { ReadLimits } from './session/resource_access.ts';
 import type { OpenSessionOptions, Session } from './session/session.ts';
 import {
@@ -867,6 +868,12 @@ export function runAcp(options: AcpOptions): AcpRun {
           relay(entry, messageChunk(upstreamId, event.text, event.from).update);
         } else if (event.type === 'update') {
           relay(entry, event.update, event.subagentId);
+        } else if (event.type === 'renamed') {
+          // chord's own line, said as the agent here, chord, says a title.
+          relay(entry, {
+            sessionUpdate: 'session_info_update',
+            title: event.title,
+          });
         }
       }
     }
@@ -1809,7 +1816,13 @@ export function runAcp(options: AcpOptions): AcpRun {
               embeddedContext: true,
             },
             mcpCapabilities: { http: true, sse: true },
-            sessionCapabilities: { list: {}, resume: {}, close: {} },
+            // chord's record takes any rename, whatever the agent takes.
+            sessionCapabilities: {
+              list: {},
+              resume: {},
+              close: {},
+              title: {},
+            },
           },
           _meta: {
             [ACP_META]: {
@@ -2021,6 +2034,45 @@ export function runAcp(options: AcpOptions): AcpRun {
           });
 
         return {};
+      },
+      // A live session is renamed as the window renames it; one listed and
+      // not loaded is recorded, for its agent to be told at the next load.
+      setTitle: async ({ params }) => {
+        refuseIfClosing();
+
+        const title = params.title.replaceAll(/\s+/g, ' ').trim();
+
+        if (title === '') {
+          throw RequestError.invalidParams(undefined, 'The title is empty.');
+        }
+
+        const entry = sessions.get(params.sessionId);
+
+        if (entry !== undefined) {
+          const renamed = await entry.conversation
+            .rename(title)
+            .catch((error: unknown) => {
+              throw refusal(error);
+            });
+
+          if (renamed === undefined) {
+            throw RequestError.sessionNotFound(params.sessionId);
+          }
+
+          return { title: renamed.title };
+        }
+
+        const listed = earlierSessions(await readRecords(options.stateDir), {
+          agent,
+        }).find(({ resume }) => resume.sessionId === params.sessionId);
+
+        if (listed?.resume.record === undefined) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        await recordPendingRename(listed.resume.record, title, Date.now());
+
+        return { title };
       },
       close: async ({ params }) => {
         refuseIfClosing();

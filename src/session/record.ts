@@ -214,7 +214,13 @@ export type RecordEntry =
    * as the record holds no ACP event the agent did not send; a record
    * written before these has none, and an older chord skips it.
    */
-  | { readonly type: 'renamed'; readonly title: string; readonly at: number }
+  | {
+      readonly type: 'renamed';
+      readonly title: string;
+      readonly at: number;
+      /** Not taken by the agent yet: `chord acp` renamed it unloaded. */
+      readonly pending?: true;
+    }
   /** The model, mode and other config values in use from here on. */
   | {
       readonly type: 'state';
@@ -634,6 +640,21 @@ function leftOpen(
  * are not reopened with it, a team's runs counted from their leads' records
  * in `runs`, by chord's id for each lead.
  */
+/**
+ * Appends a rename the agent has not taken yet to the record at `path`, for
+ * a session `chord acp` renamed while it was not loaded: the next load or
+ * resume sends it (the owner's Q3 d).
+ */
+export async function recordPendingRename(
+  path: string,
+  title: string,
+  at: number,
+): Promise<void> {
+  const entry: RecordEntry = { type: 'renamed', title, at, pending: true };
+
+  await appendFile(path, `${JSON.stringify(entry)}\n`);
+}
+
 export function recordActions(
   entries: readonly RecordEntry[],
   runs: ReadonlyMap<string, readonly RecordEntry[]> = new Map(),
@@ -823,6 +844,7 @@ export function recordActions(
           turnId: open ?? 'session',
           title: entry.title,
           at: entry.at,
+          ...(entry.pending === true ? { pending: true } : {}),
         });
 
         break;

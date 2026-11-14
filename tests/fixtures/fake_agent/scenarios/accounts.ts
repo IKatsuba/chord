@@ -4,7 +4,6 @@
  * after `initialize`, and another account mid-turn.
  */
 import * as acp from '@agentclientprotocol/sdk/unstable';
-import process from 'node:process';
 import { AUTH_RACE, AUTH_STATUS } from '../options.ts';
 import type { Client, Play } from '../turn.ts';
 
@@ -63,27 +62,18 @@ function statusOf(): acp.AuthStatusResponse {
 }
 
 /**
- * Answers `auth/status` as `--auth-status` says. Under `--auth-race` the
- * answer and an API key's push go in one write, in the order named, so
- * chord reads them in one chunk: the answer is written here, under the
- * request's id, and the SDK's own is never sent.
+ * Answers `auth/status` as `--auth-status` says, with `--auth-race`'s push
+ * of an API key's account just before the answer or just after it.
  */
 export async function authStatus(
-  requestId: acp.RequestId,
+  client: Client,
 ): Promise<acp.AuthStatusResponse> {
-  if (AUTH_RACE !== undefined) {
-    const answer = { jsonrpc: '2.0', id: requestId, result: statusOf() };
-    const push = {
-      jsonrpc: '2.0',
-      method: 'auth/status_update',
-      params: API_KEY,
-    };
-    const both = AUTH_RACE === 'push-first' ? [push, answer] : [answer, push];
-
-    process.stdout.write(
-      both.map((each) => `${JSON.stringify(each)}\n`).join(''),
+  if (AUTH_RACE === 'push-first') {
+    await client.notify('auth/status_update', API_KEY);
+  } else if (AUTH_RACE === 'answer-first') {
+    setTimeout(
+      () => void client.notify('auth/status_update', API_KEY).catch(() => {}),
     );
-    await new Promise<never>(() => {});
   }
 
   if (AUTH_STATUS === 'error') {

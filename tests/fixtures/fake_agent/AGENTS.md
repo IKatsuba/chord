@@ -358,9 +358,8 @@
   (`CHORD_FAKE_AUTH_PUSH=1`) pushes that account in an `auth/status_update`
   just after `initialize` (the subscription for `error` and `hang`), and
   `authchanged` pushes an API key's account mid-turn; `--auth-race
-  <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`) writes `auth/status`'s
-  answer itself, with a push of that account before or after it, in one
-  write, so chord reads both in one chunk (CHD-629).
+  <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`) pushes that account
+  just before `auth/status`'s answer, or just after it (CHD-629).
   `--auth-required prompt` opens the session and refuses its first prompt
   `authRequired` ("Authentication required"); the next prompt runs (CHD-629).
   `subagentlinked` announces a child, then a running TaskStop whose content

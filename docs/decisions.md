@@ -8944,3 +8944,14 @@ verbatim without advertising `options`), Q5 a (`-p` writes notices to
 stderr), Q6 a (Claude's dropped `info` messages accepted), Q7 a (a notice's
 `⏺` in its severity's role), Q8 a (a renamed config id caught by the
 pin-bump checklist, harmless by the read-back).
+
+## 2026-11-14 — CHD-629: an account push after the request beats its answer
+
+ACP SDK 2.6 does not keep a response and a notification in wire order: it
+can hand chord an `auth/status` answer after an `auth/status_update` that
+came after it on the wire, so folding both as they reach chord can let an
+older answer replace a newer push. Tried and not taken: reading the answer
+from the transport's tap, in wire order, beside the SDK's own handling. The
+owner chose (b): the SDK's result is folded as it comes, except that once a
+push is heard after the request went out, the answer does not replace it.
+No upstream issue was opened.

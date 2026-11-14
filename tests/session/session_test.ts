@@ -2467,10 +2467,10 @@ describe("the agent's account (CHD-629)", () => {
     }));
 
   for (const [race, last] of [
-    ['push-first', SIGNED_IN],
+    ['push-first', API_KEY],
     ['answer-first', API_KEY],
   ] as const) {
-    test(`an answer and a push fold in the order they came over the wire, the later winning (${race})`, () =>
+    test(`a push heard after the request went out is the account, and the answer does not replace it (${race})`, () =>
       accountOn(
         ['--auth-status', 'authenticated', '--auth-race', race],
         async (session) => {

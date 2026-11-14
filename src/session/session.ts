@@ -461,8 +461,13 @@ export async function openSession(
   let accountState: AccountState = NO_ACCOUNT;
   /** Aborted as the session closes: a wait on the account stops then. */
   const ending = new AbortController();
-  /** The id chord sent `auth/status` under, whose answer is the account. */
-  let accountAsked: unknown;
+  /**
+   * Whether a push was heard since `auth/status` went out: the SDK may hand
+   * over the request's answer after a push that came after it on the wire,
+   * so once one is heard the answer does not replace it (CHD-629, the
+   * owner's ruling).
+   */
+  let pushedSinceAsked = false;
   const accountListeners = new Set<(account: AccountState) => void>();
   const account = (event: AccountEvent) => {
     const next = foldAccount(accountState, event);
@@ -545,40 +550,19 @@ export async function openSession(
   };
 
   const onTraffic = (traffic: Traffic) => {
-    // The account's answer and pushes fold here, in the order they came
-    // over the wire (CHD-629): a push is the connection's and not a
-    // session's, never held in `early`, and heard from before `initialize`.
+    // A push of the account, a notification of the connection's and not a
+    // session's: never held in `early`, and heard from before `initialize`.
     if (
-      traffic.from === 'chord' &&
-      'method' in traffic.message &&
-      traffic.message.method === 'auth/status' &&
-      'id' in traffic.message
-    ) {
-      accountAsked = traffic.message.id;
-    } else if (
       traffic.from === 'agent' &&
       'method' in traffic.message &&
       traffic.message.method === 'auth/status_update'
     ) {
+      pushedSinceAsked = true;
+
       account({
         type: 'heard',
         status: traffic.message.params as AuthStatusResponse,
       });
-    } else if (
-      traffic.from === 'agent' &&
-      !('method' in traffic.message) &&
-      'id' in traffic.message &&
-      accountAsked !== undefined &&
-      traffic.message.id === accountAsked
-    ) {
-      account(
-        'result' in traffic.message
-          ? {
-              type: 'heard',
-              status: traffic.message.result as AuthStatusResponse,
-            }
-          : { type: 'failed' },
-      );
     }
 
     // The tap keeps notifications from the SDK: this is the one place to hear it.
@@ -633,9 +617,17 @@ export async function openSession(
   // wait for it, and Claude's adapter joins the probe `initialize` began.
   if (connection.init.agentCapabilities?.auth?.status) {
     account({ type: 'asked' });
-    // Its answer is heard on the wire; an agent gone before answering is
-    // a failed request.
-    connection.authStatus().catch(() => account({ type: 'failed' }));
+
+    pushedSinceAsked = false;
+
+    connection.authStatus().then(
+      (status) => {
+        if (!pushedSinceAsked) {
+          account({ type: 'heard', status });
+        }
+      },
+      () => account({ type: 'failed' }),
+    );
   }
 
   live.add(connection.pid);

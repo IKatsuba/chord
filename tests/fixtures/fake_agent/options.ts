@@ -235,9 +235,9 @@ export const AUTH_PUSH =
   ARGS.includes('--auth-push') || process.env.CHORD_FAKE_AUTH_PUSH === '1';
 
 /**
- * `--auth-race <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`): `auth/status`'s
- * answer and a push of an API key's account go in one write, in that order,
- * so a test sees the two folded in the order they came (CHD-629).
+ * `--auth-race <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`): an API
+ * key's account is pushed just before `auth/status`'s answer, or just after
+ * it, both after the request came (CHD-629).
  */
 export const AUTH_RACE = (() => {
   const chosen = valueOf('--auth-race', 'CHORD_FAKE_AUTH_RACE');

@@ -581,6 +581,8 @@ export class Conversation {
    * holding the queue back.
    */
   #settling: AbortController | undefined;
+  /** The ids of the compactions the session on screen has opened. */
+  #compactions = new Set<string>();
   /** When the agent last sent an update, by `performance.now()`. */
   #heardAt = 0;
   /**
@@ -949,6 +951,7 @@ export class Conversation {
     this.#lastTurnId = 'session';
     this.#selfTurnId = undefined;
     this.#cycle = undefined;
+    this.#compactions = new Set();
     this.#wentId = undefined;
     // They go with the session they were queued in.
     this.#queued = [];
@@ -3422,6 +3425,7 @@ export class Conversation {
     // Silent since the last turn ended: what comes now is not its tail.
     const quiet = now - Math.max(this.#heardAt, this.#endedAt) >= QUIET_MS;
     const mark = subagentId === undefined ? cycleMark(update) : undefined;
+    const unasked = subagentId === undefined && this.#opensUnasked(update);
 
     this.#heardAt = now;
 
@@ -3438,6 +3442,7 @@ export class Conversation {
       update,
       ...(subagentId === undefined ? {} : { subagentId }),
       ...(TIMED_UPDATES.has(update.sessionUpdate) ? { at: this.#now() } : {}),
+      ...(unasked ? { unasked: true } : {}),
     });
 
     // A cost that came after its turn's end, as Claude's can, is still its.
@@ -3455,6 +3460,31 @@ export class Conversation {
     if (subagentId === undefined && STATE_UPDATES.has(update.sessionUpdate)) {
       this.#report(session);
     }
+  }
+
+  /**
+   * Whether `update` opens a compaction with nothing under way: no turn,
+   * chord's or the agent's own after a missed steer, no cycle and no wait
+   * for a turn's tail, as Claude compacts an idle session (CHD-624). Said
+   * once, at its first update, from chord's state and not the agent's
+   * words; a replay never comes this way.
+   */
+  #opensUnasked(update: SessionUpdate): boolean {
+    if (
+      update.sessionUpdate !== 'compaction_update' ||
+      this.#compactions.has(update.compactionId)
+    ) {
+      return false;
+    }
+
+    this.#compactions.add(update.compactionId);
+
+    return (
+      this.#turn === undefined &&
+      this.#selfTurnId === undefined &&
+      this.#cycle === undefined &&
+      this.#settling === undefined
+    );
   }
 
   /**

@@ -280,6 +280,11 @@ export interface Compaction {
   readonly summary: string;
   /** Why it failed, in the agent's words. */
   readonly error?: string;
+  /**
+   * The agent ran it on its own, with nothing of the person's or chord's
+   * under way, as Claude does to an idle session (CHD-624).
+   */
+  readonly unasked?: true;
 }
 
 /**
@@ -1024,6 +1029,11 @@ export type TranscriptAction =
       readonly subagentId?: string;
       /** When it reached chord, for the updates whose time is kept. */
       readonly at?: number;
+      /**
+       * A compaction's first update that came with no turn, cycle or
+       * settling under way: the compaction is unasked (CHD-624).
+       */
+      readonly unasked?: true;
     }
   | {
       readonly type: 'permission_requested';

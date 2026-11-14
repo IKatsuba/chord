@@ -1,0 +1,24 @@
+ ▀▄     chord v0.70.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d624
+ ▀▀     ? for shortcuts · /help
+
+ › idlecompactfail
+
+ ⏺ Done: three tests merged into one table, all green.
+   ⎿  Compaction failed while idle: Not enough messages to compact.
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

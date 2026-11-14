@@ -25,6 +25,13 @@ export interface CliAgent {
 
 export const CLI_AGENTS: readonly CliAgent[] = [
   {
+    // https://github.com/autohandai/code-cli/blob/main/docs/guides/ACP.md
+    name: 'autohand',
+    title: 'Autohand Code',
+    argv: ['autohand', '--acp'],
+    install: 'https://github.com/autohandai/code-cli#installation',
+  },
+  {
     // https://cursor.com/docs/cli/acp
     name: 'cursor',
     title: 'Cursor',
@@ -60,18 +67,11 @@ export const CLI_AGENTS: readonly CliAgent[] = [
     install: 'https://junie.jetbrains.com/docs/junie-cli.html',
   },
   {
-    // https://www.kimi.com/code/docs/en/kimi-code-cli/reference/kimi-acp
-    name: 'kimi',
-    title: 'Kimi Code',
-    argv: ['kimi', 'acp'],
-    install:
-      'https://www.kimi.com/code/docs/en/kimi-code-cli/guides/getting-started.html',
-  },
-  {
     // https://kiro.dev/docs/cli/acp/
     name: 'kiro',
     title: 'Kiro',
-    argv: ['kiro-cli', 'acp'],
+    // V3, as the registry's binary starts it.
+    argv: ['kiro-cli', 'acp', '--agent-engine=v3'],
     install: 'https://kiro.dev/docs/getting-started/installation/',
   },
   {

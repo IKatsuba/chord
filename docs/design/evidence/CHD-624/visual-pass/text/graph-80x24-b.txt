@@ -1,0 +1,24 @@
+ ▀▄     chord v0.70.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d624
+ ▀▀     ? for shortcuts · /help
+
+ › graphemes
+
+ ⏺ A decomposed é then bold and then code after it.
+
+   - 👩‍💻 joined then code
+   - ⚠️ warning then code
+   - 👍🏽 toned then code
+   - plain bold then code
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › naïve 日本語 👩‍💻 ok                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

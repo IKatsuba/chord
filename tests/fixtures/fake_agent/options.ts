@@ -382,7 +382,7 @@ export const SILENT_SET_MODE =
   ARGS.includes('--silent-set-mode') ||
   process.env.CHORD_FAKE_SILENT_SET_MODE === '1';
 
-const STEERINGS = ['claude', 'codex', 'codex24'] as const;
+const STEERINGS = ['claude', 'codex', 'codex24', 'opencode'] as const;
 
 function steeringAdapter(): (typeof STEERINGS)[number] | undefined {
   const flag = ARGS.indexOf('--steering');
@@ -402,7 +402,9 @@ function steeringAdapter(): (typeof STEERINGS)[number] | undefined {
 /**
  * The adapter whose `_session/steering` the fake answers as: `claude`; `codex24`,
  * Codex's from 2.4, which honour `promptRequired`; or `codex`, which ignores it,
- * as codex-acp before 2.4 did and a person's own command can still start; none
+ * as codex-acp before 2.4 did and a person's own command can still start;
+ * `opencode`, opencode v2's from 2.2.7, which never starts a turn of its own
+ * and answers `promptRequired` with no turn whatever was asked; none
  * by default, when it neither advertises nor takes it.
  */
 export const STEERING = steeringAdapter();

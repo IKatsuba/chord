@@ -8774,3 +8774,84 @@ stray positional, and joining the tokens back would be a workaround around
 the library. The owner chose chord's own reader, `src/session/new_args.ts`.
 Options put: that reader; quoted names through a tokenizer and `parseArgs`;
 `parseArgs` with names that hold no space.
+
+## 2026-11-13 — CHD-624: the catch-up in two PRs, dependencies first (owner)
+
+The owner took the recommendations of the CHD-624 survey
+(`docs/design/evidence/CHD-624/survey.md`), D1 changed below. Options for
+shipping: one PR; dependencies and Claude's new defaults first, then the
+features; a PR per feature. Chosen: two in order. CHD-624 bumps
+`@agentclientprotocol/sdk` to 2.6.0, OpenTUI to 0.8.4 after a visual pass,
+claude-agent-sdk and genai-prices, refreshes the registry, and handles what
+claude-agent-acp 0.107 changes for a person; `/rename`, the account in
+`/status`, initial options for model and effort, notices and the `session`
+tool-call content are CHD-629, cursor-cloud's extras CHD-630. Not taken: ACP
+v2 (alpha, its RFDs back to Draft, many agents echo any version asked),
+string-width 9 (a major that must agree with OpenTUI's width method), proxy
+chains and `session/archive` (no agent serves them). Libraries: the SDK's
+own types for every new method; nothing is written that the SDK carries.
+
+## 2026-11-13 — CHD-624: Claude starts in Auto, the adapter's default (owner)
+
+claude-agent-acp 0.101 starts a new session in Auto unless the person's
+Claude settings name `permissions.defaultMode`; 0.99.1 started in Manual.
+Options: (a) take the adapter's default and say so in the release notes;
+(b) chord starts Claude in Manual unless chord's settings name a mode, sent
+as initial `configOptions` on `session/new` (ACP schema 1.31) with the mode's
+config id from a table keyed by the adapter's name; (c) ask the person once.
+The owner chose (a) after reading the design for (b). chord sends no start
+mode of its own; named modes are set after `session/new` as today, and
+Claude's own `permissions.defaultMode` keeps deciding. Consequence: Claude
+decides permissions in a new session unless the person picks a mode; the
+release notes say how. The initial-options path designed for (b) moves to
+CHD-629's F3 for mode, model and effort together, with what that design
+found: `session/options` before every start makes Claude run a throwaway
+Claude Code and the person's `SessionStart` hooks, so ids come from a table;
+the mode step must read the current mode at its turn and check it after a
+fallback. Libraries: the SDK 2.6 types; nothing written.
+
+## 2026-11-13 — CHD-624: an unasked compaction is chord's state, not an enricher's
+
+Claude 0.101 compacts an idle session on its own; the trigger goes only to
+JetBrains AIR. The owner chose (D2 a) to keep it and draw it "compacted
+while idle". Options for deciding which compaction is unasked: an enricher
+marking `_meta` when no request of chord's is open; `Conversation`, which
+knows turns and cycles. Chosen: `Conversation`, once per compaction at its
+first update; an enricher would mark a compaction inside Claude's own cycle
+as idle. The mark is an `unasked` field on the update action and on
+`Compaction`, carried explicitly through the record's entry mappings; it is
+not relayed by `chord acp`. Compaction updates open no cycle today, so no
+cycle change is made. Rejected: holding cycles off for a while after a
+compaction, which would also stop real cycles and codebuddy's start marks,
+latch on a missing end, and still miss a chunk arriving after its window;
+a chunk the adapter may forward around `/compact` carries nothing to
+attribute it, and the owner left it as today (O1 a): it may open a
+Claude cycle that shows working until the next prompt. The compaction's
+cost stays the last turn's late cost, as every late Claude cost.
+
+## 2026-11-13 — CHD-624: Kimi Code by the registry under the name `kimi`
+
+The registry added npx `kimi-code`, the program chord ran as its own CLI
+`kimi`. The owner chose (D6) the registry's. Options for the name: keep
+`kimi` through `ALIASES` as `claude` maps to `claude-acp`; rename to
+`kimi-code` and map recorded `kimi` on resume; rename with no mapping.
+Chosen: the alias, which keeps records, settings, `offeredAgents`, team
+files and `chord kimi` working together; a record-only mapping leaves the
+others broken. autohand, binary-only in the registry now, becomes an own CLI
+(`autohand --acp`); kiro passes `--agent-engine=v3` as the registry does;
+the generator names each agent it drops for being binary-only.
+
+## 2026-11-14 — CHD-624: OpenTUI's own width method under tmux (owner)
+
+chord told OpenTUI's renderer to measure by grapheme wherever OpenTUI saw
+tmux (`src/ui/app/terminal_width.ts`), as OpenTUI measured by code point
+there and tmux drew a VS16 emoji two cells wide (anomalyco/opentui#1654).
+OpenTUI 0.8.3 closed that issue: it measures by grapheme under tmux 3.6 and
+newer, by the version tmux answers, and keeps code points for an older or
+unknown tmux. Options: (a) delete the workaround and take OpenTUI's choice
+everywhere; (b) keep it, overruling OpenTUI on older tmux; (c) check an
+older tmux first. The owner chose (a): older tmux is not a concern. The
+module and its tests are gone; a person's own `OPENTUI_FORCE_UNICODE` or
+`OPENTUI_FORCE_WCWIDTH` still reaches OpenTUI from the environment.
+`OTUI_STDOUT_THREAD` is still set off for the renderer and put back for
+the processes chord starts.

@@ -5,7 +5,7 @@ import { TranscriptEntry } from '../../../src/ui/transcript/Transcript.tsx';
 import { describe, expect, test } from 'bun:test';
 import { withChild, openOther, pickAgent } from '../app/child_window.tsx';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { readPast, recordActions } from '../../../src/session/record.ts';
@@ -1376,3 +1376,16 @@ describe('CHD-524 tester: Note request ownership', () => {
       ));
   }
 });
+
+test("codex 2.6's async questions outlive their turn, and its withdrawal closes the box (CHD-624)", () =>
+  withWindow(async (window) => {
+    // The gate holds the withdrawal until the box has been seen.
+    await mkdir(join(window.dir, '.fake-gate'));
+    await send(window, 'askcodexasync');
+    // Asked in the turn, it is open once the turn has ended.
+    await window.shows('asks you 2 questions · between turns');
+    await writeFile(join(window.dir, '.fake-gate', 'release'), '');
+    await window.shows('⎿  fake asked · Next step, Token · Cancelled');
+    expect(window.frame()).toContain('I asked; the answer can come later.');
+    expect(window.frame()).not.toContain('asks you 2 questions');
+  }));

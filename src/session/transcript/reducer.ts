@@ -131,7 +131,13 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
     case 'update': {
       const next =
         action.subagentId === undefined
-          ? applyUpdate(state, action.turnId, action.update, action.at)
+          ? applyUpdate(
+              state,
+              action.turnId,
+              action.update,
+              action.at,
+              action.unasked,
+            )
           : childUpdate(state, action, applyUpdate);
 
       // Said here, at the top, with the turn that runs, whether the agent
@@ -323,6 +329,7 @@ function applyUpdate(
   turnId: string,
   update: SessionUpdate,
   at?: number,
+  unasked?: true,
 ): Transcript {
   switch (update.sessionUpdate) {
     case 'subagent_update':
@@ -354,7 +361,7 @@ function applyUpdate(
     }
     case 'compaction_update':
     case 'compaction_summary_chunk':
-      return mergeCompaction(state, turnId, update);
+      return mergeCompaction(state, turnId, update, unasked);
     case 'plan_update':
       return updatePlan(state, turnId, update.plan);
     case 'plan_removed':

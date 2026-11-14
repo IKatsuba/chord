@@ -4,7 +4,7 @@
  */
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { type SessionUpdate } from '@agentclientprotocol/sdk/unstable';
@@ -24,10 +24,13 @@ import {
 } from '../../src/session/conversation.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { initialAppState, reduceApp } from '../../src/ui/app/state.ts';
+import { inSpinner } from '../../src/ui/transcript/compaction.ts';
 import { sessionFigure } from '../../src/ui/transcript/spend.ts';
 import { turnCost } from '../../src/session/prices.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { Turn } from '../fixtures/fake_agent/turn.ts';
+import { COMPACT_ERROR } from '../fixtures/compactions.ts';
+import { IDLE_CHUNK } from '../fixtures/fake_agent/scenarios/compaction.ts';
 import { SHELL } from '../fixtures/fake_agent/scenarios/shell.ts';
 import { LONG_SESSION_TITLE } from '../fixtures/fake_agent/scenarios/text.ts';
 import { PERMISSIONS } from '../fixtures/fake_agent/scenarios/permissions.ts';
@@ -1215,5 +1218,243 @@ describe('CHD-445 U1 tester: titles before prompts on every opening path', () =>
       conversation.send('text');
       await until(() => events.some((event) => event.type === 'result'));
       expect(conversation.title).toBeUndefined();
+    }));
+});
+
+describe("Claude's compaction of an idle session (CHD-624 D2)", () => {
+  /** The compaction entries the window would hold, from `events`. */
+  const compactions = (events: readonly ConversationEvent[]) =>
+    events
+      .reduce(reduceApp, initialAppState)
+      .transcript.entries.flatMap((entry) =>
+        entry.kind === 'compaction' ? [entry] : [],
+      );
+  /** The idle compaction's last usage, the one with its cost. */
+  const costed = (events: readonly ConversationEvent[]) =>
+    events.some(
+      (event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'usage_update' &&
+        event.update.used === 41200 &&
+        event.update.cost !== undefined,
+    );
+  const opened = (events: readonly ConversationEvent[]) =>
+    events.some(
+      (event) =>
+        event.type === 'update' &&
+        event.update.sessionUpdate === 'compaction_update',
+    );
+
+  test('is marked unasked under the last turn, and opens no cycle, no second result and no working', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('idlecompact');
+      await until(() => costed(events));
+
+      const turn = events.find((event) => event.type === 'prompt')!;
+      const marked = events.filter(
+        (event) => event.type === 'update' && event.unasked === true,
+      );
+
+      expect(events.some((event) => event.type === 'cycle_started')).toBe(
+        false,
+      );
+      expect(events.filter((event) => event.type === 'result')).toHaveLength(1);
+      // Only its opening update carries the mark.
+      expect(marked).toHaveLength(1);
+      assert(marked[0]?.type === 'update');
+      expect(marked[0].update.sessionUpdate).toBe('compaction_update');
+      expect(marked[0].turnId).toBe(turn.turnId);
+      expect(
+        events.reduce(reduceApp, initialAppState).transcript.turn.status,
+      ).toBe('idle');
+      expect(
+        compactions(events).map(({ turnId, compaction }) => ({
+          turnId,
+          status: compaction.status,
+          unasked: compaction.unasked,
+        })),
+      ).toStrictEqual([
+        { turnId: turn.turnId, status: 'completed', unasked: true },
+      ]);
+    }));
+
+  test('a prompt sent while it runs waits behind it, the spinner says it, and its entry is patched in place', async () => {
+    let cwd = '';
+
+    await onFake(
+      ['--adapter', 'claude'],
+      async (conversation, events) => {
+        await mkdir(join(cwd, '.fake-gate'));
+        conversation.send('idlecompact');
+        await until(() => opened(events));
+        conversation.send('text');
+        await until(() =>
+          events.some(
+            (event) => event.type === 'prompt' && event.text === 'text',
+          ),
+        );
+
+        const running = events.reduce(reduceApp, initialAppState).transcript;
+        const entry = running.entries.find(
+          (each) => each.kind === 'compaction',
+        );
+
+        assert(entry !== undefined);
+        expect(running.turn.status).not.toBe('idle');
+        expect(inSpinner(entry, running.turn)).toBe(true);
+
+        await writeFile(join(cwd, '.fake-gate', 'release'), '');
+        await until(() => saidIn(events).includes('Hello, world.'));
+
+        const [first, second] = events.filter(
+          (event) => event.type === 'prompt',
+        );
+
+        expect(events.some((event) => event.type === 'cycle_started')).toBe(
+          false,
+        );
+        expect(
+          compactions(events).map(({ turnId, compaction }) => ({
+            turnId,
+            status: compaction.status,
+            unasked: compaction.unasked,
+          })),
+        ).toStrictEqual([
+          { turnId: first!.turnId, status: 'completed', unasked: true },
+        ]);
+        expect(second!.turnId).not.toBe(first!.turnId);
+      },
+      (session) => {
+        cwd = session.cwd;
+
+        return session;
+      },
+    );
+  });
+
+  test('one that fails is marked too, with its error', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('idlecompactfail');
+      await until(() =>
+        compactions(events).some(
+          ({ compaction }) => compaction.status === 'failed',
+        ),
+      );
+
+      expect(
+        compactions(events).map(({ compaction }) => compaction),
+      ).toStrictEqual([
+        {
+          id: expect.any(String),
+          status: 'failed',
+          summary: '',
+          error: COMPACT_ERROR,
+          unasked: true,
+        },
+      ]);
+      expect(events.some((event) => event.type === 'cycle_started')).toBe(
+        false,
+      );
+    }));
+
+  // The owner's O1 a: a chunk nothing ties to the compaction, after a quiet
+  // second, is Claude's own work, as today's `claudecyclebare`.
+  test('an untagged chunk after it opens a cycle that stays working until the next prompt, as today', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('idlecompactsays');
+      await until(() => saidIn(events).includes(IDLE_CHUNK));
+
+      const at = events.findIndex((event) => event.type === 'cycle_started');
+
+      expect(at).toBeGreaterThan(-1);
+      expect(events.slice(at).some((event) => event.type === 'result')).toBe(
+        false,
+      );
+      expect(
+        events.reduce(reduceApp, initialAppState).transcript.turn.status,
+      ).not.toBe('idle');
+    }));
+});
+
+describe('CHD-624 U2 tester: idle compaction interruption boundaries', () => {
+  const entries = (events: readonly ConversationEvent[]) =>
+    events
+      .reduce(reduceApp, initialAppState)
+      .transcript.entries.flatMap((entry) =>
+        entry.kind === 'compaction' ? [entry] : [],
+      );
+
+  test('interrupting the prompt queued behind an idle compaction cancels it in place and the next turn runs', async () => {
+    let cwd = '';
+
+    await onFake(
+      ['--adapter', 'claude'],
+      async (conversation, events) => {
+        await mkdir(join(cwd, '.fake-gate'));
+        conversation.send('idlecompact');
+        await until(() => entries(events).length === 1);
+
+        const original = entries(events)[0];
+
+        assert(original);
+        expect(original.compaction.unasked).toBe(true);
+        conversation.send('text');
+        await until(() =>
+          events.some(
+            (event) => event.type === 'prompt' && event.text === 'text',
+          ),
+        );
+        conversation.interrupt();
+        await until(() =>
+          entries(events).some(
+            ({ compaction }) => compaction.status === 'cancelled',
+          ),
+        );
+        await until(() =>
+          events.some(
+            (event) =>
+              event.type === 'result' && event.result.status === 'cancelled',
+          ),
+        );
+        expect(entries(events)).toHaveLength(1);
+        expect(entries(events)[0]).toMatchObject({
+          turnId: original.turnId,
+          compaction: {
+            id: original.compaction.id,
+            status: 'cancelled',
+            unasked: true,
+          },
+        });
+        expect(events.some((event) => event.type === 'cycle_started')).toBe(
+          false,
+        );
+        conversation.send('text');
+        await until(() => saidIn(events).includes('Hello, world.'));
+      },
+      (session) => {
+        cwd = session.cwd;
+
+        return session;
+      },
+    );
+  });
+
+  test('a compaction requested in a person’s turn remains plain when cancelled', () =>
+    onFake(['--adapter', 'claude'], async (conversation, events) => {
+      conversation.send('compact');
+      await until(() => entries(events).length === 1);
+      expect(entries(events)[0]?.compaction.unasked).toBeUndefined();
+      conversation.interrupt();
+      await until(() =>
+        entries(events).some(
+          ({ compaction }) => compaction.status === 'cancelled',
+        ),
+      );
+      expect(entries(events)[0]?.compaction.unasked).toBeUndefined();
+      expect(
+        events.filter(
+          (event) => event.type === 'update' && event.unasked === true,
+        ),
+      ).toEqual([]);
     }));
 });

@@ -1,0 +1,40 @@
+
+
+
+
+                                ▀▀▄
+                                ▀▀▀▀▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗
+                                ▀▀▀▀▀▀▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗
+                                 ▀▀▀▀▀▀▀▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║
+                                 ▄▀▀▀▀▀▀▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║
+                                ▀▀▀▀▀▀▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝
+                                ▀▀▀▀▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝
+                                ▀▀▀
+
+                                          One terminal for every coding agent.
+                                              v0.70.0 · /tmp/chord-qa.d624
+
+                              Select agent
+
+                                ↑ 10. dimcode · DimCode
+                                  11. dirac · Dirac
+                                  12. factory-droid · Factory Droid
+                                  13. fast-agent
+                                  14. gemini · Gemini CLI
+                                  15. github-copilot-cli · GitHub Copilot
+                                  16. glm-acp-agent · GLM Agent
+                                  17. grok-build · Grok Build
+                                  18. kilo · Kilo
+                                  19. kimi · Kimi Code
+                                  20. minimax-code · MiniMax Code
+                                  21. minion-code · Minion Code
+                                  22. nova · Nova
+                              ❯ ↓ 23. pi-acp · pi ACP
+                                  … +15 more
+
+                              ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+
+
+
+
+

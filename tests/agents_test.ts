@@ -19,7 +19,7 @@ import {
 } from '../src/agents.ts';
 import { CLI_AGENTS } from '../src/clis.ts';
 import { REGISTRY_AGENTS } from '../src/registry.ts';
-import { frozenAgents } from '../scripts/dev/registry.ts';
+import { binaryOnly, frozenAgents } from '../scripts/dev/registry.ts';
 
 test('the default agent is one chord knows', () => {
   expect(findAgent(DEFAULT_AGENT) !== undefined).toBeTruthy();
@@ -317,6 +317,10 @@ test('only agents npx or uvx starts are frozen, npx before uvx', () => {
       env: {},
     },
   ]);
+});
+
+test('each agent left out for being binary only is named, so a refresh drops none without a word (CHD-624)', () => {
+  expect(binaryOnly(REGISTRY)).toStrictEqual(['binary-only']);
 });
 
 test('a package without an exact version is refused, not frozen', () => {
@@ -878,5 +882,99 @@ describe('CHD-621 tester: riff is an ordinary unregistered agent', () => {
       start: 'fixture --acp',
       from: 'settings',
     });
+  });
+});
+
+describe('CHD-624 U4 tester: refreshed agent identities and availability', () => {
+  test('kimi remains one public name for command overrides, settings and offered agents', async () => {
+    const registry = REGISTRY_AGENTS.find(({ id }) => id === 'kimi-code');
+
+    assert(registry);
+    expect(listAgents().filter(({ name }) => name === 'kimi')).toHaveLength(1);
+    expect(listAgents().some(({ name }) => name === 'kimi-code')).toBe(false);
+    expect(agentStart('kimi').command).toEqual([
+      'npx',
+      '-y',
+      `${registry.package}@${registry.version}`,
+      ...registry.args,
+    ]);
+    expect(agentStart('kimi', ['fixture-kimi', 'acp'])).toEqual({
+      command: ['fixture-kimi', 'acp'],
+      env: {},
+    });
+
+    const listed = await listedAgents({ kimi: ['fixture-kimi', 'acp'] }, () =>
+      Promise.resolve(undefined),
+    );
+    const offered = offeredAgents(listed, ['kimi', 'kimi']);
+
+    expect(offered.unknown).toEqual([]);
+    expect(offered.agents).toEqual([
+      {
+        name: 'kimi',
+        title: 'Kimi Code',
+        start: 'fixture-kimi acp',
+        from: 'settings',
+      },
+    ]);
+  });
+
+  for (const found of [false, true]) {
+    test(`autohand is offered only when its own CLI is present: ${found}`, async () => {
+      const listed = await listedAgents({}, (command) =>
+        Promise.resolve(
+          found && command === 'autohand' ? '/bin/autohand' : undefined,
+        ),
+      );
+      const row = listed.find(({ name }) => name === 'autohand');
+
+      expect(row).toEqual({
+        name: 'autohand',
+        title: 'Autohand Code',
+        start: 'autohand --acp',
+        from: 'cli',
+        found,
+      });
+      expect(
+        offeredAgents(listed, undefined).agents.some(
+          ({ name }) => name === 'autohand',
+        ),
+      ).toBe(found);
+      expect(listed.filter(({ name }) => name === 'autohand')).toHaveLength(1);
+    });
+  }
+
+  test('kiro selects engine v3 and Copilot keeps its id with its full title', () => {
+    expect(agentStart('kiro').command).toEqual([
+      'kiro-cli',
+      'acp',
+      '--agent-engine=v3',
+    ]);
+    expect(findAgent('github-copilot-cli')?.title).toBe('GitHub Copilot');
+  });
+
+  test('mixed registry distributions report only the binary ids, in registry order', () => {
+    const registry = {
+      agents: [
+        { id: 'binary-first', name: 'Binary First', distribution: {} },
+        {
+          id: 'node-fixture',
+          name: 'Node Fixture',
+          distribution: { npx: { package: 'fixture@1.0.0' } },
+        },
+        {
+          id: 'python-fixture',
+          name: 'Python Fixture',
+          distribution: { uvx: { package: 'fixture==1.0.0' } },
+        },
+        { id: 'binary-last', name: 'Binary Last', distribution: {} },
+      ],
+    };
+
+    expect(binaryOnly(registry)).toEqual(['binary-first', 'binary-last']);
+    expect(frozenAgents(registry).map(({ id }) => id)).toEqual([
+      'node-fixture',
+      'python-fixture',
+    ]);
   });
 });

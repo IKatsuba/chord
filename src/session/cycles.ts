@@ -8,8 +8,8 @@ import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 
 /**
  * The `_claude/origin` kinds of a cycle Claude Code started on its own, as
- * claude-agent-acp 0.99.1 tells its results apart (`AUTONOMOUS_RESULT_ORIGINS`
- * in `dist/acp-agent.js`): a usage update of one ends the cycle.
+ * claude-agent-acp 0.107.0 tells its results apart (`AUTONOMOUS_RESULT_ORIGINS`
+ * in `dist/result-end.js`): a usage update of one ends the cycle.
  */
 const AUTONOMOUS_ORIGINS: ReadonlySet<string> = new Set([
   'task-notification',

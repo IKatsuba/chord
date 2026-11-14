@@ -1,0 +1,38 @@
+$ bun scripts/dev.ts chord agents
+agoragentic-acp     Agoragentic          npx                    npx -y agoragentic-mcp@1.3.0 --acp
+auggie              Auggie CLI           npx                    AUGMENT_DISABLE_AUTO_UPDATE=1 npx -y @augmentcode/auggie@0.36.0 --acp
+autohand            Autohand Code        npx                    npx -y @autohandai/autohand-acp@0.2.1
+bob                 Bob                  npx                    npx -y @ibm/bob@2.0.9 acp
+claude              Claude Agent         npx                    npx -y @agentclientprotocol/claude-agent-acp@0.99.1
+cline               Cline                npx                    npx -y cline@3.0.74 --acp
+codebuddy-code      Codebuddy Code       npx                    npx -y @tencent-ai/codebuddy-code@2.179.1 --acp
+codex               Codex                npx                    npx -y @agentclientprotocol/codex-acp@2.5.0
+cursor-cloud        Cursor Cloud Agents  npx                    npx -y @chorded/cursor-cloud-acp@0.1.0
+deepagents          DeepAgents           npx                    npx -y deepagents-acp@0.1.7
+dimcode             DimCode              npx                    npx -y dimcode@0.5.22 acp
+dirac               Dirac                npx                    npx -y dirac-cli@0.5.24 --acp
+factory-droid       Factory Droid        npx                    DROID_DISABLE_AUTO_UPDATE=true FACTORY_DROID_AUTO_UPDATE_ENABLED=false npx -y droid@1.1.0 exec --output-format acp-daemon
+fast-agent          fast-agent           uvx                    FAST_AGENT_MODEL=codexplan uvx fast-agent-acp@0.10.1 -x
+gemini              Gemini CLI           npx                    npx -y @google/gemini-cli@0.66.0 --acp
+github-copilot-cli  Copilot              npx                    npx -y @github/copilot@1.0.105 --acp
+glm-acp-agent       GLM Agent            npx                    npx -y glm-acp-agent@1.17.0
+grok-build          Grok Build           npx                    npx -y @xai-official/grok@1.0.73 agent stdio
+kilo                Kilo                 npx                    npx -y @kilocode/cli@7.8.18 acp
+minimax-code        MiniMax Code         npx                    npx -y @minimax-ai/code@0.2.7 acp
+minion-code         Minion Code          uvx                    uvx minion-code@0.1.44 acp
+nova                Nova                 npx                    npx -y @compass-ai/nova@1.1.62 acp
+pi-acp              pi ACP               npx                    npx -y pi-acp@0.0.34
+qoder               Qoder CLI            npx                    npx -y @qoder-ai/qodercli@0.2.14 --acp
+qwen-code           Qwen Code            npx                    npx -y @qwen-code/qwen-code@0.26.5 --acp --experimental-skills
+sigit               siGit Code           npx                    npx -y @smbcloud/sigit@1.7.7
+cursor              Cursor               own CLI · found        agent acp
+devin               Devin                own CLI · not on PATH  devin acp
+fx                  fx                   own CLI · found        fx acp
+goose               goose                own CLI · not on PATH  goose acp
+junie               Junie                own CLI · not on PATH  junie --acp true
+kimi                Kimi Code            own CLI · not on PATH  kimi acp
+kiro                Kiro                 own CLI · not on PATH  kiro-cli acp
+openclaw            OpenClaw             own CLI · not on PATH  openclaw acp
+opencode            OpenCode             own CLI · found        opencode acp
+poolside            Poolside             own CLI · not on PATH  pool acp
+zeroclaw            ZeroClaw             own CLI · not on PATH  zeroclaw acp

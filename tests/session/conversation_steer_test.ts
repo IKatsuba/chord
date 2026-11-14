@@ -2878,3 +2878,93 @@ describe('CHD-476 U1 tester: role consumption follows actual delivery', () => {
     );
   });
 });
+
+describe("opencode v2's steering, from 2.2.7 (CHD-624)", () => {
+  test('is taken as advertised: a message told mid-turn goes into the turn', async () => {
+    let steers = false;
+
+    await onFake(
+      ['--steering', 'opencode'],
+      async (conversation, events) => {
+        conversation.send('bash');
+        await callOpen(events);
+        conversation.tell(MAIN, 'Then the docs.');
+        await until(() => events.some((event) => event.type === 'result'));
+
+        expect(steers).toBe(true);
+        expect(steerOrder(events)).toStrictEqual([
+          'into: Then the docs.',
+          'call ended',
+          'ended',
+        ]);
+      },
+      (session) => {
+        steers = session.steers();
+
+        return session;
+      },
+    );
+  });
+
+  test('a steer that misses the turn is refused, and goes as the next turn with none of the agent’s own', () =>
+    onFake(
+      ['--steering', 'opencode', '--steer-late'],
+      async (conversation, events) => {
+        conversation.send('text');
+        await went();
+
+        let queued = 0;
+
+        expect(
+          conversation.tell(MAIN, 'Stop.', () => (queued += 1)),
+        ).toStrictEqual('sent');
+        await until(
+          () => events.filter((event) => event.type === 'result').length === 2,
+        );
+
+        expect(promptsIn(events)).toStrictEqual([
+          ['text', undefined],
+          ['Stop.', undefined],
+        ]);
+        expect(queued).toStrictEqual(1);
+        expect(events.some((event) => event.type === 'cycle_started')).toBe(
+          false,
+        );
+      },
+    ));
+});
+
+describe('CHD-624 U3 tester: opencode idle steering', () => {
+  test('an idle steer is refused without starting work and the next person’s prompt runs once', async () => {
+    let source: Session | undefined;
+
+    await onFake(
+      ['--steering', 'opencode'],
+      async (conversation, events) => {
+        assert(source);
+        expect(await source.steer('Do not start a turn.')).toBe('refused');
+        expect(
+          events.filter(
+            (event) =>
+              event.type === 'prompt' ||
+              event.type === 'result' ||
+              event.type === 'self_started' ||
+              event.type === 'cycle_started',
+          ),
+        ).toEqual([]);
+        conversation.send('text');
+        await until(() => events.some((event) => event.type === 'result'));
+        expect(promptsIn(events)).toEqual([['text', undefined]]);
+        expect(events.filter((event) => event.type === 'result')).toHaveLength(
+          1,
+        );
+        expect(saidIn(events)).toContain('Hello, world.');
+      },
+      (session) => {
+        source = session;
+
+        return session;
+      },
+    );
+  });
+});

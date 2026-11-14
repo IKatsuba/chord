@@ -10,6 +10,9 @@ import { lifetime, pause, type Play } from '../turn.ts';
 const FLOOD_CHUNK = 64 * 1024;
 const FLOOD_BYTES = 64 * 1024 * 1024;
 
+/** What `turnfailed`'s turn fails with, as goose words a model error. */
+export const TURN_FAILED = 'Request failed: the model is overloaded.';
+
 export const MISBEHAVING = {
   // More than any pipe holds, as fast as chord takes it, for a client that
   // stopped reading; a cancel or the client's going ends it.
@@ -52,6 +55,14 @@ export const MISBEHAVING = {
     throw new acp.RequestError(-32603, 'The fake agent failed on purpose.');
   },
 
+  // A turn that ends on the model's error, as goose from 1.59 fails
+  // `session/prompt`: -32603 with `reason: "turn_failed"`.
+  async turnfailed(turn) {
+    await turn.say('Reading the tests.');
+
+    throw new acp.RequestError(-32603, TURN_FAILED, { reason: 'turn_failed' });
+  },
+
   // An update after the answer, as some adapters send their last chunks or
   // their usage once `session/prompt` has been answered.
   async late(turn) {
@@ -83,6 +94,21 @@ export const MISBEHAVING = {
     });
     await turn.client.notify('_fake/notice', { text: 'an extension' });
     await turn.say('Sent the unknown.');
+
+    return 'end_turn';
+  },
+
+  // Claude's sign-in state, which chord takes no handler for: the old
+  // underscore name 0.99.1 sends and the method 0.107 sends on SDK 2.6.
+  async authstatus(turn) {
+    const status: acp.AuthStatusUpdateNotification = {
+      state: 'authenticated',
+      accounts: [{ label: 'Claude Max', active: true }],
+    };
+
+    await turn.client.notify('_auth/status_update', status);
+    await turn.client.notify('auth/status_update', status);
+    await turn.say('Sent the sign-in state.');
 
     return 'end_turn';
   },

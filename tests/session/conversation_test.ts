@@ -3,7 +3,7 @@
  * close while the agent never answers, a reply's chunks, and messages held
  * behind Claude's open calls.
  */
-import { expect, test } from 'bun:test';
+import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -19,6 +19,7 @@ import { TaskAgent } from '../../src/session/tasks.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
 import { TRACEBACK_ERROR } from '../fixtures/fake_agent/options.ts';
+import { TURN_FAILED } from '../fixtures/fake_agent/scenarios/misbehaving.ts';
 import {
   heldSession,
   until,
@@ -1404,3 +1405,71 @@ test("on Claude's adapter, a message held behind an open call goes as the next t
     ]);
     expect(queued).toStrictEqual(1);
   }));
+
+test("goose's turn_failed ends the turn failed in its words, not the connection, and the next prompt runs (CHD-624)", () =>
+  onFake([], async (conversation, events) => {
+    conversation.send('turnfailed');
+    await until(() => events.some((event) => event.type === 'result'));
+
+    const result = events.find((event) => event.type === 'result');
+
+    assert(result?.type === 'result');
+    expect(result.result).toMatchObject({
+      status: 'failed',
+      error: { message: TURN_FAILED },
+    });
+
+    conversation.send('text');
+    await until(
+      () => events.filter((event) => event.type === 'result').length === 2,
+    );
+
+    expect(
+      events.filter((event) => event.type === 'result').at(-1),
+    ).toMatchObject({ result: { status: 'completed' } });
+    expect(
+      events.some(
+        (event) =>
+          event.type === 'disconnected' || event.type === 'connect_failed',
+      ),
+    ).toBe(false);
+  }));
+
+describe('CHD-624 U3 tester: failed turns release the prompt queue', () => {
+  test('two failed turns retain their own errors and the queued successful turn completes on the same connection', () =>
+    onFake([], async (conversation, events) => {
+      conversation.send('turnfailed');
+      conversation.send('turnfailed');
+      conversation.send('text');
+      await until(
+        () => events.filter((event) => event.type === 'result').length === 3,
+      );
+
+      const results = events.filter((event) => event.type === 'result');
+      const prompts = events.filter((event) => event.type === 'prompt');
+
+      expect(results.map(({ result }) => result.status)).toEqual([
+        'failed',
+        'failed',
+        'completed',
+      ]);
+      expect(results.map(({ turnId }) => turnId)).toEqual(
+        prompts.map(({ turnId }) => turnId),
+      );
+      expect(new Set(results.map(({ turnId }) => turnId)).size).toBe(3);
+
+      for (const result of results.slice(0, 2)) {
+        expect(result.result).toMatchObject({
+          error: { message: TURN_FAILED },
+        });
+      }
+
+      expect(saidIn(events)).toContain('Hello, world.');
+      expect(
+        events.filter(
+          (event) =>
+            event.type === 'disconnected' || event.type === 'connect_failed',
+        ),
+      ).toEqual([]);
+    }));
+});

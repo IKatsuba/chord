@@ -1,0 +1,24 @@
+                            ▀▄
+                            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            ▀▀
+                          v0.70.0 · /tmp/chord-qa.d624
+
+          Select agent
+
+            ↑ 18. kilo · Kilo
+              19. kimi · Kimi Code
+              20. minimax-code · MiniMax Code
+              21. minion-code · Minion Code
+              22. nova · Nova
+              23. pi-acp · pi ACP
+              24. qoder · Qoder CLI
+              25. qwen-code · Qwen Code
+              26. sigit · siGit Code
+              27. cursor · Cursor
+              28. fx
+          ❯   29. opencode · OpenCode
+              … +17 more
+
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+

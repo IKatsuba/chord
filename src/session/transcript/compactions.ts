@@ -9,7 +9,8 @@ import { appended } from './entries.ts';
  * in place as ACP says: a `summary` or `error` left out keeps what was there,
  * `null` clears it. The first update may already be the last, as when an
  * agent replays a compaction that is over. A chunk for a compaction never
- * opened is dropped, as ACP sends none before one.
+ * opened is dropped, as ACP sends none before one. Whether it is unasked
+ * is said by its opening update and kept by every later one.
  */
 export function mergeCompaction(
   state: Transcript,
@@ -18,6 +19,7 @@ export function mergeCompaction(
     SessionUpdate,
     { sessionUpdate: 'compaction_update' | 'compaction_summary_chunk' }
   >,
+  unasked?: true,
 ): Transcript {
   const index = state.entries.findLastIndex(
     (entry) =>
@@ -49,7 +51,12 @@ export function mergeCompaction(
   const before: Compaction =
     found?.kind === 'compaction'
       ? found.compaction
-      : { id: update.compactionId, status: update.status, summary: '' };
+      : {
+          id: update.compactionId,
+          status: update.status,
+          summary: '',
+          ...(unasked === undefined ? {} : { unasked }),
+        };
   const { error: _, ...kept } = before;
   const error = update.error === undefined ? before.error : update.error;
   const compaction: Compaction = {

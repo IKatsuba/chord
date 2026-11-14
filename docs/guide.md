@@ -264,11 +264,10 @@ cmd+arrows work only where the terminal passes them to chord:
   to chord. Use ctrl+a/e for the line's ends.
 - **tmux:** option+arrows work, but tmux has no super/cmd modifier. Use
   ctrl+a/e for line moves, or a terminal preset that sends those keys.
-  chord uses OpenTUI's Unicode width method under tmux unless you set
-  `OPENTUI_FORCE_WCWIDTH` or `OPENTUI_FORCE_UNICODE`. This adjustment stays
-  in the renderer; processes chord starts do not inherit it. Under tmux
-  3.6a, some VS16 glyphs may still go blank when repainted over earlier
-  wide glyphs; this was also reproduced in tmux alone.
+  OpenTUI chooses the width method; `OPENTUI_FORCE_WCWIDTH` or
+  `OPENTUI_FORCE_UNICODE` overrides it. Under tmux 3.6a, some VS16 glyphs
+  may still go blank when repainted over earlier wide glyphs; this was
+  also reproduced in tmux alone.
 
 ctrl+g opens the prompt in your editor (`$VISUAL`, then `$EDITOR`, then
 `vi`), run through your shell; what it saves comes back as the prompt with
@@ -334,6 +333,16 @@ meanwhile goes at once and takes it over. Requests inside it are held
 between turns, with ctrl+x a to answer. Claude's cycle ends when it reports
 autonomous model usage; without that update it stays working until Esc or
 a prompt.
+
+Compaction appears as `Compacting conversation…`, then
+`Conversation compacted`; ctrl+o shows its summary when supplied. One
+started with no turn running reads `Compacting conversation while idle…`,
+then `Conversation compacted while idle`, or `Compaction failed while idle`
+or `Compaction cancelled while idle`. Compaction alone leaves the prompt
+available and sends no working status or notification. If you send a prompt
+meanwhile, its turn's spinner shows the compaction until it ends. The
+wording stays on resume from chord's record; an agent's replay without
+that record draws it plain.
 
 Replies and messages render as markdown, wrapped to the window. Rows can
 break at spaces or after `/`, `-`, `.`, `,`, `:` and `(`. Outside quotes,
@@ -1519,7 +1528,7 @@ JSON remains in the session record.
 
 Production readers try any installed version on `darwin-arm64`: Codex through
 its unmodified official PATH npm launcher or native binary, and native Claude
-Code through Agent SDK 0.3.316's experimental getter in an isolated worker.
+Code through Agent SDK 0.3.325's experimental getter in an isolated worker.
 The npm Codex launcher needs existing Node. Missing executables, unsupported
 targets, custom ACP commands and failed or malformed reads return unavailable
 reasons. Chord installs no provider and adds no login or credential reader.
@@ -1738,7 +1747,10 @@ not take HTTP or is set to take no MCP servers. `-p` gets no such server.
 
 Models, efforts and modes are set per agent because their ids are the
 agent's own: `/model`, `/effort`, `/config` and shift+tab show what it offers;
-`chord agents` lists the names. An effort is one the model the session starts
+`chord agents` lists the names. Claude opens in Auto, where Claude decides
+permissions. To start in another mode, set `agents.claude.permissionMode`
+in chord's settings, pass `--permission-mode`, or set Claude's own
+`permissions.defaultMode`. An effort is one the model the session starts
 on offers. A starting model, effort or mode the agent refuses is said in the
 transcript, with where it was set and what the agent offers, and the session
 goes on as the agent chose; an agent with no effort starts on its own, and
@@ -1765,15 +1777,16 @@ agent name. Other agents keep their MCP settings from the files.
 
 `chord agents` lists the agents the [ACP Registry](https://agentclientprotocol.com/registry)
 offers through npx or uvx, with all pins refreshed together: `claude` and
-`codex` for Claude's and Codex's adapters, every other one by its registry
-id, including `bob` and `github-copilot-cli` (Copilot). It starts one as
-`npx -y <package>@<version>` or `uvx <package>@<version>`, so `npx` or `uvx`
-must be on your `PATH`.
+`codex` for Claude's and Codex's adapters, `kimi` for Kimi Code, the rest by
+registry id, including `bob` and `github-copilot-cli` (GitHub Copilot). It
+starts one as `npx -y <package>@<version>` or `uvx <package>@<version>`, so
+`npx` or `uvx` must be on your `PATH`.
 
-Some agents ship their own CLI, which speaks ACP itself: `cursor`, `devin`,
-`fx`, `goose`, `junie`, `kimi`, `kiro`, `openclaw`, `opencode`, `poolside`
-and `zeroclaw`. chord starts each by the command its docs give (Cursor's
-`agent acp`, goose's `goose acp`, …), which you install yourself; when it is
+Some agents ship their own CLI, which speaks ACP itself: `autohand`,
+`cursor`, `devin`, `fx`, `goose`, `junie`, `kiro`, `openclaw`, `opencode`,
+`poolside` and `zeroclaw`. chord starts each by the command its docs give
+(Cursor's `agent acp`, Autohand Code's `autohand --acp`, Kiro's
+`kiro-cli acp --agent-engine=v3`, …), which you install yourself; when it is
 not on your `PATH`, chord says which command it looked for and where the
 agent says to install it, and exits before a session starts. chord downloads
 nothing for them: the registry also offers most of these as archives to
@@ -1922,7 +1935,7 @@ bun check                  # native type checker
 bun dev lint chord --fix   # what ESLint can fix
 bun fmt                    # native formatter
 bun dev compile            # this machine's binary into dist/
-bun dev registry           # refetch the ACP Registry's agents into src/registry.ts
+bun dev registry           # refetch the registry; name binary-only omissions
 ```
 
 `AGENTS.md` is binding for people and agents and says which checks a change
@@ -2105,10 +2118,10 @@ checkout, then run `bun dev compile` there. The rebuilt binary is in
 - [ACP Registry](https://cdn.agentclientprotocol.com/registry/v1/latest/registry.json)
   — the agents chord knows by name, frozen into `src/registry.ts`, beside
   `src/clis.ts`'s agents started by their own CLI.
-- [OpenTUI](https://github.com/anomalyco/opentui) 0.8.1 — the terminal interface,
+- [OpenTUI](https://github.com/anomalyco/opentui) 0.8.4 — the terminal interface,
   through its React bindings.
 - [Agent Client Protocol SDK](https://github.com/agentclientprotocol/typescript-sdk)
-  2.2.0 — the connection to the agent, and the protocol types.
+  2.6.0 — the connection to the agent, and the protocol types.
 - [Cliffy](https://cliffy.io) — the command line.
 
 ## Licence

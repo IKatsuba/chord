@@ -1,0 +1,40 @@
+ ▀▄     chord v0.70.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.d624
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  /clear    Start a new session with an empty transcript
+  /config   Change the agent's settings for this session, such as effort
+  /context  Show how full the agent's context window is
+  /cost     Show the tokens and cost this session has spent
+  /echo     Repeat what follows the command
+  /effort   Change the agent's effort for this session
+  /exit     Quit chord
+  /fast     Turn the agent's fast mode on or off for this session
+  /fork     Fork the conversation into a new agent
+  /greet    Say hello from the fake agent
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /                                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                 Fake Large with a 1M context window · medium effort · 1% context used

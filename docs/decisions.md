@@ -8777,8 +8777,8 @@ Options put: that reader; quoted names through a tokenizer and `parseArgs`;
 
 ## 2026-11-13 — CHD-624: the catch-up in two PRs, dependencies first (owner)
 
-The owner took every recommendation of the CHD-624 survey
-(`docs/design/evidence/CHD-624/survey.md`). Options for shipping: one PR;
+The owner took the recommendations of the CHD-624 survey
+(`docs/design/evidence/CHD-624/survey.md`), D1 changed below. Options for shipping: one PR;
 dependencies and Claude's new defaults first, then the features; a PR per
 feature. Chosen: two in order. CHD-624 bumps `@agentclientprotocol/sdk` to
 2.6.0, OpenTUI to 0.8.4 after a visual pass, claude-agent-sdk and
@@ -8791,28 +8791,24 @@ major that must agree with OpenTUI's width method), proxy chains and
 `session/archive` (no agent serves them). Libraries: the SDK's own types for
 every new method; nothing is written that the SDK carries.
 
-## 2026-11-13 — CHD-624: Claude starts in Manual by initial config options
+## 2026-11-13 — CHD-624: Claude starts in Auto, the adapter's default (owner)
 
-claude-agent-acp 0.101 starts a session in Auto. The owner chose (D1 b) that
-chord starts it in Manual unless chord's settings name a mode. Options for
-how: set the mode after `session/new`, as named modes are today; initial
-`configOptions` on `session/new` (ACP schema 1.31,
-`sessionCapabilities.options`). Chosen: initial options, by one general
-path (`initialEntries`) any agent advertising `options` takes, with
-`#applyStarting` kept as the
-read-back and fallback; CHD-629 adds model and effort to the same path.
-Options for knowing the config id before the session exists: a table of ids
-read from the adapter's source; `session/options` before every start;
-ids learned from an earlier session. Chosen: the table, keyed by the
-adapter's `agentInfo.name` (unlike `/fast`'s, keyed by registry id) so any
-command running the adapter gets the safe default; `session/options` makes
-Claude start a throwaway Claude Code and run the person's `SessionStart`
-hooks on every start, and learning leaves the first session without. The
-default goes on `session/new` only; load and resume keep the session's own
-mode. The mode step reads the current mode at its turn and checks it after a
-fallback, so a model change or a fallback that does not hold is caught. No
-retry without the entries on -32602. Consequence: a mode set in Claude's own
-settings no longer decides chord's start (owner question O2).
+claude-agent-acp 0.101 starts a new session in Auto unless the person's
+Claude settings name `permissions.defaultMode`; 0.99.1 started in Manual.
+Options: (a) take the adapter's default and say so in the release notes;
+(b) chord starts Claude in Manual unless chord's settings name a mode, sent
+as initial `configOptions` on `session/new` (ACP schema 1.31) with the mode's
+config id from a table keyed by the adapter's name; (c) ask the person once.
+The owner chose (a) after reading the design for (b). chord sends no start
+mode of its own; named modes are set after `session/new` as today, and
+Claude's own `permissions.defaultMode` keeps deciding. Consequence: Claude
+decides permissions in a new session unless the person picks a mode; the
+release notes say how. The initial-options path designed for (b) moves to
+CHD-629's F3 for mode, model and effort together, with what that design
+found: `session/options` before every start makes Claude run a throwaway
+Claude Code and the person's `SessionStart` hooks, so ids come from a table;
+the mode step must read the current mode at its turn and check it after a
+fallback. Libraries: the SDK 2.6 types; nothing written.
 
 ## 2026-11-13 — CHD-624: an unasked compaction is chord's state, not an enricher's
 
@@ -8829,7 +8825,8 @@ cycle change is made. Rejected: holding cycles off for a while after a
 compaction, which would also stop real cycles and codebuddy's start marks,
 latch on a missing end, and still miss a chunk arriving after its window;
 a chunk the adapter may forward around `/compact` carries nothing to
-attribute it, so what to do with it is the owner's (O1). The compaction's
+attribute it, and the owner left it as today (O1 a): it may open a
+Claude cycle that shows working until the next prompt. The compaction's
 cost stays the last turn's late cost, as every late Claude cost.
 
 ## 2026-11-13 — CHD-624: Kimi Code by the registry under the name `kimi`

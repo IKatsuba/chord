@@ -882,7 +882,7 @@ describe('a rename the agent takes at the load (CHD-629)', () => {
     readdirSync(recordsDir(stateDir))
       .filter((file) => file.endsWith('.jsonl'))
       .flatMap((file) =>
-        parseRecord(readFileSync(join(stateDir, file), 'utf8')),
+        parseRecord(readFileSync(join(recordsDir(stateDir), file), 'utf8')),
       )
       .flatMap((entry) => (entry.type === 'renamed' ? [entry] : []));
 

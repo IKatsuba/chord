@@ -25,6 +25,7 @@ import {
   type StopReason,
   type Usage,
 } from '@agentclientprotocol/sdk/unstable';
+import { isDeepStrictEqual } from 'node:util';
 import { type AcpRequest, connectAgentApp } from './acp/agent_app.ts';
 import { foldEvent, NO_FOLD } from './acp/host_fold.ts';
 import { seeingWrites } from './acp/stdio.ts';
@@ -316,21 +317,23 @@ export function runAcp(options: AcpOptions): AcpRun {
     return account?.phase === 'heard' ? account.status : { state: 'unknown' };
   };
 
-  /** What the client was last told of the account, so only a change goes. */
-  let toldAccount = JSON.stringify(sourceStatus());
+  /**
+   * What the client was last told of the account, so only a change goes:
+   * a change of value, whatever order its keys come in.
+   */
+  let toldAccount = sourceStatus();
   /**
    * Tells the client the source's account where it changed: the source's
    * own push, or another session becoming the source as one closes or exits.
    */
   const tellAccount = () => {
     const status = sourceStatus();
-    const told = JSON.stringify(status);
 
-    if (told === toldAccount) {
+    if (isDeepStrictEqual(status, toldAccount)) {
       return;
     }
 
-    toldAccount = told;
+    toldAccount = status;
 
     connection.client.notify('auth/status_update', status).catch(() => {
       // The connection went; the way out has it from there.

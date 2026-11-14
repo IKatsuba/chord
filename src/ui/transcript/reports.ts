@@ -15,6 +15,12 @@ import {
 } from '../../session/usage.ts';
 import type { AppState } from '../app/state.ts';
 import { formatElapsed } from '../../session/elapsed.ts';
+import stripAnsi from 'strip-ansi';
+import {
+  accountLine,
+  type AccountState,
+  shownAccounts,
+} from '../../session/auth_status.ts';
 import { contextEstimated, contextUsed } from '../status/status.ts';
 import { type Figure, sessionFigure, type SpendPart } from './spend.ts';
 import { manySessions, spendTable } from './spend_table.ts';
@@ -52,6 +58,10 @@ export interface ReportFacts {
     readonly spend: readonly SpendPart[];
     readonly width: number;
   };
+  /** What the agent says of its connection's account (CHD-629). */
+  readonly account?: AccountState | undefined;
+  /** The session's title, the agent's or a rename's (CHD-629). */
+  readonly title?: string | undefined;
 }
 
 /** The facts the window holds, for a report run now. */
@@ -61,9 +71,12 @@ export function reportFacts(
   cwd: string,
   now: number,
   window?: ReportFacts['window'],
+  title?: string,
 ): ReportFacts {
   return {
     ...(window === undefined ? {} : { window }),
+    ...(title === undefined ? {} : { title }),
+    account: state.account,
     agent,
     cwd,
     sessionId: state.sessionId,
@@ -388,11 +401,66 @@ export function statusReport(facts: ReportFacts): ReportRow[] {
       ? undefined
       : (facts.modes.find(({ id }) => id === facts.mode)?.name ?? facts.mode);
 
-  return aligned([
+  const accounts =
+    facts.account === undefined ? [] : accountRows(facts.account, facts.agent);
+  const rows = aligned([
     ['Agent', facts.agent],
+    ...(accounts[0] === undefined ? [] : [['Account', accounts[0]] as const]),
+    ['Title', facts.title === undefined ? 'not given' : clean(facts.title)],
     ['Model', modelName(facts.models) ?? `not reported by ${facts.agent}`],
     ['Mode', mode ?? `not reported by ${facts.agent}`],
     ['Session', facts.sessionId ?? 'starting…'],
     ['Directory', facts.cwd],
   ]);
+  // Later accounts go under the first, their label left blank.
+  const more = accounts.slice(1).map((text) => ({
+    label: ' '.repeat(rows[0]?.label?.length ?? 0),
+    text,
+  }));
+
+  return accounts.length === 0
+    ? rows
+    : [...rows.slice(0, 2), ...more, ...rows.slice(2)];
+}
+
+/** An agent's string as a row draws it: its escapes gone, on one line. */
+function clean(text: string): string {
+  return stripAnsi(text).replaceAll(/\s+/g, ' ').trim();
+}
+
+/**
+ * The `Account` row's values, one per row: none where the agent does not
+ * advertise `auth.status`, the active accounts, or all of them when none is
+ * marked, and otherwise the state in words.
+ */
+export function accountRows(
+  account: AccountState,
+  agent: string,
+): readonly string[] {
+  switch (account.phase) {
+    case 'none':
+      return [];
+    case 'pending':
+      return ['checking…'];
+    case 'failed':
+      return [`not reported by ${agent}`];
+    case 'heard':
+      break;
+  }
+
+  const { state, accounts = [] } = account.status;
+
+  switch (state) {
+    case 'authenticated': {
+      const shown = shownAccounts(accounts);
+
+      return shown.length === 0 ? ['signed in'] : shown.map(accountLine);
+    }
+    case 'unauthenticated':
+      return ['not signed in'];
+    case 'not_required':
+      return ['none needed'];
+    default:
+      return [`not reported by ${agent}`];
+  }
 }

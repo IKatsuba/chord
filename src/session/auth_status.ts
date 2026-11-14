@@ -4,7 +4,11 @@
  * pushes, folded in the order they arrive, as ACP carries no revision.
  * Display only: never recorded, never in `-p`'s output.
  */
-import type { AuthStatusResponse } from '@agentclientprotocol/sdk/unstable';
+import type {
+  AuthAccount,
+  AuthStatusResponse,
+} from '@agentclientprotocol/sdk/unstable';
+import stripAnsi from 'strip-ansi';
 
 /** Where an agent's account stands, as chord heard it. */
 export type AccountState =
@@ -54,4 +58,32 @@ export function foldAccount(
     case 'failed':
       return state.phase === 'heard' ? state : { phase: 'failed' };
   }
+}
+
+/** An agent's string as chord draws it: its escapes gone, on one line. */
+function clean(text: string): string {
+  return stripAnsi(text).replaceAll(/\s+/g, ' ').trim();
+}
+
+/** An account's parts, each only when sent, cleaned and joined by ` · `. */
+export function accountLine(account: AuthAccount): string {
+  return [
+    account.label,
+    account.description,
+    account.name,
+    account.email,
+    account.organization,
+  ]
+    .flatMap((part) => (typeof part === 'string' ? [clean(part)] : []))
+    .filter((part) => part !== '')
+    .join(' · ');
+}
+
+/** The accounts chord names: the active ones, or all when none is marked. */
+export function shownAccounts(
+  accounts: readonly AuthAccount[] | undefined,
+): readonly AuthAccount[] {
+  const active = (accounts ?? []).filter((each) => each.active === true);
+
+  return active.length > 0 ? active : (accounts ?? []);
 }

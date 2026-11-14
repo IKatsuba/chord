@@ -198,12 +198,19 @@ export function useCommands(
           command,
           rows: report(
             command,
-            reportFacts(state, agent, cwd, Date.now(), {
-              spend: sessions.spend(),
-              // Under the report's `⎿`, six columns in, inside the
-              // transcript's margins: a note never wraps.
-              width: columns - 8,
-            }),
+            reportFacts(
+              state,
+              agent,
+              cwd,
+              Date.now(),
+              {
+                spend: sessions.spend(),
+                // Under the report's `⎿`, six columns in, inside the
+                // transcript's margins: a note never wraps.
+                width: columns - 8,
+              },
+              conversation()?.title,
+            ),
           ),
         });
       case 'exit':

@@ -29,6 +29,8 @@ async function renaming(
     conversation: Conversation;
     events: ConversationEvent[];
     dir: string;
+    /** Each title handed to the session's setTitle, as it was called. */
+    asked: string[];
     lines: (...kinds: string[]) => Promise<unknown[]>;
   }) => Promise<void>,
 ) {
@@ -37,13 +39,24 @@ async function renaming(
   const events: ConversationEvent[] = [];
   const recording = new FileRecording(stateDir, () => {});
 
+  const asked: string[] = [];
   const conversation = new Conversation(
-    () =>
-      openSession({
+    async () => {
+      const session = await openSession({
         agent: 'fake',
         cwd: dir,
         agentCommand: fakeAgentCommand(undefined, ...flags),
-      }),
+      });
+
+      return {
+        ...session,
+        setTitle: (title: string) => {
+          asked.push(title);
+
+          return session.setTitle(title);
+        },
+      };
+    },
     (event) => events.push(event),
     Date.now,
     {},
@@ -83,7 +96,7 @@ async function renaming(
     await until(() => events.some((event) => event.type === 'connected'));
     conversation.send('text');
     await until(() => events.some((event) => event.type === 'result'));
-    await body({ conversation, events, dir, lines });
+    await body({ conversation, events, dir, asked, lines });
   } finally {
     await conversation.close();
     await rm(dir, { recursive: true });
@@ -169,28 +182,34 @@ describe('a rename (CHD-629)', () => {
     }));
 
   test('two renames go one at a time, in order, the second off the wire until the first is answered, and the second holds', () =>
-    renaming(['--set-title', 'hang'], async ({ conversation, dir, lines }) => {
-      const first = conversation.rename('First');
+    renaming(
+      ['--set-title', 'hang'],
+      async ({ conversation, dir, asked, lines }) => {
+        const first = conversation.rename('First');
 
-      await hearing(dir, 1);
+        await hearing(dir, 1);
 
-      const second = conversation.rename('Second');
+        const second = conversation.rename('Second');
 
-      // Its turn in the chain comes only once the first's answer has.
-      await new Promise((resolve) => setTimeout(resolve));
-      expect(await heard(dir)).toStrictEqual(['First']);
+        // Its turn in the chain comes only once the first's answer has: by
+        // the time the chain's next link would have run, nothing more was asked.
+        await Promise.resolve();
+        await Promise.resolve();
+        expect(asked).toStrictEqual(['First']);
 
-      await release(dir);
-      await Promise.all([first, second]);
+        await release(dir);
+        await Promise.all([first, second]);
 
-      expect(await heard(dir)).toStrictEqual(['First', 'Second']);
+        expect(asked).toStrictEqual(['First', 'Second']);
+        expect(await heard(dir)).toStrictEqual(['First', 'Second']);
 
-      expect(conversation.title).toBe('Second');
-      expect(await lines('renamed')).toStrictEqual([
-        { type: 'renamed', title: 'First' },
-        { type: 'renamed', title: 'Second' },
-      ]);
-    }));
+        expect(conversation.title).toBe('Second');
+        expect(await lines('renamed')).toStrictEqual([
+          { type: 'renamed', title: 'First' },
+          { type: 'renamed', title: 'Second' },
+        ]);
+      },
+    ));
 
   test('a /clear while a rename is out drops its answer: the new session keeps no title and neither record has the line', () =>
     renaming(['--set-title', 'hang'], async ({ conversation, dir, lines }) => {

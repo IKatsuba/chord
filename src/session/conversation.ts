@@ -3242,8 +3242,14 @@ export class Conversation {
     }
 
     // Before the modes and models are reported, so the session is first
-    // shown as it starts rather than as the agent's defaults.
-    await this.#applyStarting(session);
+    // shown as it starts rather than as the agent's defaults; the change
+    // chain's first link, so a change asked while it runs waits behind it
+    // and finds the session as the start left it (CHD-629).
+    const starting = this.#changes.then(() => this.#applyStarting(session));
+
+    this.#changes = starting.catch(() => {});
+
+    await starting;
 
     if (!this.#current(session)) {
       return;
@@ -3362,6 +3368,7 @@ export class Conversation {
               what: `on ${model.id}`,
               kind: 'models',
               offered: () => Promise.resolve(session.models()?.available),
+              current: () => session.models()?.current,
               ask: () => session.setModel(model.id),
             },
           ]),
@@ -3374,6 +3381,7 @@ export class Conversation {
               kind: 'efforts',
               listedOnly: true,
               offered: () => Promise.resolve(session.efforts()?.available),
+              current: () => session.efforts()?.current,
               ask: () => session.setEffort(effort.id),
             },
           ]),
@@ -3386,6 +3394,7 @@ export class Conversation {
               kind: 'modes',
               listedOnly: true,
               offered: () => Promise.resolve(session.modes()?.available),
+              current: () => session.modes()?.current,
               ask: () => session.setMode(mode.id),
             },
           ]),

@@ -33,7 +33,7 @@ const FAST_OFF: acp.Notice = {
     'Rate limit for fast mode reached; it comes back after the limit resets.',
 };
 
-const AUTO_OFF: acp.Notice = {
+export const AUTO_OFF: acp.Notice = {
   severity: 'info',
   title: 'Auto mode unavailable',
   description:

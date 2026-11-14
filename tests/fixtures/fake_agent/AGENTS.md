@@ -344,6 +344,10 @@
   then holds until cancelled. `--first-message <text>`
   (`CHORD_FAKE_FIRST_MESSAGE`) sends an agent message with its own id
   before each `session/new` answer, without starting a turn.
+  `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`) offers `auto`, opens
+  every session in it, and on `fake-small` takes `auto` as `acceptEdits`
+  with an `Auto mode unavailable` notice; switching to `fake-small` moves
+  `auto` the same way (CHD-629).
   `--options <apply|ignore|reject>` (`CHORD_FAKE_OPTIONS`) advertises
   `sessionCapabilities.options` and applies `session/new`'s initial
   `configOptions` in order as `session/set_config_option` would, skipping

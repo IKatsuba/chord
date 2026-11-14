@@ -282,6 +282,7 @@ import {
   FIRST_MESSAGE,
   START_NOTICE,
   INITIAL_OPTIONS,
+  AUTO_FALLBACK,
   HANG,
   RESEND_CONFIG,
   CONFIG_IN_RESPONSES,
@@ -336,7 +337,7 @@ import { FX } from './scenarios/fx.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
 import { MODES } from './scenarios/modes.ts';
-import { NOTICES, noticeUpdate } from './scenarios/notices.ts';
+import { AUTO_OFF, NOTICES, noticeUpdate } from './scenarios/notices.ts';
 import { PERMISSIONS } from './scenarios/permissions.ts';
 import { REVIEW_PERMISSIONS } from './scenarios/review_permissions.ts';
 import { PLANS } from './scenarios/plans.ts';
@@ -691,6 +692,10 @@ async function switchedModel(
   sessionId: string,
 ): Promise<acp.SetSessionConfigOptionResponse> {
   const model = models.get(sessionId) ?? FIRST_MODEL;
+
+  if (modes.get(sessionId) === 'auto') {
+    modes.set(sessionId, await fallenBack(client, sessionId, 'auto'));
+  }
 
   if (
     !effortsOf(model).some(
@@ -1067,10 +1072,43 @@ const HISTORY: Update[] = [
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The modes `session/new` and its kin answer with, the older way. */
-function sessionModes(): { modes?: acp.SessionModeState } {
+function sessionModes(sessionId = ''): { modes?: acp.SessionModeState } {
   return NO_MODES
     ? {}
-    : { modes: { currentModeId: 'default', availableModes: AVAILABLE_MODES } };
+    : {
+        modes: {
+          currentModeId: modes.get(sessionId) ?? FIRST_MODE,
+          availableModes: AVAILABLE_MODES,
+        },
+      };
+}
+
+/** The mode a session opens in: `auto` under `--auto-fallback`. */
+const FIRST_MODE = AUTO_FALLBACK ? 'auto' : 'default';
+
+/**
+ * The mode `asked` comes to on `sessionId`'s model: under `--auto-fallback`,
+ * `auto` on `fake-small` is `acceptEdits`, said in a notice.
+ */
+async function fallenBack(
+  client: Pick<Client, 'notify'>,
+  sessionId: string,
+  asked: string,
+): Promise<string> {
+  if (
+    !AUTO_FALLBACK ||
+    asked !== 'auto' ||
+    (models.get(sessionId) ?? FIRST_MODEL) !== 'fake-small'
+  ) {
+    return asked;
+  }
+
+  await client.notify('session/update', {
+    sessionId,
+    update: noticeUpdate(AUTO_OFF),
+  });
+
+  return 'acceptEdits';
 }
 
 /** Sends the commands just after the reply, as Claude's adapter does. */
@@ -1507,7 +1545,12 @@ async function setConfig(
             ? fasts
             : efforts;
 
-  chosen.set(params.sessionId, value);
+  chosen.set(
+    params.sessionId,
+    configId === 'mode'
+      ? await fallenBack(client, params.sessionId, value)
+      : value,
+  );
 
   if (configId === 'model') {
     return switchedModel(client, params.sessionId);
@@ -1569,7 +1612,7 @@ const connection = acp
 
     const sessionId = SESSION_ID ?? crypto.randomUUID();
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers);
     openedWith.set(
       sessionId,
@@ -1604,7 +1647,7 @@ const connection = acp
 
     return {
       sessionId,
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
   })
@@ -1631,7 +1674,7 @@ const connection = acp
       throw acp.RequestError.resourceNotFound(sessionId);
     }
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers);
     openedWith.set(sessionId, opened('session/load', params._meta));
     cwds.set(sessionId, params.cwd);
@@ -1647,7 +1690,7 @@ const connection = acp
     titleAtStart(client, sessionId);
 
     return {
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
   })
@@ -1677,7 +1720,7 @@ const connection = acp
       models.set(sessionId, FORK_MODEL);
     }
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers ?? []);
     openedWith.set(sessionId, {
       ...opened('session/fork', params._meta),
@@ -1690,7 +1733,7 @@ const connection = acp
 
     return {
       sessionId,
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
   })
@@ -1708,7 +1751,7 @@ const connection = acp
       throw acp.RequestError.resourceNotFound(sessionId);
     }
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers ?? []);
     openedWith.set(sessionId, opened('session/resume', params._meta));
     cwds.set(sessionId, params.cwd);
@@ -1721,7 +1764,7 @@ const connection = acp
     }
 
     return {
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
   })
@@ -1747,7 +1790,10 @@ const connection = acp
       throw new acp.RequestError(-32603, 'The fake agent holds its mode.');
     }
 
-    modes.set(params.sessionId, params.modeId);
+    modes.set(
+      params.sessionId,
+      await fallenBack(client, params.sessionId, params.modeId),
+    );
 
     if (SILENT_SET_MODE || CONFIG_IN_RESPONSES) {
       return {};

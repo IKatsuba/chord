@@ -205,12 +205,25 @@ export const CHILD_MODEL = valueOf('--child-model', 'CHORD_FAKE_CHILD_MODEL');
 export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
 
 /**
+ * `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`): it offers `auto` and
+ * opens every session in it, and on `fake-small`, which has no Auto, takes
+ * `auto` as `acceptEdits` and says so in a notice, as Claude's adapter does
+ * for a model without it; switching to `fake-small` moves `auto` the same
+ * way (CHD-629).
+ */
+export const AUTO_FALLBACK =
+  ARGS.includes('--auto-fallback') ||
+  process.env.CHORD_FAKE_AUTO_FALLBACK === '1';
+
+/**
  * Whether it also offers an `auto` mode, `--auto-mode` or
  * `CHORD_FAKE_AUTO_MODE=1`, as an agent standing in for Codex in the
  * screenshots does; the list every test reads leaves it out.
  */
 export const AUTO_MODE =
-  ARGS.includes('--auto-mode') || process.env.CHORD_FAKE_AUTO_MODE === '1';
+  ARGS.includes('--auto-mode') ||
+  process.env.CHORD_FAKE_AUTO_MODE === '1' ||
+  AUTO_FALLBACK;
 
 /**
  * Whether it also offers Claude's `bypassPermissions` mode, `--bypass-mode`

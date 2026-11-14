@@ -300,11 +300,13 @@ export function Tool({
 function LinkLine({ subagent }: { subagent: Subagent }) {
   const { name, arg, note } = agentHeadline(subagent, false);
 
+  // Wrapped at the text's column, never cut; the agent's words through
+  // `Ansi`, as their escapes are not chord's.
   return (
-    <text {...ROWS}>
+    <text {...FILL}>
       <span attributes={BOLD}>{name}</span>
-      {arg === undefined ? '' : `(${arg})`}
-      {note ?? ''}
+      {arg === undefined ? null : <Ansi text={`(${arg})`} />}
+      {note === undefined ? null : <Ansi text={note} />}
     </text>
   );
 }

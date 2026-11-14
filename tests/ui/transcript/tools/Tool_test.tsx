@@ -2231,4 +2231,27 @@ describe('a call that names a subagent (CHD-629)', () => {
       ).slice(1),
     ).toStrictEqual(['  ⎿  Stopped.']);
   });
+
+  test("a long title wraps at the link's own column, nothing cut, and the agent's escapes colour it rather than show", async () => {
+    const long =
+      'Watch the build and the lint and the tests across every package of the workspace';
+    const rows = await rowsOf(
+      [
+        { ...SPAWNED, title: `\u001b[31m${long}\u001b[0m` },
+        call('completed', [ref]),
+      ],
+      'stop',
+    );
+    const linked = rows.slice(1).join('');
+
+    expect(rows[1]?.startsWith('  ⎿  Agent(')).toBe(true);
+    expect(rows[2]?.startsWith('     ')).toBe(true);
+    expect(
+      rows
+        .slice(1)
+        .map((row) => row.trim())
+        .join(' '),
+    ).toContain(long);
+    expect(linked).not.toContain('[31m');
+  });
 });

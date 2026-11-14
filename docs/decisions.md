@@ -8778,9 +8778,9 @@ Options put: that reader; quoted names through a tokenizer and `parseArgs`;
 ## 2026-11-13 — CHD-624: the catch-up in two PRs, dependencies first (owner)
 
 The owner took the recommendations of the CHD-624 survey
-(`docs/design/evidence/CHD-624/survey.md`), D1 changed below. Options for shipping: one PR;
-dependencies and Claude's new defaults first, then the features; a PR per
-feature. Chosen: two in order. CHD-624 bumps `@agentclientprotocol/sdk` to
+(`docs/design/evidence/CHD-624/survey.md`), D1 changed below. Options for
+shipping: one PR; dependencies and Claude's new defaults first, then the
+features; a PR per feature. Chosen: two in order. CHD-624 bumps `@agentclientprotocol/sdk` to
 2.6.0, OpenTUI to 0.8.4 after a visual pass, claude-agent-sdk and
 genai-prices, refreshes the registry, and handles what claude-agent-acp
 0.107 changes for a person; `/rename`, the account in `/status`, initial

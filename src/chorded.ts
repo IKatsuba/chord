@@ -1,8 +1,8 @@
 /**
  * chord's own npx agents, the packages of this repository, in the
- * registry's shape (CHD-622). Each version is a literal, bumped by a chord
- * commit after the package's release, so main never pins a version npm
- * does not have; chord's release preflight asks npm for each.
+ * registry's shape (CHD-622). Each version is a literal, and the pin may
+ * lead; the package is published before chord's next release, and chord's
+ * release preflight asks npm for each.
  */
 import type { RegistryAgent } from './registry.ts';
 

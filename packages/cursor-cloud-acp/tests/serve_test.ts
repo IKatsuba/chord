@@ -1684,3 +1684,106 @@ describe('CHD-622 tester: independent ACP sessions', () => {
     ]);
   });
 });
+
+describe('CHD-630 tester: account resolution lifecycle', () => {
+  const ready = async (options?: Parameters<typeof connect>[0]) => {
+    const at = connect(options);
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    return at;
+  };
+
+  test('a delayed account answer does not hold a turn or its cancellation', async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const me = at.cursor.port.me;
+
+    (at.cursor.port as { me: typeof me }).me = async (options) => {
+      const user = await me(options);
+
+      entered.resolve();
+      await release.promise;
+
+      return user;
+    };
+
+    const checking = at.request('auth/status', {});
+
+    try {
+      await entered.promise;
+      at.cursor.scripts.push({ hang: true });
+
+      const running = at.request('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text: 'wait' }],
+      });
+      const deadline = performance.now() + 3000;
+
+      while (!at.cursor.runs.get(sessionId)?.length) {
+        if (performance.now() > deadline) {
+          throw new Error(
+            'the turn did not start while account resolution waited',
+          );
+        }
+
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+
+      await at.connection.agent.notify('session/cancel', { sessionId });
+      expect(await running).toEqual({ stopReason: 'cancelled' });
+      expect(at.pushed).toEqual([]);
+    } finally {
+      release.resolve();
+      expect(await checking).toMatchObject({ state: 'authenticated' });
+    }
+
+    expect(at.order.indexOf('session/prompt')).toBeLessThan(
+      at.order.indexOf('auth/status'),
+    );
+  });
+
+  test('a sign-out on one connection leaves another connection signed in', async () => {
+    const env = { CURSOR_API_KEY: 'key_good' };
+    const a = await ready({ env });
+    const b = await ready();
+
+    await a.request('auth/status', {});
+
+    const before = await b.request('auth/status', {});
+
+    env.CURSOR_API_KEY = 'key_refused';
+
+    expect((await refusal(newSession(a))).code).toBe(-32000);
+    expect(a.pushed).toEqual([{ state: 'unauthenticated' }]);
+    expect(await b.request('auth/status', {})).toEqual(before);
+    expect(b.pushed).toEqual([]);
+    expect((await newSession(b)).sessionId).toBe('bc-1');
+  });
+
+  test('the same account from a different credential source pushes once without the key', async () => {
+    const env = { CURSOR_API_KEY: 'key_good' };
+    const at = await ready({ env });
+
+    await at.request('auth/status', {});
+
+    env.CURSOR_API_KEY = '';
+
+    await newSession(at);
+    await newSession(at);
+    expect(at.pushed).toHaveLength(1);
+    expect(at.pushed[0]).toMatchObject({
+      state: 'authenticated',
+      accounts: [{ description: 'keychain' }],
+    });
+    expect(JSON.stringify(at.pushed)).not.toContain('key_good');
+    expect(at.order.indexOf('auth/status_update')).toBeLessThan(
+      at.order.indexOf('session/new'),
+    );
+  });
+});

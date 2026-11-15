@@ -92,6 +92,7 @@ function fakeSdk(error: Error, run = failingRun(error)): typeof sdk {
       return Promise.resolve();
     },
     listArtifacts: () => Promise.reject(error),
+    getUsage: () => Promise.reject(error),
     send: (_message: unknown, options?: sdk.SendOptions) => {
       model = options?.model;
 
@@ -142,6 +143,7 @@ describe("the Port throws the adapter's errors from every call", () => {
     const agent = await port.create({ apiKey: 'k' });
 
     await expect(agent.listArtifacts()).rejects.toMatchObject(network);
+    await expect(agent.getUsage()).rejects.toMatchObject(network);
 
     const run = await agent.send('hi');
     const seen: unknown[] = [];

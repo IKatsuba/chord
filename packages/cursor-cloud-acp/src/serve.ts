@@ -403,6 +403,27 @@ export function serve(stream: Stream, context: ServeContext): Served {
         ];
   };
 
+  /**
+   * The agent's whole cost so far, Cursor's undiscounted token price (owner,
+   * CHD-630 Q1 C2, Q2). The SDK gives no context window or tokens in
+   * context, so `used` and `size` are 0, which chord takes as no window
+   * known. A cost not reported yet, or a failed getUsage, sends nothing.
+   */
+  const cost = async (open: Session): Promise<SessionUpdate[]> => {
+    const usage = await open.agent.getUsage().catch(() => undefined);
+
+    return usage?.cost === undefined
+      ? []
+      : [
+          {
+            sessionUpdate: 'usage_update',
+            used: 0,
+            size: 0,
+            cost: { amount: usage.cost.rawCostCents / 100, currency: 'USD' },
+          },
+        ];
+  };
+
   let shutting: Promise<void> | undefined;
 
   const shutdown = async () => {
@@ -517,7 +538,8 @@ export function serve(stream: Stream, context: ServeContext): Served {
           });
         },
         artifacts: () => open.agent.listArtifacts().catch(() => []),
-        ended: () => renamed(open),
+        ended: async () =>
+          (await Promise.all([renamed(open), cost(open)])).flat(),
         // A model Cursor ran that the list lacks shows under its own id.
         ran: (model) => {
           if (current() && open.choice === sentWith) {

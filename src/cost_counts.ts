@@ -20,6 +20,9 @@ export const COST_COUNTS: Readonly<Record<string, CostCount>> = {
   // claude-agent-acp 0.93 keeps the SDK's `total_cost_usd` per query and
   // restores none of it on load.
   claude: 'opening',
+  // cursor-cloud-acp sends the cloud agent's whole cost from getUsage()
+  // after each run (CHD-630).
+  'cursor-cloud': 'session',
   // Each reads the session's sum from its own store. dirac rebuilds it on
   // load, and on resume, which is load, from every message the stored task
   // saved (docs/agent-capabilities.md, di20).

@@ -104,6 +104,7 @@ function agent(real: sdk.SDKAgent, from: typeof sdk): PortAgent {
     [Symbol.asyncDispose]: () =>
       guarded(() => real[Symbol.asyncDispose](), from),
     listArtifacts: () => guarded(() => real.listArtifacts(), from),
+    getUsage: (options) => guarded(() => real.getUsage(options), from),
     send: async (...args) =>
       run(await guarded(() => real.send(...args), from), from),
   };

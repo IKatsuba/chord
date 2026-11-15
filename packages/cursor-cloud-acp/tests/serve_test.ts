@@ -891,6 +891,121 @@ describe('the title', () => {
   });
 });
 
+describe('cost', () => {
+  const started = async (costCents?: number) => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.costCents = costCents;
+
+    const { sessionId } = await newSession(at);
+
+    return { at, sessionId };
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request<{ stopReason: string }>('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const costs = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'usage_update'
+        ? [each.params.update]
+        : [],
+    );
+
+  test("after each run, before its answer, the agent's whole undiscounted cost with no window", async () => {
+    const { at, sessionId } = await started(5);
+
+    expect(costs(at)).toEqual([]);
+    await prompt(at, sessionId);
+    await prompt(at, sessionId);
+    expect(costs(at)).toEqual([
+      {
+        sessionUpdate: 'usage_update',
+        used: 0,
+        size: 0,
+        cost: { amount: 0.05, currency: 'USD' },
+      },
+      {
+        sessionUpdate: 'usage_update',
+        used: 0,
+        size: 0,
+        cost: { amount: 0.1, currency: 'USD' },
+      },
+    ]);
+
+    const order = at.seen.flatMap((each) =>
+      each.kind === 'answer'
+        ? [each.method]
+        : each.params.update.sessionUpdate === 'usage_update'
+          ? ['usage_update']
+          : [],
+    );
+
+    expect(order).toEqual([
+      'initialize',
+      'session/new',
+      'usage_update',
+      'session/prompt',
+      'usage_update',
+      'session/prompt',
+    ]);
+  });
+
+  test('a cost not reported yet sends nothing; it lands in the next run’s total', async () => {
+    const { at, sessionId } = await started(5);
+
+    at.cursor.scripts.push({ costLags: true });
+    await prompt(at, sessionId);
+    expect(costs(at)).toEqual([]);
+
+    await prompt(at, sessionId);
+    expect(costs(at).map((each) => each.cost)).toEqual([
+      { amount: 0.1, currency: 'USD' },
+    ]);
+  });
+
+  test('no cost from Cursor, or a failed getUsage, sends nothing and the turn still ends', async () => {
+    const none = await started();
+
+    expect(await prompt(none.at, none.sessionId)).toEqual({
+      stopReason: 'end_turn',
+    });
+    expect(costs(none.at)).toEqual([]);
+
+    const failing = await started(5);
+
+    failing.at.cursor.failUsage = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    expect(await prompt(failing.at, failing.sessionId)).toEqual({
+      stopReason: 'end_turn',
+    });
+    expect(costs(failing.at)).toEqual([]);
+  });
+
+  test('nothing at resume or load: the first figure comes with a run’s end', async () => {
+    const { at, sessionId } = await started(5);
+
+    await prompt(at, sessionId);
+    await at.request('session/resume', { sessionId, cwd: CWD, mcpServers: [] });
+    await at.request('session/load', { sessionId, cwd: CWD, mcpServers: [] });
+    expect(costs(at)).toHaveLength(1);
+    expect(
+      at.cursor.calls.filter((each) => each.method === 'getUsage'),
+    ).toHaveLength(1);
+  });
+});
+
 describe('config options', () => {
   test('a mode is sent from the next send; a model change sends the whole set again', async () => {
     const at = connect();

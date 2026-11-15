@@ -31,7 +31,11 @@ export type PortRun = Pick<
 /** One cloud agent, a session of the adapter's. */
 export interface PortAgent extends Pick<
   SDKAgent,
-  'agentId' | 'model' | 'listArtifacts' | typeof Symbol.asyncDispose
+  | 'agentId'
+  | 'model'
+  | 'listArtifacts'
+  | 'getUsage'
+  | typeof Symbol.asyncDispose
 > {
   send(...args: Parameters<SDKAgent['send']>): Promise<PortRun>;
 }

@@ -28,6 +28,8 @@ export interface Script {
   readonly refuse?: CursorError;
   /** The stream loses its connection after its messages; the run goes on. */
   readonly lose?: boolean;
+  /** Cursor reports no cost for the run while it is the agent's latest. */
+  readonly costLags?: boolean;
   /** What conversation() gives; else one turn naming the run. */
   readonly conversation?: readonly ConversationTurn[];
 }
@@ -61,6 +63,10 @@ export interface FakeCursor {
   failMe: Error | undefined;
   /** The name Cursor gives a new agent; `Agent <n>` when unset. */
   newName: string | undefined;
+  /** Each run's undiscounted cost in cents; no cost reported when unset. */
+  costCents: number | undefined;
+  /** What getUsage does; by default answers the agent's runs' cost. */
+  failUsage: Error | undefined;
   /** Each send's onDelta, so a test can deliver an update late. */
   readonly onDeltas: NonNullable<SendOptions['onDelta']>[];
 }
@@ -199,6 +205,8 @@ export function fakeCursor(
   const runs = new Map<string, FakeRun[]>();
   const closed: string[] = [];
   const onDeltas: NonNullable<SendOptions['onDelta']>[] = [];
+  /** Runs whose cost Cursor has not reported yet. */
+  const lagging = new Set<string>();
   /** Created and not yet sent to: unknown to Cursor. */
   const pending = new Map<string, SDKAgentInfo>();
   let next = 0;
@@ -217,6 +225,37 @@ export function fakeCursor(
         return Promise.resolve();
       },
       listArtifacts: () => Promise.resolve([]),
+      getUsage: () => {
+        calls.push({ method: 'getUsage', apiKey: undefined, args: agentId });
+
+        if (fake.failUsage !== undefined) {
+          return Promise.reject(fake.failUsage);
+        }
+
+        const all = runs.get(agentId) ?? [];
+        const zero = {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          totalTokens: 0,
+        };
+        const reported =
+          fake.costCents !== undefined && !lagging.has(all.at(-1)?.id ?? '');
+
+        return Promise.resolve({
+          usage: zero,
+          runs: [],
+          ...(reported
+            ? {
+                cost: {
+                  rawCostCents: fake.costCents! * all.length,
+                  chargedCents: 0,
+                },
+              }
+            : {}),
+        });
+      },
       send: (message, options) => {
         calls.push({
           method: 'send',
@@ -250,6 +289,10 @@ export function fakeCursor(
         }
 
         const run = fakeRun(agentId, script, options?.onDelta);
+
+        if (script.costLags === true) {
+          lagging.add(run.id);
+        }
 
         runs.set(agentId, [...(runs.get(agentId) ?? []), run]);
 
@@ -374,6 +417,8 @@ export function fakeCursor(
     failGet: undefined,
     failMe: undefined,
     newName: undefined,
+    costCents: undefined,
+    failUsage: undefined,
     onDeltas,
   };
 

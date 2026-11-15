@@ -2047,3 +2047,122 @@ describe('CHD-630 tester: account resolution lifecycle', () => {
     );
   });
 });
+
+describe('CHD-630 tester: title lifecycle', () => {
+  const ready = async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    return at;
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const titles = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'session_info_update'
+        ? [[each.params.sessionId, each.params.update.title]]
+        : [],
+    );
+
+  test("a cancelled lookup returns late without consuming the next turn's title", async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const returned = Promise.withResolvers<void>();
+    const get = at.cursor.port.get;
+    let held = false;
+
+    (at.cursor.port as { get: typeof get }).get = async (id, options) => {
+      const info = await get(id, options);
+
+      if (!held) {
+        held = true;
+
+        entered.resolve();
+        await release.promise;
+        returned.resolve();
+      }
+
+      return info;
+    };
+
+    const running = prompt(at, sessionId);
+
+    try {
+      await entered.promise;
+      await at.connection.agent.notify('session/cancel', { sessionId });
+      expect(await running).toEqual({ stopReason: 'cancelled' });
+      expect(titles(at)).toEqual([]);
+      expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+      expect(titles(at)).toEqual([[sessionId, 'Agent 1']]);
+    } finally {
+      release.resolve();
+      await returned.promise;
+    }
+
+    await prompt(at, sessionId);
+    expect(titles(at)).toEqual([[sessionId, 'Agent 1']]);
+  });
+
+  test('concurrent sessions keep separate names and update destinations', async () => {
+    const at = await ready();
+    const a = await newSession(at);
+    const b = await newSession(at);
+
+    await Promise.all([prompt(at, b.sessionId), prompt(at, a.sessionId)]);
+    expect(titles(at)).toHaveLength(2);
+    expect(titles(at)).toContainEqual([a.sessionId, 'Agent 1']);
+    expect(titles(at)).toContainEqual([b.sessionId, 'Agent 2']);
+
+    const info = at.cursor.listed.find((each) => each.agentId === a.sessionId)!;
+
+    info.name = 'Changed first';
+
+    await Promise.all([prompt(at, b.sessionId), prompt(at, a.sessionId)]);
+    expect(titles(at)).toHaveLength(3);
+    expect(titles(at).at(-1)).toEqual([a.sessionId, 'Changed first']);
+  });
+
+  test('empty and failed lookups preserve the known name until a valid change', async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+
+    await prompt(at, sessionId);
+
+    const info = at.cursor.listed.find((each) => each.agentId === sessionId)!;
+
+    info.name = ' \t ';
+
+    await prompt(at, sessionId);
+
+    info.name = ' Agent 1 ';
+    info.lastModified += 1000;
+
+    await prompt(at, sessionId);
+
+    info.name = 'Recovered title';
+    at.cursor.failGet = new CursorError('network', 'fixture unavailable');
+
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    expect(titles(at)).toEqual([[sessionId, 'Agent 1']]);
+
+    at.cursor.failGet = undefined;
+
+    await prompt(at, sessionId);
+    expect(titles(at)).toEqual([
+      [sessionId, 'Agent 1'],
+      [sessionId, 'Recovered title'],
+    ]);
+  });
+});

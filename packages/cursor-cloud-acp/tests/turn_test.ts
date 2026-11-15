@@ -485,6 +485,67 @@ describe('after the run ends', () => {
     turn.cancel();
     expect(await answer).toEqual({ stopReason: 'cancelled' });
   });
+
+  test("what the run's end sends goes after its lines, before the answer", async () => {
+    const fake = fakeRun();
+    const drawn: SessionUpdate[] = [];
+    const title: SessionUpdate = {
+      sessionUpdate: 'session_info_update',
+      title: 'Login page',
+    };
+    const turn = new Turn({
+      agentId: ID,
+      send: () => Promise.resolve(fake.run),
+      artifacts: () => Promise.resolve([]),
+      ended: () => Promise.resolve([title]),
+      emit: (update) => {
+        drawn.push(update);
+
+        return Promise.resolve();
+      },
+    });
+    const answer = turn.run();
+
+    await settle();
+    fake.finish({
+      git: {
+        branches: [{ repoUrl: 'https://github.com/acme/web', branch: 'b' }],
+      },
+    });
+    expect(await answer).toEqual({ stopReason: 'end_turn' });
+    expect(drawn.map((each) => each.sessionUpdate)).toEqual([
+      'agent_message_chunk',
+      'session_info_update',
+    ]);
+  });
+
+  test('a cancel while the end is asked for answers cancelled, sending none of it', async () => {
+    const fake = fakeRun();
+    const ended = deferred<SessionUpdate[]>();
+    const drawn: SessionUpdate[] = [];
+    const turn = new Turn({
+      agentId: ID,
+      bound: 20,
+      send: () => Promise.resolve(fake.run),
+      artifacts: () => Promise.resolve([]),
+      ended: () => ended.promise,
+      emit: (update) => {
+        drawn.push(update);
+
+        return Promise.resolve();
+      },
+    });
+    const answer = turn.run();
+
+    await settle();
+    fake.finish();
+    await settle();
+    turn.cancel();
+    expect(await answer).toEqual({ stopReason: 'cancelled' });
+    ended.resolve([{ sessionUpdate: 'session_info_update', title: 'late' }]);
+    await settle();
+    expect(drawn).toEqual([]);
+  });
 });
 
 test("a lost stream keeps the SDK's class, code and request id in data", async () => {

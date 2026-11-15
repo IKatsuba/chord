@@ -59,6 +59,8 @@ export interface FakeCursor {
   failGet: Error | undefined;
   /** What Cursor.me does for a key it takes; by default names its user. */
   failMe: Error | undefined;
+  /** The name Cursor gives a new agent; `Agent <n>` when unset. */
+  newName: string | undefined;
   /** Each send's onDelta, so a test can deliver an update late. */
   readonly onDeltas: NonNullable<SendOptions['onDelta']>[];
 }
@@ -299,7 +301,7 @@ export function fakeCursor(
       // Lazy, as Cursor's is (Q9): Cursor knows the agent from its first send.
       pending.set(agentId, {
         agentId,
-        name: `Agent ${next}`,
+        name: fake.newName ?? `Agent ${next}`,
         summary: '',
         lastModified: Date.now(),
         runtime: 'cloud',
@@ -371,6 +373,7 @@ export function fakeCursor(
     pageSize: undefined,
     failGet: undefined,
     failMe: undefined,
+    newName: undefined,
     onDeltas,
   };
 

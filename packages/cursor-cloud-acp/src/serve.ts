@@ -71,6 +71,12 @@ interface Session {
   choice: Choice;
   models: readonly ModelListItem[];
   turn: Turn | undefined;
+  /**
+   * Cursor's name for the agent as last known here: Agent.get's at a
+   * reopen, none for a new agent. A title goes out only when a run changes
+   * it (owner, CHD-630 Q4).
+   */
+  name: string | undefined;
 }
 
 /** The `login` command for this version, as the sign-in names it. */
@@ -360,6 +366,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         },
         models: await models(found),
         turn: undefined,
+        name: info.name.trim() === '' ? undefined : info.name.trim(),
       };
 
       await hold(open, generation);
@@ -370,6 +377,30 @@ export function serve(stream: Stream, context: ServeContext): Served {
         url: repo === undefined ? undefined : cursorUrl(repo),
       };
     });
+  };
+
+  /**
+   * The title when Cursor's name for `open`'s agent changed since it was
+   * last known; nothing when it did not, or when Agent.get fails.
+   */
+  const renamed = async (open: Session): Promise<SessionUpdate[]> => {
+    const info = await port
+      .get(open.agent.agentId, { apiKey: open.apiKey })
+      .catch(() => undefined);
+    const name = info?.name.trim();
+
+    return info === undefined ||
+      name === undefined ||
+      name === '' ||
+      name === open.name
+      ? []
+      : [
+          {
+            sessionUpdate: 'session_info_update',
+            title: name,
+            updatedAt: new Date(info.lastModified).toISOString(),
+          },
+        ];
   };
 
   let shutting: Promise<void> | undefined;
@@ -437,6 +468,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
             choice: { mode: 'default' },
             models: await models(found),
             turn: undefined,
+            name: undefined,
           };
 
           await hold(opened, generation);
@@ -485,19 +517,28 @@ export function serve(stream: Stream, context: ServeContext): Served {
           });
         },
         artifacts: () => open.agent.listArtifacts().catch(() => []),
+        ended: () => renamed(open),
         // A model Cursor ran that the list lacks shows under its own id.
         ran: (model) => {
           if (current() && open.choice === sentWith) {
             open.choice = { ...open.choice, model: chosen(model) };
           }
         },
-        emit: (update: SessionUpdate) =>
-          current()
-            ? client.notify('session/update', {
-                sessionId: params.sessionId,
-                update,
-              })
-            : Promise.resolve(),
+        emit: (update: SessionUpdate) => {
+          if (!current()) {
+            return Promise.resolve();
+          }
+
+          // Kept once sent, so the same name is not sent again.
+          if (update.sessionUpdate === 'session_info_update') {
+            open.name = update.title ?? open.name;
+          }
+
+          return client.notify('session/update', {
+            sessionId: params.sessionId,
+            update,
+          });
+        },
       });
 
       // A prompt while one runs is Cursor's to refuse (AgentBusyError); the

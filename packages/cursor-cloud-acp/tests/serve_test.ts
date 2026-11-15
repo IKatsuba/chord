@@ -494,6 +494,7 @@ describe('session/new', () => {
       `Cursor cloud agent on github.com/acme/web, starting from branch login-page on origin. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.  \n${LINK('bc-1')}`,
       'session/new',
       'ok',
+      'session_info_update',
       'session/prompt',
     ]);
   });
@@ -682,6 +683,7 @@ describe('session/prompt', () => {
       'agent_thought_chunk',
       'tool_call',
       'agent_message_chunk',
+      'session_info_update',
     ]);
 
     const sent = at.cursor.calls.find((each) => each.method === 'send')
@@ -743,6 +745,149 @@ describe('session/prompt', () => {
       clientCapabilities: {},
     });
     expect((await refusal(prompt(at, 'bc-9'))).code).toBe(-32002);
+  });
+});
+
+describe('the title', () => {
+  const started = async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    const { sessionId } = await newSession(at);
+
+    return { at, sessionId };
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request<{ stopReason: string }>('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const titles = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'session_info_update'
+        ? [each.params.update]
+        : [],
+    );
+
+  const rename = (
+    at: ReturnType<typeof connect>,
+    sessionId: string,
+    name: string,
+    lastModified = Date.UTC(2026, 10, 15, 9, 30),
+  ) => {
+    const info = at.cursor.listed.find((each) => each.agentId === sessionId)!;
+
+    info.name = name;
+    info.lastModified = lastModified;
+  };
+
+  test("a new session: nothing at open; Cursor's name, trimmed, at the first run's end", async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.newName = '  Login form email validation ';
+
+    const { sessionId } = await newSession(at);
+
+    expect(titles(at)).toEqual([]);
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    expect(titles(at)).toEqual([
+      {
+        sessionUpdate: 'session_info_update',
+        title: 'Login form email validation',
+        updatedAt: new Date(at.cursor.listed[0]!.lastModified).toISOString(),
+      },
+    ]);
+    rename(at, sessionId, 'Login form email validation');
+    await prompt(at, sessionId);
+    expect(titles(at)).toHaveLength(1);
+  });
+
+  test('a run that leaves the name as it was sends nothing; one that changes it sends it', async () => {
+    const { at, sessionId } = await started();
+
+    await prompt(at, sessionId);
+    await prompt(at, sessionId);
+    expect(titles(at).map((each) => each.title)).toEqual(['Agent 1']);
+
+    rename(at, sessionId, 'Login page and email validation');
+    await prompt(at, sessionId);
+    expect(titles(at).map((each) => each.title)).toEqual([
+      'Agent 1',
+      'Login page and email validation',
+    ]);
+  });
+
+  test('an empty name, or a failed Agent.get, sends nothing and the turn still ends', async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.newName = '   ';
+
+    const { sessionId } = await newSession(at);
+
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    rename(at, sessionId, 'Login page');
+
+    at.cursor.failGet = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    expect(titles(at)).toEqual([]);
+  });
+
+  test('resume and load send no title at open; a run that changes the name does', async () => {
+    const { at, sessionId } = await started();
+
+    await prompt(at, sessionId);
+    rename(at, sessionId, 'Login page');
+
+    const before = titles(at).length;
+
+    await at.request('session/resume', { sessionId, cwd: CWD, mcpServers: [] });
+    await at.request('session/load', { sessionId, cwd: CWD, mcpServers: [] });
+    await prompt(at, sessionId);
+    expect(titles(at).length).toBe(before);
+
+    rename(at, sessionId, 'Login page and email validation');
+    await prompt(at, sessionId);
+    expect(
+      titles(at)
+        .slice(before)
+        .map((each) => each.title),
+    ).toEqual(['Login page and email validation']);
+  });
+
+  test('a cancelled run sends no title; the next run that ends sends it', async () => {
+    const { at, sessionId } = await started();
+
+    at.cursor.scripts.push({ hang: true });
+
+    const answer = prompt(at, sessionId);
+
+    await new Promise((resolve) => setImmediate(resolve));
+    await at.connection.agent.notify('session/cancel', { sessionId });
+    expect((await answer).stopReason).toBe('cancelled');
+    expect(titles(at)).toEqual([]);
+
+    await prompt(at, sessionId);
+    expect(titles(at).map((each) => each.title)).toEqual(['Agent 1']);
   });
 });
 

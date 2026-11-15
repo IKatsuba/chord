@@ -5,21 +5,25 @@ v1 agent on stdin and stdout, written on Cursor's TypeScript SDK,
 `@cursor/sdk`. [chord](https://github.com/IKatsuba/chord) starts it as its
 `cursor-cloud` agent.
 
-Requires Node 22.13 or newer. Version 0.1.0 is not published yet; the
-commands below require that release.
+Requires Node 22.13 or newer. The commands below require 0.2.0
+to be published; the owner publishes it before chord's next release.
 
 ## Signing in
 
 ```sh
-npx -y @chorded/cursor-cloud-acp@0.1.0 login    # Cursor's browser login, the key kept in the OS keychain
-npx -y @chorded/cursor-cloud-acp@0.1.0 status   # whether the keychain holds a login
-npx -y @chorded/cursor-cloud-acp@0.1.0 logout   # the key removed from the keychain
+npx -y @chorded/cursor-cloud-acp@0.2.0 login    # Cursor's browser login, the key kept in the OS keychain
+npx -y @chorded/cursor-cloud-acp@0.2.0 status   # whether the keychain holds a login
+npx -y @chorded/cursor-cloud-acp@0.2.0 logout   # the key removed from the keychain
 ```
 
 `CURSOR_API_KEY`, when set, is used instead of the keychain's key. Where no
 keychain is there (Linux without a Secret Service), `login` refuses and
 points to `CURSOR_API_KEY`; no key is written to a file. The SDK's own
 login file is not used. Keychain calls time out after 10 seconds.
+ACP `auth/status` reports the account's name and email when given, with
+the key's source and keychain expiry when known; chord shows them in
+`/status`. Changes push at the next status request, session start, list,
+resume or load, without polling.
 
 What each prints, on stdout (the SDK's own lines, the login URL among
 them, go to stderr):
@@ -37,7 +41,7 @@ them, go to stderr):
 ```sh
 chord cursor-cloud
 # Or serve ACP v1 to another client in the current directory:
-npx -y @chorded/cursor-cloud-acp@0.1.0
+npx -y @chorded/cursor-cloud-acp@0.2.0
 ```
 
 Start in a git work tree on a pushed branch with a push remote. The check
@@ -50,7 +54,11 @@ nothing is downloaded.
 
 Creating a session is refused while the Cursor account's prepaid balance
 is empty: top up or enable auto top-up. `usage_limit_exceeded` appears as
-one plain line with Cursor's message.
+one plain line with Cursor's message. After each run, ACP `usage_update`
+reports the whole agent's undiscounted token cost in USD when available.
+Cost may lag until a later run. chord's `/cost` counts it per session, so
+resuming does not count earlier runs again. No context meter is shown:
+the SDK gives no context window.
 
 Agent and Plan modes apply from the next prompt. Models have one entry
 each, with separate parameter options; choosing a model starts outside
@@ -65,6 +73,9 @@ In chord, `/resume` lists chord's records;
 The adapter replays the history Cursor provides. A run still going is
 reported, not followed live; prompts are refused until it ends.
 ACP `session/list` lists the account's cloud agents for the repository.
+Cursor's agent name becomes the title only when it changes after a run,
+never on new, resume or load. `/rename` changes chord's title alone; a later
+change to Cursor's name replaces it.
 MCP servers are not forwarded: chord holds them back by default; servers
 sent by another client are named unreachable in the first message.
 

@@ -15,11 +15,11 @@ test('each agent whose cost or usage counting is kept is one chord starts by tha
   ).toStrictEqual([]);
 });
 
-test("claude's cost counts from each opening, dimcode's, dirac's, kilo's and opencode's from the session's start, and any other's is not known", () => {
+test("claude's cost counts from each opening, cursor-cloud's, dimcode's, dirac's, kilo's and opencode's from the session's start, and any other's is not known", () => {
   expect(costCountOf('claude')).toBe('opening');
   expect(
-    ['dimcode', 'dirac', 'kilo', 'opencode'].map(costCountOf),
-  ).toStrictEqual(['session', 'session', 'session', 'session']);
+    ['cursor-cloud', 'dimcode', 'dirac', 'kilo', 'opencode'].map(costCountOf),
+  ).toStrictEqual(['session', 'session', 'session', 'session', 'session']);
   expect(costCountOf('codex')).toBe(undefined);
   expect(costCountOf('toString')).toBe(undefined);
 });

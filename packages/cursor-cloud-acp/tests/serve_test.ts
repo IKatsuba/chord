@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import {
+  type AuthStatusUpdateNotification,
   client,
   type ClientConnection,
   ndJsonStream,
@@ -106,6 +107,10 @@ function connect(
     | { readonly kind: 'update'; readonly params: SessionNotification }
     | { readonly kind: 'answer'; readonly method: string }
   )[] = [];
+  /** Every `auth/status_update` pushed, in order. */
+  const pushed: AuthStatusUpdateNotification[] = [];
+  /** Each push and answer by method, in the order they came. */
+  const order: string[] = [];
 
   serve(ndJsonStream(toClient.writable, toAgent.readable), {
     port: cursor.port,
@@ -122,6 +127,10 @@ function connect(
     .onNotification('session/update', ({ params }) => {
       seen.push({ kind: 'update', params });
     })
+    .onNotification('auth/status_update', ({ params }) => {
+      pushed.push(params);
+      order.push('auth/status_update');
+    })
     .connect(ndJsonStream(toAgent.writable, toClient.readable));
 
   open.push(connection);
@@ -130,6 +139,7 @@ function connect(
     const answer = (await connection.agent.request(method, params)) as T;
 
     seen.push({ kind: 'answer', method });
+    order.push(method);
 
     return answer;
   };
@@ -144,7 +154,7 @@ function connect(
         : [],
     );
 
-  return { cursor, connection, seen, request, texts };
+  return { cursor, connection, seen, pushed, order, request, texts };
 }
 
 const newSession = (
@@ -191,6 +201,7 @@ describe('initialize', () => {
         },
       ],
       agentCapabilities: {
+        auth: { status: {} },
         loadSession: true,
         promptCapabilities: { image: true, embeddedContext: false },
         mcpCapabilities: { http: false, sse: false },
@@ -214,6 +225,212 @@ describe('initialize', () => {
       message:
         'Sign in with `npx -y @chorded/cursor-cloud-acp@0.1.0 login` in a terminal, or set CURSOR_API_KEY.',
     });
+  });
+});
+
+describe('auth/status', () => {
+  const ADA = {
+    label: 'Cursor',
+    active: true,
+    name: 'Ada Lovelace',
+    email: 'ada@example.com',
+  };
+
+  /** A keychain holding `key`, expiring 2027-02-13. */
+  const expiring = (key: string): SdkCredentialStore => ({
+    ...store(),
+    load: () =>
+      Promise.resolve({
+        version: 1,
+        backendUrl: 'https://api2.cursor.sh',
+        apiKey: key,
+        apiKeyExpiresAtMs: Date.UTC(2027, 1, 13),
+        createdAtMs: 0,
+      }),
+  });
+
+  const ready = async (options?: Parameters<typeof connect>[0]) => {
+    const at = connect(options);
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    return at;
+  };
+
+  const status = (at: ReturnType<typeof connect>) =>
+    at.request('auth/status', {});
+
+  test("the keychain's key: the account, its source and expiry", async () => {
+    const at = await ready({ store: expiring('key_good') });
+
+    expect(await status(at)).toEqual({
+      state: 'authenticated',
+      accounts: [{ ...ADA, description: 'keychain, expires 2027-02-13' }],
+    });
+  });
+
+  test('CURSOR_API_KEY names the variable; a keychain entry without expiry, the keychain', async () => {
+    const env = await ready({ env: { CURSOR_API_KEY: 'key_good' } });
+
+    expect(await status(env)).toEqual({
+      state: 'authenticated',
+      accounts: [{ ...ADA, description: 'CURSOR_API_KEY' }],
+    });
+    expect(await status(await ready())).toEqual({
+      state: 'authenticated',
+      accounts: [{ ...ADA, description: 'keychain' }],
+    });
+  });
+
+  test('no key, or one Cursor refuses: unauthenticated, with no account', async () => {
+    expect(await status(await ready({ store: store() }))).toEqual({
+      state: 'unauthenticated',
+    });
+    expect(await status(await ready({ store: store('key_other') }))).toEqual({
+      state: 'unauthenticated',
+    });
+  });
+
+  test('a keychain or Cursor that fails otherwise: unknown', async () => {
+    const keychain = await ready({
+      store: {
+        ...store(),
+        load: () =>
+          Promise.reject(new KeychainError('The keychain refused: locked.')),
+      },
+    });
+
+    expect(await status(keychain)).toEqual({ state: 'unknown' });
+
+    const network = await ready();
+
+    network.cursor.failMe = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    expect(await status(network)).toEqual({ state: 'unknown' });
+  });
+
+  test('a team key with no user: the account names only its source', async () => {
+    const at = await ready();
+    const me = at.cursor.port.me;
+
+    (at.cursor.port as { me: typeof me }).me = (options) =>
+      me(options).then(() => ({ apiKeyName: 'ci', createdAt: '2026-11-01' }));
+
+    expect(await status(at)).toEqual({
+      state: 'authenticated',
+      accounts: [{ label: 'Cursor', active: true, description: 'keychain' }],
+    });
+  });
+
+  test('no push before the first auth/status is answered', async () => {
+    const at = await ready({ store: store() });
+
+    await refusal(newSession(at));
+    expect(at.pushed).toEqual([]);
+  });
+
+  test('a session start that finds the status changed pushes it before its answer, once', async () => {
+    const at = await ready();
+
+    await status(at);
+
+    at.cursor.failMe = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    await refusal(newSession(at));
+    expect(at.pushed).toEqual([{ state: 'unknown' }]);
+
+    at.cursor.failMe = undefined;
+
+    await newSession(at);
+    await newSession(at);
+    expect(at.pushed).toEqual([
+      { state: 'unknown' },
+      {
+        state: 'authenticated',
+        accounts: [{ ...ADA, description: 'keychain' }],
+      },
+    ]);
+    expect(at.order.filter((each) => each !== 'session/new')).toEqual([
+      'initialize',
+      'auth/status',
+      'auth/status_update',
+      'auth/status_update',
+    ]);
+    expect(at.order.indexOf('session/new')).toBeGreaterThan(
+      at.order.lastIndexOf('auth/status_update'),
+    );
+  });
+
+  test('a signed-out start pushes unauthenticated before refusing', async () => {
+    let signedIn = true;
+    const at = await ready({
+      store: {
+        ...store(),
+        load: () => {
+          return signedIn
+            ? store('key_good').load()
+            : Promise.resolve(undefined);
+        },
+      },
+    });
+
+    await status(at);
+
+    signedIn = false;
+
+    expect(await refusal(newSession(at))).toEqual({
+      code: -32000,
+      message: 'Not signed in to Cursor.',
+    });
+    expect(at.pushed).toEqual([{ state: 'unauthenticated' }]);
+  });
+
+  test('list, resume, load and a later auth/status push a change too', async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+
+    // Cursor knows an agent from its first send.
+    await at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+    await status(at);
+    at.cursor.keys.clear();
+    await refusal(at.request('session/list', { cwd: CWD }));
+    expect(at.pushed).toEqual([{ state: 'unauthenticated' }]);
+
+    at.cursor.keys.add('key_good');
+    await at.request('session/resume', {
+      sessionId,
+      cwd: CWD,
+      mcpServers: [],
+    });
+    expect(at.pushed.at(-1)?.state).toBe('authenticated');
+
+    at.cursor.keys.clear();
+    await refusal(
+      at.request('session/load', { sessionId, cwd: CWD, mcpServers: [] }),
+    );
+    expect(at.pushed.at(-1)).toEqual({ state: 'unauthenticated' });
+
+    at.cursor.keys.add('key_good');
+
+    at.order.length = 0;
+
+    await status(at);
+    expect(at.pushed).toHaveLength(4);
+    expect(at.pushed.at(-1)?.state).toBe('authenticated');
+    expect(at.order).toEqual(['auth/status_update', 'auth/status']);
+
+    await status(at);
+    expect(at.pushed).toHaveLength(4);
   });
 });
 
@@ -277,6 +494,7 @@ describe('session/new', () => {
       `Cursor cloud agent on github.com/acme/web, starting from branch login-page on origin. It runs in Cursor's cloud, not on this machine, pushes its work to a branch of its own, and keeps running if chord closes.  \n${LINK('bc-1')}`,
       'session/new',
       'ok',
+      'session_info_update',
       'session/prompt',
     ]);
   });
@@ -465,6 +683,7 @@ describe('session/prompt', () => {
       'agent_thought_chunk',
       'tool_call',
       'agent_message_chunk',
+      'session_info_update',
     ]);
 
     const sent = at.cursor.calls.find((each) => each.method === 'send')
@@ -526,6 +745,264 @@ describe('session/prompt', () => {
       clientCapabilities: {},
     });
     expect((await refusal(prompt(at, 'bc-9'))).code).toBe(-32002);
+  });
+});
+
+describe('the title', () => {
+  const started = async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    const { sessionId } = await newSession(at);
+
+    return { at, sessionId };
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request<{ stopReason: string }>('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const titles = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'session_info_update'
+        ? [each.params.update]
+        : [],
+    );
+
+  const rename = (
+    at: ReturnType<typeof connect>,
+    sessionId: string,
+    name: string,
+    lastModified = Date.UTC(2026, 10, 15, 9, 30),
+  ) => {
+    const info = at.cursor.listed.find((each) => each.agentId === sessionId)!;
+
+    info.name = name;
+    info.lastModified = lastModified;
+  };
+
+  test("a new session: nothing at open; Cursor's name, trimmed, at the first run's end", async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.newName = '  Login form email validation ';
+
+    const { sessionId } = await newSession(at);
+
+    expect(titles(at)).toEqual([]);
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    expect(titles(at)).toEqual([
+      {
+        sessionUpdate: 'session_info_update',
+        title: 'Login form email validation',
+        updatedAt: new Date(at.cursor.listed[0]!.lastModified).toISOString(),
+      },
+    ]);
+    rename(at, sessionId, 'Login form email validation');
+    await prompt(at, sessionId);
+    expect(titles(at)).toHaveLength(1);
+  });
+
+  test('a run that leaves the name as it was sends nothing; one that changes it sends it', async () => {
+    const { at, sessionId } = await started();
+
+    await prompt(at, sessionId);
+    await prompt(at, sessionId);
+    expect(titles(at).map((each) => each.title)).toEqual(['Agent 1']);
+
+    rename(at, sessionId, 'Login page and email validation');
+    await prompt(at, sessionId);
+    expect(titles(at).map((each) => each.title)).toEqual([
+      'Agent 1',
+      'Login page and email validation',
+    ]);
+  });
+
+  test('an empty name, or a failed Agent.get, sends nothing and the turn still ends', async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.newName = '   ';
+
+    const { sessionId } = await newSession(at);
+
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    rename(at, sessionId, 'Login page');
+
+    at.cursor.failGet = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    expect(titles(at)).toEqual([]);
+  });
+
+  test('resume and load send no title at open; a run that changes the name does', async () => {
+    const { at, sessionId } = await started();
+
+    await prompt(at, sessionId);
+    rename(at, sessionId, 'Login page');
+
+    const before = titles(at).length;
+
+    await at.request('session/resume', { sessionId, cwd: CWD, mcpServers: [] });
+    await at.request('session/load', { sessionId, cwd: CWD, mcpServers: [] });
+    await prompt(at, sessionId);
+    expect(titles(at).length).toBe(before);
+
+    rename(at, sessionId, 'Login page and email validation');
+    await prompt(at, sessionId);
+    expect(
+      titles(at)
+        .slice(before)
+        .map((each) => each.title),
+    ).toEqual(['Login page and email validation']);
+  });
+
+  test('a cancelled run sends no title; the next run that ends sends it', async () => {
+    const { at, sessionId } = await started();
+
+    at.cursor.scripts.push({ hang: true });
+
+    const answer = prompt(at, sessionId);
+
+    await new Promise((resolve) => setImmediate(resolve));
+    await at.connection.agent.notify('session/cancel', { sessionId });
+    expect((await answer).stopReason).toBe('cancelled');
+    expect(titles(at)).toEqual([]);
+
+    await prompt(at, sessionId);
+    expect(titles(at).map((each) => each.title)).toEqual(['Agent 1']);
+  });
+});
+
+describe('cost', () => {
+  const started = async (costCents?: number) => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.costCents = costCents;
+
+    const { sessionId } = await newSession(at);
+
+    return { at, sessionId };
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request<{ stopReason: string }>('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const costs = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'usage_update'
+        ? [each.params.update]
+        : [],
+    );
+
+  test("after each run, before its answer, the agent's whole undiscounted cost with no window", async () => {
+    const { at, sessionId } = await started(5);
+
+    expect(costs(at)).toEqual([]);
+    await prompt(at, sessionId);
+    await prompt(at, sessionId);
+    expect(costs(at)).toEqual([
+      {
+        sessionUpdate: 'usage_update',
+        used: 0,
+        size: 0,
+        cost: { amount: 0.05, currency: 'USD' },
+      },
+      {
+        sessionUpdate: 'usage_update',
+        used: 0,
+        size: 0,
+        cost: { amount: 0.1, currency: 'USD' },
+      },
+    ]);
+
+    const order = at.seen.flatMap((each) =>
+      each.kind === 'answer'
+        ? [each.method]
+        : each.params.update.sessionUpdate === 'usage_update'
+          ? ['usage_update']
+          : [],
+    );
+
+    expect(order).toEqual([
+      'initialize',
+      'session/new',
+      'usage_update',
+      'session/prompt',
+      'usage_update',
+      'session/prompt',
+    ]);
+  });
+
+  test('a cost not reported yet sends nothing; it lands in the next run’s total', async () => {
+    const { at, sessionId } = await started(5);
+
+    at.cursor.scripts.push({ costLags: true });
+    await prompt(at, sessionId);
+    expect(costs(at)).toEqual([]);
+
+    await prompt(at, sessionId);
+    expect(costs(at).map((each) => each.cost)).toEqual([
+      { amount: 0.1, currency: 'USD' },
+    ]);
+  });
+
+  test('no cost from Cursor, or a failed getUsage, sends nothing and the turn still ends', async () => {
+    const none = await started();
+
+    expect(await prompt(none.at, none.sessionId)).toEqual({
+      stopReason: 'end_turn',
+    });
+    expect(costs(none.at)).toEqual([]);
+
+    const failing = await started(5);
+
+    failing.at.cursor.failUsage = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    expect(await prompt(failing.at, failing.sessionId)).toEqual({
+      stopReason: 'end_turn',
+    });
+    expect(costs(failing.at)).toEqual([]);
+  });
+
+  test('nothing at resume or load: the first figure comes with a run’s end', async () => {
+    const { at, sessionId } = await started(5);
+
+    await prompt(at, sessionId);
+    await at.request('session/resume', { sessionId, cwd: CWD, mcpServers: [] });
+    await at.request('session/load', { sessionId, cwd: CWD, mcpServers: [] });
+    expect(costs(at)).toHaveLength(1);
+    expect(
+      at.cursor.calls.filter((each) => each.method === 'getUsage'),
+    ).toHaveLength(1);
   });
 });
 
@@ -1464,6 +1941,347 @@ describe('CHD-622 tester: independent ACP sessions', () => {
       'key_good',
       'key_good',
       'key_good',
+    ]);
+  });
+});
+
+describe('CHD-630 tester: account resolution lifecycle', () => {
+  const ready = async (options?: Parameters<typeof connect>[0]) => {
+    const at = connect(options);
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    return at;
+  };
+
+  test('a delayed account answer does not hold a turn or its cancellation', async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const me = at.cursor.port.me;
+
+    (at.cursor.port as { me: typeof me }).me = async (options) => {
+      const user = await me(options);
+
+      entered.resolve();
+      await release.promise;
+
+      return user;
+    };
+
+    const checking = at.request('auth/status', {});
+
+    try {
+      await entered.promise;
+      at.cursor.scripts.push({ hang: true });
+
+      const running = at.request('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text: 'wait' }],
+      });
+      const deadline = performance.now() + 3000;
+
+      while (!at.cursor.runs.get(sessionId)?.length) {
+        if (performance.now() > deadline) {
+          throw new Error(
+            'the turn did not start while account resolution waited',
+          );
+        }
+
+        await new Promise<void>((resolve) => setImmediate(resolve));
+      }
+
+      await at.connection.agent.notify('session/cancel', { sessionId });
+      expect(await running).toEqual({ stopReason: 'cancelled' });
+      expect(at.pushed).toEqual([]);
+    } finally {
+      release.resolve();
+      expect(await checking).toMatchObject({ state: 'authenticated' });
+    }
+
+    expect(at.order.indexOf('session/prompt')).toBeLessThan(
+      at.order.indexOf('auth/status'),
+    );
+  });
+
+  test('a sign-out on one connection leaves another connection signed in', async () => {
+    const env = { CURSOR_API_KEY: 'key_good' };
+    const a = await ready({ env });
+    const b = await ready();
+
+    await a.request('auth/status', {});
+
+    const before = await b.request('auth/status', {});
+
+    env.CURSOR_API_KEY = 'key_refused';
+
+    expect((await refusal(newSession(a))).code).toBe(-32000);
+    expect(a.pushed).toEqual([{ state: 'unauthenticated' }]);
+    expect(await b.request('auth/status', {})).toEqual(before);
+    expect(b.pushed).toEqual([]);
+    expect((await newSession(b)).sessionId).toBe('bc-1');
+  });
+
+  test('the same account from a different credential source pushes once without the key', async () => {
+    const env = { CURSOR_API_KEY: 'key_good' };
+    const at = await ready({ env });
+
+    await at.request('auth/status', {});
+
+    env.CURSOR_API_KEY = '';
+
+    await newSession(at);
+    await newSession(at);
+    expect(at.pushed).toHaveLength(1);
+    expect(at.pushed[0]).toMatchObject({
+      state: 'authenticated',
+      accounts: [{ description: 'keychain' }],
+    });
+    expect(JSON.stringify(at.pushed)).not.toContain('key_good');
+    expect(at.order.indexOf('auth/status_update')).toBeLessThan(
+      at.order.indexOf('session/new'),
+    );
+  });
+});
+
+describe('CHD-630 tester: title lifecycle', () => {
+  const ready = async () => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    return at;
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const titles = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'session_info_update'
+        ? [[each.params.sessionId, each.params.update.title]]
+        : [],
+    );
+
+  test("a cancelled lookup returns late without consuming the next turn's title", async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const returned = Promise.withResolvers<void>();
+    const get = at.cursor.port.get;
+    let held = false;
+
+    (at.cursor.port as { get: typeof get }).get = async (id, options) => {
+      const info = await get(id, options);
+
+      if (!held) {
+        held = true;
+
+        entered.resolve();
+        await release.promise;
+        returned.resolve();
+      }
+
+      return info;
+    };
+
+    const running = prompt(at, sessionId);
+
+    try {
+      await entered.promise;
+      await at.connection.agent.notify('session/cancel', { sessionId });
+      expect(await running).toEqual({ stopReason: 'cancelled' });
+      expect(titles(at)).toEqual([]);
+      expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+      expect(titles(at)).toEqual([[sessionId, 'Agent 1']]);
+    } finally {
+      release.resolve();
+      await returned.promise;
+    }
+
+    await prompt(at, sessionId);
+    expect(titles(at)).toEqual([[sessionId, 'Agent 1']]);
+  });
+
+  test('concurrent sessions keep separate names and update destinations', async () => {
+    const at = await ready();
+    const a = await newSession(at);
+    const b = await newSession(at);
+
+    await Promise.all([prompt(at, b.sessionId), prompt(at, a.sessionId)]);
+    expect(titles(at)).toHaveLength(2);
+    expect(titles(at)).toContainEqual([a.sessionId, 'Agent 1']);
+    expect(titles(at)).toContainEqual([b.sessionId, 'Agent 2']);
+
+    const info = at.cursor.listed.find((each) => each.agentId === a.sessionId)!;
+
+    info.name = 'Changed first';
+
+    await Promise.all([prompt(at, b.sessionId), prompt(at, a.sessionId)]);
+    expect(titles(at)).toHaveLength(3);
+    expect(titles(at).at(-1)).toEqual([a.sessionId, 'Changed first']);
+  });
+
+  test('empty and failed lookups preserve the known name until a valid change', async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+
+    await prompt(at, sessionId);
+
+    const info = at.cursor.listed.find((each) => each.agentId === sessionId)!;
+
+    info.name = ' \t ';
+
+    await prompt(at, sessionId);
+
+    info.name = ' Agent 1 ';
+    info.lastModified += 1000;
+
+    await prompt(at, sessionId);
+
+    info.name = 'Recovered title';
+    at.cursor.failGet = new CursorError('network', 'fixture unavailable');
+
+    expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+    expect(titles(at)).toEqual([[sessionId, 'Agent 1']]);
+
+    at.cursor.failGet = undefined;
+
+    await prompt(at, sessionId);
+    expect(titles(at)).toEqual([
+      [sessionId, 'Agent 1'],
+      [sessionId, 'Recovered title'],
+    ]);
+  });
+});
+
+describe('CHD-630 tester: cost lifecycle', () => {
+  const ready = async (cents: number) => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.costCents = cents;
+
+    return at;
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const costs = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'usage_update'
+        ? [{ sessionId: each.params.sessionId, update: each.params.update }]
+        : [],
+    );
+
+  test.each([0, 4.2])(
+    'a reported %p cents is retained with no context window',
+    async (cents) => {
+      const at = await ready(cents);
+      const { sessionId } = await newSession(at);
+
+      await prompt(at, sessionId);
+      expect(costs(at)).toEqual([
+        {
+          sessionId,
+          update: {
+            sessionUpdate: 'usage_update',
+            used: 0,
+            size: 0,
+            cost: { amount: cents / 100, currency: 'USD' },
+          },
+        },
+      ]);
+    },
+  );
+
+  test('sessions with different run counts report their own totals', async () => {
+    const at = await ready(5);
+    const a = await newSession(at);
+    const b = await newSession(at);
+
+    await prompt(at, a.sessionId);
+    await Promise.all([prompt(at, a.sessionId), prompt(at, b.sessionId)]);
+    expect(
+      costs(at)
+        .filter((each) => each.sessionId === a.sessionId)
+        .map((each) => each.update.cost?.amount),
+    ).toEqual([0.05, 0.1]);
+    expect(
+      costs(at)
+        .filter((each) => each.sessionId === b.sessionId)
+        .map((each) => each.update.cost?.amount),
+    ).toEqual([0.05]);
+  });
+
+  test('a hung usage lookup can be cancelled and its late total cannot reach the next turn', async () => {
+    const at = await ready(5);
+    const create = at.cursor.port.create;
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const returned = Promise.withResolvers<void>();
+    let held = false;
+
+    (at.cursor.port as { create: typeof create }).create = async (options) => {
+      const agent = await create(options);
+
+      return {
+        ...agent,
+        getUsage: async () => {
+          const usage = await agent.getUsage();
+
+          if (!held) {
+            held = true;
+
+            entered.resolve();
+            await release.promise;
+            returned.resolve();
+          }
+
+          return usage;
+        },
+      };
+    };
+
+    const { sessionId } = await newSession(at);
+    const running = prompt(at, sessionId);
+
+    try {
+      await entered.promise;
+      await at.connection.agent.notify('session/cancel', { sessionId });
+      expect(await running).toEqual({ stopReason: 'cancelled' });
+      expect(costs(at)).toEqual([]);
+      expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+      expect(costs(at).map((each) => each.update.cost?.amount)).toEqual([0.1]);
+    } finally {
+      release.resolve();
+      await returned.promise;
+    }
+
+    await prompt(at, sessionId);
+    expect(costs(at).map((each) => each.update.cost?.amount)).toEqual([
+      0.1, 0.15,
     ]);
   });
 });

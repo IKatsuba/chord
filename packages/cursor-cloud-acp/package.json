@@ -1,6 +1,6 @@
 {
   "name": "@chorded/cursor-cloud-acp",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Cursor's cloud agents as an ACP v1 agent on stdin and stdout",
   "license": "MIT",
   "type": "module",

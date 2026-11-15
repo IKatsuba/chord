@@ -1,8 +1,8 @@
 /**
  * chord's own npx agents, the packages of this repository, in the
- * registry's shape (CHD-622). Each version is a literal, bumped by a chord
- * commit after the package's release, so main never pins a version npm
- * does not have; chord's release preflight asks npm for each.
+ * registry's shape (CHD-622). Each version is a literal, and the pin may
+ * lead; the package is published before chord's next release, and chord's
+ * release preflight asks npm for each.
  */
 import type { RegistryAgent } from './registry.ts';
 
@@ -22,7 +22,7 @@ export const CHORDED_AGENTS: readonly ChordedAgent[] = [
     name: 'Cursor Cloud Agents',
     runner: 'npx',
     package: '@chorded/cursor-cloud-acp',
-    version: '0.1.0',
+    version: '0.2.0',
     args: [],
     env: {},
     repository:

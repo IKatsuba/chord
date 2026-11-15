@@ -28,6 +28,10 @@ export interface Script {
   readonly refuse?: CursorError;
   /** The stream loses its connection after its messages; the run goes on. */
   readonly lose?: boolean;
+  /** What Cursor renames the agent to when the run ends. */
+  readonly rename?: string;
+  /** Cursor reports no cost for the run while it is the agent's latest. */
+  readonly costLags?: boolean;
   /** What conversation() gives; else one turn naming the run. */
   readonly conversation?: readonly ConversationTurn[];
 }
@@ -57,6 +61,14 @@ export interface FakeCursor {
   pageSize: number | undefined;
   /** What Agent.get does; by default answers for an agent Cursor knows. */
   failGet: Error | undefined;
+  /** What Cursor.me does for a key it takes; by default names its user. */
+  failMe: Error | undefined;
+  /** The name Cursor gives a new agent; `Agent <n>` when unset. */
+  newName: string | undefined;
+  /** Each run's undiscounted cost in cents; no cost reported when unset. */
+  costCents: number | undefined;
+  /** What getUsage does; by default answers the agent's runs' cost. */
+  failUsage: Error | undefined;
   /** Each send's onDelta, so a test can deliver an update late. */
   readonly onDeltas: NonNullable<SendOptions['onDelta']>[];
 }
@@ -195,6 +207,8 @@ export function fakeCursor(
   const runs = new Map<string, FakeRun[]>();
   const closed: string[] = [];
   const onDeltas: NonNullable<SendOptions['onDelta']>[] = [];
+  /** Runs whose cost Cursor has not reported yet. */
+  const lagging = new Set<string>();
   /** Created and not yet sent to: unknown to Cursor. */
   const pending = new Map<string, SDKAgentInfo>();
   let next = 0;
@@ -213,6 +227,37 @@ export function fakeCursor(
         return Promise.resolve();
       },
       listArtifacts: () => Promise.resolve([]),
+      getUsage: () => {
+        calls.push({ method: 'getUsage', apiKey: undefined, args: agentId });
+
+        if (fake.failUsage !== undefined) {
+          return Promise.reject(fake.failUsage);
+        }
+
+        const all = runs.get(agentId) ?? [];
+        const zero = {
+          inputTokens: 0,
+          outputTokens: 0,
+          cacheReadTokens: 0,
+          cacheWriteTokens: 0,
+          totalTokens: 0,
+        };
+        const reported =
+          fake.costCents !== undefined && !lagging.has(all.at(-1)?.id ?? '');
+
+        return Promise.resolve({
+          usage: zero,
+          runs: [],
+          ...(reported
+            ? {
+                cost: {
+                  rawCostCents: fake.costCents! * all.length,
+                  chargedCents: 0,
+                },
+              }
+            : {}),
+        });
+      },
       send: (message, options) => {
         calls.push({
           method: 'send',
@@ -247,6 +292,24 @@ export function fakeCursor(
 
         const run = fakeRun(agentId, script, options?.onDelta);
 
+        if (script.costLags === true) {
+          lagging.add(run.id);
+        }
+
+        // Before the adapter's own wait: the name is Cursor's by the run's end.
+        if (script.rename !== undefined) {
+          const renamed = script.rename;
+
+          void run.wait().then(() => {
+            const info = listed.find((each) => each.agentId === agentId);
+
+            if (info !== undefined) {
+              info.name = renamed;
+              info.lastModified = Date.now();
+            }
+          });
+        }
+
         runs.set(agentId, [...(runs.get(agentId) ?? []), run]);
 
         return Promise.resolve(run);
@@ -268,7 +331,17 @@ export function fakeCursor(
       calls.push({ method: 'me', apiKey: options?.apiKey });
       auth(options?.apiKey, keys);
 
-      return Promise.resolve({ apiKeyName: 'test', createdAt: '2026-11-01' });
+      if (fake.failMe !== undefined) {
+        return Promise.reject(fake.failMe);
+      }
+
+      return Promise.resolve({
+        apiKeyName: 'test',
+        createdAt: '2026-11-01',
+        userFirstName: 'Ada',
+        userLastName: 'Lovelace',
+        userEmail: 'ada@example.com',
+      });
     },
     models: (options) => {
       calls.push({ method: 'models', apiKey: options?.apiKey });
@@ -287,7 +360,7 @@ export function fakeCursor(
       // Lazy, as Cursor's is (Q9): Cursor knows the agent from its first send.
       pending.set(agentId, {
         agentId,
-        name: `Agent ${next}`,
+        name: fake.newName ?? `Agent ${next}`,
         summary: '',
         lastModified: Date.now(),
         runtime: 'cloud',
@@ -358,6 +431,10 @@ export function fakeCursor(
     closed,
     pageSize: undefined,
     failGet: undefined,
+    failMe: undefined,
+    newName: undefined,
+    costCents: undefined,
+    failUsage: undefined,
     onDeltas,
   };
 

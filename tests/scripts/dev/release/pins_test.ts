@@ -37,7 +37,7 @@ test('a pin npm lacks stops the release, naming it and the way on', () => {
 test("chord's pins are src/chorded.ts's, and chord's steps ask for them", () => {
   expect(
     CHORDED_AGENTS.map((agent) => `${agent.package}@${agent.version}`),
-  ).toEqual(['@chorded/cursor-cloud-acp@0.1.0']);
+  ).toEqual(['@chorded/cursor-cloud-acp@0.2.0']);
   expect(steps.preflight).toBeFunction();
 });
 
@@ -59,5 +59,38 @@ describe('CHD-622 tester: release pin refusal', () => {
       ),
     ).toThrow('release @chorded/cursor-cloud-acp first');
     expect(asked).toEqual(['@chorded/cursor-cloud-acp@0.1.0']);
+  });
+});
+
+describe('CHD-630 tester: publishing the pinned version', () => {
+  test.each([undefined, '0.1.0', '0.2.1'])(
+    'the current pin blocks release when npm returns %p',
+    (published) => {
+      const asked: string[] = [];
+
+      expect(() =>
+        pinsOnNpm((spec) => {
+          asked.push(spec);
+
+          return published;
+        }),
+      ).toThrow(
+        'npm has no @chorded/cursor-cloud-acp@0.2.0, which src/chorded.ts pins: release @chorded/cursor-cloud-acp first',
+      );
+      expect(asked).toEqual(['@chorded/cursor-cloud-acp@0.2.0']);
+    },
+  );
+
+  test('publishing 0.2.0 lets the current pin pass preflight', () => {
+    const asked: string[] = [];
+
+    expect(() =>
+      pinsOnNpm((spec) => {
+        asked.push(spec);
+
+        return '0.2.0';
+      }),
+    ).not.toThrow();
+    expect(asked).toEqual(['@chorded/cursor-cloud-acp@0.2.0']);
   });
 });

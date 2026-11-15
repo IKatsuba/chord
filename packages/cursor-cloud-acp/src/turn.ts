@@ -34,6 +34,8 @@ export interface TurnContext {
     onDelta: NonNullable<SendOptions['onDelta']>,
   ) => Promise<PortRun>;
   readonly artifacts: () => Promise<readonly Pick<SDKArtifact, 'path'>[]>;
+  /** What a finished run sends beside its end lines; never rejects. */
+  readonly ended?: () => Promise<readonly SessionUpdate[]>;
   /** One update to the client, awaited, so its backpressure holds. */
   readonly emit: (update: SessionUpdate) => Promise<void>;
   /** The model the run used, as the SDK reports it. */
@@ -168,16 +170,22 @@ export class Turn {
     }
 
     // A cancel while the artifacts are asked for still answers at once.
-    const artifacts = await Promise.race([
-      this.#context.artifacts(),
+    const asked = await Promise.race([
+      Promise.all([
+        this.#context.artifacts(),
+        this.#context.ended?.() ?? Promise.resolve([]),
+      ]),
       this.#cancelling,
     ]);
 
-    if (artifacts === 'cancelled' || this.#cancelled) {
+    if (asked === 'cancelled' || this.#cancelled) {
       return { stopReason: 'cancelled', ...tokens };
     }
 
+    const [artifacts, ended] = asked;
+
     await this.#draw(runEnd(result, artifacts).map((text) => line(text)));
+    await this.#draw(ended);
 
     return this.#cancelled
       ? { stopReason: 'cancelled', ...tokens }

@@ -10,6 +10,7 @@ import {
   agent,
   type AgentConnection,
   type AgentContext,
+  type AuthStatusResponse,
   ndJsonStream,
   type ContentBlock,
   type InitializeResponse,
@@ -27,8 +28,15 @@ import {
   sdkMode,
   selection,
 } from './config.ts';
-import { apiKey, type CredentialSource } from './credentials.ts';
-import { INTERNAL_ERROR, INVALID_PARAMS, signedOut, toAcp } from './errors.ts';
+import { authenticated, UNAUTHENTICATED, UNKNOWN } from './auth_status.ts';
+import { type CredentialSource, findKey } from './credentials.ts';
+import {
+  CursorError,
+  INTERNAL_ERROR,
+  INVALID_PARAMS,
+  signedOut,
+  toAcp,
+} from './errors.ts';
 import type { Port, PortAgent, PortRun } from './port.ts';
 import { cursorUrl, type Git, repository } from './repo.ts';
 import { Turn } from './turn.ts';
@@ -63,6 +71,12 @@ interface Session {
   choice: Choice;
   models: readonly ModelListItem[];
   turn: Turn | undefined;
+  /**
+   * Cursor's name for the agent as last known here: Agent.get's at a
+   * reopen, none for a new agent. A title goes out only when a run changes
+   * it (owner, CHD-630 Q4).
+   */
+  name: string | undefined;
 }
 
 /** The `login` command for this version, as the sign-in names it. */
@@ -82,6 +96,7 @@ export function initialize(version: string): InitializeResponse {
       },
     ],
     agentCapabilities: {
+      auth: { status: {} },
       loadSession: true,
       promptCapabilities: { image: true, embeddedContext: false },
       // stdio servers are taken, as ACP asks, and named unreachable (Q5).
@@ -143,18 +158,74 @@ export function serve(stream: Stream, context: ServeContext): Served {
     return open;
   };
 
-  const key = async (): Promise<string> => {
-    const found = await apiKey(context.credentials());
+  /** A resolution of the key: the key or why there is none, and its status. */
+  const resolve = async (): Promise<
+    | { readonly status: AuthStatusResponse; readonly key: string }
+    | { readonly status: AuthStatusResponse; readonly error: unknown }
+  > => {
+    let found;
 
-    if (found === undefined) {
-      throw signedOut();
+    try {
+      found = await findKey(context.credentials());
+    } catch (error) {
+      return { status: UNKNOWN, error };
     }
 
-    // A key Cursor refuses, one minted for another backend among them,
-    // answers as signed out with the SDK's words.
-    await port.me({ apiKey: found });
+    if (found === undefined) {
+      return { status: UNAUTHENTICATED, error: signedOut() };
+    }
 
-    return found;
+    try {
+      // A key Cursor refuses, one minted for another backend among them,
+      // answers as signed out with the SDK's words.
+      const user = await port.me({ apiKey: found.apiKey });
+
+      return { status: authenticated(found, user), key: found.apiKey };
+    } catch (error) {
+      return {
+        status:
+          error instanceof CursorError && error.kind === 'auth'
+            ? UNAUTHENTICATED
+            : UNKNOWN,
+        error,
+      };
+    }
+  };
+
+  /**
+   * The last status answered or pushed, as JSON; none before the first
+   * `auth/status` is answered, as there is nothing yet to update.
+   */
+  let kept: string | undefined;
+
+  /** `status` pushed when it differs from the one kept. */
+  const report = async (client: AgentContext, status: AuthStatusResponse) => {
+    const next = JSON.stringify(status);
+
+    if (kept === undefined || kept === next) {
+      return;
+    }
+
+    kept = next;
+
+    // A push that fails leaves the request's own answer as it is.
+    await client.notify('auth/status_update', status).catch(() => undefined);
+  };
+
+  /**
+   * The key for a request, its status pushed first when it changed: the
+   * package never polls, so a sign-in or out elsewhere shows here.
+   */
+  const key = async (client: AgentContext): Promise<string> => {
+    const resolved = await resolve();
+
+    await report(client, resolved.status);
+
+    if ('error' in resolved) {
+      throw resolved.error;
+    }
+
+    return resolved.key;
   };
 
   const models = (key: string) =>
@@ -265,13 +336,14 @@ export function serve(stream: Stream, context: ServeContext): Served {
   const reopen = async (
     id: string,
     mcpServers: readonly McpServer[] | undefined,
+    client: AgentContext,
   ): Promise<{
     open: Session;
     last: LastRun | undefined;
     url: string | undefined;
   }> => {
     const generation = begin(id);
-    const found = await key();
+    const found = await key(client);
     const reopened = await port.resume(id, { apiKey: found });
 
     return opening(reopened, async () => {
@@ -294,6 +366,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         },
         models: await models(found),
         turn: undefined,
+        name: info.name.trim() === '' ? undefined : info.name.trim(),
       };
 
       await hold(open, generation);
@@ -304,6 +377,51 @@ export function serve(stream: Stream, context: ServeContext): Served {
         url: repo === undefined ? undefined : cursorUrl(repo),
       };
     });
+  };
+
+  /**
+   * The title when Cursor's name for `open`'s agent changed since it was
+   * last known; nothing when it did not, or when Agent.get fails.
+   */
+  const renamed = async (open: Session): Promise<SessionUpdate[]> => {
+    const info = await port
+      .get(open.agent.agentId, { apiKey: open.apiKey })
+      .catch(() => undefined);
+    const name = info?.name.trim();
+
+    return info === undefined ||
+      name === undefined ||
+      name === '' ||
+      name === open.name
+      ? []
+      : [
+          {
+            sessionUpdate: 'session_info_update',
+            title: name,
+            updatedAt: new Date(info.lastModified).toISOString(),
+          },
+        ];
+  };
+
+  /**
+   * The agent's whole cost so far, Cursor's undiscounted token price (owner,
+   * CHD-630 Q1 C2, Q2). The SDK gives no context window or tokens in
+   * context, so `used` and `size` are 0, which chord takes as no window
+   * known. A cost not reported yet, or a failed getUsage, sends nothing.
+   */
+  const cost = async (open: Session): Promise<SessionUpdate[]> => {
+    const usage = await open.agent.getUsage().catch(() => undefined);
+
+    return usage?.cost === undefined
+      ? []
+      : [
+          {
+            sessionUpdate: 'usage_update',
+            used: 0,
+            size: 0,
+            cost: { amount: usage.cost.rawCostCents / 100, currency: 'USD' },
+          },
+        ];
   };
 
   let shutting: Promise<void> | undefined;
@@ -328,6 +446,19 @@ export function serve(stream: Stream, context: ServeContext): Served {
 
   const connection = agent({ name: NAME })
     .onRequest('initialize', () => initialize(context.version))
+    .onRequest('auth/status', async ({ client }) => {
+      const { status } = await resolve();
+
+      // The first answer is what later ones update; a later one that
+      // differs is pushed too, as every resolution's is.
+      if (kept === undefined) {
+        kept = JSON.stringify(status);
+      } else {
+        await report(client, status);
+      }
+
+      return status;
+    })
     .onRequest('authenticate', () => {
       // The owner put sign-in in the package's own command.
       throw new RequestError(
@@ -339,7 +470,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
       try {
         // Git first: a refusal needs no key, keychain or network.
         const repo = await repository(params.cwd, context.git);
-        const found = await key();
+        const found = await key(client);
         const created = await port.create({
           apiKey: found,
           mode: 'agent',
@@ -358,6 +489,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
             choice: { mode: 'default' },
             models: await models(found),
             turn: undefined,
+            name: undefined,
           };
 
           await hold(opened, generation);
@@ -406,19 +538,29 @@ export function serve(stream: Stream, context: ServeContext): Served {
           });
         },
         artifacts: () => open.agent.listArtifacts().catch(() => []),
+        ended: async () =>
+          (await Promise.all([renamed(open), cost(open)])).flat(),
         // A model Cursor ran that the list lacks shows under its own id.
         ran: (model) => {
           if (current() && open.choice === sentWith) {
             open.choice = { ...open.choice, model: chosen(model) };
           }
         },
-        emit: (update: SessionUpdate) =>
-          current()
-            ? client.notify('session/update', {
-                sessionId: params.sessionId,
-                update,
-              })
-            : Promise.resolve(),
+        emit: (update: SessionUpdate) => {
+          if (!current()) {
+            return Promise.resolve();
+          }
+
+          // Kept once sent, so the same name is not sent again.
+          if (update.sessionUpdate === 'session_info_update') {
+            open.name = update.title ?? open.name;
+          }
+
+          return client.notify('session/update', {
+            sessionId: params.sessionId,
+            update,
+          });
+        },
       });
 
       // A prompt while one runs is Cursor's to refuse (AgentBusyError); the
@@ -480,9 +622,9 @@ export function serve(stream: Stream, context: ServeContext): Served {
 
       return { configOptions: options(open) };
     })
-    .onRequest('session/list', async ({ params }) => {
+    .onRequest('session/list', async ({ params, client }) => {
       try {
-        const found = await key();
+        const found = await key(client);
         const url =
           params.cwd === undefined || params.cwd === null
             ? undefined
@@ -526,6 +668,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         const { open, last, url } = await reopen(
           params.sessionId,
           params.mcpServers,
+          client,
         );
 
         await notifyWhile(
@@ -552,6 +695,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         const { open, last, url } = await reopen(
           params.sessionId,
           params.mcpServers,
+          client,
         );
         const notify = (update: SessionUpdate) =>
           notifyWhile(open, client, params.sessionId, update);

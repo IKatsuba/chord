@@ -1944,16 +1944,18 @@ and no dismissal is recorded.
 ### cursor-cloud
 
 `chord cursor-cloud` starts Cursor Cloud Agents through
-`npx -y @chorded/cursor-cloud-acp@0.1.0`, on Node 22.13 or newer. The
-package's first release is not on npm yet; its owner must publish 0.1.0
-before this command can start it. `chord cursor` uses Cursor's local CLI.
+`npx -y @chorded/cursor-cloud-acp@0.2.0`, on Node 22.13 or newer. That
+version must be published before the command can start it. `chord cursor` uses Cursor's local CLI.
 
 Sign in from a terminal with
-`npx -y @chorded/cursor-cloud-acp@0.1.0 login`; `status` checks the login
+`npx -y @chorded/cursor-cloud-acp@0.2.0 login`; `status` checks the login
 and `logout` removes its key from the OS keychain. `CURSOR_API_KEY` takes
 precedence. Without a keychain (on Linux, a Secret Service), use that
 variable; the adapter stores no key in a file and does not use the SDK's
-own login file.
+own login file. `/status` shows the account's name and email when given,
+with `CURSOR_API_KEY` or `keychain` and its expiry date when known. Sign-in
+changes appear at the next session start, list, resume or load; the adapter
+never polls, and `/status` itself sends no request.
 
 Start in a git work tree on a pushed branch with a push remote. The check
 uses the local remote-tracking ref, without fetching; local changes are
@@ -1965,7 +1967,10 @@ tools, with a notice above the first message.
 
 Creating a session is refused while the Cursor account's prepaid balance
 is empty: top up or enable auto top-up. `usage_limit_exceeded` appears as
-one plain line with Cursor's message.
+one plain line with Cursor's message. `/cost` uses Cursor's undiscounted
+token cost in USD for the whole cloud agent, checked after each run. Cost
+may lag until a later run; resuming does not count earlier runs again.
+No context meter is shown: the SDK gives no context window.
 
 `shift+tab` switches Agent and Plan modes; `/model` offers one entry per
 model with its effort and settings below. `/effort` changes reasoning
@@ -1983,7 +1988,10 @@ opens an agent started on cursor.com or another machine, replaying the
 history Cursor provides. A run still going is reported with its link;
 the adapter does not follow it live and refuses prompts until it ends.
 The adapter's ACP `session/list` lists the account's cloud agents for
-this repository; chord's picker keeps using its own records.
+this repository; chord's picker keeps using its own records. Cursor's
+agent name becomes the title only when it changes after a run, never on
+new, resume or load. `/rename` changes chord's title alone; a later change
+to Cursor's name replaces it.
 
 ## Development
 
@@ -2024,11 +2032,15 @@ bun dev chord --qa capture cursor-cloud --agent-command "bun packages/cursor-clo
 
 The fixture uses fake git, credentials and Cursor; it needs no repository,
 keychain or network. `CURSOR_CLOUD_QA` selects a refused start:
-`signed-out`, `key-refused`, `outside`, `detached`, `no-remote` or
-`not-pushed`. A prompt's first word selects `think`, `tool`, `plan`,
-`request`, `hang` (until Esc), `fail`, `busy` or `lost`; other prompts
-answer `ok`. Add `--resume bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10`
-to replay the fixture's earlier agent.
+`signed-out`, `key-refused`, `keychain-fails`, `outside`, `detached`,
+`no-remote` or `not-pushed`; `env-key` starts with `CURSOR_API_KEY`.
+Otherwise the account is Ada Lovelace with a keychain expiry of 2027-02-13.
+A prompt's first word selects `think`, `tool`, `plan`, `request`, `hang`
+(until Esc), `fail`, `busy`, `lost`, `rename` (changes Cursor's title) or
+`nocost` (cost not yet reported); other prompts answer `ok`. A new agent
+is named `Login form email validation`; each run costs 4.2 cents. Add
+`--resume bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10` to replay the earlier
+agent, `Login page`; `rename` changes it to `Login page and email validation`.
 
 `bun dev compile` installs all target packages and embeds OpenTUI's native
 library. `--all` builds every release target; `--install` puts this machine's
@@ -2081,8 +2093,8 @@ A fresh release refuses a different version while package.json's is not on npm.
 `bun dev release cursor-cloud-acp` runs `install`, `quality`, `build`,
 `pack` and `publish`; a new version needs `build`. It publishes only
 `@chorded/cursor-cloud-acp`, tags `cursor-cloud-acp-v<version>` and creates
-no GitHub release. Publish 0.1.0 before releasing chord: chord's preflight
-checks every pin in `src/chorded.ts` on npm and refuses a missing version.
+no GitHub release. Publish the pinned version before chord's next release:
+chord's preflight checks every `src/chorded.ts` pin on npm and refuses a miss.
 
 chord's release runs `install`, `quality` (`bun dev quality chord`),
 `natives`, `compile`, `sign`, `selftest`, `notarise`, `pack`, `publish` in

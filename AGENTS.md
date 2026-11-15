@@ -92,8 +92,9 @@ the scope; each runs that package's `steps.ts`. chord's is at the repository
 root. It defines checks, lint arguments and release stages, with publish last.
 `bun dev release cursor-cloud-acp` runs install, quality, build, pack and
 publish, tags `cursor-cloud-acp-v<version>` and creates no GitHub release.
-A new package version needs build. Publish its 0.1.0 before chord: chord's
-preflight checks every `src/chorded.ts` pin on npm and refuses a miss.
+A new package version needs build. Publish the pinned version before chord's
+next release: preflight checks every `src/chorded.ts` pin on npm and refuses
+a miss.
 A bare `bun dev release` releases nothing. Use
 `--bump <version|major|minor|patch|fix>` instead of editing the version by hand.
 Add `--channel <name>` for

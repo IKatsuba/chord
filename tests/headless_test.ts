@@ -10,6 +10,7 @@ import {
   failureOf,
   type HeadlessOptions,
   joinPiped,
+  noticeLine,
   Reply,
   resultJson,
   runHeadless,
@@ -283,6 +284,76 @@ test('-p --output-format json marks a cost chord worked out from the tokens', as
     turnCost('gpt-5.3-codex', TURN_TOKENS),
   );
   expect(result.cost_estimated).toStrictEqual(true);
+});
+
+test("an agent's notice goes to stderr as a line of chord's, in text and JSON, and stdout keeps the reply alone (CHD-629)", async () => {
+  const notice =
+    'chord: Fast mode turned off: Rate limit for fast mode reached; it comes back after the limit resets.\n';
+
+  expect(await headless('notice')).toStrictEqual({
+    code: 0,
+    stdout: 'Running the lexer suite with coverage now. Done.\n',
+    stderr: notice,
+  });
+
+  const json = await headless('notice', 'json');
+
+  expect(json.code).toStrictEqual(0);
+  expect(json.stderr).toStrictEqual(notice);
+  expect(JSON.parse(json.stdout).result).toStrictEqual(
+    'Running the lexer suite with coverage now. Done.',
+  );
+});
+
+test("a notice's line is cleaned and folded to one, its description left out when it has none", () => {
+  expect(
+    noticeLine({
+      severity: 'warning',
+      title: '\x1b[1mMCP server\x1b[0m failed',
+      description: 'one\n\n  two',
+    }),
+  ).toStrictEqual('chord: MCP server failed: one two\n');
+  expect(
+    noticeLine({ severity: 'info', title: 'Alone', description: null }),
+  ).toStrictEqual('chord: Alone\n');
+});
+
+describe('CHD-629 tester: headless notice boundaries', () => {
+  for (const format of ['text', 'json'] as const) {
+    test(`startup and turn notices reach stderr once in order, with ${format} stdout kept clean`, async () => {
+      const output = await headless('notice', format, {
+        agentFlags: ['--start-notice', 'Startup advice'],
+      });
+
+      expect(output.code).toBe(0);
+      expect(output.stderr).toBe(
+        'chord: Startup advice\n' +
+          'chord: Fast mode turned off: Rate limit for fast mode reached; it comes back after the limit resets.\n',
+      );
+      expect(
+        format === 'json'
+          ? JSON.parse(output.stdout).result
+          : output.stdout.trimEnd(),
+      ).toBe('Running the lexer suite with coverage now. Done.');
+    });
+
+    test(`a failed prompt preserves its earlier notice and failure in ${format}`, async () => {
+      const output = await headless('error', format, {
+        agentFlags: ['--start-notice', 'Startup advice'],
+      });
+
+      expect(output.code).toBe(1);
+      expect(output.stderr).toBe(
+        'chord: Startup advice\nchord: The fake agent failed on purpose.\n',
+      );
+
+      if (format === 'json') {
+        expect(JSON.parse(output.stdout).is_error).toBe(true);
+      }
+
+      expect(output.stdout).not.toContain('Startup advice');
+    });
+  }
 });
 
 test('a failing agent exits 1 with its error on stderr', async () => {
@@ -1679,4 +1750,45 @@ describe('CHD-620 tester: headless MCP flag boundaries', () => {
       error: 'The fake agent failed on purpose.',
     });
   });
+});
+
+describe('CHD-629 tester: headless account privacy', () => {
+  for (const format of ['text', 'json']) {
+    for (const refused of [false, true]) {
+      test(`${format} ${refused ? 'sign-in failure' : 'success'} contains no account payload in either output stream`, async () => {
+        const result = await chord(
+          ['-p', refused ? 'text' : 'authchanged', '--output-format', format],
+          '',
+          undefined,
+          {
+            CHORD_FAKE_AUTH_STATUS: 'authenticated',
+            CHORD_FAKE_AUTH_RACE: 'push-first',
+            ...(refused ? { CHORD_FAKE_AUTH_REQUIRED: 'prompt' } : {}),
+          },
+        );
+
+        expect(result.code).toBe(refused ? 1 : 0);
+
+        for (const marker of [
+          'auth/status',
+          'name@example.com',
+          'ANTHROPIC_API_KEY',
+          'Claude Max',
+          'Anthropic API key',
+        ]) {
+          expect(result.stdout).not.toContain(marker);
+          expect(result.stderr).not.toContain(marker);
+        }
+
+        if (format === 'json') {
+          expect(JSON.parse(result.stdout).is_error).toBe(refused);
+        }
+
+        if (!refused) {
+          expect(result.stdout).toContain('Checking who is signed in. Done.');
+          expect(result.stderr).toBe('');
+        }
+      });
+    }
+  }
 });

@@ -1,9 +1,11 @@
 import type {
   Cost,
   McpServer,
+  Notice,
   SessionUpdate,
   ToolCallUpdate,
 } from '@agentclientprotocol/sdk/unstable';
+import stripAnsi from 'strip-ansi';
 import { type OneshotOutcome, runOneshot } from './session/oneshot.ts';
 import { signInLines, signInOf } from './session/sign_in.ts';
 import {
@@ -163,6 +165,18 @@ export function failureOf(outcome: OneshotOutcome): string | undefined {
     : `The agent stopped: ${result.stopReason}.`;
 }
 
+/**
+ * What stderr says of an agent's notice, one line, so stdout keeps the reply
+ * alone (the owner's Q5 a): the agent's strings cleaned and each run of
+ * whitespace folded, as every agent string chord prints is.
+ */
+export function noticeLine({ title, description }: Notice): string {
+  const clean = (text: string) => stripAnsi(text).replace(/\s+/g, ' ').trim();
+  const detail = description ? clean(description) : '';
+
+  return `chord: ${clean(title)}${detail === '' ? '' : `: ${detail}`}\n`;
+}
+
 /** What stderr says of a permission nobody was there to answer. */
 export function refusalLine(toolCall: ToolCallUpdate): string {
   return `chord: refused ${
@@ -292,6 +306,12 @@ export async function runHeadless(options: HeadlessOptions): Promise<number> {
         : { mcpServers: options.mcpServers }),
       ...(options.noMcpServers === true ? { noMcpServers: true } : {}),
       onUpdate: async (update) => {
+        if (update.sessionUpdate === 'notice') {
+          await stderr(noticeLine(update));
+
+          return;
+        }
+
         const added = reply.take(update);
 
         if (format === 'text' && added !== '') {

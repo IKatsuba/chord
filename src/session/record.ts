@@ -208,6 +208,19 @@ export type RecordEntry =
    * one opening. A record written before these has none.
    */
   | { readonly type: 'opened'; readonly at: number }
+  /**
+   * The session renamed `title` at `at`: the title the agent answered, or
+   * the one typed for an agent that takes none (CHD-629). chord's own line,
+   * as the record holds no ACP event the agent did not send; a record
+   * written before these has none, and an older chord skips it.
+   */
+  | {
+      readonly type: 'renamed';
+      readonly title: string;
+      readonly at: number;
+      /** Not taken by the agent yet: `chord acp` renamed it unloaded. */
+      readonly pending?: true;
+    }
   /** The model, mode and other config values in use from here on. */
   | {
       readonly type: 'state';
@@ -627,6 +640,21 @@ function leftOpen(
  * are not reopened with it, a team's runs counted from their leads' records
  * in `runs`, by chord's id for each lead.
  */
+/**
+ * Appends a rename the agent has not taken yet to the record at `path`, for
+ * a session `chord acp` renamed while it was not loaded: the next load or
+ * resume sends it (the owner's Q3 d).
+ */
+export async function recordPendingRename(
+  path: string,
+  title: string,
+  at: number,
+): Promise<void> {
+  const entry: RecordEntry = { type: 'renamed', title, at, pending: true };
+
+  await appendFile(path, `${JSON.stringify(entry)}\n`);
+}
+
 export function recordActions(
   entries: readonly RecordEntry[],
   runs: ReadonlyMap<string, readonly RecordEntry[]> = new Map(),
@@ -810,6 +838,16 @@ export function recordActions(
         });
 
         break;
+      case 'renamed':
+        actions.push({
+          type: 'renamed',
+          turnId: open ?? 'session',
+          title: entry.title,
+          at: entry.at,
+          ...(entry.pending === true ? { pending: true } : {}),
+        });
+
+        break;
       case 'forked':
         actions.push({
           type: 'forked',
@@ -983,7 +1021,7 @@ export function historyEntries(actions: readonly PastAction[]): RecordEntry[] {
         entries.push({
           type: 'result',
           turnId: action.turnId,
-          result: action.result,
+          result: recordedResult(action.result),
         });
 
         break;
@@ -1107,6 +1145,8 @@ export function entryOf(
       };
     case 'run_typed':
       return { type: 'ran', turnId: event.turnId, call: event.call };
+    case 'renamed':
+      return { type: 'renamed', title: event.title, at: event.at };
     case 'agent_closed':
       return { type: 'closed', agent: event.id };
     case 'disconnected':
@@ -1114,7 +1154,11 @@ export function entryOf(
         ? undefined
         : { type: 'disconnected', at: event.at };
     case 'result':
-      return { type: 'result', turnId: event.turnId, result: event.result };
+      return {
+        type: 'result',
+        turnId: event.turnId,
+        result: recordedResult(event.result),
+      };
     case 'usage':
       return event;
     case 'model':
@@ -1130,6 +1174,23 @@ export function entryOf(
     default:
       return undefined;
   }
+}
+
+/**
+ * A turn's result as the record keeps it: a sign-in's account is shown
+ * live and never written (CHD-629).
+ */
+function recordedResult(result: TurnResult): TurnResult {
+  if (
+    result.status !== 'failed' ||
+    result.error.signIn?.account === undefined
+  ) {
+    return result;
+  }
+
+  const { account: _, ...signIn } = result.error.signIn;
+
+  return { ...result, error: { ...result.error, signIn } };
 }
 
 /** The state line with `moved` over it; none when nothing moved. */
@@ -1194,6 +1255,11 @@ export class FileRecording implements Recording {
   #queue: { path: string; line: string }[] = [];
   /** Whether a prompt was sent in the session on screen. */
   #prompted = false;
+  /**
+   * Whether the session on screen was opened from a record it goes on in:
+   * a rename there keeps the session as a prompt would (CHD-629).
+   */
+  #reopened = false;
   #state: StateEntry = stateEntry({});
   /** The forms and links waiting on the person, kept for their answer's line. */
   readonly #asking = new Map<string, ElicitationWait>();
@@ -1258,6 +1324,7 @@ export class FileRecording implements Recording {
     this.#path = path;
     this.#held = [];
     this.#prompted = false;
+    this.#reopened = session.record !== undefined;
     this.#state = stateOfSession(session);
 
     const opened: RecordEntry = { type: 'opened', at: this.#now() };
@@ -1467,6 +1534,13 @@ export class FileRecording implements Recording {
   }
 
   #add(entry: RecordEntry): void {
+    // A rename is work on a record that exists, not a mere look: it keeps
+    // what was held for it, in order, as a prompt does; a new session's
+    // rename alone keeps none (CHD-629).
+    if (entry.type === 'renamed' && this.#reopened && !this.#prompted) {
+      this.#begun();
+    }
+
     if (!this.#prompted || this.#path === undefined) {
       this.#held.push(entry);
 

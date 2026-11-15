@@ -33,6 +33,12 @@ export interface StartingAsk {
   readonly listedOnly?: boolean;
   /** The ids the agent lists; none when it lists none. */
   offered(): Promise<readonly { readonly id: string }[] | undefined>;
+  /**
+   * The value the session is on now, read when the ask's turn comes and once
+   * more after it: one already current is not asked for, and an agent that
+   * answered and chose otherwise has the say (CHD-629).
+   */
+  current?(): string | undefined;
   ask(): Promise<void>;
 }
 
@@ -66,7 +72,11 @@ export function agentMessageOf(error: unknown): string {
  * not", such as `start in yolo mode, set by --permission-mode: the agent
  * offers default, plan`, or to nothing when the agent took it. A value the
  * agent does not list is not asked for; with `listedOnly`, neither is one
- * when the agent lists nothing, and the refusal says it lists none.
+ * when the agent lists nothing, and the refusal says it lists none. One the
+ * session is on already, as an agent took it at `session/new`, is not asked
+ * for either. When the agent answers and is still on another, a required
+ * value is refused, `the agent is in <current>`; an optional one is the
+ * agent's choice, which its notice explains where it sends one.
  */
 export async function askStarting({
   value,
@@ -74,9 +84,14 @@ export async function askStarting({
   kind,
   listedOnly,
   offered,
+  current,
   ask,
 }: StartingAsk): Promise<string | undefined> {
   let reason: string | undefined;
+
+  if (current?.() === value.id) {
+    return undefined;
+  }
 
   try {
     const ids = (await offered())?.map((offer) => offer.id) ?? [];
@@ -87,6 +102,12 @@ export async function askStarting({
       reason = `the agent offers ${ids.join(', ')}`;
     } else {
       await ask();
+
+      const now = current?.();
+
+      if (value.required && now !== undefined && now !== value.id) {
+        reason = `the agent is in ${now}`;
+      }
     }
   } catch (error) {
     reason = agentMessageOf(error);

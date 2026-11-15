@@ -1,8 +1,10 @@
 import type {
   AvailableCommand,
+  InitialSessionConfigOption,
   SessionConfigOption,
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
+import type { AccountState } from './auth_status.ts';
 import { CYCLE_WORK, cycleMark } from './cycles.ts';
 import { setTimeout as delay } from 'node:timers/promises';
 import type { ResourceLink } from '../files.ts';
@@ -131,6 +133,11 @@ export type ConversationEvent =
    * advertises none.
    */
   | { readonly type: 'model'; readonly models: AgentModels | undefined }
+  /**
+   * What the agent says of its connection's account, as it changes; never
+   * recorded (CHD-629).
+   */
+  | { readonly type: 'account'; readonly account: AccountState }
   /**
    * The agent's modes, when they differ from the last reported, and after
    * every mode change the agent answered.
@@ -292,6 +299,12 @@ export interface Recording {
   captureServed?(): ((turnId: string, call: ChordCall) => void) | undefined;
 }
 
+/** A rename the session took: its title, and whether its agent took it. */
+export interface Renamed {
+  readonly title: string;
+  readonly agent: boolean;
+}
+
 /** What each session the conversation opens is put on before it is shown. */
 export interface Starting {
   /** A model, as `/model` sets it. */
@@ -304,6 +317,12 @@ export interface Starting {
    * on the agent's own.
    */
   readonly effort?: StartingValue | undefined;
+  /**
+   * A `chord acp` client's initial `configOptions` for main, sent down as
+   * they came where the agent takes them, and read back by their own ids
+   * after the values above (the owner's Q4 b).
+   */
+  readonly entries?: readonly InitialSessionConfigOption[] | undefined;
 }
 
 /** A prompt to send: what the transcript shows, and what the agent gets. */
@@ -437,7 +456,7 @@ export class Conversation {
    * Opens a session; the signal gives up on one still starting, so a quit or
    * a `/clear` never waits on an agent that does not answer.
    */
-  readonly #open: (signal: AbortSignal) => Promise<Session>;
+  readonly #open: (signal: AbortSignal, starting: Starting) => Promise<Session>;
   readonly #emit: (event: ConversationEvent) => void;
   /** The window alone, for what the record must not keep. */
   readonly #show: (event: ConversationEvent) => void;
@@ -636,6 +655,12 @@ export class Conversation {
    * session `clear` replaces starts a new one.
    */
   #changes: Promise<void> = Promise.resolve();
+  /**
+   * The session's renames, one at a time in the order asked, apart from
+   * `#changes`: a hung option change must not hold a title, nor the other
+   * way round (CHD-629). A session `clear` replaces starts a new one.
+   */
+  #renames: Promise<void> = Promise.resolve();
   #failures = 0;
   /** Lines to go ahead of the person's next prompt, as held output does. */
   #ahead: string[] = [];
@@ -677,7 +702,11 @@ export class Conversation {
   readonly #monitorsStopping = new Set<Promise<void>>();
 
   constructor(
-    open: (signal: AbortSignal) => Promise<Session>,
+    /**
+     * Opens a session, told what it starts on, which a new one may be asked
+     * for as it opens (CHD-629).
+     */
+    open: (signal: AbortSignal, starting: Starting) => Promise<Session>,
     emit: (event: ConversationEvent) => void,
     now: () => number = Date.now,
     starting: Starting = {},
@@ -706,6 +735,11 @@ export class Conversation {
     this.#emit = (event) => {
       if (event.type === 'update' && event.subagentId === undefined) {
         this.#titled(event.update);
+      }
+
+      // A rename's title, live or from the record, until another (CHD-629).
+      if (event.type === 'renamed') {
+        this.#title = event.title;
       }
 
       told(event);
@@ -814,7 +848,10 @@ export class Conversation {
     // Settles once the agent has a session, not once it is set up: a close
     // or a `clear` lets it go from there, whatever the agent leaves unanswered
     // in `#setUp`.
-    const opening: Promise<Session | undefined> = this.#open(stop.signal).then(
+    const opening: Promise<Session | undefined> = this.#open(
+      stop.signal,
+      this.#starting,
+    ).then(
       (session) => {
         // `clear` let this one go while it started; it closes it.
         if (this.#opening === opening) {
@@ -831,6 +868,8 @@ export class Conversation {
           for (const action of session.history()) {
             if (action.type === 'update' && action.subagentId === undefined) {
               this.#titled(action.update);
+            } else if (action.type === 'renamed') {
+              this.#title = action.title;
             }
           }
 
@@ -943,6 +982,7 @@ export class Conversation {
     // A change the old session's agent never answers must not hold the new
     // session's.
     this.#changes = Promise.resolve();
+    this.#renames = Promise.resolve();
     this.#firstPrompt = undefined;
     this.#title = undefined;
     // The next session's first prompt is not in any record yet.
@@ -2744,6 +2784,63 @@ export class Conversation {
   }
 
   /**
+   * Renames the session (CHD-629): by `session/set_title` where the agent
+   * takes a title, whose answer is the title kept, else in chord alone, the
+   * typed title folded to one line. Resolves to the title and whether the
+   * agent took it, once the record has its line; to nothing for a session a
+   * `clear` retired meanwhile, whose answer is no one's. A refusal records
+   * nothing and rejects with the agent's error.
+   */
+  rename(typed: string): Promise<Renamed | undefined> {
+    const session = this.#session;
+
+    if (!session || this.#closing) {
+      return notUp().then(() => undefined);
+    }
+
+    const title = typed.replaceAll(/\s+/g, ' ').trim();
+    const renamed = this.#renames.then(async () => {
+      if (!this.#current(session)) {
+        return undefined;
+      }
+
+      const agent = session.takesTitles();
+      let taken: string;
+
+      try {
+        taken = agent ? await session.setTitle(title) : title;
+      } catch (error) {
+        // A retired session's refusal, or its agent gone, is no one's.
+        if (!this.#current(session)) {
+          return undefined;
+        }
+
+        throw error;
+      }
+
+      if (!this.#current(session)) {
+        return undefined;
+      }
+
+      this.#emit({
+        type: 'renamed',
+        turnId: this.#stamp(),
+        title: taken,
+        at: this.#now(),
+      });
+
+      return { title: taken, agent };
+    });
+
+    this.#renames = renamed.then(
+      () => {},
+      () => {},
+    );
+
+    return renamed;
+  }
+
+  /**
    * Asks the agent for a mode. Nothing on screen changes until the agent
    * reports the mode it is in; a refusal goes into the transcript, and rejects
    * what this returns, which a caller may ignore.
@@ -3235,8 +3332,14 @@ export class Conversation {
     }
 
     // Before the modes and models are reported, so the session is first
-    // shown as it starts rather than as the agent's defaults.
-    await this.#applyStarting(session);
+    // shown as it starts rather than as the agent's defaults; the change
+    // chain's first link, so a change asked while it runs waits behind it
+    // and finds the session as the start left it (CHD-629).
+    const starting = this.#changes.then(() => this.#applyStarting(session));
+
+    this.#changes = starting.catch(() => {});
+
+    await starting;
 
     if (!this.#current(session)) {
       return;
@@ -3247,6 +3350,12 @@ export class Conversation {
     this.#models = session.models();
 
     this.#emit({ type: 'model', models: this.#models });
+    this.#emit({ type: 'account', account: session.account() });
+    session.subscribeAccount((account) => {
+      if (this.#current(session)) {
+        this.#emit({ type: 'account', account });
+      }
+    });
 
     // The servers its agent was not given, said afresh by every session it
     // opens, a resumed one's too, after the settings problems and before its
@@ -3317,6 +3426,18 @@ export class Conversation {
       }
     });
 
+    // A rename `chord acp` recorded while the session was not loaded goes
+    // to the agent first, where it takes one (the owner's Q3 d).
+    const pending = past.findLast((action) => action.type === 'renamed');
+
+    if (
+      pending?.type === 'renamed' &&
+      pending.pending === true &&
+      session.takesTitles()
+    ) {
+      void this.rename(pending.title).catch(() => {});
+    }
+
     this.#emit({ type: 'prompt_capabilities', image: session.takesImages() });
     this.#emit({ type: 'connected', sessionId: session.id, at: this.#now() });
 
@@ -3342,12 +3463,25 @@ export class Conversation {
    * start, which an effort's never does.
    */
   async #applyStarting(session: Session): Promise<void> {
-    const { model, mode, effort } = this.#starting;
+    const { model, mode, effort, entries = [] } = this.#starting;
+    // A client's entry beats chord's value for the same option.
+    const sent = (category: string) => {
+      const id = session
+        .configOptions()
+        .find((option) => option.category === category)?.id;
+
+      return id !== undefined && entries.some((entry) => entry.configId === id);
+    };
+
+    // Its turn in the chain can come after a clear or a close retired it.
+    if (!this.#current(session)) {
+      return;
+    }
 
     this.#effortRefused = undefined;
 
     const asks: StartingAsk[] = [
-      ...(model === undefined
+      ...(model === undefined || sent('model')
         ? []
         : [
             {
@@ -3355,10 +3489,11 @@ export class Conversation {
               what: `on ${model.id}`,
               kind: 'models',
               offered: () => Promise.resolve(session.models()?.available),
+              current: () => session.models()?.current,
               ask: () => session.setModel(model.id),
             },
           ]),
-      ...(effort === undefined
+      ...(effort === undefined || sent('thought_level')
         ? []
         : [
             {
@@ -3367,10 +3502,11 @@ export class Conversation {
               kind: 'efforts',
               listedOnly: true,
               offered: () => Promise.resolve(session.efforts()?.available),
+              current: () => session.efforts()?.current,
               ask: () => session.setEffort(effort.id),
             },
           ]),
-      ...(mode === undefined
+      ...(mode === undefined || sent('mode')
         ? []
         : [
             {
@@ -3379,6 +3515,7 @@ export class Conversation {
               kind: 'modes',
               listedOnly: true,
               offered: () => Promise.resolve(session.modes()?.available),
+              current: () => session.modes()?.current,
               ask: () => session.setMode(mode.id),
             },
           ]),
@@ -3386,6 +3523,11 @@ export class Conversation {
 
     for (const ask of asks) {
       const refused = await askStarting(ask);
+
+      // A clear or a close while it was out: the rest is nobody's to ask.
+      if (!this.#current(session)) {
+        return;
+      }
 
       if (refused !== undefined && ask.value.required) {
         throw new Error(`Could not ${refused}`);
@@ -3402,6 +3544,51 @@ export class Conversation {
           message: `Could not ${refused}`,
         });
       }
+    }
+
+    for (const entry of entries) {
+      await this.#applyEntry(session, entry);
+
+      if (!this.#current(session)) {
+        return;
+      }
+    }
+  }
+
+  /**
+   * A client's initial entry read back by its id once its turn comes, as the
+   * session is then (the owner's Q4 b): one the session does not list is
+   * dropped, one already current costs nothing, and any other goes to
+   * `session/set_config_option` as the client sent it. A refusal fails the
+   * start, as a required value's does, and so does an agent that answers and
+   * is on another value.
+   */
+  async #applyEntry(
+    session: Session,
+    entry: InitialSessionConfigOption,
+  ): Promise<void> {
+    const listed = () =>
+      session.configOptions().find((option) => option.id === entry.configId);
+    const what = `start with ${entry.configId} ${String(entry.value)}, set by the client`;
+
+    if (listed() === undefined || listed()?.currentValue === entry.value) {
+      return;
+    }
+
+    try {
+      await session.setConfigOption(entry);
+    } catch (error) {
+      if (this.#current(session)) {
+        throw new Error(`Could not ${what}: ${agentMessageOf(error)}`);
+      }
+
+      return;
+    }
+
+    const now = listed()?.currentValue;
+
+    if (this.#current(session) && now !== undefined && now !== entry.value) {
+      throw new Error(`Could not ${what}: the agent is in ${String(now)}`);
     }
   }
 
@@ -4015,11 +4202,14 @@ export class Conversation {
     }
 
     // The end of a turn whose prompt never went is the window's alone; in
-    // the record it would end a turn that is not there.
-    const ended = went
-      ? emit
-      : (event: ConversationEvent) =>
-          this.#session === session && this.#show(event);
+    // the record it would end a turn that is not there. So is the end of one
+    // a close cut short, which the record leaves without a result, as after
+    // a crash: the close has flushed the record by the time it comes (the
+    // owner's ruling, CHD-629).
+    const ended = (event: ConversationEvent) =>
+      went && this.#closing === undefined
+        ? emit(event)
+        : this.#session === session && this.#show(event);
 
     // The turn stays on screen, still working, through the wait, so the
     // queued prompt reads as waiting behind it and Esc can still take it back.

@@ -19,18 +19,25 @@ import {
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import process from 'node:process';
 import { pathToFileURL } from 'node:url';
 import { findAgent } from '../../src/agents.ts';
 import { startFailureOf } from '../../src/session/start_failure.ts';
 import { signInOf, SignInNeeded } from '../../src/session/sign_in.ts';
 import { FILLED, GUARDIAN_REVIEW } from '../../src/session/enrich.ts';
-import { recordActions, type RecordEntry } from '../../src/session/record.ts';
+import {
+  parseRecord,
+  recordActions,
+  type RecordEntry,
+} from '../../src/session/record.ts';
 import { pastActions } from '../../src/session/replay.ts';
 import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../src/session/transcript/types.ts';
 import type { PendingPermission } from '../../src/session/permissions.ts';
 import {
+  AUTH_WAIT_MS,
   openSession,
+  type OpenSessionOptions,
   type Session,
   type Turn,
 } from '../../src/session/session.ts';
@@ -43,6 +50,10 @@ import { CRASH_WORDS } from '../fixtures/fake_agent/scenarios/agents.ts';
 import { FX_ERROR_NOTICE } from '../fixtures/fake_agent/scenarios/fx.ts';
 import { mentionsIn } from '../../src/ui/prompt/mentions.ts';
 import { run, said } from '../fixtures/recorder.ts';
+import {
+  API_KEY,
+  SIGNED_IN,
+} from '../fixtures/fake_agent/scenarios/accounts.ts';
 import { isAlive, withSession, collect, calls } from './session_fake.ts';
 
 describe('CHD-534 synthetic fx failure', () => {
@@ -835,6 +846,165 @@ async function openedBy(
     await session.close();
   }
 }
+
+describe('initial configOptions on session/new (CHD-629)', () => {
+  const STARTING = { model: 'fake-small', effort: 'high', mode: 'plan' };
+
+  /** What the fake says opened a session asked to start on `STARTING`. */
+  const openedOn = async (
+    dir: string,
+    flags: readonly string[],
+    more: Partial<OpenSessionOptions> = {},
+  ) => {
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, ...flags),
+      initial: STARTING,
+      ...more,
+    });
+
+    try {
+      const reply = said((await run(session, 'opened')).updates).join('');
+
+      return {
+        opened: JSON.parse(reply.replace(/^```json\n|\n```$/g, '')),
+        model: session.models()?.current,
+        effort: session.efforts()?.current,
+        mode: session.modes()?.current,
+      };
+    } finally {
+      await session.close();
+    }
+  };
+
+  test('a new Claude session that takes options is sent the values, model, effort, mode, applies them, and is never asked session/options', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-'));
+
+    try {
+      const { opened, model, effort, mode } = await openedOn(dir, [
+        '--adapter',
+        'claude',
+        '--options',
+        'apply',
+      ]);
+
+      expect(opened).toStrictEqual({
+        method: 'session/new',
+        meta: NO_SUGGESTIONS,
+        configOptions: [
+          { configId: 'model', value: 'fake-small' },
+          { configId: 'effort', value: 'high' },
+          { configId: 'mode', value: 'plan' },
+        ],
+        sessionOptions: 0,
+      });
+      expect({ model, effort, mode }).toStrictEqual(STARTING);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test("without options advertised, or on an agent the table does not have, session/new is today's", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-'));
+
+    try {
+      expect(
+        (await openedOn(dir, ['--adapter', 'claude'])).opened,
+      ).toStrictEqual({ method: 'session/new', meta: NO_SUGGESTIONS });
+      expect(
+        (await openedOn(dir, ['--options', 'apply'])).opened,
+      ).toStrictEqual({ method: 'session/new', sessionOptions: 0 });
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('a load takes no entries, and neither does a fork', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-'));
+    const flags = ['--adapter', 'claude', '--options', 'apply', '--fork'];
+
+    try {
+      expect(
+        (
+          await openedOn(dir, flags, {
+            resume: { sessionId: crypto.randomUUID(), cwd: dir },
+          })
+        ).opened,
+      ).toStrictEqual({
+        method: 'session/load',
+        meta: NO_SUGGESTIONS,
+        sessionOptions: 0,
+      });
+
+      const source = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(undefined, ...flags),
+      });
+
+      try {
+        const forked = await openedOn(dir, flags, { fork: source.id });
+
+        expect(forked.opened).not.toHaveProperty('configOptions');
+        expect(forked.opened.method).toBe('session/fork');
+      } finally {
+        await source.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
+describe('CHD-629 tester: initial entries stay on new sessions', () => {
+  test('a recorded session/resume sends neither initial entries nor session/options', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-initial-resume-'));
+    const stateDir = join(dir, 'state');
+    const flags = [
+      '--adapter',
+      'claude',
+      '--options',
+      'apply',
+      '--resume-only',
+    ];
+
+    try {
+      const sessionId = await recordSession({
+        stateDir,
+        cwd: dir,
+        command: fakeAgentCommand(undefined, ...flags),
+        prompts: ['text'],
+      });
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const resumed = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(undefined, ...flags),
+        initial: { model: 'fake-small', effort: 'high', mode: 'plan' },
+        resume: { sessionId, cwd: dir, record: record.path },
+      });
+
+      try {
+        const reply = said((await run(resumed, 'opened')).updates).join('');
+        const opened = JSON.parse(reply.replace(/^```json\n|\n```$/g, ''));
+
+        expect(opened).toStrictEqual({
+          method: 'session/resume',
+          meta: NO_SUGGESTIONS,
+          sessionOptions: 0,
+        });
+      } finally {
+        await resumed.close();
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
 
 describe('a session forked from another (CHD-101)', () => {
   test('it opens in a process of its own by session/fork, from the session named, and outlives it', async () => {
@@ -2262,4 +2432,375 @@ describe('CHD-613 embedded resource fixture', () => {
       '--steering',
       'claude',
     ));
+});
+
+describe("the agent's account (CHD-629)", () => {
+  /** A session on the fake under `flags`, handed to `body`, then closed. */
+  const accountOn = async (
+    flags: readonly string[],
+    body: (session: Session) => void | Promise<void>,
+  ) => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-account-'));
+    const session = await openSession({
+      agent: 'fake',
+      cwd: dir,
+      agentCommand: fakeAgentCommand(undefined, ...flags),
+    });
+
+    try {
+      await body(session);
+    } finally {
+      await session.close();
+      await rm(dir, { recursive: true });
+    }
+  };
+
+  test('none where auth.status is not advertised', () =>
+    accountOn([], (session) => {
+      expect(session.account()).toStrictEqual({ phase: 'none' });
+    }));
+
+  test('asked beside session/new and folded once answered', () =>
+    accountOn(['--auth-status', 'authenticated'], async (session) => {
+      await until(() => session.account().phase === 'heard');
+
+      expect(session.account()).toStrictEqual({
+        phase: 'heard',
+        status: SIGNED_IN,
+      });
+    }));
+
+  for (const [race, last] of [
+    ['push-first', API_KEY],
+    ['answer-first', API_KEY],
+  ] as const) {
+    test(`a push heard after the request went out is the account, and the answer does not replace it (${race})`, () =>
+      accountOn(
+        ['--auth-status', 'authenticated', '--auth-race', race],
+        async (session) => {
+          // A turn's round trip: whatever either sent has been heard by then.
+          await run(session, 'text');
+
+          expect(session.account()).toStrictEqual({
+            phase: 'heard',
+            status: last,
+          });
+        },
+      ));
+  }
+
+  test('a request that never answers does not hold the start: the account stays pending', () =>
+    accountOn(['--auth-status', 'hang'], (session) => {
+      expect(session.account()).toStrictEqual({ phase: 'pending' });
+    }));
+
+  test('a failed request is failed, and a push after it is heard', async () => {
+    await accountOn(['--auth-status', 'error'], async (session) => {
+      await until(() => session.account().phase === 'failed');
+    });
+
+    await accountOn(
+      ['--auth-status', 'error', '--auth-push'],
+      async (session) => {
+        await until(() => session.account().phase === 'heard');
+
+        expect(session.account()).toStrictEqual({
+          phase: 'heard',
+          status: SIGNED_IN,
+        });
+      },
+    );
+  });
+
+  test('a push mid-turn is the account from then on, and each change is told', () =>
+    accountOn(['--auth-status', 'authenticated'], async (session) => {
+      const told: unknown[] = [];
+
+      session.subscribeAccount((account) => told.push(account));
+      await until(() => session.account().phase === 'heard');
+      await run(session, 'authchanged');
+
+      expect(session.account()).toStrictEqual({
+        phase: 'heard',
+        status: API_KEY,
+      });
+      expect(told.at(-1)).toStrictEqual({ phase: 'heard', status: API_KEY });
+    }));
+});
+
+describe("a sign-in worded from the agent's account (CHD-629, the owner's Q2 c)", () => {
+  test('a start refused for a login carries what the agent says of its account', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-signin-'));
+
+    try {
+      const failure = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--auth-required',
+          'bare',
+          '--auth-status',
+          'unauthenticated',
+        ),
+      }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+      expect(signInOf(failure)?.account).toStrictEqual({
+        phase: 'heard',
+        status: { state: 'unauthenticated' },
+      });
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('an account still unheard is waited for about a second at most, then the block is worded from nothing', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-signin-'));
+    const began = performance.now();
+
+    try {
+      const failure = await openSession({
+        agent: 'fake',
+        cwd: dir,
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--auth-required',
+          'bare',
+          '--auth-status',
+          'hang',
+        ),
+      }).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
+
+      expect(signInOf(failure)?.account).toStrictEqual({ phase: 'pending' });
+      expect(performance.now() - began).toBeLessThan(5000);
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  test('a prompt refused for a login is a failed turn with its sign-in; the next prompt runs', () =>
+    withSession(
+      async (session) => {
+        const refused = await run(session, 'text');
+
+        expect(refused.result).toStrictEqual({
+          status: 'failed',
+          error: {
+            message: 'Authentication required',
+            code: '-32000',
+            signIn: {
+              message: 'Authentication required',
+              ways: [],
+              account: { phase: 'heard', status: { state: 'unauthenticated' } },
+            },
+          },
+        });
+        expect((await run(session, 'text')).result.status).toBe('completed');
+      },
+      undefined,
+      '--auth-required',
+      'prompt',
+      '--auth-status',
+      'unauthenticated',
+    ));
+});
+
+describe('a wait on the account for a refused prompt stops on a cancel or a close (CHD-629)', () => {
+  for (const how of ['cancel', 'close'] as const) {
+    test(`a ${how} while the account is still unheard ends the wait at once`, () =>
+      withSession(
+        async (session) => {
+          const began = performance.now();
+          const turn = session.prompt('text');
+
+          await turn.sent;
+          await (how === 'cancel' ? turn.cancel() : session.close());
+
+          const result = await turn.result;
+
+          expect(result.status).toBe('failed');
+          // Well inside AUTH_WAIT_MS: nothing waited for the hung ask.
+          expect(performance.now() - began).toBeLessThan(AUTH_WAIT_MS);
+        },
+        undefined,
+        '--auth-required',
+        'prompt',
+        '--auth-status',
+        'hang',
+      ));
+  }
+});
+
+describe('CHD-629 tester: sign-in wait process boundaries', () => {
+  for (const how of ['cancel', 'close', 'exit'] as const) {
+    test(`${how} ends an already-refused prompt's account wait without waiting for its deadline`, () =>
+      withSession(
+        async (session) => {
+          const began = performance.now();
+          const turn = session.prompt('text');
+
+          await turn.sent;
+          // Two round trips after the prompt leave its refusal handled, while
+          // auth/status is still hung; no pause guesses when the wait began.
+          await session.setMode('plan');
+          await session.setEffort('high');
+
+          if (how === 'cancel') {
+            await turn.cancel();
+          } else if (how === 'close') {
+            await session.close();
+          } else {
+            const [pid] = session.agentPids;
+
+            assert(pid !== undefined);
+            process.kill(pid, 'SIGKILL');
+          }
+
+          const result = await turn.result;
+
+          assert(result.status === 'failed');
+          expect(result.error.code).toBe('-32000');
+          expect(result.error.signIn?.account?.phase).toBe(
+            how === 'exit' ? 'failed' : 'pending',
+          );
+          expect(performance.now() - began).toBeLessThan(AUTH_WAIT_MS * 0.8);
+        },
+        undefined,
+        '--auth-required',
+        'prompt',
+        '--auth-status',
+        'hang',
+      ));
+  }
+});
+
+describe('CHD-629 tester: account request lifecycle and privacy', () => {
+  for (const advertised of [false, true]) {
+    test(`a pre-initialize push ${advertised ? 'is replaced by the later advertised answer' : 'is heard without requesting an unadvertised status'}`, () =>
+      withSession(
+        async (session) => {
+          await run(session, 'text');
+          expect(session.account()).toEqual({
+            phase: 'heard',
+            status: advertised ? SIGNED_IN : API_KEY,
+          });
+        },
+        undefined,
+        '--auth-push-early',
+        ...(advertised ? ['--auth-status', 'authenticated'] : []),
+      ));
+  }
+
+  test('a request failing after its push keeps the account and never reports a turn update or failure for it', () =>
+    withSession(
+      async (session) => {
+        const updates: SessionUpdate[] = [];
+        const stop = session.subscribe((update) => updates.push(update));
+
+        try {
+          expect((await run(session, 'text')).result.status).toBe('completed');
+          expect(session.account()).toEqual({
+            phase: 'heard',
+            status: API_KEY,
+          });
+          expect(JSON.stringify(updates)).not.toContain('auth/status');
+          expect(JSON.stringify(updates)).not.toContain('ANTHROPIC_API_KEY');
+        } finally {
+          stop();
+        }
+      },
+      undefined,
+      '--auth-status',
+      'error',
+      '--auth-race',
+      'push-first',
+    ));
+
+  test('one hung account request holds neither another session nor cancellation of its own turn', () =>
+    withSession(
+      async (pending) => {
+        expect(pending.account()).toEqual({ phase: 'pending' });
+        await withSession(
+          async (other) => {
+            const result = await run(other, 'authchanged');
+
+            expect(result.result.status).toBe('completed');
+            expect(other.account()).toEqual({
+              phase: 'heard',
+              status: API_KEY,
+            });
+            expect(pending.account()).toEqual({ phase: 'pending' });
+          },
+          undefined,
+          '--auth-status',
+          'authenticated',
+        );
+        await cancelSlowTurn(pending, (turn) => turn.cancel());
+        expect(pending.account()).toEqual({ phase: 'pending' });
+      },
+      undefined,
+      '--auth-status',
+      'hang',
+    ));
+
+  test('an agent exiting with its account request unanswered moves only that connection to failed', () =>
+    withSession(
+      async (session) => {
+        expect(session.account()).toEqual({ phase: 'pending' });
+
+        const [pid] = session.agentPids;
+
+        assert(pid !== undefined);
+        process.kill(pid, 'SIGKILL');
+        await session.exited;
+        await until(() => session.account().phase === 'failed');
+        expect(session.account()).toEqual({ phase: 'failed' });
+      },
+      undefined,
+      '--auth-status',
+      'hang',
+    ));
+
+  test('answers and pushes reach the account listeners without entering the conversation record or replay', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-account-record-tester-'));
+    const stateDir = join(cwd, 'state');
+    const events: unknown[] = [];
+
+    try {
+      await recordSession({
+        cwd,
+        stateDir,
+        command: fakeAgentCommand(undefined, '--auth-status', 'authenticated'),
+        prompts: ['authchanged', 'text'],
+        heard: (event) => events.push(event),
+      });
+
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const text = await readFile(record.path, 'utf8');
+      const replay = JSON.stringify(recordActions(parseRecord(text)));
+
+      expect(JSON.stringify(events)).toContain('ANTHROPIC_API_KEY');
+
+      for (const marker of [
+        'auth/status',
+        'name@example.com',
+        'ANTHROPIC_API_KEY',
+        'Claude Max',
+      ]) {
+        expect(text).not.toContain(marker);
+        expect(replay).not.toContain(marker);
+      }
+    } finally {
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
 });

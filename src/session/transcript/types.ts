@@ -19,6 +19,7 @@ import type { PlanPhase, PlanTodo } from '../../acp/plans.ts';
 import type { Questions } from '../questions.ts';
 import type { OpenEscape, TerminalCursor } from '../terminal_text.ts';
 import type { TokenUsage } from '../usage.ts';
+import type { SignIn } from '../sign_in.ts';
 import type { Team } from '../../teams.ts';
 import type { PermissionReview } from '../permission_review.ts';
 
@@ -409,6 +410,9 @@ export interface Subagent {
   readonly callId?: string;
 }
 
+/** The severities a notice draws by; any other word reads `info`. */
+export type NoticeSeverity = 'info' | 'warning' | 'error';
+
 /** One block in the transcript, in the order it first appeared. */
 export type Entry =
   | { readonly kind: 'user'; readonly turnId: string; readonly text: string }
@@ -478,6 +482,8 @@ export type Entry =
       readonly turnId: string;
       readonly message: string;
       readonly code?: string;
+      /** A prompt refused for want of a login, drawn as its block (CHD-629). */
+      readonly signIn?: SignIn;
     }
   | {
       /**
@@ -487,6 +493,14 @@ export type Entry =
       readonly kind: 'warning';
       readonly turnId: string;
       readonly message: string;
+    }
+  | {
+      /** An agent's `notice`, its severity one chord draws (CHD-629). */
+      readonly kind: 'notice';
+      readonly turnId: string;
+      readonly severity: NoticeSeverity;
+      readonly title: string;
+      readonly description?: string;
     }
   | { readonly kind: 'cancelled'; readonly turnId: string }
   | {
@@ -951,7 +965,12 @@ export type TurnResult =
     }
   | {
       readonly status: 'failed';
-      readonly error: { readonly message: string; readonly code?: string };
+      readonly error: {
+        readonly message: string;
+        readonly code?: string;
+        /** The login the agent refused the prompt for (CHD-629). */
+        readonly signIn?: SignIn;
+      };
     };
 
 export interface Transcript {
@@ -1184,6 +1203,22 @@ export type TranscriptAction =
       readonly type: 'monitors_left';
       readonly turnId: string;
       readonly monitors: readonly PastMonitor[];
+    }
+  /**
+   * The session was named `title` at `at`, by a rename the agent took or
+   * chord kept for an agent that takes none (CHD-629); nothing is drawn.
+   */
+  | {
+      readonly type: 'renamed';
+      readonly turnId: string;
+      readonly title: string;
+      readonly at: number;
+      /**
+       * Recorded by `chord acp` for a session not loaded, which its agent
+       * has not taken yet: the next load or resume sends it (the owner's
+       * Q3 d).
+       */
+      readonly pending?: true;
     }
   /** The session is a fork of the agent `from`'s, made at `at` (CHD-101). */
   | {

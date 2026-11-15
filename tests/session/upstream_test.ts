@@ -970,3 +970,172 @@ describe('CHD-613 prompt resources', () => {
     }
   });
 });
+
+describe("a call's references to subagents going up (CHD-629)", () => {
+  const announce: SessionUpdate = {
+    sessionUpdate: 'subagent_update',
+    sessionId: 'c',
+    state: { state: 'running' },
+  };
+  const text = { type: 'content', content: { type: 'text', text: 'Stopped.' } };
+  const call = (content: unknown[]): SessionUpdate =>
+    ({
+      sessionUpdate: 'tool_call_update',
+      toolCallId: 'stop',
+      content,
+    }) as SessionUpdate;
+  const sent = (capabilities: typeof ALL, content: unknown[]) => {
+    const { session } = mapUpdate(
+      upstreamSession('s1', 's1~2'),
+      capabilities,
+      announce,
+    );
+
+    return (
+      mapUpdate(session, capabilities, call(content)).notification?.update as {
+        content?: unknown[];
+      }
+    ).content;
+  };
+
+  test("an announced child's reference goes by its alias; any other id is dropped, never raw", () => {
+    expect(
+      sent(ALL, [
+        text,
+        { type: 'session', sessionId: 'c' },
+        { type: 'session', sessionId: 's1' },
+        { type: 'session', sessionId: 'stranger' },
+      ]),
+    ).toEqual([text, { type: 'session', sessionId: 's1~2/c' }]);
+  });
+
+  test('a client that takes no subagents gets none of them; content of references alone goes empty', () => {
+    expect(sent(NONE, [text, { type: 'session', sessionId: 'c' }])).toEqual([
+      text,
+    ]);
+    expect(sent(ALL, [{ type: 'session', sessionId: 'stranger' }])).toEqual([]);
+  });
+});
+
+describe('CHD-629 tester: reference alias lifecycle boundaries', () => {
+  function announced(upstream: string) {
+    let session = upstreamSession('main', upstream);
+
+    for (const [id, parent] of [
+      ['child', undefined],
+      ['grand', 'child'],
+    ] as const) {
+      session = mapUpdate(
+        session,
+        ALL,
+        {
+          sessionUpdate: 'subagent_update',
+          sessionId: id,
+          title: id,
+          state: { state: 'running' },
+        },
+        parent,
+      ).session;
+    }
+
+    return session;
+  }
+
+  const opaque = { 'example.com/opaque': { array: [false, null, 2] } };
+  const text = {
+    type: 'content',
+    content: { type: 'text', text: 'Kept.', _meta: opaque },
+    _meta: opaque,
+  } as const;
+
+  for (const kind of ['tool_call', 'tool_call_update'] as const) {
+    test(`${kind} keeps metadata and non-reference content, resolves ended grandchildren, and leaves the input unchanged`, () => {
+      const session = mapUpdate(
+        announced('public'),
+        ALL,
+        {
+          sessionUpdate: 'subagent_update',
+          sessionId: 'grand',
+          state: { state: 'completed' },
+        },
+        'child',
+      ).session;
+      const update: SessionUpdate = {
+        sessionUpdate: kind,
+        toolCallId: 'call',
+        title: 'Stop',
+        status: 'completed',
+        _meta: opaque,
+        content: [
+          text,
+          { type: 'session', sessionId: 'grand', _meta: opaque },
+          { type: 'session', sessionId: 'main' },
+          { type: 'session', sessionId: 'unknown' },
+        ],
+      };
+      const before = structuredClone(update);
+      const sent = mapUpdate(session, ALL, update, 'child').notification;
+
+      expect<unknown>(sent?.sessionId).toBe('public/child');
+      expect<unknown>(sent?.update).toEqual({
+        ...update,
+        content: [
+          text,
+          { type: 'session', sessionId: 'public/child/grand', _meta: opaque },
+        ],
+      });
+      expect<unknown>(update).toEqual(before);
+      expect<unknown>(
+        mapUpdate(session, NONE, update).notification?.update,
+      ).toEqual({
+        ...update,
+        content: [text],
+      });
+    });
+
+    test(`${kind} cannot resolve another main's child alias or raw ids it never announced`, () => {
+      const first = announced('main');
+      const second = announced('main~2');
+      const update: SessionUpdate = {
+        sessionUpdate: kind,
+        toolCallId: 'call',
+        title: 'Stop',
+        content: [
+          { type: 'session', sessionId: 'child' },
+          { type: 'session', sessionId: 'grand' },
+          { type: 'session', sessionId: 'main/child' },
+          { type: 'session', sessionId: 'main~2/child' },
+        ],
+      };
+
+      expect<unknown>(
+        mapUpdate(first, ALL, update).notification?.update,
+      ).toEqual({
+        ...update,
+        content: [
+          { type: 'session', sessionId: 'main/child' },
+          { type: 'session', sessionId: 'main/child/grand' },
+        ],
+      });
+      expect<unknown>(
+        mapUpdate(second, ALL, update).notification?.update,
+      ).toEqual({
+        ...update,
+        content: [
+          { type: 'session', sessionId: 'main~2/child' },
+          { type: 'session', sessionId: 'main~2/child/grand' },
+        ],
+      });
+      expect<unknown>(
+        mapUpdate(upstreamSession('other', 'other'), ALL, update).notification
+          ?.update,
+      ).toEqual({ ...update, content: [] });
+      expect<unknown>(
+        mapUpdate(first, NONE, update).notification?.update,
+      ).toEqual({
+        ...update,
+        content: [],
+      });
+    });
+  }
+});

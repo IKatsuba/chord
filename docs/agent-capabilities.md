@@ -458,18 +458,18 @@ rest.
 
 ## 2. What chord uses today and leaves unused
 
-Read in chord's own client for CHD-624, on `@agentclientprotocol/sdk` 2.6.0's
-`/unstable` entry: `src/acp/`, `src/session/`, the launch in `src/agents.ts`
+Read in chord's own client through CHD-629, on SDK 2.6.0's `/unstable` entry:
+`src/acp/`, `src/session/`, the launch in `src/agents.ts`
 and `src/clis.ts`, and `chord acp`'s side in `src/acp_agent.ts` and
 `src/acp/agent_app.ts`. It was first read at HEAD 287fedc3 on SDK 1.8.0; line
 references are the current ones. Each entry says what chord uses and what it
 leaves unused, in the summary's codes.
 
 Since that first reading chord has taken titles, fork, a stop per subagent,
-steering of the person's queued prompts, `session_message`, `authMethods` for
-a failed sign-in's words, and every MCP server checked against the agent's
-capabilities. Still as first noted: chord never calls `session/list`, and a
-cost of 0 from an agent counts as a cost and stops chord's estimate.
+steering of queued prompts, `session_message`, account-aware sign-in guidance,
+initial options, notices and tool-call subagent references. MCP servers are
+checked against the agent's capabilities. chord never calls `session/list`;
+a cost of 0 from an agent stops chord's estimate.
 
 ### What chord asks for and declares
 
@@ -486,24 +486,24 @@ cost of 0 from an agent counts as a cost and stops chord's estimate.
   `embeddedContext` (`src/session/session.ts:743-747`), `mcpCapabilities`
   http, sse and acp (`src/session/servers.ts:59-115`),
   `_meta.steering.supported` (`src/acp/connection.ts:584-593`),
-  `agentInfo.name` (`src/session/session.ts:751-752,891`), and `authMethods`,
-  only to word a start that failed for want of a sign-in
-  (`src/session/session.ts:588-591`, `src/session/sign_in.ts`). Unused:
+  `agentInfo.name`, `sessionCapabilities.title` and `options`, `auth.status`,
+  and `authMethods` to word a sign-in refusal at start or at a prompt
+  (`src/session/session.ts`, `src/session/sign_in.ts`). Unused:
   `promptCapabilities.audio`, and `sessionCapabilities` list, close and
   delete (list only guards a call nothing makes).
 - **B2, client capabilities.** Declared: `elicitation` (form and URL),
-  `plan`, `session.compaction`, `subagents`, and
-  `_meta.terminal_output_delta` (`src/acp/connection.ts:228-234`). Not
-  declared: `fs` and `terminal`. chord answers `session/request_permission`,
+  `plan`, `session.compaction`, `subagents`, `session.notices`, and
+  `_meta.terminal_output_delta` (`src/acp/connection.ts`). `chord acp` declares
+  notices only when its client does. Not declared: `fs` and `terminal`.
+  chord answers `session/request_permission`,
   `elicitation/create` (a mode other than form or URL is cancelled), and the
   plan requests `cursor/create_plan` and `x.ai/exit_plan_mode`, an unreadable
   plan answered `cancelled` (`src/acp/connection.ts:312-354`,
   `src/acp/plans.ts`). Every other request from an agent, `fs/*`,
   `terminal/*` and other extension methods included, gets the SDK's
-  method-not-found (`core/jsonrpc.js:654-656` in the SDK). Notifications
-  other than `session/update` are dropped without a trace: the SDK answers
-  only requests, so Claude's `auth/status_update` and `_auth/status_update`
-  pass silently (`authstatus`, `tests/acp/connection_test.ts`).
+  method-not-found (`core/jsonrpc.js:654-656` in the SDK). `auth/status_update`
+  supplies the connection's account state; `_auth/status_update` is ignored
+  (`src/acp/connection.ts`).
   `elicitation/complete` is read off the traffic
   (`src/session/session.ts:433-441`) and only `chord acp` passes it on.
 
@@ -511,7 +511,12 @@ cost of 0 from an agent counts as a cost and stops chord's estimate.
 
 - **B3, new.** `{cwd, mcpServers}`, and for Claude's adapter alone
   `_meta.claudeCode.options.promptSuggestions: false`; the same `_meta` goes
-  on fork, load and resume (`src/session/session.ts:508-523,888-894`). No
+  on fork, load and resume. With `options`, named model, effort and mode go
+  as initial `configOptions` using the adapter's recorded ids (currently
+  Claude); client entries pass verbatim and override matching ids. Values
+  are read back and unmet ones requested after opening. No `session/options`
+  is sent; load and resume use changes after opening, fork takes none
+  (`src/session/initial_options.ts`, `src/session/conversation.ts`). No
   `_meta` of chord's own goes to an agent.
 - **B4–B5, load and resume.** Resume when the agent offers it and chord has
   its own record of the session, or the agent has no `loadSession`; load
@@ -555,9 +560,10 @@ cost of 0 from an agent counts as a cost and stops chord's estimate.
 
 - **Used:** title, kind, status (only forward), locations, content, rawInput
   and rawOutput are kept (`src/session/transcript/tools.ts`). Text content and
-  diffs are drawn, other known content shows as its type, and a kind chord
-  does not know, SDK 2.6's `session` content among them, draws nothing
-  (`src/ui/transcript/tools/tools.ts:518-533`). Without the `terminal`
+  diffs are drawn. `session` references name known subagents as
+  `Agent(<title>)` above the call's output and status, deduplicated; an
+  unknown id draws nothing. Other known content shows as its type; unknown
+  kinds draw nothing (`src/ui/transcript/tools/`). Without the `terminal`
   capability a `terminal` content block names only an id, so a command's
   output comes from the tool call's `_meta` (`terminal_info`,
   `terminal_output_delta`, `terminal_output`, `terminal_exit`). Claude's
@@ -636,10 +642,14 @@ cost of 0 from an agent counts as a cost and stops chord's estimate.
 - **B23, session title.** `session_info_update`'s title is kept as the
   session's, recorded, and read back on resume; a task agent's is not shown
   (CHD-445, CHD-491; `src/session/conversation.ts:766-784`,
-  `src/session/sessions.ts`). chord never sets one (`session/set_title`).
-- **B24, login.** chord never calls `authenticate`. `authMethods` only words
-  a start that failed for a sign-in (B1); an `authRequired` error shows as a
-  failed start or a failed turn, with its message.
+  `src/session/sessions.ts`). `/rename` uses `session/set_title` where
+  offered, recording the returned title, or renames locally otherwise. The
+  last title wins, from a rename or an agent update; refusals record nothing.
+- **B24, login.** chord never calls `authenticate`. Where `auth.status` is
+  offered, it asks beside session creation and reads pushes. `/status` shows
+  account and title; `authRequired` at start or a prompt shows the sign-in
+  block with the reported account, waiting at most one second for a pending
+  check. Account data stays out of records and tools.
 - **B25, `fs` and `terminal`.** Not declared, so never called back; requests
   get method-not-found.
 - **B26, MCP servers.** The person's servers from settings and `.mcp.json`,
@@ -651,7 +661,9 @@ cost of 0 from an agent counts as a cost and stops chord's estimate.
 
 ### Other updates
 
-- **Used:** `compaction_update` and summary chunks are drawn
+- **Used:** `notice` is recorded and drawn as a dim title and description,
+  its `⏺` coloured by severity; it starts no cycle. `-p` writes it to stderr,
+  keeping stdout for the reply. `compaction_update` and summary chunks are drawn
   (`src/session/transcript/compactions.ts`); one that opens with no turn,
   cycle or wait for a turn's tail under way is marked unasked and drawn "while
   idle" (CHD-624). chord never starts a compaction itself. A user's own
@@ -659,7 +671,7 @@ cost of 0 from an agent counts as a cost and stops chord's estimate.
   `session_info_update` unsolicited-turn marker starts its own cycle and
   `session_end` ends it; Claude's `_claude/origin` usage ends one
   (`src/session/cycles.ts`).
-- **Dropped:** `notice`, `session_message_chunk`, a live
+- **Dropped:** `session_message_chunk`, a live
   `user_message_chunk`, and any kind chord does not know
   (`src/session/transcript/reducer.ts`).
 
@@ -691,23 +703,27 @@ the agent chord runs.
 - **Advertised.** Protocol version 1, `agentInfo {name: 'chord'}`,
   `authMethods: []`, `loadSession`, `promptCapabilities` image and
   `embeddedContext` (no audio), `mcpCapabilities` http and sse,
-  `sessionCapabilities` list, resume and close, and `_meta['chord/acp']`
-  with its extensions (`src/acp_agent.ts:1791-1814`). Not advertised: fork,
-  steering, `options`.
+  `sessionCapabilities` list, resume, close and title, `auth.status`, and
+  `_meta['chord/acp']` with its extensions (`src/acp_agent.ts`). Not
+  advertised: fork, steering, `options`.
 - **Served.** `initialize`, `session/new`, `list`, `load`, `resume`,
   `prompt`, `cancel`, `set_config_option` (models go through it), `set_mode`
-  and `close`, and chord's own `_chord/session/steer`, `_chord/agents/send`,
+  and `close`, `session/set_title` live or for an unloaded listed session,
+  `auth/status` from the oldest live main session, and chord's own
+  `_chord/session/steer`, `_chord/agents/send`,
   `_chord/agents/close` and `_chord/monitors/stop`
   (`src/acp/agent_app.ts:150-174`).
 - **Not served.** `session/set_model`, `session/fork`, `_session/steering`,
-  `authenticate`, and SDK 2.6's `session/options`, `session/set_title`,
-  `session/status`, `session/archive` and `auth/status` have no handler, so
-  the SDK answers -32601.
+  `authenticate`, and SDK 2.6's `session/options`, `session/status` and
+  `session/archive` have no handler; the SDK answers -32601.
 - **Relayed.** Updates go upstream through `mapUpdate`: a child's session id
   becomes `<main>/<child>`, and a kind the client did not declare is dropped
   (`src/acp_agent.ts:329-351`, `src/session/upstream.ts:44-91`). An unasked
   compaction's mark is chord's state and is not relayed. `elicitation/complete`
-  goes on to the client (`src/acp_agent.ts:1201-1203`).
+  goes on to the client. Tool-call session references use announced aliases;
+  unknown ids and all references without `subagents` are dropped. Notices
+  require `session.notices`. Account changes push `auth/status_update` once
+  per changed value (`src/acp_agent.ts`, `src/session/upstream.ts`).
 
 ## 3. The agents
 
@@ -4601,7 +4617,7 @@ reach the model. fx's steering key differs from `_meta.steering.supported`,
 so messages from other agents queue. Subagents are flat; their permissions
 come on the parent. A command's live output shows only the newest chunk. A
 mode picked in chord becomes the person's fx default outside chord. Notices
-arrive as agent text, since chord does not declare `session.notices`.
+are drawn as their own entries where chord declares `session.notices`.
 Non-standard stop reasons read as completed (`src/session/session.ts:579`).
 Ignored: titles, the empty command list, `elicitation/complete`, every
 `_meta.fx` key and `command_result`.

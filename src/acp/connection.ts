@@ -69,6 +69,8 @@ export interface OpenAgentOptions {
     request: PlanRequest | undefined,
     signal: AbortSignal,
   ) => Promise<PlanResponse>;
+  /** What `initialize` declares; `clientCapabilities()` by default. */
+  readonly capabilities?: acp.ClientCapabilities;
   /** Gives up on a start: the agent is stopped and the open rejects. */
   readonly signal?: AbortSignal;
   /** How long `close()` waits at each step; chord's own bounds by default. */
@@ -154,6 +156,21 @@ export interface Agent {
     request: acp.ForkSessionRequest,
     signal?: AbortSignal,
   ): Promise<acp.ForkSessionResponse>;
+  /**
+   * Names a session (ACP's unstable `session/set_title`), answering the title
+   * as the agent stored it; throws without asking when the agent does not
+   * offer `sessionCapabilities.title` (CHD-629).
+   */
+  setTitle(
+    request: acp.SetSessionTitleRequest,
+    signal?: AbortSignal,
+  ): Promise<acp.SetSessionTitleResponse>;
+  /**
+   * The account the connection is signed in to (ACP's unstable
+   * `auth/status`); throws without asking when the agent does not offer
+   * `agentCapabilities.auth.status` (CHD-629).
+   */
+  authStatus(signal?: AbortSignal): Promise<acp.AuthStatusResponse>;
   /** Throws without asking when the agent does not offer `session/list`. */
   listSessions(
     request: acp.ListSessionsRequest,
@@ -223,15 +240,24 @@ const DRAIN_MS = 1000;
  * chord reads as the whole output; droid, asked for the delta, sends the
  * whole output as text instead, and asked for `terminal_output` would show
  * only its last chunk (docs/agent-capabilities.md dr12, pi10). chord keeps
- * one reading for every agent on purpose (CHD-456).
+ * one reading for every agent on purpose (CHD-456). Notices are declared
+ * only where someone sees them: declaring them makes Claude's and Codex's
+ * adapters send as a `notice` what they send otherwise as reply text, and
+ * Claude's drop its `info`-level messages (CHD-629).
  */
-const CLIENT_CAPABILITIES: acp.ClientCapabilities = {
-  elicitation: Object.fromEntries(ELICITATION_MODES.map((mode) => [mode, {}])),
-  plan: {},
-  session: { compaction: {} },
-  subagents: {},
-  _meta: { terminal_output_delta: true },
-};
+export function clientCapabilities(
+  declare: { readonly notices: boolean } = { notices: true },
+): acp.ClientCapabilities {
+  return {
+    elicitation: Object.fromEntries(
+      ELICITATION_MODES.map((mode) => [mode, {}]),
+    ),
+    plan: {},
+    session: { compaction: {}, ...(declare.notices ? { notices: {} } : {}) },
+    subagents: {},
+    _meta: { terminal_output_delta: true },
+  };
+}
 
 /**
  * Starts the agent, connects to it on its stdio and initialises ACP v1.
@@ -457,7 +483,7 @@ export async function connectAgent(
       () =>
         connection.agent.request('initialize', {
           protocolVersion: acp.PROTOCOL_VERSION,
-          clientCapabilities: CLIENT_CAPABILITIES,
+          clientCapabilities: options.capabilities ?? clientCapabilities(),
           clientInfo: { name: 'chord', version: manifest.version },
         }),
       options.signal,
@@ -517,6 +543,22 @@ export async function connectAgent(
 
       return await ask(
         () => connection.agent.request('session/fork', request),
+        signal,
+      );
+    },
+    authStatus: async (signal) => {
+      offered('auth/status', offers.auth?.status);
+
+      return await ask(
+        () => connection.agent.request('auth/status', {}),
+        signal,
+      );
+    },
+    setTitle: async (request, signal) => {
+      offered('session/set_title', offers.sessionCapabilities?.title);
+
+      return await ask(
+        () => connection.agent.request('session/set_title', request),
         signal,
       );
     },

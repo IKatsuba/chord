@@ -13,6 +13,7 @@ import {
   AUTO_MODE,
   BYPASS_MODE,
   NO_MODES,
+  RENAMED_IDS,
   TOKENS_ONLY,
   UNPRICED_MODEL,
 } from './options.ts';
@@ -40,6 +41,12 @@ export const AVAILABLE_MODES: acp.SessionMode[] = [
   ...(AUTO_MODE ? [{ id: 'auto', name: 'Auto' }] : []),
   ...(BYPASS_MODE ? [{ id: 'bypassPermissions', name: 'Bypass' }] : []),
 ];
+
+/**
+ * Each `session/set_config_option` request a session received, as it came,
+ * which `configsheard` answers with (CHD-629).
+ */
+export const configsHeard = new Map<string, unknown[]>();
 
 /** Each session's mode. */
 export const modes = new Map<string, string>();
@@ -160,13 +167,34 @@ export const strayCancels = new Map<string, number>();
  * ACP agents send them; the modes also go the older way, in `session/new`'s
  * `modes`.
  */
+/** The options `--config-ids renamed` gives ids of its own. */
+const RENAMED = new Set(['model', 'mode', 'effort']);
+
+/** The id the fake gives option `name`: `x-<name>` under `--config-ids renamed`. */
+export function configIdOf(name: string): string {
+  return RENAMED_IDS && RENAMED.has(name) ? `x-${name}` : name;
+}
+
+/** The option an id asked for names, none for an id the fake does not give. */
+export function configNameOf(id: string): string | undefined {
+  if (!RENAMED_IDS) {
+    return id;
+  }
+
+  if (id.startsWith('x-') && RENAMED.has(id.slice(2))) {
+    return id.slice(2);
+  }
+
+  return RENAMED.has(id) ? undefined : id;
+}
+
 export function configOptions(sessionId: string): acp.SessionConfigOption[] {
   const model = models.get(sessionId) ?? FIRST_MODEL;
   const effort: acp.SessionConfigOption[] = NO_CONFIG
     ? []
     : [
         {
-          id: 'effort',
+          id: configIdOf('effort'),
           name: 'Effort',
           category: 'thought_level',
           type: 'select',
@@ -193,7 +221,7 @@ export function configOptions(sessionId: string): acp.SessionConfigOption[] {
     ? []
     : [
         {
-          id: 'mode',
+          id: configIdOf('mode'),
           name: 'Mode',
           category: 'mode',
           type: 'select',
@@ -218,7 +246,7 @@ export function configOptions(sessionId: string): acp.SessionConfigOption[] {
 
   return [
     {
-      id: 'model',
+      id: configIdOf('model'),
       name: 'Model',
       category: 'model',
       type: 'select',

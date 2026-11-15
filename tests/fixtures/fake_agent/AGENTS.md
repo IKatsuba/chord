@@ -31,6 +31,10 @@
   `bashask`),
   `compaction.ts` (`compact`, `codexcompact`, `compactfail`, `idlecompact`,
   `idlecompactfail`, `idlecompactsays`),
+  `notices.ts` (`notice`, `noticeidle`, `noticelong`),
+  `titles.ts` (`titledlater`),
+  `accounts.ts` (`authchanged`),
+  `links.ts` (`subagentlinked`, `subagentgrandlinked`, `subagentstranger`),
   `modes.ts` (`status`, `exitplan`, `claudeexitplan`, `mode`, `lock`,
   `fullaccess`),
   `soak.ts` (`soak`, `soaklead`, `soakturn`),
@@ -96,12 +100,14 @@
   `compact`,
   `codexcompact`,
   `compactfail`, `idlecompact`, `idlecompactfail`, `idlecompactsays`,
+  `notice`, `noticeidle`, `noticelong`, `titledlater`, `authchanged`,
+  `subagentlinked`, `subagentgrandlinked`, `subagentstranger`,
   `status`,
   `cancels`, `error`, `flood`, `ignorescancel`, `authstatus`, `slow`, `long`,
   `longheld`, `turnfailed`,
   `costwait`, `costwaitlate`,
   `todos`, `exitplan`, `claudeexitplan`, `lock`, `fullaccess`,
-  `mcp`, `opened`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
+  `mcp`, `opened`, `configsheard`, `form`, `link`, `leftform`, `leftformgated`, `requestform`,
   `strangerform`, `bigaskleft`,
   `mode`, `late`, `twins`, `mcpask`, `bigask`, `bigasktwice`, `unknown`,
   `subagent`, `subagentupdate`, `subagentstates`, `subagentstatesstay`,
@@ -191,9 +197,9 @@
   sends a chunk after answering the prompt; `unknown` sends an update of a
   kind ACP does not have and a notification of its own; `authstatus`
   sends Claude's `_auth/status_update` and `auth/status_update`, which chord
-  takes no handler for, then a line; `turnfailed` says a line, then fails
-  its prompt with -32603 `{reason: "turn_failed"}`, as goose from 1.59 does
-  on a model's error; `cancels` says how
+  ignores and reads respectively, then a line; `turnfailed` says a line,
+  then fails its prompt with -32603 `{reason: "turn_failed"}`, as goose
+  from 1.59 does on a model's error; `cancels` says how
   many `session/cancel` notifications its session got with no turn playing,
   `--say-cancels` (`CHORD_FAKE_SAY_CANCELS=1`) acknowledges each such cancel
   with `Cancel heard with no turn.`, so tests can wait for its arrival;
@@ -342,6 +348,63 @@
   then holds until cancelled. `--first-message <text>`
   (`CHORD_FAKE_FIRST_MESSAGE`) sends an agent message with its own id
   before each `session/new` answer, without starting a turn.
+  `configsheard` answers with JSON of every `session/set_config_option`
+  request the session received, as it came over the wire (CHD-629).
+  `--auth-status <authenticated|unauthenticated|unknown|error|hang|several>`
+  (`CHORD_FAKE_AUTH_STATUS`) advertises `agentCapabilities.auth.status` and
+  answers `auth/status`: a subscription (`Claude Max`, an email and an
+  organization), the state alone, an error, never, or, for `several`, two
+  accounts neither marked active, the first long past 80 columns; `--auth-push`
+  (`CHORD_FAKE_AUTH_PUSH=1`) pushes that account in an `auth/status_update`
+  just after `initialize` (the subscription for `error` and `hang`);
+  `--auth-status held` answers the subscription once
+  `<cwd>/.fake-gate/release` exists in the agent's directory (at most
+  10 s); `--auth-push-early` (`CHORD_FAKE_AUTH_PUSH_EARLY=1`) pushes an API
+  key's account before the `initialize` answer, with or without
+  `--auth-status`; and
+  `authchanged` pushes an API key's account mid-turn; `--auth-race
+  <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`) pushes that account
+  just before `auth/status`'s answer, or just after it (CHD-629).
+  `--auth-required prompt` opens the session and refuses its first prompt
+  `authRequired` ("Authentication required"); the next prompt runs (CHD-629).
+  `subagentlinked` announces a child, then a running TaskStop whose content
+  is only a reference to it (`{type: "session"}`), completed with text and
+  the reference twice, and a SendMessage of only the reference, failed;
+  `subagentgrandlinked` announces a child that announces a grandchild, then
+  a TaskStop of only a reference to the grandchild, running until
+  `<cwd>/.fake-gate/release` exists (at most 10 s), then completed;
+  `subagentstranger` refers to a session never announced (CHD-629).
+  `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`)
+  advertises `sessionCapabilities.title` and stores a `session/set_title`
+  title trimmed, its whitespace folded and cut at 80: `echo` sends it in a
+  `session_info_update`, then answers it; `silent` only answers; `refuse`
+  refuses -32600; `hang` answers as `echo` once
+  `<cwd>/.fake-gate/release` exists (at most 10 s). An empty title is
+  -32602. Each request's title goes on a line of
+  `<cwd>/.fake-gate/titles-heard` as it arrives. `titledlater` says a line,
+  then sends its own `session_info_update` title once the gate opens (CHD-629).
+  `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`) offers `auto`, opens
+  every session in it, and on `fake-small` takes `auto` as `acceptEdits`
+  with an `Auto mode unavailable` notice; switching to `fake-small` moves
+  `auto` the same way (CHD-629).
+  `--options <apply|ignore|reject>` (`CHORD_FAKE_OPTIONS`) advertises
+  `sessionCapabilities.options` and applies `session/new`'s initial
+  `configOptions` in order as `session/set_config_option` would, skipping
+  one it cannot take, ignores them, or refuses the request -32602; two
+  entries with one id are -32602 whichever. `--config-ids renamed`
+  (`CHORD_FAKE_CONFIG_IDS`) gives its model, mode and effort options the ids
+  `x-model`, `x-mode` and `x-effort` (CHD-629). `opened` then also says
+  the initial `configOptions` sent and, under `--options`, how many
+  `session/options` it heard.
+  `--start-notice <text>` (`CHORD_FAKE_START_NOTICE`) sends a `warning`
+  notice titled `text` before each `session/new` answer (CHD-629).
+  `notice` sends a `warning` notice between two reply chunks, and
+  `noticeidle` ends its turn with a line, then sends an `info` notice
+  1.5 s after the turn, with no request open; `noticelong` sends an
+  `error` notice whose description runs past two rows at 80 columns, with
+  blank lines inside, then a line. Each is a `notice` to a
+  client that declares `clientCapabilities.session.notices`, and to any
+  other Claude's bold blockquote as reply text.
   `costwait` reports a cost, then works on until it is cancelled, and
   `costwaitlate` also says a cost of 0.02 just after its cancelled answer; `plan`
   moves its three steps along about 2 s apart, to see the list mid-turn;

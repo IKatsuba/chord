@@ -4,7 +4,26 @@
  * and a start that fails.
  */
 import { describe, expect, test } from 'bun:test';
-import { withChild, openOther, readyAgent } from './child_window.tsx';
+import {
+  withChild,
+  openOther,
+  pickAgent,
+  readyAgent,
+} from './child_window.tsx';
+import assert from 'node:assert/strict';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { RecordEntry } from '../../../src/session/record.ts';
+import type { AccountState } from '../../../src/session/auth_status.ts';
+import { openSession } from '../../../src/session/session.ts';
+import type { Entry } from '../../../src/session/transcript/types.ts';
+import type { WindowedState } from '../../../src/ui/app/state.ts';
+import {
+  earlierSessions,
+  readRecords,
+  summaryOf,
+} from '../../../src/session/sessions.ts';
 import { draw } from '../harness.tsx';
 import { type Resumable } from '../../../src/session/sessions.ts';
 import { App } from '../../../src/ui/app/App.tsx';
@@ -20,10 +39,12 @@ import {
   quitAll,
   ready,
   send,
+  statusReports,
   TAB,
   until,
   UP,
   withWindow,
+  type Window,
 } from './render.tsx';
 import manifest from '../../../package.json' with { type: 'json' };
 
@@ -428,5 +449,469 @@ describe('CHD-621 tester: sign-in commands reach the agent', () => {
           { columns, rows },
         ));
     }
+  }
+});
+
+describe('/rename (CHD-629)', () => {
+  test("names the session in front: how with no title, then the agent's title once it took it", () =>
+    withWindow(
+      async (window) => {
+        await send(window, 'text');
+        await window.shows('This reply came in chunks.');
+
+        expect(await reported(window, '/rename')).toContain(
+          '⎿  Name the session: /rename <title>',
+        );
+
+        await window.type('/rename Parser test tidy-up');
+        await window.press('\r');
+        await window.shows('⎿  Renamed to Parser test tidy-up');
+
+        expect(await reported(window, '/rename')).toContain(
+          'Name the session: /rename <title>. Now: Parser test tidy-up',
+        );
+      },
+      { agentCommand: fakeAgentCommand(undefined, '--set-title', 'echo') },
+    ));
+
+  test("a refusal is an error note in the agent's words; an agent that takes no title is renamed in chord only", async () => {
+    await withWindow(
+      async (window) => {
+        await window.shows('Fake Large with a 1M context window');
+        await window.type('/rename Parser test tidy-up');
+        await window.press('\r');
+        await window.shows(
+          'Could not rename: fake refused it: This version of the fake agent cannot rename a session.',
+        );
+      },
+      { agentCommand: fakeAgentCommand(undefined, '--set-title', 'refuse') },
+    );
+    await withWindow(async (window) => {
+      await window.shows('Fake Large with a 1M context window');
+      await window.type('/rename Parser test tidy-up');
+      await window.press('\r');
+      await window.shows(
+        'Renamed to Parser test tidy-up in chord only: fake takes no title, and its own may replace it',
+      );
+    });
+  });
+});
+
+describe('CHD-629 tester: rename targets and terminal status', () => {
+  interface TitleCall {
+    sessionId: string;
+    title: string;
+  }
+
+  const command = fakeAgentCommand(
+    undefined,
+    '--set-title',
+    'echo',
+    '--child-runtime',
+    'fake',
+  );
+  const captureTitles =
+    (calls: TitleCall[]): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+
+      return {
+        ...session,
+        setTitle: (title) => {
+          calls.push({ sessionId: session.id, title });
+
+          return session.setTitle(title);
+        },
+      };
+    };
+
+  async function rename(window: Window, title: string) {
+    await send(window, `/rename ${title}`);
+    await window.shows(`Renamed to ${title}`);
+  }
+
+  test('an actual starting session refuses rename without queueing a title request', async () => {
+    const calls: TitleCall[] = [];
+
+    await withWindow(
+      async (window) => {
+        await window.shows('Starting');
+        await send(window, '/rename While starting');
+        await window.shows(
+          'The session is not open yet; rename it once it is.',
+        );
+        expect(calls).toEqual([]);
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--hang', 'start'),
+        whileStarting: true,
+        openWith: captureTitles(calls),
+      },
+    );
+  });
+
+  test('an exited session refuses rename before calling setTitle', async () => {
+    const calls: TitleCall[] = [];
+
+    await withWindow(
+      async (window) => {
+        const session = window.session();
+
+        assert(session);
+        await session.close();
+        await session.exited;
+        await send(window, '/rename After exit');
+        await window.shows('main has exited; its session cannot be renamed.');
+        expect(calls).toEqual([]);
+      },
+      { agentCommand: command, openWith: captureTitles(calls) },
+    );
+  });
+
+  test('a real task record resumed as main keeps its task title and refuses rename', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-rename-task-'));
+    const path = join(dir, 'task.jsonl');
+    const id = crypto.randomUUID();
+    const calls: TitleCall[] = [];
+    const entries: RecordEntry[] = [
+      {
+        type: 'session',
+        version: 1,
+        sessionId: id,
+        agent: 'fake',
+        cwd: dir,
+        at: 0,
+        parent: 'parent',
+        name: 'Task title',
+        task: 'task-id',
+      },
+      { type: 'prompt', turnId: 't1', at: 1, prompt: 'Do the work', images: 0 },
+      {
+        type: 'result',
+        turnId: 't1',
+        result: { status: 'completed', stopReason: 'end_turn' },
+      },
+    ];
+
+    try {
+      const text =
+        entries.map((entry) => JSON.stringify(entry)).join('\n') + '\n';
+
+      await writeFile(path, text);
+
+      const record = summaryOf(path, text);
+
+      assert(record);
+
+      const [choice] = earlierSessions([record], { agent: 'fake', cwd: dir });
+
+      assert(choice);
+      await withWindow(
+        async (window) => {
+          expect(window.session()?.resumed?.task).toBe(true);
+          await send(window, '/rename New task title');
+          await window.shows(
+            'main is a task; it keeps the title it was given.',
+          );
+          expect(calls).toEqual([]);
+        },
+        {
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--set-title',
+            'echo',
+            '--resume-only',
+          ),
+          resume: choice.resume,
+          openWith: captureTitles(calls),
+        },
+      );
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+
+  for (const columns of [80, 120]) {
+    test(`the picked child alone is renamed, while OSC status keeps main's title at ${columns} columns`, async () => {
+      const calls: TitleCall[] = [];
+      const log: string[] = [];
+
+      await withChild(
+        async (window) => {
+          await send(window, 'text');
+          await window.shows('This reply came in chunks.');
+
+          const mainId = window.session()?.id;
+
+          assert(mainId);
+          await rename(window, 'Main title');
+          await until(
+            'main OSC title',
+            () => statusReports(log).at(-1)?.title === 'Main title',
+          );
+          await openOther(window);
+          await pickAgent(window, 'other');
+          await readyAgent(window);
+          await rename(window, 'Child title');
+
+          expect(calls[0]).toEqual({ sessionId: mainId, title: 'Main title' });
+          expect(calls[1]?.title).toBe('Child title');
+          expect(calls[1]?.sessionId).not.toBe(mainId);
+          expect(statusReports(log).at(-1)?.title).toBe('Main title');
+          await until('both recorded titles', async () => {
+            const records = await readRecords(join(window.dir, 'state'));
+
+            return (
+              records.some(
+                (record) =>
+                  record.sessionId === mainId && record.title === 'Main title',
+              ) &&
+              records.some(
+                (record) =>
+                  record.sessionId === calls[1]?.sessionId &&
+                  record.title === 'Child title',
+              )
+            );
+          });
+
+          await pickAgent(window, 'main');
+          await readyAgent(window);
+          expect(window.frame()).not.toContain('Renamed to Child title');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          agentCommand: command,
+          startupOf: () => ({ agentCommand: command }),
+          openWith: captureTitles(calls),
+          log,
+        },
+      );
+    });
+  }
+
+  test('a late rename answer keeps its note in the original session after a child is picked', () =>
+    withChild(
+      async (window) => {
+        await openOther(window);
+        await send(window, '/rename Main waits');
+        await window.shows('Renaming to Main waits');
+        await until('rename reached the fake', () => {
+          return readFile(
+            join(window.dir, '.fake-gate', 'titles-heard'),
+            'utf8',
+          ).then(
+            (text) => text.includes('Main waits'),
+            () => false,
+          );
+        });
+
+        await pickAgent(window, 'other');
+        await readyAgent(window);
+        await mkdir(join(window.dir, '.fake-gate'), { recursive: true });
+        await writeFile(join(window.dir, '.fake-gate', 'release'), '');
+        await until('main rename recorded', async () =>
+          (await readRecords(join(window.dir, 'state'))).some(
+            (record) => record.title === 'Main waits',
+          ),
+        );
+        expect(window.frame()).not.toContain('Renamed to Main waits');
+        await pickAgent(window, 'main');
+        await readyAgent(window);
+        await window.shows('Renamed to Main waits');
+      },
+      {
+        agentCommand: fakeAgentCommand(
+          undefined,
+          '--set-title',
+          'hang',
+          '--child-runtime',
+          'fake',
+        ),
+        startupOf: () => ({
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--set-title',
+            'hang',
+            '--child-runtime',
+            'fake',
+          ),
+        }),
+      },
+    ));
+});
+
+describe('CHD-629 tester: status account display snapshots', () => {
+  interface AccountFeed {
+    current: AccountState;
+    listeners: Set<(account: AccountState) => void>;
+  }
+
+  const authenticated = (label: string, email: string): AccountState => ({
+    phase: 'heard',
+    status: {
+      state: 'authenticated',
+      accounts: [{ label, email, active: true }],
+    },
+  });
+
+  const injectAccounts =
+    (
+      feeds: AccountFeed[],
+      seed: (index: number) => AccountState,
+    ): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+      const feed: AccountFeed = {
+        current: seed(feeds.length),
+        listeners: new Set(),
+      };
+
+      feeds.push(feed);
+
+      return {
+        ...session,
+        account: () => feed.current,
+        subscribeAccount: (listener) => {
+          feed.listeners.add(listener);
+
+          return () => {
+            feed.listeners.delete(listener);
+          };
+        },
+      };
+    };
+
+  const rows = (entry: Extract<Entry, { kind: 'report' }>) =>
+    entry.rows.map((row) => row.text).join('\n');
+
+  test('pushes and renames change the next report while old reports stay snapshots and account data stays out of records', async () => {
+    const beforeEmail = 'display-before-only@example.test';
+    const afterEmail = 'display-after-only@example.test';
+    const feeds: AccountFeed[] = [];
+    let all: WindowedState | undefined;
+    const snapshots = () =>
+      all?.sessions[all.front]?.transcript.entries.flatMap((entry) =>
+        entry.kind === 'report' && entry.command === 'status' ? [entry] : [],
+      ) ?? [];
+
+    await withWindow(
+      async (window) => {
+        await send(window, 'text');
+        await window.shows('This reply came in chunks.');
+        await send(window, '/rename Before title');
+        await window.shows('Renamed to Before title');
+        await reported(window, '/status');
+        await until('first status snapshot', () => snapshots().length === 1);
+
+        const first = snapshots()[0];
+        const feed = feeds[0];
+
+        assert(first && feed);
+        expect(rows(first)).toContain(beforeEmail);
+        expect(rows(first)).toContain('Before title');
+
+        feed.current = authenticated('After account push', afterEmail);
+
+        for (const listener of feed.listeners) {
+          listener(feed.current);
+        }
+
+        await until('pushed account in window state', () => {
+          const account = all?.sessions[all.front]?.account;
+
+          return (
+            account?.phase === 'heard' &&
+            account.status.accounts?.some(
+              (each) => each.email === afterEmail,
+            ) === true
+          );
+        });
+
+        expect(rows(first)).toContain(beforeEmail);
+        expect(rows(first)).not.toContain(afterEmail);
+        expect(window.frame()).not.toContain(afterEmail);
+        await send(window, '/rename After title');
+        await window.shows('Renamed to After title');
+        await reported(window, '/status');
+        await until('second status snapshot', () => snapshots().length === 2);
+
+        const second = snapshots()[1];
+
+        assert(second);
+        expect(rows(second)).toContain(afterEmail);
+        expect(rows(second)).not.toContain(beforeEmail);
+        expect(rows(second)).toContain('After title');
+        expect(rows(first)).toContain('Before title');
+        await until('latest title flushed to record', async () =>
+          (await readRecords(join(window.dir, 'state'))).some(
+            (record) => record.title === 'After title',
+          ),
+        );
+
+        const records = await readRecords(join(window.dir, 'state'));
+
+        expect(records.length).toBeGreaterThan(0);
+
+        for (const record of records) {
+          const raw = await readFile(record.path, 'utf8');
+
+          expect(raw).not.toContain(beforeEmail);
+          expect(raw).not.toContain(afterEmail);
+          expect(raw).not.toContain('Before account push');
+          expect(raw).not.toContain('After account push');
+        }
+      },
+      {
+        agentCommand: fakeAgentCommand(undefined, '--set-title', 'echo'),
+        openWith: injectAccounts(feeds, () =>
+          authenticated('Before account push', beforeEmail),
+        ),
+        onState: (state) => {
+          all = state;
+        },
+      },
+    );
+  });
+
+  for (const columns of [80, 120]) {
+    test(`a picked child's status reads only its own connection account at ${columns} columns`, async () => {
+      const feeds: AccountFeed[] = [];
+
+      await withChild(
+        async (window) => {
+          const main = await reported(window, '/status');
+
+          expect(main).toContain('main-display-only@example.test');
+          await openOther(window);
+          await pickAgent(window, 'other');
+          await readyAgent(window);
+
+          const child = await reported(window, '/status');
+
+          expect(child).toContain('child-display-only@example.test');
+          expect(child).not.toContain('main-display-only@example.test');
+          await pickAgent(window, 'main');
+          await readyAgent(window);
+
+          const again = await reported(window, '/status');
+
+          expect(again).toContain('main-display-only@example.test');
+          expect(again).not.toContain('child-display-only@example.test');
+        },
+        {
+          columns,
+          rows: columns === 80 ? 24 : 40,
+          openWith: injectAccounts(feeds, (index) =>
+            authenticated(
+              index === 0 ? 'Main account' : 'Child account',
+              index === 0
+                ? 'main-display-only@example.test'
+                : 'child-display-only@example.test',
+            ),
+          ),
+        },
+      );
+    });
   }
 });

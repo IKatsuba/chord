@@ -9,6 +9,7 @@ import {
   type CodePickAction,
   reduceCodePick,
 } from '../transcript/code_pick.ts';
+import { type AccountState, NO_ACCOUNT } from '../../session/auth_status.ts';
 import { askedInput, mine } from '../../session/busy.ts';
 import type { ConversationEvent } from '../../session/conversation.ts';
 import { inBatch } from '../../session/transcript/entries.ts';
@@ -140,6 +141,8 @@ export type Connection =
  */
 export interface SessionState extends PromptSession, ViewSession, DialogsState {
   readonly connection: Connection;
+  /** What the agent says of its connection's account (CHD-629). */
+  readonly account: AccountState;
   /** The agent's id for the session, once it is up. */
   readonly sessionId?: string;
   /** When the session came up, epoch milliseconds. */
@@ -388,6 +391,7 @@ export type AppAction =
 
 export const initialAppState: AppState = {
   connection: { status: 'starting' },
+  account: NO_ACCOUNT,
   transcript: emptyTranscript,
   quitArmed: false,
   modes: [],
@@ -679,6 +683,8 @@ function reduceStep(state: AppState, action: AppAction): AppState {
         mcpPanel: false,
       };
     }
+    case 'account':
+      return { ...state, account: action.account };
     case 'model': {
       if (sameModels(action.models, state.models)) {
         return state;
@@ -1121,6 +1127,7 @@ const SESSION_FIELDS: Readonly<Record<keyof SessionState, true>> = {
   overflowing: true,
   attended: true,
   connection: true,
+  account: true,
   sessionId: true,
   since: true,
   spent: true,

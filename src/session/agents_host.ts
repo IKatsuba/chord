@@ -5,7 +5,10 @@
  * the window turns that into the actions it dispatches, each as it comes.
  */
 import { relative } from 'node:path';
-import type { McpServer } from '@agentclientprotocol/sdk/unstable';
+import type {
+  InitialSessionConfigOption,
+  McpServer,
+} from '@agentclientprotocol/sdk/unstable';
 import { agentNameProblem } from '../agent_name.ts';
 import type { Wait } from '../notify.ts';
 import { Runtimes, sessionProbe } from '../server/runtimes.ts';
@@ -41,6 +44,7 @@ import {
   type ConversationEvent,
   type OpenSession,
 } from './conversation.ts';
+import { initialValuesOf } from './initial_options.ts';
 import { newArgs } from './new_args.ts';
 import { OpenAgents } from './open_agents.ts';
 import type { Place } from './place.ts';
@@ -130,6 +134,11 @@ export interface AgentsHostOptions {
    * named, and children take the settings' only.
    */
   readonly mainServers?: readonly McpServer[];
+  /**
+   * A client's initial `configOptions` for main alone: children and team
+   * members keep chord's values (CHD-629, the owner's Q4 b).
+   */
+  readonly mainEntries?: readonly InitialSessionConfigOption[];
   /** One claim among hosts that ask one person; none is this host's own. */
   readonly settingsBox?: ReturnType<typeof settingsBoxClaim>;
 }
@@ -276,6 +285,7 @@ export function createAgentsHost(
     resources,
     resume,
     mainServers,
+    mainEntries,
     settingsBox = settingsBoxClaim(),
   }: AgentsHostOptions,
   port: AgentsPort,
@@ -1275,7 +1285,7 @@ export function createAgentsHost(
     let forking = fork;
 
     const conversation = new Conversation(
-      (signal) => {
+      (signal, starting) => {
         if (startup.refused !== undefined) {
           throw new Error(startup.refused);
         }
@@ -1319,6 +1329,7 @@ export function createAgentsHost(
               }
             : {}),
           ...(forking === undefined ? {} : { fork: forking }),
+          initial: initialValuesOf(starting),
         };
 
         forking = undefined;
@@ -1705,8 +1716,14 @@ export function createAgentsHost(
 
                   validation.resolve(undefined);
                 } else if (child !== undefined) {
+                  // A start refused for a value it read back keeps the receipt's
+                  // own words for it, from what the session is on (CHD-629);
+                  // one with no session left says the start failed.
                   refuse(
-                    'Initialization failed before the first job; the attempted agent is closing.',
+                    (child.conversation.session === undefined
+                      ? undefined
+                      : opening.checkStarted?.(child.conversation)) ??
+                      'Initialization failed before the first job; the attempted agent is closing.',
                   );
 
                   if (opening.checkStarted !== undefined) {
@@ -2388,7 +2405,7 @@ export function createAgentsHost(
     let releaseCurrentCaller = () => {};
 
     const conversation = new Conversation(
-      (signal) => {
+      (signal, opening) => {
         if (refused !== undefined) {
           throw new Error(refused);
         }
@@ -2426,6 +2443,7 @@ export function createAgentsHost(
           signal,
           ...(agentCommand === undefined ? {} : { agentCommand }),
           ...(next === undefined ? {} : { resume: next }),
+          initial: initialValuesOf(opening),
           ...(servers.length === 0 ? {} : { mcpServers: servers }),
           ...(admitted === undefined ? {} : { chordServer: admitted.server }),
           ...(takes === false
@@ -2470,7 +2488,9 @@ export function createAgentsHost(
         emit(event);
       },
       Date.now,
-      starting,
+      mainEntries === undefined
+        ? starting
+        : { ...starting, entries: mainEntries },
       new FileRecording(stateDir ?? chordStateDir(), (message) =>
         emit({
           type: 'failed',

@@ -1,4 +1,6 @@
 import { describe, expect, test } from 'bun:test';
+import type { AuthStatusResponse } from '@agentclientprotocol/sdk/unstable';
+import type { AccountState } from '../src/session/auth_status.ts';
 import assert from 'node:assert';
 import { spawnSync } from 'node:child_process';
 import {
@@ -10,6 +12,7 @@ import {
   writeFile,
 } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
+import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
@@ -25,6 +28,7 @@ import type { LeaveExit } from '../src/session/leaving.ts';
 import { placeOf, readPlace } from '../src/session/place.ts';
 import {
   parseRecord,
+  recordsDir,
   recordActions,
   type RecordEntry,
 } from '../src/session/record.ts';
@@ -41,6 +45,10 @@ import {
   type WireMessage,
 } from './fixtures/acp_client.ts';
 import { fakeAgentCommand, gatedCommand } from './fixtures/fake.ts';
+import {
+  API_KEY,
+  SIGNED_IN,
+} from './fixtures/fake_agent/scenarios/accounts.ts';
 import { recordSession } from './fixtures/records.ts';
 import { until } from './session/conversation_fake.ts';
 
@@ -181,7 +189,8 @@ describe('initialize', () => {
               embeddedContext: true,
             },
             mcpCapabilities: { http: true, sse: true },
-            sessionCapabilities: { list: {}, resume: {}, close: {} },
+            auth: { status: {} },
+            sessionCapabilities: { list: {}, resume: {}, close: {}, title: {} },
           },
           _meta: {
             'chord/acp': {
@@ -605,6 +614,910 @@ describe('one surface', () => {
       },
       { agent: 'dimcode' },
     ));
+});
+
+describe("a client's initial configOptions (CHD-629, the owner's Q4 b)", () => {
+  const ENTRIES = [
+    { configId: 'model', value: 'fake-small' },
+    { configId: 'nope', value: 'x' },
+  ];
+
+  /** The session/new answer's current value of option `id`. */
+  const currentOf = (result: unknown, id: string) =>
+    (
+      result as { configOptions?: { id: string; currentValue: unknown }[] }
+    ).configOptions?.find((option) => option.id === id)?.currentValue;
+
+  const openedOn = async (
+    client: AcpClient,
+    cwd: string,
+  ): Promise<{ result: unknown; opened: Record<string, unknown> }> => {
+    const { result, error } = await client.request('session/new', {
+      cwd,
+      mcpServers: [],
+      configOptions: ENTRIES,
+    });
+
+    expect(error).toBeUndefined();
+
+    const sessionId = (result as { sessionId: string }).sessionId;
+
+    await client.answerTo(
+      client.send('session/prompt', {
+        sessionId,
+        prompt: [{ type: 'text', text: 'opened' }],
+      }),
+    );
+
+    return {
+      result,
+      opened: JSON.parse(
+        client.said(sessionId).replace(/^```json\n|\n```$/g, ''),
+      ) as Record<string, unknown>,
+    };
+  };
+
+  test('go down as sent where the agent takes options, an id it does not know too', () =>
+    onAcp(
+      ['--adapter', 'claude', '--options', 'apply'],
+      async ({ client, cwd }) => {
+        const { result, opened } = await openedOn(client, cwd);
+
+        expect(opened.configOptions).toEqual(ENTRIES);
+        expect(currentOf(result, 'model')).toBe('fake-small');
+      },
+    ));
+
+  test('are read back by their ids: one the agent skipped is set after, one the session does not list is dropped', () =>
+    onAcp(
+      ['--adapter', 'claude', '--options', 'ignore'],
+      async ({ client, cwd, lines }) => {
+        const { result } = await openedOn(client, cwd);
+
+        expect(currentOf(result, 'model')).toBe('fake-small');
+        expect(lines.filter((line) => line.includes('nope'))).toEqual([]);
+      },
+    ));
+
+  test('go nowhere on session/new where the agent does not take options, and are set after it opens', () =>
+    onAcp([], async ({ client, cwd }) => {
+      const { result, opened } = await openedOn(client, cwd);
+
+      expect(opened).not.toHaveProperty('configOptions');
+      expect(currentOf(result, 'model')).toBe('fake-small');
+    }));
+});
+
+describe('CHD-629 tester: client entry wire fidelity', () => {
+  const ENTRIES = [
+    {
+      configId: 'effort',
+      value: 'high',
+      _meta: {
+        'example.com/opaque': { kept: [1, null, false], text: 'as sent' },
+      },
+    },
+    {
+      configId: 'unlisted-boolean',
+      type: 'boolean',
+      value: false,
+      _meta: { 'example.com/drop': true },
+    },
+    { configId: 'model', value: 'fake-small', _meta: null },
+  ];
+
+  for (const flags of [[], ['--options', 'ignore']]) {
+    test(`read-back keeps client order and opaque metadata on the wire; unlisted boolean is dropped (${flags.join(' ') || 'no options capability'})`, () =>
+      onAcp(flags, async ({ client, cwd, prompt }) => {
+        const { result, error } = await client.request('session/new', {
+          cwd,
+          mcpServers: [],
+          configOptions: ENTRIES,
+        });
+
+        expect(error).toBeUndefined();
+
+        const sessionId = (result as { sessionId: string }).sessionId;
+
+        await client.answerTo(prompt(sessionId, 'configsheard'));
+
+        const heard = JSON.parse(
+          client.said(sessionId).replace(/^```json\n|\n```$/g, ''),
+        );
+
+        expect(heard).toEqual(
+          ENTRIES.filter((entry) => entry.configId !== 'unlisted-boolean').map(
+            (entry) => ({ ...entry, sessionId }),
+          ),
+        );
+      }));
+  }
+
+  test('session/new forwards the original entries with metadata and the unlisted typed entry intact', () =>
+    onAcp(['--options', 'apply'], async ({ client, cwd, prompt }) => {
+      const { result, error } = await client.request('session/new', {
+        cwd,
+        mcpServers: [],
+        configOptions: ENTRIES,
+      });
+
+      expect(error).toBeUndefined();
+
+      const sessionId = (result as { sessionId: string }).sessionId;
+
+      await client.answerTo(prompt(sessionId, 'opened'));
+
+      const opened = JSON.parse(
+        client.said(sessionId).replace(/^```json\n|\n```$/g, ''),
+      );
+
+      expect(opened.configOptions).toEqual(ENTRIES);
+    }));
+
+  test('a refused client read-back fails session/new and leaves a later start usable', () =>
+    onAcp(['--refuse-config'], async ({ client, cwd, newSession }) => {
+      const { result, error } = await client.request('session/new', {
+        cwd,
+        mcpServers: [],
+        configOptions: [{ configId: 'effort', value: 'high' }],
+      });
+
+      expect(result).toBeUndefined();
+      expect(error?.code).toBe(-32603);
+      expect(error?.message).toContain('The fake agent holds its effort.');
+      expect(await newSession()).toBeString();
+    }));
+});
+
+describe('session/set_title (CHD-629)', () => {
+  const titled = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .flatMap((update) =>
+        update.sessionUpdate === 'session_info_update' ? [update.title] : [],
+      );
+
+  test("a live session is renamed by its agent, whose echo the client hears, and answers the agent's title", () =>
+    onAcp(['--set-title', 'echo'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+      const { result } = await client.request('session/set_title', {
+        sessionId,
+        title: 'Fix   the parser',
+      });
+
+      expect(result).toEqual({ title: 'Fix the parser' });
+      expect(titled(client, sessionId)).toContain('Fix the parser');
+    }));
+
+  test("an agent that takes no title is renamed in chord's record alone; one that refuses answers its error", async () => {
+    await onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect(
+        (
+          await client.request('session/set_title', {
+            sessionId,
+            title: ' A  b ',
+          })
+        ).result,
+      ).toEqual({ title: 'A b' });
+    });
+
+    await onAcp(['--set-title', 'refuse'], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+      const { error } = await client.request('session/set_title', {
+        sessionId,
+        title: 'Fix the parser',
+      });
+
+      expect(error?.message).toContain('cannot rename');
+    });
+  });
+
+  test('an empty title is -32602 and a session chord has no record of -32002', () =>
+    onAcp([], async ({ client, newSession }) => {
+      const sessionId = await newSession();
+
+      expect(
+        (await client.request('session/set_title', { sessionId, title: '  ' }))
+          .error?.code,
+      ).toBe(-32602);
+      expect(
+        (
+          await client.request('session/set_title', {
+            sessionId: crypto.randomUUID(),
+            title: 'Fix the parser',
+          })
+        ).error?.code,
+      ).toBe(-32002);
+    }));
+
+  test("a listed session not loaded is renamed in its record, listed by it, and its agent is told at the next load (the owner's Q3 d)", () =>
+    onAcp(
+      ['--set-title', 'echo'],
+      async ({ client, cwd, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'text'));
+        await client.request('session/close', { sessionId });
+
+        expect(
+          (
+            await client.request('session/set_title', {
+              sessionId,
+              title: 'Parser test tidy-up',
+            })
+          ).result,
+        ).toEqual({ title: 'Parser test tidy-up' });
+
+        const listed = await client.request('session/list', { cwd });
+
+        expect(
+          (
+            listed.result as {
+              sessions: { sessionId: string; title: string }[];
+            }
+          ).sessions.find((session) => session.sessionId === sessionId)?.title,
+        ).toBe('Parser test tidy-up');
+
+        const loaded = await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+
+        expect(loaded.error).toBeUndefined();
+        expect(titled(client, sessionId)).toContain('Parser test tidy-up');
+        // The agent is told at the load, as it takes titles.
+        await until(() => {
+          try {
+            return readFileSync(
+              join(cwd, '.fake-gate', 'titles-heard'),
+              'utf8',
+            ).includes('Parser test tidy-up');
+          } catch {
+            return false;
+          }
+        });
+      },
+    ));
+});
+
+describe('CHD-629 tester: pending ACP rename lifecycle', () => {
+  const watchTitles =
+    (answers: string[]): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+
+      return {
+        ...session,
+        setTitle: async (title) => {
+          const answer = await session.setTitle(title);
+
+          answers.push(answer);
+
+          return answer;
+        },
+      };
+    };
+
+  async function answered(acp: Acp, sessionId: string) {
+    const response = await acp.client.answerTo(acp.prompt(sessionId, 'text'));
+
+    expect(response.error).toBeUndefined();
+    expect(response.result?.stopReason).toBe('end_turn');
+  }
+
+  const heardTitles = (cwd: string) => {
+    try {
+      return readFileSync(join(cwd, '.fake-gate', 'titles-heard'), 'utf8')
+        .split('\n')
+        .filter(Boolean);
+    } catch {
+      return [];
+    }
+  };
+
+  const relayedTitles = (client: AcpClient, sessionId: string) =>
+    client
+      .updates(sessionId)
+      .flatMap((update) =>
+        update.sessionUpdate === 'session_info_update' ? [update.title] : [],
+      );
+
+  async function park(acp: Acp, title: string) {
+    const sessionId = await acp.newSession();
+
+    await answered(acp, sessionId);
+    expect(
+      (await acp.client.request('session/close', { sessionId })).error,
+    ).toBeUndefined();
+    expect(
+      (await acp.client.request('session/set_title', { sessionId, title }))
+        .result,
+    ).toEqual({ title });
+
+    return sessionId;
+  }
+
+  const reopen = (
+    acp: Acp,
+    sessionId: string,
+    method: 'session/load' | 'session/resume',
+  ) => acp.client.request(method, { sessionId, cwd: acp.cwd, mcpServers: [] });
+
+  async function recordedLines(acp: Acp, sessionId: string) {
+    const record = (await readRecords(acp.stateDir)).find(
+      (entry) => entry.sessionId === sessionId,
+    );
+
+    assert(record);
+
+    return parseRecord(await readFile(record.path, 'utf8'));
+  }
+
+  const recordedRenames = async (acp: Acp, sessionId: string) =>
+    (await recordedLines(acp, sessionId)).filter(
+      (entry) => entry.type === 'renamed',
+    );
+
+  for (const method of ['session/load', 'session/resume'] as const) {
+    test(`${method} sends only the last pending title, records the normalized answer, and never retries a taken rename`, async () => {
+      const answers: string[] = [];
+
+      await onAcp(
+        ['--set-title', 'silent', '--resume-only'],
+        async (acp) => {
+          const long = 'x'.repeat(200);
+          const normalized = 'x'.repeat(80);
+          const sessionId = await park(acp, 'Superseded pending title');
+
+          await acp.client.request('session/set_title', {
+            sessionId,
+            title: long,
+          });
+
+          const before = (await recordedLines(acp, sessionId)).length;
+
+          expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+          await until(() => answers.includes(normalized));
+          expect(
+            (
+              await acp.client.request('session/set_config_option', {
+                sessionId,
+                configId: 'effort',
+                value: 'high',
+              })
+            ).error,
+          ).toBeUndefined();
+          await acp.client.request('session/close', { sessionId });
+
+          expect(heardTitles(acp.cwd)).toEqual([long]);
+
+          const last = (await recordedRenames(acp, sessionId)).at(-1);
+
+          expect(last?.title).toBe(normalized);
+          expect(last?.pending).toBeUndefined();
+
+          const added = (await recordedLines(acp, sessionId)).slice(before);
+          const renamedAt = added.findIndex(
+            (entry) => entry.type === 'renamed',
+          );
+
+          expect(added.slice(0, 2).map((entry) => entry.type)).toEqual([
+            'opened',
+            'state',
+          ]);
+          expect(renamedAt).toBeGreaterThan(1);
+          expect(added[renamedAt]).toEqual({
+            type: 'renamed',
+            title: normalized,
+            at: expect.any(Number),
+          });
+          expect(
+            added
+              .slice(renamedAt + 1)
+              .some(
+                (entry) =>
+                  entry.type === 'state' && entry.options.effort === 'high',
+              ),
+          ).toBe(true);
+          expect(added.some((entry) => entry.type === 'prompt')).toBe(false);
+          expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+          await answered(acp, sessionId);
+          expect(heardTitles(acp.cwd)).toEqual([long]);
+
+          const listed = await acp.client.request('session/list', {
+            cwd: acp.cwd,
+          });
+          const sessions = listed.result?.sessions as {
+            sessionId: string;
+            title: string;
+          }[];
+
+          expect(
+            sessions.find((session) => session.sessionId === sessionId)?.title,
+          ).toBe(normalized);
+        },
+        { open: watchTitles(answers) },
+      );
+    });
+
+    test(`${method} stays usable after a pending refusal and retries on the next opening without losing the recorded title`, () =>
+      onAcp(['--set-title', 'refuse', '--resume-only'], async (acp) => {
+        const sessionId = await park(acp, 'Still pending');
+
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+        await until(() => heardTitles(acp.cwd).length === 1);
+        await acp.client.request('session/close', { sessionId });
+
+        const first = (await recordedRenames(acp, sessionId)).at(-1);
+
+        expect(first?.title).toBe('Still pending');
+        expect(first?.pending).toBe(true);
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+        await until(() => heardTitles(acp.cwd).length === 2);
+        expect(heardTitles(acp.cwd)).toEqual([
+          'Still pending',
+          'Still pending',
+        ]);
+        expect(acp.lines.join('')).not.toContain('cannot rename');
+      }));
+
+    test(`${method} keeps a pending title in chord only when the agent takes no title`, () =>
+      onAcp(['--resume-only'], async (acp) => {
+        const sessionId = await park(acp, 'Local pending title');
+
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+
+        if (method === 'session/load') {
+          expect(relayedTitles(acp.client, sessionId)).toContain(
+            'Local pending title',
+          );
+        }
+
+        const listed = await acp.client.request('session/list', {
+          cwd: acp.cwd,
+        });
+        const sessions = listed.result?.sessions as {
+          sessionId: string;
+          title: string;
+        }[];
+
+        expect(
+          sessions.find((session) => session.sessionId === sessionId)?.title,
+        ).toBe('Local pending title');
+        expect(heardTitles(acp.cwd)).toEqual([]);
+        await acp.client.request('session/close', { sessionId });
+        expect((await reopen(acp, sessionId, method)).error).toBeUndefined();
+        await answered(acp, sessionId);
+        expect(heardTitles(acp.cwd)).toEqual([]);
+      }));
+  }
+
+  test('a hung pending rename leaves load and prompts usable, and stays first in the live rename FIFO', () =>
+    onAcp(['--set-title', 'hang'], async (acp) => {
+      const sessionId = await park(acp, 'Pending title');
+
+      expect(
+        (await reopen(acp, sessionId, 'session/load')).error,
+      ).toBeUndefined();
+      await until(() => heardTitles(acp.cwd).length === 1);
+
+      const next = acp.client.send('session/set_title', {
+        sessionId,
+        title: 'Fresh title',
+      });
+
+      await answered(acp, sessionId);
+      expect(heardTitles(acp.cwd)).toEqual(['Pending title']);
+
+      const other = await acp.newSession();
+
+      await answered(acp, other);
+      await mkdir(join(acp.cwd, '.fake-gate'), { recursive: true });
+      await writeFile(join(acp.cwd, '.fake-gate', 'release'), '');
+      expect((await acp.client.answerTo(next)).result).toEqual({
+        title: 'Fresh title',
+      });
+      expect(heardTitles(acp.cwd)).toEqual(['Pending title', 'Fresh title']);
+    }));
+});
+
+describe('a rename the agent takes at the load (CHD-629)', () => {
+  /** Every `renamed` line in the records under `stateDir`. */
+  const renamedIn = (stateDir: string) =>
+    readdirSync(recordsDir(stateDir))
+      .filter((file) => file.endsWith('.jsonl'))
+      .flatMap((file) =>
+        parseRecord(readFileSync(join(recordsDir(stateDir), file), 'utf8')),
+      )
+      .flatMap((entry) => (entry.type === 'renamed' ? [entry] : []));
+
+  test("a pending rename the agent takes at the load is written at once, the agent's title and not pending, with no prompt after it", () =>
+    onAcp(
+      ['--set-title', 'echo'],
+      async ({ client, cwd, newSession, prompt, stateDir }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'text'));
+        await client.request('session/close', { sessionId });
+        await client.request('session/set_title', {
+          sessionId,
+          title: 'x'.repeat(100),
+        });
+        await client.request('session/load', {
+          sessionId,
+          cwd,
+          mcpServers: [],
+        });
+        await until(() =>
+          renamedIn(stateDir).some(
+            (entry) => entry.title === 'x'.repeat(80) && !entry.pending,
+          ),
+        );
+        await client.request('session/close', { sessionId });
+
+        expect(renamedIn(stateDir).at(-1)).toMatchObject({
+          title: 'x'.repeat(80),
+        });
+        expect(renamedIn(stateDir).at(-1)).not.toHaveProperty('pending');
+      },
+    ));
+});
+
+describe('auth/status (CHD-629)', () => {
+  /** The account pushes the client heard, their payloads in order. */
+  const pushes = (client: AcpClient) =>
+    client.messages.flatMap((message) =>
+      message.method === 'auth/status_update' ? [message.params] : [],
+    );
+
+  test('unknown before any session, then the oldest main session’s account, its changes pushed once each', () =>
+    onAcp(
+      ['--auth-status', 'authenticated'],
+      async ({ client, newSession, prompt }) => {
+        expect((await client.request('auth/status', {})).result).toEqual({
+          state: 'unknown',
+        });
+
+        const sessionId = await newSession();
+
+        await until(() => pushes(client).length === 1);
+        expect((await client.request('auth/status', {})).result).toEqual(
+          SIGNED_IN,
+        );
+
+        await client.answerTo(prompt(sessionId, 'authchanged'));
+        await until(() => pushes(client).length === 2);
+        // The same account again is no news.
+        await client.answerTo(prompt(sessionId, 'text'));
+
+        expect(pushes(client)).toEqual([SIGNED_IN, API_KEY]);
+      },
+    ));
+
+  test('a new source with the same account as the last pushed pushes nothing: the push names no source', () =>
+    onAcp(
+      ['--auth-status', 'authenticated'],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+
+        await newSession();
+        await until(() => pushes(client).length === 1);
+        await client.request('session/close', { sessionId: first });
+
+        // The answer comes after the close has settled whatever it would push.
+        expect((await client.request('auth/status', {})).result).toEqual(
+          SIGNED_IN,
+        );
+        expect(pushes(client)).toEqual([SIGNED_IN]);
+      },
+    ));
+
+  test("another session's account is not mixed in until the source closes; then it is pushed once", () =>
+    onAcp(
+      ['--auth-status', 'authenticated'],
+      async ({ client, newSession, prompt }) => {
+        const first = await newSession();
+        const second = await newSession();
+
+        await until(() => pushes(client).length === 1);
+        await client.answerTo(prompt(second, 'authchanged'));
+
+        expect((await client.request('auth/status', {})).result).toEqual(
+          SIGNED_IN,
+        );
+        expect(pushes(client)).toEqual([SIGNED_IN]);
+
+        await client.request('session/close', { sessionId: first });
+        await until(() => pushes(client).length === 2);
+
+        expect(pushes(client)).toEqual([SIGNED_IN, API_KEY]);
+        expect((await client.request('auth/status', {})).result).toEqual(
+          API_KEY,
+        );
+      },
+    ));
+});
+
+describe('CHD-629 tester: ACP account source isolation', () => {
+  interface Feed {
+    session: Session;
+    current: AccountState;
+    listeners: Set<(account: AccountState) => void>;
+  }
+
+  const A: AuthStatusResponse = {
+    state: 'authenticated',
+    accounts: [{ label: 'Alpha', email: 'alpha@example.test', active: true }],
+    _meta: { 'example.com/identity': { flag: true, tags: ['a', 'b'] } },
+  };
+  const B: AuthStatusResponse = {
+    state: 'authenticated',
+    accounts: [{ label: 'Beta', email: 'beta@example.test', active: true }],
+    _meta: { 'example.com/opaque': { kept: [false, null, 3] } },
+  };
+  const heard = (status: AuthStatusResponse): AccountState => ({
+    phase: 'heard',
+    status,
+  });
+  const pushes = (client: AcpClient) =>
+    client.messages.flatMap((message) =>
+      message.method === 'auth/status_update' ? [message.params] : [],
+    );
+  const inject =
+    (feeds: Feed[], seed: readonly AccountState[]): typeof openSession =>
+    async (options) => {
+      const session = await openSession(options);
+      const feed: Feed = {
+        session,
+        current: seed[feeds.length] ?? { phase: 'none' },
+        listeners: new Set(),
+      };
+
+      feeds.push(feed);
+
+      return {
+        ...session,
+        account: () => feed.current,
+        subscribeAccount: (listener) => {
+          feed.listeners.add(listener);
+
+          return () => {
+            feed.listeners.delete(listener);
+          };
+        },
+      };
+    };
+
+  function publish(feed: Feed | undefined, account: AccountState) {
+    assert(feed);
+
+    feed.current = account;
+
+    for (const listener of feed.listeners) {
+      listener(account);
+    }
+  }
+
+  const status = async (client: AcpClient) => {
+    const response = await client.request('auth/status', {});
+
+    expect(response.error).toBeUndefined();
+
+    return response.result;
+  };
+
+  test('the oldest main stays the source through unknown phases, forwards metadata whole, and ignores retired pushes', async () => {
+    const feeds: Feed[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+        const second = await newSession();
+
+        for (const phase of ['none', 'failed', 'pending'] as const) {
+          publish(feeds[0], { phase });
+          expect(await status(client)).toEqual({ state: 'unknown' });
+        }
+
+        expect(pushes(client)).toEqual([]);
+        publish(feeds[0], heard(A));
+        expect(await status(client)).toEqual(A);
+        publish(feeds[1], heard(B));
+        expect(await status(client)).toEqual(A);
+        expect(pushes(client)).toEqual([A]);
+        await client.request('session/close', { sessionId: first });
+        expect(await status(client)).toEqual(B);
+        publish(feeds[0], heard({ state: 'unauthenticated' }));
+        expect(await status(client)).toEqual(B);
+        expect(pushes(client)).toEqual([A, B]);
+        await client.request('session/close', { sessionId: second });
+        expect(await status(client)).toEqual({ state: 'unknown' });
+        expect(pushes(client)).toEqual([A, B, { state: 'unknown' }]);
+      },
+      { open: inject(feeds, [{ phase: 'pending' }, heard(B)]) },
+    );
+  });
+
+  test('an exited source hands over once and its later account cannot replace the next live main', async () => {
+    const feeds: Feed[] = [];
+
+    await onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+
+        await newSession();
+        expect(await status(client)).toEqual(A);
+
+        const source = feeds[0];
+
+        assert(source);
+        await source.session.close();
+        await until(() => pushes(client).length === 2);
+        expect(await status(client)).toEqual(B);
+        publish(source, heard({ state: 'unauthenticated' }));
+        expect(await status(client)).toEqual(B);
+        await client.request('session/close', { sessionId: first });
+        expect(pushes(client)).toEqual([A, B]);
+      },
+      { open: inject(feeds, [heard(A), heard(B)]) },
+    );
+  });
+
+  test('a child is never the global source even while its main has no account', async () => {
+    const feeds: Feed[] = [];
+
+    await onAcp(
+      ['--child-runtime', 'fake'],
+      async ({ client, newSession, prompt }) => {
+        const first = await newSession();
+
+        await client.answerTo(prompt(first, 'agentother'));
+        await until(() => feeds.length === 2);
+        publish(feeds[1], heard(B));
+        expect(await status(client)).toEqual({ state: 'unknown' });
+        expect(pushes(client)).toEqual([]);
+        publish(feeds[0], heard(A));
+        expect(await status(client)).toEqual(A);
+        await client.request('session/close', { sessionId: first });
+        expect(await status(client)).toEqual({ state: 'unknown' });
+        expect(pushes(client)).toEqual([A, { state: 'unknown' }]);
+      },
+      {
+        server: serveChord(),
+        open: inject(feeds, [{ phase: 'none' }, heard(B)]),
+      },
+    );
+  });
+
+  test('equivalent account payloads deduplicate across a source handover regardless of object key order', async () => {
+    const feeds: Feed[] = [];
+    const reordered: AuthStatusResponse = {
+      _meta: { 'example.com/identity': { tags: ['a', 'b'], flag: true } },
+      accounts: [{ active: true, email: 'alpha@example.test', label: 'Alpha' }],
+      state: 'authenticated',
+    };
+
+    await onAcp(
+      [],
+      async ({ client, newSession }) => {
+        const first = await newSession();
+
+        await newSession();
+        expect(await status(client)).toEqual(A);
+        await client.request('session/close', { sessionId: first });
+        expect(await status(client)).toEqual(reordered);
+        expect(pushes(client)).toEqual([A]);
+      },
+      { open: inject(feeds, [heard(A), heard(reordered)]) },
+    );
+  });
+});
+
+describe('notices (CHD-629)', () => {
+  test("a client that declares notices gets the agent's notice as it came", () =>
+    onAcp([], async ({ client, newSession, prompt }) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(prompt(sessionId, 'notice'));
+
+      expect(
+        client
+          .updates(sessionId)
+          .filter((update) => update.sessionUpdate === 'notice'),
+      ).toEqual([
+        {
+          sessionUpdate: 'notice',
+          severity: 'warning',
+          title: 'Fast mode turned off',
+          description:
+            'Rate limit for fast mode reached; it comes back after the limit resets.',
+        },
+      ]);
+      expect(client.said(sessionId)).not.toContain('Fast mode');
+    }));
+
+  test('a client that does not gets what the agent sends one that does not declare it: chord declares nothing for it and rewrites nothing', () =>
+    onAcp(
+      [],
+      async ({ client, newSession, prompt }) => {
+        const sessionId = await newSession();
+
+        await client.answerTo(prompt(sessionId, 'notice'));
+
+        expect(kinds(client, sessionId)).not.toContain('notice');
+        expect(client.said(sessionId)).toContain(
+          '> **Fast mode turned off**\n> Rate limit',
+        );
+      },
+      { capabilities: { ...FULL, session: { compaction: {} } } },
+    ));
+});
+
+describe('CHD-629 tester: notice forwarding boundaries', () => {
+  for (const declared of [true, false]) {
+    test(`startup advice is delivered before any prompt with notices ${declared ? 'declared' : 'omitted'}`, () =>
+      onAcp(
+        ['--start-notice', 'Before the first prompt'],
+        async ({ client, newSession }) => {
+          const sessionId = await newSession();
+
+          if (declared) {
+            expect(
+              client
+                .updates(sessionId)
+                .filter((update) => update.sessionUpdate === 'notice'),
+            ).toEqual([
+              {
+                sessionUpdate: 'notice',
+                severity: 'warning',
+                title: 'Before the first prompt',
+              },
+            ]);
+            expect(client.said(sessionId)).not.toContain(
+              'Before the first prompt',
+            );
+          } else {
+            expect(kinds(client, sessionId)).not.toContain('notice');
+            expect(client.said(sessionId)).toContain(
+              '> **Before the first prompt**',
+            );
+          }
+        },
+        { capabilities: declared ? FULL : { subagents: {} } },
+      ));
+  }
+
+  test('two mains with the same downstream id keep their own notices', () =>
+    onAcp(['--session-id', 's1'], async ({ client, newSession, prompt }) => {
+      const first = await newSession();
+      const second = await newSession();
+
+      expect(first).not.toBe(second);
+      await Promise.all([
+        client.answerTo(prompt(first, 'notice')),
+        client.answerTo(prompt(second, 'noticelong')),
+      ]);
+
+      const titles = (sessionId: string) =>
+        client
+          .updates(sessionId)
+          .flatMap((update) =>
+            update.sessionUpdate === 'notice' ? [update.title] : [],
+          );
+
+      expect(titles(first)).toEqual(['Fast mode turned off']);
+      expect(titles(second)).toEqual(['MCP server "files" failed to start']);
+      expect(client.said(first)).not.toContain('MCP server');
+      expect(client.said(second)).not.toContain('Fast mode');
+    }));
 });
 
 describe('sessions side by side', () => {

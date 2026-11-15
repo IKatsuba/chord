@@ -142,18 +142,118 @@ test('/status names the agent, model, mode, session and directory', () => {
     ),
   ).toStrictEqual([
     'Agent:     fake',
+    'Title:     not given',
     'Model:     Large',
     'Mode:      Plan',
     'Session:   session-1',
     'Directory: /work',
   ]);
   expect(
-    text(statusReport({ ...FACTS, sessionId: undefined })).slice(1, 4),
+    text(statusReport({ ...FACTS, sessionId: undefined })).slice(2, 5),
   ).toStrictEqual([
     'Model:     not reported by fake',
     'Mode:      not reported by fake',
     'Session:   starting…',
   ]);
+});
+
+describe("/status's account and title (CHD-629)", () => {
+  const MAX = {
+    label: 'Claude Max',
+    email: 'name@example.com',
+    organization: 'Example Org',
+    active: true,
+  };
+  const rows = (account: ReportFacts['account'], title?: string) =>
+    text(
+      statusReport({
+        ...FACTS,
+        account,
+        ...(title === undefined ? {} : { title }),
+      }),
+    );
+
+  test('an Account row after Agent, its parts joined, then the Title row', () => {
+    expect(
+      rows(
+        { phase: 'heard', status: { state: 'authenticated', accounts: [MAX] } },
+        'Parser test tidy-up',
+      ).slice(0, 4),
+    ).toStrictEqual([
+      'Agent:     fake',
+      'Account:   Claude Max · name@example.com · Example Org',
+      'Title:     Parser test tidy-up',
+      'Model:     not reported by fake',
+    ]);
+  });
+
+  test('each phase and state in words, and no row where auth.status is not advertised', () => {
+    const one = (account: ReportFacts['account']) => rows(account)[1];
+
+    expect(rows({ phase: 'none' })[1]).toBe('Title:     not given');
+    expect(one({ phase: 'pending' })).toBe('Account:   checking…');
+    expect(one({ phase: 'failed' })).toBe('Account:   not reported by fake');
+    expect(one({ phase: 'heard', status: { state: 'unknown' } })).toBe(
+      'Account:   not reported by fake',
+    );
+    expect(one({ phase: 'heard', status: { state: 'unauthenticated' } })).toBe(
+      'Account:   not signed in',
+    );
+    expect(one({ phase: 'heard', status: { state: 'not_required' } })).toBe(
+      'Account:   none needed',
+    );
+    expect(one({ phase: 'heard', status: { state: 'authenticated' } })).toBe(
+      'Account:   signed in',
+    );
+  });
+
+  test('one row per active account, or every account when none is marked, later labels blank, an empty line between', () => {
+    const key = {
+      label: 'Anthropic API key',
+      description: 'ANTHROPIC_API_KEY',
+    };
+
+    expect(
+      rows({
+        phase: 'heard',
+        status: {
+          state: 'authenticated',
+          accounts: [MAX, { ...key, active: false }],
+        },
+      })[1],
+    ).toBe('Account:   Claude Max · name@example.com · Example Org');
+    expect(
+      rows({
+        phase: 'heard',
+        status: {
+          state: 'authenticated',
+          accounts: [{ label: 'A' }, key, { label: 'C' }],
+        },
+      }).slice(1, 7),
+    ).toStrictEqual([
+      'Account:   A',
+      '',
+      '           Anthropic API key · ANTHROPIC_API_KEY',
+      '',
+      '           C',
+      'Title:     not given',
+    ]);
+  });
+
+  test("an agent's strings are cleaned: escapes gone, whitespace folded", () => {
+    expect(
+      rows(
+        {
+          phase: 'heard',
+          status: {
+            state: 'authenticated',
+            accounts: [{ label: '\u001b[1mMax\u001b[0m', name: 'A  B\nC' }],
+          },
+        },
+        'Fix\u001b[31m  the\nparser',
+      ).slice(1, 3),
+    ).toStrictEqual(['Account:   Max · A B C', 'Title:     Fix the parser']);
+  });
 });
 
 test("a cost and a context chord worked out read as chord's estimate", () => {

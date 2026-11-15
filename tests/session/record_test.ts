@@ -8,7 +8,9 @@ import { reduceTranscript } from '../../src/session/transcript/reducer.ts';
 import {
   emptyTranscript,
   type Entry,
+  type TurnResult,
 } from '../../src/session/transcript/types.ts';
+import type { AccountState } from '../../src/session/auth_status.ts';
 import { turnCost } from '../../src/session/prices.ts';
 import { runOneshot } from '../../src/session/oneshot.ts';
 import {
@@ -19,6 +21,7 @@ import {
   childPasts,
   entryOf,
   FileRecording,
+  historyEntries,
   lastTotal,
   readPast,
   promptLine,
@@ -42,6 +45,7 @@ import type { SessionUpdate } from '@agentclientprotocol/sdk/unstable';
 import { compactionLine } from '../../src/ui/transcript/compaction.ts';
 import { endedLine } from '../../src/ui/transcript/ended.ts';
 import { fakeAgentCommand } from '../fixtures/fake.ts';
+import { until as waitFor } from './conversation_fake.ts';
 import { recordSession } from '../fixtures/records.ts';
 
 async function withDir(body: (dir: string) => Promise<void>) {
@@ -3238,4 +3242,122 @@ describe('an unasked compaction in the record (CHD-624)', () => {
       ),
     ).toStrictEqual([false]);
   });
+});
+
+describe("a sign-in's account is never recorded (CHD-629)", () => {
+  test("a prompt refused for a login keeps its block live, and the record holds none of the account's fields", async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'chord-signin-record-'));
+    const stateDir = join(dir, 'state');
+    const events: ConversationEvent[] = [];
+    const recording = new FileRecording(stateDir, () => {});
+
+    const conversation = new Conversation(
+      () =>
+        openSession({
+          agent: 'fake',
+          cwd: dir,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            '--auth-required',
+            'prompt',
+            '--auth-status',
+            'authenticated',
+          ),
+        }),
+      (event) => events.push(event),
+      Date.now,
+      {},
+      recording,
+    );
+    const results = () => events.filter((event) => event.type === 'result');
+
+    try {
+      conversation.start();
+      await waitFor(() => events.some((event) => event.type === 'connected'));
+      conversation.send('text');
+      await waitFor(() => results().length === 1);
+
+      const [refused] = results();
+
+      assert(refused?.type === 'result' && refused.result.status === 'failed');
+      expect(refused.result.error.signIn?.account?.phase).toBe('heard');
+
+      conversation.send('text');
+      await waitFor(() => results().length === 2);
+      await conversation.close();
+      await recording.flushed();
+
+      const [record] = await readRecords(stateDir);
+
+      assert(record);
+
+      const text = await recordFiles.readFile(record.path, 'utf8');
+
+      expect(text).toContain('Authentication required');
+
+      for (const field of ['name@example.com', 'Example Org', 'Claude Max']) {
+        expect(text).not.toContain(field);
+      }
+    } finally {
+      await rm(dir, { recursive: true });
+    }
+  });
+});
+
+describe('CHD-629 tester: sign-in serialization boundaries', () => {
+  const accounts: AccountState[] = [
+    { phase: 'none' },
+    { phase: 'pending' },
+    { phase: 'failed' },
+    {
+      phase: 'heard',
+      status: {
+        state: 'authenticated',
+        accounts: [
+          {
+            label: 'Live identity only',
+            email: 'never-record-this@example.test',
+            organization: 'Display only organisation',
+          },
+        ],
+      },
+    },
+  ];
+
+  for (const account of accounts) {
+    test(`both result serialization paths omit ${account.phase} account data without changing the live result`, () => {
+      const result: TurnResult = {
+        status: 'failed',
+        error: {
+          code: '-32000',
+          message: 'Authentication required',
+          signIn: {
+            message: 'Authentication required',
+            ways: [{ name: 'Fixture login', description: 'Run fixture login' }],
+            account,
+          },
+        },
+      };
+      const before = structuredClone(result);
+      const expected: TurnResult = {
+        status: 'failed',
+        error: {
+          code: '-32000',
+          message: 'Authentication required',
+          signIn: {
+            message: 'Authentication required',
+            ways: [{ name: 'Fixture login', description: 'Run fixture login' }],
+          },
+        },
+      };
+      const event = { type: 'result', turnId: 't', result } as const;
+      const live = entryOf(event, { type: 'state', options: {} });
+      const history = historyEntries([event]);
+
+      expect(live).toEqual({ ...event, result: expected });
+      expect(history).toEqual([{ ...event, result: expected }]);
+      expect(JSON.stringify([live, history])).not.toContain('account');
+      expect(result).toEqual(before);
+    });
+  }
 });

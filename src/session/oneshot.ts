@@ -8,6 +8,7 @@ import { DIMCODE_WORDS, dimcodeAtRisk } from '../notices.ts';
 import { filledIn } from './enrich.ts';
 import { allowOption } from './permissions.ts';
 import { permissionPresentation } from './permission_review.ts';
+import { initialValuesOf } from './initial_options.ts';
 import { openSession } from './session.ts';
 import {
   askStarting,
@@ -98,6 +99,7 @@ export async function runOneshot(
       ? {}
       : { mcpServers: options.mcpServers }),
     ...(options.noMcpServers === true ? { noMcpServers: true } : {}),
+    initial: initialValuesOf(options),
   });
 
   let cost: Cost | undefined;
@@ -147,6 +149,7 @@ export async function runOneshot(
               kind: 'efforts',
               listedOnly: true,
               offered: () => Promise.resolve(session.efforts()?.available),
+              current: () => session.efforts()?.current,
               ask: () => session.setEffort(effort.id),
             },
           ]),
@@ -159,6 +162,7 @@ export async function runOneshot(
               kind: 'modes',
               listedOnly: true,
               offered: () => Promise.resolve(session.modes()?.available),
+              current: () => session.modes()?.current,
               ask: () => session.setMode(mode.id),
             },
           ]),

@@ -1,5 +1,7 @@
 import { describe, expect, test } from 'bun:test';
 import chalk from 'chalk';
+import { useState } from 'react';
+import { paletteOf } from '../../../../src/ui/theme/theme.ts';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { draw } from '../../harness.tsx';
 import { PathViews } from '../../../../src/ui/app/context.ts';
@@ -12,16 +14,24 @@ import {
 } from '../../../../src/session/record.ts';
 import { reduceTranscript } from '../../../../src/session/transcript/reducer.ts';
 import { emptyTranscript } from '../../../../src/session/transcript/types.ts';
+import type {
+  SessionUpdate,
+  ToolCallContent,
+} from '@agentclientprotocol/sdk/unstable';
 import assert from 'node:assert/strict';
 import type {
+  Entry,
+  Subagent,
   ToolCall,
   TurnState,
 } from '../../../../src/session/transcript/types.ts';
 import {
   ChordServerName,
+  Colours,
   type CodeActions,
   CodeBlockActions,
   type DrawnBlock,
+  TranscriptEntries,
 } from '../../../../src/ui/app/context.ts';
 import {
   MessageBody,
@@ -2118,6 +2128,272 @@ describe('CHD-611 tester: independent path views leave tool data unchanged', () 
       } finally {
         await drawn.unmount();
       }
+    });
+  }
+});
+
+describe('a call that names a subagent (CHD-629)', () => {
+  /** The rows the call `id` draws in a transcript folded from `updates`. */
+  const rowsOf = async (updates: SessionUpdate[], id: string) => {
+    const transcript = updates.reduce(
+      (state, update) =>
+        reduceTranscript(state, { type: 'update', turnId: 't', update }),
+      reduceTranscript(emptyTranscript, {
+        type: 'prompt',
+        turnId: 't',
+        text: 'go',
+        at: 0,
+      }),
+    );
+    const entry = transcript.entries.find(
+      (each) => each.kind === 'tool' && each.call.id === id,
+    );
+
+    assert(entry);
+
+    const drawn = await draw(
+      <TranscriptEntries.Provider value={transcript.entries}>
+        <TranscriptEntry
+          entry={entry}
+          turn={{ status: 'working', turnId: 't', since: 0 }}
+          agent='fake'
+          expanded={false}
+          width={76}
+        />
+      </TranscriptEntries.Provider>,
+      { columns: 80, rows: 8 },
+    );
+    const frame = stripAnsi(drawn.frame());
+
+    await drawn.unmount();
+
+    return frame
+      .split('\n')
+      .map((row) => row.trimEnd())
+      .filter((row) => row !== '');
+  };
+
+  const SPAWNED: SessionUpdate = {
+    sessionUpdate: 'subagent_update',
+    sessionId: 'child',
+    title: 'Watch the build',
+    state: { state: 'running' },
+  };
+  const ref = { type: 'session', sessionId: 'child' } as ToolCallContent;
+  const call = (
+    status: 'in_progress' | 'failed' | 'completed',
+    content: ToolCallContent[],
+  ): SessionUpdate => ({
+    sessionUpdate: 'tool_call',
+    toolCallId: 'stop',
+    title: 'TaskStop',
+    kind: 'other',
+    status,
+    content,
+  });
+
+  test("its link line comes first, then the call's own lines as they would be without it", async () => {
+    expect(
+      await rowsOf(
+        [
+          SPAWNED,
+          call('completed', [
+            { type: 'content', content: { type: 'text', text: 'Stopped.' } },
+            ref,
+            ref,
+          ]),
+        ],
+        'stop',
+      ),
+    ).toStrictEqual([
+      '⏺ TaskStop',
+      '  ⎿  Agent(Watch the build)',
+      '     Stopped.',
+    ]);
+  });
+
+  test('a call with only the reference reads Running… while it runs and Failed once it failed, never on the link', async () => {
+    expect(
+      (await rowsOf([SPAWNED, call('in_progress', [ref])], 'stop')).slice(1),
+    ).toStrictEqual(['  ⎿  Agent(Watch the build)', '     Running…']);
+    expect(
+      (await rowsOf([SPAWNED, call('failed', [ref])], 'stop')).slice(1),
+    ).toStrictEqual(['  ⎿  Agent(Watch the build)', '     Failed']);
+  });
+
+  test('a reference to a session never announced names nothing', async () => {
+    expect(
+      (
+        await rowsOf(
+          [
+            call('completed', [
+              { type: 'content', content: { type: 'text', text: 'Stopped.' } },
+              { type: 'session', sessionId: 'stranger' } as ToolCallContent,
+            ]),
+          ],
+          'stop',
+        )
+      ).slice(1),
+    ).toStrictEqual(['  ⎿  Stopped.']);
+  });
+
+  test("a long title wraps at the link's own column, nothing cut, and the agent's escapes colour it rather than show", async () => {
+    const long =
+      'Watch the build and the lint and the tests across every package of the workspace';
+    const rows = await rowsOf(
+      [
+        { ...SPAWNED, title: `\u001b[31m${long}\u001b[0m` },
+        call('completed', [ref]),
+      ],
+      'stop',
+    );
+    const linked = rows.slice(1).join('');
+
+    expect(rows[1]?.startsWith('  ⎿  Agent(')).toBe(true);
+    expect(rows[2]?.startsWith('     ')).toBe(true);
+    expect(
+      rows
+        .slice(1)
+        .map((row) => row.trim())
+        .join(' '),
+    ).toContain(long);
+    expect(linked).not.toContain('[31m');
+  });
+});
+
+describe('CHD-629 tester: linked subagent draw lifecycle', () => {
+  const grandchild: Subagent = {
+    id: 'grandchild',
+    title: 'Lint the parser',
+    state: 'completed',
+    entries: [],
+    plan: [],
+  };
+  const tree: Entry[] = [
+    {
+      kind: 'subagent',
+      turnId: 't',
+      subagent: {
+        id: 'child',
+        title: 'Watch the build',
+        state: 'completed',
+        plan: [],
+        entries: [{ kind: 'subagent', turnId: 't', subagent: grandchild }],
+      },
+    },
+  ];
+  const reference: ToolCallContent = {
+    type: 'session',
+    sessionId: 'grandchild',
+  };
+  const call: ToolCall = {
+    id: 'stop',
+    title: 'TaskStop',
+    kind: 'other',
+    status: 'in_progress',
+    content: [reference, reference],
+  };
+
+  for (const columns of [80, 120]) {
+    test(`a late grandchild announcement resolves the existing running call at ${columns} columns, and an ended child stays linked`, async () => {
+      let change: ((entries: readonly Entry[]) => void) | undefined;
+
+      function Live() {
+        const [entries, setEntries] = useState<readonly Entry[]>([]);
+
+        change = setEntries;
+
+        return (
+          <TranscriptEntries.Provider value={entries}>
+            <Tool
+              call={call}
+              expanded={false}
+              ended={false}
+              width={columns - 2}
+            />
+          </TranscriptEntries.Provider>
+        );
+      }
+
+      const drawn = await draw(<Live />, { columns, rows: 12 });
+
+      try {
+        expect(stripAnsi(drawn.frame())).toContain('Running…');
+        expect(stripAnsi(drawn.frame())).not.toContain('Agent(');
+        assert(change);
+        change(tree);
+        await until('late grandchild link', () =>
+          stripAnsi(drawn.frame()).includes('Agent(Lint the parser)'),
+        );
+
+        const frame = stripAnsi(drawn.frame());
+
+        expect(frame.match(/Agent\(Lint the parser\)/g)).toHaveLength(1);
+        expect(frame.indexOf('Agent(Lint the parser)')).toBeLessThan(
+          frame.indexOf('Running…'),
+        );
+        expect(frame).not.toContain('Agent(Watch the build)');
+        expect(frame).not.toContain('Done');
+      } finally {
+        await drawn.unmount();
+      }
+    });
+  }
+
+  for (const theme of ['dark', 'light'] as const) {
+    test(`call status and expansion do not colour or replace the grandchild annotation in ${theme}`, async () => {
+      const linkRows: string[] = [];
+
+      for (const status of [
+        'pending',
+        'in_progress',
+        'failed',
+        'completed',
+      ] as const) {
+        for (const expanded of [false, true]) {
+          const drawn = await draw(
+            <Colours.Provider value={paletteOf(theme, true)}>
+              <TranscriptEntries.Provider value={tree}>
+                <Tool
+                  call={{ ...call, status }}
+                  expanded={expanded}
+                  ended={false}
+                  width={78}
+                />
+              </TranscriptEntries.Provider>
+            </Colours.Provider>,
+            { columns: 80, rows: 12 },
+          );
+
+          try {
+            const raw = drawn.frame();
+            const frame = stripAnsi(raw);
+
+            expect(frame.match(/Agent\(Lint the parser\)/g)).toHaveLength(1);
+
+            if (status === 'failed') {
+              expect(frame).toContain('Failed');
+            }
+
+            if (status === 'in_progress') {
+              expect(frame).toContain('Running…');
+            }
+
+            const row = raw
+              .split('\n')
+              .find((line) =>
+                stripAnsi(line).includes('Agent(Lint the parser)'),
+              );
+
+            assert(row);
+            linkRows.push(row);
+          } finally {
+            await drawn.unmount();
+          }
+        }
+      }
+
+      expect(new Set(linkRows).size).toBe(1);
     });
   }
 });

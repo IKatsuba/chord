@@ -12,6 +12,7 @@ import { filledIn } from '../enrich.ts';
 import { awaitedCall, replacedCall, served } from './chord.ts';
 import { mergeCompaction } from './compactions.ts';
 import { appendText } from './messages.ts';
+import { addNotice } from './notices.ts';
 import {
   elicitationRequested,
   elicitationSettled,
@@ -298,6 +299,9 @@ function reduceAction(state: Transcript, action: TranscriptAction): Transcript {
       };
     case 'cycle_started':
       return cycleStarted(state, action.turnId, action.at);
+    // A title shows where the agent's own does, never as a line (CHD-445).
+    case 'renamed':
+      return state;
     case 'forked':
       return {
         ...state,
@@ -359,6 +363,8 @@ function applyUpdate(
 
       return { ...rest, plan: update.entries ?? state.plan };
     }
+    case 'notice':
+      return addNotice(state, turnId, update);
     case 'compaction_update':
     case 'compaction_summary_chunk':
       return mergeCompaction(state, turnId, update, unasked);

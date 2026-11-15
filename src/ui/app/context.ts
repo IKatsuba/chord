@@ -1,3 +1,4 @@
+import type { Entry } from '../../session/transcript/types.ts';
 import type { PathView } from '../transcript/tools/paths.ts';
 import { createContext, useContext, useMemo } from 'react';
 import type { Renderable, RGBA } from '@opentui/core';
@@ -147,6 +148,12 @@ export const AgentColours = createContext<Readonly<Record<string, string>>>({});
  * passed. A call to it is chord's own from its first update (CHD-415).
  */
 export const ChordServerName = createContext<string | undefined>(undefined);
+
+/**
+ * The transcript's entries, where a call's reference to a subagent finds
+ * it at draw time (CHD-629); none outside a transcript.
+ */
+export const TranscriptEntries = createContext<readonly Entry[]>([]);
 
 /**
  * The session's directory and home, by which the window draws a file or a

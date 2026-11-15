@@ -8855,3 +8855,103 @@ module and its tests are gone; a person's own `OPENTUI_FORCE_UNICODE` or
 `OPENTUI_FORCE_WCWIDTH` still reaches OpenTUI from the environment.
 `OTUI_STDOUT_THREAD` is still set off for the renderer and put back for
 the processes chord starts.
+
+## 2026-11-14 — CHD-629: `/rename` is a chord record line from the agent's answer
+
+Options for the record: a synthesised `session_info_update`; a chord-own
+`renamed` line; nothing but the agent's echo. Options for timing: write when
+typed, before sending; write from the answer. Chosen: a `renamed` line
+written from `session/set_title`'s answer (the agent's stored title wins over
+the typed one), or at once for an agent without `sessionCapabilities.title`,
+in a rename chain of its own per session, one at a time. The record holds no
+ACP event the agent did not send; record order is wire order; a silent or
+normalised answer is recorded as answered. The last title wins, whoever set
+it (D3 b). Kept apart from CHD-626's config chain: a hung config change must
+not hold a title. Rejected: writing before sending, which records a title the
+agent may normalise or refuse. A refused `set_title` records nothing
+(owner, Q1 a). No key: a typed command, as CHD-626
+O6 settled. Libraries: the SDK 2.6 `setSessionTitle` types; nothing written.
+
+## 2026-11-14 — CHD-629: the account is a fold per connection, never awaited
+
+Claude's identity is per connection and its `auth/status` may wait up to 5 s
+on a CLI probe. Options: ask before `session/new`; ask beside it and wait on
+success; ask beside it and never wait on success. Chosen: one `auth/status`
+beside `session/new`, plus the `auth/status_update` listener, folded in
+arrival order into `none | pending | heard | failed`; `/status` reads it and
+sends nothing; never recorded or relayed to tools. A failed start or a
+prompt's -32000 words the sign-in block from it, waiting at most 1 s for a
+pending answer. `chord acp` serves one source, its oldest live main session
+of the startup agent, and moves to the next on close with one push; it never
+mixes connections. Signed-out Claude opens and fails the first prompt; the
+owner chose to keep that (Q2 c) over failing the start on `unauthenticated`
+or asking before `session/new`. Libraries: SDK 2.6 `AuthStatusResponse`; `strip-ansi` for the
+account strings.
+
+## 2026-11-14 — CHD-629: initial options from a table, read back in the chain
+
+Options for ids: `session/options` before each start (Claude runs a throwaway
+Claude Code and the person's SessionStart hooks); a table. Options for the
+key: registry id, as `FAST_OPTIONS`; `agentInfo.name`. Chosen: a table keyed
+by `agentInfo.name` (it covers `--agent-command`), entries on `session/new`
+only, model then effort then mode, named values only. `#applyStarting`
+becomes the first link of CHD-626's one chain, checks each value against the
+session's state at its own turn, asks what is not current, and rereads after
+a successful ask: an optional value the agent overrode draws no line, a
+required one fails the start. No value is asked more than twice; chord does
+not read why the agent overrode. Rejected: one upfront unmet list, which
+misses a value a model change moved; moving `FAST_OPTIONS` to the adapter
+name, CHD-626's choice and not this task. `chord acp` does not advertise
+`options`; a client's entries pass down verbatim (owner, Q4 b). A stale
+id falls back to set-after-new; the pin-bump checklist rechecks the table
+(owner, Q8 a). Libraries: SDK 2.6
+`InitialSessionConfigOption`; nothing written.
+
+## 2026-11-14 — CHD-629: notices declared per open, drawn as their own entry
+
+Declaring `session.notices` makes Claude and codex send notices instead of
+reply text, and Claude drop its `info` messages. Options: declare for every
+connection; per open; never. Chosen: `CLIENT_CAPABILITIES` becomes a
+parameter of `openAgent`; the window and `-p` declare it, `chord acp` only
+when its client did, so its clients get what they get today and chord
+rewrites no agent output. A notice is a transcript entry of its own, kept
+whole in the record and drawn on resume; it is no cycle work. The colour
+is dim text with the `⏺` in the severity's role (owner, Q7 a); `-p` writes
+notices to stderr (Q5 a); Claude's dropped `info` messages are accepted
+(Q6 a).
+Libraries: SDK 2.6 `Notice` types; no library draws transcript entries
+beyond OpenTUI's `text`.
+
+## 2026-11-14 — CHD-629: a `session` reference is resolved when drawn
+
+Options: resolve on arrival and store the link; resolve at draw time.
+Chosen: at draw time against the subagents the transcript holds; the
+reference never grows the tree; an unknown id draws nothing. Link lines are
+annotations above the call's own lines, which keep `Running…`, `Failed` and
+the `Error:` prefix as today. `chord acp` aliases known ids and drops unknown
+ones and every reference for a client without `subagents`; a raw id could
+equal an unrelated upstream alias. Libraries: SDK 2.6 `SessionReference`;
+nothing written.
+
+## 2026-11-14 — CHD-629: the owner's answers
+
+The owner took every recommendation of `docs/design/CHD-629.md`: Q1 a (a
+refused `set_title` records nothing), Q2 c (signed-out Claude opens; a -32000
+at start or at a prompt becomes the sign-in block from `auth/status`), Q3 d
+(`chord acp` records a rename of an unloaded session and sends `set_title` at
+its next load), Q4 b (`chord acp` passes a client's initial `configOptions`
+verbatim without advertising `options`), Q5 a (`-p` writes notices to
+stderr), Q6 a (Claude's dropped `info` messages accepted), Q7 a (a notice's
+`⏺` in its severity's role), Q8 a (a renamed config id caught by the
+pin-bump checklist, harmless by the read-back).
+
+## 2026-11-14 — CHD-629: an account push after the request beats its answer
+
+ACP SDK 2.6 does not keep a response and a notification in wire order: it
+can hand chord an `auth/status` answer after an `auth/status_update` that
+came after it on the wire, so folding both as they reach chord can let an
+older answer replace a newer push. Tried and not taken: reading the answer
+from the transport's tap, in wire order, beside the SDK's own handling. The
+owner chose (b): the SDK's result is folded as it comes, except that once a
+push is heard after the request went out, the answer does not replace it.
+No upstream issue was opened.

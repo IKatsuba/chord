@@ -18,6 +18,7 @@ import {
   type OpenSession,
 } from '../../session/conversation.ts';
 import { createAgentsHost } from '../../session/agents_host.ts';
+import type { RenameTarget } from './rename.ts';
 import { closeOnForcedExit } from '../../session/leaving.ts';
 import type { Place } from '../../session/place.ts';
 import type { ChordServer } from '../../server/server.ts';
@@ -1111,6 +1112,42 @@ export function useSessions(
     );
   };
 
+  /**
+   * `/rename`'s target: the session in front, main or the child picked, or
+   * why it cannot be renamed (CHD-629).
+   */
+  const renameTarget = (): RenameTarget<Conversation> => {
+    const agents = front();
+    const child = agents && pickedChild(agents);
+    const key = child?.key ?? agents?.main?.key;
+    const name = child?.name ?? 'main';
+    const conversation = key === undefined ? undefined : conversationAt(key);
+
+    if ((child?.wait ?? agents?.main?.wait)?.exited === true) {
+      return { kind: 'exited', name };
+    }
+
+    // Refused, not queued: a start that fails would leave it nowhere.
+    if (
+      key === undefined ||
+      conversation?.session === undefined ||
+      stateOf(key)?.connection.status !== 'ready'
+    ) {
+      return { kind: 'starting' };
+    }
+
+    if (conversation.session.resumed?.task === true) {
+      return { kind: 'task', name };
+    }
+
+    return {
+      kind: 'open',
+      key,
+      agent: child?.runtime ?? agents?.main?.agent ?? '',
+      conversation,
+    };
+  };
+
   /** ctrl+x a: the agent that waits longest on the person, if one does. */
   const attend = () => {
     if (!sessions.attend()) {
@@ -1586,6 +1623,7 @@ export function useSessions(
     sendToMain,
     clearFront,
     agentRows,
+    renameTarget,
     recipients: () => {
       const agents = front();
 

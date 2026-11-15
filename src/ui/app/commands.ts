@@ -7,6 +7,7 @@ import { type Dispatch, useRef } from 'react';
 import { findAgent } from '../../agents.ts';
 import type { Conversation } from '../../session/conversation.ts';
 import { effortsFrom } from '../../session/efforts.ts';
+import { agentMessageOf } from '../../session/starting.ts';
 import { modelName } from '../../session/models.ts';
 import type { TeamShown } from '../../session/transcript/types.ts';
 import type { EditorMode } from '../../settings.ts';
@@ -15,6 +16,15 @@ import { newTeamPrompt, TEAM_WORDS } from '../teams/teams.ts';
 import type { ChordCommand } from '../prompt/commands.ts';
 import { report, reportFacts } from '../transcript/reports.ts';
 import { themeName, type ThemeSetting } from '../theme/theme.ts';
+import {
+  refusedByAgentNote,
+  refusedNote,
+  renamedNote,
+  renamingNote,
+  type RenameNote,
+  type RenameTarget,
+  unnamedNote,
+} from './rename.ts';
 import type { AppState, WindowedAction } from './state.ts';
 
 export interface CommandsOptions {
@@ -57,6 +67,8 @@ export interface CommandsSessions {
    * gone to, its call to draw; or why not, if it was refused.
    */
   newTyped(named: string): Promise<TeamShown>;
+  /** `/rename`'s target; see `useSessions`. */
+  renameTarget(): RenameTarget<Conversation>;
   /** `/fork`; see `useSessions`. */
   forkTyped(
     named: string,
@@ -167,6 +179,8 @@ export function useCommands(
         return effort(args.trim());
       case 'fast':
         return fast();
+      case 'rename':
+        return rename(args);
       case 'resume':
         return sessions.openResume();
       case 'theme':
@@ -184,12 +198,19 @@ export function useCommands(
           command,
           rows: report(
             command,
-            reportFacts(state, agent, cwd, Date.now(), {
-              spend: sessions.spend(),
-              // Under the report's `⎿`, six columns in, inside the
-              // transcript's margins: a note never wraps.
-              width: columns - 8,
-            }),
+            reportFacts(
+              state,
+              agent,
+              cwd,
+              Date.now(),
+              {
+                spend: sessions.spend(),
+                // Under the report's `⎿`, six columns in, inside the
+                // transcript's margins: a note never wraps.
+                width: columns - 8,
+              },
+              conversation()?.title,
+            ),
           ),
         });
       case 'exit':
@@ -242,6 +263,45 @@ export function useCommands(
     void conversation()
       ?.toggleFast(agent, findAgent(agent)?.fastOption)
       .catch(() => {});
+  };
+
+  /**
+   * `/rename <title>`: the session in front renamed, its title folded to one
+   * line; one note under the command, in the renamed session's view, that
+   * says how it went (CHD-629).
+   */
+  const rename = (args: string) => {
+    const title = args.replaceAll(/\s+/g, ' ').trim();
+    const command = ['rename', title].filter(Boolean).join(' ');
+    const turnId = `rename-${crypto.randomUUID()}`;
+    const target = sessions.renameTarget();
+    const refused = refusedNote(target);
+
+    if (refused !== undefined || target.kind !== 'open') {
+      return (
+        refused && dispatch({ type: 'noted', turnId, command, ...refused })
+      );
+    }
+
+    const note = ({ text, failed }: RenameNote) =>
+      dispatch({
+        type: 'in_session',
+        key: target.key,
+        action: { type: 'noted', turnId, command, text, failed },
+      });
+
+    if (title === '') {
+      return note(unnamedNote(target.conversation.title));
+    }
+
+    note(renamingNote(title));
+    void target.conversation.rename(title).then(
+      (renamed) =>
+        renamed &&
+        note(renamedNote(renamed.title, target.agent, renamed.agent)),
+      (error: unknown) =>
+        note(refusedByAgentNote(target.agent, agentMessageOf(error))),
+    );
   };
 
   /**

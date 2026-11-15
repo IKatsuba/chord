@@ -12,7 +12,12 @@ import {
   MARKDOWN_WRAP,
 } from '../../markdown.ts';
 import { STEP_MS } from '../options.ts';
-import { mcpServers, openedWith, steeredInto } from '../sessions.ts';
+import {
+  configsHeard,
+  mcpServers,
+  openedWith,
+  steeredInto,
+} from '../sessions.ts';
 import { lifetime, pause, type Play, steeredIn } from '../turn.ts';
 import { GATE_RELEASE, gateOpened } from './agents.ts';
 
@@ -152,6 +157,18 @@ export const TEXT = {
     await turn.say(
       `\`\`\`json\n${JSON.stringify(
         mcpServers.get(turn.sessionId) ?? [],
+        null,
+        2,
+      )}\n\`\`\``,
+    );
+
+    return 'end_turn';
+  },
+
+  async configsheard(turn) {
+    await turn.say(
+      `\`\`\`json\n${JSON.stringify(
+        configsHeard.get(turn.sessionId) ?? [],
         null,
         2,
       )}\n\`\`\``,

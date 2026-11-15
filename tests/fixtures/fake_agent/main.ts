@@ -280,6 +280,13 @@ import {
   ARGS,
   AUTH_REQUIRED,
   FIRST_MESSAGE,
+  START_NOTICE,
+  INITIAL_OPTIONS,
+  SET_TITLE,
+  AUTH_STATUS,
+  AUTH_PUSH,
+  AUTH_PUSH_EARLY,
+  AUTO_FALLBACK,
   HANG,
   RESEND_CONFIG,
   CONFIG_IN_RESPONSES,
@@ -326,6 +333,14 @@ import {
   IDLE_COMPACTION,
 } from './scenarios/compaction.ts';
 import { RESOURCES } from './scenarios/resources.ts';
+import { setTitle, TITLES } from './scenarios/titles.ts';
+import {
+  ACCOUNTS,
+  API_KEY,
+  authStatus,
+  pushStatus,
+} from './scenarios/accounts.ts';
+import { LINKS } from './scenarios/links.ts';
 import { SELECTED_TEAMS } from './scenarios/selected_teams.ts';
 import { CHORD_TOOLS } from './scenarios/chord_tools.ts';
 import { FORM_SCHEMA } from '../forms.ts';
@@ -334,6 +349,7 @@ import { FX } from './scenarios/fx.ts';
 import { GUARDIAN } from './scenarios/guardian.ts';
 import { MISBEHAVING } from './scenarios/misbehaving.ts';
 import { MODES } from './scenarios/modes.ts';
+import { AUTO_OFF, NOTICES, noticeUpdate } from './scenarios/notices.ts';
 import { PERMISSIONS } from './scenarios/permissions.ts';
 import { REVIEW_PERMISSIONS } from './scenarios/review_permissions.ts';
 import { PLANS } from './scenarios/plans.ts';
@@ -352,6 +368,8 @@ import { TOOLS } from './scenarios/tools.ts';
 import {
   AVAILABLE_MODELS,
   AVAILABLE_MODES,
+  configNameOf,
+  configsHeard,
   configOptions,
   cwds,
   efforts,
@@ -393,6 +411,14 @@ const SCENARIOS = [
   'guardian',
   'guardiangated',
   'text',
+  'notice',
+  'noticeidle',
+  'noticelong',
+  'titledlater',
+  'authchanged',
+  'subagentlinked',
+  'subagentgrandlinked',
+  'subagentstranger',
   'cloudrequest',
   'texttillsteered',
   'texttillsteeredheld',
@@ -479,6 +505,7 @@ const SCENARIOS = [
   'lock',
   'mcp',
   'opened',
+  'configsheard',
   'form',
   'link',
   'askclaude',
@@ -685,6 +712,10 @@ async function switchedModel(
 ): Promise<acp.SetSessionConfigOptionResponse> {
   const model = models.get(sessionId) ?? FIRST_MODEL;
 
+  if (modes.get(sessionId) === 'auto') {
+    modes.set(sessionId, await fallenBack(client, sessionId, 'auto'));
+  }
+
   if (
     !effortsOf(model).some(
       (each) => each.value === (efforts.get(sessionId) ?? 'medium'),
@@ -782,6 +813,10 @@ const PLAY: Record<Scenario, Play> = {
   ...COMPACTION,
   ...IDLE_COMPACTION,
   ...MODES,
+  ...NOTICES,
+  ...TITLES,
+  ...ACCOUNTS,
+  ...LINKS,
   ...SUBAGENTS,
   ...MISBEHAVING,
   ...FX,
@@ -1059,10 +1094,43 @@ const HISTORY: Update[] = [
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** The modes `session/new` and its kin answer with, the older way. */
-function sessionModes(): { modes?: acp.SessionModeState } {
+function sessionModes(sessionId = ''): { modes?: acp.SessionModeState } {
   return NO_MODES
     ? {}
-    : { modes: { currentModeId: 'default', availableModes: AVAILABLE_MODES } };
+    : {
+        modes: {
+          currentModeId: modes.get(sessionId) ?? FIRST_MODE,
+          availableModes: AVAILABLE_MODES,
+        },
+      };
+}
+
+/** The mode a session opens in: `auto` under `--auto-fallback`. */
+const FIRST_MODE = AUTO_FALLBACK ? 'auto' : 'default';
+
+/**
+ * The mode `asked` comes to on `sessionId`'s model: under `--auto-fallback`,
+ * `auto` on `fake-small` is `acceptEdits`, said in a notice.
+ */
+async function fallenBack(
+  client: Pick<Client, 'notify'>,
+  sessionId: string,
+  asked: string,
+): Promise<string> {
+  if (
+    !AUTO_FALLBACK ||
+    asked !== 'auto' ||
+    (models.get(sessionId) ?? FIRST_MODEL) !== 'fake-small'
+  ) {
+    return asked;
+  }
+
+  await client.notify('session/update', {
+    sessionId,
+    update: noticeUpdate(AUTO_OFF),
+  });
+
+  return 'acceptEdits';
 }
 
 /** Sends the commands just after the reply, as Claude's adapter does. */
@@ -1272,9 +1340,65 @@ interface SteerRequest {
   };
 }
 
-/** How a session was opened, as `opened` says it: `meta` only when sent. */
-function opened(method: string, meta: unknown) {
-  return meta === undefined || meta === null ? { method } : { method, meta };
+/**
+ * How a session was opened, as `opened` says it: `meta` and the initial
+ * `configOptions` only when sent, and under `--options` how many
+ * `session/options` the fake has heard (CHD-629).
+ */
+function opened(
+  method: string,
+  meta: unknown,
+  configOptions?: readonly acp.InitialSessionConfigOption[] | null,
+) {
+  return {
+    method,
+    ...(meta === undefined || meta === null ? {} : { meta }),
+    ...(configOptions ? { configOptions } : {}),
+    ...(INITIAL_OPTIONS === undefined ? {} : { sessionOptions: optionsAsked }),
+  };
+}
+
+/** The sessions `--auth-required prompt` refused a prompt of already. */
+const promptsRefused = new Set<string>();
+
+/** How many `session/options` requests the fake has heard. */
+let optionsAsked = 0;
+
+/**
+ * `session/new`'s initial entries, as `--options` takes them: applied in
+ * order, each it cannot take skipped, as Claude's adapter does; ignored; or
+ * the request refused. Two with one id fail it whichever, as ACP says.
+ */
+async function applyInitial(
+  client: Client,
+  sessionId: string,
+  entries: readonly acp.InitialSessionConfigOption[],
+): Promise<void> {
+  if (entries.length === 0 || INITIAL_OPTIONS === undefined) {
+    return;
+  }
+
+  if (
+    new Set(entries.map((entry) => entry.configId)).size !== entries.length ||
+    INITIAL_OPTIONS === 'reject'
+  ) {
+    throw acp.RequestError.invalidParams(
+      undefined,
+      'The fake agent takes no such initial configOptions.',
+    );
+  }
+
+  if (INITIAL_OPTIONS === 'ignore') {
+    return;
+  }
+
+  for (const { configId, value } of entries) {
+    await setConfig(client, {
+      sessionId,
+      configId,
+      value: String(value),
+    }).catch(() => {});
+  }
 }
 
 /**
@@ -1386,10 +1510,97 @@ function refuseSession(method: string): void {
   }
 }
 
+/**
+ * Sets one of a session's config options, as `session/set_config_option`
+ * asks and as `--options apply` applies `session/new`'s initial entries.
+ */
+async function setConfig(
+  client: Client,
+  params: acp.SetSessionConfigOptionRequest,
+): Promise<acp.SetSessionConfigOptionResponse> {
+  // An id the fake does not give takes nothing, as an unknown option.
+  const configId = configNameOf(params.configId) ?? '';
+
+  if (HANG === 'config' || (HANG === 'effort' && configId === 'effort')) {
+    await never();
+  }
+
+  if (CONFIG_DELAY_MS > 0) {
+    await new Promise((resolve) => setTimeout(resolve, CONFIG_DELAY_MS));
+  }
+
+  const value = String(params.value);
+  const model = models.get(params.sessionId) ?? FIRST_MODEL;
+  const offered =
+    configId === 'model'
+      ? AVAILABLE_MODELS
+      : configId === 'mode' && !NO_MODES
+        ? AVAILABLE_MODES.map(({ id }) => ({ value: id }))
+        : configId === 'effort' && !NO_CONFIG
+          ? effortsOf(model)
+          : configId === 'fast' && hasFast(model)
+            ? FAST_VALUES
+            : configId === 'permission' && DIMCODE_PERMISSION !== undefined
+              ? DIMCODE_PERMISSIONS
+              : [];
+
+  if (!offered.some((entry) => entry.value === value)) {
+    throw acp.RequestError.invalidParams(
+      undefined,
+      `${params.configId} cannot be ${value}`,
+    );
+  }
+
+  if (configId === 'effort' && REFUSE_CONFIG) {
+    throw new acp.RequestError(-32603, 'The fake agent holds its effort.');
+  }
+
+  if (configId === 'mode' && locked.has(params.sessionId)) {
+    throw new acp.RequestError(-32603, 'The fake agent holds its mode.');
+  }
+
+  const chosen =
+    configId === 'model'
+      ? models
+      : configId === 'mode'
+        ? modes
+        : configId === 'permission'
+          ? permissions
+          : configId === 'fast'
+            ? fasts
+            : efforts;
+
+  chosen.set(
+    params.sessionId,
+    configId === 'mode'
+      ? await fallenBack(client, params.sessionId, value)
+      : value,
+  );
+
+  if (configId === 'model') {
+    return switchedModel(client, params.sessionId);
+  }
+
+  // Codex's adapter says nothing of the mode it moved to.
+  if (configId === 'mode' && SILENT_SET_MODE) {
+    return {} as acp.SetSessionConfigOptionResponse;
+  }
+
+  return { configOptions: configOptions(params.sessionId) };
+}
+
 const connection = acp
   .agent({ name: 'chord-fake-agent' })
-  .onRequest('initialize', ({ params }) => {
+  .onRequest('initialize', async ({ params, client }) => {
     readCapabilities(params);
+
+    if (AUTH_PUSH) {
+      pushStatus(client);
+    }
+
+    if (AUTH_PUSH_EARLY) {
+      await client.notify('auth/status_update', API_KEY);
+    }
 
     return HANG === 'start'
       ? never()
@@ -1400,6 +1611,7 @@ const connection = acp
             ? { authMethods: CLOUD_AUTH_METHODS }
             : {}),
           agentCapabilities: {
+            ...(AUTH_STATUS === undefined ? {} : { auth: { status: {} } }),
             loadSession: !NO_LOAD,
             mcpCapabilities: MCP_TRANSPORTS,
             promptCapabilities: {
@@ -1410,6 +1622,8 @@ const connection = acp
               list: {},
               ...(RESUME_ONLY ? { resume: {} } : {}),
               ...(FORKS ? { fork: {} } : {}),
+              ...(INITIAL_OPTIONS === undefined ? {} : { options: {} }),
+              ...(SET_TITLE === undefined ? {} : { title: {} }),
             },
           },
           // Steering as Claude's adapter, it names itself as that adapter does,
@@ -1433,11 +1647,15 @@ const connection = acp
 
     const sessionId = SESSION_ID ?? crypto.randomUUID();
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers);
-    openedWith.set(sessionId, opened('session/new', params._meta));
+    openedWith.set(
+      sessionId,
+      opened('session/new', params._meta, params.configOptions),
+    );
     cwds.set(sessionId, params.cwd);
     created.push({ sessionId, cwd: params.cwd });
+    await applyInitial(client, sessionId, params.configOptions ?? []);
 
     // Before the answer, as cursor-cloud's first message comes (CHD-622).
     if (FIRST_MESSAGE !== undefined) {
@@ -1451,15 +1669,32 @@ const connection = acp
       });
     }
 
+    if (START_NOTICE !== undefined) {
+      await client.notify('session/update', {
+        sessionId,
+        update: noticeUpdate({ severity: 'warning', title: START_NOTICE }),
+      });
+    }
+
     // The client hears of the commands only once the session is already up.
     advertiseCommands(client, sessionId);
     titleAtStart(client, sessionId);
 
     return {
       sessionId,
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
+  })
+  .onRequest('auth/status', ({ client }) => authStatus(client))
+  .onRequest('session/set_title', ({ params, client }) =>
+    setTitle(client, params),
+  )
+  // Counted, for a test that chord never asks it (CHD-629).
+  .onRequest('session/options', () => {
+    optionsAsked += 1;
+
+    return { ...sessionModes(), configOptions: configOptions('') };
   })
   // The sessions this process created, newest first, in the directory asked
   // for or in all of them.
@@ -1478,7 +1713,7 @@ const connection = acp
       throw acp.RequestError.resourceNotFound(sessionId);
     }
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers);
     openedWith.set(sessionId, opened('session/load', params._meta));
     cwds.set(sessionId, params.cwd);
@@ -1494,7 +1729,7 @@ const connection = acp
     titleAtStart(client, sessionId);
 
     return {
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
   })
@@ -1524,7 +1759,7 @@ const connection = acp
       models.set(sessionId, FORK_MODEL);
     }
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers ?? []);
     openedWith.set(sessionId, {
       ...opened('session/fork', params._meta),
@@ -1537,7 +1772,7 @@ const connection = acp
 
     return {
       sessionId,
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
   })
@@ -1555,7 +1790,7 @@ const connection = acp
       throw acp.RequestError.resourceNotFound(sessionId);
     }
 
-    modes.set(sessionId, 'default');
+    modes.set(sessionId, FIRST_MODE);
     mcpServers.set(sessionId, params.mcpServers ?? []);
     openedWith.set(sessionId, opened('session/resume', params._meta));
     cwds.set(sessionId, params.cwd);
@@ -1568,7 +1803,7 @@ const connection = acp
     }
 
     return {
-      ...sessionModes(),
+      ...sessionModes(sessionId),
       configOptions: configOptions(sessionId),
     };
   })
@@ -1594,7 +1829,10 @@ const connection = acp
       throw new acp.RequestError(-32603, 'The fake agent holds its mode.');
     }
 
-    modes.set(params.sessionId, params.modeId);
+    modes.set(
+      params.sessionId,
+      await fallenBack(client, params.sessionId, params.modeId),
+    );
 
     if (SILENT_SET_MODE || CONFIG_IN_RESPONSES) {
       return {};
@@ -1612,72 +1850,13 @@ const connection = acp
   })
   // A model, a mode or an effort is chosen through its config option, and the
   // answer carries every option as it now stands, as ACP asks.
-  .onRequest('session/set_config_option', async ({ params, client }) => {
-    if (
-      HANG === 'config' ||
-      (HANG === 'effort' && params.configId === 'effort')
-    ) {
-      await never();
-    }
+  .onRequest('session/set_config_option', ({ params, client }) => {
+    configsHeard.set(params.sessionId, [
+      ...(configsHeard.get(params.sessionId) ?? []),
+      params,
+    ]);
 
-    if (CONFIG_DELAY_MS > 0) {
-      await new Promise((resolve) => setTimeout(resolve, CONFIG_DELAY_MS));
-    }
-
-    const value = String(params.value);
-    const model = models.get(params.sessionId) ?? FIRST_MODEL;
-    const offered =
-      params.configId === 'model'
-        ? AVAILABLE_MODELS
-        : params.configId === 'mode' && !NO_MODES
-          ? AVAILABLE_MODES.map(({ id }) => ({ value: id }))
-          : params.configId === 'effort' && !NO_CONFIG
-            ? effortsOf(model)
-            : params.configId === 'fast' && hasFast(model)
-              ? FAST_VALUES
-              : params.configId === 'permission' &&
-                  DIMCODE_PERMISSION !== undefined
-                ? DIMCODE_PERMISSIONS
-                : [];
-
-    if (!offered.some((entry) => entry.value === value)) {
-      throw acp.RequestError.invalidParams(
-        undefined,
-        `${params.configId} cannot be ${value}`,
-      );
-    }
-
-    if (params.configId === 'effort' && REFUSE_CONFIG) {
-      throw new acp.RequestError(-32603, 'The fake agent holds its effort.');
-    }
-
-    if (params.configId === 'mode' && locked.has(params.sessionId)) {
-      throw new acp.RequestError(-32603, 'The fake agent holds its mode.');
-    }
-
-    const chosen =
-      params.configId === 'model'
-        ? models
-        : params.configId === 'mode'
-          ? modes
-          : params.configId === 'permission'
-            ? permissions
-            : params.configId === 'fast'
-              ? fasts
-              : efforts;
-
-    chosen.set(params.sessionId, value);
-
-    if (params.configId === 'model') {
-      return switchedModel(client, params.sessionId);
-    }
-
-    // Codex's adapter says nothing of the mode it moved to.
-    if (params.configId === 'mode' && SILENT_SET_MODE) {
-      return {} as acp.SetSessionConfigOptionResponse;
-    }
-
-    return { configOptions: configOptions(params.sessionId) };
+    return setConfig(client, params);
   })
   // The older way to pick a model, which Claude's adapter still answers.
   .onRequest(
@@ -1701,6 +1880,14 @@ const connection = acp
     },
   )
   .onRequest('session/prompt', async ({ params, client }) => {
+    // Signed out, the first prompt is refused; signed in elsewhere since, the
+    // next one runs.
+    if (AUTH_REQUIRED === 'prompt' && !promptsRefused.has(params.sessionId)) {
+      promptsRefused.add(params.sessionId);
+
+      throw acp.RequestError.authRequired();
+    }
+
     const gate = join(cwds.get(params.sessionId) ?? '.', '.fake-gate');
     const capture = join(gate, 'capture-prompt');
 

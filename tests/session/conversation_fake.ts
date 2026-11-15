@@ -54,6 +54,8 @@ export function heldSession() {
     // Its agent never goes on its own.
     exited: new Promise<void>(() => {}),
     takesImages: () => false,
+    account: () => ({ phase: 'none' }),
+    subscribeAccount: () => () => {},
     modes: () => undefined,
     commands: () => [],
     models: () => undefined,

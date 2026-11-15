@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert';
+import type { ToolCallContent } from '@agentclientprotocol/sdk/unstable';
 import { spawnSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
@@ -432,4 +433,127 @@ describe('CHD-581 tester: children across session boundaries', () => {
       },
     );
   });
+});
+
+describe("a call's reference to a child going up (CHD-629)", () => {
+  test('names the child by the alias the client was told, an unannounced one dropped', () =>
+    withChildren(async (client, newSession) => {
+      const sessionId = await newSession();
+
+      await client.answerTo(
+        client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: 'subagentlinked' }],
+        }),
+      );
+      await client.answerTo(
+        client.send('session/prompt', {
+          sessionId,
+          prompt: [{ type: 'text', text: 'subagentstranger' }],
+        }),
+      );
+
+      const updates = client.updates(sessionId);
+      const child = updates.find(
+        (update) => update.sessionUpdate === 'subagent_update',
+      );
+      const references = updates.flatMap((update) =>
+        update.sessionUpdate === 'tool_call' ||
+        update.sessionUpdate === 'tool_call_update'
+          ? (
+              (update as { content?: { type: string; sessionId?: string }[] })
+                .content ?? []
+            ).filter((item) => item.type === 'session')
+          : [],
+      );
+
+      assert(child?.sessionUpdate === 'subagent_update');
+      expect(references.length).toBeGreaterThan(0);
+      expect(
+        references.every(
+          (item) =>
+            item.type === 'session' && item.sessionId === child.sessionId,
+        ),
+      ).toBe(true);
+    }));
+});
+
+describe('CHD-629 tester: reference isolation on the ACP wire', () => {
+  test('two mains with colliding raw child ids forward both tool kinds to their own announced grandchild', () =>
+    withChildren(async (client, newSession, _lines, { cwd }) => {
+      await mkdir(join(cwd, '.fake-gate'), { recursive: true });
+      await writeFile(join(cwd, '.fake-gate', 'release'), '');
+
+      const first = await newSession();
+      const second = await newSession();
+      const aliases: string[] = [];
+
+      for (const sessionId of [first, second]) {
+        const answer = await client.answerTo(
+          prompt(client, sessionId, 'subagentgrandlinked'),
+        );
+
+        expect(answer.error).toBeUndefined();
+
+        const child = client
+          .updates(sessionId)
+          .find((update) => update.sessionUpdate === 'subagent_update');
+
+        assert(child?.sessionUpdate === 'subagent_update');
+        assert(typeof child.sessionId === 'string');
+
+        const grand = client
+          .updates(child.sessionId)
+          .find((update) => update.sessionUpdate === 'subagent_update');
+
+        assert(grand?.sessionUpdate === 'subagent_update');
+        assert(typeof grand.sessionId === 'string');
+        expect(grand.sessionId).toStartWith(child.sessionId + '/');
+        aliases.push(grand.sessionId);
+
+        const calls = client
+          .updates(sessionId)
+          .filter(
+            (update) =>
+              update.sessionUpdate === 'tool_call' ||
+              update.sessionUpdate === 'tool_call_update',
+          );
+
+        expect(new Set(calls.map((update) => update.sessionUpdate))).toEqual(
+          new Set(['tool_call', 'tool_call_update']),
+        );
+
+        for (const update of calls) {
+          assert(
+            update.sessionUpdate === 'tool_call' ||
+              update.sessionUpdate === 'tool_call_update',
+          );
+
+          const content = update.content as ToolCallContent[] | undefined;
+
+          expect(content?.filter((item) => item.type === 'session')).toEqual([
+            { type: 'session', sessionId: grand.sessionId },
+          ]);
+        }
+      }
+
+      expect(first).not.toBe(second);
+      expect(aliases[0]).not.toBe(aliases[1]);
+      await client.request('session/close', { sessionId: first });
+
+      const response = await client.answerTo(
+        prompt(client, second, 'subagentstranger'),
+      );
+
+      expect(response.error).toBeUndefined();
+
+      const last = client
+        .updates(second)
+        .findLast((update) => update.sessionUpdate === 'tool_call');
+
+      assert(last?.sessionUpdate === 'tool_call');
+      expect(last.content).toEqual([
+        { type: 'content', content: { type: 'text', text: 'Stopped.' } },
+      ]);
+    }));
 });

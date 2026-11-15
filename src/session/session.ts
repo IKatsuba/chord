@@ -1,8 +1,10 @@
 import type {
+  AuthStatusResponse,
   AvailableCommand,
   CompleteElicitationNotification,
   ContentBlock,
   EmbeddedResource as AcpEmbeddedResource,
+  InitialSessionConfigOption,
   McpServer,
   PromptResponse,
   SessionConfigOption,
@@ -10,9 +12,21 @@ import type {
   SessionUpdate,
 } from '@agentclientprotocol/sdk/unstable';
 import process from 'node:process';
-import { type Agent, openAgent } from '../acp/connection.ts';
+import { setTimeout as delay } from 'node:timers/promises';
+import {
+  type Agent,
+  clientCapabilities,
+  openAgent,
+} from '../acp/connection.ts';
 import type { Traffic } from '../acp/traffic.ts';
 import { agentStart, findAgent } from '../agents.ts';
+import {
+  type AccountEvent,
+  type AccountState,
+  foldAccount,
+  NO_ACCOUNT,
+} from './auth_status.ts';
+import { initialEntries, type InitialValues } from './initial_options.ts';
 import { mentionLinks, type ResourceLink } from '../files.ts';
 import {
   type AgentState,
@@ -51,7 +65,13 @@ import { type Heard, pastActions } from './replay.ts';
 import type { Resume } from './sessions.ts';
 import { routed, type SessionTree, sessionTree } from './subagents.ts';
 import type { TranscriptAction, TurnResult } from './transcript/types.ts';
-import { asSignIn } from './sign_in.ts';
+import {
+  asSignIn,
+  AUTH_REQUIRED,
+  signInOf,
+  waysOf,
+  withAccount,
+} from './sign_in.ts';
 import { startFailed, type StartStep } from './start_failure.ts';
 import { tokensOf } from './usage.ts';
 import type { TurnFigures } from './turn_costs.ts';
@@ -110,6 +130,19 @@ export interface OpenSessionOptions {
    * agent that would refuse it never sees it.
    */
   chordServer?: McpServer;
+  /**
+   * Whether `initialize` declares `session.notices`: the window and `-p` do;
+   * `chord acp` only for a client that declared it, so its clients get what
+   * the agent sends them without chord (CHD-629). Yes by default.
+   */
+  notices?: boolean;
+  /**
+   * The model, effort and mode chord was asked to start on, by the agent's
+   * ids, sent as `session/new`'s initial `configOptions` where the agent
+   * takes them (`initialEntries`); never on a load, a resume or a fork. The
+   * conversation still reads each back once the session is up (CHD-629).
+   */
+  initial?: InitialValues;
   /** The agent says a link it asked for has been followed. */
   onElicitationComplete?: (params: CompleteElicitationNotification) => void;
   /**
@@ -167,6 +200,12 @@ export interface Turn {
  * it, as with no turn running.
  */
 export type SteerOutcome = 'injected' | 'startedNewTurn' | 'refused';
+
+/**
+ * How long a sign-in failure waits for an `auth/status` still out before it
+ * is worded from what is known (the owner's Q2 c).
+ */
+export const AUTH_WAIT_MS = 1000;
 
 export { CLAUDE_ADAPTER };
 
@@ -259,8 +298,25 @@ export interface Session {
    * `initialize` answer advertises `_session/steering`.
    */
   steers(): boolean;
+  /**
+   * What the agent says of the account its connection is signed in to, as
+   * its `auth/status` answer and pushes leave it (CHD-629).
+   */
+  account(): AccountState;
+  /** Hears each change of `account()`; the returned function stops it. */
+  subscribeAccount(listener: (account: AccountState) => void): () => void;
   /** Whether the agent forks a session, as `initialize` says (CHD-101). */
   forks(): boolean;
+  /**
+   * Whether the agent takes a title for the session, as `initialize`
+   * advertises `sessionCapabilities.title` (CHD-629).
+   */
+  takesTitles(): boolean;
+  /**
+   * Names the session by `session/set_title`, resolving to the title as the
+   * agent stored it; throws without asking an agent that does not take one.
+   */
+  setTitle(title: string): Promise<string>;
   /**
    * Whether a steer cuts off the tool calls the turn has open: Claude's
    * adapter, told by the name it gives in `initialize`, delivers a steer
@@ -341,6 +397,11 @@ export interface Session {
    */
   setOption(id: string, value: string): Promise<void>;
   /**
+   * Sends a client's config entry to `session/set_config_option` as it came,
+   * its type and `_meta` too, only the session's id added (CHD-629).
+   */
+  setConfigOption(entry: InitialSessionConfigOption): Promise<void>;
+  /**
    * The config options as the agent last sent them, categories and `_meta`
    * included, for what reads them by those (`parameters.ts`, `choice.ts`).
    */
@@ -397,6 +458,66 @@ export async function openSession(
   >();
   /** Updates no listener has heard yet, for the first one to come. */
   const held: Heard[] = [];
+  let accountState: AccountState = NO_ACCOUNT;
+  /** Aborted as the session closes: a wait on the account stops then. */
+  const ending = new AbortController();
+  /**
+   * Whether a push was heard since `auth/status` went out: the SDK may hand
+   * over the request's answer after a push that came after it on the wire,
+   * so once one is heard the answer does not replace it (CHD-629, the
+   * owner's ruling).
+   */
+  let pushedSinceAsked = false;
+  const accountListeners = new Set<(account: AccountState) => void>();
+  const account = (event: AccountEvent) => {
+    const next = foldAccount(accountState, event);
+
+    if (next === accountState) {
+      return;
+    }
+
+    accountState = next;
+
+    for (const listener of accountListeners) {
+      listener(next);
+    }
+  };
+
+  /**
+   * The account once the agent has said, waiting for an `auth/status` still
+   * out at most `AUTH_WAIT_MS`, or until `signal` gives up; then whatever is
+   * known (the owner's Q2 c).
+   */
+  const settledAccount = async (
+    signal?: AbortSignal,
+  ): Promise<AccountState> => {
+    if (accountState.phase !== 'pending') {
+      return accountState;
+    }
+
+    const heard = Promise.withResolvers<void>();
+    const listener = () => heard.resolve();
+    const done = new AbortController();
+
+    accountListeners.add(listener);
+
+    try {
+      await Promise.race([
+        heard.promise,
+        delay(AUTH_WAIT_MS, undefined, {
+          signal:
+            signal === undefined
+              ? done.signal
+              : AbortSignal.any([done.signal, signal]),
+        }).catch(() => {}),
+      ]);
+    } finally {
+      done.abort();
+      accountListeners.delete(listener);
+    }
+
+    return accountState;
+  };
 
   /** Where `notification` belongs, the tree grown by what it announces. */
   const route = (notification: SessionNotification): Heard | undefined => {
@@ -429,6 +550,21 @@ export async function openSession(
   };
 
   const onTraffic = (traffic: Traffic) => {
+    // A push of the account, a notification of the connection's and not a
+    // session's: never held in `early`, and heard from before `initialize`.
+    if (
+      traffic.from === 'agent' &&
+      'method' in traffic.message &&
+      traffic.message.method === 'auth/status_update'
+    ) {
+      pushedSinceAsked = true;
+
+      account({
+        type: 'heard',
+        status: traffic.message.params as AuthStatusResponse,
+      });
+    }
+
     // The tap keeps notifications from the SDK: this is the one place to hear it.
     if (
       traffic.from === 'agent' &&
@@ -471,10 +607,28 @@ export async function openSession(
     onPermission: permissions.handler,
     onElicitation: elicitations.handler,
     onPlan: plans.handler,
+    capabilities: clientCapabilities({ notices: options.notices !== false }),
     ...(signal === undefined ? {} : { signal }),
   }).catch((error: unknown) => {
     throw signal?.aborted ? error : startFailed(error, 'initialize', pinned);
   });
+
+  // Beside `session/new`, never awaited: a start that succeeds does not
+  // wait for it, and Claude's adapter joins the probe `initialize` began.
+  if (connection.init.agentCapabilities?.auth?.status) {
+    account({ type: 'asked' });
+
+    pushedSinceAsked = false;
+
+    connection.authStatus().then(
+      (status) => {
+        if (!pushedSinceAsked) {
+          account({ type: 'heard', status });
+        }
+      },
+      () => account({ type: 'failed' }),
+    );
+  }
 
   live.add(connection.pid);
   void connection.exited.then(() => live.delete(connection.pid));
@@ -493,6 +647,7 @@ export async function openSession(
   );
 
   const shutdown = async () => {
+    ending.abort();
     permissions.close();
     elicitations.close();
     plans.close();
@@ -517,8 +672,14 @@ export async function openSession(
       tree = sessionTree(sessionId);
       answer = forked;
     } else if (resume === undefined) {
+      const entries = initialEntries(connection.init, options.initial ?? {});
       const created = await connection.newSession(
-        { cwd, mcpServers, ...openingMeta(connection) },
+        {
+          cwd,
+          mcpServers,
+          ...(entries.length === 0 ? {} : { configOptions: entries }),
+          ...openingMeta(connection),
+        },
         signal,
       );
 
@@ -585,10 +746,15 @@ export async function openSession(
     // in it offered (CHD-435).
     // Why it failed, under the sign-in it needs when that is why, which
     // stays what the start rejects with (CHD-435).
-    const error = asSignIn(
+    // Worded from what the agent says of its account, which a pending ask
+    // gets a moment to say (the owner's Q2 c).
+    const signIn = asSignIn(
       startFailed(refused, step, pinned),
       connection.init.authMethods,
     );
+    const error = signInOf(signIn)
+      ? withAccount(signIn, await settledAccount(signal))
+      : signIn;
 
     try {
       await shutdown();
@@ -669,6 +835,8 @@ export async function openSession(
     ) => {
       const blocks = [...promptBlocks(text, attachments), ...resources];
       let cancelled = false;
+      /** Aborted by a cancel: a wait on the account for its refusal stops. */
+      const stopped = new AbortController();
       /** Whether the prompt has gone to the agent, which a cancel then tells. */
       let gone = false;
       const { promise: sent, resolve: went } = Promise.withResolvers<
@@ -711,23 +879,39 @@ export async function openSession(
             stopReason,
             ...(usage ? { usage: tokensOf(usage) } : {}),
           }),
-          (error: unknown): TurnResult => {
+          async (error: unknown): Promise<TurnResult> => {
             // A prompt that went has said so already; this one never did.
             went(undefined);
 
             const code = codeOf(error);
+            const message = messageOf(error);
+            // A prompt refused for want of a login is its sign-in block,
+            // worded from the account (the owner's Q2 c).
+            const signIn =
+              code === String(AUTH_REQUIRED)
+                ? {
+                    message,
+                    ways: waysOf(connection.init.authMethods),
+                    account: await settledAccount(
+                      AbortSignal.any([stopped.signal, ending.signal]),
+                    ),
+                  }
+                : undefined;
 
             return {
               status: 'failed',
               error: {
-                message: messageOf(error),
+                message,
                 ...(code === undefined ? {} : { code }),
+                ...(signIn === undefined ? {} : { signIn }),
               },
             };
           },
         ),
         cancel: () => {
           cancelled = true;
+
+          stopped.abort();
 
           // A prompt still waiting on its mentions never reached the agent:
           // the cancel only keeps it back. Told the agent, it could land on
@@ -746,8 +930,18 @@ export async function openSession(
       connection.init.agentCapabilities?.promptCapabilities?.embeddedContext ===
       true,
     steers: () => connection.steering,
+    account: () => accountState,
+    subscribeAccount: (listener) => {
+      accountListeners.add(listener);
+
+      return () => accountListeners.delete(listener);
+    },
     forks: () =>
       Boolean(connection.init.agentCapabilities?.sessionCapabilities?.fork),
+    takesTitles: () =>
+      Boolean(connection.init.agentCapabilities?.sessionCapabilities?.title),
+    setTitle: async (title) =>
+      (await connection.setTitle({ sessionId: id, title })).title,
     cutsCallsOnSteer: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     startsOwnCycles: () => connection.init.agentInfo?.name === CLAUDE_ADAPTER,
     steer: async (
@@ -830,6 +1024,14 @@ export async function openSession(
         sessionId: id,
         configId: key,
         value,
+      });
+
+      state = withOptions(state, answered.configOptions);
+    },
+    setConfigOption: async (entry) => {
+      const answered = await connection.setConfigOption({
+        ...entry,
+        sessionId: id,
       });
 
       state = withOptions(state, answered.configOptions);

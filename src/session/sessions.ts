@@ -253,10 +253,11 @@ function summarise(path: string): {
 }
 
 /**
- * The agent's title for a session as its record's lines leave it, as the
+ * The title for a session as its record's lines leave it, as the
  * conversation keeps it (CHD-491): the last `session_info_update` that gave
- * one, `null` taking it back and a blank one left out; a subagent's is not
- * the session's. Only the lines that name the update are parsed.
+ * one, `null` taking it back and a blank one left out, or the last rename
+ * (CHD-629), whichever came later; a subagent's is not the session's. Only
+ * the lines that name one are parsed.
  */
 function recordedTitle(): {
   line(line: string): void;
@@ -266,6 +267,16 @@ function recordedTitle(): {
 
   return {
     line: (line) => {
+      if (line.startsWith('{"type":"renamed"')) {
+        const [entry] = parseRecord(line);
+
+        if (entry?.type === 'renamed' && entry.title.trim() !== '') {
+          title = titleLine(entry.title);
+        }
+
+        return;
+      }
+
       if (
         !line.startsWith('{"type":"update"') ||
         !line.includes('"session_info_update"')

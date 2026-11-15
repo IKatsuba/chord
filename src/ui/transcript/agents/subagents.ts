@@ -711,6 +711,61 @@ export function askerRow(path: readonly Subagent[]): AskerPiece[] {
 }
 
 /**
+ * The subagent `id` names among `entries`, found depth first, a grandchild
+ * at any depth; none for an id that is no subagent drawn there (CHD-629).
+ */
+export function subagentById(
+  entries: readonly Entry[],
+  id: string,
+): Subagent | undefined {
+  for (const entry of entries) {
+    if (entry.kind !== 'subagent') {
+      continue;
+    }
+
+    if (entry.subagent.id === id) {
+      return entry.subagent;
+    }
+
+    const found = subagentById(entry.subagent.entries, id);
+
+    if (found !== undefined) {
+      return found;
+    }
+  }
+
+  return undefined;
+}
+
+/**
+ * The subagents a call's content refers to by `{type: "session"}`, in the
+ * order sent, each once; a reference to one not drawn is left out, as the
+ * reference grants nothing and only `subagent_update` adds to the tree.
+ */
+export function linkedSubagents(
+  content: readonly { readonly type: string; readonly sessionId?: unknown }[],
+  entries: readonly Entry[],
+): Subagent[] {
+  const seen = new Set<string>();
+
+  return content.flatMap((item) => {
+    if (
+      item.type !== 'session' ||
+      typeof item.sessionId !== 'string' ||
+      seen.has(item.sessionId)
+    ) {
+      return [];
+    }
+
+    seen.add(item.sessionId);
+
+    const found = subagentById(entries, item.sessionId);
+
+    return found === undefined ? [] : [found];
+  });
+}
+
+/**
  * The status line's words once the turn has ended with subagents still at
  * work, as their blocks may be out of sight; none when none is.
  */

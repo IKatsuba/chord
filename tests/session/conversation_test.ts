@@ -5,15 +5,22 @@
  */
 import { describe, expect, test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, rm } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { run } from '../fixtures/recorder.ts';
+import {
+  API_KEY,
+  SIGNED_IN,
+} from '../fixtures/fake_agent/scenarios/accounts.ts';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { RequestError } from '@agentclientprotocol/sdk/unstable';
 import {
   Conversation,
   type ConversationEvent,
+  type Recording,
   type Starting,
 } from '../../src/session/conversation.ts';
+import { FileRecording } from '../../src/session/record.ts';
 import { openSession, type Session } from '../../src/session/session.ts';
 import { TaskAgent } from '../../src/session/tasks.ts';
 import { valueToAsk } from '../../src/ui/pickers/picker.ts';
@@ -675,6 +682,73 @@ test('closing kills a cleared agent that never answered its starting model', () 
     { model: { id: 'fake-small', from: 'set by --model' } },
     (conversation) => conversation.clear(),
   ));
+
+test('a close cutting a turn short leaves it without a result in the record, and writes nothing after it resolves (CHD-629)', async () => {
+  const root = await mkdtemp(join(tmpdir(), 'chord-conversation-'));
+  const events: ConversationEvent[] = [];
+  const file = new FileRecording(join(root, 'state'), (message) => {
+    throw new Error(message);
+  });
+
+  // Set once the close has begun, then once it asks for its last flush:
+  // what the record hears after that, the close has left behind.
+  let closing = false;
+  let closed = false;
+  const late: string[] = [];
+  const recording: Recording = {
+    opened: (session) => file.opened(session),
+    sent: (...args) => file.sent(...args),
+    heard: (event) => {
+      closing ||= event.type === 'closing';
+
+      if (closed) {
+        late.push(event.type);
+      }
+
+      file.heard(event);
+    },
+    flushed: () => {
+      closed ||= closing;
+
+      return file.flushed();
+    },
+  };
+  const conversation = new Conversation(
+    () =>
+      openSession({
+        agent: 'fake',
+        cwd: root,
+        agentCommand: fakeAgentCommand(),
+      }),
+    (event) => events.push(event),
+    Date.now,
+    {},
+    recording,
+  );
+
+  try {
+    conversation.start();
+    await until(() => events.some((event) => event.type === 'connected'));
+    // Its agent holds the turn open until it goes.
+    conversation.send('ignorescancel');
+    await until(() => saidIn(events).includes('Holding on.'));
+    await conversation.close();
+    // The window still hears the turn end, once the agent has gone.
+    await until(() => events.some((event) => event.type === 'result'));
+    await file.flushed();
+
+    const lines = (await readFile(file.path!, 'utf8'))
+      .split('\n')
+      .filter((line) => line !== '')
+      .map((line) => JSON.parse(line) as { type: string });
+
+    expect(lines.some((line) => line.type === 'prompt')).toBe(true);
+    expect(lines.some((line) => line.type === 'result')).toBe(false);
+    expect(late).toStrictEqual([]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
 
 test("a task's refused starting effort reaches the parent's transcript, named, and the task runs on", async () => {
   const { parent, events } = await parentUp();
@@ -1472,4 +1546,89 @@ describe('CHD-624 U3 tester: failed turns release the prompt queue', () => {
         ),
       ).toEqual([]);
     }));
+});
+
+describe('CHD-629 tester: retired account events', () => {
+  test('a held answer and later push from the cleared connection cannot replace the new connection account', async () => {
+    const cwd = await mkdtemp(join(tmpdir(), 'chord-account-retired-tester-'));
+    const oldCwd = join(cwd, 'old');
+
+    await mkdir(oldCwd, { recursive: true });
+
+    const events: ConversationEvent[] = [];
+    const releaseClose = Promise.withResolvers<void>();
+    const sessions: Session[] = [];
+    const conversation = new Conversation(
+      async () => {
+        const first = sessions.length === 0;
+        const session = await openSession({
+          agent: 'fake',
+          cwd: first ? oldCwd : cwd,
+          agentCommand: fakeAgentCommand(
+            undefined,
+            ...(first ? ['--auth-status', 'held'] : []),
+          ),
+        });
+
+        sessions.push(session);
+
+        return first
+          ? {
+              ...session,
+              close: async () => {
+                await releaseClose.promise;
+                await session.close();
+              },
+            }
+          : session;
+      },
+      (event) => events.push(event),
+    );
+    let retiring: Promise<void> | undefined;
+
+    try {
+      conversation.start();
+      await until(() => events.some((event) => event.type === 'connected'));
+      expect(events.filter((event) => event.type === 'account').at(-1)).toEqual(
+        { type: 'account', account: { phase: 'pending' } },
+      );
+
+      retiring = conversation.clear();
+
+      await until(
+        () => events.filter((event) => event.type === 'connected').length === 2,
+      );
+
+      const accounts = () => events.filter((event) => event.type === 'account');
+      const before = accounts().length;
+
+      expect(accounts().at(-1)).toEqual({
+        type: 'account',
+        account: { phase: 'none' },
+      });
+      await mkdir(join(oldCwd, '.fake-gate'), { recursive: true });
+      await writeFile(join(oldCwd, '.fake-gate', 'release'), '');
+
+      const old = sessions[0];
+
+      assert(old);
+      await until(() => old.account().phase === 'heard');
+      expect(old.account()).toEqual({ phase: 'heard', status: SIGNED_IN });
+      await run(old, 'authchanged');
+      expect(old.account()).toEqual({ phase: 'heard', status: API_KEY });
+      expect(accounts()).toHaveLength(before);
+      conversation.send('text');
+      await until(() => events.some((event) => event.type === 'result'));
+      expect(accounts().at(-1)).toEqual({
+        type: 'account',
+        account: { phase: 'none' },
+      });
+    } finally {
+      releaseClose.resolve();
+      await retiring;
+      await conversation.close();
+      await Promise.all(sessions.map((session) => session.close()));
+      await rm(cwd, { recursive: true, force: true });
+    }
+  });
 });

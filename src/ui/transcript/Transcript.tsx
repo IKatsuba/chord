@@ -32,7 +32,9 @@ import { Ansi } from '../theme/Ansi.tsx';
 import { CUT, DIM, fg, FILL, ROWS, TEXT } from '../theme/text.ts';
 import { compactionLine, inSpinner } from './compaction.ts';
 import { endedLine } from './ended.ts';
+import { noticeDescription, noticeMarker } from './notice.ts';
 import { Reply } from './Reply.tsx';
+import { SignInBlock } from '../app/SignIn.tsx';
 import {
   inArrow,
   messageHeader,
@@ -149,9 +151,19 @@ export const TranscriptEntry = memo(function TranscriptEntry({
         </>
       );
     case 'error':
-      return <Failure text={entry.message} />;
+      // A prompt refused for want of a login: its block in the turn's place.
+      return entry.signIn === undefined ? (
+        <Failure text={entry.message} />
+      ) : (
+        <>
+          <Failure text={`${agent} needs a sign-in: ${entry.message}`} />
+          <SignInBlock agent={agent} signIn={entry.signIn} />
+        </>
+      );
     case 'warning':
       return <Failure text={entry.message} tone='warning' />;
+    case 'notice':
+      return <Notice entry={entry} />;
     case 'cancelled':
       return <Outcome text='Interrupted by user' failed />;
     case 'stopped':
@@ -264,6 +276,37 @@ export const TranscriptEntry = memo(function TranscriptEntry({
       );
   }
 });
+
+/**
+ * An agent's notice (CHD-629): its title by a `⏺` in the severity's role,
+ * dim for `info`, and its description on the rows under it at the text's
+ * column, all of it dim, wrapped and never cut.
+ */
+function Notice({ entry }: { entry: Extract<Entry, { kind: 'notice' }> }) {
+  const gap = useGap();
+  const marker = noticeMarker(entry.severity, useColours());
+
+  return (
+    <>
+      {gap.spacer}
+      <box flexDirection='row' {...gap.props} flexShrink={0}>
+        <Gutter {...paint(marker)} dimColor={marker === undefined}>
+          ⏺
+        </Gutter>
+        <box flexDirection='column' flexGrow={1} flexShrink={1}>
+          <text {...FILL} attributes={DIM}>
+            <Ansi text={entry.title} />
+          </text>
+          {entry.description === undefined ? null : (
+            <text {...FILL} attributes={DIM}>
+              <Ansi text={noticeDescription(entry.description)} />
+            </text>
+          )}
+        </box>
+      </box>
+    </>
+  );
+}
 
 /**
  * The close of a turn the agent started on its own, which chord cancelled:

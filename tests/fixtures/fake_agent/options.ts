@@ -205,12 +205,105 @@ export const CHILD_MODEL = valueOf('--child-model', 'CHORD_FAKE_CHILD_MODEL');
 export const FORK_MODEL = valueOf('--fork-model', 'CHORD_FAKE_FORK_MODEL');
 
 /**
+ * `--auth-status <authenticated|unauthenticated|unknown|error|hang|held|several>`
+ * (`CHORD_FAKE_AUTH_STATUS`): it advertises `agentCapabilities.auth.status`
+ * and answers `auth/status` as `scenarios/accounts.ts` plays it (CHD-629).
+ */
+export const AUTH_STATUS = (() => {
+  const chosen = valueOf('--auth-status', 'CHORD_FAKE_AUTH_STATUS');
+
+  if (
+    chosen === undefined ||
+    chosen === 'authenticated' ||
+    chosen === 'unauthenticated' ||
+    chosen === 'unknown' ||
+    chosen === 'error' ||
+    chosen === 'hang' ||
+    chosen === 'held' ||
+    chosen === 'several'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --auth-status "${chosen}"`);
+})();
+
+/**
+ * `--auth-push` (`CHORD_FAKE_AUTH_PUSH=1`): it pushes the account in an
+ * `auth/status_update` just after answering `initialize` (CHD-629).
+ */
+export const AUTH_PUSH =
+  ARGS.includes('--auth-push') || process.env.CHORD_FAKE_AUTH_PUSH === '1';
+
+/**
+ * `--auth-push-early` (`CHORD_FAKE_AUTH_PUSH_EARLY=1`): it pushes an API
+ * key's account before it answers `initialize`, whether or not it
+ * advertises `auth.status` (CHD-629).
+ */
+export const AUTH_PUSH_EARLY =
+  ARGS.includes('--auth-push-early') ||
+  process.env.CHORD_FAKE_AUTH_PUSH_EARLY === '1';
+
+/**
+ * `--auth-race <push-first|answer-first>` (`CHORD_FAKE_AUTH_RACE`): an API
+ * key's account is pushed just before `auth/status`'s answer, or just after
+ * it, both after the request came (CHD-629).
+ */
+export const AUTH_RACE = (() => {
+  const chosen = valueOf('--auth-race', 'CHORD_FAKE_AUTH_RACE');
+
+  if (
+    chosen === undefined ||
+    chosen === 'push-first' ||
+    chosen === 'answer-first'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --auth-race "${chosen}"`);
+})();
+
+/**
+ * `--set-title <echo|silent|refuse|hang>` (`CHORD_FAKE_SET_TITLE`): it
+ * advertises `sessionCapabilities.title` and answers `session/set_title` as
+ * `scenarios/titles.ts` plays the mode (CHD-629).
+ */
+export const SET_TITLE = (() => {
+  const chosen = valueOf('--set-title', 'CHORD_FAKE_SET_TITLE');
+
+  if (
+    chosen === undefined ||
+    chosen === 'echo' ||
+    chosen === 'silent' ||
+    chosen === 'refuse' ||
+    chosen === 'hang'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --set-title "${chosen}"`);
+})();
+
+/**
+ * `--auto-fallback` (`CHORD_FAKE_AUTO_FALLBACK=1`): it offers `auto` and
+ * opens every session in it, and on `fake-small`, which has no Auto, takes
+ * `auto` as `acceptEdits` and says so in a notice, as Claude's adapter does
+ * for a model without it; switching to `fake-small` moves `auto` the same
+ * way (CHD-629).
+ */
+export const AUTO_FALLBACK =
+  ARGS.includes('--auto-fallback') ||
+  process.env.CHORD_FAKE_AUTO_FALLBACK === '1';
+
+/**
  * Whether it also offers an `auto` mode, `--auto-mode` or
  * `CHORD_FAKE_AUTO_MODE=1`, as an agent standing in for Codex in the
  * screenshots does; the list every test reads leaves it out.
  */
 export const AUTO_MODE =
-  ARGS.includes('--auto-mode') || process.env.CHORD_FAKE_AUTO_MODE === '1';
+  ARGS.includes('--auto-mode') ||
+  process.env.CHORD_FAKE_AUTO_MODE === '1' ||
+  AUTO_FALLBACK;
 
 /**
  * Whether it also offers Claude's `bypassPermissions` mode, `--bypass-mode`
@@ -478,22 +571,26 @@ export const STEP_MS = Number(
  * unless it is accepted; `linkother` asks the same link and, unless it is
  * accepted, fails for some other reason (-32603), which needs no login;
  * `cloud` refuses as cursor-cloud does signed out, its one way in naming
- * the versioned command that signs in (CHD-622).
+ * the versioned command that signs in (CHD-622). `prompt` opens the session
+ * and refuses its first prompt `authRequired`, as Claude's adapter does
+ * signed out, the next one running (CHD-629).
  */
 export const AUTH_REQUIRED:
-  'methods' | 'bare' | 'link' | 'linkother' | 'cloud' | undefined = (() => {
-  const flag = ARGS.indexOf('--auth-required');
-  const kind =
-    flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_AUTH_REQUIRED;
+  'methods' | 'bare' | 'link' | 'linkother' | 'cloud' | 'prompt' | undefined =
+  (() => {
+    const flag = ARGS.indexOf('--auth-required');
+    const kind =
+      flag >= 0 ? ARGS[flag + 1] : process.env.CHORD_FAKE_AUTH_REQUIRED;
 
-  return kind === 'methods' ||
-    kind === 'bare' ||
-    kind === 'link' ||
-    kind === 'linkother' ||
-    kind === 'cloud'
-    ? kind
-    : undefined;
-})();
+    return kind === 'methods' ||
+      kind === 'bare' ||
+      kind === 'link' ||
+      kind === 'linkother' ||
+      kind === 'cloud' ||
+      kind === 'prompt'
+      ? kind
+      : undefined;
+  })();
 
 /**
  * `--start-fails <kind>` (`CHORD_FAKE_START_FAILS`): the fake fails to start
@@ -521,6 +618,56 @@ export const START_FAILS:
 /** The last line of `--start-fails traceback`'s traceback. */
 export const TRACEBACK_ERROR =
   "ImportError: cannot import name 'AuthMethod' from 'acp.schema'";
+
+/**
+ * `--options <apply|ignore|reject>` (`CHORD_FAKE_OPTIONS`): it advertises
+ * `sessionCapabilities.options` and, on `session/new`, applies the initial
+ * `configOptions` in list order as `session/set_config_option` would,
+ * skipping one it cannot take, as Claude's adapter does; ignores them; or
+ * refuses the request -32602. Two entries with one id are -32602 whichever
+ * (CHD-629).
+ */
+export const INITIAL_OPTIONS = (() => {
+  const chosen = valueOf('--options', 'CHORD_FAKE_OPTIONS');
+
+  if (
+    chosen === undefined ||
+    chosen === 'apply' ||
+    chosen === 'ignore' ||
+    chosen === 'reject'
+  ) {
+    return chosen;
+  }
+
+  throw new Error(`unknown --options "${chosen}"`);
+})();
+
+/**
+ * `--config-ids renamed` (`CHORD_FAKE_CONFIG_IDS`): its model, mode and
+ * effort options go by `x-model`, `x-mode` and `x-effort`, as an adapter
+ * that renamed them at a pin bump would; the plain ids are unknown to it
+ * (CHD-629).
+ */
+export const RENAMED_IDS = (() => {
+  const chosen = valueOf('--config-ids', 'CHORD_FAKE_CONFIG_IDS');
+
+  if (chosen !== undefined && chosen !== 'renamed') {
+    throw new Error(`unknown --config-ids "${chosen}"`);
+  }
+
+  return chosen === 'renamed';
+})();
+
+/**
+ * `--start-notice <text>` (`CHORD_FAKE_START_NOTICE`): every `session/new`
+ * sends a `warning` notice titled `text` before its answer, as Claude's
+ * adapter says an MCP server failed to start; as its bold blockquote to a
+ * client that did not declare notices (CHD-629).
+ */
+export const START_NOTICE = valueOf(
+  '--start-notice',
+  'CHORD_FAKE_START_NOTICE',
+);
 
 /**
  * `--first-message <text>` (`CHORD_FAKE_FIRST_MESSAGE`): every `session/new`

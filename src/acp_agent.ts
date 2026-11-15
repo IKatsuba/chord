@@ -5,8 +5,10 @@
  */
 import {
   type AgentConnection,
+  type AuthStatusResponse,
   type ClientCapabilities,
   type CreateElicitationResponse,
+  type InitialSessionConfigOption,
   type JsonRpcId,
   type LoadSessionRequest,
   type LoadSessionResponse,
@@ -23,6 +25,7 @@ import {
   type StopReason,
   type Usage,
 } from '@agentclientprotocol/sdk/unstable';
+import { isDeepStrictEqual } from 'node:util';
 import { type AcpRequest, connectAgentApp } from './acp/agent_app.ts';
 import { foldEvent, NO_FOLD } from './acp/host_fold.ts';
 import { seeingWrites } from './acp/stdio.ts';
@@ -51,6 +54,8 @@ import {
   type LeaveStep,
 } from './session/leaving.ts';
 import type { Place } from './session/place.ts';
+import type { AccountState } from './session/auth_status.ts';
+import { recordPendingRename } from './session/record.ts';
 import type { ReadLimits } from './session/resource_access.ts';
 import type { OpenSessionOptions, Session } from './session/session.ts';
 import {
@@ -252,6 +257,8 @@ interface Entry {
     | undefined;
   /** Its agent went: it takes no more prompts, and closes when it can. */
   gone: boolean;
+  /** What its agent says of its connection's account (CHD-629). */
+  account?: AccountState;
   noticed: boolean;
   closing?: Promise<void>;
 }
@@ -290,6 +297,49 @@ export function runAcp(options: AcpOptions): AcpRun {
   const settingsBox = settingsBoxClaim();
 
   const say = (line: string) => options.stderr(line);
+
+  /**
+   * Where `auth/status` is read (CHD-629): the oldest main session still
+   * live, of the startup agent, as every main is; the method names no
+   * session, so no other's account is mixed in.
+   */
+  const accountSource = (): Entry | undefined =>
+    [...entries].find(
+      (entry) =>
+        !entry.gone &&
+        entry.closing === undefined &&
+        entry.conversation.session !== undefined,
+    );
+  /** The source's account, `unknown` while it has said none or there is none. */
+  const sourceStatus = (): AuthStatusResponse => {
+    const account = accountSource()?.account;
+
+    return account?.phase === 'heard' ? account.status : { state: 'unknown' };
+  };
+
+  /**
+   * What the client was last told of the account, so only a change goes:
+   * a change of value, whatever order its keys come in.
+   */
+  let toldAccount = sourceStatus();
+  /**
+   * Tells the client the source's account where it changed: the source's
+   * own push, or another session becoming the source as one closes or exits.
+   */
+  const tellAccount = () => {
+    const status = sourceStatus();
+
+    if (isDeepStrictEqual(status, toldAccount)) {
+      return;
+    }
+
+    toldAccount = status;
+
+    connection.client.notify('auth/status_update', status).catch(() => {
+      // The connection went; the way out has it from there.
+    });
+  };
+
   const send = (notification: SessionNotification) => {
     connection.client.notify('session/update', notification).catch(() => {
       // The connection went; the way out has it from there.
@@ -321,6 +371,7 @@ export function runAcp(options: AcpOptions): AcpRun {
       })
       .finally(() => {
         entries.delete(entry);
+        tellAccount();
       });
 
     return entry.closing;
@@ -866,6 +917,12 @@ export function runAcp(options: AcpOptions): AcpRun {
           relay(entry, messageChunk(upstreamId, event.text, event.from).update);
         } else if (event.type === 'update') {
           relay(entry, event.update, event.subagentId);
+        } else if (event.type === 'renamed') {
+          // chord's own line, said as the agent here, chord, says a title.
+          relay(entry, {
+            sessionUpdate: 'session_info_update',
+            title: event.title,
+          });
         }
       }
     }
@@ -909,6 +966,12 @@ export function runAcp(options: AcpOptions): AcpRun {
       case 'update':
         relay(entry, event.update, event.subagentId);
         tellConfig(entry);
+
+        break;
+      case 'account':
+        entry.account = event.account;
+
+        tellAccount();
 
         break;
       case 'modes':
@@ -957,6 +1020,8 @@ export function runAcp(options: AcpOptions): AcpRun {
         break;
       case 'disconnected':
         entry.gone = true;
+
+        tellAccount();
 
         if (entry.upstream !== undefined) {
           sessions.delete(entry.upstream.upstreamId);
@@ -1184,6 +1249,7 @@ export function runAcp(options: AcpOptions): AcpRun {
     cwd: string,
     servers: readonly McpServer[],
     resume?: { readonly from: Resume; readonly replays: boolean },
+    configOptions?: readonly InitialSessionConfigOption[],
   ): Entry => {
     starts += 1;
 
@@ -1198,6 +1264,7 @@ export function runAcp(options: AcpOptions): AcpRun {
         open: (opening) =>
           options.open({
             ...opening,
+            notices: Boolean(capabilities?.session?.notices),
             onElicitationComplete: (params) => {
               connection.client
                 .notify('elicitation/complete', params)
@@ -1208,6 +1275,9 @@ export function runAcp(options: AcpOptions): AcpRun {
         resources: options.resources?.read,
         resume: resume?.from,
         mainServers: servers,
+        ...(configOptions === undefined || configOptions.length === 0
+          ? {}
+          : { mainEntries: configOptions }),
         settingsBox,
       },
       {
@@ -1796,6 +1866,8 @@ export function runAcp(options: AcpOptions): AcpRun {
           agentInfo: { name: 'chord', version: options.version },
           authMethods: [],
           agentCapabilities: {
+            // Served from one session's agent, whichever runs (CHD-629).
+            auth: { status: {} },
             loadSession: true,
             promptCapabilities: {
               image: true,
@@ -1803,7 +1875,13 @@ export function runAcp(options: AcpOptions): AcpRun {
               embeddedContext: true,
             },
             mcpCapabilities: { http: true, sse: true },
-            sessionCapabilities: { list: {}, resume: {}, close: {} },
+            // chord's record takes any rename, whatever the agent takes.
+            sessionCapabilities: {
+              list: {},
+              resume: {},
+              close: {},
+              title: {},
+            },
           },
           _meta: {
             [ACP_META]: {
@@ -1819,7 +1897,17 @@ export function runAcp(options: AcpOptions): AcpRun {
 
         const { place, servers } = await placed(params, signal);
 
-        return up(openEntry(place, params.cwd, servers), requestId, signal);
+        return up(
+          openEntry(
+            place,
+            params.cwd,
+            servers,
+            undefined,
+            params.configOptions ?? undefined,
+          ),
+          requestId,
+          signal,
+        );
       },
       listSessions: async ({ cwd }) => ({
         sessions: earlierSessions(await readRecords(options.stateDir), {
@@ -2005,6 +2093,46 @@ export function runAcp(options: AcpOptions): AcpRun {
           });
 
         return {};
+      },
+      // A live session is renamed as the window renames it; one listed and
+      // not loaded is recorded, for its agent to be told at the next load.
+      authStatus: () => sourceStatus(),
+      setTitle: async ({ params }) => {
+        refuseIfClosing();
+
+        const title = params.title.replaceAll(/\s+/g, ' ').trim();
+
+        if (title === '') {
+          throw RequestError.invalidParams(undefined, 'The title is empty.');
+        }
+
+        const entry = sessions.get(params.sessionId);
+
+        if (entry !== undefined) {
+          const renamed = await entry.conversation
+            .rename(title)
+            .catch((error: unknown) => {
+              throw refusal(error);
+            });
+
+          if (renamed === undefined) {
+            throw RequestError.sessionNotFound(params.sessionId);
+          }
+
+          return { title: renamed.title };
+        }
+
+        const listed = earlierSessions(await readRecords(options.stateDir), {
+          agent,
+        }).find(({ resume }) => resume.sessionId === params.sessionId);
+
+        if (listed?.resume.record === undefined) {
+          throw RequestError.sessionNotFound(params.sessionId);
+        }
+
+        await recordPendingRename(listed.resume.record, title, Date.now());
+
+        return { title };
       },
       close: async ({ params }) => {
         refuseIfClosing();

@@ -7,14 +7,16 @@
  *   bun dev chord --qa <name> cursor-cloud --agent-command "bun packages/cursor-cloud-acp/tests/fixtures/main.ts"
  *
  * `CURSOR_CLOUD_QA` picks how a start goes: `signed-out`, `key-refused`,
- * `outside`, `detached`, `no-remote`, `not-pushed`; unset, it starts. A
+ * `keychain-fails`, `outside`, `detached`, `no-remote`, `not-pushed`;
+ * `env-key` starts with the key in `CURSOR_API_KEY`; unset, it starts
+ * with the keychain's, which expires 2027-02-13. A
  * prompt's first word picks its run: `think`, `tool`, `plan`, `request`,
  * `hang` (until Esc), `fail`, `busy`, `lost`; any other is answered `ok`.
  * Words later in a prompt never pick one. One earlier agent, `EARLIER`,
  * can be resumed by id.
  */
 import type { InteractionUpdate, ToolCall } from '@cursor/sdk';
-import { CursorError } from '../../src/errors.ts';
+import { CursorError, KeychainError } from '../../src/errors.ts';
 import type { Git, GitResult } from '../../src/repo.ts';
 import { serveStdio } from '../../src/serve.ts';
 import { fakeCursor, fakeRun, type Script } from './fake_port.ts';
@@ -250,19 +252,27 @@ process.exitCode = await serveStdio({
   port: cursor.port,
   git,
   credentials: () => ({
-    env: {},
+    env: START === 'env-key' ? { CURSOR_API_KEY: 'key_good' } : {},
     store: {
-      load: () =>
-        Promise.resolve(
+      load: () => {
+        if (START === 'keychain-fails') {
+          return Promise.reject(
+            new KeychainError('The keychain refused: locked.'),
+          );
+        }
+
+        return Promise.resolve(
           START === 'signed-out'
             ? undefined
             : {
                 version: 1,
                 backendUrl: 'https://api2.cursor.sh',
                 apiKey: 'key_good',
+                apiKeyExpiresAtMs: Date.UTC(2027, 1, 13),
                 createdAtMs: 0,
               },
-        ),
+        );
+      },
       save: () => Promise.resolve(),
       clear: () => Promise.resolve(),
     },

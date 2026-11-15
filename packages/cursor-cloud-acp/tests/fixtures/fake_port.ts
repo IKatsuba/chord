@@ -57,6 +57,8 @@ export interface FakeCursor {
   pageSize: number | undefined;
   /** What Agent.get does; by default answers for an agent Cursor knows. */
   failGet: Error | undefined;
+  /** What Cursor.me does for a key it takes; by default names its user. */
+  failMe: Error | undefined;
   /** Each send's onDelta, so a test can deliver an update late. */
   readonly onDeltas: NonNullable<SendOptions['onDelta']>[];
 }
@@ -268,7 +270,17 @@ export function fakeCursor(
       calls.push({ method: 'me', apiKey: options?.apiKey });
       auth(options?.apiKey, keys);
 
-      return Promise.resolve({ apiKeyName: 'test', createdAt: '2026-11-01' });
+      if (fake.failMe !== undefined) {
+        return Promise.reject(fake.failMe);
+      }
+
+      return Promise.resolve({
+        apiKeyName: 'test',
+        createdAt: '2026-11-01',
+        userFirstName: 'Ada',
+        userLastName: 'Lovelace',
+        userEmail: 'ada@example.com',
+      });
     },
     models: (options) => {
       calls.push({ method: 'models', apiKey: options?.apiKey });
@@ -358,6 +370,7 @@ export function fakeCursor(
     closed,
     pageSize: undefined,
     failGet: undefined,
+    failMe: undefined,
     onDeltas,
   };
 

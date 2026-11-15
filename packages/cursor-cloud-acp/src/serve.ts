@@ -10,6 +10,7 @@ import {
   agent,
   type AgentConnection,
   type AgentContext,
+  type AuthStatusResponse,
   ndJsonStream,
   type ContentBlock,
   type InitializeResponse,
@@ -27,8 +28,15 @@ import {
   sdkMode,
   selection,
 } from './config.ts';
-import { apiKey, type CredentialSource } from './credentials.ts';
-import { INTERNAL_ERROR, INVALID_PARAMS, signedOut, toAcp } from './errors.ts';
+import { authenticated, UNAUTHENTICATED, UNKNOWN } from './auth_status.ts';
+import { type CredentialSource, findKey } from './credentials.ts';
+import {
+  CursorError,
+  INTERNAL_ERROR,
+  INVALID_PARAMS,
+  signedOut,
+  toAcp,
+} from './errors.ts';
 import type { Port, PortAgent, PortRun } from './port.ts';
 import { cursorUrl, type Git, repository } from './repo.ts';
 import { Turn } from './turn.ts';
@@ -82,6 +90,7 @@ export function initialize(version: string): InitializeResponse {
       },
     ],
     agentCapabilities: {
+      auth: { status: {} },
       loadSession: true,
       promptCapabilities: { image: true, embeddedContext: false },
       // stdio servers are taken, as ACP asks, and named unreachable (Q5).
@@ -143,18 +152,74 @@ export function serve(stream: Stream, context: ServeContext): Served {
     return open;
   };
 
-  const key = async (): Promise<string> => {
-    const found = await apiKey(context.credentials());
+  /** A resolution of the key: the key or why there is none, and its status. */
+  const resolve = async (): Promise<
+    | { readonly status: AuthStatusResponse; readonly key: string }
+    | { readonly status: AuthStatusResponse; readonly error: unknown }
+  > => {
+    let found;
 
-    if (found === undefined) {
-      throw signedOut();
+    try {
+      found = await findKey(context.credentials());
+    } catch (error) {
+      return { status: UNKNOWN, error };
     }
 
-    // A key Cursor refuses, one minted for another backend among them,
-    // answers as signed out with the SDK's words.
-    await port.me({ apiKey: found });
+    if (found === undefined) {
+      return { status: UNAUTHENTICATED, error: signedOut() };
+    }
 
-    return found;
+    try {
+      // A key Cursor refuses, one minted for another backend among them,
+      // answers as signed out with the SDK's words.
+      const user = await port.me({ apiKey: found.apiKey });
+
+      return { status: authenticated(found, user), key: found.apiKey };
+    } catch (error) {
+      return {
+        status:
+          error instanceof CursorError && error.kind === 'auth'
+            ? UNAUTHENTICATED
+            : UNKNOWN,
+        error,
+      };
+    }
+  };
+
+  /**
+   * The last status answered or pushed, as JSON; none before the first
+   * `auth/status` is answered, as there is nothing yet to update.
+   */
+  let kept: string | undefined;
+
+  /** `status` pushed when it differs from the one kept. */
+  const report = async (client: AgentContext, status: AuthStatusResponse) => {
+    const next = JSON.stringify(status);
+
+    if (kept === undefined || kept === next) {
+      return;
+    }
+
+    kept = next;
+
+    // A push that fails leaves the request's own answer as it is.
+    await client.notify('auth/status_update', status).catch(() => undefined);
+  };
+
+  /**
+   * The key for a request, its status pushed first when it changed: the
+   * package never polls, so a sign-in or out elsewhere shows here.
+   */
+  const key = async (client: AgentContext): Promise<string> => {
+    const resolved = await resolve();
+
+    await report(client, resolved.status);
+
+    if ('error' in resolved) {
+      throw resolved.error;
+    }
+
+    return resolved.key;
   };
 
   const models = (key: string) =>
@@ -265,13 +330,14 @@ export function serve(stream: Stream, context: ServeContext): Served {
   const reopen = async (
     id: string,
     mcpServers: readonly McpServer[] | undefined,
+    client: AgentContext,
   ): Promise<{
     open: Session;
     last: LastRun | undefined;
     url: string | undefined;
   }> => {
     const generation = begin(id);
-    const found = await key();
+    const found = await key(client);
     const reopened = await port.resume(id, { apiKey: found });
 
     return opening(reopened, async () => {
@@ -328,6 +394,13 @@ export function serve(stream: Stream, context: ServeContext): Served {
 
   const connection = agent({ name: NAME })
     .onRequest('initialize', () => initialize(context.version))
+    .onRequest('auth/status', async () => {
+      const { status } = await resolve();
+
+      kept = JSON.stringify(status);
+
+      return status;
+    })
     .onRequest('authenticate', () => {
       // The owner put sign-in in the package's own command.
       throw new RequestError(
@@ -339,7 +412,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
       try {
         // Git first: a refusal needs no key, keychain or network.
         const repo = await repository(params.cwd, context.git);
-        const found = await key();
+        const found = await key(client);
         const created = await port.create({
           apiKey: found,
           mode: 'agent',
@@ -480,9 +553,9 @@ export function serve(stream: Stream, context: ServeContext): Served {
 
       return { configOptions: options(open) };
     })
-    .onRequest('session/list', async ({ params }) => {
+    .onRequest('session/list', async ({ params, client }) => {
       try {
-        const found = await key();
+        const found = await key(client);
         const url =
           params.cwd === undefined || params.cwd === null
             ? undefined
@@ -526,6 +599,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         const { open, last, url } = await reopen(
           params.sessionId,
           params.mcpServers,
+          client,
         );
 
         await notifyWhile(
@@ -552,6 +626,7 @@ export function serve(stream: Stream, context: ServeContext): Served {
         const { open, last, url } = await reopen(
           params.sessionId,
           params.mcpServers,
+          client,
         );
         const notify = (update: SessionUpdate) =>
           notifyWhile(open, client, params.sessionId, update);

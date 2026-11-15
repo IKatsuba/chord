@@ -3,6 +3,7 @@ import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { fileURLToPath } from 'node:url';
 import {
+  type AuthStatusUpdateNotification,
   client,
   type ClientConnection,
   ndJsonStream,
@@ -106,6 +107,10 @@ function connect(
     | { readonly kind: 'update'; readonly params: SessionNotification }
     | { readonly kind: 'answer'; readonly method: string }
   )[] = [];
+  /** Every `auth/status_update` pushed, in order. */
+  const pushed: AuthStatusUpdateNotification[] = [];
+  /** Each push and answer by method, in the order they came. */
+  const order: string[] = [];
 
   serve(ndJsonStream(toClient.writable, toAgent.readable), {
     port: cursor.port,
@@ -122,6 +127,10 @@ function connect(
     .onNotification('session/update', ({ params }) => {
       seen.push({ kind: 'update', params });
     })
+    .onNotification('auth/status_update', ({ params }) => {
+      pushed.push(params);
+      order.push('auth/status_update');
+    })
     .connect(ndJsonStream(toAgent.writable, toClient.readable));
 
   open.push(connection);
@@ -130,6 +139,7 @@ function connect(
     const answer = (await connection.agent.request(method, params)) as T;
 
     seen.push({ kind: 'answer', method });
+    order.push(method);
 
     return answer;
   };
@@ -144,7 +154,7 @@ function connect(
         : [],
     );
 
-  return { cursor, connection, seen, request, texts };
+  return { cursor, connection, seen, pushed, order, request, texts };
 }
 
 const newSession = (
@@ -191,6 +201,7 @@ describe('initialize', () => {
         },
       ],
       agentCapabilities: {
+        auth: { status: {} },
         loadSession: true,
         promptCapabilities: { image: true, embeddedContext: false },
         mcpCapabilities: { http: false, sse: false },
@@ -214,6 +225,204 @@ describe('initialize', () => {
       message:
         'Sign in with `npx -y @chorded/cursor-cloud-acp@0.1.0 login` in a terminal, or set CURSOR_API_KEY.',
     });
+  });
+});
+
+describe('auth/status', () => {
+  const ADA = {
+    label: 'Cursor',
+    active: true,
+    name: 'Ada Lovelace',
+    email: 'ada@example.com',
+  };
+
+  /** A keychain holding `key`, expiring 2027-02-13. */
+  const expiring = (key: string): SdkCredentialStore => ({
+    ...store(),
+    load: () =>
+      Promise.resolve({
+        version: 1,
+        backendUrl: 'https://api2.cursor.sh',
+        apiKey: key,
+        apiKeyExpiresAtMs: Date.UTC(2027, 1, 13),
+        createdAtMs: 0,
+      }),
+  });
+
+  const ready = async (options?: Parameters<typeof connect>[0]) => {
+    const at = connect(options);
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    return at;
+  };
+
+  const status = (at: ReturnType<typeof connect>) =>
+    at.request('auth/status', {});
+
+  test("the keychain's key: the account, its source and expiry", async () => {
+    const at = await ready({ store: expiring('key_good') });
+
+    expect(await status(at)).toEqual({
+      state: 'authenticated',
+      accounts: [{ ...ADA, description: 'keychain, expires 2027-02-13' }],
+    });
+  });
+
+  test('CURSOR_API_KEY names the variable; a keychain entry without expiry, the keychain', async () => {
+    const env = await ready({ env: { CURSOR_API_KEY: 'key_good' } });
+
+    expect(await status(env)).toEqual({
+      state: 'authenticated',
+      accounts: [{ ...ADA, description: 'CURSOR_API_KEY' }],
+    });
+    expect(await status(await ready())).toEqual({
+      state: 'authenticated',
+      accounts: [{ ...ADA, description: 'keychain' }],
+    });
+  });
+
+  test('no key, or one Cursor refuses: unauthenticated, with no account', async () => {
+    expect(await status(await ready({ store: store() }))).toEqual({
+      state: 'unauthenticated',
+    });
+    expect(await status(await ready({ store: store('key_other') }))).toEqual({
+      state: 'unauthenticated',
+    });
+  });
+
+  test('a keychain or Cursor that fails otherwise: unknown', async () => {
+    const keychain = await ready({
+      store: {
+        ...store(),
+        load: () =>
+          Promise.reject(new KeychainError('The keychain refused: locked.')),
+      },
+    });
+
+    expect(await status(keychain)).toEqual({ state: 'unknown' });
+
+    const network = await ready();
+
+    network.cursor.failMe = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    expect(await status(network)).toEqual({ state: 'unknown' });
+  });
+
+  test('a team key with no user: the account names only its source', async () => {
+    const at = await ready();
+    const me = at.cursor.port.me;
+
+    (at.cursor.port as { me: typeof me }).me = (options) =>
+      me(options).then(() => ({ apiKeyName: 'ci', createdAt: '2026-11-01' }));
+
+    expect(await status(at)).toEqual({
+      state: 'authenticated',
+      accounts: [{ label: 'Cursor', active: true, description: 'keychain' }],
+    });
+  });
+
+  test('no push before the first auth/status is answered', async () => {
+    const at = await ready({ store: store() });
+
+    await refusal(newSession(at));
+    expect(at.pushed).toEqual([]);
+  });
+
+  test('a session start that finds the status changed pushes it before its answer, once', async () => {
+    const at = await ready();
+
+    await status(at);
+
+    at.cursor.failMe = new CursorError('network', 'fetch failed', {
+      sdkClass: 'NetworkError',
+    });
+
+    await refusal(newSession(at));
+    expect(at.pushed).toEqual([{ state: 'unknown' }]);
+
+    at.cursor.failMe = undefined;
+
+    await newSession(at);
+    await newSession(at);
+    expect(at.pushed).toEqual([
+      { state: 'unknown' },
+      {
+        state: 'authenticated',
+        accounts: [{ ...ADA, description: 'keychain' }],
+      },
+    ]);
+    expect(at.order.filter((each) => each !== 'session/new')).toEqual([
+      'initialize',
+      'auth/status',
+      'auth/status_update',
+      'auth/status_update',
+    ]);
+    expect(at.order.indexOf('session/new')).toBeGreaterThan(
+      at.order.lastIndexOf('auth/status_update'),
+    );
+  });
+
+  test('a signed-out start pushes unauthenticated before refusing', async () => {
+    let signedIn = true;
+    const at = await ready({
+      store: {
+        ...store(),
+        load: () => {
+          return signedIn
+            ? store('key_good').load()
+            : Promise.resolve(undefined);
+        },
+      },
+    });
+
+    await status(at);
+
+    signedIn = false;
+
+    expect(await refusal(newSession(at))).toEqual({
+      code: -32000,
+      message: 'Not signed in to Cursor.',
+    });
+    expect(at.pushed).toEqual([{ state: 'unauthenticated' }]);
+  });
+
+  test('list, resume and load push a change too; auth/status itself pushes none', async () => {
+    const at = await ready();
+    const { sessionId } = await newSession(at);
+
+    // Cursor knows an agent from its first send.
+    await at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+    await status(at);
+    at.cursor.keys.clear();
+    await refusal(at.request('session/list', { cwd: CWD }));
+    expect(at.pushed).toEqual([{ state: 'unauthenticated' }]);
+
+    at.cursor.keys.add('key_good');
+    await at.request('session/resume', {
+      sessionId,
+      cwd: CWD,
+      mcpServers: [],
+    });
+    expect(at.pushed.at(-1)?.state).toBe('authenticated');
+
+    at.cursor.keys.clear();
+    await refusal(
+      at.request('session/load', { sessionId, cwd: CWD, mcpServers: [] }),
+    );
+    expect(at.pushed.at(-1)).toEqual({ state: 'unauthenticated' });
+
+    at.cursor.keys.add('key_good');
+    await status(at);
+    expect(at.pushed).toHaveLength(3);
   });
 });
 

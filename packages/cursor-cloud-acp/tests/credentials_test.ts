@@ -1,6 +1,6 @@
 import { describe, expect, test } from 'bun:test';
 import type { SdkCredentialStore, StoredSdkCredentials } from '@cursor/sdk';
-import { apiKey } from '../src/credentials.ts';
+import { apiKey, findKey } from '../src/credentials.ts';
 import { KeychainError } from '../src/errors.ts';
 
 const NOW = 1_850_000_000_000;
@@ -90,6 +90,26 @@ describe('apiKey', () => {
     await apiKey(from);
     await apiKey(from);
     expect(from.store.loads).toBe(2);
+  });
+});
+
+describe('findKey', () => {
+  test("names where the key came from, with the keychain entry's expiry", async () => {
+    expect(
+      await findKey(source(STORED, { CURSOR_API_KEY: 'key_env' })),
+    ).toEqual({ apiKey: 'key_env', source: 'env' });
+    expect(await findKey(source(STORED))).toEqual({
+      apiKey: 'key_keychain',
+      source: 'keychain',
+      expiresAtMs: NOW + 1,
+    });
+
+    const { apiKeyExpiresAtMs: _, ...never } = STORED;
+
+    expect(await findKey(source(never))).toEqual({
+      apiKey: 'key_keychain',
+      source: 'keychain',
+    });
   });
 });
 

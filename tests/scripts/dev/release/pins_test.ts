@@ -37,7 +37,7 @@ test('a pin npm lacks stops the release, naming it and the way on', () => {
 test("chord's pins are src/chorded.ts's, and chord's steps ask for them", () => {
   expect(
     CHORDED_AGENTS.map((agent) => `${agent.package}@${agent.version}`),
-  ).toEqual(['@chorded/cursor-cloud-acp@0.1.0']);
+  ).toEqual(['@chorded/cursor-cloud-acp@0.2.0']);
   expect(steps.preflight).toBeFunction();
 });
 

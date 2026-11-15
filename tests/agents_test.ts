@@ -806,10 +806,10 @@ describe("cursor-cloud, chord's own npx agent (CHD-622)", () => {
       name: 'cursor-cloud',
       title: 'Cursor Cloud Agents',
       runner: 'npx',
-      pinned: '@chorded/cursor-cloud-acp@0.1.0',
+      pinned: '@chorded/cursor-cloud-acp@0.2.0',
       mcpServers: false,
       start: {
-        command: ['npx', '-y', '@chorded/cursor-cloud-acp@0.1.0'],
+        command: ['npx', '-y', '@chorded/cursor-cloud-acp@0.2.0'],
         env: {},
       },
     });
@@ -840,11 +840,11 @@ describe("cursor-cloud, chord's own npx agent (CHD-622)", () => {
     expect(row).toEqual({
       name: 'cursor-cloud',
       title: 'Cursor Cloud Agents',
-      start: 'npx -y @chorded/cursor-cloud-acp@0.1.0',
+      start: 'npx -y @chorded/cursor-cloud-acp@0.2.0',
       from: 'npx',
     });
     expect(agentTable([row])).toBe(
-      'cursor-cloud  Cursor Cloud Agents  npx  npx -y @chorded/cursor-cloud-acp@0.1.0',
+      'cursor-cloud  Cursor Cloud Agents  npx  npx -y @chorded/cursor-cloud-acp@0.2.0',
     );
     expect(
       agentsJson({

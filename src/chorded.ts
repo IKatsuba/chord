@@ -22,7 +22,7 @@ export const CHORDED_AGENTS: readonly ChordedAgent[] = [
     name: 'Cursor Cloud Agents',
     runner: 'npx',
     package: '@chorded/cursor-cloud-acp',
-    version: '0.1.0',
+    version: '0.2.0',
     args: [],
     env: {},
     repository:

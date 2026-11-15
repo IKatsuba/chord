@@ -84,7 +84,7 @@
     },
     "packages/cursor-cloud-acp": {
       "name": "@chorded/cursor-cloud-acp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "bin": {
         "cursor-cloud-acp": "dist/bin.js",
       },

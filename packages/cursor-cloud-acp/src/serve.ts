@@ -394,10 +394,16 @@ export function serve(stream: Stream, context: ServeContext): Served {
 
   const connection = agent({ name: NAME })
     .onRequest('initialize', () => initialize(context.version))
-    .onRequest('auth/status', async () => {
+    .onRequest('auth/status', async ({ client }) => {
       const { status } = await resolve();
 
-      kept = JSON.stringify(status);
+      // The first answer is what later ones update; a later one that
+      // differs is pushed too, as every resolution's is.
+      if (kept === undefined) {
+        kept = JSON.stringify(status);
+      } else {
+        await report(client, status);
+      }
 
       return status;
     })

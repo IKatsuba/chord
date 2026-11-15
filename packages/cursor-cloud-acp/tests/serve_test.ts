@@ -392,7 +392,7 @@ describe('auth/status', () => {
     expect(at.pushed).toEqual([{ state: 'unauthenticated' }]);
   });
 
-  test('list, resume and load push a change too; auth/status itself pushes none', async () => {
+  test('list, resume, load and a later auth/status push a change too', async () => {
     const at = await ready();
     const { sessionId } = await newSession(at);
 
@@ -421,8 +421,16 @@ describe('auth/status', () => {
     expect(at.pushed.at(-1)).toEqual({ state: 'unauthenticated' });
 
     at.cursor.keys.add('key_good');
+
+    at.order.length = 0;
+
     await status(at);
-    expect(at.pushed).toHaveLength(3);
+    expect(at.pushed).toHaveLength(4);
+    expect(at.pushed.at(-1)?.state).toBe('authenticated');
+    expect(at.order).toEqual(['auth/status_update', 'auth/status']);
+
+    await status(at);
+    expect(at.pushed).toHaveLength(4);
   });
 });
 

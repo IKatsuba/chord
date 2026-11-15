@@ -5,7 +5,8 @@
   recorded fast-option ids and `session/initial_options.ts`'s
   `INITIAL_CONFIG_IDS` when their adapters' pins change.
 - `chorded.ts` holds chord's own npx agents, merged by name with the
-  registry. Pins are literals; bump one only after its package is on npm.
+  registry. Pins are literals and may lead publication; publish the package
+  before chord's next release.
   `cursor-cloud` defaults to `mcpServers: false`: cloud agents cannot reach
   local servers. Nothing in `src/` imports `packages/`, `@cursor/sdk` or
   `@napi-rs/keyring`; neither dependency belongs in chord's binary.

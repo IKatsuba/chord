@@ -14,6 +14,9 @@
 - Resolve credentials for each session: nonempty `CURSOR_API_KEY`, else
   an unexpired keychain entry, else signed out. Never use the SDK's login
   file. Keychain calls are bounded at 10 seconds; no file fallback.
+  `auth/status` reports the account, key source and expiry, never the key.
+  After its first answer, changed resolutions push `auth/status_update`;
+  never poll.
 - Only ACP writes stdout while serving. SDK errors keep their message as
   one plain line; class, code and request id belong in error data. No
   parsing error words, guessed event shapes or answered Cursor requests.
@@ -27,6 +30,10 @@
 - Cancel is bounded at 10 seconds. Drop late updates after the turn ends.
   Closing a session or process closes handles without cancelling cloud
   runs. A resumed run still going is reported, never followed live.
+- After a run, send a title only when Cursor's name changed; send none
+  on new, resume or load. Rename is chord-local: the SDK cannot rename.
+  Report the agent's whole `rawCostCents / 100` as USD when available,
+  with `used` and `size` zero: the SDK gives no context window.
 - Tests mirror `src/` under `tests/`; fixture entry is
   `tests/fixtures/main.ts`. Its QA argv and scenarios are in the guide.
   Run `bun dev quality cursor-cloud-acp` from the repository root;

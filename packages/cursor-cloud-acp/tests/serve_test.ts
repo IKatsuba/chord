@@ -2166,3 +2166,122 @@ describe('CHD-630 tester: title lifecycle', () => {
     ]);
   });
 });
+
+describe('CHD-630 tester: cost lifecycle', () => {
+  const ready = async (cents: number) => {
+    const at = connect();
+
+    await at.request('initialize', {
+      protocolVersion: 1,
+      clientCapabilities: {},
+    });
+
+    at.cursor.costCents = cents;
+
+    return at;
+  };
+
+  const prompt = (at: ReturnType<typeof connect>, sessionId: string) =>
+    at.request('session/prompt', {
+      sessionId,
+      prompt: [{ type: 'text', text: 'hi' }],
+    });
+
+  const costs = (at: ReturnType<typeof connect>) =>
+    at.seen.flatMap((each) =>
+      each.kind === 'update' &&
+      each.params.update.sessionUpdate === 'usage_update'
+        ? [{ sessionId: each.params.sessionId, update: each.params.update }]
+        : [],
+    );
+
+  test.each([0, 4.2])(
+    'a reported %p cents is retained with no context window',
+    async (cents) => {
+      const at = await ready(cents);
+      const { sessionId } = await newSession(at);
+
+      await prompt(at, sessionId);
+      expect(costs(at)).toEqual([
+        {
+          sessionId,
+          update: {
+            sessionUpdate: 'usage_update',
+            used: 0,
+            size: 0,
+            cost: { amount: cents / 100, currency: 'USD' },
+          },
+        },
+      ]);
+    },
+  );
+
+  test('sessions with different run counts report their own totals', async () => {
+    const at = await ready(5);
+    const a = await newSession(at);
+    const b = await newSession(at);
+
+    await prompt(at, a.sessionId);
+    await Promise.all([prompt(at, a.sessionId), prompt(at, b.sessionId)]);
+    expect(
+      costs(at)
+        .filter((each) => each.sessionId === a.sessionId)
+        .map((each) => each.update.cost?.amount),
+    ).toEqual([0.05, 0.1]);
+    expect(
+      costs(at)
+        .filter((each) => each.sessionId === b.sessionId)
+        .map((each) => each.update.cost?.amount),
+    ).toEqual([0.05]);
+  });
+
+  test('a hung usage lookup can be cancelled and its late total cannot reach the next turn', async () => {
+    const at = await ready(5);
+    const create = at.cursor.port.create;
+    const entered = Promise.withResolvers<void>();
+    const release = Promise.withResolvers<void>();
+    const returned = Promise.withResolvers<void>();
+    let held = false;
+
+    (at.cursor.port as { create: typeof create }).create = async (options) => {
+      const agent = await create(options);
+
+      return {
+        ...agent,
+        getUsage: async () => {
+          const usage = await agent.getUsage();
+
+          if (!held) {
+            held = true;
+
+            entered.resolve();
+            await release.promise;
+            returned.resolve();
+          }
+
+          return usage;
+        },
+      };
+    };
+
+    const { sessionId } = await newSession(at);
+    const running = prompt(at, sessionId);
+
+    try {
+      await entered.promise;
+      await at.connection.agent.notify('session/cancel', { sessionId });
+      expect(await running).toEqual({ stopReason: 'cancelled' });
+      expect(costs(at)).toEqual([]);
+      expect(await prompt(at, sessionId)).toEqual({ stopReason: 'end_turn' });
+      expect(costs(at).map((each) => each.update.cost?.amount)).toEqual([0.1]);
+    } finally {
+      release.resolve();
+      await returned.promise;
+    }
+
+    await prompt(at, sessionId);
+    expect(costs(at).map((each) => each.update.cost?.amount)).toEqual([
+      0.1, 0.15,
+    ]);
+  });
+});

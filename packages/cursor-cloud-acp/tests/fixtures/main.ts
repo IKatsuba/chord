@@ -11,9 +11,11 @@
  * `env-key` starts with the key in `CURSOR_API_KEY`; unset, it starts
  * with the keychain's, which expires 2027-02-13. A
  * prompt's first word picks its run: `think`, `tool`, `plan`, `request`,
- * `hang` (until Esc), `fail`, `busy`, `lost`; any other is answered `ok`.
- * Words later in a prompt never pick one. One earlier agent, `EARLIER`,
- * can be resumed by id.
+ * `hang` (until Esc), `fail`, `busy`, `lost`, `rename` (Cursor renames the
+ * agent at the run's end), `nocost` (its cost not reported yet); any other
+ * is answered `ok`. Words later in a prompt never pick one. A new agent is
+ * named `Login form email validation`; each run costs 4.2 cents. One
+ * earlier agent, `EARLIER`, named `Login page`, can be resumed by id.
  */
 import type { InteractionUpdate, ToolCall } from '@cursor/sdk';
 import { CursorError, KeychainError } from '../../src/errors.ts';
@@ -167,6 +169,13 @@ function scriptFor(text: string): Script | undefined {
         messages: [{ ...base, type: 'request', request_id: 'r-81c2' }],
         hang: true,
       };
+    case 'rename':
+      return {
+        deltas: words('Email validation added to the login page.'),
+        rename: 'Login page and email validation',
+      };
+    case 'nocost':
+      return { deltas: words('ok'), costLags: true };
     case 'lost':
       return { deltas: words('Starting…'), lose: true };
     case 'hang':
@@ -195,6 +204,9 @@ function scriptFor(text: string): Script | undefined {
 
 const cursor = fakeCursor(scriptFor);
 
+cursor.newName = 'Login form email validation';
+cursor.costCents = 4.2;
+
 /**
  * An agent started earlier, on cursor.com or another machine, so
  * `--resume` has one to reopen in a fresh fixture: its last run finished,
@@ -204,7 +216,7 @@ export const EARLIER = 'bc-5e1f0a7c-2d4b-4e8a-9c1f-7b2e6d3a9f10';
 
 cursor.listed.push({
   agentId: EARLIER,
-  name: 'Add login page',
+  name: 'Login page',
   summary: '',
   lastModified: Date.now() - 3 * 3600 * 1000,
   runtime: 'cloud',

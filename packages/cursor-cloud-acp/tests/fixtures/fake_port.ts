@@ -28,6 +28,8 @@ export interface Script {
   readonly refuse?: CursorError;
   /** The stream loses its connection after its messages; the run goes on. */
   readonly lose?: boolean;
+  /** What Cursor renames the agent to when the run ends. */
+  readonly rename?: string;
   /** Cursor reports no cost for the run while it is the agent's latest. */
   readonly costLags?: boolean;
   /** What conversation() gives; else one turn naming the run. */
@@ -292,6 +294,20 @@ export function fakeCursor(
 
         if (script.costLags === true) {
           lagging.add(run.id);
+        }
+
+        // Before the adapter's own wait: the name is Cursor's by the run's end.
+        if (script.rename !== undefined) {
+          const renamed = script.rename;
+
+          void run.wait().then(() => {
+            const info = listed.find((each) => each.agentId === agentId);
+
+            if (info !== undefined) {
+              info.name = renamed;
+              info.lastModified = Date.now();
+            }
+          });
         }
 
         runs.set(agentId, [...(runs.get(agentId) ?? []), run]);

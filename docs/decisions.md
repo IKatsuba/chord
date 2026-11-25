@@ -4515,3 +4515,14 @@ that full-pipe shape deterministically (the agent closes on a signal
 chord sends once its 4 MiB flush is held unread) and asserts each host's real
 behaviour, a write error on macOS and none on Linux, with the exit
 observed and a clean stop on both (main's decision; not a loosening).
+
+## CTUI-192: on Linux the by-hand note names Ctrl-C alone
+
+On a Linux terminal, dart:io never ends stdin at Ctrl-D: with the
+terminal in canonical mode, typed lines arrive, but `stdin`'s `onDone`
+never fires after ^D (a bare AOT probe on a pty shows it; macOS ends
+the stream). So `chord acp` run by hand cannot be left with Ctrl-D on
+Linux. The owner chose to leave the stdin code as it is and say so: on
+Linux the by-hand note reads "Ctrl-C leaves", on macOS it keeps "Ctrl-D
+or Ctrl-C leaves". The compiled note case sends Ctrl-C on Linux and
+checks chord ends by SIGINT, and keeps the Ctrl-D path on macOS.

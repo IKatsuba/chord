@@ -575,7 +575,16 @@ void main() {
 
   test('the by-hand note is for a terminal alone', () {
     expect(byHandNote(stdinIsTerminal: false), isEmpty);
-    expect(byHandNote(stdinIsTerminal: true), [
+    expect(byHandNote(stdinIsTerminal: false, linux: true), isEmpty);
+    expect(byHandNote(stdinIsTerminal: true, linux: true), [
+      'chord: acp serves ACP on stdin and stdout, for a client that starts it.',
+      'chord: nothing to press here. Ctrl-C leaves; `chord` opens a window.',
+    ]);
+    expect(
+      byHandNote(stdinIsTerminal: true),
+      byHandNote(stdinIsTerminal: true, linux: Platform.isLinux),
+    );
+    expect(byHandNote(stdinIsTerminal: true, linux: false), [
       'chord: acp serves ACP on stdin and stdout, for a client that starts it.',
       'chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` opens a '
           'window.',

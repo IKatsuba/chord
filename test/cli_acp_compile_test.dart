@@ -272,15 +272,23 @@ void main() {
   }
 
   test('the by-hand note goes to a terminal', () async {
+    // On Linux dart:io never ends a terminal's stdin at Ctrl-D, so the
+    // note names Ctrl-C there, and Ctrl-C ends chord by its signal.
+    final linux = Platform.isLinux;
+    final leave = linux ? r'\003' : r'\004';
+    final verdict = linux
+        ? r'exit [expr {[lindex $result 4] eq "CHILDKILLED" && '
+              r'[lindex $result 5] eq "SIGINT" ? 0 : 1}]'
+        : r'exit [lindex $result 3]';
     final script = File('${directory.path}/note.exp')
       ..writeAsStringSync('''
 set timeout 20
 spawn $chord acp x --agent-command true
 expect "nothing to press here"
-send "\\004"
+send "$leave"
 expect eof
 catch wait result
-exit [lindex \$result 3]
+$verdict
 ''');
     final result = await Process.run(
       '/usr/bin/expect',
@@ -295,6 +303,16 @@ exit [lindex \$result 3]
       contains(
         'chord: acp serves ACP on stdin and stdout, for a client that starts '
         'it.',
+      ),
+    );
+    expect(
+      result.stdout,
+      contains(
+        linux
+            ? 'chord: nothing to press here. Ctrl-C leaves; `chord` opens a '
+                  'window.'
+            : 'chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` '
+                  'opens a window.',
       ),
     );
   }, skip: hasExpect ? false : '/usr/bin/expect is not installed');

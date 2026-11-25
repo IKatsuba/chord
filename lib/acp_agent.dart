@@ -7,7 +7,7 @@ library;
 
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io' show ProcessSignal;
+import 'dart:io' show Platform, ProcessSignal;
 
 import 'package:cancellation_token/cancellation_token.dart';
 import 'package:collection/collection.dart';
@@ -76,12 +76,18 @@ const acpExtensions = {
 
 /// What a person who ran it by hand reads on stderr; only a stdin that is
 /// a terminal is a person's. A client's stdin is a pipe, and sees no note.
-List<String> byHandNote({required bool stdinIsTerminal}) => stdinIsTerminal
-    ? const [
+/// On [linux] (by default, the host's) it names Ctrl-C alone: dart:io never
+/// ends a Linux terminal's stdin at Ctrl-D (docs/decisions.md, CTUI-192).
+List<String> byHandNote({required bool stdinIsTerminal, bool? linux}) =>
+    stdinIsTerminal
+    ? [
         'chord: acp serves ACP on stdin and stdout, for a client that starts '
             'it.',
-        'chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` opens '
-            'a window.',
+        (linux ?? Platform.isLinux)
+            ? 'chord: nothing to press here. Ctrl-C leaves; `chord` opens a '
+                  'window.'
+            : 'chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` '
+                  'opens a window.',
       ]
     : const [];
 

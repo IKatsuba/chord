@@ -86,8 +86,11 @@ void main() {
       expect(note.said, [
         'chord: acp serves ACP on stdin and stdout, for a client that '
             'starts it.',
-        'chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` '
-            'opens a window.',
+        Platform.isLinux
+            ? 'chord: nothing to press here. Ctrl-C leaves; `chord` opens a '
+                  'window.'
+            : 'chord: nothing to press here. Ctrl-D or Ctrl-C leaves; `chord` '
+                  'opens a window.',
       ]);
       for (final line in note.said) {
         expect(line.length, lessThanOrEqualTo(80));

@@ -698,8 +698,8 @@ The app lives under `lib/`, with snake_case file names;
 - Loaded runs count only while the host stays awake. On macOS, use
   `caffeinate -dimsu dart test` in the package being tested. A run interrupted
   by sleep, with cases lasting far past their timeouts, is void; rerun awake.
-- Record handle-closure proofs require macOS and `lsof`; without either,
-  those cases skip with a reason.
+- Record handle-closure proofs use `/proc/self/fd` on Linux or `lsof` on
+  macOS; other hosts and Macs without `lsof` skip with a reason.
 - The port's signal-owner pty, exit, crash, entrypoint, agent lookup and
   session teardown fixtures use cached kernel snapshots built once in
   `setUpAll`, under the runner's fixed 12-minute setup limit. Cases keep
@@ -740,8 +740,9 @@ The app lives under `lib/`, with snake_case file names;
   need the system `expect`. Run the tag explicitly.
 - Upgrade tests use scripted managers and loopback registry servers. Release
   tests use recording runners; npm layout tests run the shim with Node when
-  available. The build compile test builds the host and Linux targets, and
-  on macOS checks an ad-hoc hardened-runtime signature. Release commands,
+  available. The build compile test builds both Linux targets; its signed
+  Darwin case needs an arm64 Mac for `codesign` and execution, and skips
+  elsewhere even with `--run-skipped`. Release commands,
   including `--dry-run`, authenticate npm and may submit to Apple: only the
   maintainer runs them; teams may inspect `--help`. CI runs on Ubuntu:
   analyze both packages, format, actionlint, three shards per suite, both

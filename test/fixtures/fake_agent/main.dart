@@ -1193,10 +1193,14 @@ Map<String, NotificationSpec> _notifications() => {
 /// A wedged agent ignores SIGTERM and goes only with SIGKILL or its parent.
 void _wedge() {
   ProcessSignal.sigterm.watch().listen((_) {});
-  final parent = _parentOf(pid);
+  // On a loaded machine ps can say nothing; the parent is the first one it
+  // names, never compared against an unknown one.
+  var parent = _parentOf(pid);
   Timer.periodic(const Duration(milliseconds: 200), (_) {
     final now = _parentOf(pid);
-    if (parent == 1 || (now != null && now != parent)) exit(1);
+    if (now == null) return;
+    parent ??= now;
+    if (parent == 1 || now != parent) exit(1);
   });
 }
 

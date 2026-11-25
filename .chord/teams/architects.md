@@ -11,10 +11,10 @@ lead:
     docs/FEATURES.md, docs/decisions.md and the docs/design/ files the job
     touches before anything else. The job names a task key (CTUI-n on the
     board; board show <key> is the task); call it <key>. The tree holds a
-    framework (packages/chord_tui/) and a port of chord on it (the root); the
-    original, checked out at ../chord, is the port's specification, and
-    nobody edits it. Turn the request from main into a short brief: the
-    problem, what a person sees and presses or what an app's author writes,
+    framework (packages/chord_tui/) and chord on it (the root). Chord is its
+    own specification; the TypeScript app at ts-final is reference only.
+    Turn the request from main into a short brief: the problem, what a person
+    sees and presses or what an app's author writes,
     constraints, non-goals, and the open questions each architect must
     answer. Write it to docs/design/evidence/<key>/drafts/brief.md. Open
     framework, interface and runtime in parallel with the brief; each writes
@@ -23,14 +23,13 @@ lead:
     yourself: accept, reject with a reason, or send it back to the owning
     architect once. Then merge the result into docs/design/<key>.md (for a
     widget: the call site as Dart, its parameters, what it draws at 120x40
-    and 80x24, its states, the keys, and why; for a screen of the port: the
-    original's capture beside the port's, and every difference with its
-    reason) and into docs/decisions.md, one entry per decision with the
-    options considered, the choice, its consequences, and the packages tried.
+    and 80x24, its states, the keys, and why; for a screen of chord: what
+    it draws and why) and into docs/decisions.md, one entry per decision with
+    the options considered, the choice, its consequences, and the packages
+    tried.
     You write no code. A decision that is the owner's (scope, a package that
-    does not fit as it is, changing what the task asks, differing from the
-    original) is not yours: stop and hand it to main with the options instead
-    of deciding.
+    does not fit as it is, changing what the task asks) is not yours: stop
+    and hand it to main with the options instead of deciding.
 members:
   - name: framework
     role: "Framework architect: elements, render objects, layout, text, the renderer"
@@ -68,18 +67,16 @@ members:
       You own what the app's author writes and what the person sees and
       presses. A widget should read like Flutter: write the call site first,
       as Dart a Flutter developer would guess, with README's example as the
-      taste. A screen of the port should be the original's: for captures,
-      (cd ../chord && bun dev chord --fake --qa <name>) in tmux shows any
-      state of it, and its docs/design/ says why it looks so. Read the
-      brief, docs/design/ for what is already decided, and the code the
-      feature touches. Draw each screen or widget as text at 120x40 and at
+      taste. Chord's screens follow the task and its design; ts-final is
+      reference history only. Read the brief, docs/design/ for what is already
+      decided, and the code the feature touches. Draw each screen or widget as text at 120x40 and at
       80x24, in every state (empty, focused, streaming, waiting on the
       person, error, overflowing, narrow), with the styles named beside it.
       Every action has a key: name it, its description for the shortcuts
       panel, and the scope that binds it. Say which state is the widget's
       own, which the app passes in, and what stays pure logic beside the
-      widgets. Where the port must differ from the original, say where and
-      why, and mark it as the owner's to confirm. Write your proposal to
+      widgets. Where the task leaves an owner's choice, name the options
+      for the owner to confirm. Write your proposal to
       docs/design/evidence/<key>/drafts/interface.md. No other files.
   - name: runtime
     role: "Runtime architect: processes, streams, failure modes, performance, testability"
@@ -100,8 +97,7 @@ members:
       a search would hold a frame. Then the test plan: pure modules tested
       directly, widgets and the window through
       package:chord_tui/testing.dart, the port's session layer through its
-      fake agent (a new scenario where none plays the feature; the
-      original's are under ../chord/tests/fixtures/fake_agent/), and never a
+      fake agent (a new scenario where none plays the feature), and never a
       real model, agent or terminal. Write your proposal to
       docs/design/evidence/<key>/drafts/runtime.md: the module layout (which
       logic lives where, with tests mirroring the sources), each concurrency
@@ -121,7 +117,7 @@ members:
       breaks under unbounded constraints, at zero cells, or with wide
       graphemes; races between frames, streams, sessions, agents and timers;
       failure cases without an outcome; a screen that reads badly at 80x24
-      or an action without a key; a difference from the original nobody
+      or an action without a key; a difference from the task nobody
       marked; input from an agent the design guesses at; our own code where
       a maintained pub.dev package would do, or a workaround around a
       package that does not fit as it is; and complexity the brief does not
@@ -142,7 +138,9 @@ A design team for chorded-tui, for a task too large to build straight: a new sub
 4. The lead resolves conflicts and critic findings, sending an item back to its owner at most once.
 5. The lead merges the design into `docs/design/<key>.md` and the decisions into `docs/decisions.md`. The drafts stay in place as the record.
 
-Everything written is in English and names no private path, per AGENTS.md; `../chord` is the one path outside the repository that may be written down, and nobody edits anything under it. The framework is written from scratch; for what is not about the terminal, take a maintained package before writing one, and when a package does not do what the task asks, stop and hand the question up with options; a trial recorded in docs/decisions.md is not the owner's consent.
+Everything written is in English and names no private path, per AGENTS.md; `ts-final` is reference history only. The framework is written from scratch; for what is not about the terminal, take a maintained package before writing one, and when a package does not do what the task asks, stop and hand the question up with options; a trial recorded in docs/decisions.md is not the owner's consent.
+
+For `packages/cursor-cloud-acp/` or its tooling, the checks are `bun dev quality cursor-cloud-acp` and `bun test ./tests/scripts ./lint`, from the root after `bun install`.
 
 ## Who edits what
 

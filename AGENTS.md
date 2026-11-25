@@ -12,7 +12,7 @@ Flutter-shaped framework, chord_tui. `README.md` describes the app;
 `docs/decisions.md` is why things are the way they are. Read these before the
 first change.
 
-There are two things in the tree, and they do not mix:
+There are three things in the tree, and they do not mix:
 
 - **The framework**, `packages/chord_tui/` (package `chord_tui`): widgets,
   layout, text, keys, the renderer, the tester. It knows nothing about agents
@@ -20,6 +20,8 @@ There are two things in the tree, and they do not mix:
 - **The port**, at the root (package `chord`, depends on the framework by
   path): the terminal app, its ACP connections, sessions and screens.
   The TypeScript app is preserved at the `ts-final` tag for reference.
+- **The Cursor Cloud adapter**, `packages/cursor-cloud-acp/`: a TypeScript
+  ACP adapter with its own Bun workspace tooling and npm release.
 
 The point of the port is to prove the framework: whenever the port needs
 something a terminal app would generally need (a scrolling list, a picker, a
@@ -308,6 +310,14 @@ dart compile exe benchmark/record_scan.dart -o build/record_scan
 ./build/record_scan
 ```
 
+```sh
+# Adapter commands, from the repository root:
+bun install
+bun dev quality cursor-cloud-acp
+bun test ./tests/scripts ./lint
+bun dev release cursor-cloud-acp --help # owner releases; help only here
+```
+
 Static checks, as the teams call them: `dart analyze` in both the root and
 `packages/chord_tui/`, and
 `dart format --output=none --set-exit-if-changed .` at the root, all clean.
@@ -409,6 +419,18 @@ example/selection.dart      semantic selection, lazy sources and held scrolling
 The app and repository, from the root:
 
 ```text
+packages/cursor-cloud-acp/  TypeScript Cursor Cloud ACP adapter
+package.json               Bun workspace, for the adapter only
+bun.lock                   pinned Bun dependencies, for the adapter only
+bunfig.toml                Bun settings, for the adapter only
+tsconfig.json              TypeScript settings, for the adapter only
+eslint.config.ts           ESLint settings, for the adapter only
+.prettierrc.json            format settings, for the adapter only
+.prettierignore             format exclusions, for the adapter only
+.npmrc                     npm settings, for the adapter only
+scripts/                   Bun tooling and release, for the adapter only
+tests/scripts/             tooling tests, for the adapter only
+lint/                      ESLint rules and tests, for the adapter only
 bin/chord.dart             app entrypoint
 lib/                       chord app
 pubspec.yaml               app manifest and shared version source

@@ -31,6 +31,11 @@ for a prompt that names one: type `edit`, `permission`, `plan`, `subagent`
 or `team` to see each part of the interface work. Its scenario names are
 listed in `test/fixtures/fake_agent/main.dart`.
 
+The TypeScript adapter in `packages/cursor-cloud-acp/` uses Bun 1.4.4 or
+newer. Bun is needed only for that adapter and its tooling. From the root,
+run `bun install`, `bun dev quality cursor-cloud-acp` and
+`bun test ./tests/scripts ./lint` for adapter changes.
+
 ## Before you open a pull request
 
 ```sh
@@ -52,6 +57,7 @@ checks you ran in the pull request. `dart format .` fixes formatting;
 analyzed, formatting and actionlint are checked, each suite runs in three
 shards, and both `compile` tags run with `expect`. It also tests the npm shim
 with Node 22.13, builds linux-x64 natively and cross-compiles linux-arm64.
+The adapter job runs its Bun quality checks and tooling tests.
 The aggregate `check` requires all jobs to pass. Darwin builds run in the
 maintainer's local release.
 

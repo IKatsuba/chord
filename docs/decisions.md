@@ -4494,3 +4494,11 @@ asserted, and the upgrade path for Bun-installed copies, a real feature.
   teams, not a team file format.
 - CI already ran on pushes to main and on pull requests (Q398); it is
   unchanged.
+
+## CTUI-190: chord and cursor-cloud-acp share the repository
+
+chord and chord_tui are Dart; `packages/cursor-cloud-acp/` stays TypeScript,
+with Bun tooling for the adapter only. The TypeScript chord is preserved
+at `ts-final` as reference history, not a specification for new behaviour.
+Before the swap, `../chord` and "the original" in this log and the designs
+mean that TypeScript app. Its own decisions log stays at `ts-final`.

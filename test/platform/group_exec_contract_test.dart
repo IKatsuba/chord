@@ -77,6 +77,12 @@ void main() {
     ['--packages=$packages', entry, ...args],
   ).timeout(const Duration(minutes: 2));
 
+  // Each call compiles bin/chord.dart from source on the JIT: about 7 s
+  // idle and 15 s on a loaded Linux container, so a case with two calls
+  // passes package:test's default 30 s. A case covers its calls' own
+  // bound, two minutes each.
+  const entryTimeout = Timeout(Duration(minutes: 5));
+
   test(
     "chord's entry point: ok frame, the program's argv, its exit code",
     () async {
@@ -95,6 +101,7 @@ void main() {
       expect(result.stdout, 'zero one\n');
       expect(result.exitCode, 7);
     },
+    timeout: entryTimeout,
   );
 
   test(
@@ -116,5 +123,6 @@ void main() {
       expect(malformed.stderr, 'chord: malformed --chord-group-exec call\n');
       expect(malformed.exitCode, 126);
     },
+    timeout: entryTimeout,
   );
 }

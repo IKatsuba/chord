@@ -787,16 +787,31 @@ void main() {
 
     test('an agent closing its stdin while chord writes does not end '
         'chord', () async {
-      // It closes once chord's first bytes reached it and a second has
-      // passed: by then the pipe is full and a flush is waiting on it.
+      // It closes its stdin only when told, once chord's flush is held
+      // on a full pipe: 4 MiB in one write outgrows any default pipe, and
+      // nothing reads it. Its sleeps take no stdin, so the close is whole.
       final agent = await spawn(
-        'head -c 1 >/dev/null; sleep 1; exec 0<&-; sleep 0.3',
+        r'trap "exec 0<&-; closed=1" USR1; echo ready; '
+        r'until [ -n "$closed" ]; do sleep 0.05 </dev/null; done; '
+        'sleep 0.3 </dev/null',
       );
-      final chunk = List.filled(64 * 1024, 0x61);
+      final out = StreamIterator(
+        agent.stdout.transform(utf8.decoder).transform(const LineSplitter()),
+      );
+      expect(await out.moveNext(), isTrue);
+      expect(out.current, 'ready');
       Object? failed;
+      var flushed = false;
+      agent.stdin.add(List.filled(4 << 20, 0x61));
+      final held = agent.stdin.flush().whenComplete(() => flushed = true);
+      await pumpEventQueue();
+      expect(flushed, isFalse, reason: 'the flush waits on the full pipe');
+      expect(Process.killPid(agent.pid, ProcessSignal.sigusr1), isTrue);
       try {
-        for (var i = 0; i < 64; i++) {
-          agent.stdin.add(chunk);
+        await held;
+        // What chord writes after the close.
+        for (var i = 0; i < 4; i++) {
+          agent.stdin.add(List.filled(64 * 1024, 0x61));
           await agent.stdin.flush();
         }
       } catch (error) {
@@ -811,6 +826,7 @@ void main() {
         expect(failed, isA<SocketException>());
       }
       expect(await agent.status, const Exit(0));
+      await out.cancel();
       await agent.stop(bounds);
       expect(await inGroupAfterStop(agent.pid), isEmpty);
     });

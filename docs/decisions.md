@@ -4511,6 +4511,7 @@ takes the hangup as a silent close: that flush and every later write
 complete with no error, the bytes dropped, and the sink's `done` never
 completes. chord does not rely on the write error either way: the
 agent's exit is what tells of it. `test/acp/process_test.dart` drives
-that full-pipe shape deterministically and asserts each host's real
+that full-pipe shape deterministically (the agent closes on a signal
+chord sends once its 4 MiB flush is held unread) and asserts each host's real
 behaviour, a write error on macOS and none on Linux, with the exit
 observed and a clean stop on both (main's decision; not a loosening).

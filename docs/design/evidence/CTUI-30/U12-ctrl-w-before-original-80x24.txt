@@ -1,0 +1,24 @@
+ ▀▄     chord vX
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <dir>
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › cut [Image #1]                                                             │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

@@ -1,0 +1,5 @@
+
+> /model
+  more prompt
+page builds 10 · rows 72 · offset 30 · scrolled back
+ctrl+p Picker  ctrl+x p Tall picker  ctrl+o Completions  ctrl+x a Anchor  ctrl+…

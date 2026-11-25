@@ -1,0 +1,24 @@
+ chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+
+ › tools
+
+ ⏺ Read(README.md)
+   ⎿  # chord
+
+ ⏺ Read it.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ›
+ ctrl+c or ctrl+d to quit

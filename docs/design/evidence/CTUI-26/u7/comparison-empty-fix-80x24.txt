@@ -1,0 +1,25 @@
+Before fix                                                                       | After fix
+ ▀▄     chord v0.0.1                                                             |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               |  ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   project                                                                  |  ▄▀▀▀   project
+ ▀▀     ? for shortcuts                                                          |  ▀▀     ? for shortcuts
+        resumed · yesterday · Inspect the saved notes                            |         resumed · yesterday · Inspect the saved notes
+                                                                                 | 
+ › Inspect the saved notes                                                       |  › Inspect the saved notes
+                                                                                 | 
+ ⏺ The saved notes are ready.                                                    |  ⏺ The saved notes are ready.
+                                                                                 | 
+                                                                                 | 
+╭────────────────────────────────────────────╮                                   | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                           │                                   | │ Resume a session                                                             │
+│ fake's earlier sessions in this directory. │                                   | │ fake's earlier sessions in this directory.                                   │
+│                                            │                                   | │                                                                              │
+│ No earlier sessions in this directory.     │                                   | │ No earlier sessions in this directory.                                       │
+│                                            │                                   | │                                                                              │
+│ Ctrl+a for all directories · Esc to close  │                                   | │ Ctrl+a for all directories · Esc to close                                    │
+╰────────────────────────────────────────────╯                                   | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |   ? for shortcuts          Fake Large with a 1M context window · medium effort

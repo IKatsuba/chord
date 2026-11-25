@@ -1,0 +1,40 @@
+
+ [2m›[0m thought
+
+ [2m∴[0m [2;3mThinking…[0m
+
+ ⏺ The answer is [1mready[0m.
+
+   [2m- [0mOne item
+   [2m- [0mAnother item
+   [2m⎿[0m  [38;2;255;107;128mInterrupted by user[39m
+   [2m⎿[0m  [2mStopped: max_tokens[0m
+
+ [38;2;255;193;7m⏺[39m [38;2;255;193;7mA warning from the agent.[39m
+
+ [38;2;255;107;128m⏺[39m [38;2;255;107;128mAn error from the agent.[39m
+
+ [2m⏺[0m [2mPlan[0m
+   [2m⎿[0m  [2m☒ [9mRead the source[0m
+   [2m [0m  [2m☒ [9mFinish the change[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

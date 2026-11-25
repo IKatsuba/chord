@@ -1,0 +1,24 @@
+   [2m│[0m   for bin in [2m│[0m
+   [2m│[0m [2m↪[0m  dist/*/ch [2m│[0m
+   [2m│[0m [2m↪[0m ord; do    [2m│[0m
+   [2m│[0m [2m↪[0m echo       [2m│[0m
+   [2m│[0m [2m↪[0m "built     [2m│[0m
+   [2m│[0m [2m↪[0m $bin";     [2m│[0m
+   [2m│[0m [2m↪[0m done       [2m│[0m
+   [2m└──────────────┘[0m
+
+ [2m›[0m permission
+
+ ⏺ [1mWrite[0m(notes.txt)
+   [2m⎿[0m  Failed
+   [2m⎿[0m  Rejected
+      Write
+      notes.txt
+
+ ⏺ Permission:
+   deny.
+
+[2m╭──────────────────╮
+│[0m ›                [2m│
+╰──────────────────╯
+[0m  sent 5 chars to

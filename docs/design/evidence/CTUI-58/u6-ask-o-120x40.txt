@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/ctui58-u6/wd
+ ▀▀     ? for shortcuts · /help
+
+ › claudecycleask
+
+ ⏺ The build runs in the background; I will read it after.
+
+ ⏺ The background build ended; saving its log.
+
+ ⏺ Write(notes/build.md)
+   ⎿  Waiting…
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      This turn:    counted when it ends
+      Session time: 19s
+
+
+
+
+
+ ››› Waiting for permission… (11s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                                                            │
+│ Write notes/build.md                                                                                                 │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

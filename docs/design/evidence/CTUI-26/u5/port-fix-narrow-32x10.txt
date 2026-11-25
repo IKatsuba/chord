@@ -1,0 +1,10 @@
+
+
+
+╭──────────────────────────────╮
+│ Resume a session             │
+│ fake's earli...is directory. │
+│                              │
+│ Ctrl+a for all directories · │
+│ Esc to close                 │
+╰──────────────────────────────╯

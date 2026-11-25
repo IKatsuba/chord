@@ -1,0 +1,40 @@
+
+ ← from @tester · fake
+   ⎿  It fails for that reason: "a" at the end of a line comes back as "a, with no closing quote. Only tests/parse/
+      tokenize_test.ts changed.
+
+ ⏺ Received the message from tester · fake.
+
+ ← from @bugfix 2 · fake
+   ⎿  This run keeps to src/parse/date.ts and tests/parse/date_test.ts. Which files do you hold?
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ ← from chord
+   ⎿  The person closed coder (fake · fake-large, id 865373cb). It takes no more messages; open_agent opens it again.
+
+ ⏺ Received the message from chord.
+
+ › /cost
+   ⎿  Total cost:   $0.0500
+      Tokens in:    4,000
+      Tokens out:   800
+      Cache read:   3,200
+      Session time: 1m 24s
+
+      This session     Cost  Tokens
+      main          $0.0500   8,000
+      bugfix        $0.0750  12,000  team run: lead $0.0500 · tester not reported · coder $0.0250
+      bugfix        $0.0500   8,000  team run: lead $0.0250 · tester not reported · coder $0.0250
+      Total         $0.1750  28,000  tester not reported; tester not reported
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● 2 agents wait · ctrl+x a to go · ? for shortcuts            Fake Large with a 1M context window · medium · 1% used
+    main       fake · Fake Large with a 1M context window · medium         ◦ idle 1m
+    bugfix     team · fake · Fake Large with a 1M context window · medium  ◦ idle 30s
+    └─ tester  fake · Fake Small · medium                                  ● permission 1m 25s
+    bugfix 2   team · fake · Fake Large with a 1M context window · medium  ◦ idle 1m            ✓ new reply
+    ├─ tester  fake · Fake Small · medium                                  ● permission 1m 1s   ← new message
+    └─ coder   fake · Fake Large with a 1M context window · medium         ◦ idle 1m            ✓ new reply

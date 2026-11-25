@@ -1,0 +1,40 @@
+ Code  plain, numbers on, wrap on
+
+[2m dart[0m
+[2m1[0m   void main() {
+[2m2[0m     print('A long message about terminal cells, 日本語, and keeping every grapheme together on screen.');
+[2m3[0m   }
+
+[2m ts[0m
+[2m1[0m   /** A comment
+[2m2[0m    * over three lines. */
+[2m3[0m   export class Cache<T> extends Map<string, T> {
+[2m4[0m     private hits = 0; // counted
+[2m5[0m     get(key: string): T | undefined {
+[2m6[0m       return super.get(key) ?? undefined;
+[2m7[0m     }
+[2m8[0m   }
+
+[2m python[0m
+[2m1[0m   @cached
+[2m2[0m   def area(r: float = 1.0) -> str:
+[2m3[0m       """Doc."""
+[2m4[0m       return f"{3.14159 * r * r:.2f}"  # rounded
+[2m5[0m
+
+[2m sh, with a tab[0m
+[2m1[0m   for f in *.txt; do
+[2m2[0m     echo "$f" | grep -v x > /dev/null
+[2m3[0m   done
+
+[2m no language[0m
+[2m1[0m   plain text, as it is
+[2m2[0m
+[2m3[0m     indented after a blank line
+
+[2m empty[0m
+[2m1[0m
+
+
+
+[1mctrl+n[0;2m Line numbers[0m  [1mctrl+w[0;2m Wrap[0m  [1mctrl+t[0;2m Theme[0m  [1mctrl+q[0;2m Quit[0m  [1mpageup[0;2m Scroll up a page[0m  [1mpagedown[0;2m Scroll down a page[0m  [1mup[0;2m S…

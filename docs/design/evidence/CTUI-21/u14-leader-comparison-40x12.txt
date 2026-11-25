@@ -1,0 +1,13 @@
+ORIGINAL                                 | FIX
+ █▄     chord v0.71.0                    |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake La...context window  |  ▀██▄   fake · Fake Large with a 1M co…
+ ▄██▀   /tmp/chord-qa.ctui21-leader      |  ▄██▀   <isolated worktree>
+ █▀     ? for shortcuts · /help          |  █▀     ? for shortcuts
+                                         | 
+                                         | 
+                                         | 
+                                         | 
+╭──────────────────────────────────────╮ | ╭──────────────────────────────────────╮
+│ ›                                    │ | │ ›                                    │
+╰──────────────────────────────────────╯ | ╰──────────────────────────────────────╯
+  ctrl+x …  b block · a waits            |   ctrl+x …  a waits

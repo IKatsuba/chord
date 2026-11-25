@@ -1,0 +1,24 @@
+Text area
+
+First logical line
+Second logical line
+Third logical line
+Fourth logical line
+Fifth logical line
+Sixth logical line
+
+
+
+
+
+
+
+ [2m┌────────────────────────────────────────────────────────────────────────────┐[0m
+ [2m│[0m [2m1[0m rrow viewport and the wider viewport too. A long logical line keeps its  [2m│[0m
+ [2m│[0m [2m1[0m gutter aligned while wrapping across the available terminal cells. 日本  [2m│[0m
+ [2m│[0m [2m1[0m 語 and emoji 🙂 stay whole; continuing text crosses the narrow viewport  [2m│[0m
+ [2m│[0m [2m1[0m and the wider viewport too. [7m [0m                                            [2m│[0m
+ [2m└────────────────────────────────────────────────────────────────────────────┘[0m
+[2mline 1, column 592 · rows 6–9 of 9[0m
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+[1menter[0;2m Submit[0m  [1mshift+enter[0;2m Insert newline[0m  [1malt+enter[0;2m Insert newline[0m  [1mctrl+enter…[0m

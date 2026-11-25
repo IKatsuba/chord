@@ -1,0 +1,7 @@
+import 'package:timeago/timeago.dart' as timeago;
+void main() {
+  final now = DateTime.utc(2026, 1, 1);
+  for (final seconds in [0, 59, 60, 90, 120, 3600, 86400, 604800, 2592000, 31536000]) {
+    print('$seconds => ${timeago.format(now.subtract(Duration(seconds: seconds)), clock: now, locale: 'en')}');
+  }
+}

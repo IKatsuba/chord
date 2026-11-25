@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · GPT-5.3 Codex
+ ▄▀▀▀   /private/tmp/ctui29e-look/wT
+ ▀▀     ? for shortcuts · /help
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      Session time: 9s
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0047 (chord's estimate)
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 21s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts             GPT-5.3 Codex · medium effort · ~1% context used

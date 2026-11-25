@@ -1,0 +1,25 @@
+Original markdown-80x24.txt | U7 live markdown-80x24.txt
+   │ const turn = session.prompt('hello');                        │              |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+   │ await turn.result;                                           │              |    ┌ ts ────────────────────────────────────────────────────────────┐
+   └──────────────────────────────────────────────────────────────┘              |    │   const session = await openSession({ agent: 'claude', cwd }); │
+                                                                                 |    │   const turn = session.prompt('hello');                        │
+   That is the whole loop. To land a change:                                     |    │   await turn.result;                                           │
+                                                                                 |    └────────────────────────────────────────────────────────────────┘
+   1. Run the checks:                                                            | 
+      ┌─ sh ─[copy]─[run]─┐                                                      |    That is the whole loop. To land a change:
+      │ bun quality       │                                                      | 
+      └───────────────────┘                                                      |    1. Run the checks:
+   2. Commit on main once every check has passed and the tree is clean, so       |       ┌ sh ───────────┐
+      whoever picks the work up next starts from a build that runs.              |       │   bun quality │
+                                                                                 |       └───────────────┘
+   Then build the binary with:                                                   |    2. Commit on main once every check has passed and the tree is clean, so
+                                                                                 |       whoever picks the work up next starts from a build that runs.
+   ┌─ sh ───────────────────────────────────[copy]─[run]─┐                       | 
+   │ bun dev compile --all                               │                       |    Then build the binary with:
+   │ for bin in dist/*/chord; do echo "built $bin"; done │                       | 
+   └─────────────────────────────────────────────────────┘                       |    ┌ sh ───────────────────────────────────────────────────┐
+                                                                                 |    │   bun dev compile --all                               │
+╭──────────────────────────────────────────────────────────────────────────────╮ |    │   for bin in dist/*/chord; do echo "built $bin"; done │
+│ ›                                                                            │ |    └───────────────────────────────────────────────────────┘
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |  ctrl+c or ctrl+d to quit

@@ -1,0 +1,10 @@
+ ▀╭ Fixture controls · F1 clo╮
+ ▀│                          │
+ ▄│ ctrl+q  Quit fixture     │
+ ▀│ f1  Toggle fixture       │
+  │ controls                 │
+  │ f2  Accept pending fake  │
+╭─│ steer                    │─╮
+│ │ f3  Refuse pending fake  │ │
+╰─│                          │─╯
+  ╰──────────────────────────╯

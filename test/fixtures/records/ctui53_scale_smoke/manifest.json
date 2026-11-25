@@ -1,0 +1,17 @@
+{
+  "scope": "Diagnostic-only canonical fixture-root matching; small JIT correctness smoke, not affected full-scale acceptance.",
+  "baseCommit": "9a36a02253f511898c4fbc20c737feddd7ad8048",
+  "source": "example/chord/benchmark/records.dart",
+  "sourceSha256": "ce5c7cbfd69056dd078c8c2b770d137396e619f4a43aae231fd64beea3094048",
+  "guard": "Fail-fast cmp of archive source against intended task source then SHA256 before invocation. A wrong relative source pathname was rejected before any runtime; corrected explicit comparison succeeded. Only one benchmark invocation ran.",
+  "command": "nice -n 19 dart run benchmark/records.dart --small --runtime=jit",
+  "environment": {
+    "TMPDIR": "owned empty directory, containing parent components to exercise canonicalization",
+    "XDG_STATE_HOME": "owned empty directory"
+  },
+  "changes": "Both transcript/record and picker fixture roots resolveSymbolicLinks before IO and snapshots; report pathMatching explicitly. No production/framework logic or benchmark workload/stage changes.",
+  "result": "16 records, 20 turns, 32 updates; exited zero, no stderr. All named descriptor snapshots zero, pending Futures zero, owned root removed. Outer TMPDIR/XDG empty and removed; no owned process/binary.",
+  "baselineLimit": "Earlier benchmark root names were not canonicalized. Retained metadata lacks canonical-root identity for every invocation; historical zero counts cannot independently exclude alias/parent-component mismatch. Positive named REG/DIR failures remain real observations. All 12 baseline JSON files remain unchanged.",
+  "remaining": "Tester must run affected full 2000-record workload three JIT and three AOT repetitions after review. Small zero observations do not establish that gate or a performance pass.",
+  "dependencies": "Unchanged base root and port pubspec.lock, offline resolution."
+}

@@ -1,0 +1,24 @@
+      Planned for this run:
+      lead (lead): fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: refused · session runtime unknown · model unknown
+      · effort unknown · mode unknown
+      lead: Initialization failed before the first job; the attempted agent
+      is closing.
+      reviewer: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Actual at recording: not opened · configuration unconfirmed
+      Run: ade54cc8 · saved definition: fixture (project)
+      lead saved: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Changes from saved: none
+      reviewer saved: fake · model agent default (unconfirmed) · effort agent
+      default (unconfirmed) · mode agent default (unconfirmed)
+      Changes from saved: none
+      Recorded failure: Team launch ade54cc8 was refused before its first
+      job; the attempted lead is closing.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

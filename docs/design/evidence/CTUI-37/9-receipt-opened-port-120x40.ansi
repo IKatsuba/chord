@@ -1,0 +1,40 @@
+   [2m [0m  [2mRun: cae0cc9c · saved definition: fixture (project)[0m
+   [2m [0m  lead saved: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default
+   [2m [0m  (unconfirmed)
+   [2m [0m  Changes from saved: none
+   [2m [0m  reviewer saved: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+   [2m [0m  default (unconfirmed)
+   [2m [0m  Changes from saved: none
+   [2m [0m  [38;2;255;107;128mRecorded failure: Team launch cae0cc9c was refused before its first job; the attempted lead is closing.[39m
+
+ Recorded Team receipt (fixture)
+   [2m⎿[0m  [2mRecorded by Chord · current state unknown · historical observation[0m
+   [2m [0m  [2mRecorded: time unknown[0m
+   [2m [0m  Actual admitted attempt 2; its first job is never delivered.
+   [2m [0m  Selection: agent-selected · this run
+   [2m [0m  Reason: Preserve every role instruction and exact permission requirement. Capacity is unknown; external work
+   [2m [0m  may be missing. Preserve every role instruction and exact permission requirement. Capacity is unknown; external
+   [2m [0m  work may be missing. Preserve every role instruction and exact permission requirement. Capacity is unknown;
+   [2m [0m  external work may be missing.
+   [2m [0m  [2mBilling: unknown · advisory[0m
+   [2m [0m  Planned for this run:
+   [2m [0m  lead (lead): fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default
+   [2m [0m  (unconfirmed)
+   [2m [0m  Actual at recording: refused · session runtime unknown · model unknown · effort unknown · mode unknown
+   [2m [0m  lead: Initialization failed before the first job; the attempted agent is closing.
+   [2m [0m  reviewer: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default
+   [2m [0m  (unconfirmed)
+   [2m [0m  Actual at recording: not opened · configuration unconfirmed
+   [2m [0m  [2mRun: ade54cc8 · saved definition: fixture (project)[0m
+   [2m [0m  lead saved: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent default
+   [2m [0m  (unconfirmed)
+   [2m [0m  Changes from saved: none
+   [2m [0m  reviewer saved: fake · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+   [2m [0m  default (unconfirmed)
+   [2m [0m  Changes from saved: none
+   [2m [0m  [38;2;255;107;128mRecorded failure: Team launch ade54cc8 was refused before its first job; the attempted lead is closing.[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                  [2mFake Large with a 1M context window · medium effort[0m

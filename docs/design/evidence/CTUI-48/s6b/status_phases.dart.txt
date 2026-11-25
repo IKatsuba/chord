@@ -1,0 +1,74 @@
+// Capture-only public-state setup. No connection, agent or model is started.
+import 'package:chord/cli.dart';
+import 'package:chord/session/start_connection.dart';
+import 'package:chord/ui/app/selection.dart' as copy;
+import 'package:chord/ui/app/state.dart';
+import 'package:chord/ui/app/window.dart';
+import 'package:chord/ui/start_state.dart';
+import 'package:chorded_tui/chorded_tui.dart';
+
+Future<void> main() async {
+  final connection = StartConnection(command: 'unused', cwd: '.');
+  var at = 0;
+  const phases = [
+    StartPhase.starting,
+    StartPhase.failed,
+    StartPhase.idle,
+    StartPhase.connected,
+    StartPhase.gone,
+    StartPhase.connected,
+  ];
+  void seed() {
+    final old = connection.app.value;
+    connection.app.value = AppState(
+      start: StartState(
+        phase: phases[at],
+        sessionId: 'fixture',
+        reason: at == 1
+            ? 'seeded failure'
+            : at == 4
+            ? 'seeded exit'
+            : null,
+      ),
+      transcript: old.transcript,
+      draft: old.draft,
+      cursor: old.cursor,
+      closing: at == 5,
+    );
+  }
+
+  seed();
+  await runApp(
+    Actions(
+      bindings: [
+        Binding('f2', 'Advance capture phase', () {
+          at = (at + 1) % phases.length;
+          seed();
+        }),
+        Binding(
+          'ctrl+q',
+          'Quit capture',
+          () => connection.app.value = const AppState(closing: true),
+        ),
+      ],
+      child: Builder(
+        builder: (context) => Actions(
+          bindings: [Binding('f12', 'Exit capture', () => exitApp(context))],
+          child: TranscriptWindow(
+            key: const ValueKey('same-status-window'),
+            launch: const Launch(
+              name: 'fixture',
+              agent: null,
+              agentCommand: 'unused',
+              version: '0.0.1',
+              directory: 'project',
+            ),
+            connection: connection,
+            copy: (text, token) => const copy.CopyResult.sent(),
+          ),
+        ),
+      ),
+    ),
+    beforeExit: connection.close,
+  );
+}

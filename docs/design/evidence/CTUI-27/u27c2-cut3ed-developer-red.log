@@ -1,0 +1,31 @@
+00:00 +0: loading test/ui/prompt/search_view_test.dart
+00:00 +0: middle CUT retains Unicode suffix and inverse cursor provenance Size(120, 40)
+00:00 +0 -1: middle CUT retains Unicode suffix and inverse cursor provenance Size(120, 40) [E]
+  Expected: contains '...'
+    Actual: '  search prompts: HEAD needle needle needle needle needle needle needle needle needle needle needle needle needle nee…'
+     Which: does not contain '...'
+  
+  package:matcher                            expect
+  test/ui/prompt/search_view_test.dart 67:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7     testWidgets.<fn>
+  
+00:00 +0 -1: middle CUT retains Unicode suffix and inverse cursor provenance Size(80, 24)
+00:00 +0 -2: middle CUT retains Unicode suffix and inverse cursor provenance Size(80, 24) [E]
+  Expected: contains '...'
+    Actual: '  search prompts: HEAD needle needle needle needle needle needle needle needl…'
+     Which: does not contain '...'
+  
+  package:matcher                            expect
+  test/ui/prompt/search_view_test.dart 67:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7     testWidgets.<fn>
+  
+00:00 +0 -2: Some tests failed.
+
+Failing tests:
+  test/ui/prompt/search_view_test.dart: middle CUT retains Unicode suffix and inverse cursor provenance Size(120, 40)
+  test/ui/prompt/search_view_test.dart: middle CUT retains Unicode suffix and inverse cursor provenance Size(80, 24)
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

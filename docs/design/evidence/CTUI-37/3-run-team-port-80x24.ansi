@@ -1,0 +1,24 @@
+
+ [38;2;78;186;101m⏺[39m [1mTeam[0m(bugfix)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mIssue 214: a string at the end of a line loses its closing quote.[0m
+      [2mreadString in src/parse/tokenize.ts stops at the newline before it[0m
+      [2mconsumes the quote. Add a test that fails for that reason, fix it, and[0m
+      [2mhave the diff reviewed. Report to me when it is done.[0m
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ [38;2;108;182;255m←[39m [2mfrom [0;1m[38;2;108;182;255m@bugfix[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts;[0m
+      [2mcoder waits for it and will edit src/parse/tokenize.ts only. I will[0m
+      [2mreport when the test fails for the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix · fake.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;255;193;7m● tester needs your permission · ctrl+x a[39m    [2mFake Large with a 1M… · 1% used[0m
+    [1mmain  [0;2m  fake  ◦ idle 13s[0m
+    [38;2;108;182;255mbugfix[2m[39m  fake  ◦ idle 12s        ✓ new reply[0m
+    [38;2;196;156;255mtester[2m[39m  fake[0m[38;2;255;193;7m  ● permission 12s[2m[39m  ← new message[0m
+    [38;2;86;212;221mcoder [2m[39m  fake  ◦ idle 11s        ✓ new reply[0m

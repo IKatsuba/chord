@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › running
+
+ ⏺ Working
+
+ ⏺ Read(notes.txt)
+   ⎿  Running…
+
+
+
+
+
+
+ ››› Working… (9s · esc to interrupt)
+ › after the running calls: held personal
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › held draft                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

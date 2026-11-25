@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › agentmentions
+
+ ⏺ Open(parser) · fake
+   ⎿  text
+
+ ⏺ Open(docs) · fake
+   ⎿  text
+
+ ⏺ Team(bugfix)
+   ⎿  No team named bugfix · list_teams lists them
+
+ ⏺ Team(bugfix)
+   ⎿  No team named bugfix · list_teams lists them
+
+ ⏺ Agent completion sessions opened.
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 11s
+    parser  fake · Fake Large with a 1M context window · medium  ◦ idle 11s  ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ◦ idle 11s  ✓ new reply

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help
+
+ › alpha reference
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › overlapask
+
+ ⏺ Bash(sleep 2)
+   ⎿  Running…
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ››› Working… (41s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › saved modal                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

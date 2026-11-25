@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0|
+ ▀▀▀▄   fake · Fake Large with a 1M context window|› Earlier request
+ ▄▀▀▀   fixture-project|
+ ▀▀     ? for shortcuts · /help|⏺ Earlier answer.
+        resumed · 56 years ago · Earlier request|
+|› Personal message accepted into this turn
+ › Earlier request|
+|⏺ Late work 1.
+ ⏺ Earlier answer.|  ⎿  Interrupted · the agent started this on its own; your message goes as the next turn
+|
+ › Personal message accepted into this turn|
+|
+ ⏺ Late work 1.|
+   ⎿  Interrupted · the agent started this on its own; your message goes as the next turn|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+|
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮|
+│ ›                                                                                                                    │|
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯|
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort|ctrl+t empty · ctrl+n late · ctrl+p next · ctrl+r reset · ctrl+s source · ctrl+q quit

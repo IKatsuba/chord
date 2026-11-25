@@ -1,0 +1,18 @@
+{
+  "probe": "self-start recovery closure-observer send",
+  "originalRevision": "577b58167672e12c999aeaf4eed2a1a988513dc2",
+  "dispatched": "sent",
+  "observerSent": true,
+  "cancels": 1,
+  "expectedBeforeQuiet": [
+    "running"
+  ],
+  "actualBeforeQuiet": [
+    "running",
+    "observer"
+  ],
+  "ownTurn": "eb803ee0-bab8-443b-9989-70252d2a586f",
+  "lateWorkTurn": "07fe4ce7-507d-4fa1-ac0f-420826710737",
+  "orderPass": false,
+  "workOwnerPass": false
+}

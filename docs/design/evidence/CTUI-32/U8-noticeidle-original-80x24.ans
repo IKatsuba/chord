@@ -1,0 +1,24 @@
+ ⏺ Done.
+
+ [2m›[0m noticelong
+
+ [38;2;255;107;128m⏺ [2mMCP server "files" failed to start[0m
+   [2mIts tools are unavailable in this session: the server exited before it [0m
+   [2manswered initialize, with status 1.[0m
+   [2mCheck its command and environment in .mcp.json, then start a new session; [0m
+   [2mthe server wrote nothing to stderr that names a reason, so this is all that [0m
+   [2mis known.[0m
+
+ ⏺ Carrying on without it.
+
+ [2m›[0m noticeidle
+
+ ⏺ Switched.
+
+ [2m⏺[0m [2mAuto mode unavailable[0m
+   [2mThe selected model does not support Auto mode; using Accept edits instead.[0m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

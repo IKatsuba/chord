@@ -1,0 +1,40 @@
+ [2m›[0m /team run bugfix Fix issue 214.
+
+ [38;2;78;186;101m⏺[39m [1mTeam[0m(bugfix)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mFix issue 214.[0m
+
+ ← [2mfrom [0;1m@bugfix[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/[0m
+      [2mparse/tokenize.ts only. I will report when the test fails for the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix · fake.
+
+ [2m›[0m /team show bugfix
+   [2m⎿[0m  bugfix · .chord/teams/bugfix.md · working 15s on "Fix issue 214."
+
+   [2m [0m  lead    fake · fake-large  default      [2m◦ idle 13s[0m        [2m✓ new reply[0m    ← from @tester · fake
+   [2m [0m  tester  fake · fake-small  acceptEdits  [38;2;255;193;7m● permission 13s[39m  [2m← new message[0m  Bash(bun dev test tests/parse)
+   [2m [0m  coder   fake · fake-large  plan         [2m◦ idle 12s[0m        [2m✓ new reply[0m    ← from @tester · fake
+
+ [2m›[0m /team stop bugfix
+   [2m⎿[0m  Stopped bugfix: its lead, tester, and coder are closed · /resume lists them
+
+ [2m←[0m [2mfrom [0;1mchord[0m
+   [2m⎿[0m  [2mThe person closed team bugfix: its lead (fake · fake-large, id 9f2d7176) and its members tester and coder. It[0m
+      [2mtakes no more messages; run_team starts it again.[0m
+
+ ⏺ Received the message from chord.
+
+ [2m›[0m /team stop nope
+   [2m⎿[0m  [38;2;255;107;128mNo run named nope is open · the list under the prompt names them[39m
+
+ [2m›[0m /team run bugfx x
+   [2m⎿[0m  [38;2;255;107;128mNo team named bugfx · /team lists them[39m
+
+ [2m›[0m /team edit x
+   [2m⎿[0m  [38;2;255;107;128m/team has no edit; it takes list, new, show, run or stop[39m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

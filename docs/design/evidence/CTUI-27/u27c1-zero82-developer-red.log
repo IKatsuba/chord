@@ -1,0 +1,37 @@
+00:00 +0: loading test/ui/app/steering_zero_test.dart
+00:00 +0: Tab at zero area cannot take a serialized second row Size(120, 40)
+00:00 +0 -1: Tab at zero area cannot take a serialized second row Size(120, 40) [E]
+  Expected: an object with length of <1>
+    Actual: WhereIterable<QueuedPrompt>:[
+              Instance of 'QueuedPrompt',
+              Instance of 'QueuedPrompt'
+            ]
+     Which: has length of <2>
+  
+  package:matcher                           expect
+  test/ui/app/steering_zero_test.dart 26:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7    testWidgets.<fn>
+  
+00:00 +0 -1: Tab at zero area cannot take a serialized second row Size(80, 24)
+00:00 +0 -2: Tab at zero area cannot take a serialized second row Size(80, 24) [E]
+  Expected: an object with length of <1>
+    Actual: WhereIterable<QueuedPrompt>:[
+              Instance of 'QueuedPrompt',
+              Instance of 'QueuedPrompt'
+            ]
+     Which: has length of <2>
+  
+  package:matcher                           expect
+  test/ui/app/steering_zero_test.dart 26:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7    testWidgets.<fn>
+  
+00:00 +0 -2: Some tests failed.
+
+Failing tests:
+  test/ui/app/steering_zero_test.dart: Tab at zero area cannot take a serialized second row Size(120, 40)
+  test/ui/app/steering_zero_test.dart: Tab at zero area cannot take a serialized second row Size(80, 24)
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

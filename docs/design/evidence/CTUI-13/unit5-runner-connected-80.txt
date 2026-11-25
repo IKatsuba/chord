@@ -1,0 +1,24 @@
+ chord v0.0.1 · fake · <directory>
+ Connected
+ ctrl+c or ctrl+d to quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

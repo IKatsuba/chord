@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts
+        resumed · yesterday · Inspect the saved notes
+
+ › Inspect the saved notes
+
+ ⏺ The saved notes are ready.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │
+│ No earlier sessions in this directory.                                                                               │
+│                                                                                                                      │
+│ Ctrl+a for all directories · Esc to close                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

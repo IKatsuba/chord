@@ -1,0 +1,24 @@
+   [2m⎿[0m  [2mok | 1 passed | 0 failed (12ms)[0m
+
+ ⏺ [1mRead[0m(src/missing.ts)
+   [2m⎿[0m  Error: File does not exist.
+
+ ⏺ Two calls worked, one failed.
+
+ [2m›[0m readsheld
+
+ ⏺ Working
+   [2m⎿[0m  Interrupted by user
+
+ [2m›[0m alpha light
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m alpha plain
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [2msearch prompts:[0m alpha[7m [0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7malpha[0m plain                                                                [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m         [2mFake Large with a 1M context window · medium effort · 1% context used[0m

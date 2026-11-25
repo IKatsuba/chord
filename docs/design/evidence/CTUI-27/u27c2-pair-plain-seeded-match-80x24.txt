@@ -1,0 +1,25 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+   ⎿  ok | 1 passed | 0 failed (12ms)                                                                                        |    ⎿  ok | 1 passed | 0 failed (12ms)
+                                                                                                                             |
+ ⏺ Read(src/missing.ts)                                                                                                      |  ⏺ Read(src/missing.ts)
+   ⎿  Error: File does not exist.                                                                                            |    ⎿  Error: File does not exist.
+                                                                                                                             |
+ ⏺ Two calls worked, one failed.                                                                                             |  ⏺ Two calls worked, one failed.
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › readsheld
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+   ⎿  Interrupted by user                                                                                                    |    ⎿  Interrupted by user
+                                                                                                                             |
+ › alpha light                                                                                                               |  › alpha light
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › alpha plain                                                                                                               |  › alpha plain
+ ──────────────────────────────────────────────────────────────────────────────                                              |  ──────────────────────────────────────────────────────────────────────────────
+  search prompts: alpha                                                                                                      |   search prompts: alpha
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────╮                                             | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › alpha plain                                                                │                                             | │ › alpha plain                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯                                             | ╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used                                               |          Fake Large with a 1M context window · medium effort · 1% context used

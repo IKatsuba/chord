@@ -1,0 +1,24 @@
+   [2m [0m  lead's instructions
+   [2m [0m  Read the job and the code it points at until you can name the cause and
+   [2m [0m  the files involved. Open tester first, coder once tester's test fails,
+   [2m [0m  and reviewer last, on the diff.
+   [2m [0m
+   [2m [0m  tester's instructions
+   [2m [0m  Write the smallest test that fails because of the bug, and run it to
+   [2m [0m  show that.
+   [2m [0m
+   [2m [0m  coder's instructions
+   [2m [0m  Make the failing test pass with the smallest change. Do not touch
+   [2m [0m  tests.
+   [2m [0m
+   [2m [0m  reviewer's instructions
+ [2m── ↓ 40 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [38;2;255;193;7m● tester needs your permission · ctrl+x a[39m    [2mFake Large with a 1M… · 1% used[0m
+    [1mmain     [0;2m  fake         ◦ idle 7s[0m
+    [38;2;108;182;255mbugfix   [2m[39m  team · fake  ◦ idle 31s        ✓ new reply[0m
+    [2m├─ [0m[38;2;196;156;255mtester[2m[39m  fake       [0m[38;2;255;193;7m  ● permission 31s[2m[39m  ← new message[0m
+    [2m└─ [0m[38;2;86;212;221mcoder [2m[39m  fake         ◦ idle 30s        ✓ new reply[0m

@@ -1,0 +1,41 @@
+Original                                                                                                                 | Port
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                ▀▀▄                                                                                      |                                 ▀▀▄
+                                ▀▀▀▀▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗                                 |                                 ▀▀▀▀▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗
+                                ▀▀▀▀▀▀▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗                                |                                 ▀▀▀▀▀▀▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗
+                                 ▀▀▀▀▀▀▀▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║                                |                                  ▀▀▀▀▀▀▀▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║
+                                 ▄▀▀▀▀▀▀▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║                                |                                  ▄▀▀▀▀▀▀▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║
+                                ▀▀▀▀▀▀▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝                                |                                 ▀▀▀▀▀▀▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝
+                                ▀▀▀▀▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝                                 |                                 ▀▀▀▀▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝
+                                ▀▀▀                                                                                      |                                 ▀▀▀
+                                                                                                                         | 
+                                          One terminal for every coding agent.                                           |                                           One terminal for every coding agent.
+                                    v0.71.0 · fake · fixture-root___________/project                                     |                                                 v0.0.1 · fake · project
+                                                                                                                         | 
+                  ╭──────────────────────────────────────────────────────────────────────────────────╮                   |                   ╭──────────────────────────────────────────────────────────────────────────────────╮
+                  │ Resume a session                                                                 │                   |                   │ Resume a session                                                                 │
+                  │ Pick one of fake's earlier sessions to open.                                     │                   |                   │ Pick one of fake's earlier sessions to open.                                     │
+                  │                                                                                  │                   |                   │                                                                                  │
+                  │ ❯ 1. just now   Inspect the saved notes and retain this descriptive title across │                   |                   │ ❯ 1. just now   Inspect the saved notes and retain this descriptive title across │
+                  │                 wrapped lines.                                                   │                   |                   │                 wrapped lines.                                                   │
+                  │   2. yesterday  Saved session 2 · 界😀 with a long title and                     │                     |                   │   2. yesterday  Saved session 2 · 界😀 with a long title and                     │
+                  │                 an_unbroken_title_tail                                           │                   |                   │                 an_unbroken_title_tail                                           │
+                  │                                                                                  │                   |                   │                                                                                  │
+                  │ Enter to resume · Ctrl+a for all directories · Esc to quit                       │                   |                   │ Enter to resume · Ctrl+a for all directories · Esc to quit                       │
+                  ╰──────────────────────────────────────────────────────────────────────────────────╯                   |                   ╰──────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 

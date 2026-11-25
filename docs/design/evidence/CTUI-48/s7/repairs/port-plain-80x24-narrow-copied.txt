@@ -1,0 +1,24 @@
+   │ ↪ chord-qa   │
+   │ ↪ -p > /tmp/ │
+   │ ↪ screen.txt │
+   │              │
+   │   echo done  │
+   └──────────────┘
+
+   - a loose item
+
+   - a loose item
+     with a box:
+
+     ┌ sh ────────┐
+     │   bun dev  │
+     │ ↪ check    │
+     └────────────┘
+
+   A paragraph
+   after.
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+  sent 13 chars to

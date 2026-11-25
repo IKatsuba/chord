@@ -1,0 +1,40 @@
+ █▄     chord v0.0.1
+ ▀██▄   fixture
+ ▄██▀   project
+ █▀     ? for shortcuts
+
+ ⏺ ┌ sh ──[copy]─[run]─┐
+   │   $ printf first  │
+   │   $ printf second │
+   └───────────────────┘
+
+   ┌ ts ─────[copy]─┐
+   │   not runnable │
+   └────────────────┘
+
+   │ ┌ bash ─────────────┐
+   │ │   $ quoted script │
+   │ └───────────────────┘
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                         ! for bash mode                      ctrl + x a for what waits on you
+  shift or \ + enter for a newline      backspace to leave bash mode         1–9 to pick a choice
+  alt + ← → to move by word             esc to interrupt or stop a command   ↑ ↓ j k ← → to move or change a value
+  ↑ ↓ for prompts                       shift + tab to cycle modes           enter to pick the highlighted choice
+  pgup pgdn to scroll                   ctrl + o for verbose output          esc to reject a permission
+  shift + ↑ ↓ to scroll a line          ctrl + c to copy                     esc to leave a picker or shortcuts
+  home end for the top and the bottom   ctrl + x b to pick a code block      ? for shortcuts
+  ↑ ↓ to pick a completion              c r to copy or put in the prompt     any key to quit the crash screen
+  tab to complete a command             ctrl + c to clear input
+  esc to close completions              ctrl + d or ctrl + c twice to quit
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

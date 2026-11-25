@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <port checkout>
+ ▀▀     ? for shortcuts · /help
+
+ › claudeslowstop
+
+ ⏺ The tests run in the background while I look.
+
+ → to Agent(Run the test suite)
+   ⎿  Run bun test in the background and report what fails.
+
+ → to Agent(Find the cancel path)
+   ⎿  Find where chord ends a turn on Esc.
+
+ ⏺ 2 agents ended · 1 cancelled (ctrl+o to expand)
+   ├─ Agent(Run the test suite) · 1 tool use · 2s
+   │  ⎿  Cancelled
+   └─ Agent(Find the cancel path) · 1 tool use · 2s
+      ⎿  Done
+
+ ⏺ The tests run on; I will say when they end.
+
+ ■ Run the test suite · agent · stopped with x after 2s
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

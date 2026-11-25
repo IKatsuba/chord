@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/ctui58-u6/wd
+ ▀▀     ? for shortcuts
+
+ › claudecycleask
+
+ ⏺ The build runs in the background; I will read it after.
+
+ ⏺ The background build ended; saving its log.
+
+ ⏺ Write(notes/build.md)
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      This turn:    counted when it ends
+      Session time: 17s
+   ⎿  Allowed Write notes/build.md · Allow
+
+ ⏺ Permission: allow.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

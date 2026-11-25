@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [39mthrough the whole argument before answering, at any window size, including 80 by 24.\n\n## Changes\n\n- Change 1:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 2: a turn can be resumed\n- Change 3: headlines wrap\n- Change 4: the box[38;2;255;255;255m
+   [39mscrolls\n- Change 5: tests run in parallel\n- Change 6: the prompt keeps its draft\n- Change 7: a turn can be[38;2;255;255;255m
+   [39mresumed\n- Change 8: headlines wrap\n- Change 9: the box scrolls\n- Change 10: tests run in parallel\n- Change 11:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 12: a turn can be resumed\n- Change 13: headlines wrap\n- Change 14: the box[38;2;255;255;255m
+   [39mscrolls\n- Change 15: tests run in parallel\n- Change 16: the prompt keeps its draft\n- Change 17: a turn can be[38;2;255;255;255m
+   [39mresumed\n- Change 18: headlines wrap\n- Change 19: the box scrolls\n- Change 20: tests run in parallel\n- Change 21:[38;2;255;255;255m
+   [39mthe prompt keeps its draft\n- Change 22: a turn can be resumed\n- Change 23: headlines wrap\n- Change 24: the box[38;2;255;255;255m
+   [39mscrolls\n- Change 25: tests run in parallel\n- Change 26: the prompt keeps its draft\n- Change 27: a turn can be[38;2;255;255;255m
+   [39mresumed\n- Change 28: headlines wrap\n- Change 29: the box scrolls\n- Change 30: tests run in parallel\n", mode:[38;2;255;255;255m
+   [39m"overwrite")[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mFailed[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected mcp__files__write_file[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: deny.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mtwins[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mWrite[0m(notes.txt)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAllowed Write notes.txt · Allow once in this folder[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: allow-here.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mpermissionmeta[38;2;255;255;255m
+
+ [2m[39m›[0m›[2m›[0m[38;2;255;255;255m [39mWaiting for permission…[38;2;255;255;255m [2m[39m(20s)[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[39mTool call[0m[38;2;255;255;255m                                                                                                            [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [39mDo you want to proceed?[38;2;255;255;255m                                                                                              [38;5;244m│
+│[38;2;255;255;255m [39m❯[38;2;255;255;255m [39m1. Deny[38;2;255;255;255m                                                                                                            [38;5;244m│
+│[38;2;255;255;255m                                                                                                                      [38;5;244m│
+│[38;2;255;255;255m [2m[39mEsc to reject[0m[38;2;255;255;255m                                                                                                        [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m

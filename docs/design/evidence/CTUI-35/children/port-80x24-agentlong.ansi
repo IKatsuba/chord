@@ -1,0 +1,24 @@
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2m<project>[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m agentlong
+
+ [38;2;78;186;101m⏺[39m [1mOpen[0m(parser)[2m · fake · fake-small[0m
+   [2m⎿[0m  [2mRead AGENTS.md and docs/FEATURES.md before you start. Then:[0m
+
+      [2m1. Fix the tokenizer so a string at the end of a line keeps its closing[0m
+      [2mquote.[0m
+      [2m2. Add two cases to `tests/parse/tokenize_test.ts`.[0m
+      [2m3. Run `bun quality` in the foreground and **do not** hand back until[0m
+      [2mit passes.[0m
+
+      [2mTell me only what failed, if anything.[0m
+
+ ⏺ Waiting on parser.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m
+    [1mmain  [0;2m  fake  ◦ idle 10s[0m
+    [38;2;108;182;255mparser[2m[39m  fake  ◦ idle 10s  ✓ new reply[0m

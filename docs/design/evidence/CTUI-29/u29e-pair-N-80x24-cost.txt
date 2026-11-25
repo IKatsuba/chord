@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0| ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window| ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /private/tmp/ctui29e-look/wN| ▄▀▀▀   /private/tmp/ctui29e-look/wN
+ ▀▀     ? for shortcuts · /help| ▀▀     ? for shortcuts
+|
+ › /cost| › /cost
+   ⎿  fake has not reported what this session has used.|   ⎿  fake has not reported what this session has used.
+      Session time: 9s|      Session time: 7s
+|
+ › hello| › hello
+|
+ ⏺ Hello, world. This reply came in chunks.| ⏺ Hello, world. This reply came in chunks.
+|
+ › /cost| › /cost
+   ⎿  Total cost:   $0.0125|   ⎿  Total cost:   $0.0125
+      Tokens in:    1,000|      Tokens in:    1,000
+      Tokens out:   200|      Tokens out:   200
+      Cache read:   800|      Cache read:   800
+      Session time: 21s|      Session time: 18s
+|
+╭──────────────────────────────────────────────────────────────────────────────╮|╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │|│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯|╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used|  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

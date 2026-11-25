@@ -1,0 +1,25 @@
+ORIGINAL + RECORDING STUB                                                                                                | PORT + RECORDING BOOTSTRAP
+   │ bun dev comp │                                                                                                      |    │   for bin in │
+   │ ile --all    │                                                                                                      |    │ ↪  dist/*/ch │
+   │ for bin in d │                                                                                                      |    │ ↪ ord; do    │
+   │ ist/*/chord; │                                                                                                      |    │ ↪ echo       │
+   │  do echo "bu │                                                                                                      |    │ ↪ "built     │
+   │ ilt $bin"; d │                                                                                                      |    │ ↪ $bin";     │
+   │ one          │                                                                                                      |    │ ↪ done       │
+   └──────────────┘                                                                                                      |    └──────────────┘
+                                                                                                                         | 
+ › permission                                                                                                            |  › permission
+                                                                                                                         | 
+ ⏺ Write(notes.txt)                                                                                                      |  ⏺ Write(notes.txt)
+   ⎿  Failed                                                                                                             |    ⎿  Failed
+   ⎿  Rejected                                                                                                           |    ⎿  Rejected
+      Write notes.                                                                                                       |       Write
+      txt                                                                                                                |       notes.txt
+                                                                                                                         | 
+ ⏺ Permission:                                                                                                           |  ⏺ Permission:
+   deny.                                                                                                                 |    deny.
+                                                                                                                         | 
+╭──────────────────╮                                                                                                     | ╭──────────────────╮
+│ ›                │                                                                                                     | │ ›                │
+╰──────────────────╯                                                                                                     | ╰──────────────────╯
+  ↑ ↓ block                                                                                                              |   sent 5 chars to

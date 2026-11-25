@@ -1,0 +1,24 @@
+ Pick one
+
+Filter:
+❯ ↑ 7.  Choice 7, with a second line
+          under its label
+    8.  Choice 8
+    9.  Choice 9
+    10. Choice 10
+    11. Choice 11
+  ↓ 12. Choice 12
+    … +18 more
+
+
+
+
+
+
+
+
+
+
+
+Chosen: nothing yet
+up Previous choice  k Previous choice  down Next choice  j Next choice  enter C…

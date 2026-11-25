@@ -1,0 +1,5 @@
+An auxiliary phase cursor probe checked pane_dead after a fixed200ms wait.
+The assertion ran before exit completed; the pane later reported exit0.
+The primary capture driver already waited for readiness and polled exit.
+The retained auxiliary driver now also uses readiness and bounded exit polls;
+both final phase panes exited0. This was a capture setup miss, not a product failure.

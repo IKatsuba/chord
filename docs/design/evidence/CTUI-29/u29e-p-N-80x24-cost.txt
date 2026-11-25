@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /private/tmp/ctui29e-look/wN
+ ▀▀     ? for shortcuts
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+      Session time: 7s
+
+ › hello
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /cost
+   ⎿  Total cost:   $0.0125
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 18s
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,24 @@
+[38;2;20;125;85m Code  light, numbers on, wrap on[39m
+
+[2m dart[0m
+[2m1[0m   [38;2;130;80;223mvoid[39m main() {
+[2m2[0m     [38;2;0;114;122mprint[39m([38;2;125;82;0m'A long message about terminal cells, 日本語, and keeping every[39m
+  [2m↪[0m [38;2;125;82;0mgrapheme together on screen.'[39m);
+[2m3[0m   }
+
+[2m ts[0m
+[2m1[0m   [38;2;110;119;129m/** A comment[39m
+[2m2[0m   [38;2;110;119;129m * over three lines. */[39m
+[2m3[0m   [38;2;130;80;223mexport[39m [38;2;130;80;223mclass[39m [38;2;11;92;173mCache[39m<T> [38;2;130;80;223mextends[39m [38;2;11;92;173mMap[39m<[38;2;0;114;122mstring[39m, T> {
+[2m4[0m     [38;2;130;80;223mprivate[39m hits = [38;2;169;72;0m0[39m; [38;2;110;119;129m// counted[39m
+[2m5[0m     [38;2;11;92;173mget[39m([38;2;176;48;111mkey[39m: [38;2;0;114;122mstring[39m): T | [38;2;169;72;0mundefined[39m {
+[2m6[0m       [38;2;130;80;223mreturn[39m [38;2;176;48;111msuper[39m.[38;2;11;92;173mget[39m(key) ?? [38;2;169;72;0mundefined[39m;
+[2m7[0m     }
+[2m8[0m   }
+
+[2m python[0m
+[2m1[0m   [38;2;74;80;196m@cached[39m
+[2m2[0m   [38;2;130;80;223mdef[39m [38;2;11;92;173marea[39m(r: [38;2;0;114;122mfloat[39m = [38;2;169;72;0m1.0[39m) -> [38;2;0;114;122mstr[39m:
+[2m3[0m       [38;2;125;82;0m"""Doc."""[39m
+[2m4[0m       [38;2;130;80;223mreturn[39m [38;2;125;82;0mf"{[38;2;169;72;0m3.14159[38;2;125;82;0m * r * r:[38;2;169;72;0m.2[38;2;125;82;0mf}"[39m  [38;2;110;119;129m# rounded[39m
+[1mctrl+n[0;2m Line numbers[0m  [1mctrl+w[0;2m Wrap[0m  [1mctrl+t[0;2m Theme[0m  [1mctrl+q[0;2m Quit[0m  [1mpageup[0;2m Scroll up a…

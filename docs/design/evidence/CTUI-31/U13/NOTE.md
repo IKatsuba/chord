@@ -1,0 +1,1 @@
+Paths are relabelled: the port ran in ~/project, the original in ../chord, with keybindings.json and settings.json here (light-ansi theme). 01-03: the agent page, Esc (does nothing), q (cancels). 04-06: --fake --resume, ctrl+t (all directories), q (quits). Session lists differ only by the saved sessions of each checkout. Port at 637d567e.

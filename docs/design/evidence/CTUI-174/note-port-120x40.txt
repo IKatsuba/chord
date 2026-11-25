@@ -1,0 +1,62 @@
+== note typed, cursor at its end (whole screen)
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <dir>
+ ▀▀     ? for shortcuts · /help
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you 2 questions                                                                                            │
+│                                                                                                                      │
+│ ← ◉ Language   ○ Checks   ○ Submit →                                                                                 │
+│                                                                                                                      │
+│ Which language should helper scripts use?                                                                            │
+│                                                                                                                      │
+│   1. Deno (TypeScript) (Recommended)                                                                                 │
+│      Runs from source with inline npm: and jsr: imports, no package manager                                          │
+│   2. Python                                                                                                          │
+│      Only where a library has no JS or TS equivalent                                                                 │
+│                                                                                                                      │
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec rom │
+│         eo sierra tango uniform victor whiskey                                                                       │
+│                                                                                                                      │
+│ Enter for the next · ↑ to the options · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+== super+left, '[' typed
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec rom │
+│         [eo sierra tango uniform victor whiskey                                                                      │
+│                                                                                                                      │
+│ Enter for the next · ↑ to the options · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+== super+right, more typed
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec rom │
+│         [eo sierra tango uniform victor whiskey xray yankee zulu                                                     │
+│                                                                                                                      │
+│ Enter for the next · ↑ to the options · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+== 40 backspaces
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo lima mike november oscar papa quebec rom │
+│         [eo sierra tango                                                                                             │
+│                                                                                                                      │
+│ Enter for the next · ↑ to the options · ←→ or Tab for the questions · Esc to cancel                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

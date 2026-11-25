@@ -1,0 +1,24 @@
+ fork · fake · Fake Large with a 1M context window · forked from main 17s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ fork ───────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    main  fake · Fake Large with a 1M context window         ◦ idle 22s
+    fork  fork · fake · Fake Large with a 1M context window  ◦ idle 4s

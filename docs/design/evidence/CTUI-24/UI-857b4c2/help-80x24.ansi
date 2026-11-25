@@ -1,0 +1,24 @@
+ ⏺ Transcript record 70
+
+ ⏺ Transcript record 71
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [2menter to send                         ctrl + o for verbose output[0m
+  [2mshift or \ + enter for a newline      ctrl + c to copy[0m
+  [2malt + ← → to move by word             ctrl + x b to pick a code block[0m
+  [2m↑ ↓ for prompts                       c r to copy or put in the prompt[0m
+  [2mpgup pgdn to scroll                   ctrl + c to clear input[0m
+  [2mshift + ↑ ↓ to scroll a line          ctrl + d or ctrl + c twice to quit[0m
+  [2mhome end for the top and the bottom   ctrl + x a for what waits on you[0m
+  [2m↑ ↓ to pick a completion              1–9 to pick a choice[0m
+  [2mtab to complete a command             ↑ ↓ j k ← → to move or change a value[0m
+  [2mtab enter to add a file or agent      enter to pick the highlighted choice[0m
+  [2mesc to close completions              esc to reject a permission[0m
+  [2m! for bash mode                       esc to leave a picker or shortcuts[0m
+  [2mbackspace to leave bash mode          ? for shortcuts[0m
+  [2mesc to interrupt or stop a command    any key to quit the crash screen[0m
+  [2mshift + tab to cycle modes[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m

@@ -1,0 +1,1 @@
+{"bindings":[{"context":"Autocomplete","bindings":{"escape":null,"ctrl+g":"autocomplete:dismiss"}},{"context":"Select","bindings":{"q":"select:cancel"}}]}

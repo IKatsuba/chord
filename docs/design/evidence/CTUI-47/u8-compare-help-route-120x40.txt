@@ -1,0 +1,42 @@
+Original | port; see u8-look.md for state/catalog/viewport limits
+
+   165. Line 165 of 200, streamed one at a time.                                                                         |    165. Line 165 of 200, streamed one at a time.
+   166. Line 166 of 200, streamed one at a time.                                                                         |    166. Line 166 of 200, streamed one at a time.
+   167. Line 167 of 200, streamed one at a time.                                                                         |    167. Line 167 of 200, streamed one at a time.
+   168. Line 168 of 200, streamed one at a time.                                                                         |    168. Line 168 of 200, streamed one at a time.
+   169. Line 169 of 200, streamed one at a time.                                                                         |    169. Line 169 of 200, streamed one at a time.
+   170. Line 170 of 200, streamed one at a time.                                                                         |    170. Line 170 of 200, streamed one at a time.
+   171. Line 171 of 200, streamed one at a time.                                                                         |    171. Line 171 of 200, streamed one at a time.
+   172. Line 172 of 200, streamed one at a time.                                                                         |    172. Line 172 of 200, streamed one at a time.
+   173. Line 173 of 200, streamed one at a time.                                                                         |    173. Line 173 of 200, streamed one at a time.
+   174. Line 174 of 200, streamed one at a time.                                                                         |    174. Line 174 of 200, streamed one at a time.
+   175. Line 175 of 200, streamed one at a time.                                                                         |    175. Line 175 of 200, streamed one at a time.
+   176. Line 176 of 200, streamed one at a time.                                                                         |    176. Line 176 of 200, streamed one at a time.
+   177. Line 177 of 200, streamed one at a time.                                                                         |    177. Line 177 of 200, streamed one at a time.
+   178. Line 178 of 200, streamed one at a time.                                                                         |    178. Line 178 of 200, streamed one at a time.
+   179. Line 179 of 200, streamed one at a time.                                                                         |    179. Line 179 of 200, streamed one at a time.
+   180. Line 180 of 200, streamed one at a time.                                                                         |    180. Line 180 of 200, streamed one at a time.
+   181. Line 181 of 200, streamed one at a time.                                                                         |    181. Line 181 of 200, streamed one at a time.
+   182. Line 182 of 200, streamed one at a time.                                                                         |    182. Line 182 of 200, streamed one at a time.
+   183. Line 183 of 200, streamed one at a time.                                                                         |    183. Line 183 of 200, streamed one at a time.
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  |    184. Line 184 of 200, streamed one at a time.
+  enter to send                           home end for the top and the bottom    ctrl + x b to pick a code block         |    185. Line 185 of 200, streamed one at a time.
+  tab to send the oldest queued now       ctrl + c to copy                       c r to copy or put in the prompt        |    186. Line 186 of 200, streamed one at a time.
+  shift or \ + enter for a newline        / @ @@ for commands, files or agents   1–9 to pick a choice                    |    187. Line 187 of 200, streamed one at a time.
+  ctrl + g to edit in $EDITOR             ↑ ↓ to pick a completion               ↑ ↓ j k ← → to move or change a value   |    188. Line 188 of 200, streamed one at a time.
+  ctrl + v to paste an image              tab to complete a command              enter to pick the highlighted choice    |    189. Line 189 of 200, streamed one at a time.
+  alt + ← → to move by word               tab enter to add a file or agent       esc to reject a permission              |    190. Line 190 of 200, streamed one at a time.
+  cmd + ← → to line start or end          esc to close completions               esc ← to leave a picker or shortcuts    |    191. Line 191 of 200, streamed one at a time.
+  ↑ ↓ for prompts, agents, background     ! for bash mode                        ctrl + a to show all directories        |  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  x to close an agent, stop background    backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms       |   enter to send                         esc to interrupt                     enter to pick the highlighted choice
+  enter for background, details, a call   esc to interrupt or stop a command     ctrl + c to stop the turn and its form  |   shift or \ + enter for a newline      ctrl + o for verbose output          esc to reject a permission
+  ctrl + r to search prompts              shift + tab to cycle modes             /vim for vim mode                       |   alt + ← → to move by word             ctrl + c to clear input              esc to leave a picker or shortcuts
+  tab enter to take a match               ctrl + o for verbose output            ? for shortcuts                         |   ↑ ↓ for prompts                       ctrl + d or ctrl + c twice to quit   ? for shortcuts
+  esc to cancel a search                  ctrl + c to clear input                any key to quit the crash screen        |   pgup pgdn to scroll                   ctrl + x a for what waits on you     any key to quit the crash screen
+  pgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit                                             |   shift + ↑ ↓ to scroll a line          1–9 to pick a choice
+  shift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you                                               |   home end for the top and the bottom   ↑ ↓ j k to move or change a value
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |   ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

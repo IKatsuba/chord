@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ../chord
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ ~/.config/chord/keybindings.json: unknown context "Nope", ignored
+
+ ⏺ ~/.config/chord/keybindings.json: ctrl+c cannot be rebound, ignored
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  keybindings.json: 2 problems · unknown context "Nope", ignored   Fake Large with a 1M context window · medium effort

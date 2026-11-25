@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › /status
+   ⎿  Agent:     fake
+      Title:     not given
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   1c4675a4-e564-4448-b9ca-523f9c328f4c
+      Directory: <project>
+
+ › /rename the parser
+   ⎿  Renamed to the parser in chord only: fake takes no title, and its own may replace it
+
+ › /status
+   ⎿  Agent:     fake
+      Title:     the parser
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   1c4675a4-e564-4448-b9ca-523f9c328f4c
+      Directory: <project>
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

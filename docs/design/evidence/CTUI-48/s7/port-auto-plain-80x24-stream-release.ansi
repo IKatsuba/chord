@@ -1,0 +1,24 @@
+   [2m│[0m               [2m│[0m agent is gone                 [2m│[0m                    [2m│[0m
+   [2m│[0m transcript.ts [2m│[0m the reducer from events       [2m│[0m transcript_test.ts [2m│[0m
+   [2m│[0m               [2m│[0m to what is drawn              [2m│[0m                    [2m│[0m
+   [2m└───────────────┴───────────────────────────────┴────────────────────┘[0m
+
+   [2m┌ ts ─────────────────────────────────────────────────────[0m[copy][2m─┐[0m
+   [2m│[0m   [7mconst[0m session = await openSession({ agent: 'claude', cwd }); [2m│[0m
+   [2m│[0m   const turn = session.prompt('hello');                        [2m│[0m
+   [2m│[0m   await turn.result;                                           [2m│[0m
+   [2m└────────────────────────────────────────────────────────────────┘[0m
+
+   That is the whole loop. To land a change:
+
+   [2m1. [0mRun the checks:
+   [2m   ┌ sh ───────────┐[0m
+   [2m   │[0m   bun quality [2m│[0m
+   [2m   └───────────────┘[0m
+
+ [2m›[0m›[2m›[0m Working… [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  sent 5 chars to the terminal's clipboard

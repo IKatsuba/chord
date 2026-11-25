@@ -1,0 +1,24 @@
+   [2m⎿[0m  [2m1 team · bugfix[0m
+
+ [38;2;78;186;101m⏺[39m [1mTeam[0m(bugfix)[2m · fake · fake-large[0m
+   [2m⎿[0m  [2mIssue 214: a string at the end of a line loses its closing quote.[0m
+      [2mreadString in src/parse/tokenize.ts stops at the newline before it[0m
+      [2mconsumes the quote. Add a test that fails for that reason, fix it, and[0m
+      [2mhave the diff reviewed. Report to me when it is done.[0m
+
+ ⏺ bugfix has the job. Its lead will report here; you can look in with ↓.
+
+ ← [2mfrom [0;1m@bugfix[0;2m · fake[0m
+   [2m⎿[0m  [2mOn it. tester is writing a failing test in tests/parse/tokenize_test.ts;[0m
+      [2mcoder waits for it and will edit src/parse/tokenize.ts only. I will[0m
+      [2mreport when the test fails for the bug's own reason.[0m
+
+ ⏺ Received the message from bugfix · fake.
+
+ [2m⏺[0m [2mteam bugfix (3 agents) was open when this session was left and is not[0m
+   [2mreopened · /resume lists them · /team run bugfix starts the team again[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

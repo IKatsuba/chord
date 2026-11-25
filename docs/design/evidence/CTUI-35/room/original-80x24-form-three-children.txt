@@ -1,0 +1,24 @@
+
+ ››› Waiting for your input… (20s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                          │
+│ Set up the deploy target                                                     │
+│                                                                              │
+│ ❯ * Project name                                                             │
+│                    Lowercase, dashes allowed                                 │
+│     Contact email  not set                                                   │
+│   ✔ Replicas       2                                                         │
+│     Traffic share  not set                                                   │
+│   ✔ Public         ☐ No                                                      │
+│   * Region         not set                                                   │
+│     Tags           not set                                                   │
+│                                                                              │
+│   Accept   Decline                                                           │
+│                                                                              │
+│ Type to fill in · ↑↓ to move · Esc to cancel                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake  ● input 20s
+    parser  fake  ◦ idle 35s        ✓ new reply
+    … +2 more

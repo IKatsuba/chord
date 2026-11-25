@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 5 lines above ───────────────────
+  shift + ↑ ↓ to scroll a line
+  home end for the top and the bottom
+  esc to interrupt
+  ctrl + o for verbose output
+  ── ↓ 10 lines below ──────────────────
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

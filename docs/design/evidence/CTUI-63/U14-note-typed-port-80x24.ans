@@ -1,0 +1,24 @@
+      Todos
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ [38;2;10;116;112m››› [38;2;71;231;165mWaiting for your answer to the plan… [2m(8s)[0m
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│ [1m[38;2;177;185;249mApprove Plan[0m                                                                 [38;2;177;185;249m│
+│                                                                              [38;2;177;185;249m│
+│ fake has a plan. Do you want to proceed?                                     [38;2;177;185;249m│
+│ [38;2;177;185;249m  1. Yes, accept the plan                                                    [38;2;177;185;249m│
+│ [38;2;177;185;249m  2. No, keep planning                                                       [38;2;177;185;249m│
+│                                                                              [38;2;177;185;249m│
+│ [38;2;177;185;249m❯ [1mNote  [0muse 2 queues and keep the old routing behind a flag until the tests  [38;2;177;185;249m│
+│         pass on every platform we support                                    [38;2;177;185;249m│
+│                                                                              [38;2;177;185;249m│
+│ [2mEnter to keep planning with this note · ↑ to the options · Esc to keep[0m       [38;2;177;185;249m│
+│ [2mplanning[0m                                                                     [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

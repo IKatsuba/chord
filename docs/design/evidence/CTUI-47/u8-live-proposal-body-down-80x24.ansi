@@ -1,0 +1,24 @@
+
+ [2m›[0m›[2m›[0m Waiting for permission… [2m(1m 14s)[0m
+
+[1m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mmcp__files__write_file[0m                                                       [1m│
+│[0m [2m── ↑ 1 line above · pageup to scroll ───────────────────────────────────────[0m [1m│
+│[0m   content: # Release 0.56.0                                                  [1m│
+│[0m                                                                              [1m│
+│[0m   This release changes how chord draws long requests: the permission box now [1m│
+│[0m   caps its height, keeps its options on screen and lets the person scroll    [1m│
+│[0m [2m── ↓ 37 lines below · pagedown to scroll ───────────────────────────────────[0m [1m│
+│[0m                                                                              [1m│
+│[0m Do you want to proceed?                                                      [1m│
+│[0m [1m [0m 1. Yes                                                                     [1m│
+│[0m [1m❯[0m [1m2. Yes, and don't ask again for files - write_file commands[0m                [1m│
+│[0m [1m [0m 3. No, and tell Claude what to do differently                              [1m│
+│[0m                                                                              [1m│
+│[0m [2mEsc to reject[0m                                                                [1m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

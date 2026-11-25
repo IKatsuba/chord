@@ -1,0 +1,40 @@
+ [1m[38;2;71;231;165m New deployment[0m
+
+ [38;2;177;185;249m❯[39m [38;2;255;107;128m⚠[39m [1m[38;2;255;107;128mProject name[0m   ab[7m [0m
+                    [38;2;255;107;128mAt least 3 characters[39m
+ [38;2;177;185;249m [39m [38;2;255;107;128m⚠[39m Contact email  not-an-email
+                    [38;2;255;107;128mNot an email address, such as name@example.com[39m
+ [38;2;177;185;249m [39m [2m✔[0m Replicas       2
+ [38;2;177;185;249m [39m [38;2;255;107;128m [39m Traffic share  [2mnot set[0m
+ [38;2;177;185;249m [39m [2m✔[0m Public         ☐ No
+ [38;2;177;185;249m [39m [2m✔[0m Region         United States
+ [38;2;177;185;249m [39m [2m✔[0m Tags           web
+
+ [38;2;177;185;249m [39m Accept [38;2;177;185;249m [39m Decline[38;2;255;107;128m     2 fields to fix[39m
+
+ [2mType to fill in · ↑↓ to move · Enter for the next · Esc to cancel[0m
+
+ [2mGave: nothing yet[0m
+ [2mCtrl+Q quits[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

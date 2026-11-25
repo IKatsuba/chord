@@ -1,0 +1,42 @@
+[
+  {
+    "name": "strip color from string",
+    "input": "\u001b[0m\u001b[4m\u001b[42m\u001b[31mfoo\u001b[39m\u001b[49m\u001b[24mfoo\u001b[0m",
+    "expected": "foofoo"
+  },
+  {
+    "name": "strip color from ls command",
+    "input": "\u001b[00;38;5;244m\u001b[m\u001b[00;38;5;33mfoo\u001b[0m",
+    "expected": "foo"
+  },
+  {
+    "name": "strip reset;setfg;setbg;italics;strike;underline sequence from string",
+    "input": "\u001b[0;33;49;3;9;4mbar\u001b[0m",
+    "expected": "bar"
+  },
+  {
+    "name": "strip link from terminal link",
+    "input": "\u001b]8;;https://github.com\u0007click\u001b]8;;\u0007",
+    "expected": "click"
+  },
+  {
+    "name": "strip OSC sequence with BEL terminator",
+    "input": "\u001b[2J\u001b[m\u001b[HABC\r\n\u001b]0;C:\\WINDOWS\\system32\\cmd.exe\u0007\u001b[?25h",
+    "expected": "ABC\r\n"
+  },
+  {
+    "name": "strip color from string using 8-bit CSI introducer",
+    "input": "31mfoo39m",
+    "expected": "foo"
+  },
+  {
+    "name": "return string as-is if no ANSI codes",
+    "input": "foo bar",
+    "expected": "foo bar"
+  },
+  {
+    "name": "return empty string as-is",
+    "input": "",
+    "expected": ""
+  }
+]

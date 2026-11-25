@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › claudecodeprompt
+
+ → to Agent(Check the build)
+   ⎿  Run this first.
+
+      ┌ sh ────────┐
+      │   bun test │
+      └────────────┘
+
+      … +15 lines (ctrl+o to expand)
+
+ ⏺ Agent(Check the build)
+   ⎿  Done (0 tool uses · 0s)
+
+ ⏺ The build holds.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

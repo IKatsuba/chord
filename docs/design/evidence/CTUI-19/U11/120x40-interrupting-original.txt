@@ -1,0 +1,40 @@
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [isolated QA directory]
+ █▀     ? for shortcuts · /help
+
+ › first prompt
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+ › ignorescancel
+
+ ⏺ Holding on.
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › status
+
+ ⏺ Status sent.
+
+ › ignorescancel
+
+ ⏺ Holding on.
+
+ ››› Interrupting… (1s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)            Fake Large with a 1M context window · medium effort · 1% context used

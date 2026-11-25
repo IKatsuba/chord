@@ -1,0 +1,3 @@
+Generated: core-aot
+PASS AOT: nested ignores, dotfiles/nonrepo, broken links, URI order/dedup, cancellable-isolate walk and cancelled links
+PASS fixture cleanup

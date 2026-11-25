@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts
+        resumed · yesterday · Inspect the saved notes
+
+ › Inspect the saved notes
+
+ ⏺ The saved notes are ready.
+
+ › mainbetween
+
+ ⏺ I will write the report once the build is done.
+
+ ⏺ Write(notes/report.md)
+
+
+
+
+
+
+ ››› Waiting for permission… (24s)
+ › after your answer: queued request one
+ › after your answer: queued request two
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │
+│ ❯ 1. just now      Earlier local notes 0                                                                             │
+│   2. 1 minute ago  Earlier local notes 1                                                                             │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● permission asked between turns · ctrl+x a to answer         Fake Large with a 1M context window · medium · 1% used

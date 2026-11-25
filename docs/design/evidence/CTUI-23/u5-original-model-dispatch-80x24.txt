@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts · /help
+
+ › /sta
+
+ ⏺ Hello, world. This reply came in chunks.
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                 │
+│ Switch fake's model for this session.                                        │
+│                                                                              │
+│ ❯ 1. Fake Large with a 1M context window ✔                                   │
+│   2. Fake Small                                                              │
+│                                                                              │
+│ Medium effort  ←/→ to adjust                                                 │
+│                                                                              │
+│ Enter to switch · ←/→ for effort · Esc to close                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,372 @@
+00:00 +0: loading test/widgets/list_view_test.dart
+00:00 +0: at 120x40 10 000 rows following the bottom build only those in sight
+
+== following the bottom, 10 000 rows (120x40) ==
++------------------------------------------------------------------------------------------------------------------------+
+|item 9960                                                                                                               |
+|item 9961                                                                                                               |
+|item 9962                                                                                                               |
+|item 9963                                                                                                               |
+|item 9964                                                                                                               |
+|item 9965                                                                                                               |
+|item 9966                                                                                                               |
+|item 9967                                                                                                               |
+|item 9968                                                                                                               |
+|item 9969                                                                                                               |
+|item 9970                                                                                                               |
+|item 9971                                                                                                               |
+|item 9972                                                                                                               |
+|item 9973                                                                                                               |
+|item 9974                                                                                                               |
+|item 9975                                                                                                               |
+|item 9976                                                                                                               |
+|item 9977                                                                                                               |
+|item 9978                                                                                                               |
+|item 9979                                                                                                               |
+|item 9980                                                                                                               |
+|item 9981                                                                                                               |
+|item 9982                                                                                                               |
+|item 9983                                                                                                               |
+|item 9984                                                                                                               |
+|item 9985                                                                                                               |
+|item 9986                                                                                                               |
+|item 9987                                                                                                               |
+|item 9988                                                                                                               |
+|item 9989                                                                                                               |
+|item 9990                                                                                                               |
+|item 9991                                                                                                               |
+|item 9992                                                                                                               |
+|item 9993                                                                                                               |
+|item 9994                                                                                                               |
+|item 9995                                                                                                               |
+|item 9996                                                                                                               |
+|item 9997                                                                                                               |
+|item 9998                                                                                                               |
+|item 9999                                                                                                               |
++------------------------------------------------------------------------------------------------------------------------+
+00:00 +1: at 120x40 pageup, 200 appends, one pump: the rows hold and the count grows
+
+== scrolled back, 200 appended, rule overlay (120x40) ==
++------------------------------------------------------------------------------------------------------------------------+
+|item 422                                                                                                                |
+|item 423                                                                                                                |
+|item 424                                                                                                                |
+|item 425                                                                                                                |
+|item 426                                                                                                                |
+|item 427                                                                                                                |
+|item 428                                                                                                                |
+|item 429                                                                                                                |
+|item 430                                                                                                                |
+|item 431                                                                                                                |
+|item 432                                                                                                                |
+|item 433                                                                                                                |
+|item 434                                                                                                                |
+|item 435                                                                                                                |
+|item 436                                                                                                                |
+|item 437                                                                                                                |
+|item 438                                                                                                                |
+|item 439                                                                                                                |
+|item 440                                                                                                                |
+|item 441                                                                                                                |
+|item 442                                                                                                                |
+|item 443                                                                                                                |
+|item 444                                                                                                                |
+|item 445                                                                                                                |
+|item 446                                                                                                                |
+|item 447                                                                                                                |
+|item 448                                                                                                                |
+|item 449                                                                                                                |
+|item 450                                                                                                                |
+|item 451                                                                                                                |
+|item 452                                                                                                                |
+|item 453                                                                                                                |
+|item 454                                                                                                                |
+|item 455                                                                                                                |
+|item 456                                                                                                                |
+|item 457                                                                                                                |
+|item 458                                                                                                                |
+|item 459                                                                                                                |
+|item 460                                                                                                                |
+|-- 238 below --                                                                                                         |
++------------------------------------------------------------------------------------------------------------------------+
+00:00 +2: at 120x40 an item above the view changing height keeps the top item and row
+
+== anchor kept after an item above grew (120x40) ==
++------------------------------------------------------------------------------------------------------------------------+
+|item 100                                                                                                                |
+|item 101                                                                                                                |
+|item 102                                                                                                                |
+|item 103                                                                                                                |
+|item 104                                                                                                                |
+|item 105                                                                                                                |
+|item 106                                                                                                                |
+|item 107                                                                                                                |
+|item 108                                                                                                                |
+|item 109                                                                                                                |
+|item 110                                                                                                                |
+|item 111                                                                                                                |
+|item 112                                                                                                                |
+|item 113                                                                                                                |
+|item 114                                                                                                                |
+|item 115                                                                                                                |
+|item 116                                                                                                                |
+|item 117                                                                                                                |
+|item 118                                                                                                                |
+|item 119                                                                                                                |
+|item 120                                                                                                                |
+|item 121                                                                                                                |
+|item 122                                                                                                                |
+|item 123                                                                                                                |
+|item 124                                                                                                                |
+|item 125                                                                                                                |
+|item 126                                                                                                                |
+|item 127                                                                                                                |
+|item 128                                                                                                                |
+|item 129                                                                                                                |
+|item 130                                                                                                                |
+|item 131                                                                                                                |
+|item 132                                                                                                                |
+|item 133                                                                                                                |
+|item 134                                                                                                                |
+|item 135                                                                                                                |
+|item 136                                                                                                                |
+|item 137                                                                                                                |
+|item 138                                                                                                                |
+|item 139                                                                                                                |
++------------------------------------------------------------------------------------------------------------------------+
+00:00 +3: at 120x40 a resize while scrolled back keeps the top item
+
+== anchor kept across a resize (120x40) ==
++------------------------------------------------------------------------------------------------------------------------+
+|item 150 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 151 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 152 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 153 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 154 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 155 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 156 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 157 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 158 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 159 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 160 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 161 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 162 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 163 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 164 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 165 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 166 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 167 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 168 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
+|item 169 word word word word word word word word word word word word word word word word word word word word word word  |
+|word word word word word word word word                                                                                 |
++------------------------------------------------------------------------------------------------------------------------+
+00:00 +4: at 120x40 items of 1, 3 and 20 rows; one cut at both edges
+
+== a 20+ row item cut at both edges (120x40) ==
++------------------------------------------------------------------------------------------------------------------------+
+|big row 10                                                                                                              |
+|big row 11                                                                                                              |
+|big row 12                                                                                                              |
+|big row 13                                                                                                              |
+|big row 14                                                                                                              |
+|big row 15                                                                                                              |
+|big row 16                                                                                                              |
+|big row 17                                                                                                              |
+|big row 18                                                                                                              |
+|big row 19                                                                                                              |
+|big row 20                                                                                                              |
+|big row 21                                                                                                              |
+|big row 22                                                                                                              |
+|big row 23                                                                                                              |
+|big row 24                                                                                                              |
+|big row 25                                                                                                              |
+|big row 26                                                                                                              |
+|big row 27                                                                                                              |
+|big row 28                                                                                                              |
+|big row 29                                                                                                              |
+|big row 30                                                                                                              |
+|big row 31                                                                                                              |
+|big row 32                                                                                                              |
+|big row 33                                                                                                              |
+|big row 34                                                                                                              |
+|big row 35                                                                                                              |
+|big row 36                                                                                                              |
+|big row 37                                                                                                              |
+|big row 38                                                                                                              |
+|big row 39                                                                                                              |
+|big row 40                                                                                                              |
+|big row 41                                                                                                              |
+|big row 42                                                                                                              |
+|big row 43                                                                                                              |
+|big row 44                                                                                                              |
+|big row 45                                                                                                              |
+|big row 46                                                                                                              |
+|big row 47                                                                                                              |
+|big row 48                                                                                                              |
+|big row 49                                                                                                              |
++------------------------------------------------------------------------------------------------------------------------+
+00:00 +5: at 80x24 10 000 rows following the bottom build only those in sight
+
+== following the bottom, 10 000 rows (80x24) ==
++--------------------------------------------------------------------------------+
+|item 9976                                                                       |
+|item 9977                                                                       |
+|item 9978                                                                       |
+|item 9979                                                                       |
+|item 9980                                                                       |
+|item 9981                                                                       |
+|item 9982                                                                       |
+|item 9983                                                                       |
+|item 9984                                                                       |
+|item 9985                                                                       |
+|item 9986                                                                       |
+|item 9987                                                                       |
+|item 9988                                                                       |
+|item 9989                                                                       |
+|item 9990                                                                       |
+|item 9991                                                                       |
+|item 9992                                                                       |
+|item 9993                                                                       |
+|item 9994                                                                       |
+|item 9995                                                                       |
+|item 9996                                                                       |
+|item 9997                                                                       |
+|item 9998                                                                       |
+|item 9999                                                                       |
++--------------------------------------------------------------------------------+
+00:00 +6: at 80x24 pageup, 200 appends, one pump: the rows hold and the count grows
+
+== scrolled back, 200 appended, rule overlay (80x24) ==
++--------------------------------------------------------------------------------+
+|item 454                                                                        |
+|item 455                                                                        |
+|item 456                                                                        |
+|item 457                                                                        |
+|item 458                                                                        |
+|item 459                                                                        |
+|item 460                                                                        |
+|item 461                                                                        |
+|item 462                                                                        |
+|item 463                                                                        |
+|item 464                                                                        |
+|item 465                                                                        |
+|item 466                                                                        |
+|item 467                                                                        |
+|item 468                                                                        |
+|item 469                                                                        |
+|item 470                                                                        |
+|item 471                                                                        |
+|item 472                                                                        |
+|item 473                                                                        |
+|item 474                                                                        |
+|item 475                                                                        |
+|item 476                                                                        |
+|-- 222 below --                                                                 |
++--------------------------------------------------------------------------------+
+00:00 +7: at 80x24 an item above the view changing height keeps the top item and row
+
+== anchor kept after an item above grew (80x24) ==
++--------------------------------------------------------------------------------+
+|item 100                                                                        |
+|item 101                                                                        |
+|item 102                                                                        |
+|item 103                                                                        |
+|item 104                                                                        |
+|item 105                                                                        |
+|item 106                                                                        |
+|item 107                                                                        |
+|item 108                                                                        |
+|item 109                                                                        |
+|item 110                                                                        |
+|item 111                                                                        |
+|item 112                                                                        |
+|item 113                                                                        |
+|item 114                                                                        |
+|item 115                                                                        |
+|item 116                                                                        |
+|item 117                                                                        |
+|item 118                                                                        |
+|item 119                                                                        |
+|item 120                                                                        |
+|item 121                                                                        |
+|item 122                                                                        |
+|item 123                                                                        |
++--------------------------------------------------------------------------------+
+00:00 +8: at 80x24 a resize while scrolled back keeps the top item
+
+== anchor kept across a resize (80x24) ==
++--------------------------------------------------------------------------------+
+|item 150 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 151 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 152 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 153 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 154 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 155 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 156 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 157 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 158 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 159 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 160 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
+|item 161 word word word word word word word word word word word word word word  |
+|word word word word word word word word word word word word word word word word |
++--------------------------------------------------------------------------------+
+00:00 +9: at 80x24 items of 1, 3 and 20 rows; one cut at both edges
+
+== a 20+ row item cut at both edges (80x24) ==
++--------------------------------------------------------------------------------+
+|big row 10                                                                      |
+|big row 11                                                                      |
+|big row 12                                                                      |
+|big row 13                                                                      |
+|big row 14                                                                      |
+|big row 15                                                                      |
+|big row 16                                                                      |
+|big row 17                                                                      |
+|big row 18                                                                      |
+|big row 19                                                                      |
+|big row 20                                                                      |
+|big row 21                                                                      |
+|big row 22                                                                      |
+|big row 23                                                                      |
+|big row 24                                                                      |
+|big row 25                                                                      |
+|big row 26                                                                      |
+|big row 27                                                                      |
+|big row 28                                                                      |
+|big row 29                                                                      |
+|big row 30                                                                      |
+|big row 31                                                                      |
+|big row 32                                                                      |
+|big row 33                                                                      |
++--------------------------------------------------------------------------------+
+00:00 +10: All tests passed!

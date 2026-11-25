@@ -1,0 +1,6 @@
+name: walker_trial
+environment:
+  sdk: ^3.12.0
+dependencies:
+  serverpod_cloud_cli: 1.3.1
+  path: ^1.9.1

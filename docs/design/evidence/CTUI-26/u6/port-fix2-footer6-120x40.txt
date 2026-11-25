@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │
+│ ❯   1.  just now   Inspect the saved notes and retain this descriptive title across wrapped lines.                   │
+│     2.  yesterday  Saved session 2 · 界😀 with a long title and an_unbroken_title_tail                               │
+│     3.  yesterday  Saved session 4 · 界😀 with a long title and an_unbroken_title_tail                               │
+│     4.  yesterday  Saved session 6 · 界😀 with a long title and an_unbroken_title_tail                               │
+│   ↓ 5.  yesterday  Saved session 8 · 界😀 with a long title and an_unbroken_title_tail                               │
+│     … +10 more                                                                                                       │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

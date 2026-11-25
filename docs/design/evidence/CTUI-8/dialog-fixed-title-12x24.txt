@@ -1,0 +1,24 @@
+╭──────────╮
+│ Allow c… │
+│ Run the  │
+│ requeste │
+│ d        │
+│ command  │
+│ in this  │
+│ session. │
+│ $ dart   │
+│ analyze  │
+│ $ dart   │
+│ format - │
+│ -output= │
+│   … 6 m… │
+│          │
+│ ❯ 1. Al… │
+│   2. Re… │
+│          │
+│ ↑↓ or j… │
+╰──────────╯
+
+>
+/permission
+up Previous…

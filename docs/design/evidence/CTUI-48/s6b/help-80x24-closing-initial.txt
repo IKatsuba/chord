@@ -1,0 +1,24 @@
+ ──────────────────────────────────────────────────────────────────────────────
+  enter to send                         ctrl + c to copy
+  shift or \ + enter for a newline      ctrl + x b to pick a code block
+  alt + ← → to move by word             c to copy the picked block
+  ↑ ↓ for prompts                       ctrl + c to clear input
+  pgup pgdn to scroll                   ctrl + d or ctrl + c twice to quit
+  shift + ↑ ↓ to scroll a line          ctrl + x a for what waits on you
+  home end for the top and the bottom   1–9 to pick a choice
+  ↑ ↓ to pick a completion              ↑ ↓ j k ← → to move or change a value
+  tab to complete a command             enter to pick the highlighted choice
+  esc to close completions              esc to reject a permission
+  esc to interrupt                      esc to leave a picker or shortcuts
+  ── ↓ 2 lines below · pagedown to scroll ──────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › unsubmitted draft                                                          │
+│   draft line 2                                                               │
+│   draft line 3                                                               │
+│   draft line 4                                                               │
+│   draft line 5                                                               │
+│   draft line 6                                                               │
+│   draft line 7                                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

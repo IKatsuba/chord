@@ -1,0 +1,6 @@
+ Fixture controls
+ f4  Finish current prompt
+ f5  Toggle open call
+ f6  Ask permission
+ f7  Emit late text
+ F1 close · ↑↓ scroll

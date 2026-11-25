@@ -1,0 +1,24 @@
+      line 03
+      line 04
+      line 05
+      line 06
+      line 07
+      line 08
+      line 09
+      line 10
+      line 11
+      line 12
+      warning
+      Exit code 3
+
+ ! printf ready; sleep 45
+   ⎿  ready
+      Stopped by the user
+
+ ! true
+   ⎿  (No output)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

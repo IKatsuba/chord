@@ -1,0 +1,24 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.71.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m[fixture directory][0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+
+
+
+
+
+
+
+ [2m[39m──────────────────────────────────────────────────────────────────────────────[0m[38;2;255;255;255m
+  [2m[39m/rename[0m[38;2;255;255;255m   [2m[39mRename this session; the agent's own title may replace it[0m[38;2;255;255;255m
+  [2m[39m/resume[0m[38;2;255;255;255m   [2m[39mResume an earlier session, here or from another directory[0m[38;2;255;255;255m
+  [2m[39m/status[0m[38;2;255;255;255m   [2m[39mShow the agent, model, mode, session and directory[0m[38;2;255;255;255m
+  [2m[39m/team[0m[38;2;255;255;255m     [2m[39mDescribe, keep and run teams of agents[0m[38;2;255;255;255m
+  [2m[39m/theme[0m[38;2;255;255;255m    [2m[39mChoose chord's colours for a dark or light terminal[0m[38;2;255;255;255m
+  [39m/vim[38;2;255;255;255m      [39mTurn vim mode for the prompt on or off[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m [39m/[38;2;255;255;255m                                                                          [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m                           [2m[39mFake Large with a 1M context window · medium effort[0m[38;2;255;255;255m

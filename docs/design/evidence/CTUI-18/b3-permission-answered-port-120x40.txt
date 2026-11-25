@@ -1,0 +1,40 @@
+ chord v0.0.1 · fake · <repository>
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Always allow
+
+ ⏺ Permission: always.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                 Fake Large with a 1M context window · medium effort · 1% context used

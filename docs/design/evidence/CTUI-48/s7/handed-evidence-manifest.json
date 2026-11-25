@@ -1,0 +1,162 @@
+[
+  {
+    "source": "build/ctui48_s7_benchmark_final.jsonl",
+    "retained": "handed/ctui48_s7_benchmark_final.jsonl",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_benchmark_summary.json",
+    "retained": "handed/ctui48_s7_benchmark_summary.json",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_benchmark_600_before.jsonl",
+    "retained": "handed/ctui48_s7_benchmark_600_before.jsonl",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_benchmark_600_after.jsonl",
+    "retained": "handed/ctui48_s7_benchmark_600_after.jsonl",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_benchmark_aot.jsonl",
+    "retained": "handed/ctui48_s7_benchmark_aot.jsonl",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_clear_before.log",
+    "retained": "handed/ctui48_s7_clear_before.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_clear_after.log",
+    "retained": "handed/ctui48_s7_clear_after.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_fake_first.log",
+    "retained": "handed/ctui48_s7_fake_first.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_fake_after_setup.log",
+    "retained": "handed/ctui48_s7_fake_after_setup.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_native_first.log",
+    "retained": "handed/ctui48_s7_native_first.log",
+    "path_sanitized": true
+  },
+  {
+    "source": "build/ctui48_s7_native_120_second.log",
+    "retained": "handed/ctui48_s7_native_120_second.log",
+    "path_sanitized": true
+  },
+  {
+    "source": "build/ctui48_s7_native_current.log",
+    "retained": "handed/ctui48_s7_native_current.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_native_drained.log",
+    "retained": "handed/ctui48_s7_native_drained.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_demo-80.ansi",
+    "retained": "handed/ctui48_s7_native_demo-80.ansi",
+    "path_sanitized": false
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_pending-80.ansi",
+    "retained": "handed/ctui48_s7_native_pending-80.ansi",
+    "path_sanitized": false
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_port-120.ansi",
+    "retained": "handed/ctui48_s7_native_port-120.ansi",
+    "path_sanitized": true
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_setup24423_port-120.ansi",
+    "retained": "handed/ctui48_s7_native_setup24423_port-120.ansi",
+    "path_sanitized": true
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_setup24423_pending-120.ansi",
+    "retained": "handed/ctui48_s7_native_setup24423_pending-120.ansi",
+    "path_sanitized": false
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_demo-120.ansi",
+    "retained": "handed/ctui48_s7_native_demo-120.ansi",
+    "path_sanitized": false
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_setup24423_demo-120.ansi",
+    "retained": "handed/ctui48_s7_native_setup24423_demo-120.ansi",
+    "path_sanitized": false
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_pending-120.ansi",
+    "retained": "handed/ctui48_s7_native_pending-120.ansi",
+    "path_sanitized": false
+  },
+  {
+    "source": "example/chord/build/ctui48_s7_native_port-80.ansi",
+    "retained": "handed/ctui48_s7_native_port-80.ansi",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_composition_metrics.jsonl",
+    "retained": "handed/ctui48_s7_composition_metrics.jsonl",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_composition_summary.json",
+    "retained": "handed/ctui48_s7_composition_summary.json",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_composition_root.log",
+    "retained": "handed/ctui48_s7_composition_root.log",
+    "path_sanitized": true
+  },
+  {
+    "source": "build/ctui48_s7_composition_port.log",
+    "retained": "handed/ctui48_s7_composition_port.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_resize_before.log",
+    "retained": "handed/ctui48_s7_resize_before.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_resize_after.log",
+    "retained": "handed/ctui48_s7_resize_after.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_resize_reached.log",
+    "retained": "handed/ctui48_s7_resize_reached.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_resize_analyze.log",
+    "retained": "handed/ctui48_s7_resize_analyze.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_resize_format.log",
+    "retained": "handed/ctui48_s7_resize_format.log",
+    "path_sanitized": false
+  },
+  {
+    "source": "build/ctui48_s7_repairs_handoff.txt",
+    "retained": "handed/ctui48_s7_repairs_handoff.txt",
+    "path_sanitized": false
+  }
+]

@@ -1,0 +1,40 @@
+docs · fake · Fake Large with a 1M context window · opened by main 50s ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    main    fake · Fake Large with a 1M context window · medium  ◦ idle 38s
+    parser  fake · Fake Small · medium                           ◦ idle 40s        ✓ new reply
+    docs    fake · Fake Large with a 1M context window · medium  ● permission 41s  ← new message

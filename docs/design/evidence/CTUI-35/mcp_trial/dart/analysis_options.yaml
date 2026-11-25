@@ -1,0 +1,6 @@
+# The trial is its own package, outside the repository's lints. Its
+# dependencies are fetched only when the trial runs, so the repository's
+# `dart analyze` skips it; `run.ts` analyzes nothing either.
+analyzer:
+  exclude:
+    - "**"

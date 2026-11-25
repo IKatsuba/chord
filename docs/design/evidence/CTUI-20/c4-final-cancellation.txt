@@ -1,0 +1,2 @@
+cancel80 Ctrl+C: Exit: 0, zsh alternate=0, exact stty restored=True
+cancel120 Esc: Exit: 0, zsh alternate=0, exact stty restored=True

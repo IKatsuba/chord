@@ -1,0 +1,10 @@
+00:00 +0: loading test/selection_compile_test.dart
+00:00 +0: compiled selection integration (setUpAll)
+00:14 +0: compiled selection integration public demo native mouse last-motion and snapshot at 120 x 40
+00:15 +1: compiled selection integration production binary mouse auto-copy and code keys record OSC only at 120 x 40
+00:16 +2: compiled selection integration production session exits without waiting for ignored pending copy at 120 x 40
+00:17 +3: compiled selection integration public demo native mouse last-motion and snapshot at 80 x 24
+00:17 +4: compiled selection integration production binary mouse auto-copy and code keys record OSC only at 80 x 24
+00:17 +5: compiled selection integration production session exits without waiting for ignored pending copy at 80 x 24
+00:18 +6: compiled selection integration (tearDownAll)
+00:18 +6: All tests passed!

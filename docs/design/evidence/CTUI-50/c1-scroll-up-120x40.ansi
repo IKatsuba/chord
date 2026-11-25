@@ -1,0 +1,40 @@
+Text area
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐[0m
+ [2m│[0m line 2                                                                                                             [2m│[0m
+ [2m│[0m line 3                                                                                                             [2m│[0m
+ [2m│[0m line 4                                                                                                             [2m│[0m
+ [2m│[0m line 5                                                                                                             [2m│[0m
+ [2m└────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘[0m
+[2mline 2, column 7 · rows 2–5 of 6[0m
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+[1menter[0;2m Submit[0m  [1mshift+enter[0;2m Insert newline[0m  [1malt+enter[0;2m Insert newline[0m  [1mctrl+enter[0;2m Insert newline[0m  [1mctrl+j[0;2m Insert newline[0m  [1ml…

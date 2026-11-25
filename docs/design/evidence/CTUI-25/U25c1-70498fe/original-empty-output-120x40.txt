@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /tmp/chord-qa.ctui-designer-u25c1
+ ▀▀     ? for shortcuts · /help
+
+ ! printf "line 01\nline 02\nline 03\nline 04\nline 05\nline 06\nline 07\nline 08\nline 09\nline 10\nline 11\nline 12\
+   n"
+   printf "warning\n" >&2; exit 3
+   ⎿  line 01
+      line 02
+      line 03
+      line 04
+      line 05
+      line 06
+      line 07
+      line 08
+      line 09
+      line 10
+      line 11
+      line 12
+      warning
+      Exit code 3
+
+ ! printf ready; sleep 45
+   ⎿  ready
+      Stopped by the user
+
+ ! true
+   ⎿  (No output)
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

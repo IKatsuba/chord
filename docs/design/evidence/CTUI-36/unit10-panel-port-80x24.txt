@@ -1,0 +1,24 @@
+ ──────────────────────────────────────────────────────────────────────────────
+  enter to send                           ! for bash mode
+  tab to send the oldest queued now       backspace to leave bash mode
+  shift or \ + enter for a newline        esc to interrupt or stop a command
+  ctrl + g to edit in $EDITOR             shift + tab to cycle modes
+  ctrl + v to paste an image              ctrl + o for verbose output
+  alt + ← → to move by word               ctrl + c to copy
+  ↑ ↓ for prompts, agents, background     ctrl + x b to pick a code block
+  x to close an agent, stop background    c r to copy or put in the prompt
+  enter for background, details, a call   ctrl + c to clear input
+  ctrl + r to search prompts              ctrl + d or ctrl + c twice to quit
+  tab enter to take a match               ctrl + x a for what waits on you
+  esc to cancel a search                  1–9 to pick a choice
+  pgup pgdn or wheel to scroll            ↑ ↓ j k ← → to move or change a value
+  shift + ↑ ↓ to scroll a line            enter to pick the highlighted choice
+  home end for the top and the bottom     esc to reject a permission
+  ↑ ↓ to pick a completion                esc to leave a picker or shortcuts
+  ── ↓ 3 lines below · pagedown to scroll ──────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    background  1 monitor running

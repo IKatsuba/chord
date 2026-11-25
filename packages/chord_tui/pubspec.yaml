@@ -1,0 +1,34 @@
+name: chord_tui
+description: >-
+  A Flutter-shaped Dart framework for rich terminal interfaces: widgets,
+  layout in cells, keys, Markdown, code and diffs, and a headless tester.
+version: 0.71.0
+repository: https://github.com/IKatsuba/chord/tree/main/packages/chord_tui
+issue_tracker: https://github.com/IKatsuba/chord/issues
+topics:
+  - terminal
+  - tui
+  - cli
+  - widgets
+  - ui
+# What chord ships for and the tests run on.
+platforms:
+  linux:
+  macos:
+
+environment:
+  sdk: ^3.11.0
+dependencies:
+  characters: ^1.4.1
+  dartdiff: ^1.0.0
+  ffi: ^2.2.0
+  highlighting: '>=0.9.0+11.8.0 <0.9.1'
+  markdown: ^7.3.1
+  matcher: ^0.12.20
+  meta: ^1.19.0
+  test_api: ^0.7.15
+  unorm_dart: ^0.3.3
+dev_dependencies:
+  fake_async: ^1.3.3
+  lints: ^6.1.0
+  test: ^1.33.0

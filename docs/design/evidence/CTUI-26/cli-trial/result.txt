@@ -1,0 +1,11 @@
+Dart SDK 3.13.5, args 2.7.0 from the port's pinned package resolution.
+AOT compilation: passed.
+
+[--resume] => Missing argument for "--resume".
+[-r] => Missing argument for "-r".
+[--resume, session-id] => session-id
+[--resume=session-id] => session-id
+[--resume=a, --resume=b] => b
+
+No workaround was built. Main approved a bounded token adapter for this
+flag before args, including an explicit repeated-option refusal.

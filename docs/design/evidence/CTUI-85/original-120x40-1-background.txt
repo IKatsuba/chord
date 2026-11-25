@@ -1,0 +1,40 @@
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › tasktwo
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Watch the build) · fake · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(Watch the deploy) · fake · 0 tool uses
+      ⎿  Initializing…
+
+ ⏺ The build and the deploy are being watched.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 2 in this session                                                                                       │
+│                                                                                                                      │
+│ ❯ Watch the build   task · fake  working 14s  main                                                                   │
+│   Watch the deploy  task · fake  working 14s  main                                                                   │
+│                                                                                                                      │
+│ Enter for details · x to stop · Esc to close                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running                         Fake Large with a 1M context window · medium effort · 1% context used
+    background  2 tasks running

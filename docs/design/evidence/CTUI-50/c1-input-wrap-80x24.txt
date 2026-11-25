@@ -1,0 +1,24 @@
+ chorded-tui demo                                 dark: the terminal did not say
+╭ log ─────────────────────────────────────────────────────────────────────────╮
+│ Type something and press enter. 日本語 and 🙂 are measured in cells.         │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────╮
+│> A long editable line wraps through the existing paragraph layout with spaces│
+│and Unicode 界é🙂, then continues to its visible final insertion point.🙂     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl+o Toggle details  ctrl+t Theme  ctrl+x b Toggle busy  ctrl+x c Clear  ct…

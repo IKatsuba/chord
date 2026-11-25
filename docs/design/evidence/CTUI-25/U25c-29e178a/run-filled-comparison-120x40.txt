@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0                                                                                                    |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       |  ▀▀▀▄   fixture
+ ▄▀▀▀   /tmp/chord-qa.ctui-designer-u25c-code                                                                            |  ▄▀▀▀   project
+ ▀▀     ? for shortcuts · /help                                                                                          |  ▀▀     ? for shortcuts
+                                                                                                                         |
+ › markdowncode                                                                                                          |  ⏺ ┌ sh ──[copy]─[run]─┐
+                                                                                                                         |    │   $ printf first  │
+ ⏺ A paragraph before the code.                                                                                          |    │   $ printf second │
+                                                                                                                         |    └───────────────────┘
+   ┌─ typescript ─[copy]─┐                                                                                               |
+   │ x                   │                                                                                               |    ┌ ts ─────[copy]─┐
+   └─────────────────────┘                                                                                               |    │   not runnable │
+                                                                                                                         |    └────────────────┘
+   ┌─ sh ───────────────────────────────────────────────────────────────────────[copy]─[run]─┐                           |
+   │ bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p > /tmp/screen.txt │                           |    │ ┌ bash ─────────────┐
+   │                                                                                         │                           |    │ │   $ quoted script │
+   │ echo done                                                                               │                           |    │ └───────────────────┘
+   └─────────────────────────────────────────────────────────────────────────────────────────┘                           |
+                                                                                                                         |
+   - a loose item                                                                                                        |
+                                                                                                                         |
+   - a loose item with a box:                                                                                            |
+                                                                                                                         |
+     ┌─ sh ─[copy]─[run]─┐                                                                                               |
+     │ bun dev check     │                                                                                               |
+     └───────────────────┘                                                                                               |
+                                                                                                                         |
+   A paragraph after.                                                                                                    |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+                                                                                                                         |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ! bun dev check                                                                                                      │ | │ ! quoted script                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ! for bash mode                                Fake Large with a 1M context window · medium effort · 1% context used   |   ! for bash mode

@@ -1,0 +1,32 @@
+00:00 +0: loading test/widgets/selection_diagnostics_test.dart
+00:00 +0: parser diagnostics distinguish real work and never retain parser state
+00:00 +1: clear drops crossed lazy caches immediately and after a frame Size(120, 40)
+00:00 +1 -1: clear drops crossed lazy caches immediately and after a frame Size(120, 40) [E]
+  Expected: <0>
+    Actual: <87>
+  crossed=87, immediate=87
+  
+  package:matcher                                     expect
+  test/widgets/selection_diagnostics_test.dart 112:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +1 -1: clear drops crossed lazy caches immediately and after a frame Size(80, 24)
+00:00 +1 -2: clear drops crossed lazy caches immediately and after a frame Size(80, 24) [E]
+  Expected: <0>
+    Actual: <92>
+  crossed=92, immediate=92
+  
+  package:matcher                                     expect
+  test/widgets/selection_diagnostics_test.dart 112:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7              testWidgets.<fn>
+  
+00:00 +1 -2: Some tests failed.
+
+Failing tests:
+  test/widgets/selection_diagnostics_test.dart: clear drops crossed lazy caches immediately and after a frame Size(120, 40)
+  test/widgets/selection_diagnostics_test.dart: clear drops crossed lazy caches immediately and after a frame Size(80, 24)
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

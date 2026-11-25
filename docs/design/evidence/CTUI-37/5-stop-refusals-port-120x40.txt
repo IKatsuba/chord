@@ -1,0 +1,40 @@
+ › /team run bugfix Fix issue 214.
+
+ ⏺ Team(bugfix) · fake · fake-large
+   ⎿  Fix issue 214.
+
+ ← from @bugfix · fake
+   ⎿  On it. tester is writing a failing test in tests/parse/tokenize_test.ts; coder waits for it and will edit src/
+      parse/tokenize.ts only. I will report when the test fails for the bug's own reason.
+
+ ⏺ Received the message from bugfix · fake.
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md · working 15s on "Fix issue 214."
+
+      lead    fake · fake-large  default      ◦ idle 13s        ✓ new reply    ← from @tester · fake
+      tester  fake · fake-small  acceptEdits  ● permission 13s  ← new message  Bash(bun dev test tests/parse)
+      coder   fake · fake-large  plan         ◦ idle 12s        ✓ new reply    ← from @tester · fake
+
+ › /team stop bugfix
+   ⎿  Stopped bugfix: its lead, tester, and coder are closed · /resume lists them
+
+ ← from chord
+   ⎿  The person closed team bugfix: its lead (fake · fake-large, id 9f2d7176) and its members tester and coder. It
+      takes no more messages; run_team starts it again.
+
+ ⏺ Received the message from chord.
+
+ › /team stop nope
+   ⎿  No run named nope is open · the list under the prompt names them
+
+ › /team run bugfx x
+   ⎿  No team named bugfx · /team lists them
+
+ › /team edit x
+   ⎿  /team has no edit; it takes list, new, show, run or stop
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

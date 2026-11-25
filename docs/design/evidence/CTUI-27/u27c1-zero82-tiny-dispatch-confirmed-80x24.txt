@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › running
+
+ ⏺ Working
+
+ › first normal
+
+
+
+
+
+
+
+ ››› Working… (1m 4s · esc to interrupt)
+ › into the running turn: second tiny
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft kept                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

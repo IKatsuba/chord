@@ -1,0 +1,24 @@
+   │               │ agent is gone                 │                    │
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │
+   │               │ to what is drawn              │                    │
+   └───────────────┴───────────────────────────────┴────────────────────┘
+
+   ┌ ts ─────────────────────────────────────────────────────[copy]─┐
+   │   const session = await openSession({ agent: 'claude', cwd }); │
+   │   const turn = session.prompt('hello');                        │
+   │   await turn.result;                                           │
+   └────────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. To land a change:
+
+   1. Run the checks:
+      ┌ sh ───────────┐
+      │   bun quality │
+      └───────────────┘
+
+ ››› Working… (4s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  sent 5 chars to the terminal's clipboard

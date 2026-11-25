@@ -1,0 +1,40 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts · /help
+
+ › /sta
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /echo hello
+
+ ⏺ hello
+
+ › /status
+   ⎿  Agent:     fake
+      Title:     not given
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   092d2087-4656-4880-be10-13e4bd377930
+      Directory: [fixture directory]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

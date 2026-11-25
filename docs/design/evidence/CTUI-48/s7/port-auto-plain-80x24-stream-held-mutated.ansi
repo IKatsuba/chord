@@ -1,0 +1,24 @@
+   [2m│ │[0m   await session.close(); // resolves once the exit is seen [2m│[0m
+   [2m│ └────────────────────────────────────────────────────────────┘[0m
+
+   [2m┌───────────────┬───────────────────────────────┬────────────────────┐[0m
+   [2m│[0;1m Module        [0;2m│[0;1m Holds                         [0;2m│[0;1m Tested by          [0;2m│[0m
+   [2m├───────────────┼───────────────────────────────┼────────────────────┤[0m
+   [2m│[0m session.ts    [2m│[0m opening, prompting            [2m│[0m session_test.ts    [2m│[0m
+   [2m│[0m               [2m│[0m and closing a session         [2m│[0m                    [2m│[0m
+   [2m│[0m processes.ts  [2m│[0m the promise that a closed     [2m│[0m processes_test.ts  [2m│[0m
+   [2m│[0m               [2m│[0m agent is gone                 [2m│[0m                    [2m│[0m
+   [2m│[0m transcript.ts [2m│[0m the reducer from events       [2m│[0m transcript_test.ts [2m│[0m
+   [2m│[0m               [2m│[0m to what is drawn              [2m│[0m                    [2m│[0m
+   [2m└───────────────┴───────────────────────────────┴────────────────────┘[0m
+
+   [2m┌ ts ─────────────────────────────────────────────────────[0m[copy][2m─┐[0m
+   [2m│[0m   [7mconst[0m session = await openSession({ agent: 'claude', cwd }); [2m│[0m
+ [2m── [0;1m↓ new output[0;2m · 10 lines below · end to jump to the bottom ─────────────────[0m
+
+ ›[2m››[0m Working… [2m(4s · esc to interrupt)[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

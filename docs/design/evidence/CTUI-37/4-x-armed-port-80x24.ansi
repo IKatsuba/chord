@@ -1,0 +1,24 @@
+      [2mreport when the test fails for the bug's own reason.[0m
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ [38;2;232;201;90m←[39m [2mfrom [0;1m[38;2;232;201;90m@tester[0;2m · fake[0m
+   [2m⎿[0m  [2mIt fails for that reason: "a" at the end of a line comes back as "a, with[0m
+      [2mno closing quote. Only tests/parse/tokenize_test.ts changed.[0m
+
+ ⏺ Received the message from tester · fake.
+
+ [38;2;124;207;127m←[39m [2mfrom [0;1m[38;2;124;207;127m@bugfix 2[0;2m · fake[0m
+   [2m⎿[0m  [2mThis run keeps to src/parse/date.ts and tests/parse/date_test.ts. Which[0m
+      [2mfiles do you hold?[0m
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+[38;2;108;182;255m╭─[1m bugfix[0m[38;2;108;182;255m ─────────────────────────────────────────────────────────────────────╮
+│[39m ›                                                                            [38;2;108;182;255m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m↑ ↓ pick · enter write · x close · esc back[0m  [2mFake Large with a 1M… · 1% used[0m
+    main     [2m  fake                    ◦ idle 28s[0m
+  [38;2;177;185;249m❯ [1m[38;2;108;182;255mbugfix   [0;2m  team · fake             ◦ idle 28s[0m
+    [2m├─ [0m[38;2;196;156;255mtester[2m[39m  fake                  [0m[38;2;255;193;7m  ● permission 42s        [2m[39m  ← new message[0m
+  [2m  … +2 more[0m

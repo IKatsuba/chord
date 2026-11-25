@@ -1,0 +1,25 @@
+ORIGINAL                                                                         | PORT
+ ⏺ Planned. Step 2 done. Step 3 done.                                            |  ⏺ Planned. Step 2 done. Step 3 done.
+                                                                                 | 
+ ⏺ Plan                                                                          |  ⏺ Plan
+   ⎿  ☒ Read the code                                                            |    ⎿  ☒ Read the code
+      ☒ Write the change                                                         |       ☒ Write the change
+      ☒ Run the tests                                                            |       ☒ Run the tests
+                                                                                 | 
+ › permission                                                                    |  › permission
+                                                                                 | 
+ ⏺ Write(notes.txt)                                                              |  ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow                                            |    ⎿  Allowed Write notes.txt · Allow
+                                                                                 | 
+ ⏺ Permission: allow.                                                            |  ⏺ Permission: allow.
+                                                                                 | 
+ › error                                                                         |  › error
+                                                                                 | 
+ ⏺ About to fail.                                                                |  ⏺ About to fail.
+                                                                                 | 
+ ⏺ The fake agent failed on purpose.                                             |  ⏺ The fake agent failed on purpose.
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |          Fake Large with a 1M context window · medium effort · 1% context used

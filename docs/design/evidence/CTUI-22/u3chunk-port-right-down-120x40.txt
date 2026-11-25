@@ -1,0 +1,40 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Select model                                                                                                         │
+│ Switch fake's model for this session.                                                                                │
+│                                                                                                                      │
+│   1. Fake Large with a 1M context window ✔                                                                           │
+│ ❯ 2. Fake Small                                                                                                      │
+│                                                                                                                      │
+│ High effort •  ←/→ to adjust · asked for once Fake Small is in use, if it offers High                                │
+│                                                                                                                      │
+│ Enter to switch · ←/→ for effort · Esc to close                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

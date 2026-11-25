@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [39mChange 15: tests run in parallel\n- Change 16: the prompt keeps its draft\n-[38;2;255;255;255m
+   [39mChange 17: a turn can be resumed\n- Change 18: headlines wrap\n- Change 19:[38;2;255;255;255m
+   [39mthe box scrolls\n- Change 20: tests run in parallel\n- Change 21: the prompt[38;2;255;255;255m
+   [39mkeeps its draft\n- Change 22: a turn can be resumed\n- Change 23: headlines[38;2;255;255;255m
+   [39mwrap\n- Change 24: the box scrolls\n- Change 25: tests run in parallel\n-[38;2;255;255;255m
+   [39mChange 26: the prompt keeps its draft\n- Change 27: a turn can be resumed\n-[38;2;255;255;255m
+   [39mChange 28: headlines wrap\n- Change 29: the box scrolls\n- Change 30: tests[38;2;255;255;255m
+   [39mrun in parallel\n", mode: "overwrite")[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mFailed[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [39mRejected mcp__files__write_file[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: deny.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mtwins[38;2;255;255;255m
+
+ [2m[39m⏺[0m[38;2;255;255;255m [1m[39mWrite[0m(notes.txt)[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mAllowed Write notes.txt · Allow once in this folder[0m[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mPermission: allow-here.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

@@ -1,0 +1,8 @@
+{
+  "owned_tmux_server": "absent",
+  "owned_fixture_processes": [],
+  "six_final_panes": "exited 0",
+  "initial_probe": "exited 0 and removed",
+  "plain_foreground_background_sgr_violations": [],
+  "clipboard": "no service constructed; callback only updates fixture state"
+}

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   Codex
+ ▄▀▀▀   /tmp/ctui57-u3/wd
+ ▀▀     ? for shortcuts
+
+ ⏺ codex did not start: it exited with code 1 before answering initialize.
+   ⎿  chord ran @agentclientprotocol/codex-acp@2.6.0, the version this chord
+      pins.
+      The end of its stderr:
+        npm warn exec The following package was not found and will be
+        installed: stub
+        npm error code ENOTFOUND
+        npm error network request to the registry failed, reason: getaddrinfo
+        ENOTFOUND registry.npmjs.org
+        npm error A complete log of this run can be found in: /tmp/npm-cache/
+        _logs/debug.log
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

@@ -1,0 +1,1 @@
+Paths are relabelled: the port ran in ~/project, the original in ../chord; the editor temp file path in orig-*-03-ctrl-g is replaced. In orig-*-03-ctrl-g the original opened $EDITOR on ctrl+g (its state.ts order); the lead settled the port keeps Autocomplete first. 04-07 are a second run without ctrl+g; 06-resume differs only in the saved sessions listed.

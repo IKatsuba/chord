@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Set Effort                                                                                                           │
+│ Choose fixture-界👩‍💻long界👩‍💻long界👩‍💻long界👩‍💻long界👩‍💻long...g界👩‍💻long界👩‍💻long界👩‍💻long-tail's Effort for this session.  │
+│                                                                                                                      │
+│ ❯ 1. Value long label 界👩‍💻 long label 界👩‍💻 long label 界... long label 界👩‍💻 long label 界👩‍💻 long label 界👩‍💻  tail ✔  │
+│   2. Short value                                                                                                     │
+│                                                                                                                      │
+│ Enter to set · Esc to go back                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

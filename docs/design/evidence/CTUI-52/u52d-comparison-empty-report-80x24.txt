@@ -1,0 +1,25 @@
+Original                                                                         │ Port
+ ▀▄     chord v0.71.0                                                            │  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake                                                                     │  ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project                                                          │  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                  │  ▀▀     ? for shortcuts
+                                                                                 │
+ ⏺ fake did not start: it refused session/new: session/new requires              │  ⏺ fake did not start: it refused session/new: session/new requires
+   `agentAlias` (alias of a configured [agents.<alias>] entry)                   │    `agentAlias` (alias of a configured [agents.<alias>] entry)
+                                                                                 │
+ › /resume                                                                       │  › /resume
+   ⎿  No earlier fake session to resume, here or in any other directory.         │    ⎿  No earlier fake session to resume, here or in any other directory.
+                                                                                 │
+                                                                                 │
+                                                                                 │
+                                                                                 │
+                                                                                 │
+                                                                                 │
+                                                                                 │
+                                                                                 │
+                                                                                 │
+                                                                                 │
+╭──────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ │ │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                │   ? for shortcuts

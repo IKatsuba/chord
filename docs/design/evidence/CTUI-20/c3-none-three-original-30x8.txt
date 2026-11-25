@@ -1,0 +1,8 @@
+  Select agent
+
+  ❯ ↑ 4.  claud...aude Agent
+      … +28 more
+
+  ↑↓ or j/k to move · Enter
+  or 1–9 to select · Esc to
+  cancel

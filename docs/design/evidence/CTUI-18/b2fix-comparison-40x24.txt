@@ -1,0 +1,25 @@
+Original bigask | Port synthetic long (40x24; labels differ)
+                                         | Permission fixture: long
+ ››› Waiting for permission… (23s)       | Transcript
+                                         | 
+╭──────────────────────────────────────╮ | ╭──────────────────────────────────────╮
+│ mcp__files__write_file               │ | │ Write notes.txt                      │
+│   path: docs/release.md              │ | │                                      │
+│   content: # Release 0.56.0          │ | │    1 - old                           │
+│                                      │ | │ ── ↓ 60 lines below ──────────────── │
+│ ── ↓ 49 lines below ──────────────── │ | │                                      │
+│                                      │ | │ Do you want to proceed?              │
+│ Do you want to proceed?              │ | │ ❯ 1. Allow once, and do not ask      │
+│ ❯ 1. Yes                             │ | │   again for files - write_file       │
+│   2. Yes, and don't ask again for    │ | │   commands in this project           │
+│   files - write_file commands        │ | │   2. Always allow, and do not ask    │
+│   3. No, and tell Claude what to do  │ | │   again for files - write_file       │
+│   differently                        │ | │   commands in this project           │
+│                                      │ | │   3. Deny, and do not ask again for  │
+│ Esc to reject                        │ | │   files - write_file commands in     │
+╰──────────────────────────────────────╯ | │   this project                       │
+                                         | │                                      │
+╭──────────────────────────────────────╮ | │ Esc to reject · denied by itself in  │
+│ ›                                    │ | │ 5 minutes                            │
+╰──────────────────────────────────────╯ | ╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…   | Answer:

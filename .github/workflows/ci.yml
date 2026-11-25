@@ -1,23 +1,41 @@
+# The port's CI, modelled on the original's ci.yml, on ubuntu-latest alone
+# (Q380): the static checks, both suites in three shards, the compile tags,
+# the npm shim's node test, and the release's Linux targets compiled. It
+# reads the repository and nothing else: no secret, no signing, no upload,
+# no release. darwin is built by the owner's local release.
 name: ci
 
 on:
   push:
-    branches: [main, next]
+    branches: [main]
   pull_request:
+
+permissions:
+  contents: read
 
 jobs:
   static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
-      - run: bun install --frozen-lockfile
-      - run: bun dev quality chord --static
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.5
+      - run: dart pub get
+        working-directory: packages/chord_tui
+      - run: dart pub get
+      - run: dart analyze
+      - run: dart analyze
+        working-directory: packages/chord_tui
+      - run: dart format --output=none --set-exit-if-changed .
+      - uses: docker://rhysd/actionlint:1.7.7
+        with:
+          args: -color
 
-  # The suite in three, each test file in exactly one: Bun's --shard cuts
-  # the sorted files by the times in tests/timings.json (CHD-513).
+  # Both suites in three, each test file in exactly one shard: every n-th
+  # of the sorted files, as tool/shards.dart cuts them (CTUI-146).
   tests:
     name: tests (${{ matrix.shard }}/3)
     runs-on: ubuntu-latest
@@ -27,42 +45,84 @@ jobs:
         shard: [1, 2, 3]
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
-      - run: bun install --frozen-lockfile
-      - run: bun dev test --shard=${{ matrix.shard }}/3
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.5
+      - run: dart pub get
+        working-directory: packages/chord_tui
+      - run: dart pub get
+      - name: the app's shard
+        shell: bash
+        run: >-
+          dart run tool/shards.dart --package=. --shard=${{ matrix.shard }}/3
+          | xargs dart test
+      - name: the framework's shard
+        shell: bash
+        run: >-
+          dart run tool/shards.dart --package=packages/chord_tui
+          --shard=${{ matrix.shard }}/3
+          | (cd packages/chord_tui && xargs dart test)
 
+  # The compile tags of both packages, their pty cases driven by expect.
   compile:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
-      - run: bun install --frozen-lockfile
-      - run: bun dev compile
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.5
+      - run: sudo apt-get update && sudo apt-get install -y expect
+      - run: dart pub get
+        working-directory: packages/chord_tui
+      - run: dart pub get
+      - run: dart test -t compile --run-skipped
+      - run: dart test -t compile --run-skipped
+        working-directory: packages/chord_tui
 
-  # cursor-cloud-acp on the Node it runs on: its checks, tests, build and
-  # the smoke of its packed tarball under Node 22 from 22.13, the floor its
-  # engines name (owner, CHD-622 Q8).
+  # The npm shim on the Node its engines name, from 22.13.
   node:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - uses: oven-sh/setup-bun@v2
         with:
-          bun-version: 1.4.4
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.5
       - uses: actions/setup-node@v4
         with:
           node-version: '22.13'
-      - run: bun install --frozen-lockfile
-      - run: bun dev quality cursor-cloud-acp
+      - run: dart pub get
+        working-directory: packages/chord_tui
+      - run: dart pub get
+      - run: dart test test/tool/npm_test.dart
+
+  # The release's Linux targets: linux-x64 compiled natively and run for
+  # --version, linux-arm64 cross-compiled and checked to be its kind.
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - uses: dart-lang/setup-dart@v1
+        with:
+          sdk: 3.13.5
+      - run: dart pub get
+        working-directory: packages/chord_tui
+      - run: dart pub get
+      - run: dart run tool/ci.dart linux-x64
+      - run: dart run tool/ci.dart linux-arm64
 
   # The check branch protection requires by name: it passes only when the
-  # static checks, every shard, the compile and the package's node job did.
+  # static checks, every shard, the compile tags, the node test and the
+  # release's targets did.
   check:
-    needs: [static, tests, compile, node]
+    needs: [static, tests, compile, node, release]
     if: always()
     runs-on: ubuntu-latest
     steps:
@@ -71,3 +131,4 @@ jobs:
           test '${{ needs.tests.result }}' = success
           test '${{ needs.compile.result }}' = success
           test '${{ needs.node.result }}' = success
+          test '${{ needs.release.result }}' = success

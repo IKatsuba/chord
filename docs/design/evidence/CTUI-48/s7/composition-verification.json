@@ -1,0 +1,11 @@
+{
+  "measured_commit": "8c15fc9c0ae80e3b705c04ac6be0d33e238a86c1",
+  "measurement_kind": "handed AOT, read by designer; not rerun",
+  "steady_phases": 12,
+  "sceneCollections_each": 0,
+  "rangeCompositions_each": 0,
+  "timings": "under concurrent normal tests; no isolated latency comparison",
+  "changed_none": "1 scene / 0 range",
+  "changed_held": "1 scene / 2 range",
+  "changed_shown": "1 scene / 1 range"
+}

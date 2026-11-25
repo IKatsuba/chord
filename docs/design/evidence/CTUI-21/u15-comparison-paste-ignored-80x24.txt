@@ -1,0 +1,25 @@
+ORIGINAL                                                                         | PORT
+                                                                                 | 
+  Error: window failed                                                           |   Bad state: window failed
+      at Throws (fixture.tsx:1:1)                                                |   #0 Throws (fixture.dart:1:1)
+                                                                                 | 
+  any key to quit · chord prints the error to stderr as it exits                 |   any key to quit · chord prints the error to stderr as it exits
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 

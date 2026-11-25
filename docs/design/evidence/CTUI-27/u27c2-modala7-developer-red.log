@@ -1,0 +1,155 @@
+00:00 +0: loading test/ui/app/search_permission_overlay_test.dart
+00:00 +0: permission arrival retains rejection cue with search=false Size(120, 40)
+00:00 +1: permission arrival retains rejection cue with search=true Size(120, 40)
+00:00 +1 -1: permission arrival retains rejection cue with search=true Size(120, 40) [E]
+  Expected: a screen showing 'Esc to reject'
+    Actual: Screen:< ▀▄     chord v0.0.1
+             ▀▀▀▄   fake
+             ▄▀▀▀   fixture-project
+             ▀▀     ? for shortcuts
+            
+             › /review
+            
+             ⏺ Working
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+             ››› Waiting for permission… (0s)
+            
+            ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+            │ Approve notes                                                                                                        │
+            │                                                                                                                      │
+            │ Do you want to proceed?                                                                                              │
+            │ ❯ 1. Allow once                                                                                                      │
+            │   2. Deny                                                                                                            │
+            │                                                                                                                      │
+             ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+              search prompts: /re
+            
+            ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+            │ › /review                                                                                                            │
+            ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯>
+     Which: the screen was:
+             ▀▄     chord v0.0.1
+             ▀▀▀▄   fake
+             ▄▀▀▀   fixture-project
+             ▀▀     ? for shortcuts
+            
+             › /review
+            
+             ⏺ Working
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+            
+             ››› Waiting for permission… (0s)
+            
+            ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+            │ Approve notes                                                                                                        │
+            │                                                                                                                      │
+            │ Do you want to proceed?                                                                                              │
+            │ ❯ 1. Allow once                                                                                                      │
+            │   2. Deny                                                                                                            │
+            │                                                                                                                      │
+             ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+              search prompts: /re
+            
+            ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+            │ › /review                                                                                                            │
+            ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  
+  package:matcher                                        expect
+  test/ui/app/search_permission_overlay_test.dart 25:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7                 testWidgets.<fn>
+  
+00:00 +1 -1: permission arrival retains rejection cue with search=false Size(80, 24)
+00:00 +2 -1: permission arrival retains rejection cue with search=true Size(80, 24)
+00:00 +2 -2: permission arrival retains rejection cue with search=true Size(80, 24) [E]
+  Expected: a screen showing 'Esc to reject'
+    Actual: Screen:< ▀▀▀▄   fake
+             ▄▀▀▀   fixture-project
+             ▀▀     ? for shortcuts
+            
+             › /review
+            
+             ⏺ Working
+            
+             ››› Waiting for permission… (0s)
+            
+            ╭──────────────────────────────────────────────────────────────────────────────╮
+            │ Approve notes                                                                │
+            │                                                                              │
+            │ Do you want to proceed?                                                      │
+            │ ❯ 1. Allow once                                                              │
+            │   2. Deny                                                                    │
+            │                                                                              │
+             ──────────────────────────────────────────────────────────────────────────────
+              search prompts: /re
+            
+            ╭──────────────────────────────────────────────────────────────────────────────╮
+            │ › /review                                                                    │
+            ╰──────────────────────────────────────────────────────────────────────────────╯>
+     Which: the screen was:
+             ▀▀▀▄   fake
+             ▄▀▀▀   fixture-project
+             ▀▀     ? for shortcuts
+            
+             › /review
+            
+             ⏺ Working
+            
+             ››› Waiting for permission… (0s)
+            
+            ╭──────────────────────────────────────────────────────────────────────────────╮
+            │ Approve notes                                                                │
+            │                                                                              │
+            │ Do you want to proceed?                                                      │
+            │ ❯ 1. Allow once                                                              │
+            │   2. Deny                                                                    │
+            │                                                                              │
+             ──────────────────────────────────────────────────────────────────────────────
+              search prompts: /re
+            
+            ╭──────────────────────────────────────────────────────────────────────────────╮
+            │ › /review                                                                    │
+            ╰──────────────────────────────────────────────────────────────────────────────╯
+  
+  package:matcher                                        expect
+  test/ui/app/search_permission_overlay_test.dart 25:11  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7                 testWidgets.<fn>
+  
+00:00 +2 -2: Some tests failed.
+
+Failing tests:
+  test/ui/app/search_permission_overlay_test.dart: permission arrival retains rejection cue with search=true Size(120, 40)
+  test/ui/app/search_permission_overlay_test.dart: permission arrival retains rejection cue with search=true Size(80, 24)
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

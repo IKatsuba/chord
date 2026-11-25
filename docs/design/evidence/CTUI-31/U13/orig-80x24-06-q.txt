@@ -1,0 +1,24 @@
+$ bun scripts/dev.ts chord --fake --resume
+EXITED 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

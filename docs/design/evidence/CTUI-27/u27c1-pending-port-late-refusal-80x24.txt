@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › running
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+ › first pending
+
+ ⏺ Working
+
+
+
+
+ ››› Working… (0s · esc to interrupt)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › second unsent                                                              │
+│   draft remains                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

@@ -1,0 +1,25 @@
+Original                                                                         | Port
+ ▀▄     chord v0.71.0                                                            |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               |  ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-root___________/project                                          |  ▄▀▀▀   project
+ ▀▀     ? for shortcuts · /help                                                  |  ▀▀     ? for shortcuts
+                                                                                 |         resumed · yesterday · Inspect the saved notes
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │ | │ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │ | │ fake's earlier sessions in this directory.                                   │
+│                                                                              │ | │                                                                              │
+│ ❯   1.  just now        Earlier local notes 0                                │ | │ ❯   1.  just now        Earlier local notes 0                                │
+│     2.  1 minute ago    Earlier local notes 1                                │ | │     2.  1 minute ago    Earlier local notes 1                                │
+│     3.  2 minutes ago   Earlier local notes 2                                │ | │     3.  2 minutes ago   Earlier local notes 2                                │
+│     4.  3 minutes ago   Earlier local notes 3                                │ | │     4.  3 minutes ago   Earlier local notes 3                                │
+│   ↓ 5.  4 minutes ago   Earlier local notes 4                                │ | │   ↓ 5.  4 minutes ago   Earlier local notes 4                                │
+│     … +19 more                                                               │ | │     … +19 more                                                               │
+│                                                                              │ | │                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │ | │ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |   ? for shortcuts          Fake Large with a 1M context window · medium effort

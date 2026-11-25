@@ -1,0 +1,24 @@
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────╮
+│ Select model                         │
+│ Switch fixture-...for this session.  │
+│                                      │
+│ ❯ 1. Model long l...bel 界👩‍💻  tail ✔ │
+│   2. Short model                     │
+│                                      │
+│ Value long label 界👩‍💻 long label 界… │
+│                                      │
+│ Enter to switch · ←/→ effort · Esc   │
+│ to close                             │
+╰──────────────────────────────────────╯

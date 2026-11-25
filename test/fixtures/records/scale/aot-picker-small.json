@@ -1,0 +1,82 @@
+{
+  "runtimeLabel": "aot-picker",
+  "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700)",
+  "workload": {
+    "choices": 20,
+    "rowLimit": 10,
+    "steadyFrames": 50,
+    "terminalSizes": [
+      "120x40",
+      "80x24"
+    ],
+    "navigationScheduleMs": 16
+  },
+  "limits": "Actual ResumePicker with in-memory summary fixtures. No scan, agent, reopen, disk or PTY timing. One separately labelled run; not substituted for transcript costs. Keys traverse the picker host and acceptance callback.",
+  "pickerFirstLayout120x40": {
+    "wallMs": 2.62,
+    "rssBytes": 24887296,
+    "cumulativePeakRssBytes": 24887296,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 3.7560000000000002,
+      "downDispatchMs": 0.034,
+      "navigationDrawMs": 0.555,
+      "enterDispatchMs": 0.012,
+      "selectedId": "session-18"
+    }
+  },
+  "pickerResize80x24": {
+    "wallMs": 0.779,
+    "rssBytes": 25509888,
+    "cumulativePeakRssBytes": 25509888,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 2.9200000000000017,
+      "downDispatchMs": 0.021,
+      "navigationDrawMs": 0.407,
+      "enterDispatchMs": 0.005,
+      "selectedId": "session-17"
+    }
+  },
+  "pickerResizeBack120x40": {
+    "wallMs": 0.686,
+    "rssBytes": 26279936,
+    "cumulativePeakRssBytes": 26279936,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 3.561,
+      "downDispatchMs": 0.02,
+      "navigationDrawMs": 0.578,
+      "enterDispatchMs": 0.005,
+      "selectedId": "session-16"
+    }
+  },
+  "pickerSteady120x40": {
+    "wallMs": 11.006,
+    "rssBytes": 31801344,
+    "cumulativePeakRssBytes": 31801344,
+    "actualNavigation": {
+      "scheduledToAcceptanceMs": 1.8909999999999982,
+      "downDispatchMs": 0.01,
+      "navigationDrawMs": 0.389,
+      "enterDispatchMs": 0.004,
+      "selectedId": "session-15"
+    }
+  },
+  "steadyFrameCosts": {
+    "samples": 50,
+    "p50Ms": 0.114,
+    "p99Ms": 0.275,
+    "maxMs": 0.275
+  },
+  "steadyCellDiffAndUtf8Costs": {
+    "samples": 50,
+    "p50Ms": 0.104,
+    "p99Ms": 0.137,
+    "maxMs": 0.137
+  },
+  "steadyDiffBytes": 1100,
+  "ownedRootRemoved": true,
+  "ownedHandlesAfterCleanup": {
+    "available": true,
+    "count": 0,
+    "descriptors": []
+  }
+}

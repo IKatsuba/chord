@@ -1,0 +1,41 @@
+Original                                                                                                                 │ Port
+ ▀▄     chord v0.71.0                                                                                                    │  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       │  ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-project                                                                                                  │  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                          │  ▀▀     ? for shortcuts
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+                                                                                                                         │ 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │ │ │ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │ │ │ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │ │ │                                                                                                                      │
+│ ❯   1.  1 hour ago    Inspect the saved notes and retain this descriptive title across wrapped lines.                │ │ │ ❯   1.  1 hour ago    Inspect the saved notes and retain this descriptive title across wrapped lines.                │
+│     2.  3 hours ago   Saved session 2 · 界😀 with a long title and an_unbroken_title_tail                            │ │ │     2.  3 hours ago   Saved session 2 · 界😀 with a long title and an_unbroken_title_tail                            │
+│     3.  5 hours ago   Saved session 4 · 界😀 with a long title and an_unbroken_title_tail                            │ │ │     3.  5 hours ago   Saved session 4 · 界😀 with a long title and an_unbroken_title_tail                            │
+│     4.  7 hours ago   Saved session 6 · 界😀 with a long title and an_unbroken_title_tail                            │ │ │     4.  7 hours ago   Saved session 6 · 界😀 with a long title and an_unbroken_title_tail                            │
+│     5.  9 hours ago   Saved session 8 · 界😀 with a long title and an_unbroken_title_tail                            │ │ │     5.  9 hours ago   Saved session 8 · 界😀 with a long title and an_unbroken_title_tail                            │
+│     6.  11 hours ago  Saved session 10 · 界😀 with a long title and an_unbroken_title_tail                           │ │ │     6.  11 hours ago  Saved session 10 · 界😀 with a long title and an_unbroken_title_tail                           │
+│     7.  13 hours ago  Saved session 12 · 界😀 with a long title and an_unbroken_title_tail                           │ │ │     7.  13 hours ago  Saved session 12 · 界😀 with a long title and an_unbroken_title_tail                           │
+│     8.  15 hours ago  Saved session 14 · 界😀 with a long title and an_unbroken_title_tail                           │ │ │     8.  15 hours ago  Saved session 14 · 界😀 with a long title and an_unbroken_title_tail                           │
+│   ↓ 9.  17 hours ago  Saved session 16 · 界😀 with a long title and an_unbroken_title_tail                           │ │ │   ↓ 9.  17 hours ago  Saved session 16 · 界😀 with a long title and an_unbroken_title_tail                           │
+│     … +6 more                                                                                                        │ │ │     … +6 more                                                                                                        │
+│                                                                                                                      │ │ │                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │ │ │ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         │ 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ │ │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort   │   ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

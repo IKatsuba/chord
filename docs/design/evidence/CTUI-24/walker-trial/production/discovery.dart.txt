@@ -1,0 +1,6 @@
+import 'dart:convert';
+import 'package:chord/files.dart';
+Future<void> main(List<String> args) async {
+  final files = await listFiles(args.single);
+  print(jsonEncode(files..sort()));
+}

@@ -1,0 +1,24 @@
+Text area
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m┌────────────────────────────────────────────────────────────────────────────┐[0m
+ [2m│[0m ine.                                                                       [2m│[0m
+ [2m│[0m Second logical line also wraps across visual rows, so Super Left must retu [2m│[0m
+ [2m│[0m rn to its logical beginning rather than only the current painted row. End. [2m│[0m
+ [2m│[0m [7m [0m                                                                          [2m│[0m
+ [2m└────────────────────────────────────────────────────────────────────────────┘[0m
+[2mline 2, column 149 · rows 3–6 of 6[0m
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+[1menter[0;2m Submit[0m  [1mshift+enter[0;2m Insert newline[0m  [1malt+enter[0;2m Insert newline[0m  [1mctrl+enter…[0m

@@ -1,0 +1,24 @@
+   ⎿  Ran bun dev test tests/parse: 2 failures, both in tests/parse/
+      printer_test.ts.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from @parser · fake
+   ⎿  All 214 parser tests pass now.
+
+ ⏺ Received the message from parser · fake.
+
+ ← from chord
+   ⎿  The person cleared parser's context (fake · fake-small, id 5d4c4ead). It
+      is open with a fresh session and knows nothing of earlier turns; your
+      next message is its first.
+
+ ⏺ Received the message from chord.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake  ◦ idle 12s
+    parser  fake  ◦ idle 12s
+    docs    fake  ● permission 29s  ← new message

@@ -1,0 +1,40 @@
+
+
+
+
+                                                    ██▄
+                                                    ████▄
+                                                    ██████▄
+                                                     ▀██████▄
+                                                     ▄██████▀   chord
+                                                    ██████▀
+                                                    ████▀
+                                                    ██▀
+
+                                          One terminal for every coding agent.
+                            v0.0.1 · /workspace/packages/terminal/interfaces/example/project
+
+                              Select agent
+
+                              ❯   1.  claude
+                                  2.  codex
+                                  3.  pi · not on PATH
+                                  4.  agent-3 · Coding agent 3
+                                  5.  agent-4 · Coding agent 4
+                                  6.  agent-5 · Coding agent 5
+                                  7.  agent-6 · Coding agent 6
+                                  8.  agent-7 · Coding agent 7
+                                  9.  agent-8 · Coding agent 8
+                                  10. agent-9 · Coding agent 9
+                                  11. agent-10 · Coding agent 10
+                                  12. agent-11 · Coding agent 11
+                                  13. agent-12 · Coding agent 12
+                                ↓ 14. agent-13 · Coding agent 13
+                                  … +14 more
+
+                              ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+
+
+
+
+

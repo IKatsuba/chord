@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   …/var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/here
+ ▀▀     ? for shortcuts · /help
+
+ › /resume
+   ⎿  That session is in /private/var/configs/xx/
+      neutral-throwaway-config-place/c/run.capture-01/elsewhere. Quit and open
+      it there with:
+      chord fake --agent-command /var/configs/xx/
+      neutral-throwaway-config-place/c/run.capture-01/fast.sh --no-mcp-servers
+      --resume 631cfc44-ca2a-4044-82da-9e40cd180e3c
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

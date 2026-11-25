@@ -1,0 +1,24 @@
+                                   █▄
+                                   ▀██▄
+                                   ▄██▀  chord
+                                   █▀
+                   v0.71.0 · fake · fixture-project
+
+ ╭────────────────────────────────────────────────────────────────────────────╮
+ │ Resume a session                                                           │
+ │ Pick one of fake's earlier sessions to open.                               │
+ │                                                                            │
+ │ ❯   1.  just now      fixture-other                          │
+ │         Saved session example 1                                            │
+ │     2.  1 hour ago    fixture-project                           │
+ │         Inspect wrapping, history and session resume behavior across a     │
+ │         deliberately long saved session title with extra details 2         │
+ │     3.  2 hours ago   fixture-project                           │
+ │         Saved session example 3                                            │
+ │   ↓ 4.  3 hours ago   fixture-other                          │
+ │     … +14 more                                                             │
+ │                                                                            │
+ │ Enter to resume · Ctrl+a for this directory · Esc to quit                  │
+ ╰────────────────────────────────────────────────────────────────────────────╯
+
+

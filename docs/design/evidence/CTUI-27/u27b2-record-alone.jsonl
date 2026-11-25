@@ -1,0 +1,6 @@
+{"type":"session","version":1,"sessionId":"00000000-0000-0000-0000-000000000027","agent":"fake","cwd":"fixture-project","at":1}
+{"type":"prompt","turnId":"old","prompt":"Earlier request","at":1,"images":0}
+{"type":"update","turnId":"old","update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"Earlier answer."}}}
+{"type":"prompt","turnId":"queued","prompt":"Personal message accepted into this turn","at":2,"images":0,"into":"old"}
+{"type":"result","turnId":"old","result":{"status":"completed","stopReason":"end_turn"}}
+{"type":"self_started","turnId":"own"}

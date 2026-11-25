@@ -1,0 +1,8 @@
+include: package:lints/recommended.yaml
+
+linter:
+  rules:
+    avoid_renaming_method_parameters: false
+    # Reported for lib/ alone: every public name of the framework says what
+    # it is for.
+    public_member_api_docs: true

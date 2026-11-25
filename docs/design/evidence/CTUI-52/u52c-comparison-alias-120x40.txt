@@ -1,0 +1,41 @@
+Original                                                                                                                 │ Port
+ ▀▄     chord v0.71.0                                                                                                    │  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake                                                                                                             │  ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project                                                                                                  │  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                          │  ▀▀     ? for shortcuts
+                                                                                                                         │
+ ⏺ fake did not start: it refused session/new: session/new requires `agentAlias` (alias of a configured [agents.         │  ⏺ fake did not start: it refused session/new: session/new requires `agentAlias` (alias of a configured
+   <alias>] entry)                                                                                                       │    [agents.<alias>] entry)
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+                                                                                                                         │
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ │ ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ │ │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ │ ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                                                                        │   ? for shortcuts

@@ -1,0 +1,41 @@
+Original tools-expanded-120x40.txt | U7 live tools-expanded-120x40.txt
+ ▀▄     chord v0.71.0                                                                                                    |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-tools-120                                                                          |  › tools
+ ▀▀     ? for shortcuts · /help                                                                                          | 
+                                                                                                                         |  ⏺ Read(README.md)
+ › tools                                                                                                                 |    ⎿  # chord
+                                                                                                                         | 
+ ⏺ Read(README.md)                                                                                                       |  ⏺ Read it.
+   ⎿  # chord                                                                                                            | 
+                                                                                                                         | 
+ ⏺ Read it.                                                                                                              | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                                                                    │ | 
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |  ctrl+c or ctrl+d to quit

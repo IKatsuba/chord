@@ -1,0 +1,1 @@
+chord: /tmp/ctui29b-look/cfgB/chord/settings.json: "offeredAgents": no agent named nope, left out

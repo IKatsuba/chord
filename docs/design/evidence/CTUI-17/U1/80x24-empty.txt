@@ -1,0 +1,24 @@
+Text area
+
+A long logical line keeps its gutter aligned while wrapping across the available
+terminal cells. 日本語 and emoji 🙂 stay whole; continuing text crosses the
+narrow viewport and the wider viewport too. A long logical line keeps its gutter
+aligned while wrapping across the available terminal cells. 日本語 and emoji 🙂
+stay whole; continuing text crosses the narrow viewport and the wider viewport
+too. A long logical line keeps its gutter aligned while wrapping across the
+available terminal cells. 日本語 and emoji 🙂 stay whole; continuing text
+crosses the narrow viewport and the wider viewport too.
+
+
+
+
+
+
+
+
+ ┌────────────────────────────────────────────────────────────────────────────┐
+ │ 1  Write a message                                                         │
+ └────────────────────────────────────────────────────────────────────────────┘
+line 1, column 1 · rows 1–1 of 1
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter…

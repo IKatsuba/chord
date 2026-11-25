@@ -1,0 +1,62 @@
+[
+  {
+    "size": "120x40",
+    "phase": "starting",
+    "x_y_visible": "120,39,0"
+  },
+  {
+    "size": "120x40",
+    "phase": "failed",
+    "x_y_visible": "38,0,0"
+  },
+  {
+    "size": "120x40",
+    "phase": "idle",
+    "x_y_visible": "23,4,0"
+  },
+  {
+    "size": "120x40",
+    "phase": "connected",
+    "x_y_visible": "4,37,1"
+  },
+  {
+    "size": "120x40",
+    "phase": "gone",
+    "x_y_visible": "4,37,1"
+  },
+  {
+    "size": "120x40",
+    "phase": "closing",
+    "x_y_visible": "4,37,1"
+  },
+  {
+    "size": "80x24",
+    "phase": "starting",
+    "x_y_visible": "80,23,0"
+  },
+  {
+    "size": "80x24",
+    "phase": "failed",
+    "x_y_visible": "38,0,0"
+  },
+  {
+    "size": "80x24",
+    "phase": "idle",
+    "x_y_visible": "23,4,0"
+  },
+  {
+    "size": "80x24",
+    "phase": "connected",
+    "x_y_visible": "4,21,1"
+  },
+  {
+    "size": "80x24",
+    "phase": "gone",
+    "x_y_visible": "4,21,1"
+  },
+  {
+    "size": "80x24",
+    "phase": "closing",
+    "x_y_visible": "4,21,1"
+  }
+]

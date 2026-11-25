@@ -1,0 +1,50 @@
+[
+  {
+    "case": "dark-120x40",
+    "exit": "1,0",
+    "copied_payloads": [
+      "\\tcopy body\\n\\ntail",
+      "quoted body"
+    ]
+  },
+  {
+    "case": "light-120x40",
+    "exit": "1,0",
+    "copied_payloads": [
+      "\\tcopy body\\n\\ntail",
+      "quoted body"
+    ]
+  },
+  {
+    "case": "plain-120x40",
+    "exit": "1,0",
+    "copied_payloads": [
+      "\\tcopy body\\n\\ntail",
+      "quoted body"
+    ]
+  },
+  {
+    "case": "dark-80x24",
+    "exit": "1,0",
+    "copied_payloads": [
+      "\\tcopy body\\n\\ntail",
+      "quoted body"
+    ]
+  },
+  {
+    "case": "light-80x24",
+    "exit": "1,0",
+    "copied_payloads": [
+      "\\tcopy body\\n\\ntail",
+      "quoted body"
+    ]
+  },
+  {
+    "case": "plain-80x24",
+    "exit": "1,0",
+    "copied_payloads": [
+      "\\tcopy body\\n\\ntail",
+      "quoted body"
+    ]
+  }
+]

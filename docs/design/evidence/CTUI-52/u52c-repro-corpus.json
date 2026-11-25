@@ -1,0 +1,46 @@
+{
+  "records": [
+    {
+      "type": "session",
+      "version": 1,
+      "sessionId": "00000000-0000-0000-0000-000000000002",
+      "agent": "fake",
+      "cwd": "<task-checkout>",
+      "at": 1794963008680
+    },
+    {
+      "type": "prompt",
+      "turnId": "turn-1",
+      "at": 1794963008680,
+      "prompt": "Saved reopen refusal reference",
+      "images": 0
+    }
+  ],
+  "recordFile": "saved-reopen.jsonl",
+  "recordDirectory": "<isolated-XDG-state>/chord/records",
+  "cwd": "task checkout for both launchers; original -C same cwd",
+  "fake": "original tests/fixtures/fake_agent/main.ts through Bun",
+  "fakeEnvironment": {
+    "CHORD_FAKE_REFUSE_LOAD": "1"
+  },
+  "cli": [
+    "fake",
+    "--agent-command",
+    "<bun> <original-fake-script>",
+    "--resume",
+    "00000000-0000-0000-0000-000000000002"
+  ],
+  "initialSize": "80x24",
+  "input": [
+    "literal /resume",
+    "Enter in separate invocation",
+    "wait/capture confirms Resume a session visible"
+  ],
+  "overlapCommandOrder": [
+    "tmux send-keys original Escape",
+    "tmux send-keys port Escape",
+    "tmux resize-window original -x32 -y10",
+    "tmux resize-window port -x32 -y10"
+  ],
+  "settlement": "immediate capture then explicit1s clock sleep and next tool capture; actual elapsed retained in escape-resize-repro.json; no pending capture interpreted as settled"
+}

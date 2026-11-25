@@ -1,0 +1,24 @@
+
+ › agentmentions
+
+ ⏺ Open(parser) · fake
+   ⎿  text
+
+ ⏺ Open(docs) · fake
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯ 1. just now  open now  parser · text                                       │
+│   2. just now  open now  docs · text                                         │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main    fake  ◦ idle 26s
+    parser  fake  ◦ idle 26s  ✓ new reply
+    docs    fake  ◦ idle 26s  ✓ new reply

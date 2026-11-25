@@ -1,0 +1,24 @@
+
+
+
+
+
+
+                                  █▄
+                                  ▀██▄  chord
+                                  ▄██▀
+                                  █▀
+        v0.0.1 · /workspace/packages/terminal/interfaces/example/project
+
+          Select agent
+
+          No agents available
+
+          Esc to cancel
+
+
+
+
+
+
+

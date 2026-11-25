@@ -1,0 +1,105 @@
+{
+ "type": "object",
+ "properties": {
+  "team": {
+   "type": "string",
+   "description": "The team, as list_teams names it"
+  },
+  "job": {
+   "type": "string",
+   "description": "The job, in full: what to do, where, and when to report"
+  },
+  "selection": {
+   "type": "object",
+   "properties": {
+    "reason": {
+     "type": "string",
+     "minLength": 1,
+     "maxLength": 500,
+     "description": "Explain the per-run choice, uncertainties and preservation of all saved role/instruction requirements."
+    },
+    "lead": {
+     "description": "Overrides for the saved lead in this run only.",
+     "type": "object",
+     "properties": {
+      "agent": {
+       "description": "Runtime ID from list_agents; omitted fields inherit saved values only on the same runtime. A runtime change requires destination model and mode, plus effort when the saved role requests it.",
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 128
+      },
+      "model": {
+       "description": "Supported destination model ID; no cross-runtime inheritance.",
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 128
+      },
+      "effort": {
+       "description": "Supported soft effort request, never an exact-effort guarantee.",
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 128
+      },
+      "mode": {
+       "description": "Supported exact destination mode ID; do not infer permission equivalence across runtimes.",
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 128
+      }
+     },
+     "additionalProperties": false
+    },
+    "members": {
+     "description": "Overrides keyed by existing saved member names; preserve every member and instruction.",
+     "type": "object",
+     "propertyNames": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+     },
+     "additionalProperties": {
+      "type": "object",
+      "properties": {
+       "agent": {
+        "description": "Runtime ID from list_agents; omitted fields inherit saved values only on the same runtime. A runtime change requires destination model and mode, plus effort when the saved role requests it.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+       },
+       "model": {
+        "description": "Supported destination model ID; no cross-runtime inheritance.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+       },
+       "effort": {
+        "description": "Supported soft effort request, never an exact-effort guarantee.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+       },
+       "mode": {
+        "description": "Supported exact destination mode ID; do not infer permission equivalence across runtimes.",
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 128
+       }
+      },
+      "additionalProperties": false
+     }
+    }
+   },
+   "required": [
+    "reason"
+   ],
+   "additionalProperties": false,
+   "description": "Optional frozen per-run configuration. Current hard constraints apply to every effective selected role, including inherited roles: omitted constraints add no restriction, an explicit empty allowlist denies. Omitted selection uses the unchanged direct saved path outside selection policy. Preferences are advisory, not permission or payment grants. Unknown fields or member names refuse before launch; no null/reset shorthand."
+  }
+ },
+ "required": [
+  "team",
+  "job"
+ ],
+ "$schema": "http://json-schema.org/draft-07/schema#",
+ "additionalProperties": {}
+}

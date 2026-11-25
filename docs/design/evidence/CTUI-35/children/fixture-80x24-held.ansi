@@ -1,0 +1,24 @@
+ [1m[38;2;108;182;255mparser[0;2m · fake · fake-small · opened by main 498633h ago[0m
+
+ [2m›[0m go on
+
+
+
+
+
+
+
+
+
+
+ [38;2;10;116;112m›[38;2;210;255;228m›[38;2;10;116;112m›[39m [38;2;71;231;165mWorking…[39m [2m(4s · esc to interrupt)[0m
+ [2m←[0m [2mfrom @main · after the running calls: Then the docs, once the tests pass.[0m
+ [2m←[0m [2mfrom @docs · fake: The README names the old flag. …[0m
+
+[38;2;108;182;255m╭─[1m parser[0m[38;2;108;182;255m ─────────────────────────────────────────────────────────────────────╮
+│[39m ›                                                                            [38;2;108;182;255m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m? for shortcuts[0m
+    main  [2m  fake               ◦ idle 0s[0m
+    [1m[38;2;108;182;255mparser[0;2m  fake · fake-small[38;2;71;231;165m  ✻ working 3s[0m
+    [38;2;196;156;255mdocs  [2m[39m  fake               ◦ idle 3s[0m

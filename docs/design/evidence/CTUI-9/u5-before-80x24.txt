@@ -1,0 +1,24 @@
+Text area
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌────────────────────────────────────────────────────────────────────────────┐
+ │ ine.                                                                       │
+ │ Second logical line also wraps across visual rows, so Super Left must retu │
+ │ rn to its logical beginning rather than only the current painted row. End. │
+ │                                                                            │
+ └────────────────────────────────────────────────────────────────────────────┘
+line 2, column 149 · rows 3–6 of 6
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter…

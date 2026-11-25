@@ -1,0 +1,24 @@
+[38;2;71;231;165mSelection area · immutable source log[39m
+[2mKnown coverage: true · overlay: false · held: false · following: true[0m
+[38;5;244m│[39m     [38;2;127;224;232mprint[39m([38;2;242;211;138m"record 10"[39m); [38;5;244m│[39m
+[38;5;244m│[39m                         [38;5;244m│[39m
+[38;5;244m│[39m   end                   [38;5;244m│[39m
+[38;5;244m└─────────────────────────┘[39m
+Record 11 · 日本語 👩‍💻 é
+
+[38;5;244m┌ dart ────────────[39m[copy][38;5;244m─┐[39m
+[38;5;244m│[39m     [38;2;127;224;232mprint[39m([38;2;242;211;138m"record 11"[39m); [38;5;244m│[39m
+[38;5;244m│[39m                         [38;5;244m│[39m
+[38;5;244m│[39m   end                   [38;5;244m│[39m
+[38;5;244m└─────────────────────────┘[39m
+Record 12 · appended while following or held
+
+[38;5;244m┌ dart ────────────[39m[copy][38;5;244m─┐[39m
+[38;5;244m│[39m     [38;2;127;224;232mprint[39m([38;2;242;211;138m"record 12"[39m); [38;5;244m│[39m
+[38;5;244m│[39m                         [38;5;244m│[39m
+[38;5;244m│[39m   end                   [38;5;244m│[39m
+[38;5;244m└─────────────────────────┘[39m
+draft stays focused
+[2mReveal last: true[0m
+[2mC-l clear · C-s snapshot · C-o overlay · C-u coverage · C-t theme · C-r reveal ·
+C-b code · F2 append · S-↑/↓ scroll · PgUp/PgDn · C-q quit[0m

@@ -1,0 +1,41 @@
+Original slow-cancelled                                                                                                  | U4 collapsed
+ ▀▄     chord v0.71.0                                                                                                    | 
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       |  › thought
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-slow-120                                                                           | 
+ ▀▀     ? for shortcuts · /help                                                                                          |  ∴ Thinking…
+                                                                                                                         | 
+ › slow                                                                                                                  |  ⏺ The answer is ready.
+                                                                                                                         | 
+ ⏺ Working......................................................................................................         |    - One item
+   ⎿  Interrupted by user                                                                                                |    - Another item
+                                                                                                                         |    ⎿  Interrupted by user
+                                                                                                                         |    ⎿  Stopped: max_tokens
+                                                                                                                         | 
+                                                                                                                         |  ⏺ A warning from the agent.
+                                                                                                                         | 
+                                                                                                                         |  ⏺ An error from the agent.
+                                                                                                                         | 
+                                                                                                                         |  ⏺ Plan
+                                                                                                                         |    ⎿  ☒ Read the source
+                                                                                                                         |       ☒ Finish the change
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                                                                    │ | 
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | 
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort   | 

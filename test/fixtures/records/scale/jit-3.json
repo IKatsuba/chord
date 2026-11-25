@@ -1,0 +1,710 @@
+{
+  "runtimeLabel": "jit",
+  "dartVersion": "3.13.5 (stable) (Tue Sep 29 01:00:52 2026 -0700)",
+  "workload": {
+    "records": 2000,
+    "irrelevantBytesPerRecord": 65536,
+    "additionalIrrelevantLineBytes": 8388608,
+    "historyTurns": 4000,
+    "stalledUpdates": 10000,
+    "updateTextBytes": 512,
+    "steadyFrames": 50,
+    "terminalSizes": [
+      "120x40",
+      "80x24"
+    ],
+    "frameIntervalMs": 16
+  },
+  "limits": "Headless build/layout/paint and synthetic Actions keys; no PTY/display/write latency. Peak RSS is cumulative. No cross-runtime speed ratio, queue cap, deadline or durability claim.",
+  "handleSnapshots": {
+    "beforeScan": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterScan": {
+      "available": true,
+      "count": 0,
+      "descriptors": []
+    },
+    "afterCancelScan": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    },
+    "afterInstrumentedScanner": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    },
+    "afterPrepare": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    },
+    "afterCancelPrepare": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    },
+    "afterLayout": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    },
+    "afterDrain": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    },
+    "beforeCleanup": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    },
+    "afterCleanup": {
+      "available": true,
+      "count": 7,
+      "descriptors": [
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/records/1008.jsonl"
+        },
+        {
+          "descriptor": "10",
+          "type": "REG",
+          "path": "/records/335.jsonl"
+        },
+        {
+          "descriptor": "12",
+          "type": "REG",
+          "path": "/records/719.jsonl"
+        },
+        {
+          "descriptor": "14",
+          "type": "REG",
+          "path": "/records/370.jsonl"
+        },
+        {
+          "descriptor": "15",
+          "type": "REG",
+          "path": "/records/1725.jsonl"
+        },
+        {
+          "descriptor": "16",
+          "type": "REG",
+          "path": "/records/1760.jsonl"
+        },
+        {
+          "descriptor": "19",
+          "type": "REG",
+          "path": "/records/1309.jsonl"
+        }
+      ]
+    }
+  },
+  "handleSnapshotScope": "One immediate lsof snapshot per named stage; external command adds inter-stage time. Relative owned paths only. No polling or physical-isolate-exit inference.",
+  "measurementControl": {
+    "wallMs": 43.521,
+    "rssBytes": 420528128,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 2,
+      "p50Ms": 3.028,
+      "p99Ms": 3.028,
+      "maxMs": 3.028
+    },
+    "dispatchedInput": {
+      "samples": 2,
+      "p50Ms": 5.369,
+      "p99Ms": 5.369,
+      "maxMs": 5.369
+    },
+    "acceptedKeys": 2
+  },
+  "setup": {
+    "wallMs": 879.643,
+    "scanBytes": 139890199
+  },
+  "scan": {
+    "wallMs": 772.051,
+    "rssBytes": 474497024,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 48,
+      "p50Ms": 0.035,
+      "p99Ms": 2.109,
+      "maxMs": 2.109
+    },
+    "dispatchedInput": {
+      "samples": 48,
+      "p50Ms": 0.082,
+      "p99Ms": 2.644,
+      "maxMs": 2.644
+    },
+    "acceptedKeys": 48
+  },
+  "sort": {
+    "wallMs": 7.838,
+    "rssBytes": 474644480,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "cancelScan": {
+    "wallMs": 4.31,
+    "rssBytes": 474628096,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0,
+    "outcome": "cancelled",
+    "requestToFutureMs": 1.419
+  },
+  "instrumentedScanner": {
+    "wallMs": 683.78,
+    "rssBytes": 465518592,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 42,
+      "p50Ms": 0.0,
+      "p99Ms": 6.987,
+      "maxMs": 6.987
+    },
+    "dispatchedInput": {
+      "samples": 42,
+      "p50Ms": 0.0,
+      "p99Ms": 7.035,
+      "maxMs": 7.035
+    },
+    "acceptedKeys": 42
+  },
+  "streamCounts": {
+    "peak": 8,
+    "retained": 0,
+    "workerLimit": 8,
+    "scope": "instrumented scanner seam; physical production isolate count is unmeasured"
+  },
+  "historyBytes": 1401340,
+  "prepare": {
+    "wallMs": 73.899,
+    "rssBytes": 481607680,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 4,
+      "p50Ms": 0.479,
+      "p99Ms": 4.242,
+      "maxMs": 4.242
+    },
+    "dispatchedInput": {
+      "samples": 4,
+      "p50Ms": 0.578,
+      "p99Ms": 4.332,
+      "maxMs": 4.332
+    },
+    "acceptedKeys": 4
+  },
+  "cancelPrepare": {
+    "wallMs": 2.788,
+    "rssBytes": 485801984,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0,
+    "outcome": "cancelled",
+    "requestToFutureMs": 0.053
+  },
+  "fold": {
+    "wallMs": 9.757,
+    "rssBytes": 498597888,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "replayWork": {
+    "actions": 12000,
+    "entries": 8000,
+    "appended": 8000,
+    "replaced": 0,
+    "copied": 8000
+  },
+  "firstLayout120x40": {
+    "wallMs": 394.813,
+    "rssBytes": 463552512,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 1,
+      "p50Ms": 378.91,
+      "p99Ms": 378.91,
+      "maxMs": 378.91
+    },
+    "dispatchedInput": {
+      "samples": 1,
+      "p50Ms": 379.006,
+      "p99Ms": 379.006,
+      "maxMs": 379.006
+    },
+    "acceptedKeys": 1
+  },
+  "firstCellDiff": {
+    "wallMs": 1.197,
+    "rssBytes": 460423168,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "resize80x24": {
+    "wallMs": 183.241,
+    "rssBytes": 454574080,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 1,
+      "p50Ms": 167.276,
+      "p99Ms": 167.276,
+      "maxMs": 167.276
+    },
+    "dispatchedInput": {
+      "samples": 1,
+      "p50Ms": 167.316,
+      "p99Ms": 167.316,
+      "maxMs": 167.316
+    },
+    "acceptedKeys": 1
+  },
+  "resizeBack120x40": {
+    "wallMs": 148.159,
+    "rssBytes": 453181440,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 1,
+      "p50Ms": 132.188,
+      "p99Ms": 132.188,
+      "maxMs": 132.188
+    },
+    "dispatchedInput": {
+      "samples": 1,
+      "p50Ms": 132.228,
+      "p99Ms": 132.228,
+      "maxMs": 132.228
+    },
+    "acceptedKeys": 1
+  },
+  "steady120x40": {
+    "wallMs": 12.823,
+    "rssBytes": 453230592,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "dispatchedInput": {
+      "samples": 0,
+      "p50Ms": null,
+      "p99Ms": null,
+      "maxMs": null
+    },
+    "acceptedKeys": 0
+  },
+  "steadyFrameCosts": {
+    "samples": 50,
+    "p50Ms": 0.132,
+    "p99Ms": 0.369,
+    "maxMs": 0.369
+  },
+  "steadyCellDiffAndUtf8Costs": {
+    "samples": 50,
+    "p50Ms": 0.053,
+    "p99Ms": 0.404,
+    "maxMs": 0.404
+  },
+  "steadyDiffBytes": 1100,
+  "stalledFlood": {
+    "wallMs": 35.148,
+    "rssBytes": 457965568,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 2,
+      "p50Ms": 0.089,
+      "p99Ms": 0.089,
+      "maxMs": 0.089
+    },
+    "dispatchedInput": {
+      "samples": 2,
+      "p50Ms": 0.202,
+      "p99Ms": 0.202,
+      "maxMs": 0.202
+    },
+    "acceptedKeys": 2
+  },
+  "stalledAppendScope": "Injected append gate models stalled IO; drain is serialization/queue work, not a filesystem flush/durability measurement",
+  "queuedByteScope": "Serialized pending UTF-8 bytes, excluding active append and held opening",
+  "queuedByteHighWater": 6448890,
+  "queuedBytesBeforeRelease": 6448890,
+  "drain": {
+    "wallMs": 18.936,
+    "rssBytes": 476741632,
+    "cumulativePeakRssBytes": 678920192,
+    "heartbeat": {
+      "samples": 1,
+      "p50Ms": 2.997,
+      "p99Ms": 2.997,
+      "maxMs": 2.997
+    },
+    "dispatchedInput": {
+      "samples": 1,
+      "p50Ms": 3.092,
+      "p99Ms": 3.092,
+      "maxMs": 3.092
+    },
+    "acceptedKeys": 1
+  },
+  "recordingAfterDrain": {
+    "queuedBytes": 0,
+    "heldBytes": 0,
+    "appendCalls": 2,
+    "appendedBytes": 6449139
+  },
+  "originalBunReference": {
+    "runtime": "Bun 1.4.4",
+    "limits": "Original scan and parse/projection only; no framework fold/layout or synthetic Actions keys. Different runtime/features; no speed ratio. Original scanner has no cancellation input.",
+    "scan": {
+      "wallMs": 185.45675000000003,
+      "count": 2000,
+      "rssBytes": 144507720,
+      "heartbeat": {
+        "samples": 11,
+        "maxMs": 5.037833000000006,
+        "p99Ms": 5.037833000000006
+      }
+    },
+    "prepare": {
+      "wallMs": 9.957875000000001,
+      "count": 12000,
+      "rssBytes": 157631328,
+      "heartbeat": {
+        "samples": 0,
+        "maxMs": null,
+        "p99Ms": null
+      }
+    }
+  },
+  "operationFutures": {
+    "peak": 1,
+    "pending": 0
+  },
+  "physicalIsolateCount": null,
+  "physicalIsolateExitLatencyMs": null,
+  "cancellationLatencyScope": "request to Future settlement, not physical isolate exit",
+  "ownedHandlesBefore": 0,
+  "ownedHandlesAfter": 7,
+  "ownedRootRemoved": true,
+  "ownedHandlesAfterCleanup": 7
+}

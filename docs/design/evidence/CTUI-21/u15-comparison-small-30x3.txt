@@ -1,0 +1,4 @@
+ORIGINAL                       | PORT
+  Error: window failed         |   Bad state: window failed
+                               | 
+  any key to quit · chord pri… |   any key to quit · chord pri…

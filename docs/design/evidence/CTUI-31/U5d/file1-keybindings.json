@@ -1,0 +1,1 @@
+{"bindings":[{"context":"Chat","bindings":{"?":null,"!":"help:toggle","enter":null,"ctrl+s":"chat:submit"}}]}

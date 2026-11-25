@@ -1,0 +1,41 @@
+Original markdown-home-120x40.txt | U7 live markdown-home-120x40.txt
+ ▀▄     chord v0.71.0                                                                                                    |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-markdown-120                                                                       |  › markdown
+ ▀▀     ? for shortcuts · /help                                                                                          | 
+                                                                                                                         |  ⏺ Reading the session layer
+ › markdown                                                                                                              | 
+                                                                                                                         |    The session layer wraps the SDK so the interface never touches a process. Start with src/session/session.ts, then
+ ⏺ Reading the session layer                                                                                             |    see the ACP spec (https://agentclientprotocol.com) for the wire format.
+                                                                                                                         | 
+   The session layer wraps the SDK so the interface never touches a process. Start with src/session/session.ts, then     |    What it does
+   see the ACP spec (https://agentclientprotocol.com) for the wire format.                                               | 
+                                                                                                                         |    - opens one persistent session per chord session
+   What it does                                                                                                          |    - starts turns with startTurn and cancels them
+                                                                                                                         |      1. a cancel stops the turn at once
+   - opens one persistent session per chord session                                                                      |      2. the agent is told with session/cancel
+   - starts turns with startTurn and cancels them                                                                        |    - closes the agent and waits until its exit is seen
+     1. a cancel stops the turn at once                                                                                  | 
+     2. the agent is told with session/cancel                                                                            |    │ A closed agent counts as gone only once its exit is seen:
+   - closes the agent and waits until its exit is seen                                                                   |    │ ┌ ts ────────────────────────────────────────────────────────┐
+                                                                                                                         |    │ │   await session.close(); // resolves once the exit is seen │
+   │ A closed agent counts as gone only once its exit is seen:                                                           |    │ └────────────────────────────────────────────────────────────┘
+   │ ┌ ts ──────────────────────────────────────────────────────┐                                                        | 
+   │ │ await session.close(); // resolves once the exit is seen │                                                        |    ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │ └──────────────────────────────────────────────────────────┘                                                        |    │ Module        │ Holds                                  │ Tested by          │
+                                                                                                                         |    ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐                                       |    │ session.ts    │ opening, prompting and closing a       │ session_test.ts    │
+   │ Module        │ Holds                                  │ Tested by          │                                       |    │               │ session                                │                    │
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤                                       |    │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │                                       |    │               │ gone                                   │                    │
+   │               │ a session                              │                    │                                       |    │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │                                       |    │               │ drawn                                  │                    │
+   │               │ gone                                   │                    │                                       |    └───────────────┴────────────────────────────────────────┴────────────────────┘
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │                                       | 
+   │               │ drawn                                  │                    │                                       |    ┌ ts ────────────────────────────────────────────────────────────┐
+ ── ↓ 23 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────  |    │   const session = await openSession({ agent: 'claude', cwd }); │
+                                                                                                                         |    │   const turn = session.prompt('hello');                        │
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ |    │   await turn.result;                                           │
+│ ›                                                                                                                    │ |  ── ↓ 17 lines below · end to jump to the bottom ──────────────────────────────────────────────────────────────────────
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |  ctrl+c or ctrl+d to quit

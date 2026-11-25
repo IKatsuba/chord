@@ -1,0 +1,40 @@
+ chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ›
+ ctrl+c or ctrl+d to quit

@@ -1,0 +1,14 @@
+   [1mchord[0;2m v0.0.1 · …/example/project[0m
+
+  Select agent
+
+  [1m❯[0m   [1m1. [0m [1mclaude[0m
+  [1m [0m   2.  codex
+  [1m [0m   3.  pi[2m · not on PATH[0m
+  [1m [0m   4.  agent-3[2m · Coding agent 3[0m
+  [1m [0m [2m↓[0m 5.  agent-4[2m · Coding agent 4[0m
+  [2m    … +23 more[0m
+
+  [2m↑↓ or j/k to move · Enter or 1–9 to[0m
+  [2mselect · Esc to cancel[0m
+

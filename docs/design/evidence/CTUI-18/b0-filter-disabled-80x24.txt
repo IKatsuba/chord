@@ -1,0 +1,24 @@
+Choices disabled
+Filter: 12
+  1. Choice 12
+Answer: None
+ctrl+t Toggle choices  ctrl+g Focus choices  ctrl+c Quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

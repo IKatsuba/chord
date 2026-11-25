@@ -1,0 +1,24 @@
+ [2m›[0m markdown
+
+ ⏺ [1;4mReading the session layer[0m
+
+   The [1msession layer[0m wraps [3mthe SDK[0m so the interface never touches a process.
+   Start with src/session/session.ts, then see the [4mACP spec[0;2m (https://[0m
+   [2magentclientprotocol.com)[0m for the wire format.
+
+   [1mWhat it does[0m
+
+   [2m- [0mopens one persistent session per chord session
+   [2m- [0mstarts turns with startTurn and cancels them
+   [2m  1. [0ma cancel stops the turn at once
+   [2m  2. [0mthe agent is told with session/cancel
+   [2m- [0mcloses the agent and waits until its exit is seen
+
+   [2m│ [3mA [7mclosed agent[0;2;3m counts as gone only once its exit is seen:[0m
+   [2m│ ┌ ts ────────────────────────────────────────────────────────┐[0m
+ [2m── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  sent 12 chars to the terminal's clipboard

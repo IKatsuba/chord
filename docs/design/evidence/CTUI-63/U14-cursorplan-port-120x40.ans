@@ -1,0 +1,40 @@
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m cursorplan
+
+ [2m⏺[0m [1mPlan[0m(Route updates by session)
+   [2m⎿[0m  [2mWaiting…[0m
+   [2m [0m  Split the session routing out of the connection.
+
+      [1;4mRoute updates by session[0m
+
+      [2m1. [0mRead src/acp/connection.ts.
+      [2m2. [0mMove the routing into src/session/session.ts.
+      [2m3. [0mRun the tests.
+
+      Move
+      ◐ Move the routing
+      ☐ Run the tests
+
+      Todos
+      ☒ Read the connection
+      ◐ Move the routing
+      ☐ Run the tests
+
+ [38;2;10;116;112m››› [38;2;71;231;165mWaiting for your answer to the plan… [2m(6s)[0m
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ [1m[38;2;177;185;249mApprove Plan[0m                                                                                                         [38;2;177;185;249m│
+│                                                                                                                      [38;2;177;185;249m│
+│ fake has a plan. Do you want to proceed?                                                                             [38;2;177;185;249m│
+│ [38;2;177;185;249m❯ 1. Yes, accept the plan                                                                                            [38;2;177;185;249m│
+│ [38;2;177;185;249m  2. No, keep planning                                                                                               [38;2;177;185;249m│
+│                                                                                                                      [38;2;177;185;249m│
+│ [38;2;177;185;249m  Note  [2mTell fake what to change, sent with 2 (optional)[0m                                                             [38;2;177;185;249m│
+│                                                                                                                      [38;2;177;185;249m│
+│ [2mEnter to pick · 1–2 · ↑↓ to move · Esc to keep planning[0m                                                              [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                                  [2mFake Large with a 1M context window · medium effort[0m

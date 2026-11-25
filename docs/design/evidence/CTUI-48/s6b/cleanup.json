@@ -1,0 +1,12 @@
+{
+  "owned_tmux_server": "absent",
+  "owned_fixture_fake_processes": [],
+  "main_port_panes": "18 exited 0",
+  "main_original_panes": "3 exited 0",
+  "independent_pick_probe": "exited 0",
+  "auxiliary_phase_reruns": "exited 0",
+  "original_isolated_config_state": "removed after saving journals",
+  "fixed_port_journal": "removed after saving per-case journals",
+  "private_path_violations": [],
+  "host_clipboard": "never constructed or called"
+}

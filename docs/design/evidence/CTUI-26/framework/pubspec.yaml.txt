@@ -1,0 +1,7 @@
+name: ctui26_framework_packages
+environment:
+  sdk: ^3.12.0
+dependencies:
+  uuid: 4.6.0
+  xdg_directories: 1.1.0
+  path: 1.9.1

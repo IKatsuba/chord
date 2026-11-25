@@ -1,0 +1,6 @@
+00:00 +0: loading test/ui/app/selection_fake_test.dart
+00:00 +0: selection and code copying through the original fake markdowncode nested, wrapped, blank and range payloads stay exact Size(120, 40)
+00:00 +1: selection and code copying through the original fake streaming open fence never enters current pick until closed Size(120, 40)
+00:02 +2: selection and code copying through the original fake markdowncode nested, wrapped, blank and range payloads stay exact Size(80, 24)
+00:03 +3: selection and code copying through the original fake streaming open fence never enters current pick until closed Size(80, 24)
+00:04 +4: All tests passed!

@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   …/var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/here
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ /var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/chord/
+   settings.json: "mcpServers.bad.command": invalid input: expected string,
+   received number; the server is ignored
+
+ ⏺ 1 MCP server was not passed to fake, which takes them over stdio and SSE
+   only: docs (http). /mcp lists it.
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

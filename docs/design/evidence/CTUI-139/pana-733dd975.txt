@@ -1,0 +1,194 @@
+2026-11-23 01:04:21.881702 INFO: Running `dart --version`...
+2026-11-23 01:04:21.977972 WARNING: Unable to detect Flutter version.
+                                    Exception: Flutter rootPath is missing
+2026-11-23 01:04:22.208058 INFO: Running `dart pub get --no-example`...
+2026-11-23 01:04:23.646055 INFO: Running `dart pub outdated --json --up-to-date --no-dev-dependencies --no-dependency-overrides`...
+2026-11-23 01:04:23.924875 INFO: Analyzing package...
+2026-11-23 01:04:23.926645 INFO: Running `dart pub get --no-example`...
+2026-11-23 01:04:25.016161 INFO: Running `dart analyze --format machine --no-plugins .`...
+2026-11-23 01:04:31.694471 INFO: Running `git init`...
+2026-11-23 01:04:32.102083 INFO: Running `git remote add origin https://github.com/IKatsuba/chord`...
+2026-11-23 01:04:32.121615 INFO: Running `git remote show origin`...
+2026-11-23 01:04:32.718689 INFO: Running `git fetch --depth 1 --no-recurse-submodules origin main`...
+2026-11-23 01:05:51.111992 INFO: Running `git ls-tree -r -z --name-only --full-tree origin/main`...
+2026-11-23 01:05:52.213717 INFO: Running `dart pub get --no-example`...
+2026-11-23 01:05:52.482923 INFO: Running `dart format --output=none --set-exit-if-changed <tmp>/pana_DRpXLK/.`...
+2026-11-23 01:05:53.297717 INFO: Analyzing pub downgrade...
+2026-11-23 01:05:53.299517 INFO: Running `dart pub downgrade --no-example`...
+2026-11-23 01:05:54.869376 INFO: Running `dart analyze --format machine --no-plugins .`...
+2026-11-23 01:05:56.549530 INFO: [pub-downgrade-success]
+2026-11-23 01:05:56.552425 INFO: Running `dart pub upgrade --no-example`...
+2026-11-23 01:05:57.039684 INFO: Running `dart pub global activate dartdoc`...
+2026-11-23 01:06:00.358021 INFO: Running `dart pub global run dartdoc --output <tmp>/pana.1795392261869.7QUTBy/doc --sanitize-html --max-file-count 10000000 --max-total-size 2147483648 --no-validate-links`...
+2026-11-23 01:06:12.879700 INFO: `dartdoc` completed:
+                                 Documenting chord_tui...
+                                 Discovering libraries...
+                                 Linking elements...
+                                 Precaching local docs for 180781 elements...
+                                 Initialized dartdoc with 684 libraries
+                                 Generating docs for library chord_tui.dart from package:chord_tui/chord_tui.dart...
+                                 Generating docs for library testing.dart from package:chord_tui/testing.dart...
+                                 Documented 2 public libraries in 12.1 seconds
+                                 Success! Docs generated into <tmp>/pana.1795392261869.7QUTBy/doc
+                                 Found 0 warnings and 0 errors.
+
+## ✗ Follow Dart file conventions (20 / 30)
+### [x] 0/10 points: Provide a valid `pubspec.yaml`
+
+<details>
+<summary>
+Failed to verify repository URL.
+</summary>
+
+*Could not find any `pubspec.yaml` in the repository.*
+
+Please provide a valid [`repository`](https://dart.dev/tools/pub/pubspec#repository) URL in `pubspec.yaml`, such that:
+
+ * `repository` can be cloned,
+ * a clone of the repository contains a `pubspec.yaml`, which:,
+    * contains `name: chord_tui`,
+    * contains a `version` property, and,
+    * does not contain a `publish_to` property.
+</details>
+
+<details>
+<summary>
+Repository URL doesn't exist.
+</summary>
+
+At the time of the analysis `https://github.com/IKatsuba/chord/tree/main/packages/chord_tui` was unreachable. Make sure that the website is reachable via [`HEAD`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/HEAD) requests.
+</details>
+
+### [*] 5/5 points: Provide a valid `README.md`
+
+### [*] 5/5 points: Provide a valid `CHANGELOG.md`
+
+### [*] 10/10 points: Use an OSI-approved license
+
+Detected license: `MIT`.
+
+
+## ✓ Provide documentation (20 / 20)
+### [*] 10/10 points: 20% or more of the public API has dartdoc comments
+
+1901 out of 1901 API elements (100.0 %) have documentation comments.
+
+### [*] 10/10 points: Package has an example
+
+
+## ✓ Platform support (20 / 20)
+### [*] 20/20 points: Supports 2 of 6 possible platforms (iOS, Android, Web, Windows, **macOS**, **Linux**)
+
+* ✓ Linux
+
+* ✓ macOS
+
+
+These platforms are not supported:
+
+<details>
+<summary>
+Package does not support platform `Android`.
+</summary>
+
+Because:
+* `package:chord_tui/chord_tui.dart` that declares support for platforms: `Linux`, `macOS`.
+</details>
+
+<details>
+<summary>
+Package does not support platform `iOS`.
+</summary>
+
+Because:
+* `package:chord_tui/chord_tui.dart` that declares support for platforms: `Linux`, `macOS`.
+</details>
+
+<details>
+<summary>
+Package does not support platform `Windows`.
+</summary>
+
+Because:
+* `package:chord_tui/chord_tui.dart` that declares support for platforms: `Linux`, `macOS`.
+</details>
+
+<details>
+<summary>
+Package does not support platform `Web`.
+</summary>
+
+Because:
+* `package:chord_tui/chord_tui.dart` that declares support for platforms: `Linux`, `macOS`.
+</details>
+
+
+## ✓ Pass static analysis (50 / 50)
+### [*] 50/50 points: code has no errors, warnings, lints, or formatting issues
+
+
+## ✓ Support up-to-date dependencies (40 / 40)
+### [*] 10/10 points: All of the package dependencies are supported in the latest version
+
+|Package|Constraint|Compatible|Latest|Notes|
+|:-|:-|:-|:-|:-|
+|[`characters`]|`^1.4.1`|1.4.1|1.4.1||
+|[`dartdiff`]|`^1.0.0`|1.0.0|1.0.0||
+|[`ffi`]|`^2.2.0`|2.2.0|2.2.0||
+|[`highlighting`]|`>=0.9.0+11.8.0 <0.9.1`|0.9.0+11.8.0|0.9.0+11.8.0||
+|[`markdown`]|`^7.3.1`|7.3.1|7.3.1||
+|[`matcher`]|`^0.12.20`|0.12.20|0.12.20||
+|[`meta`]|`^1.19.0`|1.19.0|1.19.0||
+|[`test_api`]|`^0.7.15`|0.7.15|0.7.15||
+|[`unorm_dart`]|`^0.3.3`|0.3.3|0.3.3||
+
+<details><summary>Transitive dependencies</summary>
+
+|Package|Constraint|Compatible|Latest|Notes|
+|:-|:-|:-|:-|:-|
+|[`args`]|-|2.7.0|2.7.0||
+|[`async`]|-|2.13.1|2.13.1||
+|[`boolean_selector`]|-|2.1.2|2.1.2||
+|[`collection`]|-|1.19.1|1.19.1||
+|[`equatable`]|-|2.1.0|3.0.0||
+|[`path`]|-|1.9.1|1.9.1||
+|[`source_span`]|-|1.10.2|1.10.2||
+|[`stack_trace`]|-|1.12.2|1.12.2||
+|[`stream_channel`]|-|2.1.4|2.1.4||
+|[`string_scanner`]|-|1.4.1|1.4.1||
+|[`term_glyph`]|-|1.2.2|1.2.2||
+|[`tuple`]|-|2.0.2|2.0.2||
+</details>
+
+To reproduce run `dart pub outdated --no-dev-dependencies --up-to-date --no-dependency-overrides`.
+
+[`characters`]: https://pub.dev/packages/characters
+[`dartdiff`]: https://pub.dev/packages/dartdiff
+[`ffi`]: https://pub.dev/packages/ffi
+[`highlighting`]: https://pub.dev/packages/highlighting
+[`markdown`]: https://pub.dev/packages/markdown
+[`matcher`]: https://pub.dev/packages/matcher
+[`meta`]: https://pub.dev/packages/meta
+[`test_api`]: https://pub.dev/packages/test_api
+[`unorm_dart`]: https://pub.dev/packages/unorm_dart
+[`args`]: https://pub.dev/packages/args
+[`async`]: https://pub.dev/packages/async
+[`boolean_selector`]: https://pub.dev/packages/boolean_selector
+[`collection`]: https://pub.dev/packages/collection
+[`equatable`]: https://pub.dev/packages/equatable
+[`path`]: https://pub.dev/packages/path
+[`source_span`]: https://pub.dev/packages/source_span
+[`stack_trace`]: https://pub.dev/packages/stack_trace
+[`stream_channel`]: https://pub.dev/packages/stream_channel
+[`string_scanner`]: https://pub.dev/packages/string_scanner
+[`term_glyph`]: https://pub.dev/packages/term_glyph
+[`tuple`]: https://pub.dev/packages/tuple
+
+### [*] 10/10 points: Package supports latest stable Dart and Flutter SDKs
+
+### [*] 20/20 points: Compatible with dependency constraint lower bounds
+
+`pub downgrade` does not expose any static analysis error.
+
+
+Points: 150/160.

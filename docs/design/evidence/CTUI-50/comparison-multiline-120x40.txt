@@ -1,0 +1,41 @@
+Original                                                                                                                 | Port
+ █▄     chord v0.71.0                                                                                                    |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                                                                       |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.designer-ctui50                                                                                    |  ▄██▀   <working directory>
+ █▀     ? for shortcuts · /help                                                                                          |  █▀     ? for shortcuts
+                                                                                                                         | 
+ › /sta/model                                                                                                            |  › /sta/model
+                                                                                                                         | 
+ ⏺ Hello, world. This reply came in chunks.                                                                              |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › line 1                                                                                                             │ | │ › line 1                                                                                                             │
+│   line 2                                                                                                             │ | │   line 2                                                                                                             │
+│   line 3                                                                                                             │ | │   line 3                                                                                                             │
+│   line 4                                                                                                             │ | │   line 4                                                                                                             │
+│   line 5                                                                                                             │ | │   line 5                                                                                                             │
+│   line 6                                                                                                             │ | │   line 6                                                                                                             │
+│   line 7                                                                                                             │ | │   line 7                                                                                                             │
+│   line 8                                                                                                             │ | │   line 8                                                                                                             │
+│   line 9                                                                                                             │ | │   line 9                                                                                                             │
+│   line 10 界é🙂                                                                                                      │  | │   line 10 界é🙂                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                 Fake Large with a 1M context window · medium effort · 1% context used   |                                                  Fake Large with a 1M context window · medium effort · 1% context used

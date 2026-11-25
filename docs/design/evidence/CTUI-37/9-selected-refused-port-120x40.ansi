@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mcodex · Fake Large with a 1M context window[0m
+ ▄██▀   [2m~/project[0m
+ █▀     [2m? for shortcuts · /help[0m
+
+ [2m›[0m selectedteam
+
+ ⏺ [1mResources[0m
+   [2m⎿[0m  [2mRead: 17:17:28 UTC · advisory snapshot[0m
+      [2mclaude · 5h: 12.345% used · reset 18:17 UTC · models unknown[0m
+      [2mcodex · 5h: 12.345% used · reset 18:17 UTC · models unknown[0m
+
+ ⏺ [1mTeam[0m(fixture)
+   [2m⎿[0m  Team launch 130128bd was refused before its first job; the attempted lead is closing.
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: refused · session runtime claude · model fake-small · effort medium · mode unknown
+      lead: lead.mode: the runtime did not confirm the requested mode plan.
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      ctrl+o for saved definition and changes
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

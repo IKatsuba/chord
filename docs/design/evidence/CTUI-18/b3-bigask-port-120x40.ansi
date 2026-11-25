@@ -1,0 +1,40 @@
+ [1mchord[0;2m v0.0.1 · fake · <repository>[0m
+   [2m⎿[0m  [2mWaiting…[0m
+
+ [2m››[0m› Waiting for permission… [2m(58s)[0m
+
+[1m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mmcp__files__write_file[0m                                                                                               [1m│
+│[0m [2m── ↑ 4 lines above · pageup to scroll ──────────────────────────────────────────────────────────────────────────────[0m [1m│
+│[0m   screen and lets the person scroll through the whole argument before answering, at any window size, including 80 by [1m│
+│[0m   24.                                                                                                                [1m│
+│[0m                                                                                                                      [1m│
+│[0m   ## Changes                                                                                                         [1m│
+│[0m                                                                                                                      [1m│
+│[0m   - Change 1: the prompt keeps its draft                                                                             [1m│
+│[0m   - Change 2: a turn can be resumed                                                                                  [1m│
+│[0m   - Change 3: headlines wrap                                                                                         [1m│
+│[0m   - Change 4: the box scrolls                                                                                        [1m│
+│[0m   - Change 5: tests run in parallel                                                                                  [1m│
+│[0m   - Change 6: the prompt keeps its draft                                                                             [1m│
+│[0m   - Change 7: a turn can be resumed                                                                                  [1m│
+│[0m   - Change 8: headlines wrap                                                                                         [1m│
+│[0m   - Change 9: the box scrolls                                                                                        [1m│
+│[0m   - Change 10: tests run in parallel                                                                                 [1m│
+│[0m   - Change 11: the prompt keeps its draft                                                                            [1m│
+│[0m   - Change 12: a turn can be resumed                                                                                 [1m│
+│[0m   - Change 13: headlines wrap                                                                                        [1m│
+│[0m [2m── ↓ 19 lines below · pagedown to scroll ───────────────────────────────────────────────────────────────────────────[0m [1m│
+│[0m                                                                                                                      [1m│
+│[0m Do you want to proceed?                                                                                              [1m│
+│[0m [1m❯[0m [1m1. Yes[0m                                                                                                             [1m│
+│[0m [1m [0m 2. Yes, and don't ask again for files - write_file commands                                                        [1m│
+│[0m [1m [0m 3. No, and tell Claude what to do differently                                                                      [1m│
+│[0m                                                                                                                      [1m│
+│[0m [2mEsc to reject[0m                                                                                                        [1m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m                                                 [2mFake Large with a 1M context window · medium effort · 1% context used[0m

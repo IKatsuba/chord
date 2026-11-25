@@ -1,0 +1,24 @@
+[38;2;71;231;165m Diff  untinted[39m
+
+[38;2;71;231;165m edit[39m
+[2msrc/greeting.ts[0m
+[2m1[0m [38;2;134;224;138m+[39m [38;2;134;224;138m/** Greets someone by name. */[39m
+[2m2[0m   [38;2;215;166;255mexport[39m [38;2;215;166;255mfunction[39m [38;2;140;200;255mgreet[39m(name: [38;2;127;224;232mstring[39m): [38;2;127;224;232mstring[39m {
+[2m2[0m [38;2;255;142;142m-[39m [38;2;255;142;142m  return "hello " + name;[39m
+[2m3[0m [38;2;134;224;138m+[39m [38;2;134;224;138m  return `hello, ${name}`;[39m
+[2m4[0m   }
+
+[38;2;71;231;165m long line, two hunks, a tab[39m
+[2msrc/long.ts[0m
+ [2m9[0m   [38;2;140;200;255mstep9[39m();
+[2m10[0m   [38;2;140;200;255mstep10[39m();
+[2m11[0m   [38;2;140;200;255mstep11[39m();
+[2m12[0m [38;2;255;142;142m-[39m [38;2;255;142;142m  return 'A message about terminal cells, 日本語, and preserving every [39m
+     [38;2;255;142;142mgrapheme while the source line wraps';[39m
+[2m12[0m [38;2;134;224;138m+[39m [38;2;134;224;138m  return 'A shorter message';[39m
+[2m13[0m   [38;2;140;200;255mmore13[39m();
+[2m14[0m   [38;2;140;200;255mmore14[39m();
+[2m15[0m   [38;2;140;200;255mmore15[39m();
+   [2m…[0m
+[2m45[0m   [38;2;140;200;255mmore45[39m();
+[1mctrl+t[0;2m Theme[0m  [1mctrl+q[0;2m Quit[0m  [1mpageup[0;2m Scroll up a page[0m  [1mpagedown[0;2m Scroll down a page…

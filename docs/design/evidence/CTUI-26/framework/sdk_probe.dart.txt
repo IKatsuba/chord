@@ -1,0 +1,21 @@
+import 'dart:convert';
+import 'dart:io';
+Future<void> main() async {
+ final dir = await Directory.systemTemp.createTemp('ctui26-sdk-');
+ try {
+  final file = File('${dir.path}/record.jsonl');
+  final values = <Map<String, Object?>>[
+   {'type':'session','version':1,'sessionId':'probe','agent':'fake','cwd':'.','at':0},
+   {'type':'prompt','turnId':'one','at':1,'prompt':'hello 世界','images':0},
+  ];
+  for (final value in values) {
+   await file.writeAsString('${jsonEncode(value)}\n', mode: FileMode.append, flush: false);
+  }
+  final lines = await file.openRead().transform(utf8.decoder).transform(const LineSplitter()).toList();
+  if (lines.length != 2 || (jsonDecode(lines.last) as Map)['prompt'] != 'hello 世界') throw StateError('roundtrip');
+  final handle = await file.open(mode: FileMode.append);
+  await handle.flush();
+  await handle.close();
+  print('PASS SDK JSONL append/UTF-8 stream/flush/close');
+ } finally { await dir.delete(recursive:true); }
+}

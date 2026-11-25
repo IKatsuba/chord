@@ -1,0 +1,73 @@
+{
+  "runtime": "jit",
+  "versions": {
+    "cancellation_token": "2.0.1",
+    "worker_manager": "7.2.9"
+  },
+  "scope": "Direct public package cancellation APIs. Worker owns an open file and a deterministic test-only processing gate. Cleanup acknowledgments are independent SDK SendPort test markers. No timing delay or polling establishes a pass. Exit notifications are observed callback order, not physical exit timing.",
+  "cancellationTokenDirect": {
+    "result": "cancelled",
+    "cleanupAckAtFuture": false,
+    "handlesAfterExitNotification": {
+      "count": 1,
+      "descriptors": [
+        {
+          "descriptor": "8",
+          "type": "REG",
+          "path": "/current.data"
+        }
+      ]
+    }
+  },
+  "workerManagerDirectGentle": {
+    "result": "cancelled",
+    "cleanupAckAtFuture": false,
+    "workerObservedCanceled": true,
+    "handlesBeforeCleanupAck": {
+      "count": 2,
+      "descriptors": [
+        {
+          "descriptor": "8",
+          "type": "REG",
+          "path": "/current.data"
+        },
+        {
+          "descriptor": "9",
+          "type": "REG",
+          "path": "/gentle.data"
+        }
+      ]
+    },
+    "handlesAfterCleanupAck": {
+      "count": 1,
+      "descriptors": [
+        {
+          "descriptor": "8",
+          "type": "REG",
+          "path": "/current.data"
+        }
+      ]
+    }
+  },
+  "eventOrder": [
+    "current-started",
+    "current-public-future-canceled",
+    "current-exit-notification",
+    "gentle-started",
+    "gentle-public-future-canceled",
+    "gentle-cancel-state",
+    "gentle-cleanup-ack"
+  ],
+  "verdict": "Both public cancellation futures settle before their worker cleanup acknowledgment. Current owned handles after an exit notification are reported separately; notification order is not physical exit timing.",
+  "ownedRootRemoved": true,
+  "handlesBeforeProbeProcessExit": {
+    "count": 1,
+    "descriptors": [
+      {
+        "descriptor": "8",
+        "type": "REG",
+        "path": "/current.data"
+      }
+    ]
+  }
+}

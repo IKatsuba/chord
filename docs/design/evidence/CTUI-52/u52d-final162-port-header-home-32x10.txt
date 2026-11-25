@@ -1,0 +1,10 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fak...ext window
+ ▄▀▀▀   …/CTUI-27
+ ▀▀     ? for shortcuts
+ ── ↓ 6 lines below ───────────
+
+╭──────────────────────────────╮
+│ ›                            │
+╰──────────────────────────────╯
+  ? for shortcuts  Fake Large…

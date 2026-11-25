@@ -1,0 +1,7 @@
+{
+  "allFinalPanesDeadWithExit0": true,
+  "ownedFixtureOrQaFakeProcesses": 0,
+  "ownedTmuxServerRemoved": true,
+  "ownedQaDirectoriesAndStateRemoved": true,
+  "pairedPromptBoxesEqualAtBothSizes": true
+}

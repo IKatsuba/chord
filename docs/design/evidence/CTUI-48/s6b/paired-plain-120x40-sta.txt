@@ -1,0 +1,41 @@
+ORIGINAL UI + RECORDING STUB                                                                                             | PORT FIXTURE + RECORDING STUB
+   │ │ await session.close(); // resolves once the exit is seen │                                                        |  █▄     chord v0.0.1
+   │ └──────────────────────────────────────────────────────────┘                                                        |  ▀██▄   fixture
+                                                                                                                         |  ▄██▀   project
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐                                       |  █▀     ? for shortcuts
+   │ Module        │ Holds                                  │ Tested by          │                                       | 
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤                                       |  › Select these request words
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │                                       | 
+   │               │ a session                              │                    │                                       |  ⏺ Select these reply words.
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │                                       | 
+   │               │ gone                                   │                    │                                       |    ┌ ts ────[copy]─┐
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │                                       |    │     copy body │
+   │               │ drawn                                  │                    │                                       |    │               │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘                                       |    │   tail        │
+                                                                                                                         |    └───────────────┘
+   ┌─ ts ──────────────────────────────────────────────────[copy]─┐                                                      | 
+   │ const session = await openSession({ agent: 'claude', cwd }); │                                                      |    │ ┌ console ──────┐
+   │ const turn = session.prompt('hello');                        │                                                      |    │ │   quoted body │
+   │ await turn.result;                                           │                                                      |    │ └───────────────┘
+   └──────────────────────────────────────────────────────────────┘                                                      | 
+                                                                                                                         |    ┌ dart ───────┐
+   That is the whole loop. To land a change:                                                                             |    │   open body │
+                                                                                                                         |    └─────────────┘
+   1. Run the checks:                                                                                                    | 
+      ┌─ sh ─[copy]─[run]─┐                                                                                              |  › Next eligible request
+      │ bun quality       │                                                                                              | 
+      └───────────────────┘                                                                                              | 
+   2. Commit on main once every check has passed and the tree is clean, so whoever picks the work up next starts from a  | 
+      build that runs.                                                                                                   | 
+                                                                                                                         | 
+   Then build the binary with:                                                                                           | 
+                                                                                                                         | 
+   ┌─ sh ───────────────────────────────────[copy]─[run]─┐                                                               | 
+   │ bun dev compile --all                               │                                                               | 
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  |  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  /status  Show the agent, model, mode, session and directory                                                            |   /status  Show the agent, model, mode, session and directory
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › /sta                                                                                                               │ | │ › /sta                                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  sent 11 chars to the terminal's clipboard                                                                              | 

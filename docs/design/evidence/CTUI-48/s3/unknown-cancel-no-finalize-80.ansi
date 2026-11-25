@@ -1,0 +1,24 @@
+Selection area · immutable source log
+[2mKnown coverage: false · overlay: false[0m
+Record 0 · 日本語 👩‍💻 é
+
+[2m┌ dart ──────────────────┐[0m
+[2m│[0m     print("record 0"); [2m│[0m
+[2m│[0m                        [2m│[0m
+[2m│[0m   end                  [2m│[0m
+[2m└────────────────────────┘[0m
+Record 1 · 日本語 👩‍💻 é
+
+[2m┌ dart ──────────────────┐[0m
+[2m│[0m     print("record 1"); [2m│[0m
+[2m│[0m                        [2m│[0m
+[2m│[0m   end                  [2m│[0m
+[2m└────────────────────────┘[0m
+Record 2 · 日本語 👩‍💻 é
+
+[2m┌ dart ──────────────────┐[0m
+[2m│[0m     print("record 2"); [2m│[0m
+draft stays focused
+[2mReveal last: true[0m
+[2mC-l clear · C-s snapshot · C-o overlay · C-u coverage · C-t theme · C-r reveal ·
+S-↑/↓ scroll · PgUp/PgDn · C-q quit[0m

@@ -1,0 +1,77 @@
+{
+  "sourceCommit": "4a084be881fc9b934d881b2bb2a9ec359ab76fba",
+  "originalCommit": "577b58167672e12c999aeaf4eed2a1a988513dc2",
+  "startedUtc": "2026-11-18T01:50:52.154172+00:00",
+  "workload": "one saved UUID2, load refusal, /resume picker visible at80x24",
+  "commandTimings": [
+    {
+      "command": [
+        "send-keys",
+        "-t",
+        "designer52c-original",
+        "Escape"
+      ],
+      "startMs": 0.0025840126909315586,
+      "endMs": 4.594458965584636
+    },
+    {
+      "command": [
+        "send-keys",
+        "-t",
+        "designer52c-port",
+        "Escape"
+      ],
+      "startMs": 4.6037500142119825,
+      "endMs": 9.384959004819393
+    },
+    {
+      "command": [
+        "resize-window",
+        "-t",
+        "designer52c-original",
+        "-x",
+        "32",
+        "-y",
+        "10"
+      ],
+      "startMs": 9.394916996825486,
+      "endMs": 19.784250005614012
+    },
+    {
+      "command": [
+        "resize-window",
+        "-t",
+        "designer52c-port",
+        "-x",
+        "32",
+        "-y",
+        "10"
+      ],
+      "startMs": 19.79541697073728,
+      "endMs": 27.892333979252726
+    }
+  ],
+  "afterOverlapMonotonic": 404778.9146345,
+  "originalImmediate": {
+    "pickerVisible": true,
+    "captureMsAfterOverlap": 9.830125025473535
+  },
+  "portImmediate": {
+    "pickerVisible": true,
+    "captureMsAfterOverlap": 24.53487500315532
+  },
+  "originalSettled": {
+    "pickerVisible": false,
+    "captureMsAfterOverlap": 39318.137416034006
+  },
+  "portSettled": {
+    "pickerVisible": true,
+    "captureMsAfterOverlap": 39329.87520802999
+  },
+  "extraSeparateEscapeOnPersistedState": "did not close; assertion failed; following literal /resume sent by shell, not a valid matched control",
+  "fresh32SeparatedControl": {
+    "originalPickerVisible": false,
+    "portPickerVisible": false
+  },
+  "cleanup": "All original/port/control sessions cooperatively exited; owned tmux servers ended; no relevant Dart/Bun process; isolated roots/archive removed."
+}

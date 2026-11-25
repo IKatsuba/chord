@@ -1,0 +1,1 @@
+Paths are relabelled: the port ran in ~/project, the original in ../chord, each with an empty XDG_CONFIG_HOME shown as ~/.config. Keys: edit (fake diff in the transcript), /theme, down (Dark), down down (Dark, colour-blind friendly: removed lines turn orange), Esc, /theme, down, Enter. *-settings.json is what Enter wrote. Port at 61e29fcf.

@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 6 lines above ───────────────────
+  cmd + ← → to line start or end
+  ↑ ↓ for prompts, agents, background
+  x to close an agent, stop background
+  enter for background, details, a call
+  ── ↓ 33 lines below ──────────────────
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

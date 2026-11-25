@@ -1,0 +1,40 @@
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Answered · 6 fields
+
+ ⏺ Elicitation answer: accept
+   {"name":"abc","email":"ops@example.com","replicas":2,"public":false,"region":"us","tags":["web"]}
+
+ › link
+
+ ⏺ fake asked: Sign in to Example to continue
+   ⎿  Declined
+
+ ⏺ Elicitation answer: decline
+
+ › link
+
+ ⏺ fake asked: Sign in to Example to continue
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › form
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › leftform
+
+ ⏺ I asked; the turn ends with the form open.
+
+ ⏺ fake asked: Set up the deploy target
+   ⎿  Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

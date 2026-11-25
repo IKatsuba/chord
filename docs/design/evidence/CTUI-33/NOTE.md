@@ -1,0 +1,1 @@
+Captures of the port (u3-, u4-, u8-, u14-port-*) beside the original (u3-, u4-, u8-, u14-original-*) in the same state, and u5-form-* (example/form.dart) to read beside original-form-*; the session directories are relabelled ~/project. The original's "background ..." row under the status line is the background view, out of CTUI-33.

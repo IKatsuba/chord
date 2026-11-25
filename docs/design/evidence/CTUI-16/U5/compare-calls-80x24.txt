@@ -1,0 +1,25 @@
+Original calls | U5 compound fixture
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-calls-80                                   | 
+ ▀▀     ? for shortcuts · /help                                                  |  ⏺ Read(src/main.ts)
+                                                                                 |    ⎿  one
+ › calls                                                                         |       two
+                                                                                 |       three
+ ⏺ Read(src/main.tsx)                                                            |       … +2 lines (ctrl+o to expand)
+   ⎿  import { Command } from '@cliffy/command';                                 | 
+      import { render } from 'ink';                                              |  ⏺ Run(bun dev test)
+      import { App } from './ui/App.tsx';                                        |    ⎿  3/3
+      … +4 lines (ctrl+o to expand)                                              |       ok | 2 passed
+                                                                                 |       FAILED | 1 failed
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run             |       … +2 lines (ctrl+o to expand)
+   --allow-sys lint/ tests/ --filter "tool calls draw their status")             |       Exit code 1
+   ⎿  ok | 1 passed | 0 failed (12ms)                                            | 
+                                                                                 |  ⏺ Edit(src/greet.ts)
+ ⏺ Read(src/missing.ts)                                                          |    ⎿  Updated src/greet.ts with 1 addition and 1 removal
+   ⎿  Error: File does not exist.                                                |       1   export function greet() {
+                                                                                 |       2 -   return "hello";
+ ⏺ Two calls worked, one failed.                                                 |       2 +   return "hello, world";
+                                                                                 |       3   }
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ |    Guardian reviewing…
+╰──────────────────────────────────────────────────────────────────────────────╯ | 
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |  ⏺ Bash(echo working)

@@ -1,0 +1,34 @@
+{
+  "scope": "CTUI-53 immediate public-operation own-descriptor proof; affected full-scale reruns remain separate and required.",
+  "baseCommit": "82388d693e3e6f42772ac07132e4cb71088fbcd8",
+  "sourceSha256": {
+    "example/chord/tool/record_worker_handles.dart": "1906ba220258aa8fb5efcdd3655ad4ef31ddf23c2367d53ca1362318c4928e3b",
+    "example/chord/test/session/record_worker_handles_test.dart": "c5218c3682a71eae42d96de8270bb8c04d093b26215858db0861be80490327a4"
+  },
+  "archiveVerification": "Both archive source hashes match the intended task sources. Checked after the six-second completed run; sources were not changed between copy and run.",
+  "dependencies": "Exact root and port pubspec.lock at baseCommit, resolved offline; no dependency changes.",
+  "command": "nice -n 19 dart test test/session/record_worker_handles_test.dart --run-skipped --concurrency=1 --fail-fast",
+  "environment": {
+    "TMPDIR": "owned empty directory (deliberately contained relative parent components in this invocation)",
+    "XDG_STATE_HOME": "owned empty directory",
+    "CHORD_RECORD_HANDLE_REPORTS": "owned raw output directory"
+  },
+  "execution": "Sequential JIT then one AOT compilation and native run. Two tests passed, no skips. Sources invoke real readRecords/readRecordedHistory, never a synthetic worker.",
+  "workload": {
+    "scanRecords": 16,
+    "ignoredPayloadPerRecordBytes": 262144,
+    "directoryControlExtraIgnoredFiles": 2048,
+    "selectedTurns": 256,
+    "selectedIgnoredPayloadBytes": 262144
+  },
+  "positiveControls": "Each runtime observes one real DIR at the directory first-event gate, eight real REG record descriptors at eight admitted file gates, and one real REG selected descriptor. Projection gate has already closed its IO.",
+  "assertions": "One lsof snapshot immediately after each public Future settles: zero owned descriptors; Closed streams/tasks zero, SDK exit joined, pending Futures zero, original cancellation identity preserved. Success and caught filesystem/version-error paths checked too. Root deleted immediately; one post-delete snapshot empty and no root recreation. No retry/poll/sleep makes a zero pass.",
+  "initialFailure": {
+    "artifact": "invalid-path-control.log",
+    "meaning": "Invalid positive control: the first probe matched noncanonical root paths against canonical lsof names and reported no DIR. Not evidence of absent DIR or a production cleanup failure. A setup copy-path error repeated that stale invalid control once before the corrected run; no AOT ran in those failed attempts. Retained log is that equivalent repeated invalid control.",
+    "fix": "Resolve the actual allocated root once before seeding/gating/snapshots; keep workload unchanged."
+  },
+  "baselineAudit": "Earlier benchmark source does not canonicalize its createTemp root and uses literal lsof-name prefix matching. The retained baseline manifest/logs lack a canonical-root identity for every invocation, so historical zero snapshots cannot independently exclude alias/parent-component mismatches. Positive named REG/DIR failures remain observations. All 12 baseline JSONs remain untouched; no historical universal cleanup claim is inferred.",
+  "limits": "macOS own-process lsof proof only; numerical physical isolate count and physical exit latency unmeasured. The watchdog bounds a hung failure only. No responsiveness/performance pass or full-scale acceptance follows.",
+  "cleanup": "Actual test/fixture roots and AOT binary removed, outer TMPDIR/XDG empty; no owned Dart/native process remains. An unrelated editor language server was identified and left alone."
+}

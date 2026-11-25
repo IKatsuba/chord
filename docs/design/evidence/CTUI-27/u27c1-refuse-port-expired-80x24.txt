@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › running
+
+ ⏺ Working
+
+
+
+
+
+
+
+
+ ››› Working… (18s · esc to interrupt)
+ › oldest refused
+ › newer queued
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft untouched                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

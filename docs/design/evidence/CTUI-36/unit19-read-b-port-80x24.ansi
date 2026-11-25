@@ -1,0 +1,24 @@
+      [2m  [0m"project": null,
+      [2m  [0m"effective": {
+      [2m    [0m"theme": "dark",
+      [2m    [0m"mcpServers": {
+      [2m      [0m"linear": {
+      [2m        [0m"command": "***",
+      [2m        [0m"env": {
+      [2m          [0m"TOKEN": "***"
+      [2m        [0m}
+      [2m      [0m}
+      [2m    [0m}
+      [2m  [0m},
+      [2m  [0m"problems": [
+      [2m    [0m{
+      [2m      [0m"file": "~/.config/chord/settings.json",
+      [2m      [0m"message": "1 key ignored"
+      [2m    [0m}
+      [2m  [0m]
+      }
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m       [2mFake Large with a 1M context window · medium · 1% used[0m

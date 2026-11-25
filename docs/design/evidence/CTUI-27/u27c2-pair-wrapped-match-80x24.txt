@@ -1,0 +1,25 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+ › alpha first                                                                                                               |  › alpha first
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › alpha second                                                                                                              |  › alpha second
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › alpha first                                                                                                               |  › alpha first
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                             |
+ › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle                                                |  › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle
+   crosses                                                                                                                   |    crosses
+   終わり 😀 é needle crosses                                                                                                   |    終わり 😀 é needle crosses
+ ──────────────────────────────────────────────────────────────────────────────                                              |  ──────────────────────────────────────────────────────────────────────────────
+  search prompts: needle crosses                                                                                             |   search prompts: needle crosses
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────╮                                             | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle │                                             | │ › Context xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxneedle │
+│    crosses                                                                   │                                             | │    crosses                                                                   │
+│   終わり 😀 é needle crosses                                                 │                                                | │   終わり 😀 é needle crosses                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯                                             | ╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used                                               |          Fake Large with a 1M context window · medium effort · 1% context used

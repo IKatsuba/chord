@@ -1,0 +1,24 @@
+   [2m185. [0mLine 185 of 200, streamed one at a time.
+   [2m186. [0mLine 186 of 200, streamed one at a time.
+   [2m187. [0mLine 187 of 200, streamed one at a time.
+   [2m188. [0mLine 188 of 200, streamed one at a time.
+   [2m189. [0mLine 189 of 200, streamed one at a time.
+   [2m190. [0mLine 190 of 200, streamed one at a time.
+   [2m191. [0mLine 191 of 200, streamed one at a time.
+   [2m192. [0mLine 192 of 200, streamed one at a time.
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mSelect model[0m                                                                 [2m│
+│[0m [2mSwitch fake's model for this session.[0m                                        [2m│
+│[0m                                                                              [2m│
+│[0m [1m [0m 1. Fake Large with a 1M context window                                     [2m│
+│[0m [1m❯[0m [1m2.[0m [1mFake Small ✔[0m                                                            [2m│
+│[0m                                                                              [2m│
+│[0m High effort  ←/→ to adjust                                                   [2m│
+│[0m                                                                              [2m│
+│[0m [2mEnter to switch · ←/→ for effort · Esc to close[0m                              [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                   [2mFake Small · high effort · 1% context used[0m

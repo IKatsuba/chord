@@ -1,0 +1,12 @@
+import 'dart:convert';
+import 'package:localized_sorter/localized_sorter.dart';
+void main() {
+  const names = ['clear','config','cost','effort','exit','fast','fork','help','model','new','resume','status','Z','a','z','ä','Å','é','e','É','İ','i','ı','Σ','ς','σ','команда','Код','🙂','_private','-x','9run'];
+  for (final locale in ['en_US','de_DE','sv_SE','tr_TR']) {
+    final sorted = [...names]..sort((a,b) => LocalizedSorter.compare(a,b,locale));
+    print(jsonEncode({'locale':locale,'sorted':sorted}));
+  }
+  for(final pair in [['a','A'],['Z','z'],['é','e'],['_private','-x']]) {
+    print(jsonEncode({'pair':pair,'sign':LocalizedSorter.compare(pair[0],pair[1],'en_US').sign}));
+  }
+}

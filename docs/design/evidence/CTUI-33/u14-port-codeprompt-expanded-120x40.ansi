@@ -1,0 +1,40 @@
+      [2mThen step 4.[0m
+
+      [2mThen step 5.[0m
+
+      [2mThen step 6.[0m
+
+      [2mThen step 7.[0m
+
+      [2mThen step 8.[0m
+
+ [38;2;78;186;101m⏺[39m [1mAgent[0m(Check the build)
+   [2m⎿[0m  Run this first.
+
+      ```sh
+      bun test
+      ```
+
+      Then step 1.
+
+      Then step 2.
+
+      Then step 3.
+
+      Then step 4.
+
+      Then step 5.
+
+      Then step 6.
+
+      Then step 7.
+
+      Then step 8.
+   [2m⎿[0m  [2mDone (0 tool uses · 0s)[0m
+
+ ⏺ The build holds.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

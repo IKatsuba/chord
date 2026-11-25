@@ -1,0 +1,50 @@
+[
+  {
+    "name": "message",
+    "prompt": "<message from=\"main\">\nRun the parser\ntests.\n</message>"
+  },
+  {
+    "name": "team member",
+    "prompt": "<team name=\"build\" role=\"member\" member=\"parser\">\nPrivate team instructions\n</team>\n<message from=\"main\">\nRun the parser\ntests.\n</message>"
+  },
+  {
+    "name": "team lead",
+    "prompt": "<team name=\"build\" role=\"lead\">\nTeam instructions\n</team>\n<message from=\"main\">\nRun the parser\ntests.\n</message>"
+  },
+  {
+    "name": "monitor message",
+    "prompt": "<message from=\"watcher\" monitor=\"id\">\nWatch\nresult\n</message>"
+  },
+  {
+    "name": "aside before prompt",
+    "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\nActual\n question"
+  },
+  {
+    "name": "only aside",
+    "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n"
+  },
+  {
+    "name": "multiple asides",
+    "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n<message from=\"chord\">\nRuntime note.\n</message>\n\n"
+  },
+  {
+    "name": "aside and shell",
+    "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n<bash-input>pwd</bash-input>\n<bash-stdout>output</bash-stdout><bash-stderr></bash-stderr>\n\nActual\n question"
+  },
+  {
+    "name": "aside and shell only",
+    "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n<bash-input>pwd</bash-input>\n<bash-stdout>output</bash-stdout><bash-stderr></bash-stderr>\n\n"
+  },
+  {
+    "name": "other sender ahead retained",
+    "prompt": "<message from=\"worker\">\nKeep this\n</message>\n\nActual question"
+  },
+  {
+    "name": "non-message preserves team-like text",
+    "prompt": "<team name=\"build\" role=\"lead\">\nTyped text\n</team>"
+  },
+  {
+    "name": "message content keeps asides literal",
+    "prompt": "<message from=\"main\">\n<message from=\"chord\">\nRuntime note.\n</message>\n\nActual text\n</message>"
+  }
+]

@@ -1,0 +1,11 @@
+Original                         │ Port
+ ▀▀▀▄   fake · Fak...ext window  │  ▀▀▀▄   fake · Fak...ext window
+ ▄▀▀▀   …/CTUI-27                │  ▄▀▀▀   …/CTUI-27
+ ▀▀     ? for shortcuts · /help  │  ▀▀     ? for shortcuts
+        resumed · ...r wrapping  │         resumed · ...r wrapping
+ ── ↓ 5 lines below ───────────  │  ── ↓ 5 lines below ───────────
+                                 │
+╭──────────────────────────────╮ │ ╭──────────────────────────────╮
+│ ›                            │ │ │ ›                            │
+╰──────────────────────────────╯ │ ╰──────────────────────────────╯
+  ? for shortcuts  Fake Large…   │   ? for shortcuts  Fake Large…

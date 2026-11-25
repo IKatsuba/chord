@@ -1,0 +1,117 @@
+[
+  {
+    "type": "disconnected",
+    "turnId": "history"
+  },
+  {
+    "type": "shell_replayed",
+    "turnId": "history-first-shell-1",
+    "run": {
+      "command": "pwd",
+      "stdout": "fixture",
+      "stderr": "",
+      "running": false,
+      "code": 0
+    }
+  },
+  {
+    "type": "prompt",
+    "turnId": "history-first",
+    "text": "ask [Image #8] [Image #2]",
+    "at": 1.25
+  },
+  {
+    "type": "update",
+    "turnId": "history-first",
+    "update": {
+      "sessionUpdate": "agent_thought_chunk",
+      "content": {
+        "type": "text",
+        "text": "thought"
+      }
+    },
+    "at": 1.5
+  },
+  {
+    "type": "update",
+    "turnId": "history-first",
+    "update": {
+      "sessionUpdate": "agent_message_chunk",
+      "content": {
+        "type": "text",
+        "text": "answer"
+      },
+      "_meta": {
+        "future": [
+          2.5
+        ]
+      }
+    },
+    "at": 1.75
+  },
+  {
+    "type": "update",
+    "turnId": "history-first",
+    "update": {
+      "sessionUpdate": "tool_call",
+      "toolCallId": "guardian_assessment:r",
+      "rawInput": {
+        "review": {
+          "status": "approved"
+        }
+      },
+      "_meta": {
+        "chord/filled": [
+          "chord/guardian"
+        ],
+        "chord/guardian": "approved"
+      }
+    }
+  },
+  {
+    "type": "result",
+    "turnId": "history-first",
+    "result": {
+      "status": "completed",
+      "stopReason": "cancelled"
+    }
+  },
+  {
+    "type": "prompt",
+    "turnId": "history-second",
+    "text": "second",
+    "at": 2.25
+  },
+  {
+    "type": "cancel",
+    "turnId": "history-second",
+    "at": 2.5
+  },
+  {
+    "type": "result",
+    "turnId": "history-second",
+    "result": {
+      "status": "cancelled",
+      "stopReason": "end_turn"
+    }
+  },
+  {
+    "type": "disconnected",
+    "turnId": "history",
+    "at": 2.75
+  },
+  {
+    "type": "prompt",
+    "turnId": "history-unfinished",
+    "text": "unfinished",
+    "at": 3.25
+  },
+  {
+    "type": "result",
+    "turnId": "history-unfinished",
+    "result": {
+      "status": "completed",
+      "stopReason": "end_turn"
+    }
+  }
+]

@@ -1,0 +1,47 @@
+ctui48_s5a2_red.log (developer-handed selected lines)
+3:   test/text/selection_child_test.dart:15:93: Error: No named parameter with the name 'selectable'.
+9:   test/text/selection_child_test.dart:47:116: Error: No named parameter with the name 'selectable'.
+15:   test/text/selection_child_test.dart:66:53: Error: No named parameter with the name 'selectable'.
+21:   test/text/selection_child_test.dart:74:44: Error: No named parameter with the name 'selectable'.
+27: +0 -1: Some tests failed.
+
+ctui48_s5a2_motion_red.log (developer-handed selected lines)
+1: +0 -1: same-fragment motion survives parent rebuild from controller observer Size(120, 40) [E]
+2:   Expected: 'single'
+3:     Actual: ''
+11: +0 -2: same-fragment motion survives parent rebuild from callback observer Size(120, 40) [E]
+12:   Expected: 'single'
+13:     Actual: ''
+21: +0 -3: same-fragment motion survives parent rebuild from controller observer Size(80, 24) [E]
+22:   Expected: 'single'
+23:     Actual: ''
+31: +0 -4: same-fragment motion survives parent rebuild from callback observer Size(80, 24) [E]
+32:   Expected: 'single'
+33:     Actual: ''
+41: +0 -4: Some tests failed.
+
+ctui48_s5a2_motion_update.log (developer-handed selected lines)
+1: +0 -1: source update plus snapshot stays current with rebuilding observer Size(120, 40) [E]
+2:   Expected: not null
+3:     Actual: <null>
+10: +0 -2: source update plus release stays current with rebuilding observer Size(120, 40) [E]
+11:   Expected: 'ABCD'
+12:     Actual: ''
+20: +2 -3: source update plus snapshot stays current with rebuilding observer Size(80, 24) [E]
+21:   Expected: not null
+22:     Actual: <null>
+29: +2 -4: source update plus release stays current with rebuilding observer Size(80, 24) [E]
+30:   Expected: 'ABCD'
+31:     Actual: ''
+39: +4 -4: Some tests failed.
+
+ctui48_s5a2_fixture_diagnostic.log (developer-handed selected lines)
+7:   Expected: a screen showing 'Snapshot: wrapped'
+8:     Actual: Screen:<Source child · middle included · phase none
+95: +0 -1: Some tests failed.
+
+ctui48_s5a2_root.log (developer-handed selected lines)
+54: +1097: All tests passed!
+
+ctui48_s5a2_port.log (developer-handed selected lines)
+1: +396: All tests passed!

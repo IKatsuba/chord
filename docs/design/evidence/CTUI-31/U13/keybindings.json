@@ -1,0 +1,1 @@
+{"bindings":[{"context":"Select","bindings":{"escape":null,"q":"select:cancel","ctrl+a":null,"ctrl+t":"select:toggleScope"}}]}

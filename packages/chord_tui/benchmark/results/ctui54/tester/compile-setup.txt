@@ -1,0 +1,1 @@
+First compile: AOT compilation failed because build/tester_picker output directory was absent in the immutable archive. PathNotFoundException (OS error 2). Created build/ and repeated the same nice19 compile successfully. Harness setup observation; no product failure. Absolute scratch path omitted.

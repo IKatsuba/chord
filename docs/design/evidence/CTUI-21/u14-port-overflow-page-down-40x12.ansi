@@ -1,0 +1,12 @@
+ [2m──────────────────────────────────────[0m
+  [2m── ↑ 5 lines above ───────────────────
+[0m  [2mshift + ↑ ↓ to scroll a line[0m
+  [2mhome end for the top and the bottom[0m
+  [2mesc to interrupt[0m
+  [2mctrl + o for verbose output[0m
+  [2m── ↓ 10 lines below ──────────────────
+[0m
+[2m╭──────────────────────────────────────╮
+│[0m › [7m [0m                                  [2m│
+╰──────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m   [2mFake Large with a…[0m

@@ -1,0 +1,24 @@
+
+ [38;2;78;186;101m⏺[39m [1mRead[0m(src/very_long_directory/src/very_long_directory/src/very_long_directory
+   /src/very_long_directory/src/very_long_directory/src/very_long_directory/src
+   /very_long_directory/src/very_long_directory/main.ts)
+   [2m⎿[0m  [2mone[0m
+   [2m [0m  [2mtwo[0m
+   [2m [0m  [2mthree[0m
+   [2m [0m  [2mfour[0m
+   [2m [0m  [2mfive[0m
+
+ [38;2;255;107;128m⏺[39m [1mRun[0m(bun dev test)
+   [2m⎿[0m  [2mtest[0m
+   [2m [0m  [2mstart[0m
+   [2m [0m  [2m3/3[0m
+   [2m [0m  [2mok | 2 passed[0m
+   [2m [0m  [2mFAILED | 1 failed[0m
+   [2m [0m  [38;2;255;107;128mExit code 1[39m
+
+ [38;2;78;186;101m⏺[39m [1mEdit[0m(src/greet.ts)
+   [2m⎿[0m  [2mUpdated src/very_long_directory/src/very_long_directory/src/very_long_dir[0m
+      [2mectory/src/very_long_directory/src/very_long_directory/src/very_long_dire[0m
+      [2mctory/src/very_long_directory/src/very_long_directory/greet.ts with 1[0m
+      [2maddition and 1 removal[0m
+      [2m1[0m   [38;2;215;166;255mexport[39m [38;2;215;166;255mfunction[39m [38;2;140;200;255mgreet[39m() {

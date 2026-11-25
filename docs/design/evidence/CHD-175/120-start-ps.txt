@@ -1,3 +1,0 @@
-start: fake agents before a choice 0
-start: fake agents after Enter on the window 3
-start-esc: cursor visible 1

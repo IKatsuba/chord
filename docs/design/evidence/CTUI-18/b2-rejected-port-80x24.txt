@@ -1,0 +1,24 @@
+Permission fixture: diff
+Transcript
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                              │
+│ ── ↑ 43 lines above · pageup to scroll ───────────────────────────────────── │
+│   42 + proposed line 42                                                      │
+│   43 + proposed line 43                                                      │
+│   44 + proposed line 44                                                      │
+│   45 + proposed line 45                                                      │
+│   46 + proposed line 46                                                      │
+│   47 + proposed line 47                                                      │
+│   48 + proposed line 48                                                      │
+│   49 + proposed line 49                                                      │
+│ ── ↓ 11 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow once                                                              │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Answer: Rejected

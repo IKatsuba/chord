@@ -1,0 +1,40 @@
+      [2mRun: 49b2b7af · saved definition: fixture (project)[0m
+      [2mlead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default[0m
+      [2mChanges from saved: model, mode[0m
+      [2mreviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent[0m
+      [2mdefault (unconfirmed)[0m
+      [2mChanges from saved: model, mode[0m
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+ [2m←[0m [2mfrom [0;1mchord[0m
+   [2m⎿[0m  [2mThe person closed team fixture: its lead (codex · fake-small, id 49b2b7af). It takes no more messages; run_team[0m
+      [2mstarts it again.[0m
+
+ ⏺ Received the message from chord.
+
+ [2m›[0m /team show 49b2b7af
+
+ Recorded Team receipt (fixture)
+   [2m⎿[0m  [2mRecorded by Chord · current state unknown · historical observation[0m
+   [2m [0m  [2mRecorded: time unknown[0m
+   [2m [0m  selectedidle
+   [2m [0m  Selection: agent-selected · this run
+   [2m [0m  Reason: Preserve all instructions and exact permission requirements; capacity is unknown.
+   [2m [0m  [2mBilling: unknown · advisory[0m
+   [2m [0m  Planned for this run:
+   [2m [0m  lead (lead): codex · model fake-small · effort agent default (unconfirmed) · mode plan
+   [2m [0m  Actual at recording: confirmed · session runtime codex · model fake-small · effort medium · mode plan
+   [2m [0m  reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+   [2m [0m  Actual at recording: not opened · configuration unconfirmed
+   [2m [0m  [2mRun: 49b2b7af · saved definition: fixture (project)[0m
+   [2m [0m  lead saved: codex · model fake-large · effort agent default (unconfirmed) · mode default
+   [2m [0m  Changes from saved: model, mode
+   [2m [0m  reviewer saved: claude · model agent default (unconfirmed) · effort agent default (unconfirmed) · mode agent
+   [2m [0m  default (unconfirmed)
+   [2m [0m  Changes from saved: model, mode
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

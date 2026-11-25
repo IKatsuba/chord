@@ -1,0 +1,6 @@
+import {xdgState} from 'xdg-basedir';
+console.log(JSON.stringify({
+  absolute: xdgState?.startsWith('/'),
+  relative: xdgState === 'relative-state',
+  defaultSuffix: xdgState?.endsWith('/.local/state'),
+}));

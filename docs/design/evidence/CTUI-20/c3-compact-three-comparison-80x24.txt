@@ -1,0 +1,25 @@
+Original installed agents | Port synthetic fixture (80x24; inventories/version/directory differ)
+                                   █▄                                            | 
+                                   ▀██▄                                          | 
+                                   ▄██▀  chord                                   | 
+                                   █▀                                            | 
+                   v0.71.0 · /tmp/chord-qa.designer-ship13-c3                    | 
+                                                                                 |                                   █▄
+          Select agent                                                           |                                   ▀██▄  chord
+                                                                                 |                                   ▄██▀
+              1.  agoragentic-acp · Agoragentic                                  |                                   █▀
+              2.  auggie · Auggie CLI                                            |         v0.0.1 · /workspace/packages/terminal/interfaces/example/project
+              3.  bob · Bob                                                      | 
+          ❯   4.  claude · Claude Agent                                          |           Select agent
+              5.  cline · Cline                                                  | 
+              6.  codebuddy-code · Codebuddy Code                                |           ❯ 1. claude
+              7.  codex · Codex                                                  |             2. codex
+              8.  cursor-cloud · Cursor Cloud Agents                             |             3. pi · not on PATH
+              9.  deepagents · DeepAgents                                        | 
+              10. dimcode · DimCode                                              |           ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+              11. dirac · Dirac                                                  | 
+            ↓ 12. factory-droid · Factory Droid                                  | 
+              … +17 more                                                         | 
+                                                                                 | 
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel             | 
+                                                                                 | 

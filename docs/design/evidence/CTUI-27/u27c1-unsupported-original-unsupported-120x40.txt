@@ -1,0 +1,40 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   fixture-project
+ █▀     ? for shortcuts · /help
+
+ › readsheld
+
+ ⏺ Working
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (8s · esc to interrupt)
+ › unsupported queued
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › plain draft                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  This agent does not take messages into a running turn · it stays queued          Fake Large with a 1M context window

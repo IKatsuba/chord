@@ -1,0 +1,24 @@
+   │   for bin in │
+   │ ↪  dist/*/ch │
+   │ ↪ ord; do    │
+   │ ↪ echo       │
+   │ ↪ "built     │
+   │ ↪ $bin";     │
+   │ ↪ done       │
+   └──────────────┘
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected
+      Write
+      notes.txt
+
+ ⏺ Permission:
+   deny.
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+  sent 5 chars to

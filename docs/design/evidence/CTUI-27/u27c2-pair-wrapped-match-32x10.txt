@@ -1,0 +1,11 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+                                                                                                                             |
+ ──────────────────────────────                                                                                              |  ──────────────────────────────
+  search promp...edle crosses                                                                                                |   search prompts: needle cros…
+                                                                                                                             |
+╭──────────────────────────────╮                                                                                             | ╭──────────────────────────────╮
+│ ↑ xxxxxxxxxxxxxxxxneedle cro │                                                                                             | │ ↑ sses                       │
+│   sses                       │                                                                                             | │   終わり 😀 é needle crosses │
+│   終わり 😀 é needle crosses │                                                                                                | │                              │
+╰──────────────────────────────╯                                                                                             | ╰──────────────────────────────╯
+  Fake Large with a… · 1% used                                                                                               |   Fake Large with a… · 1% used

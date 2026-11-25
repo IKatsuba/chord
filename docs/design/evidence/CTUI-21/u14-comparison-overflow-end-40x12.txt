@@ -1,0 +1,13 @@
+ORIGINAL                                 | PORT
+ ──────────────────────────────────────  |  ──────────────────────────────────────
+  ── ↑ 38 lines above ────────────────── |   ── ↑ 14 lines above ──────────────────
+  tab ← → ↑ ↓ space to answer forms      |   enter to pick the highlighted choice
+  ctrl + c to stop the turn and its form |   esc to reject a permission
+  /vim for vim mode                      |   esc to leave a picker or shortcuts
+  ? for shortcuts                        |   ? for shortcuts
+  any key to quit the crash screen       |   any key to quit the crash screen
+                                         | 
+╭──────────────────────────────────────╮ | ╭──────────────────────────────────────╮
+│ ›                                    │ | │ ›                                    │
+╰──────────────────────────────────────╯ | ╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…   |   ? for shortcuts   Fake Large with a…

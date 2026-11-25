@@ -1,0 +1,40 @@
+      Report paths and line numbers, and write what you find to notes/routing.md.
+
+ → to Agent(Review the transcript reducer)
+   ⎿  Review src/session/transcript/reducer.ts for updates it drops.
+
+ → to Agent(Run the tests)
+   ⎿  Run bun test and report what fails.
+
+ → to Agent(Watch the build)
+   ⎿  Watch the build and say when it breaks.
+
+ ⏺ Running 4 agents… (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 3 tool uses
+   │  ⎿  Write(notes/routing.md) · waiting for permission
+   ├─ Agent(Review the transcript reducer) · 1 tool use · 0s
+   │  ⎿  Failed
+   │     API Error: 529 Overloaded
+   ├─ Agent(Run the tests) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(Watch the build) · 1 tool use · 0s
+      ⎿  Untracked
+
+ ››› Waiting for permission… (9s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Find the session layer) asks                                                                                   │
+│ Write notes/routing.md                                                                                               │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort
+    background  ● main's agent asking · ? main's agent untracked

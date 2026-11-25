@@ -1,0 +1,25 @@
+Original turnfailed-80x24.txt | U7 live turnfailed-80x24.txt
+ ▀▄     chord v0.71.0                                                            |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-turnfailed-80                              |  › turnfailed
+ ▀▀     ? for shortcuts · /help                                                  | 
+                                                                                 |  ⏺ Reading the tests.
+ › turnfailed                                                                    | 
+                                                                                 |  ⏺ Request failed: the model is overloaded.
+ ⏺ Reading the tests.                                                            | 
+                                                                                 | 
+ ⏺ Request failed: the model is overloaded.                                      | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   |  ctrl+c or ctrl+d to quit

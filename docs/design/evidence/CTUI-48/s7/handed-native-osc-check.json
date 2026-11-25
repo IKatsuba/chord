@@ -1,0 +1,22 @@
+[
+  {
+    "artifact": "handed/ctui48_s7_native_port-120.ansi",
+    "decoded_OSC_payloads": [
+      "bun dev check",
+      "draft",
+      "draft"
+    ],
+    "1002_on": true,
+    "1002_off": true
+  },
+  {
+    "artifact": "handed/ctui48_s7_native_port-80.ansi",
+    "decoded_OSC_payloads": [
+      "bun dev check",
+      "draft",
+      "draft"
+    ],
+    "1002_on": true,
+    "1002_off": true
+  }
+]

@@ -1,0 +1,11 @@
+Original                         │ Port
+ ⏺ fake did not start: it        │ ╭──────────────────────────────╮
+   refused session/load:         │ │ Resume a session             │
+   Resource not found:           │ │                              │
+   00000000-0000-0000-0000-      │ │ Ctrl+a for all directories · │
+   000000000002                  │ ╰──────────────────────────────╯
+                                 │
+╭──────────────────────────────╮ │ ╭──────────────────────────────╮
+│ ›                            │ │ │ ›                            │
+╰──────────────────────────────╯ │ ╰──────────────────────────────╯
+  ? for shortcuts                │   ? for shortcuts

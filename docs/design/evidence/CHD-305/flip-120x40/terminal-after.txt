@@ -1,2 +1,0 @@
-flags(alt,mouse_any,mouse_sgr,mouse_button,mouse_all)=0,0,0,0,0
-stty: same

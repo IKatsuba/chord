@@ -1,0 +1,24 @@
+      ⎿  Initializing…
+
+ ⏺ The build and the deploy are being watched.
+
+ › /cost
+   ⎿  Total cost:   $0.0125
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 9s
+
+      This session           Cost  Tokens
+      main                $0.0125   2,000
+        Watch the build         —       —  task agent, running: counted when
+                                           it ends
+        Watch the deploy        —       —  task agent, running: counted when
+                                           it ends
+      Total               $0.0125   2,000  2 running
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running         Fake Large with a 1M context window · 1% used
+    background  2 tasks running

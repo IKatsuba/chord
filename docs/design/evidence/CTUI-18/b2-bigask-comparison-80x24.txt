@@ -1,0 +1,25 @@
+Original bigask | Port diff (80x24; scenario data differs)
+                                                                                 | Permission fixture: diff
+ ››› Waiting for permission… (24s)                                               | Transcript
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                       │ | │ Write notes.txt                                                              │
+│   path: docs/release.md                                                      │ | │                                                                              │
+│   content: # Release 0.56.0                                                  │ | │    1 - old                                                                   │
+│                                                                              │ | │    1 + proposed line 1                                                       │
+│   This release changes how chord draws long requests: the permission box now │ | │    2 + proposed line 2                                                       │
+│   caps its height, keeps its options on screen and lets the person scroll    │ | │    3 + proposed line 3                                                       │
+│ ── ↓ 37 lines below · pagedown to scroll ─────────────────────────────────── │ | │    4 + proposed line 4                                                       │
+│                                                                              │ | │    5 + proposed line 5                                                       │
+│ Do you want to proceed?                                                      │ | │    6 + proposed line 6                                                       │
+│ ❯ 1. Yes                                                                     │ | │    7 + proposed line 7                                                       │
+│   2. Yes, and don't ask again for files - write_file commands                │ | │ ── ↓ 53 lines below · pagedown to scroll ─────────────────────────────────── │
+│   3. No, and tell Claude what to do differently                              │ | │                                                                              │
+│                                                                              │ | │ Do you want to proceed?                                                      │
+│ Esc to reject                                                                │ | │ ❯ 1. Allow once                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯ | │   2. Always allow                                                            │
+                                                                                 | │   3. Deny                                                                    │
+╭──────────────────────────────────────────────────────────────────────────────╮ | │                                                                              │
+│ ›                                                                            │ | │ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   | Answer:

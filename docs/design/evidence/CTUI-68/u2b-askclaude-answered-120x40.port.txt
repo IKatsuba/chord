@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/chorded-tui
+ ▀▀     ? for shortcuts · /help
+
+ › askcodex
+   ⎿  fake asked · Next step, Token · Cancelled
+
+ ⏺ Elicitation answer: cancel
+
+ › askclaudeone
+
+ ⏺ Asking(Which language should helper scripts use?)
+   ⎿  Language  Deno
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno"}
+
+ › askclaude
+
+ ⏺ Asking(for your input)
+   ⎿  Language  Deno (TypeScript) (Recommended)
+      Checks    skipped
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"Deno (TypeScript) (Recommended)"}
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

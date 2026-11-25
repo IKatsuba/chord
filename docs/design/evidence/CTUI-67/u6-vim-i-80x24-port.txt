@@ -1,0 +1,25 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   …/var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/here
+ ▀▀     ? for shortcuts · /help
+
+ › /vim
+   ⎿  Vim mode on: Esc for normal mode, i to insert
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › abc def gцhi                                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  -- NORMAL --             Fake Large with a 1M context window · medium effort
+cursor 12,21

@@ -1,0 +1,40 @@
+
+  Error: the window broke while drawing
+      at Throws (fixture.tsx:1:1)
+      at App (fixture.tsx:2:1)
+
+  any key to quit · chord prints the error to stderr as it exits
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

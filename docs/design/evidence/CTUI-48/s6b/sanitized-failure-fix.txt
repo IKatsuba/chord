@@ -1,0 +1,64 @@
+Explicitly handed developer diagnostics. All red cases are uncommitted S6b WIP,
+based on S6a4eeba4f / later docs444649c; no committed-baseline attribution.
+Final code bca820ed79c58fa65645625b1b88100c2735a05e.
+Designer did not reconstruct an older runtime. Debug pass counters below are
+raw diagnostic counters, not a new per-operation pass budget.
+
+build/ctui48_s6b_start_diagnostic.log
+CTUI48DEBUG catalog null epoch 0 current 0
+00:00 +0 -1: real newest-visible pick skips open fence, copies quote, moves/clamps and keeps focus Size(120, 40) [E]
+  Expected: a screen showing '↑ ↓ another block · c copy · esc done'
+Actual: Screen (separate sanitized diagnostic-screen file)
+
+build/ctui48_s6b_start_budget_diagnostic.log
+CTUI48DEBUG visible 0 snapshot null size Size(120, 40) session true exiting false passes=4
+CTUI48DEBUG catalog null epoch 0 current 0 passes=4
+00:00 +0 -1: real newest-visible pick skips open fence, copies quote, moves/clamps and keeps focus Size(120, 40) [E]
+  Expected: a screen showing '↑ ↓ another block · c copy · esc done'
+Actual: Screen (separate sanitized diagnostic-screen file)
+
+build/ctui48_s6b_start_after_live_pending.log
+00:00 +12: All tests passed!
+
+build/ctui48_s6b_command_six_before.log
+00:00 +0 -1: test/ui/app/commands_convergence_test.dart: same-batch command typing and current room converge within two passes Size(120, 40) [E]
+  Expected: true
+    Actual: <false>
+00:00 +0 -2: test/ui/app/commands_geometry_test.dart: mode keeps original precedence over hidden-completion hint at Size(120, 40) [E]
+  Expected: '/sta'
+    Actual: '/ta'
+            Expected: /sta
+              Actual: /ta
+00:00 +0 -3: test/ui/app/commands_convergence_test.dart: same-batch command typing and current room converge within two passes Size(80, 24) [E]
+  Expected: true
+    Actual: <false>
+00:00 +1 -4: test/ui/app/commands_geometry_test.dart: Closing rejects a current completion before the next frame at Size(120, 40) [E]
+  Expected: '/sta'
+    Actual: '/ta'
+            Expected: /sta
+              Actual: /ta
+00:00 +1 -5: test/ui/app/commands_geometry_test.dart: mode keeps original precedence over hidden-completion hint at Size(80, 24) [E]
+  Expected: '/sta'
+    Actual: '/ta'
+            Expected: /sta
+              Actual: /ta
+00:00 +2 -6: test/ui/app/commands_geometry_test.dart: Closing rejects a current completion before the next frame at Size(80, 24) [E]
+  Expected: '/sta'
+    Actual: '/ta'
+            Expected: /sta
+              Actual: /ta
+
+build/ctui48_s6b_footer_repair_after.log
+00:00 +52: All tests passed!
+
+build/ctui48_s6b_reached.log
+00:03 +420 -1: test/ui/app/wheel_window_test.dart: whole fixture seeds draft and composes [--help, --tall-draft] at Size(80, 24) [E]
+  Expected: false
+    Actual: <true>
+00:03 +420 -2: test/ui/app/wheel_window_test.dart: whole fixture seeds draft and composes [--help, --tall-draft, --closing] at Size(80, 24) [E]
+  Expected: false
+    Actual: <true>
+
+build/ctui48_s6b_reached_final.log
+01:29 +1391: All tests passed!
+

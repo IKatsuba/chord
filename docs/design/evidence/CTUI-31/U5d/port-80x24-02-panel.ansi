@@ -1,0 +1,24 @@
+ [2m──────────────────────────────────────────────────────────────────────────────[0m
+  [2mctrl + s to send[0m
+  [2mtab to send the oldest queued now[0m
+  [2mshift + enter or \ + ctrl + s for a newline[0m
+  [2mctrl + v to paste an image[0m
+  [2malt + ← → to move by word[0m
+  [2m↑ ↓ for prompts[0m
+  [2mctrl + r to search prompts[0m
+  [2mtab enter to take a match[0m
+  [2mesc to cancel a search[0m
+  [2mpgup pgdn to scroll[0m
+  [2mshift + ↑ ↓ to scroll a line[0m
+  [2mhome end for the top and the bottom[0m
+  [2m↑ ↓ to pick a completion[0m
+  [2mtab to complete a command[0m
+  [2mtab enter to add a file or agent[0m
+  [2mesc to close completions[0m
+  [2m! for bash mode[0m
+  [2m── ↓ 18 lines below · pagedown to scroll ─────────────────────────────────────
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m! for shortcuts[0m          [2mFake Large with a 1M context window · medium effort[0m

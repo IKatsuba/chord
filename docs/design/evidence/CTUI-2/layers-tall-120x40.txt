@@ -1,0 +1,40 @@
+╭ Models ──────╮ranscript, scrolled back scrolled back scrolled back
+│ ❯ Choice 1   │ranscript,
+│   Choice 2   │ranscript, scrolled back
+│   Choice 3   │ranscript, scrolled back scrolled back
+│   Choice 4   │ranscript, scrolled back scrolled back scrolled back
+│   Choice 5   │ranscript,
+│   Choice 6   │ranscript, scrolled back
+│   Choice 7   │ranscript, scrolled back scrolled back
+│   Choice 8   │ranscript, scrolled back scrolled back scrolled back
+│   Choice 9   │ranscript,
+│   Choice 10  │ranscript, scrolled back
+│   Choice 11  │ranscript, scrolled back scrolled back
+│   Choice 12  │ranscript, scrolled back scrolled back scrolled back
+│   Choice 13  │ranscript,
+│   Choice 14  │ranscript, scrolled back
+│   Choice 15  │ranscript, scrolled back scrolled back
+│   Choice 16  │ranscript, scrolled back scrolled back scrolled back
+│   Choice 17  │ranscript,
+│   Choice 18  │ranscript, scrolled back
+│   Choice 19  │ranscript, scrolled back scrolled back
+│   Choice 20  │ranscript, scrolled back scrolled back scrolled back
+│   Choice 21  │ranscript,
+│   Choice 22  │ranscript, scrolled back
+│   Choice 23  │ranscript, scrolled back scrolled back
+│   Choice 24  │ranscript, scrolled back scrolled back scrolled back
+│   Choice 25  │ranscript,
+│   Choice 26  │ranscript, scrolled back
+│   Choice 27  │ranscript, scrolled back scrolled back
+│   Choice 28  │ranscript, scrolled back scrolled back scrolled back
+│   Choice 29  │ranscript,
+│   Choice 30  │word61 word61 word61 word61 word61 word61 word61 word61 word61 word61
+│   Choice 31  │word62 word62 word62 word62 word62 word62 word62 word62 word62 word62
+│   Choice 32  │word63 word63 word63
+│   Choice 33  │
+╰──────────────╯word65 word65 word65 word65 word65 word65 word65 word65 word65 word65
+
+> /model
+  more prompt
+page builds 10 · rows 67 · offset 30 · scrolled back
+enter Choose  escape Close  tab Next field  shift+tab Previous field  ctrl+p Picker  ctrl+x p Tall picker  ctrl+o Compl…

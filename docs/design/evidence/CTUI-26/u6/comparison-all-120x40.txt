@@ -1,0 +1,41 @@
+Original                                                                                                                 | Port
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                ▀▀▄                                                                                      |                                 ▀▀▄
+                                ▀▀▀▀▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗                                 |                                 ▀▀▀▀▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗
+                                ▀▀▀▀▀▀▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗                                |                                 ▀▀▀▀▀▀▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗
+                                 ▀▀▀▀▀▀▀▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║                                |                                  ▀▀▀▀▀▀▀▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║
+                                 ▄▀▀▀▀▀▀▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║                                |                                  ▄▀▀▀▀▀▀▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║
+                                ▀▀▀▀▀▀▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝                                |                                 ▀▀▀▀▀▀▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝
+                                ▀▀▀▀▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝                                 |                                 ▀▀▀▀▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝
+                                ▀▀▀                                                                                      |                                 ▀▀▀
+                                                                                                                         | 
+                                          One terminal for every coding agent.                                           |                                           One terminal for every coding agent.
+                                    v0.71.0 · fake · fixture-root___________/project                                     |                                                 v0.0.1 · fake · project
+                                                                                                                         | 
+                  ╭──────────────────────────────────────────────────────────────────────────────────╮                   |                   ╭──────────────────────────────────────────────────────────────────────────────────╮
+                  │ Resume a session                                                                 │                   |                   │ Resume a session                                                                 │
+                  │ Pick one of fake's earlier sessions to open.                                     │                   |                   │ Pick one of fake's earlier sessions to open.                                     │
+                  │                                                                                  │                   |                   │                                                                                  │
+                  │ ❯ 1. just now   …/fixture-label_____/project                                     │                   |                   │ ❯ 1. just now   project                                                          │
+                  │      Inspect the saved notes and retain this descriptive title across wrapped    │                   |                   │      Inspect the saved notes and retain this descriptive title across wrapped    │
+                  │      lines.                                                                      │                   |                   │      lines.                                                                      │
+                  │   2. yesterday  …/fixture-label_____/project                                     │                   |                   │   2. yesterday  …/界😀/another-directory-1                                       │
+                  │      Saved session 2 · 界😀 with a long title and an_unbroken_title_tail         │                     |                   │      Saved session 1 · 界😀 with a long title and an_unbroken_title_tail         │
+                  │   3. yesterday  …/界😀/another-directory-1                                       │                     |                   │   3. yesterday  project                                                          │
+                  │      Saved session 1 · 界😀 with a long title and an_unbroken_title_tail         │                     |                   │      Saved session 2 · 界😀 with a long title and an_unbroken_title_tail         │
+                  │   4. yesterday  …/界😀/another-directory-3                                       │                     |                   │   4. yesterday  …/界😀/another-directory-3                                       │
+                  │      Saved session 3 · 界😀 with a long title and an_unbroken_title_tail         │                     |                   │      Saved session 3 · 界😀 with a long title and an_unbroken_title_tail         │
+                  │                                                                                  │                   |                   │                                                                                  │
+                  │ Enter to resume · Ctrl+a for this directory · Esc to quit                        │                   |                   │ Enter to resume · Ctrl+a for this directory · Esc to quit                        │
+                  ╰──────────────────────────────────────────────────────────────────────────────────╯                   |                   ╰──────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 

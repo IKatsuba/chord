@@ -1,0 +1,80 @@
+Resolving dependencies in `.`...
+Downloading packages...
++ ansi_escape_codes 2.2.1 (4.0.1 available)
++ archive 4.7.1
++ args 2.7.0
++ async 2.13.1
++ basic_utils 5.8.2
++ boolean_selector 2.1.2
++ characters 1.4.1
++ checked_yaml 2.0.4
++ ci 0.1.0
++ cli_tools 0.13.2 (0.14.0 available)
++ clock 1.1.3
++ collection 1.19.1
++ config 0.9.1 (0.10.0 available)
++ convert 3.1.2
++ crypto 3.0.8
++ dart_mappable 4.10.0
++ dio 5.11.1
++ dio_web_adapter 2.2.2
++ equatable 2.1.0 (3.0.0 available)
++ ffi 2.2.0
++ fixnum 1.1.1
++ ground_control_client 1.3.1
++ hotreloader 4.4.0
++ http 1.6.0
++ http_parser 4.1.2
++ image 4.13.1
++ intl 0.20.3
++ isolated_object 0.1.0 (0.2.0 available)
++ json_annotation 4.12.0
++ logging 1.3.0
++ markdown 7.3.1
++ matcher 0.12.20
++ meta 1.19.0
++ mime 2.1.0
++ nocterm 0.9.0
++ oauth2 2.0.5
++ path 1.9.1
++ pointycastle 4.0.0
++ pool 1.5.3
++ posix 6.5.4
++ pub_api_client 3.2.0 (4.0.0 available)
++ pub_semver 2.2.1
++ pubspec_parse 1.7.0
++ quiver 3.2.2
++ rfc_6901 0.2.1
++ sentry 9.30.1 (10.4.0 available)
++ serverpod_auth_core_client 4.0.4 (4.1.2 available)
++ serverpod_auth_idp_client 4.0.4 (4.1.2 available)
++ serverpod_client 4.0.4 (4.1.2 available)
++ serverpod_cloud_cli 1.3.1
++ serverpod_cloud_shared 1.3.1
++ serverpod_logging 0.1.0 (0.2.0 available)
++ serverpod_logging_cli 0.1.0 (0.2.0 available)
++ serverpod_serialization 4.0.4 (4.1.2 available)
++ serverpod_tui 0.12.0 (0.14.0 available)
++ source_span 1.10.2
++ stack_trace 1.12.2
++ stream_channel 2.1.4
++ stream_transform 2.1.2
++ string_scanner 1.4.1
++ super_string 1.0.3
++ term_glyph 1.2.2
++ test_api 0.7.15
++ type_plus 2.1.1
++ typed_data 1.4.0
++ uuid 4.6.0
++ vm_service 15.4.0
++ watcher 1.2.1
++ web 1.1.2
++ web_socket 1.0.1
++ web_socket_channel 3.0.3
++ yaml 3.1.4
++ yaml_codec 1.0.0
++ yaml_writer 2.1.0
++ zmodem 0.0.6
+Changed 75 dependencies in `.`!
+14 packages have newer versions incompatible with dependency constraints.
+Try `dart pub outdated` for more information.

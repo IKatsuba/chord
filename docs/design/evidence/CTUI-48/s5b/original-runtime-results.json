@@ -1,0 +1,26 @@
+[
+  {
+    "case": "auto-dark",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-light",
+    "exit": "1,0"
+  },
+  {
+    "case": "auto-plain",
+    "exit": "1,0"
+  },
+  {
+    "case": "manual-dark",
+    "exit": "1,0"
+  },
+  {
+    "case": "failure-dark",
+    "exit": "1,0"
+  },
+  {
+    "case": "timeout-dark",
+    "exit": "1,0"
+  }
+]

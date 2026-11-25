@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+ ▀▄     chord v0.71.0                                                                                                        |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                           |  ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project                                                                                                      |  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                              |  ▀▀     ? for shortcuts
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › running
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+   ⎿  Interrupted by user                                                                                                    |    ⎿  Interrupted by user
+                                                                                                                             |
+ › first pending                                                                                                             |  › first pending
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |  ⏺ Working
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |  ››› Working… (1s · esc to interrupt)
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › second unsent                                                                                                      │     | │ › second unsent                                                                                                      │
+│   draft remains                                                                                                      │     | │   draft remains                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                 Fake Large with a 1M context window · medium effort · 1% context used       |

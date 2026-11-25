@@ -1,0 +1,15 @@
+== designer-port: 10 backspaces
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tango uniform vict │
+│                                                                              │
+│                                                                              │
+== designer-port: 11th
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tango uniform vic  │
+│                                                                              │
+│ Enter for the next · ↑ options · ←→ questions · Esc to cancel                │
+== designer-port: 13 more, fast
+│ ❯ Note  alpha bravo charlie delta echo foxtrot golf hotel india juliet kilo  │
+│         lima mike november oscar papa quebec romeo sierra tango uniform vic  │
+│                                                                              │
+│ Enter for the next · ↑ options · ←→ questions · Esc to cancel                │

@@ -1,0 +1,5 @@
+sta
+Draft: sta
+Last Tab: ignored
+tab Complete visible word  ctrl+r Reset draft  ctrl+q Quit
+Typing keeps focus; Ctrl+R resets the seed.

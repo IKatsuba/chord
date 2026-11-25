@@ -1,0 +1,24 @@
+ parser · fake · fake-small · opened by main 498633h ago
+
+ › go on
+
+
+
+
+
+
+
+
+
+
+ ››› Working… (4s · esc to interrupt)
+ ← from @main · after the running calls: Then the docs, once the tests pass.
+ ← from @docs · fake: The README names the old flag. …
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake               ◦ idle 0s
+    parser  fake · fake-small  ✻ working 3s
+    docs    fake               ◦ idle 3s

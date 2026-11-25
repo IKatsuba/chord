@@ -1,0 +1,15 @@
+Original installed agents | Port synthetic fixture (39x14; inventories/version/directory differ)
+ chord v0.71.0 · …a.designer-ship13-c3  |    chord v0.0.1 · …/example/project
+                                        | 
+  Select agent                          |   Select agent
+                                        | 
+  ❯ ↑ 4.  claude · Claude Agent         |   ❯   1.  claude
+      5.  cline · Cline                 |       2.  codex
+      6.  codebuddy-...Codebuddy Code   |       3.  pi · not on PATH
+      7.  codex · Codex                 |       4.  agent-3 · Coding agent 3
+    ↓ 8.  cursor-clo...r Cloud Agents   |     ↓ 5.  agent-4 · Coding agent 4
+      … +24 more                        |       … +23 more
+                                        | 
+  ↑↓ or j/k to move · Enter or 1–9 to   |   ↑↓ or j/k to move · Enter or 1–9 to
+  select · Esc to cancel                |   select · Esc to cancel
+                                        | 

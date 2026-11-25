@@ -1,0 +1,25 @@
+ORIGINAL                                                                         | FIX
+ █▄     chord v0.71.0                                                            |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                               |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.ctui21-leader                                              |  ▄██▀   <isolated worktree>
+ █▀     ? for shortcuts · /help                                                  |  █▀     ? for shortcuts
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ctrl+x …  b a code block · a the one that waits · esc never mind               |   ctrl+x …  a the one that waits · esc never mind

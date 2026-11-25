@@ -1,0 +1,5 @@
+The wheel fixture uses Allow once; the actual original permission scenario
+uses Allow. The first actual120dark matrix stopped at a missing Allow once
+readiness phrase. Both UIs were already correctly waiting for permission.
+Captured scene/journal retained; panes rejected the request and exited0.
+The final driver waits for 1. Allow, covering either production wording.

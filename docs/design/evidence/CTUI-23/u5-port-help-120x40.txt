@@ -1,0 +1,40 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts
+
+ › /sta
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /echo hello
+
+ ⏺ hello
+
+ › /status
+   ⎿  Agent:     fake
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   a191bf49-a717-47f6-98ee-04ed48bbde53
+      Directory: [fixture directory]
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                         tab to complete a command            1–9 to pick a choice
+  shift or \ + enter for a newline      esc to close completions             ↑ ↓ j k ← → to move or change a value
+  alt + ← → to move by word             esc to interrupt                     enter to pick the highlighted choice
+  ↑ ↓ for prompts                       shift + tab to cycle modes           esc to reject a permission
+  pgup pgdn to scroll                   ctrl + o for verbose output          esc to leave a picker or shortcuts
+  shift + ↑ ↓ to scroll a line          ctrl + c to clear input              ? for shortcuts
+  home end for the top and the bottom   ctrl + d or ctrl + c twice to quit   any key to quit the crash screen
+  ↑ ↓ to pick a completion              ctrl + x a for what waits on you
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

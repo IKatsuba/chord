@@ -1,0 +1,24 @@
+[38;2;71;231;165m Markdown  dark, 100%[39m
+[1;4mTerminal cells[0m
+
+A paragraph with [3memphasis[0m, [1mstrong[0m, [9mstruck[0m, [38;2;177;185;249minline code[39m, a [4m[38;2;140;200;255mlink[0m
+[2m(https://example.com)[0m, [4m[38;2;140;200;255mhttps://auto.example[0m and 日本語 that wraps in the width
+it receives, then continues at the same left edge. After a hard break.
+
+[1mLists[0m
+
+[2m- [0mA first item
+[2m- [0mA second item that is long enough to wrap, so its text hangs under its own
+[2m  [0mfirst word and not under the marker
+[2m  - [0mA nested item
+[2m[x] [0mA done task
+[2m[ ] [0mAn open task
+
+[2m3. [0mthree
+[2m4. [0mfour
+
+[2m- [0mloose one
+
+[2m- [0mloose two
+
+[1mctrl+s[0;2m Stream again[0m  [1mctrl+t[0;2m Theme[0m  [1mctrl+q[0;2m Quit[0m  [1mpageup[0;2m Scroll up a page[0m  [1mpagedo…

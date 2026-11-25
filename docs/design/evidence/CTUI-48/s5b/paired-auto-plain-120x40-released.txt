@@ -1,0 +1,41 @@
+ORIGINAL UI + RECORDING STUB                                                                                             | PORT FIXTURE + RECORDING STUB
+   170. Line 170 of 200, streamed one at a time.                                                                         |  █▄     chord v0.0.1
+   171. Line 171 of 200, streamed one at a time.                                                                         |  ▀██▄   fixture
+   172. Line 172 of 200, streamed one at a time.                                                                         |  ▄██▀   project
+   173. Line 173 of 200, streamed one at a time.                                                                         |  █▀     ? for shortcuts
+   174. Line 174 of 200, streamed one at a time.                                                                         | 
+   175. Line 175 of 200, streamed one at a time.                                                                         |  › Select these request words
+   176. Line 176 of 200, streamed one at a time.                                                                         | 
+   177. Line 177 of 200, streamed one at a time.                                                                         |  ⏺ Reply words and a link label (https://example.test).
+   178. Line 178 of 200, streamed one at a time.                                                                         | 
+   179. Line 179 of 200, streamed one at a time.                                                                         |    ┌ dart ──────────────────────┐
+   180. Line 180 of 200, streamed one at a time.                                                                         |    │   print("complete block"); │
+   181. Line 181 of 200, streamed one at a time.                                                                         |    └────────────────────────────┘
+   182. Line 182 of 200, streamed one at a time.                                                                         | 
+   183. Line 183 of 200, streamed one at a time.                                                                         |    Last reply paragraph.
+   184. Line 184 of 200, streamed one at a time.                                                                         | 
+   185. Line 185 of 200, streamed one at a time.                                                                         |  › Next eligible request
+   186. Line 186 of 200, streamed one at a time.                                                                         | 
+   187. Line 187 of 200, streamed one at a time.                                                                         | 
+   188. Line 188 of 200, streamed one at a time.                                                                         | 
+   189. Line 189 of 200, streamed one at a time.                                                                         | 
+   190. Line 190 of 200, streamed one at a time.                                                                         | 
+   191. Line 191 of 200, streamed one at a time.                                                                         | 
+   192. Line 192 of 200, streamed one at a time.                                                                         | 
+   193. Line 193 of 200, streamed one at a time.                                                                         | 
+   194. Line 194 of 200, streamed one at a time.                                                                         | 
+   195. Line 195 of 200, streamed one at a time.                                                                         | 
+   196. Line 196 of 200, streamed one at a time.                                                                         | 
+   197. Line 197 of 200, streamed one at a time.                                                                         | 
+   198. Line 198 of 200, streamed one at a time.                                                                         | 
+   199. Line 199 of 200, streamed one at a time.                                                                         | 
+   200. Line 200 of 200, streamed one at a time.                                                                         | 
+                                                                                                                         | 
+ › Next eligible request                                                                                                 | 
+                                                                                                                         | 
+ ⏺ Hello, world. This reply came in chunks.                                                                              | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  sent 4 chars to the terminal's clipboard                                                                               |   sent 4 chars to the terminal's clipboard

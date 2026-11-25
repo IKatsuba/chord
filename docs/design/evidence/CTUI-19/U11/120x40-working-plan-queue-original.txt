@@ -1,0 +1,40 @@
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › status
+
+ ⏺ Status sent.
+
+ › ignorescancel
+
+ ⏺ Holding on.
+   ⎿  Interrupted by user
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+ › permission
+
+ ⏺ Write(notes.txt)
+   ⎿  Failed
+   ⎿  Rejected Write notes.txt
+
+ ⏺ Permission: deny.
+
+ › plan
+
+ ⏺ Planned.
+
+ ››› Working… (0s · esc to interrupt)
+  ⎿  ☒ Read the code
+     ◐ Write the change
+     ☐ Run the tests
+ › plan queue
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ⏸ plan mode on (shift+tab to cycle)            Fake Large with a 1M context window · medium effort · 1% context used

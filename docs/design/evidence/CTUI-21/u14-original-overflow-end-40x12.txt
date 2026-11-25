@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 38 lines above ──────────────────
+  tab ← → ↑ ↓ space to answer forms
+  ctrl + c to stop the turn and its form
+  /vim for vim mode
+  ? for shortcuts
+  any key to quit the crash screen
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

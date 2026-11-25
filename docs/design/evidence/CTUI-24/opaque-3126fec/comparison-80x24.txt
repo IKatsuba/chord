@@ -1,0 +1,24 @@
+Resize to five rows to hide the completion.                                      | Resize to five rows to hide the completion.
+Transcript row 1 · underlying cells stay visible                                 | Transcript row 1 · underlying cells stay visible
+Transcript row 2 · underlying cells stay visible                                 | Transcript row 2 · underlying cells stay visible
+Transcript row 3 · underlying cells stay visible                                 | Transcript row 3 · underlying cells stay visible
+Transcript row 4 · underlying cells stay visible                                 | Transcript row 4 · underlying cells stay visible
+Transcript row 5 · underlying cells stay visible                                 | Transcript row 5 · underlying cells stay visible
+Transcript row 6 · underlying cells stay visible                                 | Transcript row 6 · underlying cells stay visible
+Transcript row 7 · underlying cells stay visible                                 | Transcript row 7 · underlying cells stay visible
+Transcript row 8 · underlying cells stay visible                                 | Transcript row 8 · underlying cells stay visible
+Transcript row 9 · underlying cells stay visible                                 | Transcript row 9 · underlying cells stay visible
+Transcript row 10 · underlying cells stay visible                                | Transcript row 10 · underlying cells stay visible
+Transcript row 11 · underlying cells stay visible                                | Transcript row 11 · underlying cells stay visible
+Transcript row 12 · underlying cells stay visible                                | Transcript row 12 · underlying cells stay visible
+Transcript row 13 · underlying cells stay visible                                | Transcript row 13 · underlying cells stay visible
+Transcript row 14 · underlying cells stay visible                                | Transcript row 14 · underlying cells stay visible
+Transcript row 15 · underlying cells stay visible                                | Transcript row 15 · underlying cells stay visible
+Transcript row 16 · underlying cells stay visible                                | Transcript row 16 · underlying cells stay visible
+Transcript row 17 · underlying cells stay visible                                | Transcript row 17 · underlying cells stay visible
+  status  Complete the wording cells stay visible                                | Transcript row 18 · underlying cells stay visible
+sta                                                                              | sta
+Draft: sta                                                                       | Draft: sta
+Last Tab: not pressed                                                            | Last Tab: not pressed
+tab Complete visible word  ctrl+r Reset draft  ctrl+q Quit                       | tab Complete visible word  ctrl+r Reset draft  ctrl+q Quit
+Typing keeps focus; Ctrl+R resets the seed.                                      | Typing keeps focus; Ctrl+R resets the seed.

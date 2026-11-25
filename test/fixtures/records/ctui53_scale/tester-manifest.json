@@ -1,0 +1,130 @@
+{
+  "scope": "CTUI-53 affected full-workload correctness and cleanup rerun, not a performance pass.",
+  "commit": "a7a8205b9429dfd059ded49d2cb05e78d644a2c4",
+  "sourceSha256": "ce5c7cbfd69056dd078c8c2b770d137396e619f4a43aae231fd64beea3094048",
+  "commands": {
+    "jit": "nice -n 19 dart run benchmark/records.dart --runtime=jit",
+    "build": "nice -n 19 dart compile exe benchmark/records.dart -o build/tester-records",
+    "aot": "nice -n 19 build/tester-records --runtime=aot"
+  },
+  "execution": "Three sequential JIT runs, one AOT compilation, three sequential native runs; every exit zero, stderr empty. Exact archive and cached locks.",
+  "environment": "Owned isolated absolute TMPDIR and XDG_STATE_HOME; explicit read-only original CHORD_SOURCE.",
+  "reports": [
+    {
+      "file": "jit-1.json",
+      "sha256": "e62edd9e0d497bb057affbde92d7658ff28b513ae57e1ef3135582562970ce68",
+      "mode": "jit",
+      "allNamedHandleCounts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cancelScan": "cancelled",
+      "cancelPrepare": "cancelled"
+    },
+    {
+      "file": "jit-2.json",
+      "sha256": "96da8ec0ac3bc25943628f3010128a887912900e004572e72dd36248510c1158",
+      "mode": "jit",
+      "allNamedHandleCounts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cancelScan": "cancelled",
+      "cancelPrepare": "cancelled"
+    },
+    {
+      "file": "jit-3.json",
+      "sha256": "5589de1e360e7ddf48bd45d4fc83fb5e57c0bb6b92109481143070895497d33e",
+      "mode": "jit",
+      "allNamedHandleCounts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cancelScan": "cancelled",
+      "cancelPrepare": "cancelled"
+    },
+    {
+      "file": "aot-1.json",
+      "sha256": "f018bd09ab5524bf65152e0fb893fe28067a4a65325f854492371a7d6ab27983",
+      "mode": "aot",
+      "allNamedHandleCounts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cancelScan": "cancelled",
+      "cancelPrepare": "cancelled"
+    },
+    {
+      "file": "aot-2.json",
+      "sha256": "811a6b11f5ab6b4704184936409b75483ff9f60a6f2558fccfe8691e37eecfa3",
+      "mode": "aot",
+      "allNamedHandleCounts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cancelScan": "cancelled",
+      "cancelPrepare": "cancelled"
+    },
+    {
+      "file": "aot-3.json",
+      "sha256": "457a442b22fb4d8f16e92121047597d365428a31dd93c07d10ae38781b99c981",
+      "mode": "aot",
+      "allNamedHandleCounts": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "cancelScan": "cancelled",
+      "cancelPrepare": "cancelled"
+    }
+  ],
+  "cleanup": "All actual allocated roots removed; outer state and TMPDIR observed empty then removed, binary removed, no owned runtime remains.",
+  "limits": "Canonical fixture roots used for all six new runs. Historical zero-prefix uncertainty and positive baseline failures retained. Physical isolate count/exit latency unmeasured. Request-to-Future timings are not physical exit latency. First-layout/resize hitches and deferred 2000-choice picker redraw concern unchanged. No extra picker run or universal performance pass."
+}

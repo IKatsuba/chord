@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts · /help
+
+ › tasktwo
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Watch the build) · fake · 0 tool uses
+   │  ⎿  Initializing…
+   └─ Agent(Watch the deploy) · fake · 0 tool uses
+      ⎿  Initializing…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  2 agents still running
+    main                                    fake               ◦ idle 0s
+    parser                                  fake · fake-small  ◦ idle 2s
+    docs                                    fake               ◦ idle 2s
+    Summarise the release notes for 0.56.0  fake               ◦ idle 2s
+  ↓ from the commits since 0.55.2, grouped
+    … +5 more

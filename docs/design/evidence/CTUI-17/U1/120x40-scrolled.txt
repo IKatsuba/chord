@@ -1,0 +1,40 @@
+Text area
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ 3 Third logical line                                                                                               │
+ │ 4 Fourth logical line                                                                                              │
+ │ 5 Fifth logical line                                                                                               │
+ │ 6 Sixth logical line                                                                                               │
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+line 6, column 19 · rows 3–6 of 6
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter Insert newline  ctrl+j Insert newline  l…

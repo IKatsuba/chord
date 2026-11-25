@@ -1,0 +1,24 @@
+      report when the test fails for the bug's own reason.
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ ← from @tester · fake
+   ⎿  It fails for that reason: "a" at the end of a line comes back as "a, with
+      no closing quote. Only tests/parse/tokenize_test.ts changed.
+
+ ⏺ Received the message from tester · fake.
+
+ › team
+
+ ⏺ List teams
+
+ ⏺ Internal error
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● tester needs your permission · ctrl+x a    Fake Large with a 1M… · 1% used
+    main    fake  ◦ idle 7s         ✓ new reply
+    bugfix  fake  ◦ idle 7s
+    tester  fake  ● permission 32s  ← new message
+    coder   fake  ◦ idle 32s        ✓ new reply

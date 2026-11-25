@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fixture
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts · /help
+
+ › deploy it
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (498623h 5m)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ main asks you to open a link · between turns                                                                         │
+│ Line 1 of why the agent needs you to sign in before it goes on.                                                      │
+│ Line 2 of why the agent needs you to sign in before it goes on.                                                      │
+│ Line 3 of why the agent needs you to sign in before it goes on.                                                      │
+│ Line 4 of why the agent needs you to sign in before it goes on.                                                      │
+│ Line 5 of why the agent needs you to sign in before it goes on.                                                      │
+│ Line 6 of why the agent needs you to sign in before it goes on.                                                      │
+│                                                                                                                      │
+│   https://example.com/oauth/authorize?client=chord&scope=read:project,read:project,read:project,read:project,read:   │
+│   project,read:project,read:project,read:project,read:project,read:project,read:project,read:project,write           │
+│   Opens example.com                                                                                                  │
+│                                                                                                                      │
+│   1. Open in the browser                                                                                             │
+│   2. Decline                                                                                                         │
+│                                                                                                                      │
+│ ctrl+x a to answer                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● input asked between turns · ctrl+x a to answer · ? for shortcuts

@@ -1,0 +1,25 @@
+ORIGINAL + RECORDING STUB                                                        | PORT + RECORDING BOOTSTRAP
+   │ x                   │                                                       |    │   x                 │
+   └─────────────────────┘                                                       |    └─────────────────────┘
+                                                                                 | 
+   ┌─ sh ────────────────────────────────────────────────────────[copy]─[run]─┐  |    ┌ sh ───────────────────────────────────────────────────────────────[copy]─┐
+   │ bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p >  │  |    │   bun dev chord --fake --qa capture && tmux capture-pane -t chord-qa -p  │
+   │ /tmp/screen.txt                                                          │  |    │ ↪ > /tmp/screen.txt                                                      │
+   │                                                                          │  |    │                                                                          │
+   │ echo done                                                                │  |    │   echo done                                                              │
+   └──────────────────────────────────────────────────────────────────────────┘  |    └──────────────────────────────────────────────────────────────────────────┘
+                                                                                 | 
+   - a loose item                                                                |    - a loose item
+                                                                                 | 
+   - a loose item with a box:                                                    |    - a loose item with a box:
+                                                                                 | 
+     ┌─ sh ─[copy]─[run]─┐                                                       |      ┌ sh ──────[copy]─┐
+     │ bun dev check     │                                                       |      │   bun dev check │
+     └───────────────────┘                                                       |      └─────────────────┘
+                                                                                 | 
+   A paragraph after.                                                            |    A paragraph after.
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  sent 98 chars to the terminal's clipboard                                      |   sent 98 chars to the terminal's clipboard

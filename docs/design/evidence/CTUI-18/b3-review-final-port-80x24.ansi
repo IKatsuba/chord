@@ -1,0 +1,24 @@
+ [1mchord[0;2m v0.0.1 · fake · <repository>[0m
+ [2m›[0m reviewpermission
+
+ [2m⏺[0m [1mRun[0m(a reviewed action)
+   [2m⎿[0m  Reviewed: caution
+
+ [2m›››[0m Waiting for permission… [2m(9s · denied in 4m 50s)[0m
+
+[1m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mRun a reviewed action[0m                                                        [1m│
+│[0m                                                                              [1m│
+│[0m The safety review held this:                                                 [1m│
+│[0m Fixture safety review: caution.                                              [1m│
+│[0m                                                                              [1m│
+│[0m [1m❯[0m [1m1. Allow once[0m                                                              [1m│
+│[0m [1m [0m 2. Deny                                                                    [1m│
+│[0m                                                                              [1m│
+│[0m [2mEsc to reject · denied by itself in 5 minutes[0m                                [1m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                            [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m                           [2mFake Large with a 1M context window · medium effort[0m

@@ -1,0 +1,40 @@
+ [1mchord[0;2m v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7[0m
+
+ [2m›[0m bash
+
+ [38;2;78;186;101m⏺[39m [1mBash[0m(git status --short)
+   [2m⎿[0m  [2m```console[0m
+   [2m [0m  [2m M src/main.tsx[0m
+   [2m [0m  [2m?? notes.md[0m
+   [2m [0m  [2m```[0m
+
+ ⏺ Two files changed.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m› [0;7m [0m
+ [2mctrl+c or ctrl+d to quit[0m

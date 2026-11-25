@@ -1,0 +1,24 @@
+[1m[38;2;196;156;255mdocs[0;2m · fake · Fake Large with a 1M context window · opened by main 18s ago[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    [1mmain  [0;2m  fake  ◦ idle 6s[0m
+    [38;2;108;182;255mparser[2m[39m  fake  ◦ idle 8s        ✓ new reply[0m
+    [38;2;196;156;255mdocs  [2m[39m  fake[0m[38;2;255;193;7m  ● permission 9s[2m[39m  ← new message[0m

@@ -1,0 +1,14 @@
+ chord v0.71.0 · …a.designer-ship13-c3
+
+  Select agent
+
+      1.  agoragenti... · Agoragentic
+      2.  auggie · Auggie CLI
+      3.  bob · Bob
+  ❯   4.  claude · Claude Agent
+    ↓ 5.  cline · Cline
+      … +24 more
+
+  ↑↓ or j/k to move · Enter or 1–9 to
+  select · Esc to cancel
+

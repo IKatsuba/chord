@@ -1,0 +1,24 @@
+   ⎿  ok | 1 passed | 0 failed (12ms)
+ ──────────────────────────────────────────────────────────────────────────────
+  enter to send                         esc to interrupt or stop a command
+  tab to send the oldest queued now     shift + tab to cycle modes
+  shift or \ + enter for a newline      ctrl + o for verbose output
+  alt + ← → to move by word             ctrl + c to copy
+  ↑ ↓ for prompts                       ctrl + x b to pick a code block
+  ctrl + r to search prompts            c r to copy or put in the prompt
+  tab enter to take a match             ctrl + c to clear input
+  esc to cancel a search                ctrl + d or ctrl + c twice to quit
+  pgup pgdn to scroll                   ctrl + x a for what waits on you
+  shift + ↑ ↓ to scroll a line          1–9 to pick a choice
+  home end for the top and the bottom   ↑ ↓ j k ← → to move or change a value
+  ↑ ↓ to pick a completion              enter to pick the highlighted choice
+  tab to complete a command             esc to reject a permission
+  tab enter to add a file or agent      esc to leave a picker or shortcuts
+  esc to close completions              ctrl + a to show all directories
+  ! for bash mode                       ? for shortcuts
+  backspace to leave bash mode          any key to quit the crash screen
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

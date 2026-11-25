@@ -1,0 +1,40 @@
+ █▄     [1mchord[0;2m v0.0.1[0m
+ ▀██▄   [2mfake · Fake Large with a 1M context window[0m
+ ▄██▀   [2m[fixture directory][0m
+ █▀     [2m? for shortcuts[0m
+
+ [2m›[0m /sta
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m›[0m /echo hello
+
+ ⏺ hello
+
+ [2m›[0m /status
+   [2m⎿[0m  [2mAgent:[0m     fake
+   [2m [0m  [2mModel:[0m     Fake Large with a 1M context window
+   [2m [0m  [2mMode:[0m      Default
+   [2m [0m  [2mSession:[0m   a191bf49-a717-47f6-98ee-04ed48bbde53
+   [2m [0m  [2mDirectory:[0m [fixture directory]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                                                                  [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

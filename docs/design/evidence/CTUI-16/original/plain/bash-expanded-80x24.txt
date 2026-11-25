@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.ctui16-designer-bash-80
+ █▀     ? for shortcuts · /help
+
+ › bash
+
+ ⏺ Bash(git status --short)
+   ⎿   M src/main.tsx
+      ?? notes.md
+
+ ⏺ Two files changed.
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,24 @@
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › /team show bugfix
+   ⎿  bugfix · .chord/teams/bugfix.md
+      Fixes a bug end to end — a failing test first, then the fix.
+
+      lead    fake · fake-large  default      Splits the job, says who edits
+                                              which files, reports to main
+      tester  fake · fake-small  acceptEdits  Writes the failing test, then
+                                              proves the fix
+      coder   fake · fake-large  plan         Writes the fix, in the files
+                                              the lead names
+
+      How bugfix works
+      … +27 lines (ctrl+o to expand)
+
+ › /team edit x
+   ⎿  /team has no edit; it takes list, new, show, run or stop
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

@@ -1,0 +1,25 @@
+Original rewrite-expanded-80x24.txt | U7 live rewrite-expanded-80x24.txt
+      30     { id: 29, name: 'row 29' },                                         |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+      31     { id: 30, name: 'row 30' },                                         |          …
+      32 -   { id: 31, name: 'row 31' },                                         |       29     { id: 28, name: 'row 28' },
+      32 +   { id: 31, name: 'a row whose name runs well past the edge of a      |       30     { id: 29, name: 'row 29' },
+           narrow terminal window' },                                            |       31     { id: 30, name: 'row 30' },
+      33     { id: 32, name: 'row 32' },                                         |       32 -   { id: 31, name: 'row 31' },
+      34     { id: 33, name: 'row 33' },                                         |       32 +   { id: 31, name: 'a row whose name runs well past the edge of a
+      35     { id: 34, name: 'row 34' },                                         |            narrow terminal window' },
+         …                                                                       |       33     { id: 32, name: 'row 32' },
+      49     { id: 48, name: 'row 48' },                                         |       34     { id: 33, name: 'row 33' },
+      50     { id: 49, name: 'row 49' },                                         |       35     { id: 34, name: 'row 34' },
+      51     { id: 50, name: 'row 50' },                                         |          …
+      52 -   { id: 51, name: 'row 51' },                                         |       49     { id: 48, name: 'row 48' },
+      53 -   { id: 52, name: 'row 52' },                                         |       50     { id: 49, name: 'row 49' },
+      52     { id: 53, name: 'row 53' },                                         |       51     { id: 50, name: 'row 50' },
+      53     { id: 54, name: 'row 54' },                                         |       52 -   { id: 51, name: 'row 51' },
+      54     { id: 55, name: 'row 55' },                                         |       53 -   { id: 52, name: 'row 52' },
+                                                                                 |       52     { id: 53, name: 'row 53' },
+ ⏺ Rewrote the table.                                                            |       53     { id: 54, name: 'row 54' },
+                                                                                 |       54     { id: 55, name: 'row 55' },
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ |  ⏺ Rewrote the table.
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |  ctrl+c or ctrl+d to quit

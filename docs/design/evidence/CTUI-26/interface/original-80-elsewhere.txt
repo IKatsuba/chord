@@ -1,0 +1,24 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   fixture-project
+ █▀     ? for shortcuts · /help
+
+ › /resume
+   ⎿  That session is in fixture-other. Quit and open it there
+      with:
+[synthetic fake command redacted; original row wrapped here]
+[synthetic fake command redacted; original row wrapped here]
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

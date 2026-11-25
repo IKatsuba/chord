@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   /private/var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/here
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ --no-mcp-servers held back 1 MCP server from fake: chord (chord's own). Without it, fake cannot start other agents
+   or use chord's tools. /mcp lists it.
+
+ › /resume
+   ⎿  That session is in /private/var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/elsewhere. Quit and
+      open it there with:
+      chord fake --agent-command /var/configs/xx/neutral-throwaway-config-place/c/run.capture-01/fast.sh --no-mcp-
+      servers --resume b6028b5b-4c6f-42ad-8c70-90d6a46ef4bb
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

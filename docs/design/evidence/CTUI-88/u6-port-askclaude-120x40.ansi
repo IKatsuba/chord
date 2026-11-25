@@ -1,0 +1,40 @@
+ [38;2;190;250;218m[48;2;164;244;206m▀[38;2;150;241;199m[49m▄[39m     [1mchord[0;2m v0.0.1[0m
+ [38;2;139;238;193m▀[38;2;124;235;186m[48;2;99;229;173m▀[38;2;110;231;179m[48;2;85;225;167m▀[38;2;71;222;160m[49m▄[39m   [2mfake · Fake Large with a 1M context window[0m
+ [38;2;62;218;155m▄[38;2;73;222;161m[48;2;56;206;150m▀[38;2;61;216;155m[48;2;50;194;145m▀[38;2;55;204;149m[49m▀[39m   [2m<working directory>[0m
+ [38;2;51;196;146m[48;2;39;174;136m▀[38;2;45;184;141m[49m▀[39m     [2m? for shortcuts · /help[0m
+
+ [2m›[0m permission
+
+ [38;2;255;107;128m⏺[39m [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [38;2;255;107;128mFailed[39m
+   [2m⎿[0m  [38;2;255;107;128mRejected Write notes.txt[39m
+
+ ⏺ Permission: deny.
+
+ [2m›[0m askclaude
+
+ [2m⏺[0m [1mAsking[0m(for your input)
+
+
+
+
+
+ [38;2;210;255;228m›[38;2;10;116;112m››[39m [38;2;71;231;165mWaiting for your input…[39m [2m(5s)[0m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mfake asks you 2 questions[0m                                                                                            [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m ← [38;2;177;185;249m◉[1m[39m Language[0m   ○ Checks   ○ Submit →                                                                                 [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [1mWhich language should helper scripts use?[0m                                                                            [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [38;2;177;185;249m1. Deno (TypeScript) (Recommended)[39m                                                                                 [38;2;177;185;249m│
+│[39m      [2mRuns from source with inline npm: and jsr: imports, no package manager[0m                                          [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. Python                                                                                                          [38;2;177;185;249m│
+│[39m      [2mOnly where a library has no JS or TS equivalent[0m                                                                 [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m Note  [38;2;102;102;102mType your own answer, or add a note to the option you chose above (optional).[39m                                [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mEnter to pick · 1–2 · ↑↓ to move · ←→ or Tab for the questions · Esc to cancel[0m                                       [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

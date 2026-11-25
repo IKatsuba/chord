@@ -1,0 +1,25 @@
+Bad state: window failed
+#0 Throws (fixture.dart:1:1)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Pane is dead (status 1, Mon Nov 16 12:14:11 2026)

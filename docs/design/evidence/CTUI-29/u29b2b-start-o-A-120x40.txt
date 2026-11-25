@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+                                ▀▀▄
+                                ▀▀▀▀▄        ██████╗ ██╗  ██╗  ██████╗  ██████╗  ██████╗
+                                ▀▀▀▀▀▀▄     ██╔════╝ ██║  ██║ ██╔═══██╗ ██╔══██╗ ██╔══██╗
+                                 ▀▀▀▀▀▀▀▄   ██║      ███████║ ██║   ██║ ██████╔╝ ██║  ██║
+                                 ▄▀▀▀▀▀▀▀   ██║      ██╔══██║ ██║   ██║ ██╔══██╗ ██║  ██║
+                                ▀▀▀▀▀▀▀     ╚██████╗ ██║  ██║ ╚██████╔╝ ██║  ██║ ██████╔╝
+                                ▀▀▀▀▀        ╚═════╝ ╚═╝  ╚═╝  ╚═════╝  ╚═╝  ╚═╝ ╚═════╝
+                                ▀▀▀
+
+                                          One terminal for every coding agent.
+                                          v0.71.0 · /private/tmp/ctui29b-look/w
+
+                              Select agent
+
+                                1. codex · Codex
+                              ❯ 2. claude · Claude Agent
+
+                              ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+
+                              Unknown in offeredAgents: nope, typo
+
+
+
+
+
+
+
+
+
+

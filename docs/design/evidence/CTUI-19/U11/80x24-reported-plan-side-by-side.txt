@@ -1,0 +1,2 @@
+Original | Port
+  ⏸ plan mode on        Fake Large with a 1M context window · medium · 1% used |   ⏸ plan mode on        Fake Large with a 1M context window · medium · 1% used

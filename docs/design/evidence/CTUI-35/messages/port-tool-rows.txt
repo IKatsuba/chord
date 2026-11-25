@@ -1,0 +1,264 @@
+=== Open(parser) · fake · fake-small and its prompt, at Size(120, 40)
+
+⏺ Open(parser) · fake · fake-small
+  ⎿  agentchild
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== → to @parser · queued, its text whole under ⎿, at Size(120, 40)
+
+→ to @parser · queued
+  ⎿  I changed how a string at the end of a line is read. Run the parser tests now and tell me only what fails.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== a → dim while it goes, red once refused with the refusal after its text, at Size(120, 40)
+
+→ to @parser
+  ⎿  Run the parser tests.
+     parser is closed; it takes no more messages
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== a send cut off says it was not delivered, at Size(120, 40)
+
+→ to @main
+  ⎿  Found it.
+     Not delivered: cut off before it reached chord. chord tells the agent at its next turn.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== Open(parser) · fake · fake-small and its prompt, at Size(80, 24)
+
+⏺ Open(parser) · fake · fake-small
+  ⎿  agentchild
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== → to @parser · queued, its text whole under ⎿, at Size(80, 24)
+
+→ to @parser · queued
+  ⎿  I changed how a string at the end of a line is read. Run the parser tests
+     now and tell me only what fails.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== a → dim while it goes, red once refused with the refusal after its text, at Size(80, 24)
+
+→ to @parser
+  ⎿  Run the parser tests.
+     parser is closed; it takes no more messages
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+=== a send cut off says it was not delivered, at Size(80, 24)
+
+→ to @main
+  ⎿  Found it.
+     Not delivered: cut off before it reached chord. chord tells the agent at
+     its next turn.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

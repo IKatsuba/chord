@@ -1,0 +1,24 @@
+Choices disabled
+Filter:
+    1. Allow this
+    command in the
+    current folder and
+    do not ask again
+  ↓ 2. Allow this
+    … +1 more
+Answer: None
+ctrl+t Toggle choices…
+
+
+
+
+
+
+
+
+
+
+
+
+
+

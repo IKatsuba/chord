@@ -1,0 +1,49 @@
+
+[1mUsage:[22m   [95mchord [33m[[95m[95magent[95m[33m][95m[39m
+[1mVersion:[22m [33m0.71.0[39m       
+
+[1mDescription:[22m
+
+  A full-screen terminal client for ACP coding agents. A new unnamed interactive start asks which agent to use for this invocation; explicit commands,
+  headless and resume routes keep their existing behavior.                                                                                            
+
+[1mOptions:[22m
+
+  [94m-h[39m, [94m--help[39m                                 [31m[1m-[22m[39m Show this help.                                                                                       
+  [94m-V[39m, [94m--version[39m                              [31m[1m-[22m[39m Show the version number for this program.                                                             
+  [94m-C[39m, [94m--cwd[39m                       [33m<[39m[95mdir[39m[33m>[39m      [31m[1m-[22m[39m Directory the session works in.                                   ([1mDefault:[22m                           
+                                                                                                                 [1m[22m[32m"/private/tmp/ctui29-look/w"[39m)       
+  [94m--agent-command[39m                 [33m<[39m[95mcommand[39m[33m>[39m  [31m[1m-[22m[39m Start this ACP agent command instead of chord's own; [agent]                                          
+                                               only names it.                                                                                        
+  [94m-m[39m, [94m--model[39m                     [33m<[39m[95mmodel[39m[33m>[39m    [31m[1m-[22m[39m Start each of [agent]'s sessions on this model, by its id for     ([31m[1mConflicts: [22m[39m[3m--print[23m)                
+                                               it.                                                                                                   
+  [94m--effort[39m                        [33m<[39m[95meffort[39m[33m>[39m   [31m[1m-[22m[39m Start each of [agent]'s sessions on this effort, by its id for                                        
+                                               it.                                                                                                   
+  [94m--permission-mode[39m               [33m<[39m[95mmode[39m[33m>[39m     [31m[1m-[22m[39m Start each of [agent]'s sessions in this mode, by its id for it.                                      
+  [94m--no-mcp-servers[39m                           [31m[1m-[22m[39m Start each of [agent]'s sessions with no MCP servers, chord's                                         
+                                               own included.                                                                                         
+  [94m-c[39m, [94m--continue[39m                             [31m[1m-[22m[39m Open the agent's latest session in this directory again.          ([31m[1mConflicts: [22m[39m[3m--resume[23m)               
+  [94m-r[39m, [94m--resume[39m                    [33m[[39m[95mid[39m[33m][39m       [31m[1m-[22m[39m Open a session by the id chord prints on quit; with no id, pick                                       
+                                               one.                                                                                                  
+  [94m-p[39m, [94m--print[39m                     [33m<[39m[95mprompt[39m[33m>[39m   [31m[1m-[22m[39m Send this prompt, print the reply and exit; piped input joins     ([31m[1mConflicts: [22m[39m[3m--continue, --resume[23m)   
+                                               it.                                                                                                   
+  [94m--dangerously-skip-permissions[39m             [31m[1m-[22m[39m Allow every permission the agent asks for. Only with -p.                                              
+  [94m--output-format[39m                 [33m<[39m[95mformat[39m[33m>[39m   [31m[1m-[22m[39m How -p prints: the reply as it streams, or one JSON object at     ([33m[1mDepends: [22m[39m[3m--print[23m, [1mValues: [22m[32m"text"[39m,  
+                                               the end.                                                          [32m"json"[39m)                             
+
+[1mCommands:[22m
+
+  [94magents[39m            [31m[1m-[22m[39m List the agents chord can start: name, title, command, and for those started by their own CLI whether PATH has it.
+  [94macp[39m      [33m[[39m[95magent[39m[33m][39m  [31m[1m-[22m[39m Serve ACP on stdin and stdout, for a client that starts chord as its agent; draws nothing.                        
+  [94mupgrade[39m           [31m[1m-[22m[39m Upgrade chord executable to latest or given version.                                                              
+
+[1mExamples:[22m
+
+  [2m[1mClaude Code[2m[22m                  chord claude                                          
+  [2m[1mPick up where you left off[2m[22m   chord claude --continue                               
+  [2m[1mPick an earlier session[2m[22m      chord --resume                                        
+  [2m[1mCodex in another directory[2m[22m   chord codex -C ~/src/app                              
+  [2m[1mOne question, for a script[2m[22m   chord -p "What does this do?"                         
+  [2m[1mPiped input with the prompt[2m[22m  git diff | chord -p "Review this" --output-format json
+  [2m[1mAn agent chord does not know[2m[22m chord my-agent --agent-command "my-agent --acp"       
+

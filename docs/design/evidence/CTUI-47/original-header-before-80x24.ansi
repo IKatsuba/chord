@@ -1,0 +1,24 @@
+[38;2;255;255;255m [39m█▄  [38;2;255;255;255m   [1m[39mchord[0;2m v0.71.0[0m[38;2;255;255;255m
+ [39m▀██▄[38;2;255;255;255m   [2m[39mfake · Fake Large with a 1M context window[0m[38;2;255;255;255m
+ [39m▄██▀[38;2;255;255;255m   [2m[39m/tmp/chord-qa.ctui47[0m[38;2;255;255;255m
+ [39m█▀  [38;2;255;255;255m   [2m[39m? for shortcuts · /help[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mlong[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [2m[39m1. [0mLine 1 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m2. [0mLine 2 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m3. [0mLine 3 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m4. [0mLine 4 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m5. [0mLine 5 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m6. [0mLine 6 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m7. [0mLine 7 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m8. [0mLine 8 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m9. [0mLine 9 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m10. [0mLine 10 of 200, streamed one at a time.[38;2;255;255;255m
+   [2m[39m11. [0mLine 11 of 200, streamed one at a time.[38;2;255;255;255m
+ [2m[39m── ↓ 189 lines below · end to jump to the bottom ─────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m [39mwheel keeps this draft[38;2;255;255;255m                                                     [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m         [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m

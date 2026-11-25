@@ -1,0 +1,41 @@
+Original rewrite-expanded-120x40.txt | U7 live rewrite-expanded-120x40.txt
+      10 -   { id: 9, name: 'row 9' },                                                                                   |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+      11 -   { id: 10, name: 'row 10' },                                                                                 |        8 -   { id: 7, name: 'row 7' },
+      12 -   { id: 11, name: 'row 11' },                                                                                 |        9 -   { id: 8, name: 'row 8' },
+      13 -   { id: 12, name: 'row 12' },                                                                                 |       10 -   { id: 9, name: 'row 9' },
+       6 +   { id: 5, name: 'entry 5' },                                                                                 |       11 -   { id: 10, name: 'row 10' },
+       7 +   { id: 6, name: 'entry 6' },                                                                                 |       12 -   { id: 11, name: 'row 11' },
+       8 +   { id: 7, name: 'entry 7' },                                                                                 |       13 -   { id: 12, name: 'row 12' },
+       9 +   { id: 8, name: 'entry 8' },                                                                                 |        6 +   { id: 5, name: 'entry 5' },
+      10 +   { id: 9, name: 'entry 9' },                                                                                 |        7 +   { id: 6, name: 'entry 6' },
+      11 +   { id: 10, name: 'entry 10' },                                                                               |        8 +   { id: 7, name: 'entry 7' },
+      12 +   { id: 11, name: 'entry 11' },                                                                               |        9 +   { id: 8, name: 'entry 8' },
+      13 +   { id: 12, name: 'entry 12' },                                                                               |       10 +   { id: 9, name: 'entry 9' },
+      14     { id: 13, name: 'row 13' },                                                                                 |       11 +   { id: 10, name: 'entry 10' },
+      15     { id: 14, name: 'row 14' },                                                                                 |       12 +   { id: 11, name: 'entry 11' },
+      16     { id: 15, name: 'row 15' },                                                                                 |       13 +   { id: 12, name: 'entry 12' },
+         …                                                                                                               |       14     { id: 13, name: 'row 13' },
+      29     { id: 28, name: 'row 28' },                                                                                 |       15     { id: 14, name: 'row 14' },
+      30     { id: 29, name: 'row 29' },                                                                                 |       16     { id: 15, name: 'row 15' },
+      31     { id: 30, name: 'row 30' },                                                                                 |          …
+      32 -   { id: 31, name: 'row 31' },                                                                                 |       29     { id: 28, name: 'row 28' },
+      32 +   { id: 31, name: 'a row whose name runs well past the edge of a narrow terminal window' },                   |       30     { id: 29, name: 'row 29' },
+      33     { id: 32, name: 'row 32' },                                                                                 |       31     { id: 30, name: 'row 30' },
+      34     { id: 33, name: 'row 33' },                                                                                 |       32 -   { id: 31, name: 'row 31' },
+      35     { id: 34, name: 'row 34' },                                                                                 |       32 +   { id: 31, name: 'a row whose name runs well past the edge of a narrow terminal window' },
+         …                                                                                                               |       33     { id: 32, name: 'row 32' },
+      49     { id: 48, name: 'row 48' },                                                                                 |       34     { id: 33, name: 'row 33' },
+      50     { id: 49, name: 'row 49' },                                                                                 |       35     { id: 34, name: 'row 34' },
+      51     { id: 50, name: 'row 50' },                                                                                 |          …
+      52 -   { id: 51, name: 'row 51' },                                                                                 |       49     { id: 48, name: 'row 48' },
+      53 -   { id: 52, name: 'row 52' },                                                                                 |       50     { id: 49, name: 'row 49' },
+      52     { id: 53, name: 'row 53' },                                                                                 |       51     { id: 50, name: 'row 50' },
+      53     { id: 54, name: 'row 54' },                                                                                 |       52 -   { id: 51, name: 'row 51' },
+      54     { id: 55, name: 'row 55' },                                                                                 |       53 -   { id: 52, name: 'row 52' },
+                                                                                                                         |       52     { id: 53, name: 'row 53' },
+ ⏺ Rewrote the table.                                                                                                    |       53     { id: 54, name: 'row 54' },
+                                                                                                                         |       54     { id: 55, name: 'row 55' },
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                                                                    │ |  ⏺ Rewrote the table.
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |  ctrl+c or ctrl+d to quit

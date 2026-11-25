@@ -1,0 +1,9 @@
+{
+  "scenario": "overlapask",
+  "stepMs": 500,
+  "pauseBeforePermissionMs": 10000,
+  "beforeCaptureAfterEnterApproxMs": 500,
+  "arrivedCaptureAfterEnterApproxMs": 11000,
+  "attempts": 1,
+  "originalOnly": true
+}

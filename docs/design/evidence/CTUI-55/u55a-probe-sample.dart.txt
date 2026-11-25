@@ -1,0 +1,58 @@
+const sample = ''' Late work 1. A first chunk that starts with a space, as an agent streams it, long enough to wrap at eighty.
+
+a hard break follows  
+   b, after three spaces
+and a soft line
+   indented by three, then more words so that this paragraph wraps in the narrow window too.
+
+ **b** x, strong after a leading space
+
+- i
+
+   x, the loose item's second paragraph
+
+> quote line
+>    continued with indent
+
+    indented code
+      kept two more
+
+```
+fenced
+   kept three
+```
+''';
+
+enum _Tone { dark, light, plain }
+
+class _MarkdownExampleState extends State<MarkdownExample> {
+  final _scroll = ScrollController();
+  var _tone = _Tone.dark;
+  var _shown = sample.length;
+  Timer? _timer;
+
+  /// Streams the reply in again, 24 characters every 30 ms.
+  void _stream() {
+    _timer?.cancel();
+    setState(() => _shown = 0);
+    _timer = Timer.periodic(const Duration(milliseconds: 30), (timer) {
+      setState(() {
+        _shown = (_shown + 24).clamp(0, sample.length);
+        if (_shown == sample.length) timer.cancel();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = switch (_tone) {
+      _Tone.dark => ThemeData.dark(),
+      _Tone.light => ThemeData.light(),
+      _Tone.plain => ThemeData.plain(),
+    };

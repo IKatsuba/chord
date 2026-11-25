@@ -5,247 +5,749 @@ It is binding.
 
 ## What this is
 
-chord is a full-screen terminal client for coding agents that speak the Agent
-Client Protocol. `README.md` is the pitch, `docs/guide.md` the whole of what it
-does, `docs/FEATURES.md` is the map of what gets built and in which order,
-`docs/decisions.md` is why the stack is what it is. Read the README,
-`FEATURES.md` and `decisions.md` before the first change.
+This repository, github.com/IKatsuba/chord, holds the Dart terminal app and its
+Flutter-shaped framework, chord_tui. `README.md` describes the app;
+`packages/chord_tui/README.md` describes the framework;
+`docs/FEATURES.md` is the map of what gets built and in which order,
+`docs/decisions.md` is why things are the way they are. Read these before the
+first change.
 
-The repository is public-ready from the first commit: everything in it — code,
-comments, docs, commit messages, test names — is in English, and nothing in it
-names a private path, a key, or a person's machine. `tests/privacy_test.ts`
-fails `bun dev quality chord` on any file git tracks that names a home directory,
-the name of the home of whoever runs it, or a path in Claude Code's own
-directory there other than its public settings files.
+There are two things in the tree, and they do not mix:
 
-## The one rule
+- **The framework**, `packages/chord_tui/` (package `chord_tui`): widgets,
+  layout, text, keys, the renderer, the tester. It knows nothing about agents
+  or chord.
+- **The port**, at the root (package `chord`, depends on the framework by
+  path): the terminal app, its ACP connections, sessions and screens.
+  The TypeScript app is preserved at the `ts-final` tag for reference.
 
-**Take a library before writing one.** Below the interface, chord's own ACP
-layer (`src/acp/` and `src/session/`) on `@agentclientprotocol/sdk` is the ACP
-client; on screen, OpenTUI (`@opentui/core` and its React bindings,
-`@opentui/react`) and its components are the widgets.
-Before writing a component, a parser, a renderer or a protocol helper, look for
-a maintained one that runs under Bun and survives `bun build --compile`, try
-it, and say in the handover what you tried. Writing our own is the answer only when the
-library is shown not to fit, and that finding goes into `docs/decisions.md`.
+The point of the port is to prove the framework: whenever the port needs
+something a terminal app would generally need (a scrolling list, a picker, a
+markdown renderer), it is built in `packages/chord_tui/lib/` with tests,
+and the port only uses it. Only what is chord's own (ACP, sessions, teams,
+its screens) lives in the root `lib/`.
 
-When a library does not do directly what the task asks, do not write a
-workaround around it on your own call: no rewriting its input, no guessing at
-ambiguous input, no patching its behaviour. Stop and hand the owner the
-question with the options, including changing what the task asks so the
-library fits as it is. A trial recorded in `docs/decisions.md` is not the
-owner's consent.
+Everything here (code, comments, docs, commit messages, test names) is in
+English, and nothing names a home directory, a key, or a person's machine.
+`../chord` is the only path outside the repository that may be written down.
+
+## The rules
+
+**The framework is written from scratch.** `packages/chord_tui/lib/` does
+not depend on nocterm or any other terminal UI package.
+
+**A maintained package before our own code, for what is not about the
+terminal.** Grapheme segmentation, markdown parsing, highlighting grammars,
+diffing, fuzzy matching, YAML, JSON-RPC: look on pub.dev for a maintained
+package that works under `dart compile exe`, try it, and say in the handover
+what you tried. Writing our own is the answer only when the package is shown
+not to fit, and that finding goes into `docs/decisions.md`. When a package
+does not do directly what the task asks, do not write a workaround around it
+on your own call: stop and hand the owner the question with the options.
+
+**The Dart app is its own specification.** `ts-final` is history for
+reference, not a requirement for new behaviour. Before the swap, "the
+original" and `../chord` in designs and decisions mean the TypeScript app.
+
+**Every action has a key.** Nothing on screen needs a pointer. A new action
+is bound through `Actions`, with a description, and the shortcuts panel
+lists it.
+
+**Logic lives where a test reaches it.** State and reducers are plain Dart
+with no widget in them; widgets draw state and dispatch.
+
+The framework and port share a version. The root `pubspec.yaml` is the
+source; the release bump updates it, `packages/chord_tui/pubspec.yaml`,
+`lib/version.dart` and the root `pubspec.lock` together.
 
 ## Commands
 
 ```sh
-bun install                    # the dependencies, as bun.lock pins them
-bun dev chord [agent]           # run from source
-bun dev chord --fake            # run against the scripted test agent
-bun dev chord acp [agent]       # serve ACP v1 on stdin and stdout, no window
-bun dev quality chord          # types, lint, format and all tests
-bun dev quality chord --static # types, coverage, lint, format and lint/ tests
-bun dev quality cursor-cloud-acp # package checks, tests, build and Node smoke
-bun check                      # Bun's native type checker
-bun dev test [args…]            # tests, a worker per core; Bun's test arguments
-bun dev test -t '…'             # matching tests
-bun dev test --changed          # uncommitted changes
-bun dev test --changed=<commit> # since a commit
-bun test --isolate --timeout=60000 ./tests/x_test.ts -t '…' # Bun's own runner
-bun dev lint chord --fix        # what ESLint can fix
-bun fmt                        # lay out the tree with Bun's native formatter
+# Framework commands, from the repository root:
+(
+  cd packages/chord_tui
+  # the dependencies, as pubspec.lock pins them
+  dart pub get
+  dart analyze                        # framework types and lints
+  dart format .                       # lay out the tree
+  dart format --output=none --set-exit-if-changed .   # check the layout
+  dart test                           # the framework's tests
+  dart test -t publish --run-skipped   # committed HEAD's archive, dry run only
+  dart doc                            # generate the framework's API docs
+  dart pub global activate pana       # install the local package checker
+  dart pub global run pana --no-warning . # local package score
+  dart test test/widgets_test.dart    # one file
+  dart test test/cursor_test.dart     # editor cursor styles and visibility
+  dart test test/terminal_services_test.dart # user variables and services
+  dart test test/terminal_open_url*_test.dart # system and WSL link opening
+  dart test test/foundation/text_editing_layout_test.dart
+  dart test test/foundation/text_editing_selection_test.dart
+  dart test test/widgets/text_area_selection_test.dart
+  dart test test/widgets/text_area_rows_tester_test.dart
+  dart test test/widgets/focus_test.dart \
+    test/widgets/focus_reparent_tester_test.dart
+  dart test test/run_app_test.dart    # startup and drawing failure cleanup
+  dart test test/run_app_signal*_test.dart # signal exits and ignored fallback
+  # driver drain, launch failure and identity
+  dart test test/expect_*test.dart
+  dart test test/terminal_mouse_test.dart \
+    test/terminal_mouse_lifecycle_test.dart
+  dart test test/terminal_hangup_test.dart test/terminal_hangup_tester_test.dart
+  dart test -n 'a chord waits'        # tests whose names match
+  # demo keys, quit, SIGHUP and failed startup
+  dart test -t compile --run-skipped
+  dart test test/run_app_exit_compile_test.dart --run-skipped
+  dart run example/main.dart          # example: Ctrl+O folds, Ctrl+Q quits
+  dart run example/demo.dart          # the framework's own demo
+  dart run example/code.dart          # highlighted, numbered, wrapped code
+  dart run example/markdown.dart      # Markdown, including streamed replies
+  dart run example/markdown_run_controls.dart # recorded copy/run actions
+  dart run example/markdown_wrap.dart # table cells and long URLs
+  dart run example/markdown_wrap.dart --narrow # narrow table fallback
+  dart run example/diff.dart          # numbered, highlighted, wrapped diffs
+  dart run example/diff_view.dart     # selected diff rows and full counts
+  dart run example/middle.dart        # text retaining both ends around ...
+  dart run example/layers.dart        # anchored layers over a streaming list
+  dart run example/overlay_visibility.dart # visible-surface completion guard
+  dart run example/overlay_visibility.dart --passive # transparent follower
+  dart run example/picker.dart        # numbered choices with a fuzzy filter
+  dart run example/picker_preview.dart # highlight preview before acceptance
+  dart run example/fold.dart          # folding output and aligned table columns
+  dart run example/dialog.dart        # a framed question over the window
+  dart run example/form.dart          # validated fields, choices and buttons
+  dart run example/form.dart --narrow # whole-field scrolling
+  dart run example/form.dart --narrow --long-list # partial option scrolling
+  # multiline editing, wrapping and scrolling
+  dart run example/text_area.dart
+  dart run example/text_area_viewport.dart  # shown rows and gutter
+  dart run example/text_area_spans.dart # style-only full-text projection
+  dart run example/error_boundary.dart  # drawing failure and fallback
+  dart run example/key_help.dart        # grouped help and pending chords
+  dart run example/key_help.dart --rebound # runtime keymap, Quit on Ctrl+Q
+  dart run example/text_area_key_filter.dart  # delegate keys from live input
+  # services and redraw
+  dart run example/terminal_services.dart --scripted-editor
+  dart run example/terminal_services.dart --scripted-editor --editor-fails
+  dart run example/mouse.dart         # captured pointer reports and wheel log
+  dart run example/selection.dart     # semantic selection, no clipboard
+  dart run benchmark/list_view.dart   # list frames and cached switches, no IO
+  dart run benchmark/markdown_stream.dart  # streamed Markdown, no terminal
+  # selection work and retained-source counts
+  dart run benchmark/selection.dart
+  dart run benchmark/picker.dart --count=2000 # exact heights and navigation
+  dart test test/widgets/markdown_blocks_test.dart
+)
+# App commands, from the repository root:
+dart pub get                       # app dependencies, including chord_tui
+dart analyze                       # app types and lints
+dart format .                      # format both packages
+dart format --output=none --set-exit-if-changed .
+dart test                          # the port's tests
+dart test test/session test/ui  # sessions and screens
+dart test test/registry_test.dart # pinned registry and launch data
+dart test test/headless_notice_tester_test.dart
+dart test test/notify_session_var_test.dart
+dart test test/session/sign_in_account_fake_test.dart
+dart test test/ui/app/status_account_window_test.dart
+dart test test/ui/app/sign_in_account_window_test.dart
+dart test test/ui/app/session_var_window_test.dart
+dart test test/ui/app/settings_starting_window_test.dart
+dart test test/ui/prompt/prompt_rows_test.dart
+dart test test/ui/dialogs/questions_note_rows_test.dart
+dart test test/ui/dialogs/questions_note_reflow_tester_test.dart
+dart test test/ui/dialogs/plan_note_tester_test.dart
+dart test test/ui/dialogs/plan_scroll_test.dart
+dart test test/ui/dialogs/plan_note_scroll*_test.dart
+dart test test/ui/dialogs/plan_note_rebound_tester_test.dart
+dart test test/ui/app/plan_note_keys_test.dart
+dart test test/ui/app/cmd_history_window_tester_test.dart
+dart test test/ui/app/prompt_press_tester_test.dart
+dart test test/ui/prompt/prompt_arrows_test.dart \
+  test/ui/prompt/prompt_modified_arrows_tester_test.dart
+dart test test/ui/app/help_command_tester_test.dart
+dart test test/cli_once_test.dart test/cli_once_tester_test.dart
+dart test test/cli_acp_missing_value_tester_test.dart
+dart test test/session/replay_legacy_plan_tester_test.dart
+dart test test/ui/app/starting_commands_window_test.dart
+dart test test/ui/app/chord_cursor_window_test.dart
+dart test test/ui/app/prompt_selection_window_test.dart
+dart test test/ui/app/textarea_held_window_test.dart
+dart test test/ui/dialogs/plan_box_held_fake_test.dart
+dart test test/session/opening_meta_test.dart
+dart test test/acp_server_leave_test.dart
+dart test test/session/monitors_run_test.dart
+dart test test/session/conversation_monitors_starting_test.dart
+dart test test/session/conversation_monitors_starting_tester_test.dart
+dart test test/ui/background
+dart test test/session/record_stopping_test.dart
+dart test test/ui/app/program_status_window_test.dart
+dart test test/acp_monitors_fake_test.dart
+dart test test/session/session_fork_fake_test.dart
+dart test test/ui/app/fork_window_test.dart
+dart test test/settings_tool_test.dart
+dart test test/ui/app/settings_tool_window_test.dart
+dart test test/acp_settings_tool_fake_test.dart
+dart test test/teams_test.dart
+dart test test/yaml_stringify_test.dart
+dart test test/session/agents_host_teams_test.dart
+dart test test/ui/app/team_command_window_test.dart
+dart test test/ui/app/propose_window_test.dart
+dart test test/ui/teams
+dart test test/platform/resources_readers_test.dart
+dart test test/platform/group_exec_contract_test.dart
+dart test test/platform/heap*_test.dart test/cli_heap_test.dart
+dart test test/cli_help_columns*_test.dart
+dart test test/acp_set_title_targeted*_test.dart
+dart test test/session/sessions_targeted_tester_test.dart
+dart test test/acp_team_fake_test.dart
+dart test test/kept_test.dart
+dart test \
+  test/channel_test.dart test/node_semver_test.dart
+dart test \
+  test/cli_upgrade_test.dart test/upgrade_test.dart
+dart test test/upgrade_brew_test.dart
+dart test test/tool/release_test.dart test/tool/release
+dart test \
+  test/tool/npm_test.dart test/tool/formula_test.dart
+dart test \
+  test/tool/ci_test.dart test/tool/workflow_test.dart
+dart test test/tool/shards_test.dart
+dart test test/tool/screenshots_test.dart test/tool/screenshots_tester_test.dart
+dart test test/tool/genai_prices_test.dart \
+  test/tool/currency_symbols_test.dart
+dart test test/fixtures/fake_agent
+# List one CI shard; paths are relative to the selected package:
+dart run tool/shards.dart --package=. --shard=1/3
+dart run tool/shards.dart --package=packages/chord_tui --shard=1/3
+# CI release-target checks on a Linux x64 host:
+dart run tool/ci.dart linux-x64
+dart run tool/ci.dart linux-arm64
+dart test test/tool/release/build_compile_test.dart \
+  --run-skipped
+dart test test/leave_zones_compile_test.dart --run-skipped
+# The port's compiled launcher, window and ACP server smoke tests:
+dart test -t compile --run-skipped
+# ACP, picker and record benchmarks, no terminal:
+dart run benchmark/acp_updates.dart
+dart run benchmark/acp_server.dart
+dart run benchmark/picker.dart --count=2000
+# Data generators use Node; install @pydantic/genai-prices 0.2.3 first:
+dart run tool/genai_prices.dart \
+  --package node_modules/@pydantic/genai-prices
+dart run tool/currency_symbols.dart # Node with ICU 78.1
+dart run benchmark/record_scan.dart # generated records
+# Record scan flags: --files=N --big-count=N --big-mb=N --runs=N;
+# --dir=PATH reuses a completed set; --keep retains it.
+dart run bin/chord.dart          # start page and agent picker
+dart run bin/chord.dart codex -C . # session directory
+dart run bin/chord.dart codex --no-mcp-servers # no MCP servers
+dart run bin/chord.dart codex --continue # latest session here
+dart run bin/chord.dart --resume # pick an earlier session
+dart run bin/chord.dart agents   # list agents and commands
+dart run bin/chord.dart agents -C . --json
+dart run bin/chord.dart acp      # serve ACP on stdio
+dart run bin/chord.dart upgrade --help # install-specific upgrade
+dart run tool/release.dart --help # maintainer release stages
+dart run bin/chord.dart codex -p "Explain this project"
+git diff | dart run bin/chord.dart codex -p "Review this" \
+  --output-format json
+dart run bin/chord.dart --help
+dart run bin/chord.dart --version
+dart run tool/dev.dart chord --fake # fake runtimes and limits
+dart run tool/dev.dart chord --fake --qa teams # fresh capture
+# README and guide images; tmux and Chrome (CHROME overrides its path):
+dart run tool/screenshots.dart # all 12 images, Dart fake only
+dart run tool/screenshots.dart start logo # start page and both logos
+dart run tool/record_history.dart --omitted # isolated saved past
+# Standalone screen fixtures, no agent:
+dart run tool/permission.dart
+dart run tool/notice.dart # F2 reopens, F3 toggles permission
+# The notice fixture accepts --light or --plain; it saves no dismissal.
+dart run tool/form.dart --long-link # held link folding
+dart run tool/form.dart --permission-over # F2 covers, F3 answers
+dart run tool/agents.dart # subagents, launches and messages
+dart run tool/children.dart # open agents and the list, no agent
+dart run tool/children.dart --many # the list folded to … +N more
+dart run tool/children.dart --codex # codex labels, no agent
+# The children fixture also accepts --asking, --unseen, --exited, --failed,
+# --tall, --held, --tasks, and --light or --plain.
+dart run tool/start.dart
+dart run tool/start.dart --resume
+dart run tool/splash.dart # slow startup, no agent; Ctrl+Q quits
+dart run tool/resume.dart --many # local/all choices, no IO
+dart run tool/failed_start.dart # commands after failed startup
+dart run tool/steering.dart # in-memory ACP; F1 lists controls
+dart run tool/steering_replay.dart # recorded personal steering
+dart run tool/prompt.dart
+dart run tool/plan.dart
+dart run tool/status.dart  # --light or --plain for other themes
+dart run tool/settings.dart # --config or --values
+dart run tool/crash.dart
+dart run tool/raw_output.dart # Read without exit bookkeeping
+dart run tool/shell.dart # recorded output, no shell
+dart run tool/bash.dart --code # recorded shell and copy actions
+dart run tool/mentions.dart # injected files, empty recipients
+dart run tool/mentions.dart --agents
+dart run tool/mentions.dart --many --slow
+# The mentions fixture also accepts --light or --plain.
+dart run tool/wheel.dart # transcript wheel, no agent
+dart run tool/wheel.dart --help --tall-draft
+dart run tool/wheel.dart --permission # overflowing proposal
+dart run tool/wheel.dart --fitting # fitting proposal
+dart run tool/selection.dart --pick # recording copy, no clipboard
+dart run tool/selection.dart --manual # explicit selection copy
+mkdir -p build
+dart compile exe bin/chord.dart -o build/chord
+./build/chord agents
+# AOT session and record benchmarks, no terminal:
+dart compile exe benchmark/acp_updates.dart -o build/acp_updates
+./build/acp_updates
+dart compile exe benchmark/acp_server.dart -o build/acp_server
+./build/acp_server
+dart compile exe benchmark/record_scan.dart -o build/record_scan
+./build/record_scan
 ```
 
-Arguments after `bun dev chord`, `bun dev test` and `bun dev lint chord` pass on
-as written. An empty argument needs `--` (`bun dev test -- -t ''`);
-the tool's own help does too (`bun dev lint chord -- --help`).
+Static checks, as the teams call them: `dart analyze` in both the root and
+`packages/chord_tui/`, and
+`dart format --output=none --set-exit-if-changed .` at the root, all clean.
 
-`bun dev test` reports the tests' status. `tests/timings.json` only places
-files: Bun uses it to balance shards and start each worker's slowest files
-first; an unlisted file takes the median. No refresh is required.
-CI runs `static` (`bun dev quality chord --static`), three `tests` shards
-(`--shard=1/3`, `2/3`, `3/3`), `compile` and `node` (Node 22.13,
-`bun dev quality cursor-cloud-acp`). The required `check` job needs all to pass.
+The framework's `publish` test exports its folder from committed HEAD
+outside git and runs `dart pub publish --dry-run`, checking zero warnings
+and a framework-only archive. It does not check uncommitted changes.
+Teams never publish;
+`dart pub publish` must always include `--dry-run`.
 
-The binary is built by Bun's compile API, Bun 1.4.4 or newer. Compilation
-installs all target packages. Build, release and maintenance commands share
-`bun dev <command>` (Cliffy):
+## Layout
 
-```sh
-bun dev compile           # this machine's binary into dist/<target>/chord
-bun dev compile --all     # every release target
-bun dev compile --install # this machine's binary into ~/.local/bin/chord
-bun dev npm               # lay out npm/ from dist/
-bun dev release chord [--bump <version|major|minor|patch|fix>] # owner's release
-bun dev selftest <binary> # fake-agent CLI/window
-bun dev registry          # refetch the registry; name binary-only omissions
-bun dev mark              # rasterise scripts/mark.svg into the header mark
-bun dev screenshots       # retake docs/images/, including title pages and logos
-bun dev screenshots logo  # the transparent dark and light README logos only
-bun dev social            # GitHub's social preview from docs/images into dist/
-bun dev memory            # long-run memory check; options in docs/memory.md
+The framework is under `packages/chord_tui/`; these paths are relative to
+that folder:
+
+```text
+.pubignore                 excludes files from the published archive
+CHANGELOG.md               framework release notes
+lib/chord_tui.dart          what an app imports
+lib/testing.dart            the tester: testWidgets, press, shows
+lib/src/foundation/         geometry, editing, selection and widget state
+lib/src/foundation/text_editing.dart editing, selection and row movement
+lib/src/foundation/vim.dart pure vim normal-mode state and editing reducer
+lib/src/foundation/form.dart form fields, validation and navigation reducer
+lib/src/foundation/scroll_state.dart scroll reducer and retained list anchor
+lib/src/foundation/item_extents.dart measured item heights and versions
+lib/src/terminal/           styles, cell buffers, renderer and terminal services
+lib/src/terminal/terminal.dart terminal IO, services and user variables
+lib/src/terminal/clipboard_image.dart platform clipboard image reading
+lib/src/terminal/open_url.dart platform and WSL system link opening
+lib/src/text/               widths, rich text, word wrap and fuzzy matching
+lib/src/text/wrap_ansi.dart  wrap-ansi layout for TextLayout.wrapAnsi
+lib/src/text/selection_layout.dart selection shaping and part row lookup
+lib/src/input/              keys, chords, kitty alternates and SGR mouse input
+lib/src/rendering/          render boxes: layout and paint
+lib/src/widgets/            the widget tree, focus and actions, the widgets
+lib/src/widgets/keymap.dart runtime rebinding by action id
+lib/src/widgets/form.dart   validated form, buttons and keyboard input
+lib/src/widgets/scroll_controller.dart retained scroll and row anchors
+lib/src/widgets/markdown.dart Markdown and blocksOf styled rows per block
+test/                       framework tests
+test/main_example_test.dart package example folding and keys
+test/publish_dry_run_test.dart committed archive contents and zero warnings
+test/cursor_test.dart       editor cursor styles, visibility and focus
+test/binary_smoke_test.dart compiled demo keys, quit and closed-pty SIGHUP
+test/run_app_exit_compile_test.dart compiled startup and write failure cleanup
+test/fixtures/run_app_exit.dart terminal failures and beforeExit exit fixture
+test/run_app_signal*_test.dart signal cleanup, re-raise and fallback exits
+test/fixtures/run_app_signal*.dart isolated termination-signal fixtures
+test/expect_*test.dart       driver drain, launch failure and PID reuse guards
+test/fixtures/expect_driver.dart expect driver and spawned-program cleanup
+test/terminal_flush*_test.dart bounded output flush, mode restoration and reuse
+test/terminal_hangup*_test.dart SIGHUP exit and flush-error boundaries
+test/fixtures/terminal_hangup*.dart pty hangup and flush-failure fixtures
+test/terminal_open_url*_test.dart platform and WSL link opening
+test/terminal_open_url_detached_test.dart detached opener and start failures
+test/fixtures/open_url_detached.dart app terminal with fake system openers
+test/terminal_mouse*_test.dart mouse ownership and terminal reuse
+test/fixtures/terminal_mouse*.dart isolated mouse-mode pty fixtures
+test/foundation/           text editing, scroll, fold, picker and table widths
+test/foundation/text_editing_selection_test.dart selection and editing keys
+test/rendering/            item extents and clipping
+test/widgets/              layout, layers, focus, rich widgets and lifecycle
+test/widgets/text_area_selection_test.dart editor selection and key help
+test/widgets/focus_reparent_tester_test.dart focus across rebuilds and moves
+test/widgets/list_view_switch_test.dart retained heights across list switches
+test/widgets/diff_wrap*_test.dart diff wrapping, measurement and selection
+test/widgets/markdown_code_frame*_test.dart code frames and character wrapping
+benchmark/                 list, Markdown, selection and picker benchmarks
+benchmark/list_view.dart    list frames, resize, streaming and cached switches
+example/main.dart           the package's runnable example
+example/demo.dart           the framework's demo
+example/code.dart           highlighted code, numbering and wrapping
+example/markdown.dart       Markdown and streamed replies
+example/markdown_run_controls.dart recorded copy/run actions
+example/markdown_wrap.dart  table-cell and URL wrap boundaries
+example/diff.dart           generated and unified diffs
+example/diff_view.dart      selected diff rows and full counts
+example/middle.dart         text retaining both ends around ...
+example/layers.dart         anchored layers over a streaming list
+example/overlay_visibility.dart layer visibility and transparent followers
+example/picker.dart         numbered choices with a fuzzy filter
+example/picker_preview.dart highlight preview before acceptance
+example/fold.dart           folding output and aligned table columns
+example/dialog.dart         a framed question over the window
+example/form.dart           validated fields and field/option scrolling
+example/text_area.dart      multiline editing, wrapping and scrolling
+example/text_area_viewport.dart shown rows and gutter
+example/text_area_spans.dart style-only full-text projection
+example/error_boundary.dart drawing failure and fallback
+example/key_help.dart       grouped help, pending chords and --rebound keymap
+example/text_area_key_filter.dart live input key delegation
+example/terminal_services.dart clipboard, editor, notifications and title
+example/mouse.dart          captured pointer reports and wheel log
+example/selection.dart      semantic selection, lazy sources and held scrolling
+
 ```
 
-`bun dev release --help` lists each package's stages and selection flags.
-Only `quality`, `lint` and `release` take a package, by its npm name without
-the scope; each runs that package's `steps.ts`. chord's is at the repository
-root. It defines checks, lint arguments and release stages, with publish last.
-`bun dev release cursor-cloud-acp` runs install, quality, build, pack and
-publish, tags `cursor-cloud-acp-v<version>` and creates no GitHub release.
-A new package version needs build. Publish the pinned version before chord's
-next release: preflight checks every `src/chorded.ts` pin on npm and refuses
-a miss.
-A bare `bun dev release` releases nothing. Use
-`--bump <version|major|minor|patch|fix>` instead of editing the version by hand.
-Add `--channel <name>` for
-`<base>-<channel>.<n>`: bumps count from npm's latest stable; if package.json
-holds that base on that channel, its number goes up, otherwise it starts at 0.
-Labelled version arguments are refused. Names start with a lowercase letter,
-then use lowercase letters, digits or hyphens; `latest`, `main` and semver
-ranges are refused. A stable bump from a pre-release needs an exact version.
-A fresh release refuses a different version while package.json's is not on npm.
-Without `--bump`, `--channel` requires package.json already on that channel.
+The app and repository, from the root:
 
-chord's stages are `install`, `quality`, `natives`, `compile`, `sign`,
-`selftest`, `notarise`, `pack`, `publish`. Selecting `publish` requires
-installed, signed-in `gh`, checked by `gh auth status` among the guards.
-Every named release then requires npm authentication, including dry runs and
-runs without publish. A failed `npm whoami` requires stdin and stdout
-terminals for one plain `npm login`, then a successful `npm whoami` recheck.
-Missing terminals, failed or cancelled login, signals or a failed recheck
-stop release work. npm may open a browser and save credentials or registry
-settings even in a dry run. Stage selection cannot skip authentication.
-A new version needs `compile`; publishing requires the channel's branch,
-or `main` for a stable release, level with origin, and commits and pushes
-package.json alone as `chore: chord v<version>` before any stage.
-A dry run still submits to Apple; add `--skip notarise` to leave that out.
-`pack` fetches FFmpeg and zlib source into `dist/release/source/` with `curl`
-and checks sums against OpenTUI's native package `FFMPEG-SOURCE.md`, even in
-dry runs. Publishing rechecks those archives and needs `pack` done in this
-run or the recorded state. It publishes all five npm packages in order;
-channel packages use `--tag <channel>`, leaving `latest` unchanged. A channel
-dry run prints its stages and npm publish arguments. After pushing the tag,
-publish creates a draft GitHub release with the archives attached, marked
-`--prerelease` for a channel. The owner writes its notes and publishes it.
-
-A publishing run, or a run at package.json's version without `--dry-run`,
-records progress in gitignored `.release/<package>/state.json`. Rerun
-`bun dev release <package>` to continue stages, npm publishing, the tag or
-the draft. It keeps its version commit on failure or a signal; runs without
-state drop theirs. Unfinished state refuses `--bump` and `--dry-run`.
-Changed outputs are refused with the stage to rerun from (after signing,
-`--from compile`). State is removed on completion; abandon it by hand with
-`rm -r .release/<package>`. A checkout-wide release lock never goes stale;
-a lock left by SIGKILL, a crash or reboot is refused with its pid and path,
-to remove by hand. See `docs/guide.md` for continuation guards and cleanup.
-
-## How code is written
-
-- **Bun runs chord.** `bun dev quality chord` runs native `bun check`,
-  tracked-file coverage, ESLint, `bun fmt --check --ignore-pattern=packages/ .`,
-  `lint/` tests and `bun dev test`. Tests use `test`, `describe`, `expect`
-  and the fake timers of `bun:test`. Code outside `src/platform/` calls `node:` built-ins; that
-  folder holds Bun's runtime calls. The binary embeds OpenTUI's native
-  library. Linux builds use glibc. Dependencies go in `package.json`;
-  jsr packages come from `npm.jsr.io` under their own names
-  (`bunfig.toml`, `.npmrc`). No `node_modules` checked in.
-- **Versions are pinned for things that move.** A pre-1.0 package is
-  exact-pinned (`@replit/codemirror-vim-core`); the rest use caret ranges.
-  The owner excepted `@cursor/sdk`, exact at 1.3.1 in cursor-cloud-acp.
-  One workspace install and committed `bun.lock` cover all packages.
-- **The style is what the tools hold.** `tsconfig.json` holds the strict
-  compiler flags, `eslint.config.ts` the lint rules, `lint/style.ts` what
-  the formatter cannot express (blank lines, imports first), and
-  `.prettierrc.json` the layout (80 columns, single quotes, JSX's too).
-  `bun dev lint chord --fix` then `bun fmt` lays code out. A lint rule added
-  to `eslint.config.ts` gets its snippet in `lint/config_test.ts`.
-- **Logic lives where a test reaches it.** Reducers from runtime events to
-  transcript state, key handling, history, completion, settings merge — pure
-  modules with tests. Components only draw state and dispatch. `tests/`
-  mirrors `src/`: a module's tests are at the mirrored path
-  (`tests/settings_test.ts` for `src/settings.ts`).
-  If a test's path differs from another only by case, add it to
-  `tsconfig.json`'s `files`: `bun check` can skip it on a case-blind file
-  system. `bun dev quality chord --static` runs `scripts/dev/covered.ts`,
-  which names and fails any tracked TS/TSX file left unchecked, with no exemptions.
-- **Tests never reach a real model, agent or resource provider.** Drive UI
-  through `tests/ui/harness.tsx` and sessions with fake ACP stdio fixtures.
-  Resource access is explicit: tests use fixture collectors; omitted access
-  stays disabled. `--fake`/`--qa` never fall back to official readers. Live
-  agents and providers are for authorized manual checks, outside
-  `bun dev quality chord`.
-- **Comments say why, not what.** A doc comment on a type says what it is for.
-- **Every action has a key.** Nothing on screen needs a pointer. A new action
-  names its key in the same change, and the shortcuts panel (`?` on an empty
-  prompt) lists it: an entry in `src/ui/shortcuts/keys.ts`, and, if a person may
-  rebind it, an action in `src/ui/shortcuts/bindings.ts` that `keyCommand` matches
-  and the entry names. `tests/ui/shortcuts/keys_test.tsx` checks
-  against it every key `keyCommand` answers and every key the prompt and the
-  permission prompt widgets act on; a widget-owned key needs its test too.
-- **Commit messages carry no trailers** — nothing after the body. Conventional
-  prefixes (`feat:`, `fix:`, `docs:`, `chore:`) with a scope where it helps.
-
-## Choosing checks for a change
-
-Run checks that match the changed files and the behavior they can affect.
-A full `bun dev quality chord` is not required before every commit.
-
-- For prose-only documentation, repository metadata or agent instructions,
-  review the diff and check formatting of the changed files. Check links or
-  rendering when the change affects them. Do not run application tests,
-  type checking or the full lint suite for these changes. Executable
-  examples, configuration and scripts need checks for their behavior.
-- For code changes, run the relevant tests and static checks for the affected
-  code. For interface changes, also check the behavior and layout by hand
-  where automated checks do not cover them.
-- Use the full `bun dev quality chord`, locally or in pull request CI, for broad
-  changes (shared runtime behavior, dependencies, build or test configuration)
-  or concrete concerns left by targeted checks. Do not broaden or repeat
-  checks without a reason tied to the change or a failure.
-
-Report what was run, what passed or failed, and what was not checked. CI may
-still run the full suite; that does not require repeating it locally for
-an unrelated change.
-
-## Checking the interface by hand
-
-chord is a terminal program, so a check runs it in a real terminal of a known
-size and reads the screen back as text. For captures, use
-`bun dev chord --fake --qa <name>`: it recreates `/tmp/chord-qa.<name>` and
-its sibling `/tmp/chord-qa.<name>.state` for chord's state, never a directory
-from `mktemp -d`. A bare `--qa` uses `/tmp/chord-qa` and `/tmp/chord-qa.state`;
-an empty name is treated as no `--qa`. Without `--qa`, `--fake` uses
-`/tmp/chord-fake`, made if missing and kept across runs so sessions resume.
-`--qa` takes precedence. These runs set only `XDG_STATE_HOME`: records
-stay out of the person's state; config, data and cache are unchanged.
-Plain `bun dev chord` keeps the person's XDG state.
-A bare `--fake --qa` opens the fake agent; plain `--qa` shows the picker.
-For cursor-cloud's offline fixture, use `--qa` without `--fake`, which
-supplies its own agent command:
-
-```sh
-bun dev chord --qa capture cursor-cloud \
-  --agent-command "bun packages/cursor-cloud-acp/tests/fixtures/main.ts"
+```text
+bin/chord.dart             app entrypoint
+lib/                       chord app
+pubspec.yaml               app manifest and shared version source
+pubspec.lock               pinned app dependencies and framework version
+lib/acp_agent.dart multi-session ACP server on stdio
+lib/acp/      ACP client, dispatchers, traffic and lifecycle
+lib/acp/agent_app.dart served methods
+lib/acp/host_fold.dart hosted session event folding
+lib/acp/params.dart ACP parameter checks
+lib/acp/plans.dart cursor and grok plan request mapping
+lib/acp/stdio.dart protocol output and drain
+lib/acp/upstream_turns.dart client turn and queue state
+lib/agent_name.dart child name checks
+lib/channel.dart release channel names and version labels
+lib/node_semver.dart npm version validation and ordering
+lib/distribution.dart npm, Homebrew and GitHub distribution names
+lib/upgrade.dart registry versions and package-manager upgrades
+lib/js_trim.dart JavaScript-compatible whitespace trimming
+lib/closest_string.dart nearest option by code-point edit distance
+lib/kept.dart future outcomes awaited across error zones
+lib/files.dart ignore-aware file discovery and mention links
+lib/ignore.dart nested gitignore rules
+lib/images.dart clipboard and file image attachments
+lib/mcp.dart settings and .mcp.json servers, checks and precedence
+lib/notices.dart dimcode warning, eligibility and dismissal record
+lib/notify.dart notification channels, wait detection and session variable bytes
+lib/status.dart terminal status across the window's agents
+lib/settings.dart user/project settings, saves and precedence
+lib/settings_tool.dart checked reads, masked values and changes
+lib/teams.dart team files, checks, discovery and saving
+lib/yaml_stringify.dart team frontmatter as npm yaml writes it
+lib/editor.dart prompt editing through VISUAL, EDITOR or vi
+lib/headless.dart one-shot reply, diagnostics and JSON result
+lib/platform/ POSIX process groups and the re-exec launcher
+lib/platform/signals.dart signal exits
+lib/platform/heap.dart SIGUSR2 memory reports and JIT heap snapshots
+lib/platform/resources.dart provider limits and reader ownership
+lib/platform/resource*.dart executables, processes and fixtures
+lib/shell.dart shell scripts, output and process-group stopping
+lib/server/   chord's MCP server, tools and runtime offers
+lib/session/  records, replay, queue, cycles, usage and cost
+lib/session/oneshot.dart one prompt without a window
+lib/session/agents_host.dart children, teams, forks and tasks
+lib/session/window_agents.dart roster, attention and naming
+lib/session/open_agents.dart child ownership and closing
+lib/session/tasks.dart task state and message wrapping
+lib/session/team_command.dart /team forms and replies
+lib/session/team_selection.dart per-run choices and receipts
+lib/session/budgets.dart provider limit types and checks
+lib/session/resource_access.dart limits reader interface
+lib/session/resource_normalization.dart provider facts checked
+lib/session/codex_resources.dart Codex limits and JSON-RPC
+lib/session/monitors.dart command runs, events, ends and resume
+lib/session/window_monitors.dart monitor ownership and limits
+lib/session/new_args.dart /new arguments and refusals
+lib/session/busy.dart active turn, queue and task checks
+lib/session/upstream.dart client capabilities and update mapping
+lib/session/upstream_commands.dart hosted slash commands
+lib/session/auth_status.dart reported account state and account wording
+lib/session/sign_in.dart sign-in guidance and account-free records
+lib/session/servers.dart MCP transport filtering
+lib/session/place.dart per-directory startup settings
+lib/session/setting_picked_up.dart saved settings applied live
+lib/session/waits.dart agent wait and unseen-result state
+lib/session/plan_asks.dart plan approval lifecycle and recording
+lib/session/elicitations.dart forms, links and their answers
+lib/session/questions.dart agent questions and answer mapping
+lib/session/subagents.dart nested ACP session routing
+lib/session/transcript/ entries, updates and transcript reducer
+lib/session/transcript/compactions.dart compaction fold
+lib/session/transcript/plans.dart plans updated and removed by id
+lib/session/transcript/subagents.dart nested work, stops and ends
+lib/session/transcript/chord.dart chord tool metadata
+lib/ui/app/   state, keys, startup guidance, copy/shell and quit
+lib/ui/app/context.dart live key context and binding ownership
+lib/ui/app/terminal.dart terminal services and session variable ownership
+lib/ui/app/window_fold.dart per-session event and intent folding
+lib/ui/app/agents_room.dart request and agent list row budgets
+lib/ui/app/scrolls.dart per-session transcript scrolling
+lib/ui/app/rename.dart session title command
+lib/ui/agents/ agent list rows, glyphs and shared clock
+lib/ui/background/background.dart monitor/task/agent items
+lib/ui/background/state.dart background view state and reducer
+lib/ui/background/view.dart rows, details, frame and log scrolling
+lib/ui/background/summary_line.dart background summary widget
+lib/ui/background/background_view.dart background frame and work
+lib/ui/dialogs/ permissions, plans, questions, forms and links
+lib/ui/dialogs/form.dart schema fields, checks and answer words
+lib/ui/dialogs/form_box.dart elicitation form box
+lib/ui/dialogs/questions.dart question steps, keys and answers
+lib/ui/dialogs/questions_box.dart agent question box
+lib/ui/dialogs/link.dart web-link choices and host
+lib/ui/dialogs/plan_scroll.dart overflowing plan Note paging
+lib/ui/dialogs/asker.dart named child request header
+lib/ui/dialogs/leave.dart request-to-agent-list key handoff
+lib/ui/header/ mark, wordmark, directory and resumed facts
+lib/ui/pickers/ agent, settings, resume, teams and MCP list
+lib/ui/plan/  live checklist and finished plan records
+lib/ui/prompt/ input, images, history/search, queue and completion
+lib/ui/prompt/named_top.dart named child prompt border
+lib/ui/shortcuts/ bound-key catalog and scrolling panel
+lib/ui/shortcuts/bindings.dart bindings, actions and layout keys
+lib/ui/splash/ drifting startup mark and slow-start hint
+lib/ui/status/ reported facts and timed working line
+lib/ui/theme/ named palettes, live preview and theme resolution
+lib/ui/teams/ saved and running teams, tables and receipts
+lib/ui/transcript/ entries, sources, code picking and scrolling
+lib/ui/transcript/compaction.dart compaction and summary
+lib/ui/transcript/agent_colours.dart agent name colours
+lib/ui/transcript/spend_table.dart window-wide cost table
+lib/ui/transcript/tools/chord.dart chord tool rows
+lib/ui/transcript/tools/settings_row.dart settings read/save rows
+lib/ui/transcript/tools/proposal*.dart team proposals and save box
+lib/ui/transcript/tools/resource_lines.dart provider limits rows
+lib/ui/transcript/tools/selection_lines.dart per-run choice rows
+lib/ui/transcript/agents/ nested blocks, trees and messages
+tool/         dev runner, screen fixtures and release tools
+tool/targets.dart macOS and Linux, arm64 and x64 targets
+tool/npm.dart platform packages and the Node shim
+tool/formula.dart stable Homebrew formula from archive checksums
+tool/ci.dart native build/version or Linux cross-compile check
+tool/shards.dart each test file assigned to exactly one CI shard
+tool/screenshots.dart framed PNGs and logos through the Dart fake
+tool/screenshots_team.md team fixture for captures
+tool/screenshots_proposal.md proposed team fixture for captures
+tool/release.dart maintainer release command
+tool/release/ builds, notices, archives, signing and release state
+tool/macos/chord.entitlements hardened-runtime Dart entitlement
+tool/notice.dart dimcode notice, no agent or dismissal writes
+tool/form.dart covered form and held-link fixtures
+tool/agents.dart nested work, launches and messages
+tool/children.dart open agents, their states and the list
+tool/genai_prices.dart pinned pricing from --package <dir>, read with Node
+tool/currency_symbols.dart pinned currency signs from Node's Intl
+test/kept_test.dart future identity and cross-zone outcomes
+test/leave_zones_compile_test.dart failed-close SIGHUP/ACP exit
+test/acp/     in-memory, scripted-child and fake ACP tests
+test/acp_*    server sessions, turns, settings and reopen tests
+test/acp_monitors_fake_test.dart monitor pushes and stop requests
+test/acp_settings_tool_fake_test.dart shared settings approval
+test/settings_tool_test.dart reads, masking and planned changes
+test/settings_team_selection_test.dart team preference checks
+test/teams_test.dart team files, checks and saves
+test/yaml_stringify_test.dart pinned YAML output fixtures
+test/acp_team_fake_test.dart ACP teams through the fake agent
+test/acp_resources_leave_test.dart reader cleanup on ACP exit
+test/acp_server_leave_test.dart MCP server cleanup on ACP exit
+test/cli_start_compile_test.dart native startup and closed-pty exit
+test/agents_json_test.dart catalog JSON fields and ordering
+test/cli_agents_json*_test.dart JSON output and settings directory
+test/cli_cwd*_test.dart session directory and resume precedence
+test/notices*_test.dart notice eligibility and dismissal records
+test/headless_notice*_test.dart warning stderr and reply output
+test/acp_notice*_test.dart warning relay and session isolation
+test/cli_heap_test.dart window-only heap signal registration
+test/cli_help_columns*_test.dart help description alignment
+test/acp_set_title_targeted*_test.dart unloaded session title reads
+test/cli_acp_test.dart ACP CLI parsing
+test/cli_acp_missing_value_tester_test.dart ACP missing option values
+test/cli_once*_test.dart repeated and combined CLI option refusals
+test/cli_acp_compile_test.dart native ACP stdio and exits
+test/registry_test.dart pinned registry and launch data
+test/fixtures/ Dart fake cache, harness, runtime catalog and pinned data
+test/fixtures/fake_agent/ scripted Dart ACP agent
+test/server/  MCP admission, role tools and runtime offers
+test/server/settings_change_test.dart approval and file writes
+test/tool/children_test.dart scripted child fixture flags
+test/channel_test.dart release channel checks
+test/node_semver_test.dart pinned npm semver boundaries
+test/cli_upgrade_test.dart upgrade CLI options and dispatch
+test/upgrade*_test.dart registry and package-manager upgrades
+test/tool/release_test.dart release CLI help and refusals
+test/tool/release/ release stages, state and recording runners
+test/tool/release/build_compile_test.dart native build checks
+test/tool/npm_test.dart package layout, manifests and shim
+test/tool/formula_test.dart stable formula and archive checksums
+test/tool/ci_test.dart native/cross-compile runner and command boundaries
+test/tool/shards_test.dart shard coverage and command-line checks
+test/tool/screenshots*_test.dart shots, fake argv, ANSI frames and logo crop
+test/tool/workflow_test.dart CI jobs, SDK and read permissions
+.github/workflows/ci.yml Ubuntu checks, sharded suites and Linux builds
+test/platform/ launcher, process groups and signals, AOT included
+test/platform/group_exec_contract_test.dart launcher contract between versions
+test/platform/heap*_test.dart heap signal ownership and complete file writes
+test/session/ session, conversation, transcript and fake scenarios
+test/session/opening_meta_test.dart Claude opening metadata
+test/session/sessions_targeted_tester_test.dart targeted reads and handles
+test/session/replay_legacy_plan_tester_test.dart legacy plan replay
+test/session/monitors*_test.dart runs, boundaries and resume
+test/session/conversation_monitors_test.dart monitor event turns
+test/session/conversation_monitors_starting_test.dart startup stop and cleanup
+test/session/conversation_monitors_starting_tester_test.dart startup ownership
+test/session/window_monitors_test.dart owner routing and limits
+test/session/agents_host_monitors_test.dart host monitor tools
+test/session/oneshot_notice_test.dart one-shot dimcode warning
+test/session/session_fork_fake_test.dart ACP fork and past
+test/session/agents_host_fork_test.dart fork admission and tools
+test/session/agents_host_teams_test.dart runs and team ownership
+test/session/agents_host_selected_test.dart choices and receipts
+test/session/team_selection_test.dart selection policy and checks
+test/session/conversation_ask_test.dart chord ask lifecycle
+test/ui/app/  keys, commands, settings, copy and fake window
+test/ui/app/starting_commands_window_test.dart startup commands
+test/ui/app/chord_cursor_window_test.dart pending-chord cursor
+test/ui/app/prompt_selection_window_test.dart select-all, undo and redo
+test/ui/app/textarea_held_window_test.dart editor key reach and line edges
+test/ui/app/cmd_history_window_tester_test.dart command-arrow prompt history
+test/ui/app/prompt_press_tester_test.dart prompt press boundaries
+test/ui/app/help_command*_test.dart repeated help and panel ownership
+test/ui/app/background*_test.dart view, logs and subagent stops
+test/ui/app/notice_window*_test.dart notice keys and geometry
+test/ui/app/sessions_notices_test.dart session notice ownership
+test/ui/app/program_status_window_test.dart all-agent status
+test/ui/app/monitors_window_test.dart owner updates and resume
+test/ui/app/form_interrupt*_test.dart form stop and recovery
+test/ui/app/fork_window_test.dart fork, clear, close and resume
+test/ui/app/settings_tool_window_test.dart save box and live use
+test/ui/app/team_command_window_test.dart /team and picker
+test/ui/app/propose_window_test.dart team proposal approval
+test/ui/app/teams_spend_window_test.dart team cost ownership
+test/ui/teams/ tables, saved teams and recorded receipts
+test/ui/background/ monitors, tasks, agents, summary and logs
+test/ui/dialogs/ permissions, plans, questions, forms and links
+test/ui/dialogs/plan_box_held_fake_test.dart plan Note keys and held focus
+test/ui/dialogs/plan_note_tester_test.dart end-only Note editing and cursor
+test/ui/dialogs/plan_scroll_test.dart Note paging reducer
+test/ui/dialogs/plan_note_scroll*_test.dart Note paging and edit following
+test/ui/dialogs/plan_note_rebound_tester_test.dart rebound Note page keys
+test/ui/app/plan_note_keys_test.dart Note page-key ownership
+test/ui/dialogs/questions_note_reflow_tester_test.dart Note growth and shrink
+test/ui/header/ mark rows and colour boundaries
+test/ui/pickers/ agent, settings and resume choices
+test/ui/plan/ checklist selection, drawing and lifecycle
+test/ui/prompt/ editing, history, queue and command matching
+test/ui/prompt/prompt_arrows_test.dart modified-arrow history navigation
+test/ui/prompt/prompt_modified_arrows_tester_test.dart history row boundaries
+test/ui/shortcuts/ catalog, panel geometry and state
+test/ui/splash/ startup frames, geometry, timing and lifecycle
+test/ui/status/ reported facts, working timers and drawing
+test/ui/transcript/ entries, tool output, sources and code picking
+test/ui/transcript/transcript_switch_test.dart session switches
+test/ui/transcript/monitors_left_test.dart resumed monitor note
+test/ui/transcript/tools/settings*_test.dart rows and selection
+test/ui/transcript/tools/diff_fake_test.dart fake diff wrapping
+benchmark/    ACP/session folding, fake flood, resume picker and record scans
+benchmark/acp_server.dart server load, framing and replay
+benchmark/record_scan.dart generated record scans
+docs/images/                screenshots and transparent logos
+docs/guide.md               flags, keys, settings and saved teams
+docs/development.md         builds, release, benchmarks and fixtures
+docs/FEATURES.md            the map
+docs/decisions.md           append-only decisions log
+docs/design/<key>.md        the design of a task that needed one
+.chord/teams/               the teams that build this
 ```
 
-```sh
-tmux new-session -d -s chord-qa -x 120 -y 40 'bun dev chord --fake --qa capture'
-tmux send-keys -t chord-qa 'hello' Enter
-tmux capture-pane -t chord-qa -p        # the screen as text; -e keeps colours
-tmux kill-session -t chord-qa
-```
+The app lives under `lib/`, with snake_case file names;
+`lib/ui/prompt/history.dart` has its test in
+`test/ui/prompt/history_test.dart`.
 
-Use a session name of your own and always kill it afterwards. Check at least
-one narrow size (80×24) as well as a wide one. A check against a live agent
-spends the owner's account: keep prompts tiny and say in the handover that you
-did it.
+## Tests
 
-## Folder rules
+- A widget is tested through `package:chord_tui/testing.dart`: render at a
+  size, press keys, check the screen. Widget tests need no terminal.
+- Loaded runs count only while the host stays awake. On macOS, use
+  `caffeinate -dimsu dart test` in the package being tested. A run interrupted
+  by sleep, with cases lasting far past their timeouts, is void; rerun awake.
+- Record handle-closure proofs require macOS and `lsof`; without either,
+  those cases skip with a reason.
+- The port's signal-owner pty, exit, crash, entrypoint, agent lookup and
+  session teardown fixtures use cached kernel snapshots built once in
+  `setUpAll`, under the runner's fixed 12-minute setup limit. Cases keep
+  their runtime budgets; compilation does not consume them.
+- Terminal flush and hangup tests use POSIX ptys and `expect` to check
+  bounded release, mode restoration, reuse and SIGHUP exit. If a
+  `StdioTerminal`'s own tty input ends and flushing fails, the failure is
+  suppressed: with `handleSignals`, `runApp` re-raises SIGHUP; without it,
+  it waits up to two seconds for the embedder's handler before its usual exit.
+  Re-raised HUP, INT and TERM get 500 ms for delivery before fallback exit
+  `128 + signal number`. Supplied or non-tty input keeps flush-error reporting.
+  The framework's `compile` tag checks demo SIGHUP when its pty closes.
+  `runExpect` returns after the driver's exit and at most two seconds of
+  output draining, even if an orphan holds a stream open. Failed launches
+  remove their temporary directory. Teardown kills surviving drivers and
+  recorded spawns with their process trees, even after the driver ends.
+  Spawn PID reuse is checked by Linux start-tick equality or macOS kernel
+  start microseconds no later than the spawn record; the remaining macOS
+  limits are in `docs/decisions.md`.
+- The port's tests never reach a real model or a real agent: pure modules
+  directly, the window through the tester, ACP through in-memory processes
+  and scripted children. The Dart fake under `test/fixtures/fake_agent/`
+  runs through `test/fixtures/fake.dart` and `fake_harness.dart`, with a
+  kernel snapshot cached in `.dart_tool` by its sources, imported app
+  sources, dependencies and SDK. The fake and pinned fixtures run with Dart.
+  Session tests cover transcript, queue, cancellation, autonomous cycles,
+  permissions, records and replay through pure modules,
+  scripted sessions and the fake. The runtime catalog admits only fake or
+  scripted starts; child tests set `CHORD_FAKE_CHILD_RUNTIME=fake`. The dev
+  runner with `--fake` uses the fake for every runtime: main, children, team
+  leads and members, `/new` and forks, with fixture resource limits. MCP tests
+  use loopback HTTP, including an AOT server. Record tests and captures use
+  isolated `XDG_STATE_HOME`, never the person's state. The fake's canned HISTORY
+  is not persistent agent history. The port's `compile` tag checks the
+  native launcher, start page, resume routes and fake session in a pty,
+  including SIGHUP exit and agent cleanup when it closes, plus
+  `test/cli_acp_compile_test.dart` on stdio. Pty and by-hand note cases
+  need the system `expect`. Run the tag explicitly.
+- Upgrade tests use scripted managers and loopback registry servers. Release
+  tests use recording runners; npm layout tests run the shim with Node when
+  available. The build compile test builds the host and Linux targets, and
+  on macOS checks an ad-hoc hardened-runtime signature. Release commands,
+  including `--dry-run`, authenticate npm and may submit to Apple: only the
+  maintainer runs them; teams may inspect `--help`. CI runs on Ubuntu:
+  analyze both packages, format, actionlint, three shards per suite, both
+  compile tags with `expect`, and the npm shim with Node 22.13. It builds
+  linux-x64 natively and cross-compiles linux-arm64; `check` requires every
+  job to pass. Darwin builds belong to the maintainer's local release.
+- A unit without a test that would fail without it is not finished.
+- Check the screen at 120x40 and at 80x24. For terminal cursor changes,
+  check a physical window focused and unfocused in a supporting terminal;
+  tmux captures do not prove its hollow unfocused appearance.
 
-Folders with rules of their own have an `AGENTS.md`:
-`packages/cursor-cloud-acp/`, `src/`,
-`src/platform/`, `src/session/`, `src/ui/`, `tests/`,
-`tests/fixtures/fake_agent/` and `scripts/`. Read the one for the folder you
-change; `src/session/AGENTS.md` also covers `src/acp/`. Codex loads
-`AGENTS.md` only from the root down to its working directory, not for a file
-it edits deeper.
+## The board
+
+Tasks live on the board, project `CTUI`: `board status`, `board next`,
+`board show CTUI-n`. Every write takes `--actor` with your own name.
+`board skill` prints the whole guide.
+
+## Git
+
+- A task's work happens on its own branch, made from `main`
+  (`git switch -c <key> main`), never on `main` itself.
+- Commits are conventional (`feat:`, `fix:`, `docs:`, `test:`, `chore:`),
+  local, and carry no trailers of any kind. Nobody pushes.
+- Every commit is signed. Commit with plain `git commit`, never with an
+  override of signing; if signing fails, stop and say so.
+
+## Comments
+
+A comment says why, not what. Public names in `packages/chord_tui/lib/`
+carry a `///` line saying what the thing is for; `dart analyze` enforces
+`public_member_api_docs` there.

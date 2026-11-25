@@ -1,0 +1,41 @@
+Original                                                                                                                 | Port
+ █▄     chord v0.71.0                                                                                                    |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                                                                       |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   fixture-root____________/project                                                                                 |  ▄██▀   project
+ █▀     ? for shortcuts · /help                                                                                          |  █▀     ? for shortcuts
+        resumed · 56 years ago · Inspect the saved notes                                                                 | 
+                                                                                                                         |  › Inspect the saved notes
+ › Inspect the saved notes                                                                                               | 
+                                                                                                                         |  ⏺ The saved notes are ready.
+ ⏺ The saved notes are ready.                                                                                            | 
+                                                                                                                         |  › text
+ › text                                                                                                                  | 
+                                                                                                                         |  ⏺ Could not keep this session's record: Bad state: fixture record write failed
+ ⏺ Could not keep this session's record: EISDIR: illegal operation on a directory, open 'fixture-root____________/       | 
+   original-state/chord/records/saved.jsonl'                                                                             |  ⏺ Hello, world. This reply came in chunks.
+                                                                                                                         | 
+ ⏺ Hello, world. This reply came in chunks.                                                                              | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |   ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

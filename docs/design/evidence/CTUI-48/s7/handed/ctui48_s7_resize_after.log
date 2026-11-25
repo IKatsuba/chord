@@ -1,0 +1,10 @@
+00:00 +0: loading test/ui/app/code_pick_coexistence_test.dart
+00:00 +0: valid pick survives resize to20 with compact hint and current descriptor dark Size(120, 40)
+00:00 +1: valid pick survives resize to20 with compact hint and current descriptor light Size(120, 40)
+00:00 +2: valid pick survives resize to20 with compact hint and current descriptor plain Size(120, 40)
+00:00 +3: resize clears range while retaining pick and verbose cancels both Size(120, 40)
+00:00 +4: valid pick survives resize to20 with compact hint and current descriptor dark Size(80, 24)
+00:00 +5: valid pick survives resize to20 with compact hint and current descriptor light Size(80, 24)
+00:00 +6: valid pick survives resize to20 with compact hint and current descriptor plain Size(80, 24)
+00:00 +7: resize clears range while retaining pick and verbose cancels both Size(80, 24)
+00:00 +8: All tests passed!

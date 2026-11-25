@@ -1,0 +1,24 @@
+ chord v0.0.1 · fake · <repository>
+
+ ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow once in this folder
+
+ ⏺ Permission: allow-here.
+
+ › permissionmeta
+
+ ››› Waiting for permission… (13s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Tool call                                                                    │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

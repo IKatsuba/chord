@@ -1,0 +1,12 @@
+{"type":"session","version":1,"sessionId":"fixture-id","agent":"fake","cwd":"fixture-project","at":0}
+{"type":"opened","at":0}
+{"type":"prompt","turnId":"first","at":1.25,"prompt":"<bash-input>pwd</bash-input>\n<bash-stdout>fixture</bash-stdout><bash-stderr></bash-stderr>\n\nask [Image #8]","images":2}
+{"type":"update","turnId":"first","at":1.5,"update":{"sessionUpdate":"agent_thought_chunk","content":{"type":"text","text":"thought"}}}
+{"type":"update","turnId":"first","at":1.75,"update":{"sessionUpdate":"agent_message_chunk","content":{"type":"text","text":"answer"},"_meta":{"future":[2.5]}}}
+{"type":"update","turnId":"first","update":{"sessionUpdate":"tool_call","toolCallId":"guardian_assessment:r","rawInput":{"review":{"status":"approved"}}}}
+{"type":"result","turnId":"first","result":{"status":"completed","stopReason":"cancelled"}}
+{"type":"prompt","turnId":"second","at":2.25,"prompt":"second","images":0}
+{"type":"cancel","turnId":"second","at":2.5}
+{"type":"result","turnId":"second","result":{"status":"cancelled","stopReason":"end_turn"}}
+{"type":"disconnected","at":2.75}
+{"type":"prompt","turnId":"unfinished","at":3.25,"prompt":"unfinished","images":0}

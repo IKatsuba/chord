@@ -1,0 +1,40 @@
+line 31 of the transcript, scrolled back scrolled back scrolled back
+line 32 of the transcript,
+line 33 of the transcript, scrolled back
+line 34 of the transcript, scrolled back scrolled back
+line 35 of the transcript, scrolled back scrolled back scrolled back
+line 36 of the transcript,
+line 37 of the transcript, scrolled back
+line 38 of the transcript, scrolled back scrolled back
+line 39 of the transcript, scrolled back scrolled back scrolled back
+line 40 of the transcript,
+line 41 of the transcript, scrolled back
+line 42 of the transcript, scrolled back scrolled back
+line 43 of the transcript, scrolled back scrolled back scrolled back
+line 44 of the transcript,
+line 45 of the transcript, scrolled back
+line 46 of the transcript, scrolled back scrolled back
+line 47 of the transcript, scrolled back scrolled back scrolled back
+line 48 of the transcript,
+line 49 of the transcript, scrolled back
+line 50 of the transcript, scrolled back scrolled back
+line 51 of the transcript, scrolled back scrolled back scrolled back
+line 52 of the transcript,
+line 53 of the transcript, scrolled back
+line 54 of the transcript, scrolled back scrolled back
+line 55 of the transcript, scrolled back scrolled back scrolled back
+line 56 of the transcript,
+line 57 of the transcript, scrolled back
+line 58 of the transcript, scrolled back scrolled back
+line 59 of the transcript, scrolled back scrolled back scrolled back
+╭ Models ──────╮ranscript,
+│   Careful    │word61 word61 word61 word61 word61 word61 word61 word61 word61 word61
+│ ❯ Balanced   │word62 word62 word62 word62 word62 word62 word62 word62 word62 word62
+│   Quick      │word63 word63 word63 word63 word63 word63 word63 word63 word63 word63
+│   Thorough   │word64 word64 word64 word64 word64 word64 word64 word64 word64 word64
+│ Esc to close │word65 word65 word65 word65 word65 word65 word65 word65 word65 word65
+╰──────────────╯
+
+> /model
+page builds 1 · rows 66 · offset 30 · following
+enter Choose  escape Close  tab Next field  shift+tab Previous field  ctrl+p Picker  ctrl+x p Tall picker  ctrl+o Compl…

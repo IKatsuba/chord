@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › /fork
+   ⎿  Forked into fork
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+  ❯ main    fake · Fake Large with a 1M context window         ◦ idle 25s
+    fork    fork · fake · Fake Large with a 1M context window  ◦ idle 17s
+    fork 2  fork · fake · Fake Large with a 1M context window  ◦ idle 10s

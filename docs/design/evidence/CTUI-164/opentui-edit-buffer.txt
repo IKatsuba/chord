@@ -1,0 +1,9 @@
+start                              "alpha beta gamma\ndelta epsilon| zeta\nomega"
+deleteLine mid (row1 col13)        "alpha beta gamma\n|omega"
+deleteLine last line col3          "alpha beta gamma\ndelta epsilon zeta|"
+deleteLine single line             "|"
+next word from 0,6: 11
+prev word from 0,6 0
+next from row1 col13 (before ' zeta'): 36 text at "omega"
+next from end of line0: 17
+next from abc|   def: 5  prev from 6: 5

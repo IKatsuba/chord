@@ -1,0 +1,25 @@
+Original markdown-home-80x24.txt | U7 live markdown-home-80x24.txt
+ ▀▄     chord v0.71.0                                                            |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-markdown-80                                |  › markdown
+ ▀▀     ? for shortcuts · /help                                                  | 
+                                                                                 |  ⏺ Reading the session layer
+ › markdown                                                                      | 
+                                                                                 |    The session layer wraps the SDK so the interface never touches a process.
+ ⏺ Reading the session layer                                                     |    Start with src/session/session.ts, then see the ACP spec
+                                                                                 |    (https://agentclientprotocol.com) for the wire format.
+   The session layer wraps the SDK so the interface never touches a process.     | 
+   Start with src/session/session.ts, then see the ACP spec (https://            |    What it does
+   agentclientprotocol.com) for the wire format.                                 | 
+                                                                                 |    - opens one persistent session per chord session
+   What it does                                                                  |    - starts turns with startTurn and cancels them
+                                                                                 |      1. a cancel stops the turn at once
+   - opens one persistent session per chord session                              |      2. the agent is told with session/cancel
+   - starts turns with startTurn and cancels them                                |    - closes the agent and waits until its exit is seen
+     1. a cancel stops the turn at once                                          | 
+ ── ↓ 40 lines below · end to jump to the bottom ──────────────────────────────  |    │ A closed agent counts as gone only once its exit is seen:
+                                                                                 |    │ ┌ ts ────────────────────────────────────────────────────────┐
+╭──────────────────────────────────────────────────────────────────────────────╮ |    │ │   await session.close(); // resolves once the exit is seen │
+│ ›                                                                            │ |  ── ↓ 34 lines below · end to jump to the bottom ──────────────────────────────
+╰──────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   |  ctrl+c or ctrl+d to quit

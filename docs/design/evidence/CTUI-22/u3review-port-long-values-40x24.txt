@@ -1,0 +1,24 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────╮
+│ Set Effort                           │
+│ Choose fixture-...for this session.  │
+│                                      │
+│ ❯ 1. Value long l...bel 界👩‍💻  tail ✔ │
+│   2. Short value                     │
+│                                      │
+│ Enter to set · Esc to go back        │
+╰──────────────────────────────────────╯

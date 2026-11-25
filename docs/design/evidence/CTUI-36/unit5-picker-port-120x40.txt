@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                                                                     │
+│ fake's earlier sessions in this directory.                                                                           │
+│                                                                                                                      │
+│ ❯   1.  just now        monitors                                                                                     │
+│     2.  1 minute ago    monitortimeout                                                                               │
+│     3.  1 minute ago    monitorexit                                                                                  │
+│     4.  1 minute ago    monitorexit                                                                                  │
+│     5.  2 minutes ago   monitorexit                                                                                  │
+│     6.  3 minutes ago   monitorflood                                                                                 │
+│     7.  3 minutes ago   monitorflood                                                                                 │
+│     8.  3 minutes ago   monitortimeout                                                                               │
+│   ↓ 9.  5 minutes ago   monitors                                                                                     │
+│     … +3 more                                                                                                        │
+│                                                                                                                      │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                                                          │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

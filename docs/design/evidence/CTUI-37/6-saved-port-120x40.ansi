@@ -1,0 +1,40 @@
+   [2m [0m  Read the job and the code it points at until you can name the cause and the files involved. Open tester first,
+   [2m [0m  coder once tester's test fails, and reviewer last, on the diff.
+   [2m [0m
+   [2m [0m  tester's instructions
+   [2m [0m  Write the smallest test that fails because of the bug, and run it to show that.
+   [2m [0m
+   [2m [0m  coder's instructions
+   [2m [0m  Make the failing test pass with the smallest change. Do not touch tests.
+   [2m [0m
+   [2m [0m  reviewer's instructions
+   [2m [0m  Read `git diff` and the test. Never edit a file.
+   [2m [0m
+   [2m [0m  [1;4mHow bugfix works[0m
+
+      [2m1. [0mThe lead reads the job, finds the files involved, and names who may edit which before anyone starts.
+      [2m2. [0mtester writes a test that fails for the bug's own reason. It edits [38;2;177;185;249mtests/[39m only, and reports the failure.
+      [2m3. [0mcoder fixes the code so that test passes. It edits only the files the lead named for it, and never [38;2;177;185;249mtests/[39m.
+      [2m4. [0mreviewer reads the diff and edits nothing. If it finds a problem, the lead hands it back to coder.
+      [2m5. [0mtester runs the whole suite once more, and the lead reports to main.
+
+      [1mWho edits what[0m
+
+      [2m- [0mOne writer per file at a time. Before a member starts, the lead tells it which files are its own.
+      [2m- [0mA member that needs a file it does not own asks its owner directly, and tells the lead what they agreed.
+      [2m- [0mAnother run of a team may be working in this directory: the leads agree on files among themselves.
+      [2m- [0mNobody commits. The person commits.
+
+      [1mReporting[0m
+
+      The lead writes to main when it needs a decision only the person can make, when the job is done, and when it
+      cannot be done.
+   [2m [0m  [38;2;78;186;101mSaved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job[39m
+
+ ⏺ bugfix is saved for this project. Hand it a bug with /team run bugfix and the bug, or just tell me to hand one to
+   bugfix.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m

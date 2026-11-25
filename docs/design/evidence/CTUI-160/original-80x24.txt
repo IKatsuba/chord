@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/<workspace>/chord
+ ▀▀     ? for shortcuts · /help
+
+ › /status
+   ⎿  Agent:     fake
+      Account:   Claude Max · a.very.long.address.for.the.capture@engineering.
+                 example.com · Example Organisation of Long Names
+
+                 Anthropic API key · ANTHROPIC_API_KEY
+      Title:     not given
+      Model:     Fake Large with a 1M context window
+      Mode:      Default
+      Session:   ee8af511-5c4f-4ec7-a007-ddaf0c000ce4
+      Directory: <workspace>/chord
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

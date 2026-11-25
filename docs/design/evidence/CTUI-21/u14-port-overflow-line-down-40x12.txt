@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 6 lines above ───────────────────
+  home end for the top and the bottom
+  esc to interrupt
+  ctrl + o for verbose output
+  ctrl + c to clear input
+  ── ↓ 9 lines below ───────────────────
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

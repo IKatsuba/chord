@@ -1,0 +1,24 @@
+Permission fixture: diff
+Transcript
+
+[1m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mWrite notes.txt[0m                                                              [1m│
+│[0m                                                                              [1m│
+│[0m    [2m1[0m - old                                                                   [1m│
+│[0m    [2m1[0m + proposed line 1                                                       [1m│
+│[0m    [2m2[0m + proposed line 2                                                       [1m│
+│[0m    [2m3[0m + proposed line 3                                                       [1m│
+│[0m    [2m4[0m + proposed line 4                                                       [1m│
+│[0m    [2m5[0m + proposed line 5                                                       [1m│
+│[0m    [2m6[0m + proposed line 6                                                       [1m│
+│[0m    [2m7[0m + proposed line 7                                                       [1m│
+│[0m [2m── ↓ 53 lines below · pagedown to scroll ───────────────────────────────────[0m [1m│
+│[0m                                                                              [1m│
+│[0m Do you want to proceed?                                                      [1m│
+│[0m [1m❯[0m [1m1.[0m [1mAllow once[0m                                                              [1m│
+│[0m [1m [0m 2. Always allow                                                            [1m│
+│[0m [1m [0m 3. Deny                                                                    [1m│
+│[0m                                                                              [1m│
+│[0m [2mEsc to reject · denied by itself in 5 minutes[0m                                [1m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0mAnswer:

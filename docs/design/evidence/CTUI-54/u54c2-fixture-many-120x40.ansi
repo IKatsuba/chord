@@ -1,0 +1,40 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mResume a session[0m                                                                                                     [38;2;177;185;249m│
+│[39m [2mfake's earlier sessions in this directory.[0m                                                                           [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m   [1m[38;2;177;185;249m1. [0m [1m[38;2;177;185;249mjust now   Inspect the saved notes and retain this descriptive title across wrapped lines.[0m                   [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m   2.  yesterday  Saved session 2 · 界😀 with a long title and an_unbroken_title_tail                               [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m   3.  yesterday  Saved session 4 · 界😀 with a long title and an_unbroken_title_tail                               [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m   4.  yesterday  Saved session 6 · 界😀 with a long title and an_unbroken_title_tail                               [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m [2m↓[0m 5.  yesterday  Saved session 8 · 界😀 with a long title and an_unbroken_title_tail                               [38;2;177;185;249m│
+│[39m [2m    … +10 more[0m                                                                                                       [38;2;177;185;249m│
+│[39m                                                                                                                      [38;2;177;185;249m│
+│[39m [2mEnter to resume · Ctrl+a for all directories · Esc to close[0m                                                          [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

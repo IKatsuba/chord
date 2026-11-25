@@ -1,0 +1,10 @@
+ ▀▀▀▄   fake · Fak...ext window
+ ▄▀▀▀   …/CTUI-27
+ ▀▀     ? for shortcuts · /help
+        resumed · ...r wrapping
+ ── ↓ 5 lines below ───────────
+
+╭──────────────────────────────╮
+│ ›                            │
+╰──────────────────────────────╯
+  ? for shortcuts  Fake Large…

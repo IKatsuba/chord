@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+ ▀▀     ? for shortcuts · /help
+
+ › /team
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                        │
+│ For this project in .chord/teams, for every project in <config>/      │
+│ chord/teams.                 │
+│                                                                              │
+│ ❯ 1. bugfix  3 agents  this project  ... a failing test first, then the fix. │
+│   2. triage  ✗ not read: no frontmatter between --- lines                    │
+│                                                                              │
+│ Ask main to fix triage · Esc to close                                        │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort

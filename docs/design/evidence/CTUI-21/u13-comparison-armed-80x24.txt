@@ -1,0 +1,25 @@
+ORIGINAL                                                                         | PORT
+      ☒ Write the change                                                         |       ☒ Write the change
+      ☒ Run the tests                                                            |       ☒ Run the tests
+                                                                                 | 
+ › permission                                                                    |  › permission
+                                                                                 | 
+ ⏺ Write(notes.txt)                                                              |  ⏺ Write(notes.txt)
+   ⎿  Allowed Write notes.txt · Allow                                            |    ⎿  Allowed Write notes.txt · Allow
+                                                                                 | 
+ ⏺ Permission: allow.                                                            |  ⏺ Permission: allow.
+                                                                                 | 
+ › error                                                                         |  › error
+                                                                                 | 
+ ⏺ About to fail.                                                                |  ⏺ About to fail.
+                                                                                 | 
+ ⏺ The fake agent failed on purpose.                                             |  ⏺ The fake agent failed on purpose.
+                                                                                 | 
+ › text                                                                          |  › text
+                                                                                 | 
+ ⏺ Hello, world. This reply came in chunks.                                      |  ⏺ Hello, world. This reply came in chunks.
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  Press ctrl+c again to quit                                                     |   Press ctrl+c again to quit     Fake Large with a 1M context window · 1% used

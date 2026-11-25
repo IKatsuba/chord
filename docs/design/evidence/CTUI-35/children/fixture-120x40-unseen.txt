@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   project
+ ▀▀     ? for shortcuts · /help
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ✗ other's turn failed · ctrl+x a to go · ? for shortcuts
+    main    fake               ◦ idle 0s
+    parser  fake · fake-small  ◦ idle 3s     ✓ new reply
+    docs    fake               ✻ working 3s  ← new message
+    other   fake               ◦ idle 3s     ✗ turn failed

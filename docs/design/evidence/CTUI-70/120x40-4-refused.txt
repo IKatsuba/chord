@@ -1,0 +1,40 @@
+  New deployment
+
+ ❯ ⚠ Project name
+                    Required
+     Contact email  not set
+   ✔ Replicas       2
+     Traffic share  not set
+   ✔ Public         ☐ No
+     ↓ 2 more fields
+
+   Accept   Decline     2 fields to fix
+
+ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel
+
+ Gave: nothing yet
+ Ctrl+Q quits
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

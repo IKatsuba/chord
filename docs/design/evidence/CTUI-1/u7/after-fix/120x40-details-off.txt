@@ -1,0 +1,40 @@
+ chorded-tui demo                                                              dark: the terminal did not say, no colour
+╭ log ─────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ 141 line 141, and more, and more, and more, and more, and more, and more, and more, and more                         │
+│ 142 line 142, and more, and more, and more, and more, and more, and more, and more, and more, and more               │
+│ 143 line 143, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more     │
+│ 144 line 144, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more,    │
+│     and more                                                                                                         │
+│ 145 line 145                                                                                                         │
+│ 146 line 146, and more                                                                                               │
+│ 147 line 147, and more, and more                                                                                     │
+│ 148 line 148, and more, and more, and more                                                                           │
+│ 149 line 149, and more, and more, and more, and more                                                                 │
+│ 150 line 150, and more, and more, and more, and more, and more                                                       │
+│ 151 line 151, and more, and more, and more, and more, and more, and more                                             │
+│ 152 line 152, and more, and more, and more, and more, and more, and more, and more                                   │
+│ 153 line 153, and more, and more, and more, and more, and more, and more, and more, and more                         │
+│ 154 line 154, and more, and more, and more, and more, and more, and more, and more, and more, and more               │
+│ 155 line 155, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more     │
+│ 156 line 156, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more,    │
+│     and more                                                                                                         │
+│ 157 line 157                                                                                                         │
+│ 158 line 158, and more                                                                                               │
+│ 159 line 159, and more, and more                                                                                     │
+│ 160 line 160, and more, and more, and more                                                                           │
+│ 161 line 161, and more, and more, and more, and more                                                                 │
+│ 162 line 162, and more, and more, and more, and more, and more                                                       │
+│ 163 line 163, and more, and more, and more, and more, and more, and more                                             │
+│ 164 line 164, and more, and more, and more, and more, and more, and more, and more                                   │
+│ 165 line 165, and more, and more, and more, and more, and more, and more, and more, and more                         │
+│ 166 line 166, and more, and more, and more, and more, and more, and more, and more, and more, and more               │
+│ 167 line 167, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more     │
+│ 168 line 168, and more, and more, and more, and more, and more, and more, and more, and more, and more, and more,    │
+│     and more                                                                                                         │
+│ 169 line 169                                                                                                         │
+│ 170 line 170, and more                                                                                               │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│>  Say something                                                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ctrl+o Toggle details  ctrl+t Theme  ctrl+x b Toggle busy  ctrl+x c Clear  ctrl+x f Fill the log  ctrl+q Quit  pageup…

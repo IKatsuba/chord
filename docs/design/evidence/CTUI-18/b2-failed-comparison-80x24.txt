@@ -1,0 +1,25 @@
+Original failed | Port failed (80x24; scenario data differs)
+                                                                                 | Permission fixture: failed
+ › reviewfailed                                                                  | Transcript
+                                                                                 | 
+ ⏺ Run(a reviewed action)                                                        | ╭──────────────────────────────────────────────────────────────────────────────╮
+   ⎿  Reviewed: failed                                                           | │ Write notes.txt                                                              │
+                                                                                 | │                                                                              │
+ ››› Waiting for permission… (33s · denied in 4m 26s)                            | │    1 - old                                                                   │
+                                                                                 | │    1 + proposed line 1                                                       │
+╭──────────────────────────────────────────────────────────────────────────────╮ | │    2 + proposed line 2                                                       │
+│ Run a reviewed action                                                        │ | │    3 + proposed line 3                                                       │
+│                                                                              │ | │    4 + proposed line 4                                                       │
+│ The safety review could not run (the reviewer did not answer in 30 s). Allow │ | │    5 + proposed line 5                                                       │
+│ it yourself, or deny it.                                                     │ | │ ── ↓ 55 lines below · pagedown to scroll ─────────────────────────────────── │
+│                                                                              │ | │                                                                              │
+│ ❯ 1. Allow once                                                              │ | │ The safety review could not run (The reviewer did not respond). Allow it     │
+│   2. Deny                                                                    │ | │ yourself, or deny it.                                                        │
+│                                                                              │ | │                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │ | │ ❯ 1. Allow once                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯ | │   2. Always allow                                                            │
+                                                                                 | │   3. Deny                                                                    │
+╭──────────────────────────────────────────────────────────────────────────────╮ | │                                                                              │
+│ ›                                                                            │ | │ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   | Answer:

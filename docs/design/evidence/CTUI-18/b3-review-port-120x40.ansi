@@ -1,0 +1,40 @@
+ [1mchord[0;2m v0.0.1 · fake · <repository>[0m
+   [2m⎿[0m  Failed
+   [2m⎿[0m  Rejected mcp__files__write_file
+
+ ⏺ Permission: deny.
+
+ [2m›[0m twins
+
+ ⏺ [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [2mAllowed Write notes.txt · Allow once in this folder[0m
+
+ ⏺ Permission: allow-here.
+
+ [2m›[0m permissionmeta
+   [2m⎿[0m  Rejected the tool call
+
+ [2m›[0m reviewpermission
+
+ [2m⏺[0m [1mRun[0m(a reviewed action)
+   [2m⎿[0m  Reviewed: caution
+   [2m [0m  [2mWaiting…[0m
+
+ [2m››[0m› Waiting for permission… [2m(32s · denied in 4m 27s)[0m
+
+[1m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mRun a reviewed action[0m                                                                                                [1m│
+│[0m                                                                                                                      [1m│
+│[0m The safety review held this:                                                                                         [1m│
+│[0m Fixture safety review: caution.                                                                                      [1m│
+│[0m                                                                                                                      [1m│
+│[0m [1m❯[0m [1m1. Allow once[0m                                                                                                      [1m│
+│[0m [1m [0m 2. Deny                                                                                                            [1m│
+│[0m                                                                                                                      [1m│
+│[0m [2mEsc to reject · denied by itself in 5 minutes[0m                                                                        [1m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m                                                 [2mFake Large with a 1M context window · medium effort · 1% context used[0m

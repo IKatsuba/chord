@@ -1,0 +1,24 @@
+Selection area · immutable source log
+[2mKnown coverage: true · overlay: false · held: false · following: true[0m
+[2m│[0m     print("record 11"); [2m│[0m
+[2m│[0m                         [2m│[0m
+[2m│[0m   end                   [2m│[0m
+[2m└─────────────────────────┘[0m
+Record 12 · appended while following or held
+
+[2m┌ dart ────────────[0m[copy][2m─┐[0m
+[2m│[0m     print("record 12"); [2m│[0m
+[2m│[0m                         [2m│[0m
+[2m│[0m   end                   [2m│[0m
+[2m└─────────────────────────┘[0m
+Record 13 · appended while following or held
+
+[2m┌ dart ────────────[0m[copy][2m─┐[0m
+[2m│[0m     print("record 13"); [2m│[0m
+[2m│[0m                         [2m│[0m
+[2m│[0m   end                   [2m│[0m
+[2m└─────────────────────────┘[0m
+draft stays focused
+[2mReveal last: true[0m
+[2mC-l clear · C-s snapshot · C-o overlay · C-u coverage · C-t theme · C-r reveal ·
+C-b code · F2 append · S-↑/↓ scroll · PgUp/PgDn · C-q quit[0m

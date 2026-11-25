@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact d37470a initial gate)
+ › thought                                                                                                                   |  › thought
+                                                                                                                             |
+ ∴ Thinking…                                                                                                                 |  ∴ Thinking…
+                                                                                                                             |
+ ⏺ Here is the answer.                                                                                                       |  ⏺ Here is the answer.
+                                                                                                                             |
+ › calls                                                                                                                     |  › calls
+                                                                                                                             |
+ ⏺ Read(src/main.tsx)                                                                                                        |  ⏺ Read(src/main.tsx)
+   ⎿  import { Command } from '@cliffy/command';                                                                             |    ⎿  import { Command } from '@cliffy/command';
+      import { render } from 'ink';                                                                                          |       import { render } from 'ink';
+      import { App } from './ui/App.tsx';                                                                                    |       import { App } from './ui/App.tsx';
+      … +4 lines (ctrl+o to expand)                                                                                          |       … +4 lines (ctrl+o to expand)
+                                                                                                                             |
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw      |  ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw
+   their status")                                                                                                            |    their status")
+   ⎿  ok | 1 passed | 0 failed (12ms)                                                                                        |    ⎿  ok | 1 passed | 0 failed (12ms)
+                                                                                                                             |
+ ⏺ Read(src/missing.ts)                                                                                                      |  ⏺ Read(src/missing.ts)
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────      |    ⎿  Error: File does not exist.
+  enter to send                           home end for the top and the bottom    ctrl + x b to pick a code block             |
+  tab to send the oldest queued now       ctrl + c to copy                       c r to copy or put in the prompt            |  ⏺ Two calls worked, one failed.
+  shift or \ + enter for a newline        / @ @@ for commands, files or agents   1–9 to pick a choice                        |  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ctrl + g to edit in $EDITOR             ↑ ↓ to pick a completion               ↑ ↓ j k ← → to move or change a value       |   enter to send                         tab to complete a command            ctrl + d or ctrl + c twice to quit
+  ctrl + v to paste an image              tab to complete a command              enter to pick the highlighted choice        |   tab to send the oldest queued now     tab enter to add a file or agent     ctrl + x a for what waits on you
+  alt + ← → to move by word               tab enter to add a file or agent       esc to reject a permission                  |   shift or \ + enter for a newline      esc to close completions             1–9 to pick a choice
+  cmd + ← → to line start or end          esc to close completions               esc ← to leave a picker or shortcuts        |   alt + ← → to move by word             ! for bash mode                      ↑ ↓ j k ← → to move or change a value
+  ↑ ↓ for prompts, agents, background     ! for bash mode                        ctrl + a to show all directories            |   ↑ ↓ for prompts                       backspace to leave bash mode         enter to pick the highlighted choice
+  x to close an agent, stop background    backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms           |   ctrl + r to search prompts            esc to interrupt or stop a command   esc to reject a permission
+  enter for background, details, a call   esc to interrupt or stop a command     ctrl + c to stop the turn and its form      |   tab enter to take a match             shift + tab to cycle modes           esc to leave a picker or shortcuts
+  ctrl + r to search prompts              shift + tab to cycle modes             /vim for vim mode                           |   esc to cancel a search                ctrl + o for verbose output          ctrl + a to show all directories
+  tab enter to take a match               ctrl + o for verbose output            ? for shortcuts                             |   pgup pgdn to scroll                   ctrl + c to copy                     ? for shortcuts
+  esc to cancel a search                  ctrl + c to clear input                any key to quit the crash screen            |   shift + ↑ ↓ to scroll a line          ctrl + x b to pick a code block      any key to quit the crash screen
+  pgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit                                                 |   home end for the top and the bottom   c r to copy or put in the prompt
+  shift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you                                                   |   ↑ ↓ to pick a completion              ctrl + c to clear input
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │     | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used       |   ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

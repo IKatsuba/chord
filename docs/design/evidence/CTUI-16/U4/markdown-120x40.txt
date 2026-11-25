@@ -1,0 +1,40 @@
+
+ › markdown
+
+ ⏺ A growing reply with an open code fence.
+
+   ┌ dart ────────────────┐
+   │   final answer = 42; │
+   └──────────────────────┘
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -1,0 +1,24 @@
+Permission fixture: review
+Transcript
+
+[1m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m [1mWrite notes.txt[0m                                                              [1m│
+│[0m                                                                              [1m│
+│[0m    [2m1[0m - old                                                                   [1m│
+│[0m    [2m1[0m + proposed line 1                                                       [1m│
+│[0m    [2m2[0m + proposed line 2                                                       [1m│
+│[0m    [2m3[0m + proposed line 3                                                       [1m│
+│[0m    [2m4[0m + proposed line 4                                                       [1m│
+│[0m [2m── ↓ 56 lines below · pagedown to scroll ───────────────────────────────────[0m [1m│
+│[0m                                                                              [1m│
+│[0m The safety review held this:                                                 [1m│
+│[0m This command could overwrite files outside the project. Review the proposed  [1m│
+│[0m changes before allowing it.                                                  [1m│
+│[0m                                                                              [1m│
+│[0m [1m❯[0m [1m1.[0m [1mAllow once[0m                                                              [1m│
+│[0m [1m [0m 2. Always allow                                                            [1m│
+│[0m [1m [0m 3. Deny                                                                    [1m│
+│[0m                                                                              [1m│
+│[0m [2mEsc to reject · denied by itself in 5 minutes[0m                                [1m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0mAnswer:

@@ -1,0 +1,24 @@
+[38;5;244m┌ custom ──[39m[copy][38;5;244m─[39m[run][38;5;244m─┐[39m
+[38;5;244m│[39m   x                   [38;5;244m│[39m
+[38;5;244m└───────────────────────┘[39m
+[38;5;244m┌ custom ──[39m[run][38;5;244m─┐[39m
+[38;5;244m│[39m   run only     [38;5;244m│[39m
+[38;5;244m└────────────────┘[39m
+[2m│ [0m[38;5;244m┌ custom ──┐[39m
+[2m│ [0m[38;5;244m│[39m   quoted [38;5;244m│[39m
+[2m│ [0m[38;5;244m└──────────┘[39m
+
+[38;5;244m┌ custom ──────┐[39m
+[38;5;244m│[39m   open fence [38;5;244m│[39m
+[38;5;244m└──────────────┘[39m
+Run: x
+[2mctrl+q Quit · r Record run action · shift+r Record run-only action[0m
+[2mc Record copy action · p Toggle picked frame · n Toggle narrow controls[0m
+
+
+
+
+
+
+
+

@@ -1,0 +1,25 @@
+Original                                                                         | Port
+ █▄     chord v0.71.0                                                            |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                               |  ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.designer-ctui50                                            |  ▄██▀   <working directory>
+ █▀     ? for shortcuts · /help                                                  |  █▀     ? for shortcuts
+                                                                                 | 
+ › /sta/model                                                                    |  › /sta/model
+                                                                                 | 
+ ⏺ Hello, world. This reply came in chunks.                                      |  ⏺ Hello, world. This reply came in chunks.
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+                                                                                 | 
+ ──────────────────────────────────────────────────────────────────────────────  |  ──────────────────────────────────────────────────────────────────────────────
+  /status  Show the agent, model, mode, session and directory                    |   /status  Show the agent, model, mode, session and directory
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /sta                                                                       │ | │ › /sta                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used   |          Fake Large with a 1M context window · medium effort · 1% context used

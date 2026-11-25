@@ -1,0 +1,24 @@
+ █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [fixture directory]
+ █▀     ? for shortcuts
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  /clear   Start a new session with an empty transcript
+  /config  Change the agent's settings for this session, such as effort
+  /echo    Repeat what follows the command
+  /effort  Change the agent's effort for this session
+  /exit    Quit chord
+  /fast    Turn the agent's fast mode on or off for this session
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /                                                                          │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort

@@ -1,0 +1,24 @@
+ ──────────────────────────────────────────────────────────────────────────────
+  ctrl + s to send
+  tab to send the oldest queued now
+  shift + enter or \ + ctrl + s for a newline
+  ctrl + v to paste an image
+  alt + ← → to move by word
+  ↑ ↓ for prompts
+  ctrl + r to search prompts
+  tab enter to take a match
+  esc to cancel a search
+  pgup pgdn to scroll
+  shift + ↑ ↓ to scroll a line
+  home end for the top and the bottom
+  ↑ ↓ to pick a completion
+  tab to complete a command
+  tab enter to add a file or agent
+  esc to close completions
+  ! for bash mode
+  ── ↓ 18 lines below · pagedown to scroll ─────────────────────────────────────
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ! for shortcuts          Fake Large with a 1M context window · medium effort

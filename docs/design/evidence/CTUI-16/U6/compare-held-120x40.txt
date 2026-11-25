@@ -1,0 +1,41 @@
+Original paused long reply | U6 held fixture
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       | 
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-long-120                                                                           |  ⏺ New output 115
+ ▀▀     ? for shortcuts · /help                                                                                          | 
+                                                                                                                         |  ⏺ New output 116
+ › long                                                                                                                  | 
+                                                                                                                         |  ⏺ New output 117
+ ⏺ 1. Line 1 of 200, streamed one at a time.                                                                             | 
+   2. Line 2 of 200, streamed one at a time.                                                                             |  ⏺ New output 118
+   3. Line 3 of 200, streamed one at a time.                                                                             | 
+   4. Line 4 of 200, streamed one at a time.                                                                             |  ⏺ New output 119
+   5. Line 5 of 200, streamed one at a time.                                                                             | 
+   6. Line 6 of 200, streamed one at a time.                                                                             |  ⏺ New output 120
+   7. Line 7 of 200, streamed one at a time.                                                                             | 
+   8. Line 8 of 200, streamed one at a time.                                                                             |  ⏺ New output 121
+   9. Line 9 of 200, streamed one at a time.                                                                             | 
+   10. Line 10 of 200, streamed one at a time.                                                                           |  ⏺ New output 122
+   11. Line 11 of 200, streamed one at a time.                                                                           | 
+   12. Line 12 of 200, streamed one at a time.                                                                           |  ⏺ New output 123
+   13. Line 13 of 200, streamed one at a time.                                                                           | 
+   14. Line 14 of 200, streamed one at a time.                                                                           |  ⏺ New output 124
+   15. Line 15 of 200, streamed one at a time.                                                                           | 
+   16. Line 16 of 200, streamed one at a time.                                                                           |  ⏺ New output 125
+   17. Line 17 of 200, streamed one at a time.                                                                           | 
+   18. Line 18 of 200, streamed one at a time.                                                                           |  ⏺ New output 126
+   19. Line 19 of 200, streamed one at a time.                                                                           | 
+   20. Line 20 of 200, streamed one at a time.                                                                           |  ⏺ New output 127
+   21. Line 21 of 200, streamed one at a time.                                                                           | 
+   22. Line 22 of 200, streamed one at a time.                                                                           |  ⏺ New output 128
+   23. Line 23 of 200, streamed one at a time.                                                                           | 
+   24. Line 24 of 200, streamed one at a time.                                                                           |  ⏺ New output 129
+   25. Line 25 of 200, streamed one at a time.                                                                           | 
+   26. Line 26 of 200, streamed one at a time.                                                                           |  ⏺ New output 130
+   27. Line 27 of 200, streamed one at a time.                                                                           | 
+                                                                                                                         |  ⏺ New output 131
+ ››› Working… (2s · esc to interrupt)                                                                                    | 
+                                                                                                                         |  ⏺ New output 132
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                                                                    │ |  ⏺ New output 133
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ |  ── ↓ new output · 180 lines below · end to jump to the bottom ────────────────────────────────────────────────────────
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort   |   Page up; ctrl+o toggles details; end follows; ctrl+q quits

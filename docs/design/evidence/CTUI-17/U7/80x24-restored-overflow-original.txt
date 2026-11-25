@@ -1,0 +1,24 @@
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ↑ A long queued prompt preserves its ending keyboard keyboard keyboard keybo │
+│   ard keyboard keyboard keyboard keyboard keyboard keyboard keyboard keyboar │
+│   d tail                                                                     │
+│   narrow queued 3                                                            │
+│   narrow queued 4                                                            │
+│   narrow queued 5                                                            │
+│   narrow queued 6                                                            │
+│   narrow draft                                                               │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

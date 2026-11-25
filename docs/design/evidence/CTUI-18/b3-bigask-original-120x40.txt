@@ -1,0 +1,40 @@
+   "overwrite")
+   ⎿  Waiting…
+
+ ››› Waiting for permission… (57s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                                                               │
+│ ── ↑ 5 lines above · pageup to scroll ────────────────────────────────────────────────────────────────────────────── │
+│   24.                                                                                                                │
+│                                                                                                                      │
+│   ## Changes                                                                                                         │
+│                                                                                                                      │
+│   - Change 1: the prompt keeps its draft                                                                             │
+│   - Change 2: a turn can be resumed                                                                                  │
+│   - Change 3: headlines wrap                                                                                         │
+│   - Change 4: the box scrolls                                                                                        │
+│   - Change 5: tests run in parallel                                                                                  │
+│   - Change 6: the prompt keeps its draft                                                                             │
+│   - Change 7: a turn can be resumed                                                                                  │
+│   - Change 8: headlines wrap                                                                                         │
+│   - Change 9: the box scrolls                                                                                        │
+│   - Change 10: tests run in parallel                                                                                 │
+│   - Change 11: the prompt keeps its draft                                                                            │
+│   - Change 12: a turn can be resumed                                                                                 │
+│   - Change 13: headlines wrap                                                                                        │
+│   - Change 14: the box scrolls                                                                                       │
+│ ── ↓ 18 lines below · pagedown to scroll ─────────────────────────────────────────────────────────────────────────── │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Yes                                                                                                             │
+│   2. Yes, and don't ask again for files - write_file commands                                                        │
+│   3. No, and tell Claude what to do differently                                                                      │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

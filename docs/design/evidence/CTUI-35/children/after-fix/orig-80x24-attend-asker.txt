@@ -1,0 +1,24 @@
+
+ ››› Waiting for permission… (29s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ docs asks                                                                    │
+│ Write notes.txt                                                              │
+│                                                                              │
+│   1 + notes                                                                  │
+│                                                                              │
+│ Do you want to proceed?                                                      │
+│ ❯ 1. Allow                                                                   │
+│   2. Always allow                                                            │
+│   3. Deny                                                                    │
+│                                                                              │
+│ Esc to reject                                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭─ docs ───────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    main    fake  ◦ idle 28s
+    parser  fake  ◦ idle 28s        ✓ new reply
+    docs    fake  ● permission 28s

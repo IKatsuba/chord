@@ -1,0 +1,24 @@
+[38;2;255;255;255m [2m[39m›[0m[38;2;255;255;255m [39mmarkdown[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [1;4m[39mReading the session layer[0m[38;2;255;255;255m
+   [39m [38;2;255;255;255m
+   [39mThe [1msession layer[0m wraps [3mthe SDK[0m so the interface never touches a process. [38;2;255;255;255m
+   [39mStart with src/session/session.ts, then see the [4mACP spec[0;2m (https://[0m[38;2;255;255;255m
+   [2m[39magentclientprotocol.com)[0m for the wire format.[38;2;255;255;255m
+   [39m [38;2;255;255;255m
+   [1m[39mWhat it does[0m[38;2;255;255;255m
+   [39m [38;2;255;255;255m
+   [2m[39m- [0mopens one persistent session per chord session[38;2;255;255;255m
+   [2m[39m- [0mstarts turns with startTurn and cancels them[38;2;255;255;255m
+     [2m[39m1. [0ma cancel stops the turn at once[38;2;255;255;255m
+     [2m[39m2. [0mthe agent is told with session/cancel[38;2;255;255;255m
+   [2m[39m- [0mcloses the agent and waits until its exit is seen[38;2;255;255;255m
+   [39m [38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m [39mA [48;5;66mclosed agent[49m counts as gone only once its exit is seen:[38;2;255;255;255m
+   [38;5;244m│[38;2;255;255;255m [2m[39m┌ ts ──────────────────────────────────────────────────────┐[0m[38;2;255;255;255m
+ [2m[39m── ↓ 35 lines below · end to jump to the bottom ──────────────────────────────[0m[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39msent 12 chars to the terminal's clipboard[0m[38;2;255;255;255m

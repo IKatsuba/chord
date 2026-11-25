@@ -1,0 +1,40 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   [isolated QA directory]
+ █▀     ? for shortcuts · /help
+
+ › plan
+
+ ⏺ Planned. Step 2 done. Step 3 done.
+
+ ⏺ Plan
+   ⎿  ☒ Read the code
+      ☒ Write the change
+      ☒ Run the tests
+
+ › plan
+
+ ⏺ Planned.
+   ⎿  Interrupted by user
+
+
+
+
+
+
+
+
+
+
+
+
+
+  Plan · 1 of 3 done
+  ⎿  ☒ Read the code
+     ◐ Write the change
+     ☐ Run the tests
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

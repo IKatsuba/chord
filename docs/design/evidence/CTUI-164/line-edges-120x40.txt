@@ -1,0 +1,45 @@
+The same two-line draft at 120x40. ctrl+a puts the cursor at line 2's start,
+ctrl+a then left at line 1's end; then the key, then "|" typed.
+
+#### original (bun dev chord --fake)
+== ctrl+a at a line's start (line 2)
+│ › alpha beta gamma|
+│   delta epsilon zeta
+== ctrl+e at a line's end (line 1)
+│ › alpha beta gamma
+│   |delta epsilon zeta
+== ctrl+u at a line's start (line 2)
+│ › alpha beta gamma|delta epsilon zeta
+== ctrl+k at a line's end (line 1)
+│ › alpha beta gamma|
+│   delta epsilon zeta
+== cmd+left at a line's start (line 2)
+│ › alpha beta gamma
+│   |delta epsilon zeta
+== cmd+right at a line's end (line 1)
+│ › alpha beta gamma|
+│   delta epsilon zeta
+== backspace at a line's start (line 2)
+│ › alpha beta gamma|delta epsilon zeta
+
+#### port (dart run tool/dev.dart chord --fake, main b83c4410)
+== ctrl+a at a line's start (line 2)
+│ › alpha beta gamma
+│   |delta epsilon zeta
+== ctrl+e at a line's end (line 1)
+│ › alpha beta gamma|
+│   delta epsilon zeta
+== ctrl+u at a line's start (line 2)
+│ › alpha beta gamma
+│   |delta epsilon zeta
+== ctrl+k at a line's end (line 1)
+│ › alpha beta gamma|
+│   delta epsilon zeta
+== cmd+left at a line's start (line 2)
+│ › alpha beta gamma
+│   |delta epsilon zeta
+== cmd+right at a line's end (line 1)
+│ › alpha beta gamma|
+│   delta epsilon zeta
+== backspace at a line's start (line 2)
+│ › alpha beta gamma|delta epsilon zeta

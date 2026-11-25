@@ -1,0 +1,24 @@
+      report when the test fails for the bug's own reason.
+
+ ⏺ tester and coder are open; I wait for tester's test.
+
+ ← from @tester · fake
+   ⎿  It fails for that reason: "a" at the end of a line comes back as "a, with
+      no closing quote. Only tests/parse/tokenize_test.ts changed.
+
+ ⏺ Received the message from tester · fake.
+
+ ← from @bugfix 2 · fake
+   ⎿  This run keeps to src/parse/date.ts and tests/parse/date_test.ts. Which
+      files do you hold?
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+╭─ bugfix ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ pick · enter write · x close · esc back  Fake Large with a 1M… · 1% used
+    main       fake                    ◦ idle 20s
+  ❯ bugfix     team · fake             ◦ idle 20s
+    ├─ tester  fake                    ● permission 34s          ← new message
+    … +2 more

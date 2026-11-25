@@ -1,0 +1,40 @@
+  New deployment
+
+     ↑ 5 more fields
+ ❯ * Region         ▾
+                      ↑ 4 more options
+                      5. Japan
+                      6. India
+                    ❯ 7. Brazil
+                      ↓ 5 more options
+     ↓ 1 more field
+
+   Accept   Decline
+
+ ↑↓ to move · 1–9 or Enter to pick · ← to close the list · Esc to cancel
+
+ Gave: nothing yet
+ Ctrl+Q quits
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

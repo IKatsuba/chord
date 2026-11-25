@@ -1,0 +1,14 @@
+[
+  {
+    "case": "dark",
+    "exit": "1,0"
+  },
+  {
+    "case": "light",
+    "exit": "1,0"
+  },
+  {
+    "case": "plain",
+    "exit": "1,0"
+  }
+]

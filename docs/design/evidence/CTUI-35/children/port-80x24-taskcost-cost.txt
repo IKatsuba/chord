@@ -1,0 +1,24 @@
+   ⎿  costwait
+
+ ⏺ Agent(Count the cost) · fake
+   ⎿  Initializing…
+
+ ⏺ The cost is being counted.
+
+ › /cost
+   ⎿  Total cost:   $0.0125
+      Tokens in:    1,000
+      Tokens out:   200
+      Cache read:   800
+      Session time: 22s
+
+      This session         Cost  Tokens
+      main              $0.0125   2,000
+        Count the cost        —       —  task agent, running: counted when it
+                                         ends
+      Total             $0.0125   2,000  1 running
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running          Fake Large with a 1M context window · 1% used

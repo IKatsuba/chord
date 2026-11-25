@@ -1,0 +1,2 @@
+│ESC[0m › ESC[48;5;66malpha beta gammaESC[49m                                                                                                   ESC[2m│
+│ESC[0m ESC[2m ESC[0m ESC[48;5;66mdelta epsilon zetaESC[49m                                                                                                 ESC[2m│

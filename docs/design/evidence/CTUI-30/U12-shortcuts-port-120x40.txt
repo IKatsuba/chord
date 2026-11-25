@@ -1,0 +1,40 @@
+ ▀▄     chord vX
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <dir>
+ ▀▀     ? for shortcuts · /help
+
+ › [Image #1]  what is this
+
+ ⏺ Received an image: image/png, 547099 bytes
+
+   Hello, world. This reply came in chunks.
+
+
+
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                         ↑ ↓ to pick a completion             ctrl + c to clear input
+  tab to send the oldest queued now     tab to complete a command            ctrl + d or ctrl + c twice to quit
+  shift or \ + enter for a newline      tab enter to add a file or agent     ctrl + x a for what waits on you
+  ctrl + v to paste an image            esc to close completions             1–9 to pick a choice
+  alt + ← → to move by word             ! for bash mode                      ↑ ↓ j k ← → to move or change a value
+  ↑ ↓ for prompts                       backspace to leave bash mode         enter to pick the highlighted choice
+  ctrl + r to search prompts            esc to interrupt or stop a command   esc to reject a permission
+  tab enter to take a match             shift + tab to cycle modes           esc to leave a picker or shortcuts
+  esc to cancel a search                ctrl + o for verbose output          ctrl + a to show all directories
+  pgup pgdn to scroll                   ctrl + c to copy                     ? for shortcuts
+  shift + ↑ ↓ to scroll a line          ctrl + x b to pick a code block      any key to quit the crash screen
+  home end for the top and the bottom   c r to copy or put in the prompt
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  No image in the clipboard                      Fake Large with a 1M context window · medium effort · 1% context used

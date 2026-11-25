@@ -1,0 +1,24 @@
+   │   const turn = session.prompt('hello');                        │
+   │   await turn.result;                                           │
+   └────────────────────────────────────────────────────────────────┘
+
+   That is the whole loop. To land a change:
+
+ ──────────────────────────────────────────────────────────────────────────────
+  enter to send                         ctrl + o for verbose output
+  shift or \ + enter for a newline      ctrl + c to clear input
+  alt + ← → to move by word             ctrl + d or ctrl + c twice to quit
+  ↑ ↓ for prompts                       ctrl + x a for what waits on you
+  pgup pgdn to scroll                   1–9 to pick a choice
+  shift + ↑ ↓ to scroll a line          ↑ ↓ j k ← → to move or change a value
+  home end for the top and the bottom   enter to pick the highlighted choice
+  ↑ ↓ to pick a completion              esc to reject a permission
+  tab to complete a command             esc to leave a picker or shortcuts
+  esc to close completions              ? for shortcuts
+  esc to interrupt                      any key to quit the crash screen
+  shift + tab to cycle modes
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

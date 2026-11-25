@@ -1,0 +1,40 @@
+
+ › settingsread
+
+ ⏺ Settings · read
+   ⎿  {
+        "user": {
+          "theme": "dark",
+          "mcpServers": {
+            "linear": {
+              "command": "***",
+              "env": {
+                "TOKEN": "***"
+              }
+            }
+          }
+        },
+        "project": null,
+        "effective": {
+          "theme": "dark",
+          "mcpServers": {
+            "linear": {
+              "command": "***",
+              "env": {
+                "TOKEN": "***"
+              }
+            }
+          }
+        },
+        "problems": [
+          {
+            "file": "~/.config/chord/settings.json",
+            "message": "1 key ignored"
+          }
+        ]
+      }
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

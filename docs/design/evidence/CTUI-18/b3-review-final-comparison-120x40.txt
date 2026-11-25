@@ -1,0 +1,41 @@
+Original | Port (120x40; private port directory replaced with <repository>)
+ █▄     chord v0.71.0                                                                                                    |  chord v0.0.1 · fake · <repository>
+ ▀██▄   fake · Fake Large with a 1M context window                                                                       | 
+ ▄██▀   /tmp/chord-qa.designer-ship13-b3afix                                                                             |  › reviewpermission
+ █▀     ? for shortcuts · /help                                                                                          | 
+                                                                                                                         |  ⏺ Run(a reviewed action)
+ › reviewpermission                                                                                                      |    ⎿  Reviewed: caution
+                                                                                                                         | 
+ ⏺ Run(a reviewed action)                                                                                                | 
+   ⎿  Reviewed: caution                                                                                                  | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+ ››› Waiting for permission… (18s · denied in 4m 41s)                                                                    |  ››› Waiting for permission… (18s · denied in 4m 41s)
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Run a reviewed action                                                                                                │ | │ Run a reviewed action                                                                                                │
+│                                                                                                                      │ | │                                                                                                                      │
+│ The safety review held this:                                                                                         │ | │ The safety review held this:                                                                                         │
+│ Fixture safety review: caution.                                                                                      │ | │ Fixture safety review: caution.                                                                                      │
+│                                                                                                                      │ | │                                                                                                                      │
+│ ❯ 1. Allow once                                                                                                      │ | │ ❯ 1. Allow once                                                                                                      │
+│   2. Deny                                                                                                            │ | │   2. Deny                                                                                                            │
+│                                                                                                                      │ | │                                                                                                                      │
+│ Esc to reject · denied by itself in 5 minutes                                                                        │ | │ Esc to reject · denied by itself in 5 minutes                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort   |                                                                    Fake Large with a 1M context window · medium effort

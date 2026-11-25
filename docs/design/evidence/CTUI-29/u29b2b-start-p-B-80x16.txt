@@ -1,0 +1,16 @@
+
+
+
+
+                   chord v0.0.1 · /private/tmp/ctui29b-look/w
+
+          Select agent
+
+          No agents available
+          offeredAgents in settings.json names no agent chord knows.
+
+          Esc to cancel
+
+
+
+

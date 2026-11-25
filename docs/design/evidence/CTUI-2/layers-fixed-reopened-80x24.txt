@@ -1,0 +1,24 @@
+line 52 of the transcript,
+line 53 of the transcript, scrolled back
+line 54 of the transcript, scrolled back scrolled back
+line 55 of the transcript, scrolled back scrolled back scrolled back
+line 56 of the transcript,
+line 57 of the transcript, scrolled back
+line 58 of the transcript, scrolled back scrolled back
+line 59 of the transcript, scrolled back scrolled back scrolled back
+line 60 of the transcript,
+streamed word61 word61 word61 word61 word61 word61 word61 word61 word61 word61
+word61
+streamed word62 word62 word62 word62 word62 word62 word62 word62 word62 word62
+word62
+╭ Models ──────╮word63 word63 word63 word63 word63 word63 word63 word63 word63
+│ ❯ Careful    │
+│   Balanced   │word64 word64 word64 word64 word64 word64 word64 word64 word64
+│   Quick      │
+│   Thorough   │word65 word65 word65 word65 word65 word65 word65 word65 word65
+│ Esc to close │
+╰──────────────╯
+
+> /model
+page builds 7 · rows 71 · offset 51 · following
+enter Choose  escape Close  tab Next field  shift+tab Previous field  ctrl+p Pi…

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   fixture-root___________/project
+ ▀▀     ? for shortcuts · /help
+
+ › mainbetween
+
+ ⏺ I will write the report once the build is done.
+
+ ⏺ Write(notes/report.md)
+   ⎿  Waiting…
+
+ › /resume
+   ⎿  A turn is running. Wait for it to end, or press Esc to interrupt it, then /resume.
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (1m 50s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ main asks · between turns                                                                                            │
+│ Write notes/report.md                                                                                                │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│ ❯ 1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

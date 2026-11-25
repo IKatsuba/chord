@@ -1,0 +1,24 @@
+W=3
+W=4     ...Z
+W=5     a...Z
+W=6     a...YZ
+W=8     ab...XYZ
+W=9     abc...XYZ
+W=10    abc...XYZ
+W=11    abc...XYZ
+W=12    abc...👩‍💻XYZ
+W=13    abc日...👩‍💻XYZ
+W=14    abc日本語👩‍💻XYZ
+A long full-width label preserving bot...ng both ends and terminal cells 日本語
+
+
+
+
+
+
+
+
+
+
+
+

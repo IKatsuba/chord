@@ -1,0 +1,25 @@
+Original actual CLI | Port actual CLI (80x24; private directory prefixes redacted)
+                                   █▄                                            |                                    █▄
+                                   ▀██▄                                          |                                    ▀██▄
+                                   ▄██▀  chord                                   |                                    ▄██▀  chord
+                                   █▀                                            |                                    █▀
+                       v0.71.0 · <checkout>/chord                                |            v0.0.1 · <checkout>/CTUI-18
+                                                                                 | 
+          Select agent                                                           |           Select agent
+                                                                                 | 
+              1.  agoragentic-acp · Agoragentic                                  |           ❯ ↑ 4.  claude · Claude Agent
+              2.  auggie · Auggie CLI                                            |               5.  cline · Cline
+              3.  bob · Bob                                                      |               6.  codebuddy-code · Codebuddy Code
+          ❯   4.  claude · Claude Agent                                          |               7.  codex · Codex
+              5.  cline · Cline                                                  |               8.  cursor-cloud · Cursor Cloud Agents
+              6.  codebuddy-code · Codebuddy Code                                |               9.  deepagents · DeepAgents
+              7.  codex · Codex                                                  |               10. dimcode · DimCode
+              8.  cursor-cloud · Cursor Cloud Agents                             |               11. dirac · Dirac
+              9.  deepagents · DeepAgents                                        |               12. factory-droid · Factory Droid
+              10. dimcode · DimCode                                              |               13. fast-agent
+              11. dirac · Dirac                                                  |               14. gemini · Gemini CLI
+            ↓ 12. factory-droid · Factory Droid                                  |             ↓ 15. github-copilot-cli · GitHub Copilot
+              … +17 more                                                         |               … +17 more
+                                                                                 | 
+          ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel             |           ↑↓ or j/k to move · Enter or 1–9 to select · Esc to cancel
+                                                                                 | 

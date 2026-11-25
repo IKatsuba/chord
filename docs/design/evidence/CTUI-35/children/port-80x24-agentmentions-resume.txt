@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   <project>
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯   1.  just now       open now  docs · text                                 │
+│     2.  just now                 docs · text                                 │
+│     3.  just now                 parser · text                               │
+│     4.  just now       open now  parser · text                               │
+│   ↓ 5.  just now                 agentmentions                               │
+│     … +37 more                                                               │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort
+    main    fake  ◦ idle 26s
+    parser  fake  ◦ idle 26s  ✓ new reply
+    docs    fake  ◦ idle 26s  ✓ new reply

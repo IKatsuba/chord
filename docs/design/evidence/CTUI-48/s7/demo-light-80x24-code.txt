@@ -1,0 +1,24 @@
+Selection area · immutable source log
+Known coverage: true · overlay: false · held: false · following: true
+│     print("record 11"); │
+│                         │
+│   end                   │
+└─────────────────────────┘
+Record 12 · appended while following or held
+
+┌ dart ────────────[copy]─┐
+│     print("record 12"); │
+│                         │
+│   end                   │
+└─────────────────────────┘
+Record 13 · appended while following or held
+
+┌ dart ────────────[copy]─┐
+│     print("record 13"); │
+│                         │
+│   end                   │
+└─────────────────────────┘
+draft stays focused
+Code snapshot:     print("record 13"); ↵  ↵ end
+C-l clear · C-s snapshot · C-o overlay · C-u coverage · C-t theme · C-r reveal ·
+C-b code · F2 append · S-↑/↓ scroll · PgUp/PgDn · C-q quit

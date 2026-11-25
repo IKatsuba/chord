@@ -1,0 +1,24 @@
+ [1mchord[0;2m v0.0.1 · fake · <repository>[0m
+   Change 17: a turn can be resumed\n- Change 18: headlines wrap\n- Change 19:
+   the box scrolls\n- Change 20: tests run in parallel\n- Change 21: the prompt
+   keeps its draft\n- Change 22: a turn can be resumed\n- Change 23: headlines
+   wrap\n- Change 24: the box scrolls\n- Change 25: tests run in parallel\n-
+   Change 26: the prompt keeps its draft\n- Change 27: a turn can be resumed\n-
+   Change 28: headlines wrap\n- Change 29: the box scrolls\n- Change 30: tests
+   run in parallel\n", mode: "overwrite")
+   [2m⎿[0m  Failed
+   [2m⎿[0m  Rejected mcp__files__write_file
+
+ ⏺ Permission: deny.
+
+ [2m›[0m twins
+
+ ⏺ [1mWrite[0m(notes.txt)
+   [2m⎿[0m  [2mAllowed Write notes.txt · Allow once in this folder[0m
+
+ ⏺ Permission: allow-here.
+
+[2m╭──────────────────────────────────────────────────────────────────────────────╮
+│[0m › [7m [0m                                                                          [2m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[0m         [2mFake Large with a 1M context window · medium effort · 1% context used[0m

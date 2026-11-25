@@ -1,0 +1,24 @@
+ code review · fake · Fake Large with ...ontext window · opened by main 41s ago
+
+
+
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  fake
+  cursor              Cursor
+  fx                  fx
+  opencode            OpenCode
+  agoragentic-acp     Agoragentic
+  auggie              Auggie CLI
+
+╭─ code review ────────────────────────────────────────────────────────────────╮
+│ › /new                                                                       │
+╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort
+    main         fake · Fake Large with a 1M context window  ◦ idle 1m
+    code review  fake · Fake Large with a 1M context window  ◦ idle 40s

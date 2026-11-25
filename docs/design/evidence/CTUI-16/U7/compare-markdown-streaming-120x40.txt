@@ -1,0 +1,41 @@
+Original markdown-streaming-120x40.txt | U7 live markdown-streaming-120x40.txt
+                                                                                                                         |  chord v0.0.1 · fake · /private/tmp/chord-qa.ctui16-designer-u7
+ ⏺ Reading the session layer                                                                                             | 
+                                                                                                                         |  › markdown
+   The session layer wraps the SDK so the interface never touches a process. Start with src/session/session.ts, then     | 
+   see the ACP spec (https://agentclientprotocol.com) for the wire format.                                               |  ⏺ Reading the session layer
+                                                                                                                         | 
+   What it does                                                                                                          |    The session layer wraps the SDK so the interface never touches a process. Start with src/session/session.ts, then
+                                                                                                                         |    see the ACP spec (https://agentclientprotocol.com) for the wire format.
+   - opens one persistent session per chord session                                                                      | 
+   - starts turns with startTurn and cancels them                                                                        |    What it does
+     1. a cancel stops the turn at once                                                                                  | 
+     2. the agent is told with session/cancel                                                                            |    - opens one persistent session per chord session
+   - closes the agent and waits until its exit is seen                                                                   |    - starts turns with startTurn and cancels them
+                                                                                                                         |      1. a cancel stops the turn at once
+   │ A closed agent counts as gone only once its exit is seen:                                                           |      2. the agent is told with session/cancel
+   │ ┌ ts ──────────────────────────────────────────────────────┐                                                        |    - closes the agent and waits until its exit is seen
+   │ │ await session.close(); // resolves once the exit is seen │                                                        | 
+   │ └──────────────────────────────────────────────────────────┘                                                        |    │ A closed agent counts as gone only once its exit is seen:
+                                                                                                                         |    │ ┌ ts ────────────────────────────────────────────────────────┐
+   ┌───────────────┬────────────────────────────────────────┬────────────────────┐                                       |    │ │   await session.close(); // resolves once the exit is seen │
+   │ Module        │ Holds                                  │ Tested by          │                                       |    │ └────────────────────────────────────────────────────────────┘
+   ├───────────────┼────────────────────────────────────────┼────────────────────┤                                       | 
+   │ session.ts    │ opening, prompting and closing         │ session_test.ts    │                                       |    ┌───────────────┬────────────────────────────────────────┬────────────────────┐
+   │               │ a session                              │                    │                                       |    │ Module        │ Holds                                  │ Tested by          │
+   │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │                                       |    ├───────────────┼────────────────────────────────────────┼────────────────────┤
+   │               │ gone                                   │                    │                                       |    │ session.ts    │ opening, prompting and closing a       │ session_test.ts    │
+   │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │                                       |    │               │ session                                │                    │
+   │               │ drawn                                  │                    │                                       |    │ processes.ts  │ the promise that a closed agent is     │ processes_test.ts  │
+   └───────────────┴────────────────────────────────────────┴────────────────────┘                                       |    │               │ gone                                   │                    │
+                                                                                                                         |    │ transcript.ts │ the reducer from events to what is     │ transcript_test.ts │
+   ┌─ ts ─────────────────────────────────────────────────────────┐                                                      |    │               │ drawn                                  │                    │
+   │ const session = await openSession({ agent: 'claude', cwd }); │                                                      |    └───────────────┴────────────────────────────────────────┴────────────────────┘
+   └──────────────────────────────────────────────────────────────┘                                                      | 
+                                                                                                                         |    ┌ ts ────────────────────────────────────────────────────────────┐
+ ››› Working… (0s · esc to interrupt)                                                                                    |    │   const session = await openSession({ agent: 'claude', cwd }); │
+                                                                                                                         |    └────────────────────────────────────────────────────────────────┘
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                                                                    │ | 
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ |  ›
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort   |  ctrl+c or ctrl+d to quit

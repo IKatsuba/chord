@@ -1,0 +1,23 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:ansi_escape_codes/extensions.dart';
+
+void main() {
+  final cases = jsonDecode(File('cases.json').readAsStringSync()) as List;
+  var passed = 0;
+  for (final c in cases) {
+    final actual = (c['input'] as String).ansiRemoveEscapeCodes();
+    if (actual == c['expected']) {
+      passed++;
+    } else {
+      print(
+        jsonEncode({
+          'case': c['name'],
+          'expected': c['expected'],
+          'actual': actual,
+        }),
+      );
+    }
+  }
+  print('$passed/${cases.length} original strip-ansi 7.2.0 cases passed');
+}

@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › form
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (11s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ fake asks for input                                                                                                  │
+│ Set up the deploy target                                                                                             │
+│                                                                                                                      │
+│ ❯ ⚠ Project name   ab                                                                                                │
+│                    At least 3 characters                                                                             │
+│   ⚠ Contact email  not-an-email                                                                                      │
+│                    Not an email address, such as name@example.com                                                    │
+│   ✔ Replicas       2                                                                                                 │
+│     Traffic share  not set                                                                                           │
+│   ✔ Public         ☐ No                                                                                              │
+│   ✔ Region         United States                                                                                     │
+│   ✔ Tags           web                                                                                               │
+│                                                                                                                      │
+│   Accept   Decline     2 fields to fix                                                                               │
+│                                                                                                                      │
+│ Type to fill in · ↑↓ to move · Enter for the next · Esc to cancel                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

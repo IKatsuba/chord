@@ -1,0 +1,4 @@
+10 000 chunks of 8 B: text + chunk 17 ms, parts then one join 0 ms (true)
+flood: 1 024 chunks of 64 KiB (64 MiB): text + chunk 3632 ms, parts then one join 6 ms (true)
+1 000 updates to the last of 1000 entries, list copied each: 8 ms
+1 000 updates to the last of 10000 entries, list copied each: 51 ms

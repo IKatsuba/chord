@@ -1,0 +1,4 @@
+{"event":"attempt","text":"quoted body","cancelled":false}
+{"event":"write","text":"quoted body"}
+{"event":"attempt","text":"\tcopy body\n\ntail","cancelled":false}
+{"event":"write","text":"\tcopy body\n\ntail"}

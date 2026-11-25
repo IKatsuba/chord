@@ -1,0 +1,40 @@
+
+ [38;2;232;201;90m←[39m [2mfrom [0;1m[38;2;232;201;90m@tester[0;2m · fake[0m
+   [2m⎿[0m  [2mIt fails for that reason: "a" at the end of a line comes back as "a, with no closing quote. Only tests/parse/[0m
+      [2mtokenize_test.ts changed.[0m
+
+ ⏺ Received the message from tester · fake.
+
+ [38;2;124;207;127m←[39m [2mfrom [0;1m[38;2;124;207;127m@bugfix 2[0;2m · fake[0m
+   [2m⎿[0m  [2mThis run keeps to src/parse/date.ts and tests/parse/date_test.ts. Which files do you hold?[0m
+
+ ⏺ Received the message from bugfix 2 · fake.
+
+ [2m←[0m [2mfrom [0;1mchord[0m
+   [2m⎿[0m  [2mThe person closed coder (fake · fake-large, id 2d293d30). It takes no more messages; open_agent opens it again.[0m
+
+ ⏺ Received the message from chord.
+
+ [2m›[0m /cost
+   [2m⎿[0m  [2mTotal cost:[0m   $0.0500
+   [2m [0m  [2mTokens in:[0m    4,000
+   [2m [0m  [2mTokens out:[0m   800
+   [2m [0m  [2mCache read:[0m   3,200
+   [2m [0m  [2mSession time:[0m 1m 24s
+   [2m [0m
+   [2m [0m  This session     Cost  Tokens
+   [2m [0m  main          $0.0500   8,000
+   [2m [0m  bugfix        $0.0750  12,000  team run: lead $0.0500 · tester not reported · coder $0.0250
+   [2m [0m  bugfix        $0.0500   8,000  team run: lead $0.0250 · tester not reported · coder $0.0250
+   [2m [0m  Total         $0.1750  28,000  tester not reported; tester not reported
+
+[38;2;108;182;255m╭─[1m bugfix[0m[38;2;108;182;255m ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m ›                                                                                                                    [38;2;108;182;255m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[39m  [38;2;255;193;7m● 2 agents wait · ctrl+x a to go[2m[39m · ? for shortcuts[0m            [2mFake Large with a 1M context window · medium · 1% used[0m
+    main     [2m  fake · Fake Large with a 1M context window · medium         ◦ idle 1m[0m
+    [1m[38;2;108;182;255mbugfix   [0;2m  team · fake · Fake Large with a 1M context window · medium  ◦ idle 30s[0m
+    [2m└─ [0m[38;2;196;156;255mtester[2m[39m  fake · Fake Small · medium                                [0m[38;2;255;193;7m  ● permission 1m 25s[39m
+    [38;2;124;207;127mbugfix 2 [2m[39m  team · fake · Fake Large with a 1M context window · medium  ◦ idle 1m            ✓ new reply[0m
+    [2m├─ [0m[38;2;232;201;90mtester[2m[39m  fake · Fake Small · medium                                [0m[38;2;255;193;7m  ● permission 1m 2s [2m[39m  ← new message[0m
+    [2m└─ [0m[38;2;245;154;198mcoder [2m[39m  fake · Fake Large with a 1M context window · medium         ◦ idle 1m            ✓ new reply[0m

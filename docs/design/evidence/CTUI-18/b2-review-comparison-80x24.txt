@@ -1,0 +1,25 @@
+Original review | Port review (80x24; scenario data differs)
+                                                                                 | Permission fixture: review
+ › reviewpermission                                                              | Transcript
+                                                                                 | 
+ ⏺ Run(a reviewed action)                                                        | ╭──────────────────────────────────────────────────────────────────────────────╮
+   ⎿  Reviewed: caution                                                          | │ Write notes.txt                                                              │
+                                                                                 | │                                                                              │
+ ››› Waiting for permission… (29s · denied in 4m 30s)                            | │    1 - old                                                                   │
+                                                                                 | │    1 + proposed line 1                                                       │
+╭──────────────────────────────────────────────────────────────────────────────╮ | │    2 + proposed line 2                                                       │
+│ Run a reviewed action                                                        │ | │    3 + proposed line 3                                                       │
+│                                                                              │ | │    4 + proposed line 4                                                       │
+│ The safety review held this:                                                 │ | │ ── ↓ 56 lines below · pagedown to scroll ─────────────────────────────────── │
+│ Fixture safety review: caution.                                              │ | │                                                                              │
+│                                                                              │ | │ The safety review held this:                                                 │
+│ ❯ 1. Allow once                                                              │ | │ This command could overwrite files outside the project. Review the proposed  │
+│   2. Deny                                                                    │ | │ changes before allowing it.                                                  │
+│                                                                              │ | │                                                                              │
+│ Esc to reject · denied by itself in 5 minutes                                │ | │ ❯ 1. Allow once                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯ | │   2. Always allow                                                            │
+                                                                                 | │   3. Deny                                                                    │
+╭──────────────────────────────────────────────────────────────────────────────╮ | │                                                                              │
+│ ›                                                                            │ | │ Esc to reject · denied by itself in 5 minutes                                │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   | Answer:

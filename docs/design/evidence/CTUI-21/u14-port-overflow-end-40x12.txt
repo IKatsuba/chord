@@ -1,0 +1,12 @@
+ ──────────────────────────────────────
+  ── ↑ 14 lines above ──────────────────
+  enter to pick the highlighted choice
+  esc to reject a permission
+  esc to leave a picker or shortcuts
+  ? for shortcuts
+  any key to quit the crash screen
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

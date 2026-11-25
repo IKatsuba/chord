@@ -1,0 +1,13 @@
+ORIGINAL                                 | PORT
+ ──────────────────────────────────────  |  ──────────────────────────────────────
+  enter to send                          |   enter to send
+  tab to send the oldest queued now      |   shift or \ + enter for a newline
+  shift or \ + enter for a newline       |   alt + ← → to move by word
+  ctrl + g to edit in $EDITOR            |   ↑ ↓ for prompts
+  ctrl + v to paste an image             |   pgup pgdn to scroll
+  ── ↓ 38 lines below ────────────────── |   ── ↓ 14 lines below ──────────────────
+                                         | 
+╭──────────────────────────────────────╮ | ╭──────────────────────────────────────╮
+│ ›                                    │ | │ ›                                    │
+╰──────────────────────────────────────╯ | ╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…   |   ? for shortcuts   Fake Large with a…

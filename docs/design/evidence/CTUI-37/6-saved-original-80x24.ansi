@@ -1,0 +1,24 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [1m[39mWho edits what[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m One writer per file at a time. Before a member starts, the lead tells[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m  it which files are its own.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m A member that needs a file it does not own asks its owner directly,[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m  and tells the lead what they agreed.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m Another run of a team may be working in this directory: the leads[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m  agree on files among themselves.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m Nobody commits. The person commits.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [1m[39mReporting[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mThe lead writes to main when it needs a decision only the person can[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mmake, when the job is done, and when it cannot be done.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [38;2;78;186;101mSaved to .chord/teams/bugfix.md · /team run bugfix <job> hands it a job[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mbugfix is saved for this project. Hand it a bug with /team run bugfix and [38;2;255;255;255m
+   [39mthe bug, or just tell me to hand one to bugfix.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 1% used[0m[38;2;255;255;255m

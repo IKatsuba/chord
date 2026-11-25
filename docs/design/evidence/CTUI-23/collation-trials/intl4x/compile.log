@@ -1,0 +1,2 @@
+'dart compile' does not support build hooks, use 'dart build' instead.
+Packages with build hooks: icu4x.

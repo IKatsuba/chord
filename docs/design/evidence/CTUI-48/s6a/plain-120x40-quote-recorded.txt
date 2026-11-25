@@ -1,0 +1,40 @@
+Markdown controls · recording only
+F2 close/open · F3 cover · ctrl+b emphasize · ctrl+y copy
+ctrl+s range · ctrl+q quit
+┌ ts ────[copy]─┐
+│     copy body │
+│               │
+│   tail        │
+└───────────────┘
+
+│ ┌ console ──────┐
+│ │   quoted body │
+│ └───────────────┘
+
+┌ dart ────────────┐
+│   streaming body │
+└──────────────────┘
+draft
+Copies 2: quoted body
+Range:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

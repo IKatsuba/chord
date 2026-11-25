@@ -1,0 +1,24 @@
+ chord v0.0.1 · fake · [task directory]
+   ...................
+
+ › queued first
+   continuation
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › queued second
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ › readsheld
+
+ ⏺ Working
+   ⎿  Interrupted by user
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › queued first                                                               │
+│   continuation                                                               │
+│   queued second                                                              │
+│   current draft                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+ ctrl+c or ctrl+d to quit

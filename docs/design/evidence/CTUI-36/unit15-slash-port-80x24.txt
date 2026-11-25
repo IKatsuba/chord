@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+
+
+
+
+
+ ──────────────────────────────────────────────────────────────────────────────
+  /fast    Turn the agent's fast mode on or off for this session
+  /fork    Fork the conversation into a new agent
+  /config  Change the agent's settings for this session, such as effort
+  /effort  Change the agent's effort for this session
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /f                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────╯
+         Fake Large with a 1M context window · medium effort · 1% context used

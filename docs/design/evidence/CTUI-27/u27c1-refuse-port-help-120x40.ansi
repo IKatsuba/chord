@@ -1,0 +1,40 @@
+ [38;2;29;150;93m[48;2;27;145;91m▀[38;2;26;142;90m[49m▄[39m     [1mchord[0;2m v0.0.1[0m
+ [38;2;25;140;90m▀[38;2;24;137;89m[48;2;22;132;87m▀[38;2;23;134;88m[48;2;21;129;86m▀[38;2;21;127;85m[49m▄[39m   [2mfake[0m
+ [38;2;20;125;85m▄[38;2;21;127;86m[48;2;19;121;85m▀[38;2;20;124;85m[48;2;18;117;85m▀[38;2;18;120;85m[49m▀[39m   [2mfixture-project[0m
+ [38;2;18;118;85m[48;2;16;111;86m▀[38;2;17;114;86m[49m▀[39m     [2m? for shortcuts[0m
+
+ [2m›[0m running
+
+ ⏺ Working
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ [2m──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────[0m
+  [2menter to send                         esc to close completions             ctrl + x a for what waits on you[0m
+  [2mtab to send the oldest queued now     ! for bash mode                      1–9 to pick a choice[0m
+  [2mshift or \ + enter for a newline      backspace to leave bash mode         ↑ ↓ j k ← → to move or change a value[0m
+  [2malt + ← → to move by word             esc to interrupt or stop a command   enter to pick the highlighted choice[0m
+  [2m↑ ↓ for prompts                       shift + tab to cycle modes           esc to reject a permission[0m
+  [2mpgup pgdn to scroll                   ctrl + o for verbose output          esc to leave a picker or shortcuts[0m
+  [2mshift + ↑ ↓ to scroll a line          ctrl + c to copy                     ctrl + a to show all directories[0m
+  [2mhome end for the top and the bottom   ctrl + x b to pick a code block      ? for shortcuts[0m
+  [2m↑ ↓ to pick a completion              c r to copy or put in the prompt     any key to quit the crash screen[0m
+  [2mtab to complete a command             ctrl + c to clear input[0m
+  [2mtab enter to add a file or agent      ctrl + d or ctrl + c twice to quit[0m
+
+[2m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[0m ›                                                                                                                    [2m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[0m  [2m? for shortcuts[0m

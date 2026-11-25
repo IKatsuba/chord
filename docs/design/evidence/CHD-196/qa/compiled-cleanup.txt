@@ -1,3 +1,0 @@
-alternate_on cursor_flag pane_current_command: 0 1 zsh
-stty before equals after: true
-exit: 0

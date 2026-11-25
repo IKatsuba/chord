@@ -1,0 +1,24 @@
+# original, 80x24: typed, cursor at the end
+│ › one two three four five six seven eight nine ten eleven twelve thirteen fo │
+│   urteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twent │
+│   y-two twenty-three twenty-four twenty-five                                 │
+
+# up, then super+left, then '[' typed: lands at the shown row's start
+│ › one two three four five six seven eight nine ten eleven twelve thirteen fo │
+│   [urteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twen │
+│   ty-two twenty-three twenty-four twenty-five                                │
+
+# super+right, then ']' typed: lands before the row's last character, since the line goes on
+│ › one two three four five six seven eight nine ten eleven twelve thirteen fo │
+│   [urteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twe] │
+│   nty-two twenty-three twenty-four twenty-five                               │
+
+# super+right again from the wrap boundary (cursor drawn at the next row's start): that row's end
+│ › one two three four five six seven eight nine ten eleven twelve thirteen fo │
+│   [urteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twe] │
+│   nty-two twenty-three twenty-four twenty-five}                              │
+
+# ctrl+a, then '^' typed: the logical line's start
+│ › ^one two three four five six seven eight nine ten eleven twelve thirteen f │
+│   o[urteen fifteen sixteen seventeen eighteen nineteen twenty twenty-one twe │
+│   ]nty-two twenty-three twenty-four twenty-five}                             │

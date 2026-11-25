@@ -1,6 +1,10 @@
+.dart_tool/
+build/
+*.exe
+.release/
 dist/
 node_modules/
+npm/
 .DS_Store
 .claude/settings.local.json
-npm/
-.release/
+.claude/worktrees/

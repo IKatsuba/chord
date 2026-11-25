@@ -1,0 +1,40 @@
+  New deployment
+
+   ✔ Project name   abc
+   ✔ Contact email  ops@example.com
+   ✔ Replicas       2
+     Traffic share  not set
+   ✔ Public         ☐ No
+   ✔ Region         United States
+   ✔ Tags           web
+
+ ❯ Accept   Decline
+
+ ←→ to switch · Enter to accept · Esc to cancel
+
+ Gave: nothing yet
+ Ctrl+Q quits
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

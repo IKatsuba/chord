@@ -1,0 +1,24 @@
+▾ Run checks
+$ dart analyze
+Analyzing CTUI-2...
+No issues found!
+$ dart format --output=none --set-exit-if-changed .
+Formatted 205 files (0 changed) in 0.45 seconds.
+$ dart test test/widgets/fold_test.dart
+00:00 +15: All tests passed!
+
+Name    Transport  Command or URL
+memory  stdio      npx -y memory
+
+
+
+
+
+
+
+
+
+
+
+
+ctrl+o Toggle tool details  ctrl+q Quit

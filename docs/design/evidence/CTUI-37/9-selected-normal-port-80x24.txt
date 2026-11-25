@@ -1,0 +1,24 @@
+ ⏺ Team(fixture) · codex · fake-small · medium
+   ⎿  selectedidle
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements;
+      capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): codex · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual: confirmed · session runtime codex · model fake-small · effort
+      medium · mode plan
+      reviewer: claude · model fake-small · effort agent default
+      (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      ctrl+o for saved definition and changes
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used
+    main     codex         ◦ idle 12s
+    fixture  team · codex  ◦ idle 12s  ✓ new reply

@@ -1,0 +1,40 @@
+Key capture · enabled · actions 0 · pastes 0
+When enabled, v then c invokes the action before the editor.
+Other text edits normally; an unfinished chord drops a miss.
+ Type here
+v then c captured action · F2 toggle capture · C-q quit
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

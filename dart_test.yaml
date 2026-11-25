@@ -1,0 +1,9 @@
+tags:
+  compile:
+    # Builds a binary: slow, so run on its own with `dart test -t compile`.
+    skip: "run with: dart test -t compile --run-skipped"
+  fake_agent:
+    # Runs the fake agent, the Dart port under test/fixtures/fake_agent, from
+    # a snapshot built once; it needs neither bun nor ../chord. Only the
+    # parity test also runs the original's with bun, and skips with the
+    # finder's reason where bun or ../chord is missing.

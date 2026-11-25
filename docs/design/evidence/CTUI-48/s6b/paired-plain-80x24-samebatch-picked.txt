@@ -1,0 +1,25 @@
+ORIGINAL UI + RECORDING STUB                                                     | PORT FIXTURE + RECORDING STUB
+   │ const turn = session.prompt('hello');                        │              |  › Select these request words
+   │ await turn.result;                                           │              | 
+   └──────────────────────────────────────────────────────────────┘              |  ⏺ Select these reply words.
+                                                                                 | 
+   That is the whole loop. To land a change:                                     |    ┌ ts ────[copy]─┐
+                                                                                 |    │     copy body │
+   1. Run the checks:                                                            |    │               │
+      ┌─ sh ─[copy]─[run]─┐                                                      |    │   tail        │
+      │ bun quality       │                                                      |    └───────────────┘
+      └───────────────────┘                                                      | 
+   2. Commit on main once every check has passed and the tree is clean, so       |    │ ┌ console ──────┐
+      whoever picks the work up next starts from a build that runs.              |    │ │   quoted body │
+                                                                                 |    │ └───────────────┘
+   Then build the binary with:                                                   | 
+                                                                                 |    ┌ dart ───────┐
+   ┌─ sh ───────────────────────────────────[copy]─[run]─┐                       |    │   open body │
+   │ bun dev compile --all                               │                       |    └─────────────┘
+   │ for bin in dist/*/chord; do echo "built $bin"; done │                       | 
+   └─────────────────────────────────────────────────────┘                       |  › Next eligible request
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ another block · c copy · r put in the prompt · esc done                    |   ↑ ↓ another block · c copy · esc done

@@ -1,0 +1,154 @@
+{
+  "parsed": [
+    {
+      "type": "session",
+      "version": 1,
+      "sessionId": "literal/id",
+      "agent": "fake",
+      "cwd": "fixture-project",
+      "at": 0
+    },
+    {
+      "type": "opened",
+      "at": 0
+    },
+    {
+      "type": "prompt",
+      "turnId": "turn-1",
+      "at": 100,
+      "prompt": "first\n prompt",
+      "images": 0
+    },
+    {
+      "type": "update",
+      "turnId": "turn-1",
+      "update": {
+        "sessionUpdate": "agent_message_chunk",
+        "content": {
+          "type": "text",
+          "text": "hello"
+        },
+        "_meta": {
+          "future": [
+            1,
+            2.5
+          ]
+        }
+      }
+    },
+    {
+      "type": "result",
+      "turnId": "turn-1",
+      "result": {
+        "status": "completed",
+        "stopReason": "cancelled"
+      }
+    },
+    {
+      "type": "renamed",
+      "at": 200,
+      "title": "Named\n session"
+    },
+    {
+      "type": "update",
+      "turnId": "turn-1",
+      "update": {
+        "sessionUpdate": "session_info_update",
+        "title": "  "
+      }
+    },
+    {
+      "type": "prompt",
+      "turnId": "turn-2",
+      "at": 300,
+      "prompt": "later",
+      "images": 0
+    },
+    {
+      "type": "result",
+      "turnId": "turn-2",
+      "result": {
+        "status": "failed",
+        "error": {
+          "message": "no",
+          "code": "reason/text"
+        }
+      }
+    },
+    {
+      "type": "future",
+      "opaque": true
+    }
+  ],
+  "summary": {
+    "path": "fixture.jsonl",
+    "sessionId": "literal/id",
+    "agent": "fake",
+    "cwd": "fixture-project",
+    "lastUsedAt": 300,
+    "prompt": "first prompt",
+    "title": "Named session"
+  },
+  "labels": [
+    {
+      "name": "message",
+      "prompt": "<message from=\"main\">\nRun the parser\ntests.\n</message>",
+      "expected": "Run the parser tests."
+    },
+    {
+      "name": "team member",
+      "prompt": "<team name=\"build\" role=\"member\" member=\"parser\">\nPrivate team instructions\n</team>\n<message from=\"main\">\nRun the parser\ntests.\n</message>",
+      "expected": "Run the parser tests."
+    },
+    {
+      "name": "team lead",
+      "prompt": "<team name=\"build\" role=\"lead\">\nTeam instructions\n</team>\n<message from=\"main\">\nRun the parser\ntests.\n</message>",
+      "expected": "Run the parser tests."
+    },
+    {
+      "name": "monitor message",
+      "prompt": "<message from=\"watcher\" monitor=\"id\">\nWatch\nresult\n</message>",
+      "expected": "Watch result"
+    },
+    {
+      "name": "aside before prompt",
+      "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\nActual\n question",
+      "expected": "Actual question"
+    },
+    {
+      "name": "only aside",
+      "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n",
+      "expected": "Runtime note."
+    },
+    {
+      "name": "multiple asides",
+      "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n<message from=\"chord\">\nRuntime note.\n</message>\n\n",
+      "expected": "Runtime note."
+    },
+    {
+      "name": "aside and shell",
+      "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n<bash-input>pwd</bash-input>\n<bash-stdout>output</bash-stdout><bash-stderr></bash-stderr>\n\nActual\n question",
+      "expected": "Actual question"
+    },
+    {
+      "name": "aside and shell only",
+      "prompt": "<message from=\"chord\">\nRuntime note.\n</message>\n\n<bash-input>pwd</bash-input>\n<bash-stdout>output</bash-stdout><bash-stderr></bash-stderr>\n\n",
+      "expected": "!pwd"
+    },
+    {
+      "name": "other sender ahead retained",
+      "prompt": "<message from=\"worker\">\nKeep this\n</message>\n\nActual question",
+      "expected": "<message from=\"worker\"> Keep this </message> Actual question"
+    },
+    {
+      "name": "non-message preserves team-like text",
+      "prompt": "<team name=\"build\" role=\"lead\">\nTyped text\n</team>",
+      "expected": "<team name=\"build\" role=\"lead\"> Typed text </team>"
+    },
+    {
+      "name": "message content keeps asides literal",
+      "prompt": "<message from=\"main\">\n<message from=\"chord\">\nRuntime note.\n</message>\n\nActual text\n</message>",
+      "expected": "<message from=\"chord\"> Runtime note. </message> Actual text"
+    }
+  ]
+}

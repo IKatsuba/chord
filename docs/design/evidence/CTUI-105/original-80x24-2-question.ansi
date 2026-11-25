@@ -1,0 +1,24 @@
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[38;2;177;185;249mdimcode can start other agents[0m[38;2;255;255;255m                                               [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                              [38;2;177;185;249m│
+│[38;2;255;255;255m [39mWith its permission option at full-access, dimcode may start other agent[38;2;255;255;255m     [38;2;177;185;249m│
+│[38;2;255;255;255m [39mCLIs it finds on your PATH, such as claude, codex and cursor, as subagents[38;2;255;255;255m   [38;2;177;185;249m│
+│[38;2;255;255;255m [39mof its own, with their approvals bypassed and on your own accounts. At[38;2;255;255;255m       [38;2;177;185;249m│
+│[38;2;255;255;255m [39mworkspace-write it asks you first, and once you allow it, the same holds.[38;2;255;255;255m    [38;2;177;185;249m│
+│[38;2;255;255;255m [39mNothing those agents do reaches chord's permission box.[38;2;255;255;255m                      [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                              [38;2;177;185;249m│
+│[38;2;255;255;255m [39mTo turn a CLI off, set externalAgents.<type>.enabled to false in[38;2;255;255;255m             [38;2;177;185;249m│
+│[38;2;255;255;255m [39m~/.dimcode/v2/config.json (claude-code, codex, cursor, …), or use[38;2;255;255;255m            [38;2;177;185;249m│
+│[38;2;255;255;255m [39m/external-agents in dimcode's own TUI. Or keep the permission option at[38;2;255;255;255m      [38;2;177;185;249m│
+│[38;2;255;255;255m [39mread-only in /config, where dimcode refuses its agent tool.[38;2;255;255;255m                  [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                              [38;2;177;185;249m│
+│[38;2;255;255;255m [38;2;177;185;249m❯[38;2;255;255;255m [38;2;177;185;249m1. Got it, don't show this again[38;2;255;255;255m                                           [38;2;177;185;249m│
+│[38;2;255;255;255m [38;2;177;185;249m [38;2;255;255;255m [39m2. Show it again next time[38;2;255;255;255m                                                 [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                              [38;2;177;185;249m│
+│[38;2;255;255;255m [2m[39mEnter to pick · 1–2 · ↑↓ to move · Esc to show it again next time[0m[38;2;255;255;255m            [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m          [2m[39mFake Large with a 1M context window · medium effort[0m[38;2;255;255;255m

@@ -1,0 +1,24 @@
+Custom shortcuts. Press ctrl+x, then a; ctrl+q quits.
+ctrl+x a  Complete chord
+ctrl+q  Quit
+pageup/shift+pageup  Scroll up a page
+pagedown/shift+pagedown  Scroll down a page
+home/shift+home  Scroll to the top
+end/shift+end  Scroll to the bottom
+ctrl+x a Complete chord  ctrl+q Quit  pageup/shift+pageup Scroll up a page  pag…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

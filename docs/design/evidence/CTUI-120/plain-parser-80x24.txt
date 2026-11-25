@@ -1,0 +1,24 @@
+ parser · fake · fake-small · opened by main 18m ago
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭─ parser ─────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts
+    main    fake               ◦ idle 0s
+    parser  fake · fake-small  ◦ idle 7s
+    docs    fake               ◦ idle 7s

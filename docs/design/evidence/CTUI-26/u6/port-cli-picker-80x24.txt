@@ -1,0 +1,24 @@
+
+
+
+
+
+                            ▀▄
+                            ▀▀▀▄  █▀▀ █ █ █▀█ █▀█ █▀▄
+                            ▄▀▀▀  █▄▄ █▀█ █▄█ █▀▄ █▄▀
+                            ▀▀
+            v0.0.1 · fake · fixture-root___________________/project
+
+ ╭────────────────────────────────────────────────────────────────────────────╮
+ │ Resume a session                                                           │
+ │ Pick one of fake's earlier sessions to open.                               │
+ │                                                                            │
+ │ ❯ 1. 1 minute ago  text                                                    │
+ │                                                                            │
+ │ Enter to resume · Ctrl+a for all directories · Esc to quit                 │
+ ╰────────────────────────────────────────────────────────────────────────────╯
+
+
+
+
+

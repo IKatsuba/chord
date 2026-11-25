@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   ~/<workspace>/chorded-tui
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ fake did not start: Authentication required: run `fake login` from your terminal, or set FAKE_API_KEY
+   ⎿  fake reports that no account is signed in.
+      fake offers these sign-ins:
+        Log in with the fake · Run `fake login` in the terminal
+        Log in with SSO
+      chord does not sign agents in. Sign in with fake's own CLI in a terminal, or set its API key where it offers one.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

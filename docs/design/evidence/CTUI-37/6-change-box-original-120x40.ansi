@@ -1,0 +1,40 @@
+[38;2;255;255;255m   [2m[39m [0m[38;2;255;255;255m  [39mMake the failing test pass with the smallest change. Do not touch tests.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mreviewer's instructions[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mRead `git diff` and the test. Never edit a file.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [1;4m[39mHow bugfix works[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m1.[0m The lead reads the job, finds the files involved, and names who may edit which before anyone starts.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m2.[0m tester writes a test that fails for the bug's own reason. It edits [38;2;177;185;249mtests/[39m only, and reports the failure.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m3.[0m coder fixes the code so that test passes. It edits only the files the lead named for it, and never [38;2;177;185;249mtests/[39m.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m4.[0m reviewer reads the diff and edits nothing. If it finds a problem, the lead hands it back to coder.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m5.[0m tester runs the whole suite once more, and the lead reports to main.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [1m[39mWho edits what[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m One writer per file at a time. Before a member starts, the lead tells it which files are its own.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m A member that needs a file it does not own asks its owner directly, and tells the lead what they agreed.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m Another run of a team may be working in this directory: the leads agree on files among themselves.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [2m[39m-[0m Nobody commits. The person commits.[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [1m[39mReporting[0m[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39m [38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mThe lead writes to main when it needs a decision only the person can make, when the job is done, and when it[38;2;255;255;255m
+   [2m[39m [0m[38;2;255;255;255m  [39mcannot be done.[38;2;255;255;255m
+
+ [38;2;10;116;112m›››[38;2;255;255;255m [38;2;71;231;165mWaiting for you…[38;2;255;255;255m [2m[39m(20s)[0m[38;2;255;255;255m
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [1m[38;2;177;185;249mReplace team bugfix?[0m[38;2;255;255;255m                                                                                                 [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m [38;2;177;185;249m❯[38;2;255;255;255m [38;2;177;185;249m1. Yes, in .chord/teams/bugfix.md[38;2;255;255;255m                                                                                  [38;2;177;185;249m│
+│[38;2;255;255;255m [38;2;177;185;249m [38;2;255;255;255m [39m2. No, tell fake what to change[38;2;255;255;255m                                                                                    [38;2;177;185;249m│
+│[38;2;255;255;255m                                                                                                                      [38;2;177;185;249m│
+│[38;2;255;255;255m [2m[39mEsc to tell fake what to change[0m[38;2;255;255;255m                                                                                      [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                                                                    [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m                                [2m[39mFake Large with a 1M context window · medium effort · 1% context used[0m[38;2;255;255;255m

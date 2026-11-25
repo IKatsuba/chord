@@ -1,0 +1,40 @@
+Source child · middle excluded · phase finalized
+Drag first to last: excluded decoration keeps its wrapped rows.
+F2 eligibility · C-s snapshot · C-b code query · C-l clear · C-q quit
+[7mfirst eligible[0m
+wrapped decoration, drawn in place and omitted from selection. wrapped decoration, drawn in place and omitted from
+selection. wrapped decoration, drawn in place and omitted from selection. wrapped decoration, drawn in place and omitted
+from selection. wrapped decoration, drawn in place and omitted from selection.
+[2m┌ dart ───────────────────────┐[0m
+[2m│[0m   print("decorative code"); [2m│[0m
+[2m└─────────────────────────────┘[0m
+[7mlast eligible[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Snapshot: first eligible\nlast eligible
+Visible eligible code: 0

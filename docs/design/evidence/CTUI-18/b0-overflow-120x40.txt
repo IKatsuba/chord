@@ -1,0 +1,40 @@
+Choices enabled
+Filter:
+  ↑ 4.  Choice 4
+    5.  Choice 5
+    6.  Choice 6
+    7.  Choice 7
+❯ ↓ 8.  Choice 8
+    … +4 more
+Answer: None
+up Previous choice  k Previous choice  down Next choice  j Next choice  enter Choose highlighted item  1 Choose item 1…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

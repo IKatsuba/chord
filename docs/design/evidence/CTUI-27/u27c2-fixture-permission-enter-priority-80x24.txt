@@ -1,0 +1,24 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts
+
+ › /review
+
+ ⏺ Working
+
+ ! echo recorded
+   ⎿  recorded held output
+
+ › running
+
+ ⏺ Working
+   ⎿  Allowed Approve notes · Allow once
+
+ ──────────────────────────────────────────────────────────────────────────────
+  search prompts: /re
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › /review                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

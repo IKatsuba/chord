@@ -1,0 +1,9 @@
+Original installed agents | Port synthetic fixture (30x8; inventories/version/directory differ)
+  Select agent                 |   Select agent
+                               | 
+  ❯ ↑ 4.  claud...aude Agent   |   ❯ ↓ 1. claude
+      … +28 more               |       … +2 more
+                               | 
+  ↑↓ or j/k to move · Enter    |   ↑↓ or j/k to move · Enter
+  or 1–9 to select · Esc to    |   or 1–9 to select · Esc to
+  cancel                       |   cancel

@@ -1,0 +1,24 @@
+ Diff  untinted
+
+ edit
+src/greeting.ts
+1 + /** Greets someone by name. */
+2   export function greet(name: string): string {
+2 -   return "hello " + name;
+3 +   return `hello, ${name}`;
+4   }
+
+ long line, two hunks, a tab
+src/long.ts
+ 9   step9();
+10   step10();
+11   step11();
+12 -   return 'A message about terminal cells, 日本語, and preserving every
+     grapheme while the source line wraps';
+12 +   return 'A shorter message';
+13   more13();
+14   more14();
+15   more15();
+   …
+45   more45();
+ctrl+t Theme  ctrl+q Quit  pageup Scroll up a page  pagedown Scroll down a page…

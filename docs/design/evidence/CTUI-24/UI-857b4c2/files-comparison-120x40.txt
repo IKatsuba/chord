@@ -1,0 +1,40 @@
+ ▀▄     chord v0.71.0                                                                                                    |  ⏺ Transcript record 62
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       |
+ ▄▀▀▀   /tmp/chord-qa.ctui-designer-mentions                                                                             |  ⏺ Transcript record 63
+ ▀▀     ? for shortcuts · /help                                                                                          |
+                                                                                                                         |  ⏺ Transcript record 64
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 65
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 66
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 67
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 68
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 69
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 70
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 71
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 72
+                                                                                                                         |
+                                                                                                                         |  ⏺ Transcript record 73
+                                                                                                                         |
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────  |  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  notes.md                                                                                                               |   notes.md
+  source.dart                                                                                                            |   source.dart
+  space name.txt                                                                                                         |   space name.txt
+  src/alpha.dart                                                                                                         |   src/alpha.dart
+  src/beta.dart                                                                                                          |   src/beta.dart
+  src/delta.dart                                                                                                         |   src/delta.dart
+  src/epsilon.dart                                                                                                       |   src/epsilon.dart
+  src/gamma.dart                                                                                                         |   src/gamma.dart
+  tests/a_test.dart                                                                                                      |   src/long directory/a literal filename that exceeds the small completion row.dart
+  tests/b_test.dart                                                                                                      |   tests/a_test.dart
+                                                                                                                         |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › @                                                                                                                  │ | │ › @                                                                                                                  │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                   Fake Large with a 1M context window · medium effort   |

@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+ ▀▄     chord v0.71.0                                                                                                        |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                           |  ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project                                                                                                      |  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                              |  ▀▀     ? for shortcuts
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › running
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+                                                                                                                             |
+ › oldest refused                                                                                                            |
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |
+                                                                                                                             |
+ › newer queued                                                                                                              |
+                                                                                                                             |
+ ⏺ Hello, world. This reply came in chunks.                                                                                  |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────      |
+  enter to send                           home end for the top and the bottom    ctrl + x b to pick a code block             |
+  tab to send the oldest queued now       ctrl + c to copy                       c r to copy or put in the prompt            |
+  shift or \ + enter for a newline        / @ @@ for commands, files or agents   1–9 to pick a choice                        |
+  ctrl + g to edit in $EDITOR             ↑ ↓ to pick a completion               ↑ ↓ j k ← → to move or change a value       |  ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  ctrl + v to paste an image              tab to complete a command              enter to pick the highlighted choice        |   enter to send                         esc to close completions             ctrl + x a for what waits on you
+  alt + ← → to move by word               tab enter to add a file or agent       esc to reject a permission                  |   tab to send the oldest queued now     ! for bash mode                      1–9 to pick a choice
+  cmd + ← → to line start or end          esc to close completions               esc ← to leave a picker or shortcuts        |   shift or \ + enter for a newline      backspace to leave bash mode         ↑ ↓ j k ← → to move or change a value
+  ↑ ↓ for prompts, agents, background     ! for bash mode                        ctrl + a to show all directories            |   alt + ← → to move by word             esc to interrupt or stop a command   enter to pick the highlighted choice
+  x to close an agent, stop background    backspace to leave bash mode           tab ← → ↑ ↓ space to answer forms           |   ↑ ↓ for prompts                       shift + tab to cycle modes           esc to reject a permission
+  enter for background, details, a call   esc to interrupt or stop a command     ctrl + c to stop the turn and its form      |   pgup pgdn to scroll                   ctrl + o for verbose output          esc to leave a picker or shortcuts
+  ctrl + r to search prompts              shift + tab to cycle modes             /vim for vim mode                           |   shift + ↑ ↓ to scroll a line          ctrl + c to copy                     ctrl + a to show all directories
+  tab enter to take a match               ctrl + o for verbose output            ? for shortcuts                             |   home end for the top and the bottom   ctrl + x b to pick a code block      ? for shortcuts
+  esc to cancel a search                  ctrl + c to clear input                any key to quit the crash screen            |   ↑ ↓ to pick a completion              c r to copy or put in the prompt     any key to quit the crash screen
+  pgup pgdn or wheel to scroll            ctrl + d or ctrl + c twice to quit                                                 |   tab to complete a command             ctrl + c to clear input
+  shift + ↑ ↓ to scroll a line            ctrl + x a for what waits on you                                                   |   tab enter to add a file or agent      ctrl + d or ctrl + c twice to quit
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │     | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used       |   ? for shortcuts

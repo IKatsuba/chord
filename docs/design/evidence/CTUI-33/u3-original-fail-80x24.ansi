@@ -1,0 +1,24 @@
+[38;2;255;255;255m
+ [39m⏺[38;2;255;255;255m [39mHello, world. This reply came in chunks.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39midlecompact[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mDone: three tests merged into one table, all green.[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [2m[39mConversation compacted while idle (ctrl+o for history)[0m[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mhello[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mHello, world. This reply came in chunks.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39midlecompactfail[38;2;255;255;255m
+
+ [39m⏺[38;2;255;255;255m [39mDone: three tests merged into one table, all green.[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mCompaction failed while idle: Not enough messages to compact.[38;2;255;255;255m
+
+ [2m[39m›[0m[38;2;255;255;255m [39mcompactfail[38;2;255;255;255m
+   [2m[39m⎿[0m[38;2;255;255;255m  [38;2;255;107;128mCompaction failed: Not enough messages to compact.[38;2;255;255;255m
+
+[38;5;244m╭──────────────────────────────────────────────────────────────────────────────╮
+│[38;2;255;255;255m [39m›[38;2;255;255;255m                                                                            [38;5;244m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[38;2;255;255;255m  [2m[39m? for shortcuts[0m[38;2;255;255;255m       [2m[39mFake Large with a 1M context window · medium · 2% used[0m[38;2;255;255;255m

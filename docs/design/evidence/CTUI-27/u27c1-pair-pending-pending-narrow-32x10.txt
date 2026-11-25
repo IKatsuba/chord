@@ -1,0 +1,11 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+                                                                                                                             |  ⏺ Working
+ ›› Working (37s · esc to                                                                                                    |
+ ›  …       interrupt)                                                                                                       |  ››› Working… (37s · esc to int
+ › into the running turn: f...g                                                                                              |  › into the running turn: f...g
+ › second unsent                                                                                                             |  › second unsent
+                                                                                                                             |
+╭──────────────────────────────╮                                                                                             | ╭──────────────────────────────╮
+│ › draft remains              │                                                                                             | │ › draft remains              │
+╰──────────────────────────────╯                                                                                             | ╰──────────────────────────────╯
+  Fake Large with a 1M contex…                                                                                               |

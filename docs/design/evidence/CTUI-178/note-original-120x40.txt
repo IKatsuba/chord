@@ -1,0 +1,145 @@
+== empty, on the Note (colour, Note rows)
+│ESC[38;2;255;255;255m ESC[38;2;177;185;249m❯ESC[38;2;255;255;255m ESC[1mESC[38;2;177;185;249mNote  ESC[0;7m ESC[0;2m Tell fake what to change, sent with 2 (optional)ESC[0mESC[38;2;255;255;255m                                                           ESC[38;2;177;185;249m│
+== empty, away (k) (colour, Note rows)
+│ESC[38;2;255;255;255m ESC[38;2;177;185;249m❯ESC[38;2;255;255;255m ESC[1mESC[38;2;177;185;249mNote  ESC[0mkESC[7m ESC[0mESC[38;2;255;255;255m                                                                                                           ESC[38;2;177;185;249m│
+== away
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  k                                                                                                            │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+== none
+│ ❯ Note  alpha beta gamma|
+== left
+│ ❯ Note  alpha beta gamma|
+== right
+│ ❯ Note  alpha beta gamma|
+== alt+left
+│ ❯ Note  alpha beta gamma|
+== super+left
+│ ❯ Note  alpha beta gamma|
+== C-a
+│ ❯ Note  alpha beta gamma|
+== C-e
+│ ❯ Note  alpha beta gamma|
+== alt+b
+│ ❯ Note  alpha beta gamma|
+== C-f
+│ ❯ Note  alpha beta gamma|
+== BSpace
+│ ❯ Note  alpha beta gamm|
+== S-BSpace
+│ ❯ Note  alpha beta gamm|
+== DC
+│ ❯ Note  alpha beta gamma|
+== C-w
+│ ❯ Note  alpha beta |
+== alt+backspace
+│ ❯ Note  alpha beta gamm|
+== C-k
+│ ❯ Note  alpha beta gamma|
+== alt+d
+│ ❯ Note  alpha beta gamma|
+== C-z
+│ ❯ Note  alpha beta gamma|
+== super+a
+│ ❯ Note  alpha beta gammaa|
+== super+z
+│ ❯ Note  alpha beta gammaz|
+== super+shift+z
+│ ❯ Note  alpha beta gammaZ|
+== shift+left
+│ ❯ Note  alpha beta gamma|
+== long note, on its end
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  The routing move should keep the old entry points working until the tests pass, and the connection reading   │
+│         should be checked against the recorded traffic before anything else changes in the plan.                     │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+== long note (colour, Note rows)
+│ESC[38;2;255;255;255m ESC[38;2;177;185;249m❯ESC[38;2;255;255;255m ESC[1mESC[38;2;177;185;249mNote  ESC[0mThe routing move should keep the old entry points working until the tests pass, and the connection readingESC[38;2;255;255;255m   ESC[38;2;177;185;249m│
+== ↑ from the note's last row
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│ ❯ 2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│   Note  The routing move should keep the old entry points working until the tests pass, and the connection reading   │
+│         should be checked against the recorded traffic before anything else changes in the plan.                     │
+│                                                                                                                      │
+│ Enter to pick · 1–2 · ↑↓ to move · Esc to keep planning                                                              │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+== j j back
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  The routing move should keep the old entry points working until the tests pass, and the connection reading   │
+│         should be checked against the recorded traffic before anything else changes in the plan.j                    │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+== ↓ on the Note
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  The routing move should keep the old entry points working until the tests pass, and the connection reading   │
+│         should be checked against the recorded traffic before anything else changes in the plan.j                    │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+== a word filling the line
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx │
+│                                                                                                                      │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+== a word filling the line (colour, Note rows)
+│ESC[38;2;255;255;255m ESC[38;2;177;185;249m❯ESC[38;2;255;255;255m ESC[1mESC[38;2;177;185;249mNote  ESC[0mxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxESC[38;2;255;255;255m ESC[38;2;177;185;249m│
+== one more character
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx │
+│         y                                                                                                            │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+== a word longer than the line
+│ Approve Plan                                                                                                         │
+│                                                                                                                      │
+│ fake has a plan. Do you want to proceed?                                                                             │
+│   1. Yes, accept the plan                                                                                            │
+│   2. No, keep planning                                                                                               │
+│                                                                                                                      │
+│ ❯ Note  wwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwwww │
+│         wwwwwww                                                                                                      │
+│                                                                                                                      │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep planning                                      │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯

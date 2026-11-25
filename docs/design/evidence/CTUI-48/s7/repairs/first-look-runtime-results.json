@@ -1,0 +1,62 @@
+[
+  {
+    "role": "original",
+    "case": "dark-120x40",
+    "exit": "1,0"
+  },
+  {
+    "role": "port",
+    "case": "dark-120x40",
+    "exit": "1,0"
+  },
+  {
+    "role": "original",
+    "case": "light-120x40",
+    "exit": "1,0"
+  },
+  {
+    "role": "port",
+    "case": "light-120x40",
+    "exit": "1,0"
+  },
+  {
+    "role": "original",
+    "case": "plain-120x40",
+    "exit": "1,0"
+  },
+  {
+    "role": "port",
+    "case": "plain-120x40",
+    "exit": "1,0"
+  },
+  {
+    "role": "original",
+    "case": "dark-80x24",
+    "exit": "1,0"
+  },
+  {
+    "role": "port",
+    "case": "dark-80x24",
+    "exit": "1,0"
+  },
+  {
+    "role": "original",
+    "case": "light-80x24",
+    "exit": "1,0"
+  },
+  {
+    "role": "port",
+    "case": "light-80x24",
+    "exit": "1,0"
+  },
+  {
+    "role": "original",
+    "case": "plain-80x24",
+    "exit": "1,0"
+  },
+  {
+    "role": "port",
+    "case": "plain-80x24",
+    "exit": "1,0"
+  }
+]

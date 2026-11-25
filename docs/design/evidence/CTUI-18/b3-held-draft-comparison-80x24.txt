@@ -1,0 +1,25 @@
+Original | Port (80x24; private port directory replaced with <repository>)
+                                                                                 |  chord v0.0.1 · fake · <repository>
+ ››› Waiting for permission… (50s)                                               | 
+                                                                                 |  ››› Waiting for permission… (50s)
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ main asks · between turns                                                    │ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ mcp__files__write_file                                                       │ | │ main asks · between turns                                                    │
+│   path: docs/release.md                                                      │ | │ mcp__files__write_file                                                       │
+│   content: # Release 0.56.0                                                  │ | │   path: docs/release.md                                                      │
+│                                                                              │ | │   content: # Release 0.56.0                                                  │
+│   This release changes how chord draws long requests: the permission box now │ | │                                                                              │
+│   caps its height, keeps its options on screen and lets the person scroll    │ | │   This release changes how chord draws long requests: the permission box now │
+│ ── ↓ 37 lines below ──────────────────────────────────────────────────────── │ | │ ── ↓ 38 lines below ──────────────────────────────────────────────────────── │
+│                                                                              │ | │                                                                              │
+│ Do you want to proceed?                                                      │ | │ Do you want to proceed?                                                      │
+│   1. Yes                                                                     │ | │   1. Yes                                                                     │
+│   2. No                                                                      │ | │   2. No                                                                      │
+│                                                                              │ | │                                                                              │
+│ ctrl+x a to answer                                                           │ | │ ctrl+x a to answer                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › kept draft                                                                 │ | │ › kept draft                                                                 │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ● permission · ctrl+x a to answer    Fake Large with a 1M context… · 2% used   |          Fake Large with a 1M context window · medium effort · 2% context used

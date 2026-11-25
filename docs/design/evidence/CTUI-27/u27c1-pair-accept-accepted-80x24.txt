@@ -1,0 +1,25 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+ ▀▄     chord v0.71.0                                                                                                        |  ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                           |  ▀▀▀▄   fake
+ ▄▀▀▀   …/CTUI-27/build/designer-u27c1-accept/fixture-project                                                                |  ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help                                                                                              |  ▀▀     ? for shortcuts
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › running
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+                                                                                                                             |
+ › first queued                                                                                                              |  › first queued
+                                                                                                                             |
+ ⏺ Read the message from nobody.                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+ ››› Working… (37s · esc to interrupt)                                                                                       |  ››› Working… (37s · esc to interrupt)
+ › second queued                                                                                                             |  › second queued
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────╮                                             | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft 界😀 stays                                                           │                                               | │ › draft 界😀 stays                                                           │
+╰──────────────────────────────────────────────────────────────────────────────╯                                             | ╰──────────────────────────────────────────────────────────────────────────────╯
+                           Fake Large with a 1M context window · medium effort                                               |

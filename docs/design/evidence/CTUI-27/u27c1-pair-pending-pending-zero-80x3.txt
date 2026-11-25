@@ -1,0 +1,4 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+                                                                                                                             |
+ ››› Working… (38s · esc to interrupt)                                                                                       |  ››› Working… (38s · esc to interrupt)
+ › into the running turn: first pending                                                                                      |  › into the running turn: first pending

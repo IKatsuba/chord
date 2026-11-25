@@ -1,0 +1,40 @@
+Terminal services
+Copy sample: Long sample words remain complete inside the text area while the caption keeps one row and every service s…
+Editor: exited 0
+Last key: space
+┌──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+│                                                                                                                      │
+│ Long sample words remain complete inside the text area while the caption keeps one row and every service shortcut st │
+│ ays visible. Long sample words remain complete inside the text area while the caption keeps one row and every servic │
+│ e shortcut stays visible. Long sample words remain complete inside the text area while the caption keeps one row and │
+│  every service shortcut stays visible. Long sample words remain complete inside the text area while the caption keep │
+│ s one row and every service shortcut stays visible. Terminal services                                                │
+│ Second sample line                                                                                                   │
+│ Edited by scripted child                                                                                             │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+│                                                                                                                      │
+└──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+super+left Move to line start · super+right Move to line end · ctrl+y Copy sample · ctrl+g Open editor · ctrl+b Bell ·
+ctrl+n OSC9 · ctrl+x n OSC777 · ctrl+t Title · ctrl+q Quit

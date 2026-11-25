@@ -1,0 +1,40 @@
+      Then step 4.
+
+      Then step 5.
+
+      Then step 6.
+
+      Then step 7.
+
+      Then step 8.
+
+ ⏺ Agent(Check the build)
+   ⎿  Run this first.
+
+      ```sh
+      bun test
+      ```
+
+      Then step 1.
+
+      Then step 2.
+
+      Then step 3.
+
+      Then step 4.
+
+      Then step 5.
+
+      Then step 6.
+
+      Then step 7.
+
+      Then step 8.
+   ⎿  Done (0 tool uses · 0s)
+
+ ⏺ The build holds.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

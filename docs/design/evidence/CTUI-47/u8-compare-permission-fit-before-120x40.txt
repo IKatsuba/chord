@@ -1,0 +1,42 @@
+Original | port; see u8-look.md for state/catalog/viewport limits
+
+   186. Line 186 of 200, streamed one at a time.                                                                         |    186. Line 186 of 200, streamed one at a time.
+   187. Line 187 of 200, streamed one at a time.                                                                         |    187. Line 187 of 200, streamed one at a time.
+   188. Line 188 of 200, streamed one at a time.                                                                         |    188. Line 188 of 200, streamed one at a time.
+   189. Line 189 of 200, streamed one at a time.                                                                         |    189. Line 189 of 200, streamed one at a time.
+   190. Line 190 of 200, streamed one at a time.                                                                         |    190. Line 190 of 200, streamed one at a time.
+   191. Line 191 of 200, streamed one at a time.                                                                         |    191. Line 191 of 200, streamed one at a time.
+   192. Line 192 of 200, streamed one at a time.                                                                         |    192. Line 192 of 200, streamed one at a time.
+   193. Line 193 of 200, streamed one at a time.                                                                         |    193. Line 193 of 200, streamed one at a time.
+   194. Line 194 of 200, streamed one at a time.                                                                         |    194. Line 194 of 200, streamed one at a time.
+   195. Line 195 of 200, streamed one at a time.                                                                         |    195. Line 195 of 200, streamed one at a time.
+   196. Line 196 of 200, streamed one at a time.                                                                         |    196. Line 196 of 200, streamed one at a time.
+   197. Line 197 of 200, streamed one at a time.                                                                         |    197. Line 197 of 200, streamed one at a time.
+   198. Line 198 of 200, streamed one at a time.                                                                         |    198. Line 198 of 200, streamed one at a time.
+   199. Line 199 of 200, streamed one at a time.                                                                         |    199. Line 199 of 200, streamed one at a time.
+   200. Line 200 of 200, streamed one at a time.                                                                         |    200. Line 200 of 200, streamed one at a time.
+                                                                                                                         | 
+ › permission                                                                                                            |  › permission
+                                                                                                                         | 
+ ⏺ Write(notes.txt)                                                                                                      |  ⏺ Write(notes.txt)
+   ⎿  Waiting…                                                                                                           |    ⎿  Waiting…
+                                                                                                                         | 
+ ››› Waiting for permission… (58s)                                                                                       |  ››› Waiting for permission… (59s)
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Write notes.txt                                                                                                      │ | │ Write notes.txt                                                                                                      │
+│                                                                                                                      │ | │                                                                                                                      │
+│   1 + notes                                                                                                          │ | │   1 + notes                                                                                                          │
+│                                                                                                                      │ | │                                                                                                                      │
+│ Do you want to proceed?                                                                                              │ | │ Do you want to proceed?                                                                                              │
+│   1. Allow                                                                                                           │ | │   1. Allow                                                                                                           │
+│ ❯ 2. Always allow                                                                                                    │ | │ ❯ 2. Always allow                                                                                                    │
+│   3. Deny                                                                                                            │ | │   3. Deny                                                                                                            │
+│                                                                                                                      │ | │                                                                                                                      │
+│ Esc to reject                                                                                                        │ | │ Esc to reject                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |   ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

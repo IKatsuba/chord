@@ -1,0 +1,41 @@
+ORIGINAL | PORT (exact 334f998 fixture; different canned agent metadata/output)
+ █▄     chord v0.71.0                                                                                                        |  █▄     chord v0.0.1
+ ▀██▄   fake · Fake Large with a 1M context window                                                                           |  ▀██▄   fake
+ ▄██▀   fixture-project                                                                                                      |  ▄██▀   fixture-project
+ █▀     ? for shortcuts · /help                                                                                              |  █▀     ? for shortcuts
+                                                                                                                             |
+ › readsheld                                                                                                                 |  › running
+                                                                                                                             |
+ ⏺ Working                                                                                                                   |  ⏺ Working
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+                                                                                                                             |
+ ››› Working… (8s · esc to interrupt)                                                                                        |  ››› Working… (8s · esc to interrupt)
+ › unsupported queued                                                                                                        |  › unsupported queued
+                                                                                                                             |
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮     | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ › plain draft                                                                                                        │     | │ › plain draft                                                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯     | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  This agent does not take messages into a running turn · it stays queued          Fake Large with a 1M context window       |   This agent does not take messages into a running turn · it stays queued

@@ -1,0 +1,40 @@
+Highlight a choice to preview it; Enter accepts it.
+Filter:
+    1.  Choice 1
+❯   2.  Choice 2
+    3.  Choice 3
+    4.  Choice 4
+    5.  Choice 5
+    6.  Choice 6
+  ↓ 7.  Choice 7
+    … +23 more
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Highlighted: Choice 2
+Accepted: Choice 2
+up Previous choice  k Previous choice  down Next choice  j Next choice  enter Choose highlighted item  1 Choose item 1…

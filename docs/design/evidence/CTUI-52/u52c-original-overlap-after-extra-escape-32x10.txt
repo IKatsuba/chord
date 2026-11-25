@@ -1,0 +1,10 @@
+ ⏺ fake did not start: it
+   refused session/load:
+   Resource not found:
+ ──────────────────────────────
+  /resume  Resume a...irectory
+
+╭──────────────────────────────╮
+│ › /resume                    │
+╰──────────────────────────────╯
+

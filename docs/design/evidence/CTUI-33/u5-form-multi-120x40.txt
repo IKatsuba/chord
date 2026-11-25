@@ -1,0 +1,40 @@
+  New deployment
+
+   ⚠ Project name   ab
+                    At least 3 characters
+   ⚠ Contact email  not-an-email
+                    Not an email address, such as name@example.com
+   ✔ Replicas       2
+     Traffic share  not set
+   ✔ Public         ☐ No
+   ✔ Region         United States
+ ❯ ✔ Tags           ▾
+                    ❯ ☒ web
+                      ☐ api
+                      ☐ worker
+
+   Accept   Decline
+
+ ↑↓ to move · Space to tick · Enter or ← to close the list · Esc to cancel
+
+ Gave: nothing yet
+ Ctrl+Q quits
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

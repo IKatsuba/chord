@@ -1,0 +1,24 @@
+             llllllllllllllllllllllll
+             llllllllllllllllllllllll
+             llllllllllllllllllllllll
+             llllllllllllllllllllllll
+             llllllllllllllllllllllll
+             l"
+
+ ››› Waiting for you… (7s)
+
+╭──────────────────────────────────────╮
+│ Set agents.fake.model?               │
+│                                      │
+│ ❯ 1. Yes, in ~/scratch/run- │
+│   x/config/chord/settings.json       │
+│   2. No, tell fake what to change    │
+│                                      │
+│ Esc to tell fake what to change ·    │
+│ pageup to read the whole change      │
+╰──────────────────────────────────────╯
+
+╭──────────────────────────────────────╮
+│ ›                                    │
+╰──────────────────────────────────────╯
+  ? for shortcuts   Fake Large with a…

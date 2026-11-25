@@ -1,0 +1,5 @@
+00:00 +0: loading test/ui/app/resume_escape_resize_test.dart
+00:00 +0: fresh narrow resume retains Escape ownership without resize
+00:00 +1: resume Escape remains owned after list disappears on resize false
+00:00 +2: resume Escape remains owned after list disappears on resize true
+00:00 +3: All tests passed!

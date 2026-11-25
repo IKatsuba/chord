@@ -1,0 +1,24 @@
+
+ ››› Waiting for your answer to the plan… (29s)
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Approve Plan                                                                 │
+│                                                                              │
+│ fake has a plan. Do you want to proceed?                                     │
+│   1. Yes, accept the plan                                                    │
+│   2. No, keep planning                                                       │
+│                                                                              │
+│ ❯ Note  ── ↑ 2 lines above · pageup to scroll ────────────────────────────── │
+│         word word word word word word word word word word word word word     │
+│                                                                              │
+│ Enter to keep planning with this note · ↑ to the options · Esc to keep       │
+│ planning                                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ● docs needs your permission · ctrl+x a  Fake Large with a 1M con… · 1% used
+    main    fake  ✻ working 29s
+    parser  fake  ◦ idle 1m           ✓ new reply
+    docs    fake  ● permission 1m 0s  ← new message
+    other   fake  ◦ idle 54s          ✓ new reply

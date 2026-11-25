@@ -1,0 +1,24 @@
+[1mMarkdown controls · recording only[0m
+F2 close/open · F3 cover · ctrl+b emphasize · ctrl+y copy
+ctrl+s range · ctrl+q quit
+[38;5;244m┌ ts ────[39m[copy][38;5;244m─┐[39m
+[38;5;244m│[39m     copy body [38;5;244m│[39m
+[38;5;244m│[39m               [38;5;244m│[39m
+[38;5;244m│[39m   tail        [38;5;244m│[39m
+[38;5;244m└───────────────┘[39m
+
+[2m│ [0m[38;5;244m┌ console ──────┐[39m
+[2m│ [0m[38;5;244m│[39m   quoted body [38;5;244m│[39m
+[2m│ [0m[38;5;244m└───────────────┘[39m
+
+[38;2;20;125;85m┌ dart ─────[1m[copy][0m[38;2;20;125;85m─┐[39m
+[38;2;20;125;85m│[39m   streaming body [38;2;20;125;85m│[39m
+[38;2;20;125;85m└──────────────────┘[39m
+draft
+Copies 2: quoted body
+Range:
+
+
+
+
+

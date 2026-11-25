@@ -1,0 +1,6 @@
+Original | Port
+ › queued second |  › queued second
+ › narrow queued 1 … |  › narrow queued 1 …
+ › A long queued prompt preserves its e...board keyboard keyboard keyboard tail |  › A long queued prompt preserves its e...board keyboard keyboard keyboard tail
+ › narrow queued 3 |  › narrow queued 3
+ › … +3 more |  › … +3 more

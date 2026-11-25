@@ -1,0 +1,164 @@
+=== after its turn, a task still at work: its block, the status line counting it, and no row under the list
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   .
+ ▀▀     ? for shortcuts · /help
+
+ › tasklong
+
+ ⏺ Agent(Watch the build) · fake
+   ⎿  Initializing…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s
+=== the task's permission between turns names it, with the key that answers it
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   .
+ ▀▀     ? for shortcuts · /help
+
+ › task
+
+ ⏺ Agent(Fix the tokenizer) · fake · fake-small
+   ⎿  Edit(src/parse/tokenize.ts) · waiting for permission
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for permission… (…)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Fix the tokenizer) · fake asks · between turns                                                                 │
+│ Edit src/parse/tokenize.ts                                                                                           │
+│                                                                                                                      │
+│ Do you want to proceed?                                                                                              │
+│   1. Allow                                                                                                           │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ ctrl+x a to answer                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● permission asked between turns · ctrl+x a to answer · ? for shortcuts
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s
+=== the task's form between turns names it in its heading
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   .
+ ▀▀     ? for shortcuts · /help
+
+ › leftform
+
+ ⏺ Agent(Carry the form) · fake
+   ⎿  Initializing…
+
+
+
+
+
+
+
+
+
+
+
+
+ ››› Waiting for your input… (…)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Agent(Carry the form) · fake asks for input · between turns                                                          │
+│ Name the project.                                                                                                    │
+│                                                                                                                      │
+│   * Project name                                                                                                     │
+│                                                                                                                      │
+│   Accept   Decline                                                                                                   │
+│                                                                                                                      │
+│ ctrl+x a to answer                                                                                                   │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ● input asked between turns · ctrl+x a to answer · 1 agent still running
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s
+=== /cost names main's task under it, ended, and one still at work as counted when it ends
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake
+ ▄▀▀▀   .
+ ▀▀     ? for shortcuts · /help
+
+ › task
+
+ ⏺ Running 2 agents… (ctrl+o to expand)
+   ├─ Agent(Fix the tokenizer) · fake · fake-small · 0 tool uses · 2.0k tokens · $0.0125
+   │  ⎿  Done
+   └─ Agent(Watch the build) · fake · 0 tool uses
+      ⎿  Initializing…
+
+ › /cost
+   ⎿  fake has not reported what this session has used.
+
+      This session                 Cost  Tokens
+      main                 not reported       —
+        Fix the tokenizer       $0.0125   2,000  task agent, ended
+        Watch the build               —       —  task agent, running: counted when it ends
+      parser               not reported       —  agent
+      Total                     $0.0125   2,000  fake not reported; parser not reported; 1 running
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  1 agent still running
+    main    fake  ◦ idle 0s
+    parser  fake  ◦ idle 0s

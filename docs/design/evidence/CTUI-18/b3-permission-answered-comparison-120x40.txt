@@ -1,0 +1,41 @@
+Original | Port (120x40; private port directory replaced with <repository>)
+ █▄     chord v0.71.0                                                                                                    |  chord v0.0.1 · fake · <repository>
+ ▀██▄   fake · Fake Large with a 1M context window                                                                       | 
+ ▄██▀   /tmp/chord-qa.designer-ship13-b3check                                                                            |  › permission
+ █▀     ? for shortcuts · /help                                                                                          | 
+                                                                                                                         |  ⏺ Write(notes.txt)
+ › permission                                                                                                            |    ⎿  Allowed Write notes.txt · Always allow
+                                                                                                                         | 
+ ⏺ Write(notes.txt)                                                                                                      |  ⏺ Permission: always.
+   ⎿  Allowed Write notes.txt · Always allow                                                                             | 
+                                                                                                                         | 
+ ⏺ Permission: always.                                                                                                   | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │ | │ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   |                                                  Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,40 @@
+ [1m[38;2;196;156;255mfork 2[0;2m · fake · Fake Large with a 1M context window · forked from fork 5s ago[0m
+
+ [2m›[0m text
+
+ ⏺ Hello, world. This reply came in chunks.
+
+ [2m── forked from main · 13:42 ──[0m
+
+ [2m── forked from fork · 13:42 ──[0m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[38;2;196;156;255m╭─[1m fork 2[0m[38;2;196;156;255m ─────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│[39m ›                                                                                                                    [38;2;196;156;255m│
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+[39m  [2m? for shortcuts[0m                                [2mFake Large with a 1M context window · medium effort · 1% context used[0m
+    main  [2m  fake · Fake Large with a 1M context window · medium         ◦ idle 20s[0m
+    [38;2;108;182;255mfork  [2m[39m  fork · fake · Fake Large with a 1M context window · medium  ◦ idle 11s[0m
+    [1m[38;2;196;156;255mfork 2[0;2m  fork · fake · Fake Large with a 1M context window · medium  ◦ idle 5s[0m

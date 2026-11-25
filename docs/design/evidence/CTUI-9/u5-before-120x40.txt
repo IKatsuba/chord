@@ -1,0 +1,40 @@
+Text area
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ ┌────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ First logical line with enough words to wrap across the text area while keeping the complete draft unchanged durin │
+ │ g Super navigation. End of first line.                                                                             │
+ │ Second logical line also wraps across visual rows, so Super Left must return to its logical beginning rather than  │
+ │ only the current painted row. End.                                                                                 │
+ └────────────────────────────────────────────────────────────────────────────────────────────────────────────────────┘
+line 2, column 149 · rows 1–4 of 4
+Enter sends · Shift+Enter adds a line · Ctrl+Q quits
+enter Submit  shift+enter Insert newline  alt+enter Insert newline  ctrl+enter Insert newline  ctrl+j Insert newline  l…

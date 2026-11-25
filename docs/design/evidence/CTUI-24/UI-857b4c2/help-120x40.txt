@@ -1,0 +1,40 @@
+ ⏺ Transcript record 62
+
+ ⏺ Transcript record 63
+
+ ⏺ Transcript record 64
+
+ ⏺ Transcript record 65
+
+ ⏺ Transcript record 66
+
+ ⏺ Transcript record 67
+
+ ⏺ Transcript record 68
+
+ ⏺ Transcript record 69
+
+ ⏺ Transcript record 70
+
+ ⏺ Transcript record 71
+
+ ⏺ Transcript record 72
+
+ ⏺ Transcript record 73
+
+ ──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  enter to send                         esc to close completions             ctrl + d or ctrl + c twice to quit
+  shift or \ + enter for a newline      ! for bash mode                      ctrl + x a for what waits on you
+  alt + ← → to move by word             backspace to leave bash mode         1–9 to pick a choice
+  ↑ ↓ for prompts                       esc to interrupt or stop a command   ↑ ↓ j k ← → to move or change a value
+  pgup pgdn to scroll                   shift + tab to cycle modes           enter to pick the highlighted choice
+  shift + ↑ ↓ to scroll a line          ctrl + o for verbose output          esc to reject a permission
+  home end for the top and the bottom   ctrl + c to copy                     esc to leave a picker or shortcuts
+  ↑ ↓ to pick a completion              ctrl + x b to pick a code block      ? for shortcuts
+  tab to complete a command             c r to copy or put in the prompt     any key to quit the crash screen
+  tab enter to add a file or agent      ctrl + c to clear input
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts

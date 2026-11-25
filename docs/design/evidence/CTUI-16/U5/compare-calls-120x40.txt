@@ -1,0 +1,41 @@
+Original calls | U5 compound fixture
+ ▀▄     chord v0.71.0                                                                                                    | 
+ ▀▀▀▄   fake · Fake Large with a 1M context window                                                                       |  ⏺ Read(src/main.ts)
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-calls-120                                                                          |    ⎿  one
+ ▀▀     ? for shortcuts · /help                                                                                          |       two
+                                                                                                                         |       three
+ › calls                                                                                                                 |       … +2 lines (ctrl+o to expand)
+                                                                                                                         | 
+ ⏺ Read(src/main.tsx)                                                                                                    |  ⏺ Run(bun dev test)
+   ⎿  import { Command } from '@cliffy/command';                                                                         |    ⎿  3/3
+      import { render } from 'ink';                                                                                      |       ok | 2 passed
+      import { App } from './ui/App.tsx';                                                                                |       FAILED | 1 failed
+      … +4 lines (ctrl+o to expand)                                                                                      |       … +2 lines (ctrl+o to expand)
+                                                                                                                         |       Exit code 1
+ ⏺ Bash(deno test --allow-read --allow-write --allow-env --allow-run --allow-sys lint/ tests/ --filter "tool calls draw  | 
+   their status")                                                                                                        |  ⏺ Edit(src/greet.ts)
+   ⎿  ok | 1 passed | 0 failed (12ms)                                                                                    |    ⎿  Updated src/greet.ts with 1 addition and 1 removal
+                                                                                                                         |       1   export function greet() {
+ ⏺ Read(src/missing.ts)                                                                                                  |       2 -   return "hello";
+   ⎿  Error: File does not exist.                                                                                        |       2 +   return "hello, world";
+                                                                                                                         |       3   }
+ ⏺ Two calls worked, one failed.                                                                                         | 
+                                                                                                                         |    Guardian reviewing…
+                                                                                                                         | 
+                                                                                                                         |  ⏺ Bash(echo working)
+                                                                                                                         |    ⎿  Running…
+                                                                                                                         | 
+                                                                                                                         |  ⏺ Read(missing.txt)
+                                                                                                                         |    ⎿  Failed
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+                                                                                                                         | 
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                                                                    │ | 
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯ | 
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used   | 

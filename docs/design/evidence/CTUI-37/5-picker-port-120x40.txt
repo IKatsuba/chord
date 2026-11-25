@@ -1,0 +1,40 @@
+ ▀▄     chord v0.0.1
+ ▀▀▀▄   fake · Fake Large with a 1M context window
+ ▄▀▀▀   ~/project
+ ▀▀     ? for shortcuts · /help
+
+ › /team
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Teams                                                                                                                │
+│ Saved for this project in .chord/teams, and for every project in <qa config>/chord/teams.              │
+│                                                                                                                      │
+│ ❯ 1. bugfix  3 agents · fake  this project               ...s a bug end to end — a failing test first, then the fix. │
+│   2. triage  ✗ not read: no frontmatter between --- lines  .chord/teams/triage.md                                    │
+│                                                                                                                      │
+│ Enter to hand it a job · /team show <name> · Esc to close                                                            │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                                  Fake Large with a 1M context window · medium effort

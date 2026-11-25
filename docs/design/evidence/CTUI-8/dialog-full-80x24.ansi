@@ -1,0 +1,24 @@
+[2mThe transcript is here. Answer: rejected[0m
+
+
+
+
+
+
+
+
+[38;2;177;185;249m╭──────────────────────────────────────────────────────────────────────────────╮
+│[39m [1m[38;2;177;185;249mAllow command?[0m                                                               [38;2;177;185;249m│
+│[39m Run the requested command in this session.                                   [38;2;177;185;249m│
+│[39m $ dart analyze                                                               [38;2;177;185;249m│
+│[39m $ dart format --output=none --set-exit-if-changed .                          [38;2;177;185;249m│
+│[39m $ dart test                                                                  [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m❯[39m [1m[38;2;177;185;249m1.[0m [1m[38;2;177;185;249mAllow once[0m                                                              [38;2;177;185;249m│
+│[39m [38;2;177;185;249m [39m 2. Reject                                                                  [38;2;177;185;249m│
+│[39m                                                                              [38;2;177;185;249m│
+│[39m [2m↑↓ or j/k to move · Enter or 1–9 to select · Esc to close[0m                    [38;2;177;185;249m│
+╰──────────────────────────────────────────────────────────────────────────────╯
+[39m
+> /permission
+[1mup[0;2m Previous choice[0m  [1mk[0;2m Previous choice[0m  [1mdown[0;2m Next choice[0m  [1mj[0;2m Next choice[0m  [1menter[0;2m C…

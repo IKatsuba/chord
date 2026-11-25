@@ -1,0 +1,40 @@
+ → to Agent(Find the session layer)
+   ⎿  Find where chord hands each session/update to its listeners and say which file owns the routing.
+
+      Report paths and line numbers, and write what you find to notes/routing.md.
+
+ → to Agent(Review the transcript reducer)
+   ⎿  Review src/session/transcript/reducer.ts for updates it drops.
+
+ → to Agent(Run the tests)
+   ⎿  Run bun test and report what fails.
+
+ → to Agent(Watch the build)
+   ⎿  Watch the build and say when it breaks.
+
+ ⏺ 4 agents ended · 1 failed, 1 untracked, 1 cancelled (ctrl+o to expand)
+   ├─ Agent(Find the session layer) · 3 tool uses · 9s
+   │  ⎿  Done
+   ├─ Agent(Review the transcript reducer) · 1 tool use · 0s
+   │  ⎿  Failed
+   │     API Error: 529 Overloaded
+   ├─ Agent(Run the tests) · 1 tool use · 0s
+   │  ⎿  Cancelled
+   └─ Agent(Watch the build) · 1 tool use · 0s
+      ⎿  Untracked
+
+ ⏺ Each agent has ended.
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Background · 1 in this session                                                                                       │
+│                                                                                                                      │
+│ ❯ Watch the build  agent  ? untracked 0s  main                                                                       │
+│                                                                                                                      │
+│ Enter for details · x to stop · Esc to close                                                                         │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used
+    background  ? main's agent untracked

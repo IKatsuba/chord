@@ -1,0 +1,24 @@
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ Resume a session                                                             │
+│ fake's earlier sessions in this directory.                                   │
+│                                                                              │
+│ ❯   1.  just now   Saved title line 1                                        │
+│                    Saved title line 2                                        │
+│                    Saved title line 3                                        │
+│                    Saved title line 4                                        │
+│                    Saved title line 5                                        │
+│   ↓                Saved title line 6                                        │
+│                                                                              │
+│ Enter to resume · Ctrl+a for all directories · Esc to close                  │
+╰──────────────────────────────────────────────────────────────────────────────╯

@@ -1,0 +1,2400 @@
+{
+  "source": "@pydantic/genai-prices 0.2.3 calcPrice model-id-only; generated with bun from the original installed package; no remote updates",
+  "cases": [
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-12T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.9674999999999999,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-12T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 1.92876,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-13T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.9674999999999999,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-13T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.967505,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-sonnet-4-6",
+      "date": "2026-03-12T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.5804999999999999,
+        "model": "claude-sonnet-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-sonnet-4-6",
+      "date": "2026-03-12T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 1.157256,
+        "model": "claude-sonnet-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-sonnet-4-6",
+      "date": "2026-03-13T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.5804999999999999,
+        "model": "claude-sonnet-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-sonnet-4-6",
+      "date": "2026-03-13T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.580503,
+        "model": "claude-sonnet-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-08-16T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.026768000000000004,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-08-16T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.026768140000000006,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-08-17T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.042199999999999994,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-08-17T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.04220022,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-09-09T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.042199999999999994,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-09-09T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.04220022,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-09-10T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-flash",
+      "date": "2026-09-10T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-pro",
+      "date": "2026-08-16T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.08312125000000001,
+        "model": "deepseek-v4-pro",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-pro",
+      "date": "2026-08-16T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.083121685,
+        "model": "deepseek-v4-pro",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-pro",
+      "date": "2026-08-17T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.12661,
+        "model": "deepseek-v4-pro",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "deepseek-v4-pro",
+      "date": "2026-08-17T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.12661065999999999,
+        "model": "deepseek-v4-pro",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-12T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.9674999999999999,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-12T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 1.92876,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-13T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.9674999999999999,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "claude-opus-4-6",
+      "date": "2026-03-13T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.967505,
+        "model": "claude-opus-4-6",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-flash-preview",
+      "date": "2026-01-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.097,
+        "model": "gemini-3-flash-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-flash-preview",
+      "date": "2026-01-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0970005,
+        "model": "gemini-3-flash-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-flash-preview",
+      "date": "2026-01-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.097,
+        "model": "gemini-3-flash-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-flash-preview",
+      "date": "2026-01-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0970005,
+        "model": "gemini-3-flash-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-image-preview",
+      "date": "2026-01-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.406,
+        "model": "gemini-3-pro-image-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-image-preview",
+      "date": "2026-01-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.40600200000000003,
+        "model": "gemini-3-pro-image-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-image-preview",
+      "date": "2026-01-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.406,
+        "model": "gemini-3-pro-image-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-image-preview",
+      "date": "2026-01-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.40600200000000003,
+        "model": "gemini-3-pro-image-preview",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-preview",
+      "date": "2026-01-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.388,
+        "model": "gemini-3-pro-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-preview",
+      "date": "2026-01-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.773004,
+        "model": "gemini-3-pro-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-preview",
+      "date": "2026-01-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.388,
+        "model": "gemini-3-pro-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3-pro-preview",
+      "date": "2026-01-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.773004,
+        "model": "gemini-3-pro-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.6-flash",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.14512499999999998,
+        "model": "gemini-3.6-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.6-flash",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.14512575,
+        "model": "gemini-3.6-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.6-flash",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.29024999999999995,
+        "model": "gemini-3.6-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.6-flash",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.2902515,
+        "model": "gemini-3.6-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.7-flash",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.14512499999999998,
+        "model": "gemini-3.7-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.7-flash",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.14512575,
+        "model": "gemini-3.7-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.7-flash",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.29024999999999995,
+        "model": "gemini-3.7-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.7-flash",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.2902515,
+        "model": "gemini-3.7-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.14512499999999998,
+        "model": "gemini-3.8-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.14512575,
+        "model": "gemini-3.8-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.29024999999999995,
+        "model": "gemini-3.8-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.2902515,
+        "model": "gemini-3.8-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-lite-tts",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10300000000000001,
+        "model": "gemini-3.8-flash-lite-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-lite-tts",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10300050000000001,
+        "model": "gemini-3.8-flash-lite-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-lite-tts",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.20600000000000002,
+        "model": "gemini-3.8-flash-lite-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-lite-tts",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.20600100000000002,
+        "model": "gemini-3.8-flash-lite-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-tts",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10450000000000001,
+        "model": "gemini-3.8-flash-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-tts",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10450050000000001,
+        "model": "gemini-3.8-flash-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-tts",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.20900000000000002,
+        "model": "gemini-3.8-flash-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-3.8-flash-tts",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.20900100000000002,
+        "model": "gemini-3.8-flash-tts",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-4-argon",
+      "date": "2026-11-30T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.386,
+        "model": "gemini-4-argon",
+        "window": 1048576
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-4-argon",
+      "date": "2026-11-30T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.386002,
+        "model": "gemini-4-argon",
+        "window": 1048576
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-4-argon",
+      "date": "2026-12-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.772,
+        "model": "gemini-4-argon",
+        "window": 1048576
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-4-argon",
+      "date": "2026-12-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.772004,
+        "model": "gemini-4-argon",
+        "window": 1048576
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-preview",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.1935,
+        "model": "gemini-robotics-er-2-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-preview",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.193501,
+        "model": "gemini-robotics-er-2-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-preview",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.387,
+        "model": "gemini-robotics-er-2-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-preview",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.387002,
+        "model": "gemini-robotics-er-2-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-streaming-preview",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.2025,
+        "model": "gemini-robotics-er-2-streaming-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-streaming-preview",
+      "date": "2026-12-31T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.20250100000000001,
+        "model": "gemini-robotics-er-2-streaming-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-streaming-preview",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.405,
+        "model": "gemini-robotics-er-2-streaming-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gemini-robotics-er-2-streaming-preview",
+      "date": "2027-01-01T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.40500200000000003,
+        "model": "gemini-robotics-er-2-streaming-preview",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.5-cyber",
+      "date": "2026-10-18T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 2.5375,
+        "model": "gpt-5.5-cyber",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.5-cyber",
+      "date": "2026-10-18T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 2.5375125,
+        "model": "gpt-5.5-cyber",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.5-cyber",
+      "date": "2026-10-19T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 2.4250000000000003,
+        "model": "gpt-5.5-cyber",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.5-cyber",
+      "date": "2026-10-19T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 2.4250125000000002,
+        "model": "gpt-5.5-cyber",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-luna",
+      "date": "2026-07-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.194,
+        "model": "gpt-5.6-luna",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-luna",
+      "date": "2026-07-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.194001,
+        "model": "gpt-5.6-luna",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-luna",
+      "date": "2026-07-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0388,
+        "model": "gpt-5.6-luna",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-luna",
+      "date": "2026-07-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.03880020000000001,
+        "model": "gpt-5.6-luna",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-sol",
+      "date": "2026-08-20T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.97,
+        "model": "gpt-5.6-sol",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-sol",
+      "date": "2026-08-20T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.970005,
+        "model": "gpt-5.6-sol",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-sol",
+      "date": "2026-08-21T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.774,
+        "model": "gpt-5.6-sol",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-sol",
+      "date": "2026-08-21T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.774004,
+        "model": "gpt-5.6-sol",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-terra",
+      "date": "2026-07-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.485,
+        "model": "gpt-5.6-terra",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-terra",
+      "date": "2026-07-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.4850025,
+        "model": "gpt-5.6-terra",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-terra",
+      "date": "2026-07-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.388,
+        "model": "gpt-5.6-terra",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "gpt-5.6-terra",
+      "date": "2026-07-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.388002,
+        "model": "gpt-5.6-terra",
+        "window": 1050000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "o3",
+      "date": "2025-06-09T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 1.9249999999999998,
+        "model": "o3",
+        "window": 200000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "o3",
+      "date": "2025-06-09T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 1.9250099999999999,
+        "model": "o3",
+        "window": 200000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "o3",
+      "date": "2025-06-10T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.389,
+        "model": "o3",
+        "window": 200000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "o3",
+      "date": "2025-06-10T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.389002,
+        "model": "o3",
+        "window": 200000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20",
+      "date": "2026-04-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.77,
+        "model": "grok-4.20",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20",
+      "date": "2026-04-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.770004,
+        "model": "grok-4.20",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20",
+      "date": "2026-04-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.4815,
+        "model": "grok-4.20",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20",
+      "date": "2026-04-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.4815025,
+        "model": "grok-4.20",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20-multi-agent-0309",
+      "date": "2026-04-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.77,
+        "model": "grok-4.20-multi-agent-0309",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20-multi-agent-0309",
+      "date": "2026-04-29T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.770004,
+        "model": "grok-4.20-multi-agent-0309",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20-multi-agent-0309",
+      "date": "2026-04-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.4815,
+        "model": "grok-4.20-multi-agent-0309",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-4.20-multi-agent-0309",
+      "date": "2026-04-30T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.4815025,
+        "model": "grok-4.20-multi-agent-0309",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-voice-latest",
+      "date": "2026-08-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0,
+        "model": "grok-voice-latest",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-voice-latest",
+      "date": "2026-08-04T23:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0,
+        "model": "grok-voice-latest",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-voice-latest",
+      "date": "2026-08-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0,
+        "model": "grok-voice-latest",
+        "window": null
+      }
+    },
+    {
+      "label": "start_date",
+      "model": "grok-voice-latest",
+      "date": "2026-08-05T00:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0,
+        "model": "grok-voice-latest",
+        "window": null
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T00:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.026275135,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T00:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T00:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T01:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T03:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T04:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T05:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T06:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T09:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T10:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T16:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.05255027,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-chat",
+      "date": "2026-11-18T16:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.026275135,
+        "model": "deepseek-chat",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T00:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.026275135,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T00:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T00:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T01:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T03:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T04:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T05:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T06:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T09:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T10:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T16:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.10699555,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-reasoner",
+      "date": "2026-11-18T16:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.026275135,
+        "model": "deepseek-reasoner",
+        "window": 64000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T00:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T00:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T00:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T01:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T03:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T04:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T05:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T06:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T09:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T10:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T16:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-flash",
+      "date": "2026-11-18T16:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T00:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T00:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T00:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T01:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T03:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T04:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T05:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T06:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T09:59:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.0576603,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T10:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T16:29:59.999Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "time_of_day",
+      "model": "deepseek-v4-flash",
+      "date": "2026-11-18T16:30:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.02883015,
+        "model": "deepseek-v4-flash",
+        "window": 1000000
+      }
+    },
+    {
+      "label": "model_id_only",
+      "model": "gpt-35-turbo",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.1007505,
+        "model": "gpt-3.5-turbo",
+        "window": 16385
+      }
+    },
+    {
+      "label": "model_id_only",
+      "model": "text-embedding-ada-002",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": null
+    },
+    {
+      "label": "model_id_only",
+      "model": "azure/gpt-4o",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": null
+    },
+    {
+      "label": "model_id_only",
+      "model": "gemini-2.5-pro",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.4850025,
+        "model": "gemini-2.5-pro",
+        "window": null
+      }
+    },
+    {
+      "label": "model_id_only",
+      "model": "claude-3-5-sonnet@20240620",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.580503,
+        "model": "claude-3-5-sonnet",
+        "window": 200000
+      }
+    },
+    {
+      "label": "model_id_only",
+      "model": "publishers/anthropic/models/claude-sonnet-4-5",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": null
+    },
+    {
+      "label": "model_id_only",
+      "model": "google/claude-sonnet-4-5",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": null
+    },
+    {
+      "label": "model_id_only",
+      "model": "unknown-model",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": null
+    },
+    {
+      "label": "tier",
+      "model": "gemini-2.5-pro",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 199999,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.24374875000000001,
+        "model": "gemini-2.5-pro",
+        "window": null
+      }
+    },
+    {
+      "label": "tier",
+      "model": "gemini-2.5-pro",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.24375,
+        "model": "gemini-2.5-pro",
+        "window": null
+      }
+    },
+    {
+      "label": "tier",
+      "model": "gemini-2.5-pro",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 200001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.4850025,
+        "model": "gemini-2.5-pro",
+        "window": null
+      }
+    },
+    {
+      "label": "tier",
+      "model": "gemini-2.5-pro",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 272000,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.6649999999999999,
+        "model": "gemini-2.5-pro",
+        "window": null
+      }
+    },
+    {
+      "label": "tier",
+      "model": "gemini-2.5-pro",
+      "date": "2026-11-18T12:00:00.000Z",
+      "usage": {
+        "input_tokens": 272001,
+        "output_tokens": 500,
+        "cache_read_tokens": 10000
+      },
+      "expected": {
+        "total": 0.6650024999999999,
+        "model": "gemini-2.5-pro",
+        "window": null
+      }
+    }
+  ]
+}

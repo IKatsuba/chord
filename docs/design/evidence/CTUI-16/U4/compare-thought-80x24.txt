@@ -1,0 +1,25 @@
+Original thought                                                                 | U4 collapsed
+ ▀▄     chord v0.71.0                                                            | 
+ ▀▀▀▄   fake · Fake Large with a 1M context window                               |  › thought
+ ▄▀▀▀   /tmp/chord-qa.ctui16-designer-thought-80                                 | 
+ ▀▀     ? for shortcuts · /help                                                  |  ∴ Thinking…
+                                                                                 | 
+ › thought                                                                       |  ⏺ The answer is ready.
+                                                                                 | 
+ ∴ Thinking…                                                                     |    - One item
+                                                                                 |    - Another item
+ ⏺ Here is the answer.                                                           |    ⎿  Interrupted by user
+                                                                                 |    ⎿  Stopped: max_tokens
+                                                                                 | 
+                                                                                 |  ⏺ A warning from the agent.
+                                                                                 | 
+                                                                                 |  ⏺ An error from the agent.
+                                                                                 | 
+                                                                                 |  ⏺ Plan
+                                                                                 |    ⎿  ☒ Read the source
+                                                                                 |       ☒ Finish the change
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ | 
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used   | 

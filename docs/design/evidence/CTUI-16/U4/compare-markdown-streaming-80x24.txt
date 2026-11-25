@@ -1,0 +1,25 @@
+Original markdown-streaming                                                      | U4 markdown
+   │ │ await session.close(); // resolves once the exit is seen │                | 
+   │ └──────────────────────────────────────────────────────────┘                |  › markdown
+                                                                                 | 
+   ┌───────────────┬───────────────────────────────┬────────────────────┐        |  ⏺ A growing reply with an open code fence.
+   │ Module        │ Holds                         │ Tested by          │        | 
+   ├───────────────┼───────────────────────────────┼────────────────────┤        |    ┌ dart ────────────────┐
+   │ session.ts    │ opening, prompting            │ session_test.ts    │        |    │   final answer = 42; │
+   │               │ and closing a session         │                    │        |    └──────────────────────┘
+   │ processes.ts  │ the promise that a closed     │ processes_test.ts  │        | 
+   │               │ agent is gone                 │                    │        | 
+   │ transcript.ts │ the reducer from events       │ transcript_test.ts │        | 
+   │               │ to what is drawn              │                    │        | 
+   └───────────────┴───────────────────────────────┴────────────────────┘        | 
+                                                                                 | 
+   ┌─ ts ─────────────────────────────────────────────────────────┐              | 
+   │ const session = await openSession({ agent: 'claude', cwd }); │              | 
+   └──────────────────────────────────────────────────────────────┘              | 
+                                                                                 | 
+ ››› Working… (0s · esc to interrupt)                                            | 
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | 
+│ ›                                                                            │ | 
+╰──────────────────────────────────────────────────────────────────────────────╯ | 
+  ? for shortcuts          Fake Large with a 1M context window · medium effort   | 

@@ -1,0 +1,25 @@
+ORIGINAL + RECORDING STUB                                                        | PORT + RECORDING BOOTSTRAP
+      │ bun quality       │                                                      |       │   bun quality │
+      └───────────────────┘                                                      |       └───────────────┘
+   2. Commit on main once every check has passed and the tree is clean, so       |    2. Commit on main once every check has passed and the tree is clean, so
+      whoever picks the work up next starts from a build that runs.              |       whoever picks the work up next starts from a build that runs.
+                                                                                 | 
+   Then build the binary with:                                                   |    Then build the binary with:
+                                                                                 | 
+   ┌─ sh ───────────────────────────────────[copy]─[run]─┐                       |    ┌ sh ────────────────────────────────────────────[copy]─┐
+   │ bun dev compile --all                               │                       |    │   bun dev compile --all                               │
+   │ for bin in dist/*/chord; do echo "built $bin"; done │                       |    │   for bin in dist/*/chord; do echo "built $bin"; done │
+   └─────────────────────────────────────────────────────┘                       |    └───────────────────────────────────────────────────────┘
+                                                                                 | 
+ › permission                                                                    |  › permission
+                                                                                 | 
+ ⏺ Write(notes.txt)                                                              |  ⏺ Write(notes.txt)
+   ⎿  Failed                                                                     |    ⎿  Failed
+   ⎿  Rejected Write notes.txt                                                   |    ⎿  Rejected Write notes.txt
+                                                                                 | 
+ ⏺ Permission: deny.                                                             |  ⏺ Permission: deny.
+                                                                                 | 
+╭──────────────────────────────────────────────────────────────────────────────╮ | ╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │ | │ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯ | ╰──────────────────────────────────────────────────────────────────────────────╯
+  ↑ ↓ another block · c copy · r put in the prompt · esc done                    |   ↑ ↓ another block · c copy · esc done

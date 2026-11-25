@@ -1,0 +1,32 @@
+00:00 +0: loading test/ui/app/resume_escape_resize_test.dart
+00:00 +0: fresh narrow resume retains Escape ownership without resize
+00:00 +1: resume Escape remains owned after list disappears on resize false
+00:00 +1 -1: resume Escape remains owned after list disappears on resize false [E]
+  Expected: null
+    Actual: <Instance of 'ResumePickerState'>
+  before=FocusNode(picker) after=FocusScopeNode(overlay entry) binding=Interrupt turn or stop command
+  
+  package:matcher                                  expect
+  test/ui/app/resume_escape_resize_test.dart 52:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7           testWidgets.<fn>
+  
+00:00 +1 -1: resume Escape remains owned after list disappears on resize true
+00:00 +1 -2: resume Escape remains owned after list disappears on resize true [E]
+  Expected: null
+    Actual: <Instance of 'ResumePickerState'>
+  before=FocusNode(picker) after=FocusScopeNode(overlay entry) binding=Interrupt turn or stop command
+  
+  package:matcher                                  expect
+  test/ui/app/resume_escape_resize_test.dart 52:9  main.<fn>
+  ===== asynchronous gap ===========================
+  package:chorded_tui/testing.dart 127:7           testWidgets.<fn>
+  
+00:00 +1 -2: Some tests failed.
+
+Failing tests:
+  test/ui/app/resume_escape_resize_test.dart: resume Escape remains owned after list disappears on resize false
+  test/ui/app/resume_escape_resize_test.dart: resume Escape remains owned after list disappears on resize true
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

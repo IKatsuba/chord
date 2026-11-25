@@ -1,0 +1,24 @@
+ ▀▄     chord v0.71.0
+ ▀▀▀▄   fake
+ ▄▀▀▀   fixture-project
+ ▀▀     ? for shortcuts · /help
+
+ ⏺ fake did not start: it does not serve ACP sessions: not an ACP agent, or not
+   at this version.
+
+
+
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ › draft survives failure                                                     │
+╰──────────────────────────────────────────────────────────────────────────────╯
+

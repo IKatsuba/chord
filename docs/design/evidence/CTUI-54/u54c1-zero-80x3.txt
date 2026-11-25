@@ -1,0 +1,3 @@
+Filter: Choice 7
+Chosen: choice 7
+/ Edit filter  escape Cancel picker  ctrl+q Quit

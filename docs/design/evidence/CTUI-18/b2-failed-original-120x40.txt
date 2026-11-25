@@ -1,0 +1,40 @@
+ █▄     chord v0.71.0
+ ▀██▄   fake · Fake Large with a 1M context window
+ ▄██▀   /tmp/chord-qa.designer-ship13-b2
+ █▀     ? for shortcuts · /help
+
+ › reviewpermission
+
+ ⏺ Run(a reviewed action)
+   ⎿  Reviewed: caution
+   ⎿  Rejected Run a reviewed action
+
+ ⏺ Review permission: deny.
+
+ › reviewfailed
+
+ ⏺ Run(a reviewed action)
+   ⎿  Reviewed: failed
+
+
+
+
+
+
+ ››› Waiting for permission… (10s · denied in 4m 49s)
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ Run a reviewed action                                                                                                │
+│                                                                                                                      │
+│ The safety review could not run (the reviewer did not answer in 30 s). Allow it yourself, or deny it.                │
+│                                                                                                                      │
+│ ❯ 1. Allow once                                                                                                      │
+│   2. Deny                                                                                                            │
+│                                                                                                                      │
+│ Esc to reject · denied by itself in 5 minutes                                                                        │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

@@ -1,0 +1,5 @@
+name: ctui22_localized_sorter_trial
+environment:
+  sdk: ^3.10.0
+dependencies:
+  localized_sorter: 0.1.2

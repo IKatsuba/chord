@@ -1,0 +1,22 @@
+== draft typed
+│ › draft one                                                                                                          │
+== cmd+down
+│ ›                                                                                                                    │
+== cmd+up
+│ › draft one                                                                                                          │
+== cmd+up again
+│ › first prompt                                                                                                       │
+== cmd+down
+│ › draft one                                                                                                          │
+== three lines, cursor on row 2
+│ › line one                                                                                                           │
+│   line two                                                                                                           │
+│   line three                                                                                                         │
+== cmd+up on row 2
+│ › line one                                                                                                           │
+│   line two                                                                                                           │
+│   line three                                                                                                         │
+== cmd+down on row 2
+│ › line one                                                                                                           │
+│   line two                                                                                                           │
+│   line three                                                                                                         │

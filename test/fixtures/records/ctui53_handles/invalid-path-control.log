@@ -1,0 +1,26 @@
+00:00 +0: loading test/session/record_worker_handles_test.dart
+00:00 +0: public record IO immediate owned descriptors under JIT
+00:02 +0 -1: public record IO immediate owned descriptors under JIT [E]
+  Expected: <0>
+    Actual: <255>
+  Unhandled exception:
+  Bad state: directory-cancel did not expose 1 active real directories.
+  #0      check (file://<repository>/build/developer-ctui53-53c-handles/example/chord/tool/record_worker_handles.dart:14:19)
+  #1      operation (file://<repository>/build/developer-ctui53-53c-handles/example/chord/tool/record_worker_handles.dart:183:7)
+  <asynchronous suspension>
+  #2      main (file://<repository>/build/developer-ctui53-53c-handles/example/chord/tool/record_worker_handles.dart:279:7)
+  <asynchronous suspension>
+  
+  
+  package:matcher                                    expect
+  test/session/record_worker_handles_test.dart 20:5  checkProof
+  ===== asynchronous gap ===========================
+  test/session/record_worker_handles_test.dart 52:7  main.<fn>
+  
+00:02 +0 -1: Some tests failed.
+
+Failing tests:
+  test/session/record_worker_handles_test.dart: public record IO immediate owned descriptors under JIT
+
+Consider enabling the flag chain-stack-traces to receive more detailed exceptions.
+For example, 'dart test --chain-stack-traces'.

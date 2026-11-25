@@ -1,0 +1,24 @@
+|
+ › /cost| › /cost
+   ⎿  fake has not reported what this session has used.|   ⎿  fake has not reported what this session has used.
+      Session time: 9s|      Session time: 7s
+|
+ › hello| › hello
+|
+ ⏺ Hello, world. This reply came in chunks.| ⏺ Hello, world. This reply came in chunks.
+|
+ › /cost| › /cost
+   ⎿  Total cost:   $0.0047 (chord's estimate)|   ⎿  Total cost:   $0.0047 (chord's estimate)
+      Tokens in:    1,000|      Tokens in:    1,000
+      Tokens out:   200|      Tokens out:   200
+      Cache read:   800|      Cache read:   800
+      Session time: 21s|      Session time: 18s
+|
+ › /context| › /context
+   ⎿  Used: 2,000 of 400,000 tokens (1%) (chord's estimate)|   ⎿  Used: 2,000 of 400,000 tokens (1%) (chord's estimate)
+      Free: 398,000 tokens (99%) (chord's estimate)|      Free: 398,000 tokens (99%) (chord's estimate)
+|
+╭──────────────────────────────────────────────────────────────────────────────╮|╭──────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                            │|│ ›                                                                            │
+╰──────────────────────────────────────────────────────────────────────────────╯|╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts             GPT-5.3 Codex · medium effort · ~1% context used|  ? for shortcuts             GPT-5.3 Codex · medium effort · ~1% context used

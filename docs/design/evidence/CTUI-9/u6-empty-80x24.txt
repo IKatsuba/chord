@@ -1,0 +1,24 @@
+Terminal services
+Copy sample:
+Editor: ready
+Last key: ctrl+u
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+│                                                                              │
+└──────────────────────────────────────────────────────────────────────────────┘
+super+left Move to line start · super+right Move to line end · ctrl+y Copy
+sample · ctrl+g Open editor · ctrl+b Bell · ctrl+n OSC9 · ctrl+x n OSC777 ·
+ctrl+t Title · ctrl+q Quit

@@ -1,0 +1,24 @@
+
+   ┌ typescript ┐
+   │   x        │
+   └────────────┘
+
+   ┌ sh ───[copy]─┐
+   │   bun dev    │
+   │ ↪ chord      │
+   │ ↪ --fake     │
+   │ ↪ --qa       │
+   │ ↪ capture && │
+   │ ↪  tmux capt │
+   │ ↪ ure-pane   │
+   │ ↪ -t         │
+   │ ↪ chord-qa   │
+   │ ↪ -p > /tmp/ │
+   │ ↪ screen.txt │
+   │              │
+ ── ↓ 15...s below
+
+╭──────────────────╮
+│ ›                │
+╰──────────────────╯
+  sent 1 chars to

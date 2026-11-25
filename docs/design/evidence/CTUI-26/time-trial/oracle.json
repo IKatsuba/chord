@@ -1,0 +1,129 @@
+{
+  "now": 1767225600000,
+  "cases": [
+    {
+      "seconds": -1,
+      "at": "2026-01-01T00:00:01.000Z",
+      "expected": "just now"
+    },
+    {
+      "seconds": 0,
+      "at": "2026-01-01T00:00:00.000Z",
+      "expected": "just now"
+    },
+    {
+      "seconds": 59,
+      "at": "2025-12-31T23:59:01.000Z",
+      "expected": "just now"
+    },
+    {
+      "seconds": 60,
+      "at": "2025-12-31T23:59:00.000Z",
+      "expected": "1 minute ago"
+    },
+    {
+      "seconds": 90,
+      "at": "2025-12-31T23:58:30.000Z",
+      "expected": "1 minute ago"
+    },
+    {
+      "seconds": 119,
+      "at": "2025-12-31T23:58:01.000Z",
+      "expected": "1 minute ago"
+    },
+    {
+      "seconds": 120,
+      "at": "2025-12-31T23:58:00.000Z",
+      "expected": "2 minutes ago"
+    },
+    {
+      "seconds": 3599,
+      "at": "2025-12-31T23:00:01.000Z",
+      "expected": "59 minutes ago"
+    },
+    {
+      "seconds": 3600,
+      "at": "2025-12-31T23:00:00.000Z",
+      "expected": "1 hour ago"
+    },
+    {
+      "seconds": 7199,
+      "at": "2025-12-31T22:00:01.000Z",
+      "expected": "1 hour ago"
+    },
+    {
+      "seconds": 7200,
+      "at": "2025-12-31T22:00:00.000Z",
+      "expected": "2 hours ago"
+    },
+    {
+      "seconds": 86399,
+      "at": "2025-12-31T00:00:01.000Z",
+      "expected": "23 hours ago"
+    },
+    {
+      "seconds": 86400,
+      "at": "2025-12-31T00:00:00.000Z",
+      "expected": "yesterday"
+    },
+    {
+      "seconds": 172799,
+      "at": "2025-12-30T00:00:01.000Z",
+      "expected": "yesterday"
+    },
+    {
+      "seconds": 172800,
+      "at": "2025-12-30T00:00:00.000Z",
+      "expected": "2 days ago"
+    },
+    {
+      "seconds": 604799,
+      "at": "2025-12-25T00:00:01.000Z",
+      "expected": "6 days ago"
+    },
+    {
+      "seconds": 604800,
+      "at": "2025-12-25T00:00:00.000Z",
+      "expected": "last week"
+    },
+    {
+      "seconds": 1209600,
+      "at": "2025-12-18T00:00:00.000Z",
+      "expected": "2 weeks ago"
+    },
+    {
+      "seconds": 2591999,
+      "at": "2025-12-02T00:00:01.000Z",
+      "expected": "4 weeks ago"
+    },
+    {
+      "seconds": 2592000,
+      "at": "2025-12-02T00:00:00.000Z",
+      "expected": "last month"
+    },
+    {
+      "seconds": 5184000,
+      "at": "2025-11-02T00:00:00.000Z",
+      "expected": "2 months ago"
+    },
+    {
+      "seconds": 31535999,
+      "at": "2025-01-01T00:00:01.000Z",
+      "expected": "12 months ago"
+    },
+    {
+      "seconds": 31536000,
+      "at": "2025-01-01T00:00:00.000Z",
+      "expected": "last year"
+    },
+    {
+      "seconds": 63072000,
+      "at": "2024-01-02T00:00:00.000Z",
+      "expected": "2 years ago"
+    },
+    {
+      "at": "invalid timestamp",
+      "expected": "invalid timestamp"
+    }
+  ]
+}

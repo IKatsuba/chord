@@ -1,0 +1,4 @@
+First repair look compared current original/port recorder events in-process
+but omitted saving per-case journal files. The final same-head capture rerun
+saves each journal before the next case and asserts the four expected payloads.
+First-look exit records remain separately retained; no product change occurred.

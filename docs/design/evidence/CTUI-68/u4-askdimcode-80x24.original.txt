@@ -1,0 +1,24 @@
+                   Bucket   my-bucket
+
+ ⏺ Elicitation answer: accept
+   {"question_0":"other","question_0_other":"mine","question_1":["option_0"],
+   "question_2":"my-bucket"}
+
+ › askdimcode
+
+ ››› Waiting for your input… (5s)
+
+╭──────────────────────────────────────────────────────────────────────────────╮
+│ fake asks you a question                                                     │
+│                                                                              │
+│ ← ◉ Deploy   ○ Submit →                                                      │
+│                                                                              │
+│ Where should it deploy?                                                      │
+│                                                                              │
+│ ❯ 1. Staging                                                                 │
+│   2. Production                                                              │
+│   3. Your own answer:                                                        │
+│                                                                              │
+│ Enter to pick · 1–3 · ↑↓ · ←→ questions · Esc to cancel                      │
+╰──────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts       Fake Large with a 1M context window · medium · 1% used

@@ -1,0 +1,40 @@
+ █▄     chord v0.71.0
+ ▀██▄   codex · Fake Large with a 1M context window
+ ▄██▀   ~/project
+ █▀     ? for shortcuts · /help
+
+ › selectedteam
+
+ ⏺ Resources
+   ⎿  Read: 17:17:28 UTC · advisory snapshot
+      claude · 5h: 12.345% used · reset 18:17 UTC · models unknown
+      codex · 5h: 12.345% used · reset 18:17 UTC · models unknown
+
+ ⏺ Team(fixture)
+   ⎿  Team launch 5b4be988 was refused before its first job; the attempted lead is closing.
+      Selection: agent-selected · this run
+      Reason: Preserve all instructions and exact permission requirements; capacity is unknown.
+      Billing: unknown · advisory
+      Planned for this run:
+      lead (lead): claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: refused · session runtime claude · model fake-small · effort medium · mode unknown
+      lead: lead.mode: the runtime did not confirm the requested mode plan.
+      reviewer: claude · model fake-small · effort agent default (unconfirmed) · mode plan
+      Actual: not opened · configuration unconfirmed
+      ctrl+o for saved definition and changes
+
+ ⏺ Selection attempt recorded; no automatic retry.
+
+
+
+
+
+
+
+
+
+
+╭──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╮
+│ ›                                                                                                                    │
+╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯
+  ? for shortcuts                                Fake Large with a 1M context window · medium effort · 1% context used

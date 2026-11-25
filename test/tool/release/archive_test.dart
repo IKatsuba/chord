@@ -83,7 +83,15 @@ void main() {
         [for (final line in lines) line.substring(0, 10)],
         ['-rwxr-xr-x', '-rw-r--r--', '-rw-r--r--'],
       );
-      expect(lines.every((line) => line.contains(' root ')), isTrue);
+      // From the headers, not the listing: bsdtar and GNU tar list owners
+      // differently.
+      expect(
+        [
+          for (final header in headersOf(p.join(out, target.archive)))
+            header.owner,
+        ],
+        [for (final _ in members) ('0', '0', 'root', 'root')],
+      );
       final extracted = Directory(p.join(root.path, 'x', target.name))
         ..createSync(recursive: true);
       await Process.run('tar', [
@@ -135,7 +143,11 @@ void main() {
         }
       }
       final recording = await archiveAll();
-      for (final argv in recording.argvs.where((argv) => argv.first == 'tar')) {
+      final writes = recording.argvs.where(
+        (argv) => argv.first == 'tar' && argv.contains('-czf'),
+      );
+      expect(writes, hasLength(targets.length));
+      for (final argv in writes) {
         expect(argv, contains('--no-xattrs'));
       }
       for (final target in targets) {
@@ -250,6 +262,72 @@ void main() {
     expect(Directory(p.join(root.path, archivesFolder)).existsSync(), isFalse);
   });
 
+  group('tar flavours', () {
+    test('bsdtar and GNU tar are told apart by their version', () {
+      expect(
+        tarFlavourIn('bsdtar 3.5.3 - libarchive 3.7.4 zlib/1.2.12\n'),
+        TarFlavour.bsd,
+      );
+      expect(
+        tarFlavourIn('tar (GNU tar) 1.35\nCopyright (C) 2023\n'),
+        TarFlavour.gnu,
+      );
+      expect(
+        () => tarFlavourIn('tar (busybox) 1.36\n'),
+        dies('tar is neither bsdtar nor GNU tar: tar (busybox) 1.36'),
+      );
+    });
+
+    test("bsdtar's arguments are macOS's, unchanged", () {
+      expect(tarArgs(TarFlavour.bsd, 'out.tar.gz', 'stage'), [
+        '--uid',
+        '0',
+        '--gid',
+        '0',
+        '--uname',
+        'root',
+        '--gname',
+        'root',
+        '--no-mac-metadata',
+        '--no-xattrs',
+        '-czf',
+        'out.tar.gz',
+        '-C',
+        'stage',
+        'chord',
+        'LICENSE',
+        'NOTICES',
+      ]);
+    });
+
+    test("GNU tar's arguments name root by name and id, in ustar", () {
+      expect(tarArgs(TarFlavour.gnu, 'out.tar.gz', 'stage'), [
+        '--owner=root:0',
+        '--group=root:0',
+        '--format=ustar',
+        '--no-xattrs',
+        '-czf',
+        'out.tar.gz',
+        '-C',
+        'stage',
+        'chord',
+        'LICENSE',
+        'NOTICES',
+      ]);
+    });
+
+    test("the host's tar is asked once, after every check", () async {
+      final recording = await archiveAll();
+      final tars = [
+        for (final argv in recording.argvs)
+          if (argv.first == 'tar') argv,
+      ];
+      expect(tars.first, ['tar', '--version']);
+      expect(tars.where((argv) => argv[1] == '--version'), hasLength(1));
+      expect(tars, hasLength(targets.length + 1));
+    });
+  });
+
   group('sums', () {
     test("are written in sha256sum's format, names relative", () {
       File(p.join(root.path, 'a')).writeAsStringSync('a');
@@ -353,6 +431,30 @@ void main() {
       expect(() => checkSum(file.path), returnsNormally);
     });
   });
+}
+
+/// Each ustar header in the gzipped tar at [path], in order: its type and
+/// its owner as uid, gid, uname and gname.
+List<({String type, (String, String, String, String) owner})> headersOf(
+  String path,
+) {
+  final raw = gzip.decode(File(path).readAsBytesSync());
+  String field(int at, int length) => String.fromCharCodes(
+    raw.sublist(at, at + length).takeWhile((byte) => byte != 0),
+  ).trim();
+  return [
+    for (var at = 0; at + 512 <= raw.length; at += 512)
+      if (String.fromCharCodes(raw.sublist(at + 257, at + 262)) == 'ustar')
+        (
+          type: String.fromCharCode(raw[at + 156]),
+          owner: (
+            int.parse(field(at + 108, 8), radix: 8).toString(),
+            int.parse(field(at + 116, 8), radix: 8).toString(),
+            field(at + 265, 32),
+            field(at + 297, 32),
+          ),
+        ),
+  ];
 }
 
 /// Records through [recording], then runs chmod and tar for real.

@@ -43,32 +43,33 @@ void main() {
     }, timeout: const Timeout(Duration(minutes: 5)));
   }
 
-  test(
-    'darwin-arm64 is built, of its kind, and runs signed with the hardened '
-    "runtime and chord's entitlements",
-    () async {
-      final target = named('darwin-arm64');
-      await build(target);
-      final temp = Directory.systemTemp.createTempSync('build_compile');
-      addTearDown(() => temp.deleteSync(recursive: true));
-      final signed = p.join(temp.path, 'chord');
-      File(p.join(root, binaryOf(target))).copySync(signed);
-      final sign = await Process.run('codesign', [
-        '--sign',
-        '-',
-        '--force',
-        '--options',
-        'runtime',
-        '--entitlements',
-        p.join(root, 'tool/macos/chord.entitlements'),
-        signed,
-      ]);
-      expect(sign.exitCode, 0, reason: '${sign.stderr}');
-      // Without allow-unsigned-executable-memory the kernel kills it here.
-      final ran = await Process.run(signed, ['--version']);
-      expect((ran.exitCode, ran.stdout), (0, 'chord $version\n'));
-    },
-    skip: hostIsArmMac ? false : 'builds darwin-arm64 only on an arm64 Mac',
-    timeout: const Timeout(Duration(minutes: 5)),
-  );
+  test('darwin-arm64 is built, of its kind, and runs signed with the hardened '
+      "runtime and chord's entitlements", () async {
+    // In the body: the compile tag runs with --run-skipped, which
+    // overrides skip:, and codesign and a darwin-arm64 run need that Mac.
+    if (!hostIsArmMac) {
+      markTestSkipped('builds darwin-arm64 only on an arm64 Mac');
+      return;
+    }
+    final target = named('darwin-arm64');
+    await build(target);
+    final temp = Directory.systemTemp.createTempSync('build_compile');
+    addTearDown(() => temp.deleteSync(recursive: true));
+    final signed = p.join(temp.path, 'chord');
+    File(p.join(root, binaryOf(target))).copySync(signed);
+    final sign = await Process.run('codesign', [
+      '--sign',
+      '-',
+      '--force',
+      '--options',
+      'runtime',
+      '--entitlements',
+      p.join(root, 'tool/macos/chord.entitlements'),
+      signed,
+    ]);
+    expect(sign.exitCode, 0, reason: '${sign.stderr}');
+    // Without allow-unsigned-executable-memory the kernel kills it here.
+    final ran = await Process.run(signed, ['--version']);
+    expect((ran.exitCode, ran.stdout), (0, 'chord $version\n'));
+  }, timeout: const Timeout(Duration(minutes: 5)));
 }

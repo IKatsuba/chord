@@ -62,7 +62,11 @@ void main() {
             argv.sublist(1),
             workingDirectory: root.path,
           );
-          return Ran(ran.exitCode, stderr: '${ran.stderr}');
+          return Ran(
+            ran.exitCode,
+            stdout: '${ran.stdout}',
+            stderr: '${ran.stderr}',
+          );
         case ['npm', 'pack', '--pack-destination', final dest]:
           final package = p.basename(cwd!);
           File(

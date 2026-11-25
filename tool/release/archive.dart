@@ -110,6 +110,7 @@ Future<void> archive(
   if (out.existsSync()) out.deleteSync(recursive: true);
   out.createSync(recursive: true);
   final staging = p.join('build', 'release', 'staging');
+  TarFlavour? flavour;
   for (final target in targets) {
     final stage = p.join(staging, target.name);
     final at = Directory(p.join(root, stage));
@@ -124,19 +125,76 @@ Future<void> archive(
       p.join(stage, 'LICENSE'),
       p.join(stage, 'NOTICES'),
     ]);
-    await _run(runner, 'tar', [
-      // No owner of this machine and no macOS metadata in what is shipped:
-      // without --no-xattrs bsdtar gives each member a pax header carrying
-      // com.apple.provenance, as npm pack's tarballs never do.
-      '--uid', '0', '--gid', '0', '--uname', 'root', '--gname', 'root',
-      '--no-mac-metadata', '--no-xattrs',
-      '-czf', p.join(archivesFolder, target.archive),
-      '-C', stage,
-      ...members,
-    ]);
+    // Asked once, at the first archive: a refused chmod runs no tar.
+    flavour ??= await tarFlavourOf(runner);
+    await _run(
+      runner,
+      'tar',
+      tarArgs(flavour, p.join(archivesFolder, target.archive), stage),
+    );
   }
   recordSums(out.path, [for (final target in targets) target.archive]);
 }
+
+/// The tar the host has: macOS ships bsdtar, Linux GNU tar, and they spell
+/// the same archive with different flags.
+enum TarFlavour {
+  /// libarchive's bsdtar, macOS's tar.
+  bsd,
+
+  /// GNU tar, Linux's.
+  gnu,
+}
+
+/// The flavour [version], the output of `tar --version`, names.
+TarFlavour tarFlavourIn(String version) {
+  if (version.startsWith('bsdtar ')) return TarFlavour.bsd;
+  if (version.startsWith('tar (GNU tar) ')) return TarFlavour.gnu;
+  die('tar is neither bsdtar nor GNU tar: ${said(version)}');
+}
+
+/// The host tar's flavour, asked through [runner].
+Future<TarFlavour> tarFlavourOf(ReleaseRunner runner) async {
+  final ran = await runner.run('tar', ['--version']);
+  if (ran.status != 0) die('tar --version failed: ${said(ran.stderr)}');
+  return tarFlavourIn(ran.stdout);
+}
+
+/// The tar arguments that write [archive] from [members] in [stage], the
+/// same archive for either [flavour]: ustar members owned by root (0:0),
+/// with no pax header and no extended attribute.
+List<String> tarArgs(TarFlavour flavour, String archive, String stage) => [
+  ...switch (flavour) {
+    // No owner of this machine and no macOS metadata in what is shipped:
+    // without --no-xattrs bsdtar gives each member a pax header carrying
+    // com.apple.provenance, as npm pack's tarballs never do.
+    TarFlavour.bsd => [
+      '--uid',
+      '0',
+      '--gid',
+      '0',
+      '--uname',
+      'root',
+      '--gname',
+      'root',
+      '--no-mac-metadata',
+      '--no-xattrs',
+    ],
+    // GNU tar has no --uid or --no-mac-metadata; NAME:ID sets both, and
+    // ustar keeps out the GNU long-name and pax headers.
+    TarFlavour.gnu => [
+      '--owner=root:0',
+      '--group=root:0',
+      '--format=ustar',
+      '--no-xattrs',
+    ],
+  },
+  '-czf',
+  archive,
+  '-C',
+  stage,
+  ...members,
+];
 
 Future<void> _run(
   ReleaseRunner runner,

@@ -72,7 +72,10 @@ final class _AttributedRunner implements ReleaseRunner {
       return Ran(0, stdout: '${args.single}: ${kinds[target.name]}\n');
     }
     if (command == 'codesign') return const Ran(0);
-    if (command == 'tar') {
+    // The flavour question writes nothing, so it carries no stage to mark.
+    if (command == 'tar' && args.contains('--version')) {
+      // Falls through to the real tar below.
+    } else if (command == 'tar') {
       final stage = p.join(root, args[args.indexOf('-C') + 1]);
       for (final member in members) {
         final path = p.join(stage, member);

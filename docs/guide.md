@@ -332,7 +332,8 @@ and are sent as held. The box shows them as `^L`, `^?` or `<85>`; the
 transcript's prompt echo and ctrl+r's match show no notation. A paste
 removes escape sequences; C1 CSI (0x9b) also takes the byte after it.
 An editor that exits with an error or is killed leaves the prompt as it
-was, and the status line says so.
+was, and the status line says so. On Linux, the window may freeze after
+the editor returns until you press another key.
 
 ctrl+v puts the image on the clipboard into the prompt as `[Image #1]`, at
 the cursor, and Enter sends it after the text. So does the terminal's own

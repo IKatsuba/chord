@@ -705,13 +705,17 @@ The app lives under `lib/`, with snake_case file names;
   `setUpAll`, under the runner's fixed 12-minute setup limit. Cases keep
   their runtime budgets; compilation does not consume them.
 - Terminal flush and hangup tests use POSIX ptys and `expect` to check
-  bounded release, mode restoration, reuse and SIGHUP exit. If a
-  `StdioTerminal`'s own tty input ends and flushing fails, the failure is
-  suppressed: with `handleSignals`, `runApp` re-raises SIGHUP; without it,
-  it waits up to two seconds for the embedder's handler before its usual exit.
+  bounded release, mode restoration, reuse and SIGHUP exit. Errors from
+  `StdioTerminal`'s own tty input count as a hangup; supplied and non-tty
+  inputs still report errors. If its own tty input ends and flushing fails,
+  that failure is suppressed: with `handleSignals`, `runApp` re-raises SIGHUP;
+  without it, it waits up to two seconds for the embedder's handler before
+  its usual exit.
   Re-raised HUP, INT and TERM get 500 ms for delivery before fallback exit
   `128 + signal number`. Supplied or non-tty input keeps flush-error reporting.
   The framework's `compile` tag checks demo SIGHUP when its pty closes.
+  Services editor pty cases skip on Linux: after the editor returns,
+  dart:io can stall the window until the next key (CTUI-193).
   `runExpect` returns after the driver's exit and at most two seconds of
   output draining, even if an orphan holds a stream open. Failed launches
   remove their temporary directory. Teardown kills surviving drivers and

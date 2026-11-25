@@ -75,7 +75,9 @@ void main() {
     addTearDown(() async {
       final children = await Process.run('pgrep', ['-P', '${process.pid}']);
       for (final child in (children.stdout as String).trim().split('\n')) {
-        if (child.isNotEmpty) await Process.run('kill', ['-KILL', '-$child']);
+        if (child.isNotEmpty) {
+          await Process.run('kill', ['-KILL', '--', '-$child']);
+        }
       }
       process.kill(ProcessSignal.sigkill);
     });
@@ -261,7 +263,9 @@ void main() {
       process.kill(signal);
       final code = await process.exitCode.timeout(const Duration(seconds: 30));
       expect(code, -signal.signalNumber, reason: await stderr);
-      final alive = await Process.run('kill', ['-0', '-$group']);
+      // After --: procps-ng kill, Linux's, takes a bare -<pgid> for an
+      // option, and then signals nothing and exits 0.
+      final alive = await Process.run('kill', ['-0', '--', '-$group']);
       expect(alive.exitCode, isNot(0), reason: 'the agent group is running');
       onlyJson('${on.out}');
     }, skip: fakeAgent.reason);

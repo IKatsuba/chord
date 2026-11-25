@@ -249,7 +249,7 @@ puts "WAIT=[wait]"
           final children = await Process.run('pgrep', ['-P', '${process.pid}']);
           for (final child in (children.stdout as String).trim().split('\n')) {
             if (child.isNotEmpty) {
-              await Process.run('kill', ['-KILL', '-$child']);
+              await Process.run('kill', ['-KILL', '--', '-$child']);
             }
           }
           process.kill(ProcessSignal.sigkill);
